@@ -11,14 +11,26 @@ import { EquipmentDisplay } from '@/components/EquipmentDisplay';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { getListingById } from '@/data/mockData';
+import { useListing } from '@/hooks/useListings';
 
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  
-  const listing = id ? getListingById(id) : undefined;
+
+  const { data, isLoading } = useListing(id);
+  const listing = data?.listing;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container py-16 flex justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        </div>
+      </div>
+    );
+  }
 
   if (!listing) {
     return (

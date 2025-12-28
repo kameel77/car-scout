@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
-import { filterListings, mockListings } from '@/data/mockData';
+import { useListings } from '@/hooks/useListings';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -29,34 +29,9 @@ export default function SearchPage() {
   const { t } = useTranslation();
   const [filters, setFilters] = React.useState<FilterState>(emptyFilters);
   const [sortBy, setSortBy] = React.useState('newest');
-  const [isLoading, setIsLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const filteredListings = React.useMemo(() => {
-    return filterListings({
-      makes: filters.makes,
-      models: filters.models,
-      fuelTypes: filters.fuelTypes,
-      yearFrom: filters.yearFrom ? parseInt(filters.yearFrom) : undefined,
-      yearTo: filters.yearTo ? parseInt(filters.yearTo) : undefined,
-      mileageFrom: filters.mileageFrom ? parseInt(filters.mileageFrom) : undefined,
-      mileageTo: filters.mileageTo ? parseInt(filters.mileageTo) : undefined,
-      drives: filters.drives,
-      transmissions: filters.transmissions,
-      powerFrom: filters.powerFrom ? parseInt(filters.powerFrom) : undefined,
-      powerTo: filters.powerTo ? parseInt(filters.powerTo) : undefined,
-      capacityFrom: filters.capacityFrom ? parseInt(filters.capacityFrom) : undefined,
-      capacityTo: filters.capacityTo ? parseInt(filters.capacityTo) : undefined,
-      bodyTypes: filters.bodyTypes,
-      priceFrom: filters.priceFrom ? parseInt(filters.priceFrom) : undefined,
-      priceTo: filters.priceTo ? parseInt(filters.priceTo) : undefined,
-      sortBy,
-    });
-  }, [filters, sortBy]);
+  const { data, isLoading } = useListings(filters, sortBy);
+  const listings = data?.listings || [];
 
   const handleClearFilters = () => {
     setFilters(emptyFilters);
@@ -79,7 +54,7 @@ export default function SearchPage() {
                 filters={filters}
                 onFilterChange={setFilters}
                 onClear={handleClearFilters}
-                resultCount={filteredListings.length}
+                resultCount={listings.length}
               />
             </div>
           </aside>
@@ -90,7 +65,7 @@ export default function SearchPage() {
               filters={filters}
               onFilterChange={setFilters}
               onClearFilters={handleClearFilters}
-              resultCount={filteredListings.length}
+              resultCount={listings.length}
               sortBy={sortBy}
               onSortChange={setSortBy}
             />
@@ -100,8 +75,8 @@ export default function SearchPage() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
                 ))
-              ) : filteredListings.length > 0 ? (
-                filteredListings.map((listing, index) => (
+              ) : listings.length > 0 ? (
+                listings.map((listing, index) => (
                   <ListingCard key={listing.listing_id} listing={listing} index={index} />
                 ))
               ) : (
