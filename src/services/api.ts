@@ -123,8 +123,16 @@ export const listingsApi = {
         const params = new URLSearchParams();
 
         if (filters) {
-            if (filters.make) params.append('make', filters.make);
-            if (filters.model) params.append('model', filters.model);
+            // Helper for array filters
+            const appendArray = (key: string, values: string[]) => {
+                if (values && values.length > 0) {
+                    // Backend expects comma-separated string for 'in' query
+                    params.append(key, values.join(','));
+                }
+            };
+
+            appendArray('make', filters.makes);
+            appendArray('model', filters.models);
 
             if (filters.priceFrom) params.append('priceMin', filters.priceFrom.toString());
             if (filters.priceTo) params.append('priceMax', filters.priceTo.toString());
@@ -134,14 +142,6 @@ export const listingsApi = {
 
             if (filters.mileageFrom) params.append('mileageMin', filters.mileageFrom.toString());
             if (filters.mileageTo) params.append('mileageMax', filters.mileageTo.toString());
-
-            // Helper for array filters
-            const appendArray = (key: string, values: string[]) => {
-                if (values && values.length > 0) {
-                    // Backend expects comma-separated string for 'in' query
-                    params.append(key, values.join(','));
-                }
-            };
 
             appendArray('fuelType', filters.fuelTypes);
             appendArray('transmission', filters.transmissions);

@@ -76,7 +76,7 @@ interface FilterSectionProps {
   children: React.ReactNode;
 }
 
-function FilterSection({ title, defaultOpen = true, children }: FilterSectionProps) {
+function FilterSection({ title, defaultOpen = false, children }: FilterSectionProps) {
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
   return (
@@ -126,9 +126,9 @@ function MultiSelect({
 
   const filteredOptions = searchable
     ? options.filter((opt) =>
-        opt.label.toLowerCase().includes(search.toLowerCase()) ||
-        t(opt.label).toLowerCase().includes(search.toLowerCase())
-      )
+      opt.label.toLowerCase().includes(search.toLowerCase()) ||
+      t(opt.label).toLowerCase().includes(search.toLowerCase())
+    )
     : options;
 
   const handleToggle = (value: string) => {
@@ -154,18 +154,27 @@ function MultiSelect({
       )}
       <ScrollArea className={searchable ? 'h-40' : 'max-h-48'}>
         <div className="space-y-1">
-          {filteredOptions.map((option) => (
-            <label
-              key={option.value}
-              className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary/50 cursor-pointer transition-colors"
-            >
-              <Checkbox
-                checked={selected.includes(option.value)}
-                onCheckedChange={() => handleToggle(option.value)}
-              />
-              <span className="text-sm">{t(option.label, option.label)}</span>
-            </label>
-          ))}
+          {filteredOptions.map((option) => {
+            const id = `filter-${option.value.replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2, 9)}`;
+            return (
+              <div
+                key={option.value}
+                className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary/50 transition-colors"
+              >
+                <Checkbox
+                  id={id}
+                  checked={selected.includes(option.value)}
+                  onCheckedChange={() => handleToggle(option.value)}
+                />
+                <label
+                  htmlFor={id}
+                  className="text-sm cursor-pointer flex-1 select-none"
+                >
+                  {t(option.label, option.label)}
+                </label>
+              </div>
+            );
+          })}
         </div>
       </ScrollArea>
     </div>
@@ -221,16 +230,21 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const { t } = useTranslation();
 
-  const makeOptions = makes.map((m) => ({ value: m.name, label: m.name }));
+  const makeOptions = makes
+    .map((m) => ({ value: m.name, label: m.name }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   const availableModels = filters.makes.length
     ? models.filter((m) => {
-        const make = makes.find((mk) => mk.name === filters.makes[0]);
-        return make && m.makeId === make.id;
-      })
+      // Support models from ANY selected make
+      const selectedMakes = makes.filter((mk) => filters.makes.includes(mk.name));
+      return selectedMakes.some((mk) => mk.id === m.makeId);
+    })
     : [];
 
-  const modelOptions = availableModels.map((m) => ({ value: m.name, label: m.name }));
+  const modelOptions = availableModels
+    .map((m) => ({ value: m.name, label: m.name }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     onFilterChange({ ...filters, [key]: value });
@@ -241,7 +255,7 @@ export function FilterPanel({
   );
 
   return (
-    <div className={cn('filter-panel', className)}>
+    <div className={cn('filter-panel flex flex-col h-full', className)}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-heading text-lg font-semibold">{t('filters.title')}</h2>
         {hasFilters && (
@@ -259,17 +273,22 @@ export function FilterPanel({
 
       <Separator className="mb-4" />
 
-      <div className="space-y-1">
+      <div className="space-y-1 overflow-y-auto flex-1 pr-3 min-h-0 -mr-1">
         {/* Make */}
         <FilterSection title={t('filters.make')}>
           <MultiSelect
             options={makeOptions}
             selected={filters.makes}
             onChange={(v) => {
-              updateFilter('makes', v);
-              if (v.length === 0 || v[0] !== filters.makes[0]) {
-                updateFilter('models', []);
+              // Standard update
+              const newFilters = { ...filters, makes: v };
+
+              // If no makes selected, clear models too (avoids stale state + orphaned models)
+              if (v.length === 0) {
+                newFilters.models = [];
               }
+
+              onFilterChange(newFilters);
             }}
             searchable
             searchPlaceholder={t('filters.selectMake')}
@@ -336,6 +355,20 @@ export function FilterPanel({
 
         <Separator />
 
+        {/* Price Range */}
+        <FilterSection title={t('filters.price')}>
+          <RangeInput
+            fromValue={filters.priceFrom}
+            toValue={filters.priceTo}
+            onFromChange={(v) => updateFilter('priceFrom', v)}
+            onToChange={(v) => updateFilter('priceTo', v)}
+            fromPlaceholder="0 PLN"
+            toPlaceholder="500 000 PLN"
+          />
+        </FilterSection>
+
+        <Separator />
+
         {/* Transmission */}
         <FilterSection title={t('filters.transmission')}>
           <MultiSelect
@@ -392,20 +425,6 @@ export function FilterPanel({
             options={bodyTypeOptions}
             selected={filters.bodyTypes}
             onChange={(v) => updateFilter('bodyTypes', v)}
-          />
-        </FilterSection>
-
-        <Separator />
-
-        {/* Price Range */}
-        <FilterSection title={t('filters.price')}>
-          <RangeInput
-            fromValue={filters.priceFrom}
-            toValue={filters.priceTo}
-            onFromChange={(v) => updateFilter('priceFrom', v)}
-            onToChange={(v) => updateFilter('priceTo', v)}
-            fromPlaceholder="0 PLN"
-            toPlaceholder="500 000 PLN"
           />
         </FilterSection>
       </div>

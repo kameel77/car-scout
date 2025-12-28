@@ -49,7 +49,7 @@ export default function SearchPage() {
         <div className="flex gap-6">
           {/* Desktop Filters */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-20">
+            <div className="sticky top-20 h-[calc(100vh-6rem)]">
               <FilterPanel
                 filters={filters}
                 onFilterChange={setFilters}

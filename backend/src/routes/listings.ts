@@ -21,6 +21,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const fuelTypes = toArray(fuelType);
         const transmissions = toArray(transmission);
         const bodyTypes = toArray(bodyType);
+        const makes = toArray(make);
+        const models = toArray(model);
 
         const orderBy: any = {};
         switch (sortBy) {
@@ -35,9 +37,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const listings = await fastify.prisma.listing.findMany({
             where: {
-                isArchived: includeArchived === 'true' ? undefined : false,
-                make: make ? { contains: make, mode: 'insensitive' } : undefined,
-                model: model ? { contains: model, mode: 'insensitive' } : undefined,
+                make: makes ? { in: makes, mode: 'insensitive' } : undefined,
+                model: models ? { in: models, mode: 'insensitive' } : undefined,
 
                 pricePln: {
                     gte: priceMin ? parseInt(priceMin) : undefined,
