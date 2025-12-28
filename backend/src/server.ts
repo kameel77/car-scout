@@ -61,16 +61,16 @@ fastify.get('/', async () => {
     };
 });
 
-// TODO: Register routes here
-// import { authRoutes } from './routes/auth.js';
-// import { importRoutes } from './routes/import.js';
-// import { listingRoutes } from './routes/listings.js';
-// import { analyticsRoutes } from './routes/analytics.js';
-// 
-// await fastify.register(authRoutes);
-// await fastify.register(importRoutes);
-// await fastify.register(listingRoutes);
-// await fastify.register(analyticsRoutes);
+// Register routes
+import { authRoutes } from './routes/auth.js';
+import { importRoutes } from './routes/import.js';
+import { listingRoutes } from './routes/listings.js';
+import { analyticsRoutes } from './routes/analytics.js';
+
+await fastify.register(authRoutes);
+await fastify.register(importRoutes);
+await fastify.register(listingRoutes);
+await fastify.register(analyticsRoutes);
 
 // Start server
 const start = async () => {
