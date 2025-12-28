@@ -19,7 +19,26 @@ const fastify = Fastify({
 
 // Register plugins
 await fastify.register(cors, {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, cb) => {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const viteUrl = process.env.VITE_API_URL || 'http://localhost:8080';
+
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return cb(null, true);
+
+        // Allow localhost on any port for development
+        if (process.env.NODE_ENV === 'development' && /^http:\/\/localhost:\d+$/.test(origin)) {
+            return cb(null, true);
+        }
+
+        // Strict check for allowed origins
+        if (origin === frontendUrl || origin === viteUrl) {
+            return cb(null, true);
+        }
+
+        // Generate error for disallowed origins
+        cb(new Error("Not allowed by CORS"), false);
+    },
     credentials: true
 });
 

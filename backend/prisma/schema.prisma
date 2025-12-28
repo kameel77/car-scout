@@ -29,8 +29,8 @@ model Listing {
   // Technical Specs
   productionYear        Int       @map("production_year")
   mileageKm             Int       @map("mileage_km")
-  fuelType              String    @map("fuel_type")
-  transmission          String
+  fuelType              String?   @map("fuel_type")
+  transmission          String?
   enginePowerHp         Int?      @map("engine_power_hp")
   engineCapacityCm3     Int?      @map("engine_capacity_cm3")
   drive                 String?

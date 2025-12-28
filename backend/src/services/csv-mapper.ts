@@ -12,21 +12,21 @@ export function mapCSVToListing(row: CSVRow, dealerId?: string): Prisma.ListingC
         version: row.version || undefined,
         vin: row.vin || undefined,
 
-        pricePln: parseInt(row.price_pln) || 0,
+        pricePln: safeInt(row.price_pln) || 0,
         priceDisplay: row.price_display || undefined,
-        omnibusLowest30dPln: row.omnibus_lowest_30d_pln ? parseInt(row.omnibus_lowest_30d_pln) : undefined,
+        omnibusLowest30dPln: safeInt(row.omnibus_lowest_30d_pln),
         omnibusText: row.omnibus_text || undefined,
 
-        productionYear: parseInt(row.production_year) || 0,
-        mileageKm: parseInt(row.mileage_km) || 0,
+        productionYear: safeInt(row.production_year) || 0,
+        mileageKm: safeInt(row.mileage_km) || 0,
         fuelType: row.fuel_type,
         transmission: row.transmission,
-        enginePowerHp: row.engine_power_hp ? parseInt(row.engine_power_hp) : undefined,
-        engineCapacityCm3: row.engine_capacity_cm3 ? parseInt(row.engine_capacity_cm3) : undefined,
+        enginePowerHp: safeInt(row.engine_power_hp),
+        engineCapacityCm3: safeInt(row.engine_capacity_cm3),
         drive: row.drive || undefined,
         bodyType: row.body_type || undefined,
-        doors: row.doors ? parseInt(row.doors) : undefined,
-        seats: row.seats ? parseInt(row.seats) : undefined,
+        doors: safeInt(row.doors),
+        seats: safeInt(row.seats),
         color: row.color || undefined,
         paintType: row.paint_type || undefined,
 
@@ -34,7 +34,7 @@ export function mapCSVToListing(row: CSVRow, dealerId?: string): Prisma.ListingC
         firstRegistrationDate: row.first_registration_date || undefined,
 
         primaryImageUrl: row.primary_image_url || undefined,
-        imageCount: row.image_count ? parseInt(row.image_count) : undefined,
+        imageCount: safeInt(row.image_count),
         imageUrls: row.image_urls ? row.image_urls.split('|') : [],
 
         equipmentAudioMultimedia: row.equipment_audio_multimedia ? row.equipment_audio_multimedia.split('|') : [],
@@ -44,10 +44,27 @@ export function mapCSVToListing(row: CSVRow, dealerId?: string): Prisma.ListingC
 
         additionalInfoHeader: row.additional_info_header || undefined,
         additionalInfoContent: row.additional_info_content || undefined,
-        specsJson: row.specs_json ? JSON.parse(row.specs_json) : undefined,
+        specsJson: safeJsonParse(row.specs_json),
 
         dealer: dealerId ? { connect: { id: dealerId } } : undefined,
     };
+}
+
+function safeJsonParse(jsonString: string | undefined): any {
+    if (!jsonString) return undefined;
+    try {
+        return JSON.parse(jsonString);
+    } catch (e) {
+        return undefined; // Or log error if needed
+    }
+}
+
+function safeInt(value: string | undefined | null): number | undefined {
+    if (!value) return undefined;
+    // Remove all spaces (e.g. "100 000")
+    const cleaned = value.toString().replace(/\s+/g, '');
+    const parsed = parseInt(cleaned, 10);
+    return isNaN(parsed) ? undefined : parsed;
 }
 
 export function mapCSVToListingUpdate(row: CSVRow): Prisma.ListingUpdateInput {

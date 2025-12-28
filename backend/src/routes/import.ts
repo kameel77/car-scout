@@ -22,7 +22,7 @@ export async function importRoutes(fastify: FastifyInstance) {
             const records = parse(csvContent, {
                 columns: true,
                 skip_empty_lines: true,
-                delimiter: '\t',
+                delimiter: ',',
                 relax_column_count: true
             }) as CSVRow[];
 
@@ -48,6 +48,8 @@ export async function importRoutes(fastify: FastifyInstance) {
 
             return result;
         } catch (error) {
+            // Log full error to console for debugging
+            console.error('CRITICAL IMPORT ERROR:', error);
             fastify.log.error(error, 'CSV import failed');
             return reply.code(500).send({
                 error: 'Import failed',

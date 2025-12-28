@@ -25,16 +25,29 @@ export async function syncListingsFromCSV(
         const vinMap = new Map(
             existingListings.map(l => [l.vin || l.listingId, l])
         );
-        const csvVINSet = new Set(
-            csvData.map(r => r.vin || r.listing_id)
-        );
+        // 1.5 Deduplicate CSV rows locally
+        // Sometimes CSV contains duplicate VINs/IDs. We take the first one encountered.
+        const uniqueCsvRows: CSVRow[] = [];
+        const seenKeysInCsv = new Set<string>();
+
+        for (const row of csvData) {
+            const key = row.vin || row.listing_id;
+            if (!key) continue; // Skip rows without identity
+
+            if (!seenKeysInCsv.has(key)) {
+                seenKeysInCsv.add(key);
+                uniqueCsvRows.push(row);
+            }
+        }
+
+        const csvVINSet = new Set(seenKeysInCsv);
 
         // 2. Categorize operations
         const toUpdate: Array<{ csvRow: CSVRow; existing: any }> = [];
         const toInsert: CSVRow[] = [];
         const toArchive: any[] = [];
 
-        for (const row of csvData) {
+        for (const row of uniqueCsvRows) {
             const key = row.vin || row.listing_id;
             const existing = vinMap.get(key);
 
@@ -47,7 +60,7 @@ export async function syncListingsFromCSV(
 
         for (const listing of existingListings) {
             const key = listing.vin || listing.listingId;
-            if (!csvVINSet.has(key)) {
+            if (key && !csvVINSet.has(key)) { // Only archive if we have a key to match against
                 toArchive.push(listing);
             }
         }
@@ -56,7 +69,7 @@ export async function syncListingsFromCSV(
         const priceHistoryEntries = [];
 
         for (const { csvRow, existing } of toUpdate) {
-            const newPrice = parseInt(csvRow.price_pln);
+            const newPrice = parseInt(csvRow.price_pln) || 0;
 
             // Update listing
             await tx.listing.update({
