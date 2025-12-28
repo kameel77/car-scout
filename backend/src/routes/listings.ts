@@ -4,15 +4,41 @@ export async function listingRoutes(fastify: FastifyInstance) {
     // Get all listings (with filters)
     fastify.get('/api/listings', async (request, reply) => {
         const {
-            make, model, priceMin, priceMax,
-            yearMin, yearMax, includeArchived
+            make, model,
+            priceMin, priceMax,
+            yearMin, yearMax,
+            mileageMin, mileageMax,
+            powerMin, powerMax,
+            capacityMin, capacityMax,
+            fuelType, transmission, bodyType,
+            sortBy,
+            includeArchived
         } = request.query as any;
+
+        // Helper to parse comma-separated lists into array or undefined
+        const toArray = (val: any) => val ? (Array.isArray(val) ? val : val.split(',')) : undefined;
+
+        const fuelTypes = toArray(fuelType);
+        const transmissions = toArray(transmission);
+        const bodyTypes = toArray(bodyType);
+
+        const orderBy: any = {};
+        switch (sortBy) {
+            case 'price_asc': orderBy.pricePln = 'asc'; break;
+            case 'price_desc': orderBy.pricePln = 'desc'; break;
+            case 'year_asc': orderBy.productionYear = 'asc'; break;
+            case 'year_desc': orderBy.productionYear = 'desc'; break;
+            case 'mileage_asc': orderBy.mileageKm = 'asc'; break;
+            case 'mileage_desc': orderBy.mileageKm = 'desc'; break;
+            case 'newest': default: orderBy.createdAt = 'desc'; break;
+        }
 
         const listings = await fastify.prisma.listing.findMany({
             where: {
                 isArchived: includeArchived === 'true' ? undefined : false,
                 make: make ? { contains: make, mode: 'insensitive' } : undefined,
                 model: model ? { contains: model, mode: 'insensitive' } : undefined,
+
                 pricePln: {
                     gte: priceMin ? parseInt(priceMin) : undefined,
                     lte: priceMax ? parseInt(priceMax) : undefined
@@ -20,13 +46,29 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 productionYear: {
                     gte: yearMin ? parseInt(yearMin) : undefined,
                     lte: yearMax ? parseInt(yearMax) : undefined
-                }
+                },
+                mileageKm: {
+                    gte: mileageMin ? parseInt(mileageMin) : undefined,
+                    lte: mileageMax ? parseInt(mileageMax) : undefined
+                },
+                enginePowerHp: {
+                    gte: powerMin ? parseInt(powerMin) : undefined,
+                    lte: powerMax ? parseInt(powerMax) : undefined
+                },
+                engineCapacityCm3: {
+                    gte: capacityMin ? parseInt(capacityMin) : undefined,
+                    lte: capacityMax ? parseInt(capacityMax) : undefined
+                },
+
+                fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' } : undefined,
+                transmission: transmissions ? { in: transmissions, mode: 'insensitive' } : undefined,
+                bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' } : undefined,
             },
             include: {
                 dealer: true
             },
-            orderBy: { updatedAt: 'desc' },
-            take: 100 // Limit for performance
+            orderBy,
+            take: 100
         });
 
         return { listings, count: listings.length };

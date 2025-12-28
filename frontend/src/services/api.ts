@@ -120,8 +120,35 @@ export const analyticsApi = {
 // Listings API
 export const listingsApi = {
     getListings: async (filters?: any) => {
-        const queryParams = new URLSearchParams(filters || {});
-        const response = await fetch(`${API_BASE_URL}/api/listings?${queryParams}`);
+        const params = new URLSearchParams();
+
+        if (filters) {
+            if (filters.make) params.append('make', filters.make);
+            if (filters.model) params.append('model', filters.model);
+
+            if (filters.priceFrom) params.append('priceMin', filters.priceFrom.toString());
+            if (filters.priceTo) params.append('priceMax', filters.priceTo.toString());
+
+            if (filters.yearFrom) params.append('yearMin', filters.yearFrom.toString());
+            if (filters.yearTo) params.append('yearMax', filters.yearTo.toString());
+
+            if (filters.mileageFrom) params.append('mileageMin', filters.mileageFrom.toString());
+            if (filters.mileageTo) params.append('mileageMax', filters.mileageTo.toString());
+
+            if (filters.fuelTypes && filters.fuelTypes.length > 0) params.append('fuelType', filters.fuelTypes.join(','));
+            if (filters.transmissions && filters.transmissions.length > 0) params.append('transmission', filters.transmissions.join(','));
+            if (filters.bodyTypes && filters.bodyTypes.length > 0) params.append('bodyType', filters.bodyTypes.join(','));
+
+            if (filters.powerFrom) params.append('powerMin', filters.powerFrom.toString());
+            if (filters.powerTo) params.append('powerMax', filters.powerTo.toString());
+
+            if (filters.capacityFrom) params.append('capacityMin', filters.capacityFrom.toString());
+            if (filters.capacityTo) params.append('capacityMax', filters.capacityTo.toString());
+
+            if (filters.sortBy) params.append('sortBy', filters.sortBy);
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/listings?${params.toString()}`);
         return response.json();
     },
 
