@@ -34,8 +34,13 @@ export function mapBackendListingToFrontend(backendListing: any): Listing {
         google_reviews_count: backendListing.dealer?.googleReviewCount,
 
         // Specifications & Equipment
-        specifications: backendListing.specsJson ?
-            (typeof backendListing.specsJson === 'string' ? JSON.parse(backendListing.specsJson) : backendListing.specsJson) : [],
+        specifications: (() => {
+            if (!backendListing.specsJson) return [];
+            const parsed = typeof backendListing.specsJson === 'string'
+                ? JSON.parse(backendListing.specsJson)
+                : backendListing.specsJson;
+            return Array.isArray(parsed) ? parsed : [];
+        })(),
 
         equipment: {
             audioMultimedia: backendListing.equipmentAudioMultimedia || [],

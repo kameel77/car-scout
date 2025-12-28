@@ -5,6 +5,7 @@ import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { useListings } from '@/hooks/useListings';
+import { useListingOptions } from '@/hooks/useListingOptions';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -31,6 +32,7 @@ export default function SearchPage() {
   const [sortBy, setSortBy] = React.useState('newest');
 
   const { data, isLoading } = useListings(filters, sortBy);
+  const { data: options } = useListingOptions();
   const listings = data?.listings || [];
 
   const handleClearFilters = () => {
@@ -55,6 +57,8 @@ export default function SearchPage() {
                 onFilterChange={setFilters}
                 onClear={handleClearFilters}
                 resultCount={listings.length}
+                availableMakes={options?.makes || []}
+                availableModels={options?.models || []}
               />
             </div>
           </aside>

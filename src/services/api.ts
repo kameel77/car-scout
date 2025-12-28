@@ -119,6 +119,15 @@ export const analyticsApi = {
 
 // Listings API
 export const listingsApi = {
+    getListingOptions: async () => {
+        // Options are public, no token needed
+        const response = await fetch(`${API_BASE_URL}/api/listings/options`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch listing options');
+        }
+        return response.json() as Promise<{ makes: string[]; models: { make: string; model: string }[] }>;
+    },
+
     getListings: async (filters?: any) => {
         const params = new URLSearchParams();
 

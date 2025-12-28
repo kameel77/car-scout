@@ -13,7 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { makes, models } from '@/data/mockData';
+// Removed mock imports
 import { cn } from '@/lib/utils';
 
 export interface FilterState {
@@ -41,6 +41,8 @@ interface FilterPanelProps {
   onClear: () => void;
   resultCount: number;
   className?: string;
+  availableMakes: string[];
+  availableModels: { make: string; model: string }[];
 }
 
 const fuelTypeOptions = [
@@ -227,23 +229,22 @@ export function FilterPanel({
   onClear,
   resultCount,
   className,
+  availableMakes,
+  availableModels: allModels,
 }: FilterPanelProps) {
   const { t } = useTranslation();
 
-  const makeOptions = makes
-    .map((m) => ({ value: m.name, label: m.name }))
+  const makeOptions = availableMakes
+    .map((m) => ({ value: m, label: m }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  const availableModels = filters.makes.length
-    ? models.filter((m) => {
-      // Support models from ANY selected make
-      const selectedMakes = makes.filter((mk) => filters.makes.includes(mk.name));
-      return selectedMakes.some((mk) => mk.id === m.makeId);
-    })
+  const filteredModels = filters.makes.length
+    ? allModels.filter((m) => filters.makes.includes(m.make))
     : [];
 
-  const modelOptions = availableModels
-    .map((m) => ({ value: m.name, label: m.name }))
+  const modelOptions = filteredModels
+    .map((m) => ({ value: m.model, label: m.model }))
+    .filter((v, i, a) => a.findIndex(t => t.value === v.value) === i) // unique
     .sort((a, b) => a.label.localeCompare(b.label));
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {

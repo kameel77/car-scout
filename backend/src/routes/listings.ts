@@ -1,6 +1,28 @@
 import { FastifyInstance } from 'fastify';
 
 export async function listingRoutes(fastify: FastifyInstance) {
+    // Get filter options (makes and models)
+    fastify.get('/api/listings/options', async (request, reply) => {
+        // fetch distinct makes
+        const makesRaw = await fastify.prisma.listing.findMany({
+            select: { make: true },
+            distinct: ['make'],
+            orderBy: { make: 'asc' }
+        });
+
+        // fetch distinct models with their makes
+        const modelsRaw = await fastify.prisma.listing.findMany({
+            select: { make: true, model: true },
+            distinct: ['make', 'model'],
+            orderBy: { model: 'asc' }
+        });
+
+        const makes = makesRaw.map(m => m.make).filter(Boolean);
+        const models = modelsRaw.map(m => ({ make: m.make, model: m.model })).filter(m => m.make && m.model);
+
+        return { makes, models };
+    });
+
     // Get all listings (with filters)
     fastify.get('/api/listings', async (request, reply) => {
         const {
