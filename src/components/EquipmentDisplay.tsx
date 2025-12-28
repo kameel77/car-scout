@@ -28,11 +28,11 @@ interface EquipmentDisplayProps {
 }
 
 const sectionConfig = [
-  { key: 'audioMultimedia', icon: Music, labelKey: 'equipment.audioMultimedia' },
-  { key: 'safety', icon: Shield, labelKey: 'equipment.safety' },
   { key: 'comfort', icon: Sofa, labelKey: 'equipment.comfort' },
-  { key: 'performance', icon: Gauge, labelKey: 'equipment.performance' },
+  { key: 'safety', icon: Shield, labelKey: 'equipment.safety' },
+  { key: 'audioMultimedia', icon: Music, labelKey: 'equipment.audioMultimedia' },
   { key: 'driverAssist', icon: Radio, labelKey: 'equipment.driverAssist' },
+  { key: 'performance', icon: Gauge, labelKey: 'equipment.performance' },
   { key: 'other', icon: MoreHorizontal, labelKey: 'equipment.other' },
 ] as const;
 
