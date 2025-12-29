@@ -27,10 +27,72 @@ const emptyFilters: FilterState = {
   query: '',
 };
 
+import { useSearchParams } from 'react-router-dom';
+
+// ... (keep constant emptyFilters)
+
+// Helper to parse arrays from URL
+const parseArray = (param: string | null) => param ? param.split(',') : [];
+
 export default function SearchPage() {
   const { t } = useTranslation();
-  const [filters, setFilters] = React.useState<FilterState>(emptyFilters);
-  const [sortBy, setSortBy] = React.useState('newest');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Initialize from URL
+  const [filters, setFilters] = React.useState<FilterState>(() => {
+    return {
+      makes: parseArray(searchParams.get('make')),
+      models: parseArray(searchParams.get('model')),
+      fuelTypes: parseArray(searchParams.get('fuelType')),
+      transmissions: parseArray(searchParams.get('transmission')),
+      bodyTypes: parseArray(searchParams.get('bodyType')),
+      drives: parseArray(searchParams.get('drive')),
+
+      yearFrom: searchParams.get('yearMin') || '',
+      yearTo: searchParams.get('yearMax') || '',
+      mileageFrom: searchParams.get('mileageMin') || '',
+      mileageTo: searchParams.get('mileageMax') || '',
+      priceFrom: searchParams.get('priceMin') || '',
+      priceTo: searchParams.get('priceMax') || '',
+      powerFrom: searchParams.get('powerMin') || '',
+      powerTo: searchParams.get('powerMax') || '',
+      capacityFrom: searchParams.get('capacityMin') || '',
+      capacityTo: searchParams.get('capacityMax') || '',
+
+      query: searchParams.get('q') || '',
+    };
+  });
+
+  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || 'newest');
+
+  // Sync URL when state changes
+  React.useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (filters.makes.length) params.set('make', filters.makes.join(','));
+    if (filters.models.length) params.set('model', filters.models.join(','));
+    if (filters.fuelTypes.length) params.set('fuelType', filters.fuelTypes.join(','));
+    if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
+    if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
+    if (filters.drives.length) params.set('drive', filters.drives.join(','));
+
+    if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
+    if (filters.yearTo) params.set('yearMax', filters.yearTo);
+    if (filters.mileageFrom) params.set('mileageMin', filters.mileageFrom);
+    if (filters.mileageTo) params.set('mileageMax', filters.mileageTo);
+    if (filters.priceFrom) params.set('priceMin', filters.priceFrom);
+    if (filters.priceTo) params.set('priceMax', filters.priceTo);
+    if (filters.powerFrom) params.set('powerMin', filters.powerFrom);
+    if (filters.powerTo) params.set('powerMax', filters.powerTo);
+    if (filters.capacityFrom) params.set('capacityMin', filters.capacityFrom);
+    if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
+
+    if (filters.query) params.set('q', filters.query);
+    if (sortBy !== 'newest') params.set('sortBy', sortBy);
+
+    setSearchParams(params, { replace: true });
+  }, [filters, sortBy, setSearchParams]);
+
 
   const { data, isLoading } = useListings(filters, sortBy);
   const { data: options } = useListingOptions();
@@ -48,11 +110,11 @@ export default function SearchPage() {
     <div className="min-h-screen bg-background">
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
-      <main className="container py-6">
+      <main className="container pt-0 pb-6">
         <div className="flex gap-6">
           {/* Desktop Filters */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-20 h-[calc(100vh-6rem)]">
+            <div className="sticky top-16 h-[calc(100vh-4rem)] pt-4">
               <FilterPanel
                 filters={filters}
                 onFilterChange={setFilters}

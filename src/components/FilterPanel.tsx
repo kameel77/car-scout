@@ -268,10 +268,6 @@ export function FilterPanel({
         )}
       </div>
 
-      <div className="text-sm text-muted-foreground mb-4">
-        {t('common.found')}: <span className="font-semibold text-foreground">{resultCount}</span>{' '}
-        {t('common.offers')}
-      </div>
 
       <Separator className="mb-4" />
 

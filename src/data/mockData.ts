@@ -40,6 +40,28 @@ export interface Listing {
   };
 }
 
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  message: string;
+  status: 'new' | 'contacted' | 'in_progress' | 'sold' | 'closed';
+  listing_id: string;
+  listing_make: string;
+  listing_model: string;
+  listing_vin?: string;
+  listing_price: string;
+  listing_year?: number;
+  listing_mileage?: string;
+  dealer_name?: string;
+  dealer_address?: string;
+  dealer_phone?: string;
+  consent_marketing_at: string;
+  consent_privacy_at: string;
+  created_at: string;
+}
+
 export interface Make {
   id: string;
   name: string;
@@ -80,7 +102,7 @@ export const models: Model[] = [
   { id: 'chr', makeId: 'toyota', name: 'C-HR', count: 28 },
   { id: 'aygo', makeId: 'toyota', name: 'Aygo X', count: 22 },
   { id: 'highlander', makeId: 'toyota', name: 'Highlander', count: 15 },
-  
+
   // Volkswagen
   { id: 'golf', makeId: 'volkswagen', name: 'Golf', count: 67 },
   { id: 'passat', makeId: 'volkswagen', name: 'Passat', count: 45 },
@@ -88,7 +110,7 @@ export const models: Model[] = [
   { id: 'polo', makeId: 'volkswagen', name: 'Polo', count: 28 },
   { id: 'arteon', makeId: 'volkswagen', name: 'Arteon', count: 12 },
   { id: 'id4', makeId: 'volkswagen', name: 'ID.4', count: 8 },
-  
+
   // BMW
   { id: '3series', makeId: 'bmw', name: '3 Series', count: 56 },
   { id: '5series', makeId: 'bmw', name: '5 Series', count: 34 },
@@ -96,14 +118,14 @@ export const models: Model[] = [
   { id: 'x5', makeId: 'bmw', name: 'X5', count: 22 },
   { id: '1series', makeId: 'bmw', name: '1 Series', count: 18 },
   { id: 'ix3', makeId: 'bmw', name: 'iX3', count: 9 },
-  
+
   // Mercedes
   { id: 'cclass', makeId: 'mercedes', name: 'C-Class', count: 48 },
   { id: 'eclass', makeId: 'mercedes', name: 'E-Class', count: 36 },
   { id: 'aclass', makeId: 'mercedes', name: 'A-Class', count: 32 },
   { id: 'glc', makeId: 'mercedes', name: 'GLC', count: 24 },
   { id: 'gle', makeId: 'mercedes', name: 'GLE', count: 16 },
-  
+
   // Audi
   { id: 'a4', makeId: 'audi', name: 'A4', count: 52 },
   { id: 'a3', makeId: 'audi', name: 'A3', count: 38 },
@@ -242,7 +264,7 @@ function generateVIN(): string {
 
 export function generateMockListings(count: number = 50): Listing[] {
   const listings: Listing[] = [];
-  
+
   for (let i = 0; i < count; i++) {
     const make = randomFromArray(makes);
     const modelOptions = models.filter(m => m.makeId === make.id);
@@ -255,7 +277,7 @@ export function generateMockListings(count: number = 50): Listing[] {
     const capacity = Math.floor(Math.random() * 2000) + 1000;
     const versions = ['Base', 'Comfort', 'Premium', 'Sport', 'Luxury', 'Executive', 'Style', 'Active'];
     const version = `${(capacity / 1000).toFixed(1)} ${randomFromArray(versions)}`;
-    
+
     listings.push({
       listing_id: generateListingId(),
       listing_url: '#',
@@ -311,7 +333,7 @@ export function generateMockListings(count: number = 50): Listing[] {
       },
     });
   }
-  
+
   return listings;
 }
 
@@ -341,71 +363,71 @@ export function filterListings(filters: {
   sortBy?: string;
 }): Listing[] {
   let result = [...mockListings];
-  
+
   if (filters.makes?.length) {
     result = result.filter(l => filters.makes!.includes(l.make));
   }
-  
+
   if (filters.models?.length) {
     result = result.filter(l => filters.models!.includes(l.model));
   }
-  
+
   if (filters.fuelTypes?.length) {
     result = result.filter(l => filters.fuelTypes!.includes(l.fuel_type));
   }
-  
+
   if (filters.yearFrom) {
     result = result.filter(l => l.production_year >= filters.yearFrom!);
   }
-  
+
   if (filters.yearTo) {
     result = result.filter(l => l.production_year <= filters.yearTo!);
   }
-  
+
   if (filters.mileageFrom) {
     result = result.filter(l => l.mileage_km >= filters.mileageFrom!);
   }
-  
+
   if (filters.mileageTo) {
     result = result.filter(l => l.mileage_km <= filters.mileageTo!);
   }
-  
+
   if (filters.drives?.length) {
     result = result.filter(l => filters.drives!.includes(l.drive));
   }
-  
+
   if (filters.transmissions?.length) {
     result = result.filter(l => filters.transmissions!.includes(l.transmission));
   }
-  
+
   if (filters.powerFrom) {
     result = result.filter(l => l.engine_power_hp >= filters.powerFrom!);
   }
-  
+
   if (filters.powerTo) {
     result = result.filter(l => l.engine_power_hp <= filters.powerTo!);
   }
-  
+
   if (filters.capacityFrom) {
     result = result.filter(l => l.engine_capacity_cm3 >= filters.capacityFrom!);
   }
-  
+
   if (filters.capacityTo) {
     result = result.filter(l => l.engine_capacity_cm3 <= filters.capacityTo!);
   }
-  
+
   if (filters.bodyTypes?.length) {
     result = result.filter(l => filters.bodyTypes!.includes(l.body_type));
   }
-  
+
   if (filters.priceFrom) {
     result = result.filter(l => l.price_pln >= filters.priceFrom!);
   }
-  
+
   if (filters.priceTo) {
     result = result.filter(l => l.price_pln <= filters.priceTo!);
   }
-  
+
   // Sorting
   switch (filters.sortBy) {
     case 'cheapest':
@@ -423,6 +445,71 @@ export function filterListings(filters: {
     default:
       break;
   }
-  
+
   return result;
 }
+
+export const mockLeads: Lead[] = [
+  {
+    id: 'L1',
+    name: 'Jan Kowalski',
+    email: 'jan.kowalski@wp.pl',
+    phone: '+48 123 456 789',
+    message: 'Dzień dobry, czy oferta na model Toyota Corolla jest aktualna i czy auto jest dostępne od ręki?',
+    status: 'new',
+    listing_id: '1',
+    listing_make: 'Toyota',
+    listing_model: 'Corolla',
+    listing_vin: 'JTNKW120001234567',
+    listing_price: '125 900 PLN',
+    listing_year: 2023,
+    listing_mileage: '12 500 km',
+    dealer_name: 'Toyota Central Park',
+    dealer_address: 'ul. Czerniakowska 100, 00-454 Warszawa',
+    dealer_phone: '+48 22 123 45 67',
+    consent_marketing_at: '2025-12-28 10:15:30',
+    consent_privacy_at: '2025-12-28 10:15:30',
+    created_at: '2025-12-28 10:15:30',
+  },
+  {
+    id: 'L2',
+    name: 'Anna Nowak',
+    email: 'a.nowak@gmail.com',
+    message: 'Interesuje mnie oferta leasingu lub najmu długoterminowego dla tego auta. Proszę o przygotowanie symulacji.',
+    status: 'contacted',
+    listing_id: '2',
+    listing_make: 'Volkswagen',
+    listing_model: 'Golf',
+    listing_vin: 'WVG5678901234EFGH',
+    listing_price: '125 000 PLN',
+    listing_year: 2022,
+    listing_mileage: '28 500 km',
+    dealer_name: 'VW Home Warszawa',
+    dealer_address: 'al. Jerozolimskie 200, 02-486 Warszawa',
+    dealer_phone: '+48 22 987 65 43',
+    consent_marketing_at: '2025-12-27 14:20:00',
+    consent_privacy_at: '2025-12-27 14:20:00',
+    created_at: '2025-12-27 14:20:00',
+  },
+  {
+    id: 'L3',
+    name: 'Marek Wiśniewski',
+    email: 'm.wisniewski@firma.pl',
+    phone: '500 600 700',
+    message: 'Poproszę o przesłanie numeru VIN oraz raportu historii pojazdu dla tego modelu.',
+    status: 'in_progress',
+    listing_id: '3',
+    listing_make: 'BMW',
+    listing_model: '3 Series',
+    listing_vin: 'WBA1234567890ABCD',
+    listing_price: '185 000 PLN',
+    listing_year: 2021,
+    listing_mileage: '45 000 km',
+    dealer_name: 'BMW Premium Selection Warszawa',
+    dealer_address: 'ul. Ostrobramska 12, 04-123 Warszawa',
+    dealer_phone: '+48 22 555 66 77',
+    consent_marketing_at: '2025-12-26 09:00:15',
+    consent_privacy_at: '2025-12-26 09:00:15',
+    created_at: '2025-12-26 09:00:15',
+  },
+];

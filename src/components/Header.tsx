@@ -52,18 +52,6 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-4">
-          {isSearchPage && hasActiveFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClearFilters}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              {t('common.clearFilters')}
-            </Button>
-          )}
-
           {/* Language Switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -109,7 +97,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 </span>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <p className="text-sm font-medium text-muted-foreground">
                   {t('header.language')}
                 </p>
@@ -119,7 +107,10 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                       key={lang.code}
                       variant={i18n.language === lang.code ? 'chip-active' : 'chip'}
                       size="chip"
-                      onClick={() => handleLanguageChange(lang.code)}
+                      onClick={() => {
+                        handleLanguageChange(lang.code);
+                        setIsOpen(false);
+                      }}
                     >
                       <span>{lang.flag}</span>
                       <span>{lang.label}</span>
@@ -127,20 +118,6 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                   ))}
                 </div>
               </div>
-
-              {isSearchPage && hasActiveFilters && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    onClearFilters?.();
-                    setIsOpen(false);
-                  }}
-                  className="gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  {t('common.clearFilters')}
-                </Button>
-              )}
             </div>
           </SheetContent>
         </Sheet>
