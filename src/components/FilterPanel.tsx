@@ -33,6 +33,7 @@ export interface FilterState {
   bodyTypes: string[];
   priceFrom: string;
   priceTo: string;
+  query: string;
 }
 
 interface FilterPanelProps {

@@ -24,6 +24,7 @@ const emptyFilters: FilterState = {
   bodyTypes: [],
   priceFrom: '',
   priceTo: '',
+  query: '',
 };
 
 export default function SearchPage() {

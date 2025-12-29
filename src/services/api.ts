@@ -164,6 +164,7 @@ export const listingsApi = {
             if (filters.capacityTo) params.append('capacityMax', filters.capacityTo.toString());
 
             if (filters.sortBy) params.append('sortBy', filters.sortBy);
+            if (filters.query) params.append('q', filters.query);
         }
 
         const response = await fetch(`${API_BASE_URL}/api/listings?${params.toString()}`);

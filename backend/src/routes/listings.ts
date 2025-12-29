@@ -26,6 +26,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
     // Get all listings (with filters)
     fastify.get('/api/listings', async (request, reply) => {
         const {
+            q, // Search query
             make, model,
             priceMin, priceMax,
             yearMin, yearMax,
@@ -57,8 +58,37 @@ export async function listingRoutes(fastify: FastifyInstance) {
             case 'newest': default: orderBy.createdAt = 'desc'; break;
         }
 
+        // Search logic
+        const searchTerms = q ? (q as string).trim().split(/\s+/).filter(Boolean) : [];
+        const searchFilter = searchTerms.length > 0 ? {
+            AND: searchTerms.map(term => {
+                const isNumber = !isNaN(parseInt(term));
+                const termFilter: any[] = [
+                    { make: { contains: term, mode: 'insensitive' } },
+                    { model: { contains: term, mode: 'insensitive' } },
+                    { version: { contains: term, mode: 'insensitive' } },
+                    { fuelType: { contains: term, mode: 'insensitive' } },
+                    { transmission: { contains: term, mode: 'insensitive' } },
+                    { bodyType: { contains: term, mode: 'insensitive' } },
+                    { additionalInfoContent: { contains: term, mode: 'insensitive' } },
+                    // Check equipment arrays for exact matches (limit of Prisma)
+                    { equipmentAudioMultimedia: { has: term } },
+                    { equipmentSafety: { has: term } },
+                    { equipmentComfortExtras: { has: term } },
+                    { equipmentOther: { has: term } }
+                ];
+
+                if (isNumber) {
+                    termFilter.push({ productionYear: { equals: parseInt(term) } });
+                }
+
+                return { OR: termFilter };
+            })
+        } : {};
+
         const listings = await fastify.prisma.listing.findMany({
             where: {
+                ...searchFilter,
                 make: makes ? { in: makes, mode: 'insensitive' } : undefined,
                 model: models ? { in: models, mode: 'insensitive' } : undefined,
 
