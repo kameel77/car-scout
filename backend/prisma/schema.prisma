@@ -23,6 +23,13 @@ model Listing {
   // Pricing
   pricePln              Int       @map("price_pln")
   priceDisplay          String?   @map("price_display")
+  
+  // Dynamic Calculated Pricing
+  dealerPriceNetPln     Float?    @map("dealer_price_net_pln")
+  dealerPriceNetEur     Float?    @map("dealer_price_net_eur")
+  brokerPricePln        Int?      @map("broker_price_pln")
+  brokerPriceEur        Int?      @map("broker_price_eur")
+  
   omnibusLowest30dPln   Int?      @map("omnibus_lowest_30d_pln")
   omnibusText           String?   @map("omnibus_text")
   
@@ -159,4 +166,17 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
   
   @@map("users")
+}
+
+model AppSettings {
+  id                  String   @id @default("default")
+  enabledLanguages    String[] @default(["pl"]) @map("enabled_languages")
+  displayCurrency     String   @default("PLN") @map("display_currency")
+  eurExRate           Float    @default(4.30) @map("eur_ex_rate")
+  brokerFeePctPln     Float    @default(3.5) @map("broker_fee_pct_pln")
+  brokerFeePctEur     Float    @default(3.5) @map("broker_fee_pct_eur")
+  
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
 }

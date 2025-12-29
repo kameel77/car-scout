@@ -278,6 +278,22 @@ export function LeadList() {
                                                 VIN: {selectedLead.listing_vin}
                                             </div>
                                         )}
+
+                                        {/* Broker Fee display */}
+                                        {(selectedLead.broker_price_pln || selectedLead.broker_price_eur) && (
+                                            <div className="mt-3 py-2 px-3 bg-amber-50 rounded-lg border border-amber-100/50">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-bold uppercase text-amber-600/70">Marża brokera (netto)</span>
+                                                    <span className="text-sm font-bold text-amber-700">
+                                                        {selectedLead.broker_price_pln && selectedLead.dealer_price_net_pln ? (
+                                                            `+ ${(Math.round(selectedLead.broker_price_pln / 1.23) - selectedLead.dealer_price_net_pln).toLocaleString('pl-PL')} PLN`
+                                                        ) : selectedLead.broker_price_eur && selectedLead.dealer_price_net_eur ? (
+                                                            `+ ${(Math.round(selectedLead.broker_price_eur / 1.23) - selectedLead.dealer_price_net_eur).toLocaleString('pl-PL')} EUR`
+                                                        ) : '---'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

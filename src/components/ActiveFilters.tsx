@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/sheet';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { cn } from '@/lib/utils';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 
 interface ActiveFiltersProps {
   filters: FilterState;
@@ -44,6 +45,7 @@ export function ActiveFilters({
   onSortChange,
 }: ActiveFiltersProps) {
   const { t } = useTranslation();
+  const { priceType, setPriceType } = usePriceSettings();
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState(filters.query || '');
 
@@ -217,6 +219,22 @@ export function ActiveFilters({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2 flex-1">
+                {priceType === 'gross' ? 'Brutto' : 'Netto'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
+                Ceny Brutto
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
+                Ceny Netto
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 flex-1">
                 <ArrowUpDown className="h-4 w-4" />
                 <span className="truncate">{currentSort ? t(currentSort.label) : t('sort.title')}</span>
               </Button>
@@ -254,6 +272,22 @@ export function ActiveFilters({
               className="pl-9 w-full bg-background border-primary/20 focus-visible:ring-primary/30 active:scale-[1.01] transition-all"
             />
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 whitespace-nowrap">
+                {priceType === 'gross' ? 'Ceny Brutto' : 'Ceny Netto'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
+                Ceny Brutto
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
+                Ceny Netto
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

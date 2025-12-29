@@ -85,11 +85,13 @@ import { authRoutes } from './routes/auth.js';
 import { importRoutes } from './routes/import.js';
 import { listingRoutes } from './routes/listings.js';
 import { analyticsRoutes } from './routes/analytics.js';
+import { settingsRoutes } from './routes/settings.js';
 
 await fastify.register(authRoutes);
 await fastify.register(importRoutes);
 await fastify.register(listingRoutes);
 await fastify.register(analyticsRoutes);
+await fastify.register(settingsRoutes);
 
 // Start server
 const start = async () => {
@@ -121,10 +123,6 @@ declare module 'fastify' {
         authenticate: any;
     }
     interface FastifyRequest {
-        user?: {
-            userId: string;
-            email: string;
-            role: string;
-        };
+        // user is already defined by @fastify/jwt
     }
 }

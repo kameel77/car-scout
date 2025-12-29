@@ -35,7 +35,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
             capacityMin, capacityMax,
             fuelType, transmission, bodyType,
             sortBy,
-            includeArchived
+            includeArchived,
+            currency // Added currency parameter
         } = request.query as any;
 
         // Helper to parse comma-separated lists into array or undefined
@@ -47,10 +48,13 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const makes = toArray(make);
         const models = toArray(model);
 
+        const isEur = currency === 'EUR';
+        const priceField = isEur ? 'brokerPriceEur' : 'brokerPricePln';
+
         const orderBy: any = {};
         switch (sortBy) {
-            case 'price_asc': orderBy.pricePln = 'asc'; break;
-            case 'price_desc': orderBy.pricePln = 'desc'; break;
+            case 'price_asc': orderBy[priceField] = 'asc'; break;
+            case 'price_desc': orderBy[priceField] = 'desc'; break;
             case 'year_asc': orderBy.productionYear = 'asc'; break;
             case 'year_desc': orderBy.productionYear = 'desc'; break;
             case 'mileage_asc': orderBy.mileageKm = 'asc'; break;
@@ -92,7 +96,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 make: makes ? { in: makes, mode: 'insensitive' } : undefined,
                 model: models ? { in: models, mode: 'insensitive' } : undefined,
 
-                pricePln: {
+                [priceField]: {
                     gte: priceMin ? parseInt(priceMin) : undefined,
                     lte: priceMax ? parseInt(priceMax) : undefined
                 },

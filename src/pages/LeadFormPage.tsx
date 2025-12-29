@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useListing } from '@/hooks/useListings';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 
@@ -41,7 +43,28 @@ export default function LeadFormPage() {
   const [referenceNumber, setReferenceNumber] = React.useState('');
 
   const { data, isLoading: isListingLoading } = useListing(id);
+  const { data: settingsData } = useAppSettings();
+  const { priceType } = usePriceSettings();
   const listing = data?.listing;
+
+  const displayPrice = React.useMemo(() => {
+    if (!listing) return '';
+    const currency = settingsData?.displayCurrency || 'PLN';
+    let price = 0;
+
+    if (currency === 'EUR' && listing.broker_price_eur) {
+      price = listing.broker_price_eur;
+    } else if (listing.broker_price_pln) {
+      price = listing.broker_price_pln;
+    }
+
+    if (price > 0) {
+      const finalPrice = priceType === 'net' ? Math.round(price / 1.23) : price;
+      return `${finalPrice.toLocaleString('pl-PL')} ${currency}`;
+    }
+
+    return listing.price_display;
+  }, [listing, settingsData, priceType]);
 
   const {
     register,
@@ -190,7 +213,7 @@ export default function LeadFormPage() {
 
                   <div className="flex items-baseline gap-2 mt-4">
                     <span className="font-heading text-3xl font-black text-primary tracking-tighter">
-                      {listing.price_display}
+                      {displayPrice}
                     </span>
                   </div>
 

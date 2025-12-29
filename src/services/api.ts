@@ -165,6 +165,7 @@ export const listingsApi = {
 
             if (filters.sortBy) params.append('sortBy', filters.sortBy);
             if (filters.query) params.append('q', filters.query);
+            if (filters.currency) params.append('currency', filters.currency);
         }
 
         const response = await fetch(`${API_BASE_URL}/api/listings?${params.toString()}`);
@@ -191,6 +192,36 @@ export const listingsApi = {
 
     restoreListing: async (id: string, token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/listings/${id}/restore`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        return response.json();
+    }
+};
+
+// Settings API
+export const settingsApi = {
+    getSettings: async () => {
+        const response = await fetch(`${API_BASE_URL}/api/settings`);
+        return response.json();
+    },
+
+    updateSettings: async (settings: any, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/settings`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(settings)
+        });
+
+        return response.json();
+    },
+
+    recalculatePrices: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/settings/recalculate`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });

@@ -23,6 +23,12 @@ export function mapBackendListingToFrontend(backendListing: any): Listing {
         primary_image_url: backendListing.primaryImageUrl || '',
         image_urls: backendListing.imageUrls || [],
 
+        // Calculated Prices
+        dealer_price_net_pln: backendListing.dealerPriceNetPln,
+        dealer_price_net_eur: backendListing.dealerPriceNetEur,
+        broker_price_pln: backendListing.brokerPricePln,
+        broker_price_eur: backendListing.brokerPriceEur,
+
         // Flatten Dealer Info
         dealer_name: backendListing.dealer?.name || '',
         dealer_address_line1: backendListing.dealer?.addressLine1 || '',

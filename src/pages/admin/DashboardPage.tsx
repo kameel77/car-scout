@@ -2,10 +2,11 @@ import { CSVUploader } from '@/components/admin/CSVUploader';
 import { ImportHistory } from '@/components/admin/ImportHistory';
 import { PriceAnalyticsDashboard } from '@/components/admin/PriceAnalyticsDashboard';
 import { LeadList } from '@/components/admin/LeadList';
+import { SettingsModule } from '@/components/admin/SettingsModule';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, BarChart3, Upload, History, MessageSquare } from 'lucide-react';
+import { LogOut, BarChart3, Upload, History, MessageSquare, Settings } from 'lucide-react';
 
 export default function AdminDashboard() {
     const { user, logout } = useAuth();
@@ -40,7 +41,16 @@ export default function AdminDashboard() {
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="space-y-8">
+                <div className="space-y-12">
+                    {/* Settings Section */}
+                    <section>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Settings className="w-5 h-5 text-blue-600" />
+                            <h2 className="text-xl font-semibold">Ustawienia Platformy</h2>
+                        </div>
+                        <SettingsModule />
+                    </section>
+
                     {/* Lead Management Section */}
                     <section>
                         <div className="flex items-center gap-2 mb-4">

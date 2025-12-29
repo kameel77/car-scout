@@ -8,6 +8,10 @@ export interface Listing {
   version: string;
   vin: string;
   price_pln: number;
+  dealer_price_net_pln?: number;
+  dealer_price_net_eur?: number;
+  broker_price_pln?: number;
+  broker_price_eur?: number;
   price_display: string;
   production_year: number;
   mileage_km: number;
@@ -54,6 +58,10 @@ export interface Lead {
   listing_price: string;
   listing_year?: number;
   listing_mileage?: string;
+  dealer_price_net_pln?: number;
+  dealer_price_net_eur?: number;
+  broker_price_pln?: number;
+  broker_price_eur?: number;
   dealer_name?: string;
   dealer_address?: string;
   dealer_phone?: string;

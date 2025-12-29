@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+
 interface ListingCardProps {
   listing: Listing;
   index?: number;
@@ -14,6 +17,26 @@ interface ListingCardProps {
 
 export function ListingCard({ listing, index = 0 }: ListingCardProps) {
   const { t } = useTranslation();
+  const { data: settings } = useAppSettings();
+  const { priceType } = usePriceSettings();
+
+  const displayPrice = React.useMemo(() => {
+    const currency = settings?.displayCurrency || 'PLN';
+    let price = 0;
+
+    if (currency === 'EUR' && listing.broker_price_eur) {
+      price = listing.broker_price_eur;
+    } else if (listing.broker_price_pln) {
+      price = listing.broker_price_pln;
+    }
+
+    if (price > 0) {
+      const finalPrice = priceType === 'net' ? Math.round(price / 1.23) : price;
+      return `${finalPrice.toLocaleString('pl-PL')} ${currency}`;
+    }
+
+    return listing.price_display;
+  }, [listing, settings, priceType]);
 
   return (
     <motion.div
@@ -32,11 +55,11 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          
+
           {/* Price Badge */}
           <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md">
             <span className="font-heading text-lg font-bold text-foreground">
-              {listing.price_display}
+              {displayPrice}
             </span>
           </div>
         </div>

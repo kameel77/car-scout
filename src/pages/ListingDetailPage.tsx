@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useListing } from '@/hooks/useListings';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +21,28 @@ export default function ListingDetailPage() {
   const navigate = useNavigate();
 
   const { data, isLoading } = useListing(id);
+  const { data: settings } = useAppSettings();
+  const { priceType } = usePriceSettings();
   const listing = data?.listing;
+
+  const displayPrice = React.useMemo(() => {
+    if (!listing) return '';
+    const currency = settings?.displayCurrency || 'PLN';
+    let price = 0;
+
+    if (currency === 'EUR' && listing.broker_price_eur) {
+      price = listing.broker_price_eur;
+    } else if (listing.broker_price_pln) {
+      price = listing.broker_price_pln;
+    }
+
+    if (price > 0) {
+      const finalPrice = priceType === 'net' ? Math.round(price / 1.23) : price;
+      return `${finalPrice.toLocaleString('pl-PL')} ${currency}`;
+    }
+
+    return listing.price_display;
+  }, [listing, settings, priceType]);
 
   if (isLoading) {
     return (
@@ -77,7 +100,7 @@ export default function ListingDetailPage() {
               <h1 className="font-heading text-2xl font-bold text-foreground">{title}</h1>
               <div className="flex items-center gap-3 mt-2">
                 <span className="font-heading text-3xl font-bold text-accent">
-                  {listing.price_display}
+                  {displayPrice}
                 </span>
                 <Badge variant="secondary" className="text-xs">
                   {t('detail.lowestPrice')}
@@ -129,7 +152,7 @@ export default function ListingDetailPage() {
                 <h1 className="font-heading text-xl font-bold text-foreground">{title}</h1>
                 <div className="flex items-center gap-2">
                   <span className="font-heading text-3xl font-bold text-accent">
-                    {listing.price_display}
+                    {displayPrice}
                   </span>
                 </div>
                 <Badge variant="secondary" className="text-xs">
