@@ -21,12 +21,24 @@ const fastify = Fastify({
 await fastify.register(cors, {
     origin: (origin, cb) => {
         // allow multiple origins via comma-separated env
+        const originOnly = (value: string) => {
+            try {
+                const url = new URL(value.trim());
+                return `${url.protocol}//${url.host}`;
+            } catch {
+                // if it's already just origin or invalid, fall back to trimmed value without trailing slash
+                return value.trim().replace(/\/+$/, '');
+            }
+        };
+
         const allowedOrigins = [
             ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []),
             ...(process.env.VITE_API_URL ? process.env.VITE_API_URL.split(',') : []),
             'http://localhost:5173',
             'http://localhost:8080'
-        ].map(o => o.trim()).filter(Boolean);
+        ]
+            .map(originOnly)
+            .filter(Boolean);
 
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return cb(null, true);
@@ -37,7 +49,8 @@ await fastify.register(cors, {
         }
 
         // Strict check for allowed origins
-        if (allowedOrigins.includes(origin)) {
+        const normalizedOrigin = originOnly(origin);
+        if (allowedOrigins.includes(normalizedOrigin)) {
             return cb(null, true);
         }
 
