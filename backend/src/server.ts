@@ -130,3 +130,18 @@ declare module 'fastify' {
         // user is already defined by @fastify/jwt
     }
 }
+
+declare module '@fastify/jwt' {
+    interface FastifyJWT {
+        payload: {
+            userId: string;
+            email: string;
+            role: string;
+        };
+        user: {
+            userId: string;
+            email: string;
+            role: string;
+        };
+    }
+}
