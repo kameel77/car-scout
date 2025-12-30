@@ -1,6 +1,11 @@
 # Build stage
 FROM node:20-slim AS builder
 
+# Ensure openssl is available for Prisma engines
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssl && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Install dependencies including devDependencies for build
@@ -21,6 +26,11 @@ RUN npm run build 2>/dev/null || npx tsc
 
 # Production stage
 FROM node:20-slim AS runner
+
+# Ensure openssl is available for Prisma runtime
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssl && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
