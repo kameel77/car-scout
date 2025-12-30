@@ -48,6 +48,47 @@ export default function ListingDetailPage() {
   const [showArchiveModal, setShowArchiveModal] = React.useState(false);
   const autoRefreshTriggered = React.useRef(false);
 
+  // Auto-check images and refresh if broken (when enabled in settings)
+  React.useEffect(() => {
+    if (!listing || !settings?.autoRefreshImages || !token) return;
+    if (autoRefreshTriggered.current) return;
+
+    const urls = listing.image_urls || [];
+    if (urls.length === 0) return;
+
+    const checkImages = async () => {
+      let failed = 0;
+      await Promise.all(
+        urls.map((url) =>
+          new Promise<void>((resolve) => {
+            const img = new Image();
+            const timer = setTimeout(() => {
+              failed++;
+              resolve();
+            }, 4000);
+            img.onload = () => {
+              clearTimeout(timer);
+              resolve();
+            };
+            img.onerror = () => {
+              clearTimeout(timer);
+              failed++;
+              resolve();
+            };
+            img.src = url;
+          })
+        )
+      );
+
+      if (failed > 0) {
+        autoRefreshTriggered.current = true;
+        await handleRefreshImages();
+      }
+    };
+
+    checkImages();
+  }, [listing, settings?.autoRefreshImages, token]);
+
   const handleRefreshImages = async () => {
     if (!id || !token) return;
 
@@ -122,47 +163,6 @@ export default function ListingDetailPage() {
   }
 
   const title = `${listing.make} ${listing.model} ${listing.version}`;
-
-  // Auto-check images and refresh if broken (when enabled in settings)
-  React.useEffect(() => {
-    if (!listing || !settings?.autoRefreshImages || !token) return;
-    if (autoRefreshTriggered.current) return;
-
-    const urls = listing.image_urls || [];
-    if (urls.length === 0) return;
-
-    const checkImages = async () => {
-      let failed = 0;
-      await Promise.all(
-        urls.map((url) =>
-          new Promise<void>((resolve) => {
-            const img = new Image();
-            const timer = setTimeout(() => {
-              failed++;
-              resolve();
-            }, 4000);
-            img.onload = () => {
-              clearTimeout(timer);
-              resolve();
-            };
-            img.onerror = () => {
-              clearTimeout(timer);
-              failed++;
-              resolve();
-            };
-            img.src = url;
-          })
-        )
-      );
-
-      if (failed > 0) {
-        autoRefreshTriggered.current = true;
-        await handleRefreshImages();
-      }
-    };
-
-    checkImages();
-  }, [listing, settings?.autoRefreshImages, token]);
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
