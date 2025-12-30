@@ -66,8 +66,8 @@ export default function LeadFormPage() {
 
       const primaryLabel = formatPrice(primaryPrice, currency);
       const secondaryLabel = isNetPrimary
-        ? `(brutto: ${formatPrice(secondaryPrice, currency)})`
-        : `(netto: ${formatPrice(secondaryPrice, currency)})`;
+        ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
+        : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`;
 
       return { primaryLabel, secondaryLabel };
     }

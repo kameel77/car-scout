@@ -42,6 +42,11 @@ export const translations = {
         saveSearch: "Zapisz wyszukiwanie",
       },
 
+      // Search
+      search: {
+        placeholder: "Szukaj marki, modelu, typu nadwozia...",
+      },
+
       // Filters
       filters: {
         title: "Filtry",
@@ -128,6 +133,8 @@ export const translations = {
         year: "rok",
         dealer: "Dealer",
         location: "Lokalizacja",
+        net: "ceny netto",
+        gross: "ceny brutto",
       },
 
       // Listing detail
@@ -310,6 +317,11 @@ export const translations = {
         saveSearch: "Save search",
       },
 
+      // Search
+      search: {
+        placeholder: "Search by make, model, body type...",
+      },
+
       // Filters
       filters: {
         title: "Filters",
@@ -396,6 +408,8 @@ export const translations = {
         year: "year",
         dealer: "Dealer",
         location: "Location",
+        net: "net prices",
+        gross: "gross prices",
       },
 
       // Listing detail
@@ -578,6 +592,11 @@ export const translations = {
         saveSearch: "Suche speichern",
       },
 
+      // Search
+      search: {
+        placeholder: "Suchen nach Marke, Modell, Erstzulassung, Fahrzeugtypen...",
+      },
+
       // Filters
       filters: {
         title: "Filter",
@@ -664,6 +683,8 @@ export const translations = {
         year: "Jahr",
         dealer: "Händler",
         location: "Standort",
+        net: "Preise netto",
+        gross: "Preise brutto",
       },
 
       // Listing detail

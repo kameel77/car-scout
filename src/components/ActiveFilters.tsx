@@ -219,15 +219,15 @@ export function ActiveFilters({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2 flex-1">
-                {priceType === 'gross' ? 'Brutto' : 'Netto'}
+                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                Ceny Brutto
+                {t('listing.gross')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                Ceny Netto
+                {t('listing.net')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -276,15 +276,15 @@ export function ActiveFilters({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2 whitespace-nowrap">
-                {priceType === 'gross' ? 'Ceny Brutto' : 'Ceny Netto'}
+                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                Ceny Brutto
+                {t('listing.gross')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                Ceny Netto
+                {t('listing.net')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
