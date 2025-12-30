@@ -37,6 +37,8 @@ services:
       dockerfile: Dockerfile
     container_name: carscout-backend-prod
     restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-carscout_user}:${POSTGRES_PASSWORD:-carscout_password}@postgres:5432/${POSTGRES_DB:-carscout}
       REDIS_URL: redis://redis:6379
