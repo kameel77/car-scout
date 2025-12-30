@@ -20,8 +20,13 @@ const fastify = Fastify({
 // Register plugins
 await fastify.register(cors, {
     origin: (origin, cb) => {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const viteUrl = process.env.VITE_API_URL || 'http://localhost:8080';
+        // allow multiple origins via comma-separated env
+        const allowedOrigins = [
+            ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []),
+            ...(process.env.VITE_API_URL ? process.env.VITE_API_URL.split(',') : []),
+            'http://localhost:5173',
+            'http://localhost:8080'
+        ].map(o => o.trim()).filter(Boolean);
 
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return cb(null, true);
@@ -32,7 +37,7 @@ await fastify.register(cors, {
         }
 
         // Strict check for allowed origins
-        if (origin === frontendUrl || origin === viteUrl) {
+        if (allowedOrigins.includes(origin)) {
             return cb(null, true);
         }
 
