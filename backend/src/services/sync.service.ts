@@ -13,12 +13,12 @@ export async function syncListingsFromCSV(
     return await prisma.$transaction(async (tx) => {
         // 1. Get existing listings
         const existingListings = await tx.listing.findMany({
-            where: { isArchived: false },
             select: {
                 id: true,
                 vin: true,
                 listingId: true,
-                pricePln: true
+                pricePln: true,
+                isArchived: true
             }
         });
 
@@ -60,7 +60,8 @@ export async function syncListingsFromCSV(
 
         for (const listing of existingListings) {
             const key = listing.vin || listing.listingId;
-            if (key && !csvVINSet.has(key)) { // Only archive if we have a key to match against
+            // Archive only active listings that disappeared from CSV
+            if (!listing.isArchived && key && !csvVINSet.has(key)) {
                 toArchive.push(listing);
             }
         }
@@ -74,7 +75,12 @@ export async function syncListingsFromCSV(
             // Update listing
             await tx.listing.update({
                 where: { id: existing.id },
-                data: mapCSVToListingUpdate(csvRow)
+                data: {
+                    ...mapCSVToListingUpdate(csvRow),
+                    isArchived: false,
+                    archivedAt: null,
+                    archivedReason: null
+                }
             });
 
             // Track price change
