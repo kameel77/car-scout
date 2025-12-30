@@ -3,6 +3,7 @@ import { ImportHistory } from '@/components/admin/ImportHistory';
 import { PriceAnalyticsDashboard } from '@/components/admin/PriceAnalyticsDashboard';
 import { LeadList } from '@/components/admin/LeadList';
 import { SettingsModule } from '@/components/admin/SettingsModule';
+import { AdminNav } from '@/components/admin/AdminNav';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -21,8 +22,8 @@ export default function AdminDashboard() {
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             {/* Header */}
             <header className="bg-white border-b shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
                         <div>
                             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                 Car Scout Admin
@@ -31,10 +32,13 @@ export default function AdminDashboard() {
                                 Welcome back, {user?.name || user?.email}
                             </p>
                         </div>
-                        <Button onClick={handleLogout} variant="outline">
-                            <LogOut className="w-4 h-4 mr-2" />
-                            Logout
-                        </Button>
+                        <div className="flex items-center gap-3">
+                            <AdminNav />
+                            <Button onClick={handleLogout} variant="outline">
+                                <LogOut className="w-4 h-4 mr-2" />
+                                Logout
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -42,14 +46,16 @@ export default function AdminDashboard() {
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="space-y-12">
-                    {/* Settings Section */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-4">
-                            <Settings className="w-5 h-5 text-blue-600" />
-                            <h2 className="text-xl font-semibold">Ustawienia Platformy</h2>
-                        </div>
-                        <SettingsModule />
-                    </section>
+                    {/* Settings Section (Admin only) */}
+                    {user?.role === 'admin' && (
+                        <section>
+                            <div className="flex items-center gap-2 mb-4">
+                                <Settings className="w-5 h-5 text-blue-600" />
+                                <h2 className="text-xl font-semibold">Ustawienia Platformy</h2>
+                            </div>
+                            <SettingsModule />
+                        </section>
+                    )}
 
                     {/* Lead Management Section */}
                     <section>
@@ -60,14 +66,16 @@ export default function AdminDashboard() {
                         <LeadList />
                     </section>
 
-                    {/* CSV Upload Section */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-4">
-                            <Upload className="w-5 h-5 text-blue-600" />
-                            <h2 className="text-xl font-semibold">CSV Import</h2>
-                        </div>
-                        <CSVUploader />
-                    </section>
+                    {/* CSV Upload Section (Admin only) */}
+                    {user?.role === 'admin' && (
+                        <section>
+                            <div className="flex items-center gap-2 mb-4">
+                                <Upload className="w-5 h-5 text-blue-600" />
+                                <h2 className="text-xl font-semibold">CSV Import</h2>
+                            </div>
+                            <CSVUploader />
+                        </section>
+                    )}
 
                     {/* Import History Section */}
                     <section>

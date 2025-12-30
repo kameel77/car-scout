@@ -1,3 +1,6 @@
+import type { TranslationEntry, TranslationPayload } from '@/types/translations';
+import type { User, UserPayload } from '@/types/user';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Auth API
@@ -241,5 +244,113 @@ export const settingsApi = {
         });
 
         return response.json();
+    }
+};
+
+// Translations API
+export const translationsApi = {
+    list: async (
+        params?: { category?: string; search?: string },
+        token?: string
+    ): Promise<{ translations: TranslationEntry[] }> => {
+        const queryParams = new URLSearchParams();
+        if (params?.category) queryParams.append('category', params.category);
+        if (params?.search) queryParams.append('search', params.search);
+
+        const response = await fetch(`${API_BASE_URL}/api/translations?${queryParams.toString()}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch translations');
+        }
+
+        return response.json();
+    },
+
+    save: async (payload: TranslationPayload, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/translations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to save translation');
+        }
+
+        return response.json();
+    },
+
+    delete: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/translations/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete translation');
+        }
+
+        return response.json();
+    }
+};
+
+// Users API
+export const usersApi = {
+    list: async (token: string): Promise<{ users: User[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/users`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch users');
+        }
+        return response.json();
+    },
+    create: async (payload: UserPayload, token: string): Promise<{ user: User }> => {
+        const response = await fetch(`${API_BASE_URL}/api/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to create user');
+        }
+        return data;
+    },
+    update: async (id: string, payload: UserPayload, token: string): Promise<{ user: User }> => {
+        const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to update user');
+        }
+        return data;
+    },
+    delete: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to delete user');
+        }
+        return data;
     }
 };

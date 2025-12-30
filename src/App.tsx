@@ -11,8 +11,11 @@ import ListingDetailPage from "./pages/ListingDetailPage";
 import LeadFormPage from "./pages/LeadFormPage";
 import LoginPage from "./pages/admin/LoginPage";
 import AdminDashboard from "./pages/admin/DashboardPage";
+import TranslationsPage from "./pages/admin/TranslationsPage";
+import UsersPage from "./pages/admin/UsersPage";
 import NotFound from "./pages/NotFound";
 import { LanguageSync } from "./components/LanguageSync";
+import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
 import './i18n';
 
 const queryClient = new QueryClient();
@@ -22,6 +25,7 @@ const App = () => (
     <AuthProvider>
       <PriceSettingsProvider>
         <TooltipProvider>
+          <DynamicTranslationsLoader />
           <LanguageSync />
           <Toaster />
           <Sonner />
@@ -38,8 +42,24 @@ const App = () => (
               <Route
                 path="/admin/dashboard"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
                     <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/translations"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <TranslationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <UsersPage />
                   </ProtectedRoute>
                 }
               />

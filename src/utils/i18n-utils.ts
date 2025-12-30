@@ -36,21 +36,24 @@ const valueMap: Record<string, string> = {
     'minivan': 'body.minivan',
 };
 
+export function getTechnicalTranslationKey(category: string, value: string | null | undefined): string {
+    if (!value) return '';
+    const normalizedValue = value.toLowerCase().trim();
+    return valueMap[normalizedValue] || `${category}.${normalizedValue}`;
+}
+
 /**
  * Translates a technical value (e.g., fuel type, transmission) from Polish database value
  * to the currently selected language.
  */
 export function translateTechnicalValue(category: string, value: string | null | undefined, t: TFunction): string {
-    if (!value) return '';
-
-    const normalizedValue = value.toLowerCase().trim();
-    const key = valueMap[normalizedValue] || `${category}.${normalizedValue}`;
+    const key = getTechnicalTranslationKey(category, value);
 
     // Try to translate. If key doesn't exist in i18n, t() returns the key itself.
     // In that case, we fall back to the original value if it doesn't look like a key.
     const translated = t(key);
     if (translated === key) {
-        return value;
+        return value || '';
     }
 
     return translated;

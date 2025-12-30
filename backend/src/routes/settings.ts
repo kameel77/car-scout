@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { authorizeRoles } from '../middleware/authorize.js';
 
 async function recalculateAllPrices(fastify: FastifyInstance) {
     const settings = await fastify.prisma.appSettings.findUnique({
@@ -59,7 +60,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
     // Update settings
     fastify.post('/api/settings', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         const data = request.body as any;
 
@@ -91,7 +92,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
     // Recalculate all listing prices based on current settings (Manual Trigger)
     fastify.post('/api/settings/recalculate', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         const updatedCount = await recalculateAllPrices(fastify);
 

@@ -37,6 +37,7 @@ export default function ListingDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, token } = useAuth();
+  const canManage = user?.role === 'admin' || user?.role === 'manager';
 
   const { data, isLoading } = useListing(id);
   const { data: settings } = useAppSettings();
@@ -241,7 +242,7 @@ export default function ListingDetailPage() {
                   </Button>
                 </div>
 
-                {user?.role === 'admin' && (
+                {canManage && (
                   <div className="pt-2 border-t mt-4">
                     <Button
                       variant="outline"
@@ -258,32 +259,34 @@ export default function ListingDetailPage() {
               </motion.div>
 
               {/* Dealer Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-card rounded-xl shadow-card p-6 space-y-4"
-              >
-                <h3 className="font-heading font-semibold">{t('detail.dealerInfo')}</h3>
-                <div>
-                  <p className="font-medium text-foreground">{listing.dealer_name}</p>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                    <MapPin className="h-4 w-4" />
-                    <span>{listing.dealer_address_line1}, {listing.dealer_city}</span>
-                  </div>
-                </div>
-                {listing.google_rating && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-warning">
-                      <Star className="h-4 w-4 fill-current" />
-                      <span className="font-medium">{listing.google_rating}</span>
+              {canManage && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-card rounded-xl shadow-card p-6 space-y-4"
+                >
+                  <h3 className="font-heading font-semibold">{t('detail.dealerInfo')}</h3>
+                  <div>
+                    <p className="font-medium text-foreground">{listing.dealer_name}</p>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4" />
+                      <span>{listing.dealer_address_line1}, {listing.dealer_city}</span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      ({listing.google_reviews_count} opinii)
-                    </span>
                   </div>
-                )}
-              </motion.div>
+                  {listing.google_rating && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-warning">
+                        <Star className="h-4 w-4 fill-current" />
+                        <span className="font-medium">{listing.google_rating}</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        ({listing.google_reviews_count} opinii)
+                      </span>
+                    </div>
+                  )}
+                </motion.div>
+              )}
             </div>
           </div>
         </div>
