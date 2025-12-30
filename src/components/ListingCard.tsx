@@ -37,9 +37,8 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
       const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
-      const secondaryLabel = isNetPrimary
-        ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
-        : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`;
+      // Secondary price intentionally omitted on listing cards (kept in detail view)
+      const secondaryLabel = null;
 
       return { primaryLabel, secondaryLabel };
     }
