@@ -12,6 +12,7 @@ import LeadFormPage from "./pages/LeadFormPage";
 import LoginPage from "./pages/admin/LoginPage";
 import AdminDashboard from "./pages/admin/DashboardPage";
 import NotFound from "./pages/NotFound";
+import { LanguageSync } from "./components/LanguageSync";
 import './i18n';
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
     <AuthProvider>
       <PriceSettingsProvider>
         <TooltipProvider>
+          <LanguageSync />
           <Toaster />
           <Sonner />
           <BrowserRouter>

@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { refreshListingImages } from '../services/image-refresh.service.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
     // Get filter options (makes and models)
@@ -120,6 +121,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' } : undefined,
                 transmission: transmissions ? { in: transmissions, mode: 'insensitive' } : undefined,
                 bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' } : undefined,
+                isArchived: includeArchived === 'true' ? undefined : false,
             },
             include: {
                 dealer: true
@@ -188,5 +190,23 @@ export async function listingRoutes(fastify: FastifyInstance) {
         });
 
         return { listing };
+    });
+
+    // Refresh images from source (admin only)
+    fastify.post('/api/listings/:id/refresh-images', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        try {
+            const listing = await refreshListingImages(fastify.prisma, id);
+            return { success: true, listing };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.code(400).send({
+                error: 'Refresh failed',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     });
 }

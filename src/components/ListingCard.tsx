@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { formatPrice } from '@/utils/formatters';
 
 interface ListingCardProps {
   listing: Listing;
@@ -20,22 +21,30 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
   const { data: settings } = useAppSettings();
   const { priceType } = usePriceSettings();
 
-  const displayPrice = React.useMemo(() => {
+  const priceInfo = React.useMemo(() => {
     const currency = settings?.displayCurrency || 'PLN';
-    let price = 0;
+    let basePrice = 0;
 
     if (currency === 'EUR' && listing.broker_price_eur) {
-      price = listing.broker_price_eur;
+      basePrice = listing.broker_price_eur;
     } else if (listing.broker_price_pln) {
-      price = listing.broker_price_pln;
+      basePrice = listing.broker_price_pln;
     }
 
-    if (price > 0) {
-      const finalPrice = priceType === 'net' ? Math.round(price / 1.23) : price;
-      return `${finalPrice.toLocaleString('pl-PL')} ${currency}`;
+    if (basePrice > 0) {
+      const isNetPrimary = priceType === 'net';
+      const primaryPrice = isNetPrimary ? Math.round(basePrice / 1.23) : basePrice;
+      const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
+
+      const primaryLabel = formatPrice(primaryPrice, currency);
+      const secondaryLabel = isNetPrimary
+        ? `(brutto: ${formatPrice(secondaryPrice, currency)})`
+        : `(netto: ${formatPrice(secondaryPrice, currency)})`;
+
+      return { primaryLabel, secondaryLabel };
     }
 
-    return listing.price_display;
+    return { primaryLabel: listing.price_display, secondaryLabel: null };
   }, [listing, settings, priceType]);
 
   return (
@@ -57,10 +66,15 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
           {/* Price Badge */}
-          <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md">
+          <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md flex flex-col md:flex-row md:items-baseline md:gap-2 items-end md:items-baseline">
             <span className="font-heading text-lg font-bold text-foreground">
-              {displayPrice}
+              {priceInfo.primaryLabel}
             </span>
+            {priceInfo.secondaryLabel && (
+              <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+                {priceInfo.secondaryLabel}
+              </span>
+            )}
           </div>
         </div>
 

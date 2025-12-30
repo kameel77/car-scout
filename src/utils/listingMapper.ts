@@ -41,11 +41,37 @@ export function mapBackendListingToFrontend(backendListing: any): Listing {
 
         // Specifications & Equipment
         specifications: (() => {
-            if (!backendListing.specsJson) return [];
-            const parsed = typeof backendListing.specsJson === 'string'
-                ? JSON.parse(backendListing.specsJson)
-                : backendListing.specsJson;
-            return Array.isArray(parsed) ? parsed : [];
+            const specs: { label: string; value: string }[] = [];
+
+            // 1. Start with data from specsJson if it exists
+            if (backendListing.specsJson) {
+                const parsed = typeof backendListing.specsJson === 'string'
+                    ? JSON.parse(backendListing.specsJson)
+                    : backendListing.specsJson;
+                if (Array.isArray(parsed)) {
+                    specs.push(...parsed);
+                }
+            }
+
+            // 2. Supplement with individual fields if not already present in specs
+            const addSpecIfMissing = (label: string, value: string | number | undefined | null) => {
+                if (value === undefined || value === null || value === '') return;
+                const exists = specs.some(s => s.label.toLowerCase() === label.toLowerCase());
+                if (!exists) {
+                    specs.push({ label, value: value.toString() });
+                }
+            };
+
+            addSpecIfMissing('specs.color', backendListing.color);
+            addSpecIfMissing('specs.bodyType', backendListing.bodyType);
+            addSpecIfMissing('specs.doors', backendListing.doors);
+            addSpecIfMissing('specs.seats', backendListing.seats);
+            addSpecIfMissing('specs.paintType', backendListing.paintType);
+            addSpecIfMissing('specs.vin', backendListing.vin);
+            addSpecIfMissing('specs.firstRegistration', backendListing.firstRegistrationDate);
+            addSpecIfMissing('specs.registrationNumber', backendListing.registrationNumber);
+
+            return specs;
         })(),
 
         equipment: {

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/collapsible';
 // Removed mock imports
 import { cn } from '@/lib/utils';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 export interface FilterState {
   makes: string[];
@@ -234,6 +235,8 @@ export function FilterPanel({
   availableModels: allModels,
 }: FilterPanelProps) {
   const { t } = useTranslation();
+  const { data: settings } = useAppSettings();
+  const currency = settings?.displayCurrency || 'PLN';
 
   const makeOptions = availableMakes
     .map((m) => ({ value: m, label: m }))
@@ -360,8 +363,8 @@ export function FilterPanel({
             toValue={filters.priceTo}
             onFromChange={(v) => updateFilter('priceFrom', v)}
             onToChange={(v) => updateFilter('priceTo', v)}
-            fromPlaceholder="0 PLN"
-            toPlaceholder="500 000 PLN"
+            fromPlaceholder={`0 ${currency}`}
+            toPlaceholder={`500 000 ${currency}`}
           />
         </FilterSection>
 

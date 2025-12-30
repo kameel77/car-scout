@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingDown, TrendingUp, Activity } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { analyticsApi } from '@/services/api';
+import { formatNumber } from '@/utils/formatters';
 
 export function PriceAnalyticsDashboard() {
     const [days, setDays] = useState(30);
@@ -143,10 +144,10 @@ export function PriceAnalyticsDashboard() {
                                     <div className="flex items-center gap-4">
                                         <div className="text-right">
                                             <p className="text-sm text-gray-600 line-through">
-                                                {change.old_price?.toLocaleString()} PLN
+                                                {formatNumber(change.old_price)} PLN
                                             </p>
                                             <p className="font-bold">
-                                                {change.new_price?.toLocaleString()} PLN
+                                                {formatNumber(change.new_price)} PLN
                                             </p>
                                         </div>
                                         <div className={`flex items-center gap-1 ${change.change_percent < 0 ? 'text-green-600' : 'text-red-600'

@@ -23,6 +23,7 @@ import {
     DollarSign,
     Search
 } from 'lucide-react';
+import { formatNumber } from '@/utils/formatters';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -286,9 +287,9 @@ export function LeadList() {
                                                     <span className="text-[10px] font-bold uppercase text-amber-600/70">Marża brokera (netto)</span>
                                                     <span className="text-sm font-bold text-amber-700">
                                                         {selectedLead.broker_price_pln && selectedLead.dealer_price_net_pln ? (
-                                                            `+ ${(Math.round(selectedLead.broker_price_pln / 1.23) - selectedLead.dealer_price_net_pln).toLocaleString('pl-PL')} PLN`
+                                                            `+ ${formatNumber(Math.round(selectedLead.broker_price_pln / 1.23) - selectedLead.dealer_price_net_pln)} PLN`
                                                         ) : selectedLead.broker_price_eur && selectedLead.dealer_price_net_eur ? (
-                                                            `+ ${(Math.round(selectedLead.broker_price_eur / 1.23) - selectedLead.dealer_price_net_eur).toLocaleString('pl-PL')} EUR`
+                                                            `+ ${formatNumber(Math.round(selectedLead.broker_price_eur / 1.23) - selectedLead.dealer_price_net_eur)} EUR`
                                                         ) : '---'}
                                                     </span>
                                                 </div>

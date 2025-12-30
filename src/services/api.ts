@@ -197,6 +197,20 @@ export const listingsApi = {
         });
 
         return response.json();
+    },
+
+    refreshImages: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/refresh-images`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Refresh failed');
+        }
+
+        return response.json();
     }
 };
 

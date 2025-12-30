@@ -180,3 +180,18 @@ model AppSettings {
 
   @@map("app_settings")
 }
+
+model Translation {
+  id          String   @id @default(cuid())
+  category    String   // 'fuel', 'transmission', 'body', 'feature', etc.
+  sourceValue String   @unique @map("source_value") // Original value (e.g. in Polish)
+  pl          String?
+  en          String?
+  de          String?
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("translations")
+}

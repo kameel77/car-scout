@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { translateFeature } from '@/utils/i18n-utils';
 
 interface EquipmentSection {
   audioMultimedia: string[];
@@ -68,7 +69,7 @@ function EquipmentSectionComponent({
         <div className="equipment-list">
           {items.map((item, i) => (
             <div key={i} className="equipment-item">
-              {item}
+              {translateFeature(item, t)}
             </div>
           ))}
         </div>

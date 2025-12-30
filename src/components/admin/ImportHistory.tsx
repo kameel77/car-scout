@@ -3,6 +3,7 @@ import { History, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { importApi } from '@/services/api';
+import { formatNumber } from '@/utils/formatters';
 
 interface ImportLog {
     id: string;
@@ -90,19 +91,19 @@ export function ImportHistory() {
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-2">
                                             <div>
                                                 <span className="text-gray-600">Total:</span>
-                                                <span className="ml-1 font-semibold">{log.totalRows}</span>
+                                                <span className="ml-1 font-semibold">{formatNumber(log.totalRows)}</span>
                                             </div>
                                             <div>
                                                 <span className="text-gray-600">Inserted:</span>
-                                                <span className="ml-1 font-semibold text-green-600">{log.inserted}</span>
+                                                <span className="ml-1 font-semibold text-green-600">{formatNumber(log.inserted)}</span>
                                             </div>
                                             <div>
                                                 <span className="text-gray-600">Updated:</span>
-                                                <span className="ml-1 font-semibold text-blue-600">{log.updated}</span>
+                                                <span className="ml-1 font-semibold text-blue-600">{formatNumber(log.updated)}</span>
                                             </div>
                                             <div>
                                                 <span className="text-gray-600">Archived:</span>
-                                                <span className="ml-1 font-semibold text-orange-600">{log.archived}</span>
+                                                <span className="ml-1 font-semibold text-orange-600">{formatNumber(log.archived)}</span>
                                             </div>
                                         </div>
 

@@ -18,6 +18,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
+import { formatPrice, formatNumber } from '@/utils/formatters';
 
 const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
@@ -47,23 +48,31 @@ export default function LeadFormPage() {
   const { priceType } = usePriceSettings();
   const listing = data?.listing;
 
-  const displayPrice = React.useMemo(() => {
-    if (!listing) return '';
+  const priceInfo = React.useMemo(() => {
+    if (!listing) return { primaryLabel: '', secondaryLabel: null };
     const currency = settingsData?.displayCurrency || 'PLN';
-    let price = 0;
+    let basePrice = 0;
 
     if (currency === 'EUR' && listing.broker_price_eur) {
-      price = listing.broker_price_eur;
+      basePrice = listing.broker_price_eur;
     } else if (listing.broker_price_pln) {
-      price = listing.broker_price_pln;
+      basePrice = listing.broker_price_pln;
     }
 
-    if (price > 0) {
-      const finalPrice = priceType === 'net' ? Math.round(price / 1.23) : price;
-      return `${finalPrice.toLocaleString('pl-PL')} ${currency}`;
+    if (basePrice > 0) {
+      const isNetPrimary = priceType === 'net';
+      const primaryPrice = isNetPrimary ? Math.round(basePrice / 1.23) : basePrice;
+      const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
+
+      const primaryLabel = formatPrice(primaryPrice, currency);
+      const secondaryLabel = isNetPrimary
+        ? `(brutto: ${formatPrice(secondaryPrice, currency)})`
+        : `(netto: ${formatPrice(secondaryPrice, currency)})`;
+
+      return { primaryLabel, secondaryLabel };
     }
 
-    return listing.price_display;
+    return { primaryLabel: listing.price_display, secondaryLabel: null };
   }, [listing, settingsData, priceType]);
 
   const {
@@ -211,16 +220,21 @@ export default function LeadFormPage() {
                   </h3>
                   <p className="text-muted-foreground text-sm line-clamp-1">{listing.version}</p>
 
-                  <div className="flex items-baseline gap-2 mt-4">
+                  <div className="flex flex-col items-start mt-4">
                     <span className="font-heading text-3xl font-black text-primary tracking-tighter">
-                      {displayPrice}
+                      {priceInfo.primaryLabel}
                     </span>
+                    {priceInfo.secondaryLabel && (
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {priceInfo.secondaryLabel}
+                      </span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-6 border-t mt-6">
                     <div>
                       <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{t('listing.mileage', 'Przebieg')}</p>
-                      <p className="font-semibold text-sm">{listing.mileage_km.toLocaleString()} km</p>
+                      <p className="font-semibold text-sm">{formatNumber(listing.mileage_km)} km</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{t('listing.location', 'Lokalizacja')}</p>
