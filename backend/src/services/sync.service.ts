@@ -186,5 +186,8 @@ export async function syncListingsFromCSV(
             duration,
             importLogId: importLog.id
         };
+    }, {
+        timeout: 30000, // allow more time for larger CSV imports
+        maxWait: 5000
     });
 }
