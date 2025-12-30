@@ -71,7 +71,8 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                 displayCurrency: data.displayCurrency,
                 eurExRate: parseFloat(data.eurExRate),
                 brokerFeePctPln: parseFloat(data.brokerFeePctPln),
-                brokerFeePctEur: parseFloat(data.brokerFeePctEur)
+                brokerFeePctEur: parseFloat(data.brokerFeePctEur),
+                autoRefreshImages: Boolean(data.autoRefreshImages)
             },
             create: {
                 id: 'default',
@@ -79,7 +80,8 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                 displayCurrency: data.displayCurrency || 'PLN',
                 eurExRate: parseFloat(data.eurExRate) || 4.30,
                 brokerFeePctPln: parseFloat(data.brokerFeePctPln) || 3.5,
-                brokerFeePctEur: parseFloat(data.brokerFeePctEur) || 3.5
+                brokerFeePctEur: parseFloat(data.brokerFeePctEur) || 3.5,
+                autoRefreshImages: Boolean(data.autoRefreshImages)
             }
         });
 

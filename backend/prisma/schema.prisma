@@ -175,6 +175,7 @@ model AppSettings {
   eurExRate           Float    @default(4.30) @map("eur_ex_rate")
   brokerFeePctPln     Float    @default(3.5) @map("broker_fee_pct_pln")
   brokerFeePctEur     Float    @default(3.5) @map("broker_fee_pct_eur")
+  autoRefreshImages   Boolean  @default(false) @map("auto_refresh_images")
   
   updatedAt           DateTime @updatedAt @map("updated_at")
 

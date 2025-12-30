@@ -32,7 +32,7 @@ export function SettingsModule() {
         try {
             setLoading(true);
             const data = await settingsApi.getSettings();
-            setSettings(data);
+            setSettings({ ...data, autoRefreshImages: Boolean(data.autoRefreshImages) });
         } catch (error) {
             toast.error('Błąd podczas pobierania ustawień');
         } finally {
@@ -126,6 +126,26 @@ export function SettingsModule() {
                                 <SelectItem value="EUR">EUR (Euro)</SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    {/* Auto image refresh */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-bold">Automatyczne sprawdzanie zdjęć</Label>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border bg-slate-50">
+                            <Checkbox
+                                id="auto-refresh-images"
+                                checked={Boolean(settings.autoRefreshImages)}
+                                onCheckedChange={(val) => setSettings({ ...settings, autoRefreshImages: Boolean(val) })}
+                            />
+                            <div className="space-y-1">
+                                <label htmlFor="auto-refresh-images" className="font-medium cursor-pointer">
+                                    Sprawdzaj zdjęcia po otwarciu oferty
+                                </label>
+                                <p className="text-xs text-slate-600">
+                                    Przy braku ładujących się zdjęć spróbujemy je automatycznie odświeżyć (wymaga zalogowania).
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="pt-4 flex justify-end">
