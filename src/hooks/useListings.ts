@@ -8,23 +8,31 @@ import { useAppSettings } from './useAppSettings';
 interface ListingsResponse {
     listings: Listing[];
     count: number;
+    page?: number;
+    perPage?: number;
+    totalPages?: number;
 }
 
-export function useListings(filters: FilterState, sortBy: string) {
+export function useListings(filters: FilterState, sortBy: string, page: number, perPage: number) {
     const { data: settings } = useAppSettings();
     const currency = settings?.displayCurrency || 'PLN';
 
     return useQuery<ListingsResponse>({
-        queryKey: ['listings', filters, sortBy, currency, settings?.updatedAt],
+        queryKey: ['listings', filters, sortBy, page, perPage, currency, settings?.updatedAt],
         queryFn: async () => {
             const data = await listingsApi.getListings({
                 ...filters,
                 sortBy,
-                currency
+                currency,
+                page,
+                perPage
             });
             return {
                 listings: data.listings.map(mapBackendListingToFrontend),
-                count: data.count
+                count: data.count,
+                page: data.page,
+                perPage: data.perPage,
+                totalPages: data.totalPages
             };
         }
     });
