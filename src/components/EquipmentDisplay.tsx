@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { translateFeature } from '@/utils/i18n-utils';
 
 interface EquipmentSection {
   audioMultimedia: string[];
@@ -28,11 +29,11 @@ interface EquipmentDisplayProps {
 }
 
 const sectionConfig = [
-  { key: 'audioMultimedia', icon: Music, labelKey: 'equipment.audioMultimedia' },
-  { key: 'safety', icon: Shield, labelKey: 'equipment.safety' },
   { key: 'comfort', icon: Sofa, labelKey: 'equipment.comfort' },
-  { key: 'performance', icon: Gauge, labelKey: 'equipment.performance' },
+  { key: 'safety', icon: Shield, labelKey: 'equipment.safety' },
+  { key: 'audioMultimedia', icon: Music, labelKey: 'equipment.audioMultimedia' },
   { key: 'driverAssist', icon: Radio, labelKey: 'equipment.driverAssist' },
+  { key: 'performance', icon: Gauge, labelKey: 'equipment.performance' },
   { key: 'other', icon: MoreHorizontal, labelKey: 'equipment.other' },
 ] as const;
 
@@ -68,7 +69,7 @@ function EquipmentSectionComponent({
         <div className="equipment-list">
           {items.map((item, i) => (
             <div key={i} className="equipment-item">
-              {item}
+              {translateFeature(item, t)}
             </div>
           ))}
         </div>

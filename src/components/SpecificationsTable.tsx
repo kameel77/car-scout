@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { translateTechnicalValue } from '@/utils/i18n-utils';
 
 interface Specification {
   label: string;
@@ -47,6 +48,11 @@ export function SpecificationsTable({
                 spec.label.toLowerCase().includes(l.toLowerCase())
               );
 
+              // Extract category from label if it follows 'specs.category' format
+              const categoryMatch = spec.label.match(/^specs\.(\w+)/);
+              const category = categoryMatch ? categoryMatch[1] : 'specs';
+              const translatedValue = translateTechnicalValue(category, spec.value, t);
+
               return (
                 <motion.tr
                   key={index}
@@ -59,7 +65,7 @@ export function SpecificationsTable({
                   )}
                 >
                   <TableCell className="font-medium text-muted-foreground w-1/2 py-3">
-                    {spec.label}
+                    {t(spec.label)}
                   </TableCell>
                   <TableCell
                     className={cn(
@@ -67,7 +73,7 @@ export function SpecificationsTable({
                       isImportant && 'font-semibold text-foreground'
                     )}
                   >
-                    {spec.value}
+                    {translatedValue}
                   </TableCell>
                 </motion.tr>
               );

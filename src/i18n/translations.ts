@@ -26,7 +26,7 @@ export const translations = {
         found: "Znaleziono",
         offers: "ofert",
       },
-      
+
       // Navigation
       nav: {
         home: "Strona główna",
@@ -34,14 +34,19 @@ export const translations = {
         favorites: "Ulubione",
         contact: "Kontakt",
       },
-      
+
       // Header
       header: {
         searchPlaceholder: "Szukaj marki, modelu...",
         language: "Język",
         saveSearch: "Zapisz wyszukiwanie",
       },
-      
+
+      // Search
+      search: {
+        placeholder: "Szukaj marki, modelu, typu nadwozia...",
+      },
+
       // Filters
       filters: {
         title: "Filtry",
@@ -71,7 +76,7 @@ export const translations = {
         priceFrom: "Cena od",
         priceTo: "Cena do",
       },
-      
+
       // Fuel types
       fuel: {
         petrol: "Benzyna",
@@ -83,20 +88,20 @@ export const translations = {
         lpg: "LPG",
         cng: "CNG",
       },
-      
+
       // Transmission
       transmission: {
         manual: "Manualna",
         automatic: "Automatyczna",
       },
-      
+
       // Drive
       drive: {
         fwd: "Przedni (FWD)",
         rwd: "Tylny (RWD)",
         awd: "4x4 / AWD",
       },
-      
+
       // Body types
       body: {
         sedan: "Sedan",
@@ -109,7 +114,7 @@ export const translations = {
         pickup: "Pickup",
         minivan: "Minivan",
       },
-      
+
       // Sorting
       sort: {
         title: "Sortuj",
@@ -118,7 +123,7 @@ export const translations = {
         lowestMileage: "Najmniejszy przebieg",
         newest: "Najmłodszy rocznik",
       },
-      
+
       // Listing card
       listing: {
         viewOffer: "Zobacz ofertę",
@@ -128,8 +133,10 @@ export const translations = {
         year: "rok",
         dealer: "Dealer",
         location: "Lokalizacja",
+        net: "ceny netto",
+        gross: "ceny brutto",
       },
-      
+
       // Listing detail
       detail: {
         askAbout: "Zapytaj o ofertę",
@@ -146,7 +153,7 @@ export const translations = {
         registrationNumber: "Numer rejestracyjny",
         lowestPrice: "Najniższa cena z 30 dni",
       },
-      
+
       // Equipment sections
       equipment: {
         audioMultimedia: "Audio i multimedia",
@@ -157,7 +164,7 @@ export const translations = {
         other: "Inne",
         noItems: "Brak elementów w tej kategorii",
       },
-      
+
       // Lead form
       lead: {
         title: "Zapytaj o ofertę",
@@ -173,47 +180,100 @@ export const translations = {
         contactEmail: "E-mail",
         contactPhone: "Telefon",
         message: "Wiadomość",
-        messagePlaceholder: "Dzień dobry, proszę o kontakt w sprawie oferty",
+        messagePlaceholder: "O co chcesz zapytać?",
         messageDefault: "Dzień dobry, proszę o kontakt w sprawie oferty {{make}} {{model}} {{version}} ({{listingId}}).",
-        consentMarketing: "Wyrażam zgodę na kontakt handlowy",
-        consentPrivacy: "Akceptuję politykę prywatności",
+        consentMarketing: "Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń. *",
+        consentPrivacy: "Oświadczam, że zapoznałem się z Regulaminem oraz Polityką Prywatności i akceptuję ich postanowienia. Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania. *",
         submit: "Wyślij zapytanie",
         sending: "Wysyłanie...",
-        successTitle: "Dziękujemy!",
-        successMessage: "Twoje zapytanie zostało wysłane. Dealer skontaktuje się z Tobą wkrótce.",
+        successTitle: "Zgłoszenie wysłane!",
+        successMessage: "Dziękujemy za zainteresowanie. Nasz doradca skontaktuje się z Tobą wkrótce.",
         referenceNumber: "Numer zgłoszenia",
-        backToResults: "Wróć do wyników",
-        backToOffer: "Wróć do oferty",
-        error: "Wystąpił błąd. Spróbuj ponownie.",
+        backToResults: "Wróć do wyszukiwarki",
+        backToOffer: "Wróć do ogłoszenia",
+        error: "Wystąpił błąd podczas wysyłania zgłoszenia. Spróbuj ponownie później.",
         retry: "Spróbuj ponownie",
+        fastQuestions: "Szybkie pytania",
+        trust: {
+          fastResponse: "Szybka odpowiedź",
+          averageTime: "Średni czas odpowiedzi: ~45 minut",
+          secureTitle: "Bezpieczny kontakt",
+          secureDesc: "Twoje dane są chronione i użyte tylko do tego zapytania.",
+        },
+        quickInquiry: {
+          availability: "Czy auto jest dostępne?",
+          financing: "Oferta finansowania",
+          history: "Raport historii i VIN",
+          expert: "Kontakt z ekspertem",
+          message: {
+            availability: "Dzień dobry, czy oferta na ten model jest aktualna i czy auto jest dostępne od ręki?",
+            financing: "Interesuje mnie oferta leasingu lub najmu długoterminowego dla tego auta. Proszę o przygotowanie symulacji.",
+            history: "Poproszę o przesłanie numeru VIN oraz raportu historii pojazdu dla tego modelu.",
+            expert: "Chciałbym skonsultować specyfikację i warunki zakupu tego pojazdu z Państwa doradcą.",
+          }
+        }
       },
-      
+
       // Validation
       validation: {
         required: "To pole jest wymagane",
         invalidEmail: "Nieprawidłowy adres e-mail",
-        invalidPhone: "Nieprawidłowy numer telefonu",
+        invalidPhone: "Nieprawidłowy numer telefonu (np. +48 123 456 789)",
         minLength: "Minimum {{min}} znaków",
         maxLength: "Maksimum {{max}} znaków",
       },
-      
+
       // Empty states
       empty: {
         noResults: "Nie znaleziono ofert",
         noResultsHint: "Spróbuj zmienić kryteria wyszukiwania",
         noPhotos: "Brak zdjęć",
       },
-      
+
       // SEO
       seo: {
-        searchTitle: "Wyszukiwarka samochodów | AutoFinder",
-        searchDescription: "Znajdź idealne auto wśród tysięcy ofert. Filtry, porównania i szczegółowe specyfikacje.",
         listingTitle: "{{make}} {{model}} {{version}} {{year}} - {{price}} | AutoFinder",
         listingDescription: "{{make}} {{model}} {{version}}, {{year}}, {{mileage}} km, {{fuel}}, {{power}} KM. Sprawdź szczegóły oferty.",
       },
+      // Specs
+      specs: {
+        color: "Kolor",
+        bodyType: "Typ nadwozia",
+        doors: "Liczba drzwi",
+        seats: "Liczba miejsc",
+        paintType: "Rodzaj lakieru",
+        vin: "VIN",
+        firstRegistration: "Data pierwszej rejestracji",
+        registrationNumber: "Numer rejestracyjny",
+        condition: "Stan",
+        origin: "Kraj pochodzenia",
+      },
+      // Equipment Features (normalized keys)
+      features: {
+        klimatyzacja_automatyczna: "Klimatyzacja automatyczna",
+        klimatyzacja_manualna: "Klimatyzacja manualna",
+        skorzana_tapicerka: "Skórzana tapicerka",
+        nawigacja_gps: "Nawigacja GPS",
+        czujniki_parkowania_przod: "Czujniki parkowania przód",
+        czujniki_parkowania_tyl: "Czujniki parkowania tył",
+        kamera_cofania: "Kamera cofania",
+        tempomat: "Tempomat",
+        tempomat_adaptacyjny: "Tempomat adaptacyjny",
+        podgrzewane_fotele_przednie: "Podgrzewane fotele przednie",
+        podgrzewana_kierownica: "Podgrzewana kierownica",
+        system_naglosnienia: "System nagłośnienia",
+        apple_carplay: "Apple CarPlay",
+        android_auto: "Android Auto",
+        bluetooth: "Bluetooth",
+        felgi_aluminiowe: "Felgi aluminiowe",
+        swiatla_led: "Światła LED",
+        matrycowe_led: "Matrycowe LED",
+        system_start_stop: "System Start-Stop",
+        bezkluczykowy_dostep: "Bezkluczykowy dostęp",
+      },
     },
   },
-  
+
   en: {
     translation: {
       // Common
@@ -241,7 +301,7 @@ export const translations = {
         found: "Found",
         offers: "offers",
       },
-      
+
       // Navigation
       nav: {
         home: "Home",
@@ -249,14 +309,19 @@ export const translations = {
         favorites: "Favorites",
         contact: "Contact",
       },
-      
+
       // Header
       header: {
         searchPlaceholder: "Search make, model...",
         language: "Language",
         saveSearch: "Save search",
       },
-      
+
+      // Search
+      search: {
+        placeholder: "Search by make, model, body type...",
+      },
+
       // Filters
       filters: {
         title: "Filters",
@@ -286,7 +351,7 @@ export const translations = {
         priceFrom: "Price from",
         priceTo: "Price to",
       },
-      
+
       // Fuel types
       fuel: {
         petrol: "Petrol",
@@ -298,20 +363,20 @@ export const translations = {
         lpg: "LPG",
         cng: "CNG",
       },
-      
+
       // Transmission
       transmission: {
         manual: "Manual",
         automatic: "Automatic",
       },
-      
+
       // Drive
       drive: {
         fwd: "Front-wheel (FWD)",
         rwd: "Rear-wheel (RWD)",
         awd: "All-wheel / AWD",
       },
-      
+
       // Body types
       body: {
         sedan: "Sedan",
@@ -324,7 +389,7 @@ export const translations = {
         pickup: "Pickup",
         minivan: "Minivan",
       },
-      
+
       // Sorting
       sort: {
         title: "Sort",
@@ -333,7 +398,7 @@ export const translations = {
         lowestMileage: "Lowest mileage",
         newest: "Newest",
       },
-      
+
       // Listing card
       listing: {
         viewOffer: "View offer",
@@ -343,8 +408,10 @@ export const translations = {
         year: "year",
         dealer: "Dealer",
         location: "Location",
+        net: "net prices",
+        gross: "gross prices",
       },
-      
+
       // Listing detail
       detail: {
         askAbout: "Ask about this offer",
@@ -361,7 +428,7 @@ export const translations = {
         registrationNumber: "Registration number",
         lowestPrice: "Lowest price in 30 days",
       },
-      
+
       // Equipment sections
       equipment: {
         audioMultimedia: "Audio & Multimedia",
@@ -372,7 +439,7 @@ export const translations = {
         other: "Other",
         noItems: "No items in this category",
       },
-      
+
       // Lead form
       lead: {
         title: "Ask about this offer",
@@ -399,36 +466,89 @@ export const translations = {
         referenceNumber: "Reference number",
         backToResults: "Back to results",
         backToOffer: "Back to offer",
-        error: "An error occurred. Please try again.",
+        error: "An error occurred while sending your inquiry. Please try again later.",
         retry: "Try again",
+        fastQuestions: "Quick questions",
+        trust: {
+          fastResponse: "Fast response",
+          averageTime: "Average response time: ~45 minutes",
+          secureTitle: "Secure contact",
+          secureDesc: "Your data is protected and used only for this inquiry.",
+        },
+        quickInquiry: {
+          availability: "Is this car available?",
+          financing: "Financing offer",
+          history: "History report & VIN",
+          expert: "Expert contact",
+          message: {
+            availability: "Hello, is this car still available for immediate delivery?",
+            financing: "I am interested in leasing or long-term rental options for this car. Please prepare a quote.",
+            history: "Could you please send me the VIN and history report for this car?",
+            expert: "I would like to discuss the specification and purchase conditions for this car with your advisor.",
+          }
+        }
       },
-      
+
       // Validation
       validation: {
         required: "This field is required",
         invalidEmail: "Invalid email address",
-        invalidPhone: "Invalid phone number",
+        invalidPhone: "Invalid phone number (e.g. +48 123 456 789)",
         minLength: "Minimum {{min}} characters",
         maxLength: "Maximum {{max}} characters",
       },
-      
+
       // Empty states
       empty: {
         noResults: "No offers found",
         noResultsHint: "Try adjusting your search criteria",
         noPhotos: "No photos",
       },
-      
+
       // SEO
       seo: {
-        searchTitle: "Car Search | AutoFinder",
-        searchDescription: "Find your perfect car among thousands of offers. Filters, comparisons, and detailed specifications.",
         listingTitle: "{{make}} {{model}} {{version}} {{year}} - {{price}} | AutoFinder",
         listingDescription: "{{make}} {{model}} {{version}}, {{year}}, {{mileage}} km, {{fuel}}, {{power}} hp. Check offer details.",
       },
+      // Specs
+      specs: {
+        color: "Color",
+        bodyType: "Body type",
+        doors: "Doors",
+        seats: "Seats",
+        paintType: "Paint type",
+        vin: "VIN",
+        firstRegistration: "First registration",
+        registrationNumber: "Registration number",
+        condition: "Condition",
+        origin: "Country of origin",
+      },
+      // Equipment Features (normalized keys)
+      features: {
+        klimatyzacja_automatyczna: "Automatic climate control",
+        klimatyzacja_manualna: "Manual climate control",
+        skorzana_tapicerka: "Leather upholstery",
+        nawigacja_gps: "GPS Navigation",
+        czujniki_parkowania_przod: "Front parking sensors",
+        czujniki_parkowania_tyl: "Rear parking sensors",
+        kamera_cofania: "Rear view camera",
+        tempomat: "Cruise control",
+        tempomat_adaptacyjny: "Adaptive cruise control",
+        podgrzewane_fotele_przednie: "Heated front seats",
+        podgrzewana_kierownica: "Heated steering wheel",
+        system_naglosnienia: "Sound system",
+        apple_carplay: "Apple CarPlay",
+        android_auto: "Android Auto",
+        bluetooth: "Bluetooth",
+        felgi_aluminiowe: "Alloy wheels",
+        swiatla_led: "LED headlights",
+        matrycowe_led: "Matrix LED",
+        system_start_stop: "Start-Stop system",
+        bezkluczykowy_dostep: "Keyless access",
+      },
     },
   },
-  
+
   de: {
     translation: {
       // Common
@@ -456,7 +576,7 @@ export const translations = {
         found: "Gefunden",
         offers: "Angebote",
       },
-      
+
       // Navigation
       nav: {
         home: "Startseite",
@@ -464,14 +584,19 @@ export const translations = {
         favorites: "Favoriten",
         contact: "Kontakt",
       },
-      
+
       // Header
       header: {
         searchPlaceholder: "Marke, Modell suchen...",
         language: "Sprache",
         saveSearch: "Suche speichern",
       },
-      
+
+      // Search
+      search: {
+        placeholder: "Suchen nach Marke, Modell, Erstzulassung, Fahrzeugtypen...",
+      },
+
       // Filters
       filters: {
         title: "Filter",
@@ -501,7 +626,7 @@ export const translations = {
         priceFrom: "Preis von",
         priceTo: "Preis bis",
       },
-      
+
       // Fuel types
       fuel: {
         petrol: "Benzin",
@@ -513,20 +638,20 @@ export const translations = {
         lpg: "LPG",
         cng: "CNG",
       },
-      
+
       // Transmission
       transmission: {
         manual: "Schaltgetriebe",
         automatic: "Automatik",
       },
-      
+
       // Drive
       drive: {
         fwd: "Frontantrieb (FWD)",
         rwd: "Heckantrieb (RWD)",
         awd: "Allrad / AWD",
       },
-      
+
       // Body types
       body: {
         sedan: "Limousine",
@@ -539,7 +664,7 @@ export const translations = {
         pickup: "Pickup",
         minivan: "Minivan",
       },
-      
+
       // Sorting
       sort: {
         title: "Sortieren",
@@ -548,7 +673,7 @@ export const translations = {
         lowestMileage: "Niedrigster Km-Stand",
         newest: "Neueste",
       },
-      
+
       // Listing card
       listing: {
         viewOffer: "Angebot ansehen",
@@ -558,8 +683,10 @@ export const translations = {
         year: "Jahr",
         dealer: "Händler",
         location: "Standort",
+        net: "Preise netto",
+        gross: "Preise brutto",
       },
-      
+
       // Listing detail
       detail: {
         askAbout: "Anfrage senden",
@@ -576,7 +703,7 @@ export const translations = {
         registrationNumber: "Kennzeichen",
         lowestPrice: "Niedrigster Preis in 30 Tagen",
       },
-      
+
       // Equipment sections
       equipment: {
         audioMultimedia: "Audio & Multimedia",
@@ -587,7 +714,7 @@ export const translations = {
         other: "Sonstiges",
         noItems: "Keine Elemente in dieser Kategorie",
       },
-      
+
       // Lead form
       lead: {
         title: "Anfrage zum Angebot",
@@ -614,32 +741,85 @@ export const translations = {
         referenceNumber: "Referenznummer",
         backToResults: "Zurück zu den Ergebnissen",
         backToOffer: "Zurück zum Angebot",
-        error: "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+        error: "Podczas wysyłania zapytania wystąpił błąd. Proszę spróbować później.",
         retry: "Erneut versuchen",
+        fastQuestions: "Schnelle Fragen",
+        trust: {
+          fastResponse: "Schnelle Antwort",
+          averageTime: "Durchschnittliche Antwortzeit: ~45 Minuten",
+          secureTitle: "Sicherer Kontakt",
+          secureDesc: "Ihre Daten sind geschützt und werden nur für diese Anfrage verwendet.",
+        },
+        quickInquiry: {
+          availability: "Ist das Auto verfügbar?",
+          financing: "Finanzierungsangebot",
+          history: "Historienbericht & VIN",
+          expert: "Expertenkontakt",
+          message: {
+            availability: "Guten Tag, ist dieses Modell noch sofort verfügbar?",
+            financing: "Ich interessiere mich für Leasing- oder Langzeitmietoptionen für dieses Auto. Bitte erstellen Sie ein Angebot.",
+            history: "Könnten Sie mir bitte die Fahrgestellnummer (VIN) und den Historienbericht für dieses Auto zusenden?",
+            expert: "Ich möchte die Spezifikation und Kaufbedingungen für dieses Fahrzeug mit Ihrem Berater besprechen.",
+          }
+        }
       },
-      
+
       // Validation
       validation: {
         required: "Dieses Feld ist erforderlich",
         invalidEmail: "Ungültige E-Mail-Adresse",
-        invalidPhone: "Ungültige Telefonnummer",
+        invalidPhone: "Ungültige Telefonnummer (z. B. +48 123 456 789)",
         minLength: "Mindestens {{min}} Zeichen",
         maxLength: "Maximal {{max}} Zeichen",
       },
-      
+
       // Empty states
       empty: {
         noResults: "Keine Angebote gefunden",
         noResultsHint: "Versuchen Sie, Ihre Suchkriterien anzupassen",
         noPhotos: "Keine Fotos",
       },
-      
+
       // SEO
       seo: {
-        searchTitle: "Fahrzeugsuche | AutoFinder",
-        searchDescription: "Finden Sie Ihr perfektes Auto unter tausenden Angeboten. Filter, Vergleiche und detaillierte Spezifikationen.",
         listingTitle: "{{make}} {{model}} {{version}} {{year}} - {{price}} | AutoFinder",
         listingDescription: "{{make}} {{model}} {{version}}, {{year}}, {{mileage}} km, {{fuel}}, {{power}} PS. Angebotsdetails prüfen.",
+      },
+      // Specs
+      specs: {
+        color: "Farbe",
+        bodyType: "Karosserieform",
+        doors: "Türen",
+        seats: "Sitzplätze",
+        paintType: "Lackierung",
+        vin: "VIN",
+        firstRegistration: "Erstzulassung",
+        registrationNumber: "Kennzeichen",
+        condition: "Zustand",
+        origin: "Herkunft",
+      },
+      // Equipment Features (normalized keys)
+      features: {
+        klimatyzacja_automatyczna: "Klimaautomatik",
+        klimatyzacja_manualna: "Manuelle Klimaanlage",
+        skorzana_tapicerka: "Lederausstattung",
+        nawigacja_gps: "Navigationssystem",
+        czujniki_parkowania_przod: "Einparkhilfe vorne",
+        czujniki_parkowania_tyl: "Einparkhilfe hinten",
+        kamera_cofania: "Rückfahrkamera",
+        tempomat: "Tempomat",
+        tempomat_adaptacyjny: "Abstandsregeltempomat",
+        podgrzewane_fotele_przednie: "Sitzheizung vorne",
+        podgrzewana_kierownica: "Beheizbares Lenkrad",
+        system_naglosnienia: "Soundsystem",
+        apple_carplay: "Apple CarPlay",
+        android_auto: "Android Auto",
+        bluetooth: "Bluetooth",
+        felgi_aluminiowe: "Leichtmetallfelgen",
+        swiatla_led: "LED-Scheinwerfer",
+        matrycowe_led: "Matrix-LED",
+        system_start_stop: "Start-Stopp-System",
+        bezkluczykowy_dostep: "Keyless Entry",
       },
     },
   },

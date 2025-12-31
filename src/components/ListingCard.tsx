@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { formatPrice } from '@/utils/formatters';
+
 interface ListingCardProps {
   listing: Listing;
   index?: number;
@@ -14,6 +18,33 @@ interface ListingCardProps {
 
 export function ListingCard({ listing, index = 0 }: ListingCardProps) {
   const { t } = useTranslation();
+  const { data: settings } = useAppSettings();
+  const { priceType } = usePriceSettings();
+
+  const priceInfo = React.useMemo(() => {
+    const currency = settings?.displayCurrency || 'PLN';
+    let basePrice = 0;
+
+    if (currency === 'EUR' && listing.broker_price_eur) {
+      basePrice = listing.broker_price_eur;
+    } else if (listing.broker_price_pln) {
+      basePrice = listing.broker_price_pln;
+    }
+
+    if (basePrice > 0) {
+      const isNetPrimary = priceType === 'net';
+      const primaryPrice = isNetPrimary ? Math.round(basePrice / 1.23) : basePrice;
+      const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
+
+      const primaryLabel = formatPrice(primaryPrice, currency);
+      // Secondary price intentionally omitted on listing cards (kept in detail view)
+      const secondaryLabel = null;
+
+      return { primaryLabel, secondaryLabel };
+    }
+
+    return { primaryLabel: listing.price_display, secondaryLabel: null };
+  }, [listing, settings, priceType]);
 
   return (
     <motion.div
@@ -32,12 +63,17 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          
+
           {/* Price Badge */}
-          <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md">
+          <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md flex flex-col md:flex-row md:items-baseline md:gap-2 items-end md:items-baseline">
             <span className="font-heading text-lg font-bold text-foreground">
-              {listing.price_display}
+              {priceInfo.primaryLabel}
             </span>
+            {priceInfo.secondaryLabel && (
+              <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+                {priceInfo.secondaryLabel}
+              </span>
+            )}
           </div>
         </div>
 

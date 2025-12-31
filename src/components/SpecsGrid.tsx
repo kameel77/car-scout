@@ -11,6 +11,8 @@ import {
   Car,
   Hash,
 } from 'lucide-react';
+import { formatNumber } from '@/utils/formatters';
+import { translateTechnicalValue } from '@/utils/i18n-utils';
 
 interface SpecsGridProps {
   year: number;
@@ -28,20 +30,20 @@ export function SpecsGrid(props: SpecsGridProps) {
 
   const specs = [
     { key: 'year', icon: Calendar, label: t('filters.productionYear'), value: String(props.year) },
-    { key: 'mileage', icon: Gauge, label: t('filters.mileage'), value: `${props.mileage.toLocaleString('pl-PL')} ${t('listing.km')}` },
-    { key: 'fuelType', icon: Fuel, label: t('filters.fuelType'), value: props.fuelType },
-    { key: 'transmission', icon: Settings2, label: t('filters.transmission'), value: props.transmission },
-    { key: 'drive', icon: Cog, label: t('filters.drive'), value: props.drive },
-    { key: 'power', icon: Zap, label: t('filters.power'), value: `${props.power} ${t('listing.hp')}` },
-    { key: 'capacity', icon: Hash, label: t('filters.engineCapacity'), value: `${props.capacity.toLocaleString('pl-PL')} ${t('listing.ccm')}` },
-    { key: 'bodyType', icon: Car, label: t('filters.bodyType'), value: props.bodyType },
+    { key: 'mileage', icon: Gauge, label: t('filters.mileage'), value: `${formatNumber(props.mileage)} ${t('listing.km')}` },
+    { key: 'fuelType', icon: Fuel, label: t('filters.fuelType'), value: translateTechnicalValue('fuel', props.fuelType, t) },
+    { key: 'transmission', icon: Settings2, label: t('filters.transmission'), value: translateTechnicalValue('transmission', props.transmission, t) },
+    { key: 'drive', icon: Cog, label: t('filters.drive'), value: translateTechnicalValue('drive', props.drive, t) },
+    { key: 'power', icon: Zap, label: t('listing.hp'), value: `${props.power} ${t('listing.hp')}` },
+    { key: 'capacity', icon: Hash, label: t('filters.engineCapacity'), value: `${formatNumber(props.capacity)} ${t('listing.ccm')}` },
+    { key: 'bodyType', icon: Car, label: t('filters.bodyType'), value: translateTechnicalValue('body', props.bodyType, t) },
   ];
 
   return (
     <div className="spec-grid">
       {specs.map((spec, index) => {
         const Icon = spec.icon;
-        
+
         return (
           <motion.div
             key={spec.key}

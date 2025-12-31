@@ -4,7 +4,8 @@ import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
-import { filterListings, mockListings } from '@/data/mockData';
+import { useListings } from '@/hooks/useListings';
+import { useListingOptions } from '@/hooks/useListingOptions';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -23,40 +24,79 @@ const emptyFilters: FilterState = {
   bodyTypes: [],
   priceFrom: '',
   priceTo: '',
+  query: '',
 };
+
+import { useSearchParams } from 'react-router-dom';
+
+// ... (keep constant emptyFilters)
+
+// Helper to parse arrays from URL
+const parseArray = (param: string | null) => param ? param.split(',') : [];
 
 export default function SearchPage() {
   const { t } = useTranslation();
-  const [filters, setFilters] = React.useState<FilterState>(emptyFilters);
-  const [sortBy, setSortBy] = React.useState('newest');
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  // Initialize from URL
+  const [filters, setFilters] = React.useState<FilterState>(() => {
+    return {
+      makes: parseArray(searchParams.get('make')),
+      models: parseArray(searchParams.get('model')),
+      fuelTypes: parseArray(searchParams.get('fuelType')),
+      transmissions: parseArray(searchParams.get('transmission')),
+      bodyTypes: parseArray(searchParams.get('bodyType')),
+      drives: parseArray(searchParams.get('drive')),
+
+      yearFrom: searchParams.get('yearMin') || '',
+      yearTo: searchParams.get('yearMax') || '',
+      mileageFrom: searchParams.get('mileageMin') || '',
+      mileageTo: searchParams.get('mileageMax') || '',
+      priceFrom: searchParams.get('priceMin') || '',
+      priceTo: searchParams.get('priceMax') || '',
+      powerFrom: searchParams.get('powerMin') || '',
+      powerTo: searchParams.get('powerMax') || '',
+      capacityFrom: searchParams.get('capacityMin') || '',
+      capacityTo: searchParams.get('capacityMax') || '',
+
+      query: searchParams.get('q') || '',
+    };
+  });
+
+  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || 'newest');
+
+  // Sync URL when state changes
   React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+    const params = new URLSearchParams();
 
-  const filteredListings = React.useMemo(() => {
-    return filterListings({
-      makes: filters.makes,
-      models: filters.models,
-      fuelTypes: filters.fuelTypes,
-      yearFrom: filters.yearFrom ? parseInt(filters.yearFrom) : undefined,
-      yearTo: filters.yearTo ? parseInt(filters.yearTo) : undefined,
-      mileageFrom: filters.mileageFrom ? parseInt(filters.mileageFrom) : undefined,
-      mileageTo: filters.mileageTo ? parseInt(filters.mileageTo) : undefined,
-      drives: filters.drives,
-      transmissions: filters.transmissions,
-      powerFrom: filters.powerFrom ? parseInt(filters.powerFrom) : undefined,
-      powerTo: filters.powerTo ? parseInt(filters.powerTo) : undefined,
-      capacityFrom: filters.capacityFrom ? parseInt(filters.capacityFrom) : undefined,
-      capacityTo: filters.capacityTo ? parseInt(filters.capacityTo) : undefined,
-      bodyTypes: filters.bodyTypes,
-      priceFrom: filters.priceFrom ? parseInt(filters.priceFrom) : undefined,
-      priceTo: filters.priceTo ? parseInt(filters.priceTo) : undefined,
-      sortBy,
-    });
-  }, [filters, sortBy]);
+    if (filters.makes.length) params.set('make', filters.makes.join(','));
+    if (filters.models.length) params.set('model', filters.models.join(','));
+    if (filters.fuelTypes.length) params.set('fuelType', filters.fuelTypes.join(','));
+    if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
+    if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
+    if (filters.drives.length) params.set('drive', filters.drives.join(','));
+
+    if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
+    if (filters.yearTo) params.set('yearMax', filters.yearTo);
+    if (filters.mileageFrom) params.set('mileageMin', filters.mileageFrom);
+    if (filters.mileageTo) params.set('mileageMax', filters.mileageTo);
+    if (filters.priceFrom) params.set('priceMin', filters.priceFrom);
+    if (filters.priceTo) params.set('priceMax', filters.priceTo);
+    if (filters.powerFrom) params.set('powerMin', filters.powerFrom);
+    if (filters.powerTo) params.set('powerMax', filters.powerTo);
+    if (filters.capacityFrom) params.set('capacityMin', filters.capacityFrom);
+    if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
+
+    if (filters.query) params.set('q', filters.query);
+    if (sortBy !== 'newest') params.set('sortBy', sortBy);
+
+    setSearchParams(params, { replace: true });
+  }, [filters, sortBy, setSearchParams]);
+
+
+  const { data, isLoading } = useListings(filters, sortBy);
+  const { data: options } = useListingOptions();
+  const listings = data?.listings || [];
 
   const handleClearFilters = () => {
     setFilters(emptyFilters);
@@ -70,16 +110,18 @@ export default function SearchPage() {
     <div className="min-h-screen bg-background">
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
-      <main className="container py-6">
+      <main className="container pt-0 pb-6">
         <div className="flex gap-6">
           {/* Desktop Filters */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-20">
+            <div className="sticky top-16 h-[calc(100vh-4rem)] pt-4">
               <FilterPanel
                 filters={filters}
                 onFilterChange={setFilters}
                 onClear={handleClearFilters}
-                resultCount={filteredListings.length}
+                resultCount={listings.length}
+                availableMakes={options?.makes || []}
+                availableModels={options?.models || []}
               />
             </div>
           </aside>
@@ -90,7 +132,7 @@ export default function SearchPage() {
               filters={filters}
               onFilterChange={setFilters}
               onClearFilters={handleClearFilters}
-              resultCount={filteredListings.length}
+              resultCount={listings.length}
               sortBy={sortBy}
               onSortChange={setSortBy}
             />
@@ -100,8 +142,8 @@ export default function SearchPage() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
                 ))
-              ) : filteredListings.length > 0 ? (
-                filteredListings.map((listing, index) => (
+              ) : listings.length > 0 ? (
+                listings.map((listing, index) => (
                   <ListingCard key={listing.listing_id} listing={listing} index={index} />
                 ))
               ) : (
