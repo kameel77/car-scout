@@ -2,7 +2,8 @@ import type { TranslationEntry, TranslationPayload } from '@/types/translations'
 import type { User, UserPayload } from '@/types/user';
 import type { FaqEntry, FaqPayload } from '@/types/faq';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Default to relative /api so it works behind the same host without extra env.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Auth API
 export const authApi = {
