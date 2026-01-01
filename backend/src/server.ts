@@ -106,6 +106,7 @@ import { analyticsRoutes } from './routes/analytics.js';
 import { settingsRoutes } from './routes/settings.js';
 import { translationRoutes } from './routes/translations.js';
 import { userRoutes } from './routes/users.js';
+import { faqRoutes } from './routes/faq.js';
 
 await fastify.register(authRoutes);
 await fastify.register(importRoutes);
@@ -114,6 +115,7 @@ await fastify.register(analyticsRoutes);
 await fastify.register(settingsRoutes);
 await fastify.register(translationRoutes);
 await fastify.register(userRoutes);
+await fastify.register(faqRoutes);
 
 // Start server
 const start = async () => {
