@@ -43,7 +43,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
         } = request.query as any;
 
         // Helper to parse comma-separated lists into array or undefined
-        const toArray = (val: any) => val ? (Array.isArray(val) ? val : val.split(',')) : undefined;
+        const toArray = (val: unknown): string[] | undefined => {
+            if (!val) return undefined;
+            if (Array.isArray(val)) return val.map(String);
+            return String(val).split(',');
+        };
 
         const fuelTypes = toArray(fuelType);
         const transmissions = toArray(transmission);
@@ -99,8 +103,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const where = {
             ...searchFilter,
-            make: makes ? { in: makes, mode: 'insensitive' } : undefined,
-            model: models ? { in: models, mode: 'insensitive' } : undefined,
+                make: makes ? { in: makes, mode: 'insensitive' as const } : undefined,
+                model: models ? { in: models, mode: 'insensitive' as const } : undefined,
 
             [priceField]: {
                 gte: priceMin ? parseInt(priceMin) : undefined,
@@ -123,9 +127,9 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 lte: capacityMax ? parseInt(capacityMax) : undefined
             },
 
-            fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' } : undefined,
-            transmission: transmissions ? { in: transmissions, mode: 'insensitive' } : undefined,
-            bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' } : undefined,
+            fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' as const } : undefined,
+            transmission: transmissions ? { in: transmissions, mode: 'insensitive' as const } : undefined,
+            bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' as const } : undefined,
             isArchived: includeArchived === 'true' ? undefined : false,
         };
 
