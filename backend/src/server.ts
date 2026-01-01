@@ -50,6 +50,10 @@ await fastify.register(cors, {
 
         // Strict check for allowed origins
         const normalizedOrigin = originOnly(origin);
+        // Allow sslip.io helper domains (used for IP-based previews)
+        if (/^https?:\/\/[a-zA-Z0-9.-]+\.sslip\.io$/.test(normalizedOrigin)) {
+            return cb(null, true);
+        }
         if (allowedOrigins.includes(normalizedOrigin)) {
             return cb(null, true);
         }
