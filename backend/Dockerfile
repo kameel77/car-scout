@@ -15,6 +15,11 @@ COPY prisma ./prisma/
 # Install dependencies
 RUN npm ci
 
+# Prisma needs a connection string even to generate the client.
+# Provide a sensible default that can be overridden at build time.
+ARG DATABASE_URL="postgresql://user:password@localhost:5432/db"
+ENV DATABASE_URL=$DATABASE_URL
+
 # Generate Prisma client
 RUN npx prisma generate
 
@@ -22,7 +27,7 @@ RUN npx prisma generate
 COPY . .
 
 # Build TypeScript code
-RUN npm run build 2>/dev/null || npx tsc
+RUN npm run build || npx tsc
 
 # Production stage
 FROM node:20-slim AS runner
