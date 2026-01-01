@@ -46,12 +46,12 @@ export const authApi = {
 
 // FAQ API
 export const faqApi = {
-    list: async (params: { page?: string }, token: string): Promise<{ entries: FaqEntry[] }> => {
+    list: async (params: { page?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {
         const queryParams = new URLSearchParams();
         if (params.page) queryParams.append('page', params.page);
 
         const response = await fetch(`${API_BASE_URL}/api/faq?${queryParams.toString()}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
         });
 
         if (!response.ok) {

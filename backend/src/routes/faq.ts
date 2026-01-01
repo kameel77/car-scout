@@ -18,13 +18,25 @@ type FaqPayload = {
 
 export async function faqRoutes(fastify: FastifyInstance) {
     // List FAQ entries
-    fastify.get('/api/faq', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
-    }, async (request) => {
+    fastify.get('/api/faq', async (request, reply) => {
         const { page } = request.query as { page?: string };
 
+        // Try to authenticate; if missing/invalid token, proceed as public
+        let role: string | undefined;
+        try {
+            await request.jwtVerify();
+            role = (request as any).user?.role;
+        } catch {
+            role = undefined;
+        }
+
         const normalizedPage = PAGE_OPTIONS.find((opt) => opt === page);
-        const where = normalizedPage ? { page: normalizedPage } : undefined;
+        const where: any = {};
+        if (normalizedPage) where.page = normalizedPage;
+        // Only admins/managers can see unpublished entries
+        if (role !== 'admin' && role !== 'manager') {
+            where.isPublished = true;
+        }
 
         const entries = await fastify.prisma.faqEntry.findMany({
             where,

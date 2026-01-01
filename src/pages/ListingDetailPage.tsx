@@ -15,12 +15,13 @@ import { useListing } from '@/hooks/useListings';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { listingsApi } from '@/services/api';
+import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/utils/formatters';
+import type { FaqEntry } from '@/types/faq';
 import {
   Dialog,
   DialogContent,
@@ -33,7 +34,7 @@ import { AlertTriangle } from 'lucide-react';
 
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, token } = useAuth();
@@ -47,6 +48,12 @@ export default function ListingDetailPage() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [showArchiveModal, setShowArchiveModal] = React.useState(false);
   const autoRefreshTriggered = React.useRef(false);
+
+  const { data: faqData } = useQuery({
+    queryKey: ['faq', 'offers'],
+    queryFn: () => faqApi.list({ page: 'offers' }),
+    staleTime: 5 * 60 * 1000
+  });
 
   // Auto-check images and refresh if broken (when enabled in settings)
   React.useEffect(() => {
@@ -136,6 +143,25 @@ export default function ListingDetailPage() {
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
   }, [listing, settings, priceType]);
+
+  const faqs = React.useMemo(() => {
+    const entries = (faqData?.entries || []) as FaqEntry[];
+    return entries
+      .filter((entry) => entry.isPublished)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [faqData]);
+
+  const getLocalizedQA = (entry: FaqEntry) => {
+    const lang = (i18n.language || 'pl').slice(0, 2);
+    switch (lang) {
+      case 'en':
+        return { question: entry.questionEn, answer: entry.answerEn };
+      case 'de':
+        return { question: entry.questionDe, answer: entry.answerDe };
+      default:
+        return { question: entry.questionPl, answer: entry.answerPl };
+    }
+  };
 
   if (isLoading) {
     return (
@@ -232,6 +258,28 @@ export default function ListingDetailPage() {
             </section>
 
             <Separator />
+
+            {/* FAQ */}
+            {faqs.length > 0 && (
+              <>
+                <section className="space-y-3">
+                  <h2 className="font-heading text-xl font-semibold">{t('nav.faq', 'FAQ')}</h2>
+                  <div className="space-y-3">
+                    {faqs.map((faq) => {
+                      const { question, answer } = getLocalizedQA(faq);
+                      return (
+                        <div key={faq.id} className="rounded-lg border border-border bg-card p-4 shadow-sm">
+                          <h3 className="text-lg font-semibold text-foreground">{question}</h3>
+                          <p className="mt-2 text-muted-foreground whitespace-pre-line">{answer}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <Separator />
+              </>
+            )}
 
             {/* Equipment */}
             <section>
