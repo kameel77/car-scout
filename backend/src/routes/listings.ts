@@ -85,7 +85,6 @@ export async function listingRoutes(fastify: FastifyInstance) {
                     { fuelType: { contains: term, mode: 'insensitive' } },
                     { transmission: { contains: term, mode: 'insensitive' } },
                     { bodyType: { contains: term, mode: 'insensitive' } },
-                    { additionalInfoContent: { contains: term, mode: 'insensitive' } },
                     // Check equipment arrays for exact matches (limit of Prisma)
                     { equipmentAudioMultimedia: { has: term } },
                     { equipmentSafety: { has: term } },
