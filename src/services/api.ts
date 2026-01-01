@@ -217,6 +217,8 @@ export const listingsApi = {
             if (filters.sortBy) params.append('sortBy', filters.sortBy);
             if (filters.query) params.append('q', filters.query);
             if (filters.currency) params.append('currency', filters.currency);
+            if (filters.page) params.append('page', filters.page.toString());
+            if (filters.perPage) params.append('perPage', filters.perPage.toString());
         }
 
         const response = await fetch(`${API_BASE_URL}/api/listings?${params.toString()}`);
