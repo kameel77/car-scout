@@ -93,12 +93,12 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
           ${model ? Prisma.sql`AND l.model = ${model}` : Prisma.empty}
       )
       SELECT 
-        listing_id, make, model, vin,
+        rp.listing_id, make, model, vin,
         prev_price as old_price,
         price_pln as new_price,
         ROUND(((price_pln - prev_price)::numeric / prev_price * 100), 2) as change_percent,
         changed_at
-      FROM ranked_prices
+      FROM ranked_prices rp
       WHERE rn = 1 
         AND prev_price IS NOT NULL
         AND prev_price != price_pln
