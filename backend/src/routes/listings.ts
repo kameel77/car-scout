@@ -37,7 +37,9 @@ export async function listingRoutes(fastify: FastifyInstance) {
             fuelType, transmission, bodyType,
             sortBy,
             includeArchived,
-            currency // Added currency parameter
+            currency, // Added currency parameter
+            page: pageParam,
+            perPage: perPageParam
         } = request.query as any;
 
         // Helper to parse comma-separated lists into array or undefined
@@ -51,6 +53,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const isEur = currency === 'EUR';
         const priceField = isEur ? 'brokerPriceEur' : 'brokerPricePln';
+
+        const page = Math.max(1, parseInt(pageParam) || 1);
+        const parsedPerPage = parseInt(perPageParam);
+        const perPage = [30, 60].includes(parsedPerPage) ? parsedPerPage : 30;
 
         const orderBy: any = {};
         switch (sortBy) {
@@ -91,46 +97,58 @@ export async function listingRoutes(fastify: FastifyInstance) {
             })
         } : {};
 
-        const listings = await fastify.prisma.listing.findMany({
-            where: {
-                ...searchFilter,
-                make: makes ? { in: makes, mode: 'insensitive' } : undefined,
-                model: models ? { in: models, mode: 'insensitive' } : undefined,
+        const where = {
+            ...searchFilter,
+            make: makes ? { in: makes, mode: 'insensitive' } : undefined,
+            model: models ? { in: models, mode: 'insensitive' } : undefined,
 
-                [priceField]: {
-                    gte: priceMin ? parseInt(priceMin) : undefined,
-                    lte: priceMax ? parseInt(priceMax) : undefined
-                },
-                productionYear: {
-                    gte: yearMin ? parseInt(yearMin) : undefined,
-                    lte: yearMax ? parseInt(yearMax) : undefined
-                },
-                mileageKm: {
-                    gte: mileageMin ? parseInt(mileageMin) : undefined,
-                    lte: mileageMax ? parseInt(mileageMax) : undefined
-                },
-                enginePowerHp: {
-                    gte: powerMin ? parseInt(powerMin) : undefined,
-                    lte: powerMax ? parseInt(powerMax) : undefined
-                },
-                engineCapacityCm3: {
-                    gte: capacityMin ? parseInt(capacityMin) : undefined,
-                    lte: capacityMax ? parseInt(capacityMax) : undefined
-                },
-
-                fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' } : undefined,
-                transmission: transmissions ? { in: transmissions, mode: 'insensitive' } : undefined,
-                bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' } : undefined,
-                isArchived: includeArchived === 'true' ? undefined : false,
+            [priceField]: {
+                gte: priceMin ? parseInt(priceMin) : undefined,
+                lte: priceMax ? parseInt(priceMax) : undefined
             },
-            include: {
-                dealer: true
+            productionYear: {
+                gte: yearMin ? parseInt(yearMin) : undefined,
+                lte: yearMax ? parseInt(yearMax) : undefined
             },
-            orderBy,
-            take: 100
-        });
+            mileageKm: {
+                gte: mileageMin ? parseInt(mileageMin) : undefined,
+                lte: mileageMax ? parseInt(mileageMax) : undefined
+            },
+            enginePowerHp: {
+                gte: powerMin ? parseInt(powerMin) : undefined,
+                lte: powerMax ? parseInt(powerMax) : undefined
+            },
+            engineCapacityCm3: {
+                gte: capacityMin ? parseInt(capacityMin) : undefined,
+                lte: capacityMax ? parseInt(capacityMax) : undefined
+            },
 
-        return { listings, count: listings.length };
+            fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' } : undefined,
+            transmission: transmissions ? { in: transmissions, mode: 'insensitive' } : undefined,
+            bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' } : undefined,
+            isArchived: includeArchived === 'true' ? undefined : false,
+        };
+
+        const [listings, totalCount] = await Promise.all([
+            fastify.prisma.listing.findMany({
+                where,
+                include: {
+                    dealer: true
+                },
+                orderBy,
+                skip: (page - 1) * perPage,
+                take: perPage
+            }),
+            fastify.prisma.listing.count({ where })
+        ]);
+
+        return {
+            listings,
+            count: totalCount,
+            page,
+            perPage,
+            totalPages: Math.max(1, Math.ceil(totalCount / perPage))
+        };
     });
 
     // Get single listing with price history

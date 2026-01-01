@@ -25,6 +25,9 @@ export const translations = {
         results: "wyników",
         found: "Znaleziono",
         offers: "ofert",
+        perPage: "na stronę",
+        toTop: "Do góry",
+        page: "Strona",
       },
 
       // Navigation
@@ -300,6 +303,9 @@ export const translations = {
         results: "results",
         found: "Found",
         offers: "offers",
+        perPage: "per page",
+        toTop: "Back to top",
+        page: "Page",
       },
 
       // Navigation
