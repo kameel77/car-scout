@@ -1,5 +1,6 @@
 import type { TranslationEntry, TranslationPayload } from '@/types/translations';
 import type { User, UserPayload } from '@/types/user';
+import type { FaqEntry, FaqPayload } from '@/types/faq';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -39,6 +40,53 @@ export const authApi = {
         });
 
         return response.json();
+    }
+};
+
+// FAQ API
+export const faqApi = {
+    list: async (params: { page?: string }, token: string): Promise<{ entries: FaqEntry[] }> => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page);
+
+        const response = await fetch(`${API_BASE_URL}/api/faq?${queryParams.toString()}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to fetch FAQ entries');
+        }
+
+        return response.json();
+    },
+    save: async (payload: FaqPayload, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/faq`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to save FAQ entry');
+        }
+        return data;
+    },
+    delete: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/faq/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to delete FAQ entry');
+        }
+        return data;
     }
 };
 

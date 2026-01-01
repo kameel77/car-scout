@@ -196,3 +196,29 @@ model Translation {
   @@index([category])
   @@map("translations")
 }
+
+// ============ FAQ ENTRIES ============
+enum FaqPage {
+  home
+  offers
+  contact
+}
+
+model FaqEntry {
+  id           String   @id @default(cuid())
+  page         FaqPage
+  sortOrder    Int      @default(0) @map("sort_order")
+  questionPl   String   @map("question_pl")
+  answerPl     String   @map("answer_pl") @db.Text
+  questionEn   String   @map("question_en")
+  answerEn     String   @map("answer_en") @db.Text
+  questionDe   String   @map("question_de")
+  answerDe     String   @map("answer_de") @db.Text
+  isPublished  Boolean  @default(true) @map("is_published")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([page, sortOrder])
+  @@map("faq_entries")
+}
