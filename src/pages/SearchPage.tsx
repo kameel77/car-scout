@@ -8,6 +8,7 @@ import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
 import { ListingPagination } from '@/components/ListingPagination';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
+import { Footer } from '@/components/Footer';
 import {
   Select,
   SelectContent,
@@ -251,6 +252,7 @@ export default function SearchPage() {
       </main>
 
       <ScrollToTopButton />
+      <Footer />
     </div>
   );
 }

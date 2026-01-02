@@ -31,6 +31,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
+import { Footer } from '@/components/Footer';
 
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +55,27 @@ export default function ListingDetailPage() {
     queryFn: () => faqApi.list({ page: 'offers' }),
     staleTime: 5 * 60 * 1000
   });
+
+  const handleRefreshImages = React.useCallback(async () => {
+    if (!id || !token) return;
+
+    try {
+      setRefreshing(true);
+      await listingsApi.refreshImages(id, token);
+      await queryClient.invalidateQueries({ queryKey: ['listing', id] });
+      await queryClient.invalidateQueries({ queryKey: ['listings'] });
+      toast.success('Zdjęcia zostały zaktualizowane');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('Auto-archived')) {
+        setShowArchiveModal(true);
+      } else {
+        toast.error(message || 'Błąd podczas odświeżania zdjęć');
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [id, queryClient, token]);
 
   // Auto-check images and refresh if broken (when enabled in settings)
   React.useEffect(() => {
@@ -94,28 +116,7 @@ export default function ListingDetailPage() {
     };
 
     checkImages();
-  }, [listing, settings?.autoRefreshImages, token]);
-
-  const handleRefreshImages = async () => {
-    if (!id || !token) return;
-
-    try {
-      setRefreshing(true);
-      await listingsApi.refreshImages(id, token);
-      await queryClient.invalidateQueries({ queryKey: ['listing', id] });
-      await queryClient.invalidateQueries({ queryKey: ['listings'] });
-      toast.success('Zdjęcia zostały zaktualizowane');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      if (message.includes('Auto-archived')) {
-        setShowArchiveModal(true);
-      } else {
-        toast.error(message || 'Błąd podczas odświeżania zdjęć');
-      }
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  }, [listing, settings?.autoRefreshImages, token, handleRefreshImages]);
 
   const priceInfo = React.useMemo(() => {
     if (!listing) return { primaryLabel: '', secondaryLabel: null };
@@ -142,7 +143,7 @@ export default function ListingDetailPage() {
     }
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
-  }, [listing, settings, priceType]);
+  }, [listing, settings, priceType, t]);
 
   const faqs = React.useMemo(() => {
     const entries = (faqData?.entries || []) as FaqEntry[];
@@ -257,35 +258,31 @@ export default function ListingDetailPage() {
               <SpecificationsTable specifications={listing.specifications} />
             </section>
 
-            <Separator />
-
-            {/* FAQ */}
-            {faqs.length > 0 && (
-              <>
-                <section className="space-y-3">
-                  <h2 className="font-heading text-xl font-semibold">{t('nav.faq', 'FAQ')}</h2>
-                  <div className="space-y-3">
-                    {faqs.map((faq) => {
-                      const { question, answer } = getLocalizedQA(faq);
-                      return (
-                        <div key={faq.id} className="rounded-lg border border-border bg-card p-4 shadow-sm">
-                          <h3 className="text-lg font-semibold text-foreground">{question}</h3>
-                          <p className="mt-2 text-muted-foreground whitespace-pre-line">{answer}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                <Separator />
-              </>
-            )}
-
             {/* Equipment */}
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.equipment')}</h2>
               <EquipmentDisplay equipment={listing.equipment} />
             </section>
+
+            <Separator />
+
+            {/* FAQ */}
+            {faqs.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="font-heading text-xl font-semibold">{t('nav.faq', 'FAQ')}</h2>
+                <div className="space-y-3">
+                  {faqs.map((faq) => {
+                    const { question, answer } = getLocalizedQA(faq);
+                    return (
+                      <div key={faq.id} className="rounded-lg border border-border bg-card p-4 shadow-sm">
+                        <h3 className="text-lg font-semibold text-foreground">{question}</h3>
+                        <p className="mt-2 text-muted-foreground whitespace-pre-line">{answer}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -381,6 +378,8 @@ export default function ListingDetailPage() {
           </div>
         </div>
       </main>
+
+      <Footer />
 
       {/* Mobile Sticky CTA */}
       <div className="sticky-cta">

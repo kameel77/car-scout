@@ -275,6 +275,26 @@ export const settingsApi = {
         return response.json();
     },
 
+    uploadLogo: async (file: File, target: 'header' | 'footer', token: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('target', target);
+
+        const response = await fetch(`${API_BASE_URL}/api/settings/logo`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Logo upload failed');
+        }
+        return data as { url: string };
+    },
+
     updateSettings: async (settings: any, token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/settings`, {
             method: 'POST',

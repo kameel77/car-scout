@@ -13,9 +13,32 @@ import {
     SelectValue
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Languages, Coins, Percent, RefreshCw, Save, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Languages, Coins, Percent, RefreshCw, Save, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+
+type LegalDocKey = 'imprint' | 'privacyPolicy' | 'terms' | 'cookies';
+type LegalDocumentsState = Record<LegalDocKey, Record<string, string>>;
+
+const LEGAL_LANGUAGES = [
+    { code: 'pl', label: 'PL' },
+    { code: 'en', label: 'EN' },
+    { code: 'de', label: 'DE' }
+] as const;
+
+const LEGAL_DOCS: { key: LegalDocKey; label: string; helper: string }[] = [
+    { key: 'imprint', label: 'Impressum / Imprint', helper: 'Wymagane w DE – dane firmy + kontakt' },
+    { key: 'privacyPolicy', label: 'Polityka prywatności', helper: 'RODO / GDPR' },
+    { key: 'terms', label: 'Regulamin / AGB', helper: 'Zasady korzystania z serwisu' },
+    { key: 'cookies', label: 'Polityka cookies', helper: 'Informacja o plikach cookie' }
+];
+
+const withLegalDocs = (raw: any): LegalDocumentsState => ({
+    imprint: { ...(raw?.imprint || {}) },
+    privacyPolicy: { ...(raw?.privacyPolicy || {}) },
+    terms: { ...(raw?.terms || {}) },
+    cookies: { ...(raw?.cookies || {}) }
+});
 
 export function SettingsModule() {
     const { token } = useAuth();
@@ -23,29 +46,43 @@ export function SettingsModule() {
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
     const [settings, setSettings] = React.useState<any>(null);
+    const [logoUploading, setLogoUploading] = React.useState<{ header: boolean; footer: boolean }>({ header: false, footer: false });
+    const headerInputRef = React.useRef<HTMLInputElement | null>(null);
+    const footerInputRef = React.useRef<HTMLInputElement | null>(null);
 
-    React.useEffect(() => {
-        fetchSettings();
-    }, []);
+    const normalizeSettings = (data: any) => ({
+        ...data,
+        enabledLanguages: data?.enabledLanguages || ['pl'],
+        displayCurrency: data?.displayCurrency || 'PLN',
+        autoRefreshImages: Boolean(data?.autoRefreshImages),
+        legalDocuments: withLegalDocs(data?.legalDocuments),
+        legalSloganPl: data?.legalSloganPl || '',
+        legalSloganEn: data?.legalSloganEn || '',
+        legalSloganDe: data?.legalSloganDe || ''
+    });
 
-    const fetchSettings = async () => {
+    const fetchSettings = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await settingsApi.getSettings();
-            setSettings({ ...data, autoRefreshImages: Boolean(data.autoRefreshImages) });
+            setSettings(normalizeSettings(data));
         } catch (error) {
             toast.error('Błąd podczas pobierania ustawień');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    React.useEffect(() => {
+        fetchSettings();
+    }, [fetchSettings]);
 
     const handleSave = async () => {
         if (!token) return;
         try {
             setSaving(true);
             const updated = await settingsApi.updateSettings(settings, token);
-            setSettings(updated);
+            setSettings(normalizeSettings(updated));
             await queryClient.invalidateQueries({ queryKey: ['appSettings'] });
             await queryClient.invalidateQueries({ queryKey: ['listings'] });
             await queryClient.invalidateQueries({ queryKey: ['listing'] });
@@ -69,10 +106,54 @@ export function SettingsModule() {
         setSettings({ ...settings, enabledLanguages: next });
     };
 
+    const handleLegalDocChange = (docKey: LegalDocKey, lang: string, value: string) => {
+        setSettings((prev: any) => {
+            const legalDocs = withLegalDocs(prev?.legalDocuments);
+            return {
+                ...prev,
+                legalDocuments: {
+                    ...legalDocs,
+                    [docKey]: {
+                        ...(legalDocs as Record<string, Record<string, string>>)[docKey],
+                        [lang]: value
+                    }
+                }
+            };
+        });
+    };
+
+    const handleLogoUpload = async (target: 'header' | 'footer', file: File | null) => {
+        if (!file || !token) return;
+        try {
+            setLogoUploading((prev) => ({ ...prev, [target]: true }));
+            const { url } = await settingsApi.uploadLogo(file, target, token);
+            setSettings((prev: any) => ({
+                ...prev,
+                [`${target}LogoUrl`]: url
+            }));
+            toast.success(`Logo (${target}) zapisane`);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Nie udało się zapisać logo');
+        } finally {
+            setLogoUploading((prev) => ({ ...prev, [target]: false }));
+            // reset input value so the same file can be reselected if needed
+            if (target === 'header' && headerInputRef.current) headerInputRef.current.value = '';
+            if (target === 'footer' && footerInputRef.current) footerInputRef.current.value = '';
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12">
                 <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+
+    if (!settings) {
+        return (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+                Nie udało się załadować ustawień.
             </div>
         );
     }
@@ -89,6 +170,76 @@ export function SettingsModule() {
                     <CardDescription>Wybierz języki i walutę wyświetlania na frontendzie.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold flex items-center gap-2">
+                                <Upload className="w-4 h-4 text-slate-500" />
+                                Logo serwisu (header)
+                            </Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    value={settings.headerLogoUrl || ''}
+                                    onChange={(e) => setSettings({ ...settings, headerLogoUrl: e.target.value })}
+                                    placeholder="https://cdn.example.com/logo-header.png"
+                                    className="bg-white"
+                                />
+                                <div className="inline-flex">
+                                    <input
+                                        ref={headerInputRef}
+                                        type="file"
+                                        accept=".png,.jpg,.jpeg,.svg,.webp"
+                                        className="hidden"
+                                        onChange={(e) => handleLogoUpload('header', e.target.files?.[0] || null)}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        disabled={logoUploading.header}
+                                        onClick={() => headerInputRef.current?.click()}
+                                    >
+                                        {logoUploading.header ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Upload'}
+                                    </Button>
+                                </div>
+                            </div>
+                            <p className="text-xs text-slate-500">
+                                Zalecane: PNG/SVG, minimum 200px szerokości, tło przezroczyste.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold flex items-center gap-2">
+                                <Upload className="w-4 h-4 text-slate-500" />
+                                Logo w stopce
+                            </Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    value={settings.footerLogoUrl || ''}
+                                    onChange={(e) => setSettings({ ...settings, footerLogoUrl: e.target.value })}
+                                    placeholder="https://cdn.example.com/logo-footer.png"
+                                    className="bg-white"
+                                />
+                                <div className="inline-flex">
+                                    <input
+                                        ref={footerInputRef}
+                                        type="file"
+                                        accept=".png,.jpg,.jpeg,.svg,.webp"
+                                        className="hidden"
+                                        onChange={(e) => handleLogoUpload('footer', e.target.files?.[0] || null)}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        disabled={logoUploading.footer}
+                                        onClick={() => footerInputRef.current?.click()}
+                                    >
+                                        {logoUploading.footer ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Upload'}
+                                    </Button>
+                                </div>
+                            </div>
+                            <p className="text-xs text-slate-500">
+                                Zalecane: jasna wersja PNG/SVG, ok. 200x60 px, tło przezroczyste.
+                            </p>
+                        </div>
+                    </div>
                     {/* Languages */}
                     <div className="space-y-3">
                         <Label className="text-sm font-bold">Dostępne języki</Label>
@@ -228,6 +379,170 @@ export function SettingsModule() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Legal & Compliance */}
+            <Card className="shadow-sm border-slate-200 md:col-span-2">
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5 text-amber-500" />
+                        Zgodność prawna i dokumenty
+                    </CardTitle>
+                    <CardDescription>Wymagane informacje dla stopki (Impressum, polityki) zgodnie z wymogami DE/UE.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Pełna nazwa podmiotu</Label>
+                            <Input
+                                value={settings.legalCompanyName || ''}
+                                onChange={(e) => setSettings({ ...settings, legalCompanyName: e.target.value })}
+                                placeholder="Nazwa spółki / firmy"
+                                className="bg-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Adres rejestrowy / korespondencyjny</Label>
+                            <Input
+                                value={settings.legalAddress || ''}
+                                onChange={(e) => setSettings({ ...settings, legalAddress: e.target.value })}
+                                placeholder="Ulica, kod, miasto, kraj"
+                                className="bg-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Email kontaktowy</Label>
+                            <Input
+                                type="email"
+                                value={settings.legalContactEmail || ''}
+                                onChange={(e) => setSettings({ ...settings, legalContactEmail: e.target.value })}
+                                placeholder="compliance@twojadomena.com"
+                                className="bg-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Telefon kontaktowy</Label>
+                            <Input
+                                value={settings.legalContactPhone || ''}
+                                onChange={(e) => setSettings({ ...settings, legalContactPhone: e.target.value })}
+                                placeholder="+49 ..."
+                                className="bg-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">NIP / VAT ID</Label>
+                            <Input
+                                value={settings.legalVatId || ''}
+                                onChange={(e) => setSettings({ ...settings, legalVatId: e.target.value })}
+                                placeholder="DE999999999"
+                                className="bg-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Numer rejestrowy (KRS/Handelsregister)</Label>
+                            <Input
+                                value={settings.legalRegisterNumber || ''}
+                                onChange={(e) => setSettings({ ...settings, legalRegisterNumber: e.target.value })}
+                                placeholder="HRB 123456"
+                                className="bg-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Osoba reprezentująca</Label>
+                            <Input
+                                value={settings.legalRepresentative || ''}
+                                onChange={(e) => setSettings({ ...settings, legalRepresentative: e.target.value })}
+                                placeholder="Imię i nazwisko"
+                                className="bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                            <div className="text-sm text-slate-700">
+                                Podaj linki do wersji PL/DE/EN. Brak linku ukryje pozycję w stopce dla danego języka. Dokument otworzy się w nowej karcie.
+                            </div>
+                        </div>
+                        <div className="grid gap-4">
+                            {LEGAL_DOCS.map((doc) => (
+                                <div key={doc.key} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="font-semibold text-foreground">{doc.label}</p>
+                                            <p className="text-xs text-slate-500">{doc.helper}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                                        {LEGAL_LANGUAGES.map((lang) => (
+                                            <div key={`${doc.key}-${lang.code}`} className="space-y-2">
+                                                <Label className="text-xs uppercase tracking-wide text-slate-600">
+                                                    {lang.label}
+                                                </Label>
+                                                <Input
+                                                    placeholder="https://twojadomena.com/dokument.pdf"
+                                                    value={settings.legalDocuments?.[doc.key]?.[lang.code] || ''}
+                                                    onChange={(e) => handleLegalDocChange(doc.key, lang.code, e.target.value)}
+                                                    className="bg-white"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <p className="font-semibold text-foreground">Slogan przy logo</p>
+                                <p className="text-xs text-slate-500">Hasło wspierające logotyp (PL/EN/DE). Pokazywane w stopce.</p>
+                            </div>
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">PL</Label>
+                                <Input
+                                    value={settings.legalSloganPl || ''}
+                                    onChange={(e) => setSettings({ ...settings, legalSloganPl: e.target.value })}
+                                    placeholder="Twoje auto. Twój wybór."
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">EN</Label>
+                                <Input
+                                    value={settings.legalSloganEn || ''}
+                                    onChange={(e) => setSettings({ ...settings, legalSloganEn: e.target.value })}
+                                    placeholder="Your car. Your choice."
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">DE</Label>
+                                <Input
+                                    value={settings.legalSloganDe || ''}
+                                    onChange={(e) => setSettings({ ...settings, legalSloganDe: e.target.value })}
+                                    placeholder="Dein Auto. Deine Wahl."
+                                    className="bg-white"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                        <Button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            {saving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Zapisz ustawienia prawne
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

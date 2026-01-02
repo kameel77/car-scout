@@ -5,6 +5,10 @@ import jwt from '@fastify/jwt';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
+import { createReadStream } from 'fs';
 
 dotenv.config();
 
@@ -120,6 +124,34 @@ await fastify.register(settingsRoutes);
 await fastify.register(translationRoutes);
 await fastify.register(userRoutes);
 await fastify.register(faqRoutes);
+
+// Serve uploaded assets (logos)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsRoot = path.resolve(__dirname, '../uploads');
+
+fastify.get('/uploads/:folder/:file', async (request, reply) => {
+    const { folder, file } = request.params as { folder: string; file: string };
+
+    if (folder !== 'logos') {
+        return reply.code(404).send({ error: 'Not found' });
+    }
+
+    const filePath = path.join(uploadsRoot, folder, file);
+    try {
+        await fs.access(filePath);
+        const ext = path.extname(filePath).toLowerCase();
+        const mime = ext === '.svg' ? 'image/svg+xml'
+            : ext === '.png' ? 'image/png'
+            : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+            : ext === '.webp' ? 'image/webp'
+            : 'application/octet-stream';
+        reply.header('Content-Type', mime);
+        return reply.send(createReadStream(filePath));
+    } catch {
+        return reply.code(404).send({ error: 'Not found' });
+    }
+});
 
 // Start server
 const start = async () => {

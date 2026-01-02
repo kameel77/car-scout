@@ -64,7 +64,7 @@ export function ActiveFilters({
     if (filters.query !== searchValue) {
       setSearchValue(filters.query || '');
     }
-  }, [filters.query]);
+  }, [filters.query, searchValue]);
 
   const activeChips: { key: string; label: string; onRemove: () => void }[] = [];
 

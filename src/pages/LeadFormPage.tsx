@@ -19,6 +19,7 @@ import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
+import { Footer } from '@/components/Footer';
 
 const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
@@ -73,7 +74,7 @@ export default function LeadFormPage() {
     }
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
-  }, [listing, settingsData, priceType]);
+  }, [listing, settingsData, priceType, t]);
 
   const {
     register,
@@ -125,6 +126,7 @@ export default function LeadFormPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground animate-pulse">{t('common.loading')}</p>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -141,6 +143,7 @@ export default function LeadFormPage() {
             </Button>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -176,6 +179,7 @@ export default function LeadFormPage() {
             </div>
           </motion.div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -426,6 +430,7 @@ export default function LeadFormPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
