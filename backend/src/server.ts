@@ -94,7 +94,29 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
 
 // Health check
 fastify.get('/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    try {
+        // Test database connection
+        await fastify.prisma.$queryRaw`SELECT 1`;
+
+        // Test Redis connection
+        await fastify.redis.ping();
+
+        return {
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            database: 'connected',
+            redis: 'connected'
+        };
+    } catch (error) {
+        fastify.log.error(error, 'Health check failed');
+        return {
+            status: 'error',
+            timestamp: new Date().toISOString(),
+            error: error instanceof Error ? error.message : 'Unknown error',
+            database: 'unknown',
+            redis: 'unknown'
+        };
+    }
 });
 
 // Root endpoint
