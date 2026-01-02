@@ -89,34 +89,49 @@ export default function SearchPage() {
     PAGE_SIZE_OPTIONS.includes(initialPerPage) ? initialPerPage : DEFAULT_PER_PAGE
   );
 
-  // Sync URL when state changes
+  // Sync URL when state changes - use a ref to prevent loops
+  const urlSyncTimeoutRef = React.useRef<NodeJS.Timeout>();
   React.useEffect(() => {
-    const params = new URLSearchParams();
+    // Clear any pending timeout
+    if (urlSyncTimeoutRef.current) {
+      clearTimeout(urlSyncTimeoutRef.current);
+    }
 
-    if (filters.makes.length) params.set('make', filters.makes.join(','));
-    if (filters.models.length) params.set('model', filters.models.join(','));
-    if (filters.fuelTypes.length) params.set('fuelType', filters.fuelTypes.join(','));
-    if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
-    if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
-    if (filters.drives.length) params.set('drive', filters.drives.join(','));
+    // Debounce URL updates to prevent excessive calls
+    urlSyncTimeoutRef.current = setTimeout(() => {
+      const params = new URLSearchParams();
 
-    if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
-    if (filters.yearTo) params.set('yearMax', filters.yearTo);
-    if (filters.mileageFrom) params.set('mileageMin', filters.mileageFrom);
-    if (filters.mileageTo) params.set('mileageMax', filters.mileageTo);
-    if (filters.priceFrom) params.set('priceMin', filters.priceFrom);
-    if (filters.priceTo) params.set('priceMax', filters.priceTo);
-    if (filters.powerFrom) params.set('powerMin', filters.powerFrom);
-    if (filters.powerTo) params.set('powerMax', filters.powerTo);
-    if (filters.capacityFrom) params.set('capacityMin', filters.capacityFrom);
-    if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
+      if (filters.makes.length) params.set('make', filters.makes.join(','));
+      if (filters.models.length) params.set('model', filters.models.join(','));
+      if (filters.fuelTypes.length) params.set('fuelType', filters.fuelTypes.join(','));
+      if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
+      if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
+      if (filters.drives.length) params.set('drive', filters.drives.join(','));
 
-    if (filters.query) params.set('q', filters.query);
-    if (sortBy !== 'newest') params.set('sortBy', sortBy);
-    if (page > 1) params.set('page', page.toString());
-    if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
+      if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
+      if (filters.yearTo) params.set('yearMax', filters.yearTo);
+      if (filters.mileageFrom) params.set('mileageMin', filters.mileageFrom);
+      if (filters.mileageTo) params.set('mileageMax', filters.mileageTo);
+      if (filters.priceFrom) params.set('priceMin', filters.priceFrom);
+      if (filters.priceTo) params.set('priceMax', filters.priceTo);
+      if (filters.powerFrom) params.set('powerMin', filters.powerFrom);
+      if (filters.powerTo) params.set('powerMax', filters.powerTo);
+      if (filters.capacityFrom) params.set('capacityMin', filters.capacityFrom);
+      if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
 
-    setSearchParams(params, { replace: true });
+      if (filters.query) params.set('q', filters.query);
+      if (sortBy !== 'newest') params.set('sortBy', sortBy);
+      if (page > 1) params.set('page', page.toString());
+      if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
+
+      setSearchParams(params, { replace: true });
+    }, 100);
+
+    return () => {
+      if (urlSyncTimeoutRef.current) {
+        clearTimeout(urlSyncTimeoutRef.current);
+      }
+    };
   }, [filters, sortBy, page, perPage, setSearchParams]);
 
   React.useEffect(() => {
@@ -139,33 +154,36 @@ export default function SearchPage() {
   const totalCount = data?.count ?? listings.length;
   const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((totalCount || 1) / perPage));
 
-  const handleFilterChange = (updatedFilters: FilterState) => {
+  const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
     setFilters(updatedFilters);
     setPage(1);
-  };
+  }, []);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = React.useCallback(() => {
     setFilters(emptyFilters);
     setPage(1);
-  };
+  }, []);
 
-  const hasActiveFilters = Object.values(filters).some((v) =>
-    Array.isArray(v) ? v.length > 0 : v !== ''
+  const hasActiveFilters = React.useMemo(() =>
+    Object.values(filters).some((v) =>
+      Array.isArray(v) ? v.length > 0 : v !== ''
+    ),
+    [filters]
   );
 
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = React.useCallback((newPage: number) => {
     const safePage = Math.min(Math.max(newPage, 1), totalPages);
     setPage(safePage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, [totalPages]);
 
-  const handlePerPageChange = (value: string) => {
+  const handlePerPageChange = React.useCallback((value: string) => {
     const parsed = parseInt(value, 10);
     const validated = PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PER_PAGE;
     setPerPage(validated);
     setPage(1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
