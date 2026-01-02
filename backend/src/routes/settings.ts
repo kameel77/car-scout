@@ -227,7 +227,12 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'File is required' });
         }
 
-        const targetFieldRaw = (file.fields?.target?.value as string) || (request.query as any)?.target;
+        const targetFieldRaw =
+            typeof (file.fields as any)?.target === 'string'
+                ? (file.fields as any).target
+                : Array.isArray((file.fields as any)?.target)
+                    ? (file.fields as any).target[0]
+                    : (request.query as any)?.target;
         const target = targetFieldRaw === 'footer' ? 'footer' : 'header';
 
         const ext = path.extname(file.filename).toLowerCase();
