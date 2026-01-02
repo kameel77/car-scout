@@ -253,10 +253,15 @@ export const listingsApi = {
         return response.json();
     },
 
-    refreshImages: async (id: string, token: string) => {
+    refreshImages: async (id: string, token?: string) => {
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/listings/${id}/refresh-images`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers
         });
 
         if (!response.ok) {

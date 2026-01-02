@@ -213,11 +213,29 @@ export async function listingRoutes(fastify: FastifyInstance) {
         return { listing };
     });
 
-    // Refresh images from source (admin only)
-    fastify.post('/api/listings/:id/refresh-images', {
-        preHandler: [fastify.authenticate]
-    }, async (request, reply) => {
+    // Refresh images from source (admin only for manual refresh, public for auto-refresh)
+    fastify.post('/api/listings/:id/refresh-images', async (request, reply) => {
         const { id } = request.params as { id: string };
+
+        // Check if user is authenticated (for manual refresh)
+        const authHeader = request.headers.authorization;
+        const isAuthenticated = authHeader && authHeader.startsWith('Bearer ');
+
+        if (!isAuthenticated) {
+            // For auto-refresh, check if autoRefreshImages setting is enabled
+            try {
+                const settings = await fastify.prisma.appSettings.findFirst();
+                if (!settings?.autoRefreshImages) {
+                    return reply.code(403).send({
+                        error: 'Auto-refresh not enabled'
+                    });
+                }
+            } catch (error) {
+                return reply.code(500).send({
+                    error: 'Settings check failed'
+                });
+            }
+        }
 
         try {
             const listing = await refreshListingImages(fastify.prisma, id);

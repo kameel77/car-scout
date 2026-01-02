@@ -154,6 +154,9 @@ export const translations = {
         firstRegistration: "Data pierwszej rejestracji",
         registrationNumber: "Numer rejestracyjny",
         lowestPrice: "Najniższa cena z 30 dni",
+        archivedTitle: "Ogłoszenie jest już nieaktualne",
+        archivedDescription: "Zostało ono automatycznie zarchiwizowane, ponieważ nie jest już dostępne u źródła lub wystąpił błąd danych.",
+        returnToSearch: "Wróć na stronę wyszukiwania",
       },
 
       // Equipment sections
@@ -445,6 +448,9 @@ export const translations = {
         firstRegistration: "First registration",
         registrationNumber: "Registration number",
         lowestPrice: "Lowest price in 30 days",
+        archivedTitle: "This listing is no longer current",
+        archivedDescription: "It has been automatically archived because it is no longer available from the source or there was a data error.",
+        returnToSearch: "Return to search page",
       },
 
       // Equipment sections
@@ -734,6 +740,9 @@ export const translations = {
         firstRegistration: "Erstzulassung",
         registrationNumber: "Kennzeichen",
         lowestPrice: "Niedrigster Preis in 30 Tagen",
+        archivedTitle: "Diese Anzeige ist nicht mehr aktuell",
+        archivedDescription: "Sie wurde automatisch archiviert, da sie nicht mehr von der Quelle verfügbar ist oder ein Datenfehler aufgetreten ist.",
+        returnToSearch: "Zurück zur Suchseite",
       },
 
       // Equipment sections

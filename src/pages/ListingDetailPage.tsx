@@ -77,9 +77,26 @@ export default function ListingDetailPage() {
     }
   }, [id, queryClient, token]);
 
+  const handleAutoRefreshImages = React.useCallback(async () => {
+    if (!id) return;
+
+    try {
+      // For auto-refresh, we don't show loading state or toast notifications
+      await listingsApi.refreshImages(id, token);
+      await queryClient.invalidateQueries({ queryKey: ['listing', id] });
+      await queryClient.invalidateQueries({ queryKey: ['listings'] });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('Auto-archived')) {
+        setShowArchiveModal(true);
+      }
+      // Don't show error toast for auto-refresh to avoid disturbing users
+    }
+  }, [id, queryClient, token]);
+
   // Auto-check images and refresh if broken (when enabled in settings)
   React.useEffect(() => {
-    if (!listing || !settings?.autoRefreshImages || !token) return;
+    if (!listing || !settings?.autoRefreshImages) return;
     if (autoRefreshTriggered.current) return;
 
     const urls = listing.image_urls || [];
@@ -111,12 +128,12 @@ export default function ListingDetailPage() {
 
       if (failed > 0) {
         autoRefreshTriggered.current = true;
-        await handleRefreshImages();
+        await handleAutoRefreshImages();
       }
     };
 
     checkImages();
-  }, [listing, settings?.autoRefreshImages, token, handleRefreshImages]);
+  }, [listing, settings?.autoRefreshImages, handleAutoRefreshImages]);
 
   const priceInfo = React.useMemo(() => {
     if (!listing) return { primaryLabel: '', secondaryLabel: null };
@@ -408,10 +425,10 @@ export default function ListingDetailPage() {
               <div className="p-2 bg-destructive/10 rounded-full">
                 <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
-              <DialogTitle className="text-xl">Ogłoszenie jest już nieaktualne</DialogTitle>
+              <DialogTitle className="text-xl">{t('detail.archivedTitle')}</DialogTitle>
             </div>
             <DialogDescription className="text-base pt-2">
-              Zostało ono automatycznie zarchiwizowane, ponieważ nie jest już dostępne u źródła lub wystąpił błąd danych.
+              {t('detail.archivedDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-6">
@@ -420,7 +437,7 @@ export default function ListingDetailPage() {
               className="w-full gap-2"
               size="lg"
             >
-              Wróć na stronę wyszukiwania
+              {t('detail.returnToSearch')}
             </Button>
           </DialogFooter>
         </DialogContent>
