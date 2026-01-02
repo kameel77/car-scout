@@ -18,7 +18,7 @@ export function useListings(filters: FilterState, sortBy: string, page: number, 
     const currency = settings?.displayCurrency || 'PLN';
 
     return useQuery<ListingsResponse>({
-        queryKey: ['listings', filters, sortBy, page, perPage, currency, settings?.updatedAt],
+        queryKey: ['listings', filters, sortBy, page, perPage, currency],
         queryFn: async () => {
             const data = await listingsApi.getListings({
                 ...filters,
@@ -39,9 +39,8 @@ export function useListings(filters: FilterState, sortBy: string, page: number, 
 }
 
 export function useListing(id: string | undefined) {
-    const { data: settings } = useAppSettings();
     return useQuery<{ listing: Listing }>({
-        queryKey: ['listing', id, settings?.updatedAt],
+        queryKey: ['listing', id],
         queryFn: async () => {
             if (!id) throw new Error('Listing ID is required');
             const data = await listingsApi.getListing(id);

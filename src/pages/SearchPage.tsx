@@ -131,7 +131,7 @@ export default function SearchPage() {
     if (nextPerPage !== perPage) {
       setPerPage(nextPerPage);
     }
-  }, [searchParams, page, perPage]);
+  }, [searchParams]); // Remove page and perPage from dependencies to avoid loops
 
   const { data, isLoading } = useListings(filters, sortBy, page, perPage);
   const { data: options } = useListingOptions();
