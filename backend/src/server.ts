@@ -12,8 +12,29 @@ import { createReadStream } from 'fs';
 
 dotenv.config();
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+// Test connections on startup
+async function testConnections() {
+    try {
+        console.log('Testing database connection...');
+        await prisma.$queryRaw`SELECT 1`;
+        console.log('✅ Database connected');
+
+        console.log('Testing Redis connection...');
+        await redis.ping();
+        console.log('✅ Redis connected');
+    } catch (error) {
+        console.error('❌ Connection test failed:', error);
+        // Don't exit in production, just log the error
+        if (process.env.NODE_ENV === 'development') {
+            process.exit(1);
+        }
+    }
+}
 
 const fastify = Fastify({
     logger: {
@@ -178,6 +199,9 @@ fastify.get('/uploads/:folder/:file', async (request, reply) => {
 // Start server
 const start = async () => {
     try {
+        // Test connections before starting server
+        await testConnections();
+
         const port = parseInt(process.env.PORT || '3000');
         await fastify.listen({ port, host: '0.0.0.0' });
         console.log(`🚀 Server listening on port ${port}`);
