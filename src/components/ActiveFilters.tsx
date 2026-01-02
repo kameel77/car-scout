@@ -48,10 +48,12 @@ export function ActiveFilters({
   const { priceType, setPriceType } = usePriceSettings();
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState(filters.query || '');
+  const [isUserTyping, setIsUserTyping] = React.useState(false);
 
   // Debounce search update
   React.useEffect(() => {
     const timeout = setTimeout(() => {
+      setIsUserTyping(false);
       if (searchValue !== filters.query) {
         onFilterChange({ ...filters, query: searchValue });
       }
@@ -59,12 +61,12 @@ export function ActiveFilters({
     return () => clearTimeout(timeout);
   }, [searchValue, filters.query, onFilterChange, filters]);
 
-  // Sync local state when filters are cleared externally
+  // Sync local state when filters are cleared externally (but not while user is typing)
   React.useEffect(() => {
-    if (filters.query !== searchValue) {
+    if (!isUserTyping && filters.query !== searchValue) {
       setSearchValue(filters.query || '');
     }
-  }, [filters.query, searchValue]);
+  }, [filters.query, searchValue, isUserTyping]);
 
   const activeChips: { key: string; label: string; onRemove: () => void }[] = [];
 
@@ -165,7 +167,7 @@ export function ActiveFilters({
       {/* Top Bar - Mobile */}
       <div className="flex lg:hidden flex-col gap-4 mb-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder={t('search.placeholder', 'Search...')}
             value={searchValue}
@@ -263,15 +265,20 @@ export function ActiveFilters({
             <span className="font-semibold text-foreground">{resultCount}</span> {t('common.offers')}
           </div>
 
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t('search.placeholder', 'Pozwól, że znajdę to za Ciebie...')}
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="pl-9 w-full bg-background border-primary/20 focus-visible:ring-primary/30 active:scale-[1.01] transition-all"
-            />
-          </div>
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder={t('search.placeholder', 'Pozwól, że znajdę to za Ciebie...')}
+            value={searchValue}
+            onChange={(e) => {
+              setIsUserTyping(true);
+              setSearchValue(e.target.value);
+            }}
+            className="pl-9 w-full bg-background border-primary/20 focus-visible:ring-primary/30 active:scale-[1.01] transition-all"
+            disabled={false}
+            readOnly={false}
+          />
+        </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
