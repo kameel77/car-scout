@@ -46,6 +46,23 @@ export default function ListingDetailPage() {
   const { priceType } = usePriceSettings();
   const listing = data?.listing;
 
+  // Store search parameters for return navigation
+  const [searchParams, setSearchParams] = React.useState<string>('');
+
+  React.useEffect(() => {
+    // Check if there are search parameters in the current URL (from search page)
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    if (urlSearchParams.toString()) {
+      setSearchParams(urlSearchParams.toString());
+    } else {
+      // If no search params in URL, try to get from sessionStorage
+      const stored = sessionStorage.getItem('searchParams');
+      if (stored) {
+        setSearchParams(stored);
+      }
+    }
+  }, []);
+
   const [refreshing, setRefreshing] = React.useState(false);
   const [showArchiveModal, setShowArchiveModal] = React.useState(false);
   const autoRefreshTriggered = React.useRef(false);
@@ -433,7 +450,10 @@ export default function ListingDetailPage() {
           </DialogHeader>
           <DialogFooter className="mt-6">
             <Button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                const targetUrl = searchParams ? `/?${searchParams}` : '/';
+                navigate(targetUrl);
+              }}
               className="w-full gap-2"
               size="lg"
             >

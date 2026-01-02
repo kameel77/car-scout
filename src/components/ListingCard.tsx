@@ -46,6 +46,14 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
     return { primaryLabel: listing.price_display, secondaryLabel: null };
   }, [listing, settings, priceType]);
 
+  const handleListingClick = () => {
+    // Store current search parameters in sessionStorage for return navigation
+    const currentSearchParams = new URLSearchParams(window.location.search);
+    if (currentSearchParams.toString()) {
+      sessionStorage.setItem('searchParams', currentSearchParams.toString());
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -53,7 +61,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
       transition={{ duration: 0.3, delay: index * 0.05 }}
       className="listing-card group"
     >
-      <Link to={`/listing/${listing.listing_id}`} className="block">
+      <Link to={`/listing/${listing.listing_id}`} onClick={handleListingClick} className="block">
         {/* Image */}
         <div className="relative aspect-[16/10] overflow-hidden">
           <img
