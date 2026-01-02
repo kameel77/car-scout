@@ -149,6 +149,16 @@ fastify.get('/', async () => {
     };
 });
 
+// Handle POST to root (for health checks or misconfigured requests)
+fastify.post('/', async () => {
+    return {
+        name: 'Car Scout API',
+        version: '1.0.0',
+        status: 'running',
+        method: 'POST'
+    };
+});
+
 // Register routes
 import { authRoutes } from './routes/auth.js';
 import { importRoutes } from './routes/import.js';
