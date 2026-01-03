@@ -8,7 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 // Auth API
 export const authApi = {
     login: async (email: string, password: string) => {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -23,7 +23,7 @@ export const authApi = {
     },
 
     me: async (token: string) => {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -35,7 +35,7 @@ export const authApi = {
     },
 
     logout: async (token: string) => {
-        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
