@@ -1,3 +1,4 @@
+type ImportMode = 'replace' | 'merge';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Auth API
@@ -41,11 +42,11 @@ export const authApi = {
 
 // Import API
 export const importApi = {
-    uploadCSV: async (file: File, token: string) => {
+    uploadCSV: async (file: File, token: string, mode: ImportMode = 'replace') => {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/import/csv`, {
+        const response = await fetch(`${API_BASE_URL}/api/import/csv?mode=${mode}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -59,14 +60,14 @@ export const importApi = {
         return response.json();
     },
 
-    uploadJSON: async (data: any[], token: string, source?: string) => {
+    uploadJSON: async (data: any[], token: string, source?: string, mode: ImportMode = 'replace') => {
         const response = await fetch(`${API_BASE_URL}/api/import/csv-data`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ data, source })
+            body: JSON.stringify({ data, source, mode })
         });
 
         if (!response.ok) {

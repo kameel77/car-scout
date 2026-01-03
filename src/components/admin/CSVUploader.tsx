@@ -17,10 +17,13 @@ interface UploadResult {
     importLogId: string;
 }
 
+type ImportMode = 'replace' | 'merge';
+
 export function CSVUploader() {
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [result, setResult] = useState<UploadResult | null>(null);
+    const [importMode, setImportMode] = useState<ImportMode>('replace');
     const { token } = useAuth();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,7 +38,7 @@ export function CSVUploader() {
 
         setIsUploading(true);
         try {
-            const uploadResult = await importApi.uploadCSV(file, token);
+            const uploadResult = await importApi.uploadCSV(file, token, importMode);
             setResult(uploadResult);
             toast.success(`Import successful! ${uploadResult.inserted} inserted, ${uploadResult.updated} updated`);
         } catch (error) {
@@ -57,6 +60,46 @@ export function CSVUploader() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                {/* Import Mode */}
+                <div className="space-y-2">
+                    <p className="text-sm font-semibold text-gray-800">Tryb importu</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {[
+                            {
+                                value: 'replace',
+                                title: 'Aktualizacja wszystkich',
+                                description: 'Zastępuje obecną listę, archiwizuje brakujące wpisy (obecne zachowanie).'
+                            },
+                            {
+                                value: 'merge',
+                                title: 'Dodaj do istniejących',
+                                description: 'Aktualizuje znalezione pojazdy, nowe dodaje do bazy, bez archiwizacji brakujących.'
+                            }
+                        ].map((option) => {
+                            const isActive = importMode === option.value;
+                            return (
+                                <label
+                                    key={option.value}
+                                    className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-colors ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-medium text-gray-900">{option.title}</span>
+                                        <input
+                                            type="radio"
+                                            name="import-mode"
+                                            className="h-4 w-4 text-blue-600"
+                                            value={option.value}
+                                            checked={isActive}
+                                            onChange={() => setImportMode(option.value as ImportMode)}
+                                        />
+                                    </div>
+                                    <p className="text-sm text-gray-600">{option.description}</p>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 {/* File Input */}
                 <div className="flex items-center gap-4">
                     <label
