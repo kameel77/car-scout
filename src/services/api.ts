@@ -173,7 +173,7 @@ export const analyticsApi = {
 export const listingsApi = {
     getListingOptions: async () => {
         // Options are public, no token needed
-        const response = await fetch(`${API_BASE_URL}/listings/options`);
+        const response = await fetch(`${API_BASE_URL}/api/listings/options`);
         if (!response.ok) {
             throw new Error('Failed to fetch listing options');
         }

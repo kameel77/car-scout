@@ -231,7 +231,7 @@ export default function SearchPage() {
               }}
             />
 
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />

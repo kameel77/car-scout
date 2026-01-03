@@ -165,13 +165,16 @@ export function ActiveFilters({
   return (
     <div className="flex flex-col">
       {/* Top Bar - Mobile */}
-      <div className="flex lg:hidden flex-col gap-4 mb-4">
+      <div className="flex lg:hidden flex-col gap-4 mb-4 mt-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder={t('search.placeholder', 'Search...')}
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={(e) => {
+              setIsUserTyping(true);
+              setSearchValue(e.target.value);
+            }}
             className="pl-9"
           />
         </div>
