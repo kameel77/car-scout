@@ -222,12 +222,30 @@ export const listingsApi = {
             if (filters.perPage) params.append('perPage', filters.perPage.toString());
         }
 
-        const response = await fetch(`${API_BASE_URL}/listings?${params.toString()}`);
-        return response.json();
+        const url = `${API_BASE_URL}/api/listings?${params.toString()}`;
+        console.log('Making API call to:', url);
+
+        try {
+            const response = await fetch(url);
+            console.log('API response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API error:', response.status, errorText);
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('API data received:', data);
+            return data;
+        } catch (error) {
+            console.error('API call failed:', error);
+            throw error;
+        }
     },
 
     getListing: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/listings/${id}`);
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}`);
         return response.json();
     },
 
