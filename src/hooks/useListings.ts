@@ -32,14 +32,15 @@ export function useListings(filters: FilterState, sortBy: string, page: number, 
 
             let mappedListings: any[] = [];
             try {
-                mappedListings = data.listings.map((listing: any, index: number) => {
-                    try {
-                        return mapBackendListingToFrontend(listing);
-                    } catch (error) {
-                        console.error(`Failed to map listing ${index}:`, error, listing);
-                        return null; // Return null for failed mappings
-                    }
-                }).filter((listing: any) => listing !== null); // Filter out failed mappings
+                mappedListings = data.listings
+                    .map((listing: any, index: number) => {
+                        const mapped = mapBackendListingToFrontend(listing);
+                        if (!mapped) {
+                            console.warn(`Failed to map listing ${index}:`, listing);
+                        }
+                        return mapped;
+                    })
+                    .filter((listing: any) => listing !== null); // Filter out failed mappings
 
                 console.log(`Successfully mapped ${mappedListings.length} out of ${data.listings.length} listings`);
             } catch (error) {
@@ -64,7 +65,11 @@ export function useListing(id: string | undefined) {
         queryFn: async () => {
             if (!id) throw new Error('Listing ID is required');
             const data = await listingsApi.getListing(id);
-            return { listing: mapBackendListingToFrontend(data.listing) };
+            const mapped = mapBackendListingToFrontend(data.listing);
+            if (!mapped) {
+                throw new Error('Failed to map listing data');
+            }
+            return { listing: mapped };
         },
         enabled: !!id
     });
