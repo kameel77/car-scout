@@ -7,6 +7,8 @@ export function useAppSettings() {
         queryFn: async () => {
             return await settingsApi.getSettings();
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
 }

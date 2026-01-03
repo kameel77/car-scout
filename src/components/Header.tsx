@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { buildAssetUrl } from '@/utils/assets';
 
 const ALL_LANGUAGES = [
   { code: 'pl', label: 'Polski', flag: '🇵🇱' },
@@ -50,7 +51,12 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
       <div className="container flex h-[var(--header-height)] items-center justify-between gap-4">
         {/* Logo */}
         <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
-          <img src="/askauto_logo.svg" alt="AskAuto" className="h-[3.25rem] w-auto" />
+          <img
+            src={buildAssetUrl(settings?.headerLogoUrl) || '/askauto_logo.svg'}
+            alt="AskAuto"
+            className="h-[3.25rem] w-auto max-w-[260px] object-contain"
+            loading="lazy"
+          />
         </Link>
 
         {/* Desktop Navigation */}
@@ -92,7 +98,12 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           <SheetContent side="right" className="w-72">
             <div className="flex flex-col gap-6 pt-6">
               <div className="flex items-center">
-                <img src="/askauto_logo.svg" alt="AskAuto" className="h-[3.25rem] w-auto" />
+                <img
+                  src={buildAssetUrl(settings?.headerLogoUrl) || '/askauto_logo.svg'}
+                  alt="AskAuto"
+                  className="h-[3.25rem] w-auto max-w-[260px] object-contain"
+                  loading="lazy"
+                />
               </div>
 
               <div className="space-y-4">

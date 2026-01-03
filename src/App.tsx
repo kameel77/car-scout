@@ -13,6 +13,7 @@ import LoginPage from "./pages/admin/LoginPage";
 import AdminDashboard from "./pages/admin/DashboardPage";
 import TranslationsPage from "./pages/admin/TranslationsPage";
 import UsersPage from "./pages/admin/UsersPage";
+import FaqPage from "./pages/admin/FaqPage";
 import NotFound from "./pages/NotFound";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
@@ -52,6 +53,14 @@ const App = () => (
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'manager']}>
                     <TranslationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/faq"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <FaqPage />
                   </ProtectedRoute>
                 }
               />

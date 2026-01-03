@@ -6,6 +6,16 @@ import { ActiveFilters } from '@/components/ActiveFilters';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
+import { ListingPagination } from '@/components/ListingPagination';
+import { ScrollToTopButton } from '@/components/ScrollToTopButton';
+import { Footer } from '@/components/Footer';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -33,6 +43,14 @@ import { useSearchParams } from 'react-router-dom';
 
 // Helper to parse arrays from URL
 const parseArray = (param: string | null) => param ? param.split(',') : [];
+
+const DEFAULT_PER_PAGE = 30;
+const PAGE_SIZE_OPTIONS = [30, 60];
+
+const parseNumberParam = (value: string | null, fallback: number) => {
+  const parsed = value ? parseInt(value, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
 
 export default function SearchPage() {
   const { t } = useTranslation();
@@ -64,47 +82,120 @@ export default function SearchPage() {
   });
 
   const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || 'newest');
+  const initialPage = parseNumberParam(searchParams.get('page'), 1);
+  const initialPerPage = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
+  const [page, setPage] = React.useState(initialPage);
+  const [perPage, setPerPage] = React.useState(
+    PAGE_SIZE_OPTIONS.includes(initialPerPage) ? initialPerPage : DEFAULT_PER_PAGE
+  );
 
-  // Sync URL when state changes
+  // Sync URL when state changes - use a ref to prevent loops
+  const urlSyncTimeoutRef = React.useRef<NodeJS.Timeout>();
   React.useEffect(() => {
-    const params = new URLSearchParams();
+    // Clear any pending timeout
+    if (urlSyncTimeoutRef.current) {
+      clearTimeout(urlSyncTimeoutRef.current);
+    }
 
-    if (filters.makes.length) params.set('make', filters.makes.join(','));
-    if (filters.models.length) params.set('model', filters.models.join(','));
-    if (filters.fuelTypes.length) params.set('fuelType', filters.fuelTypes.join(','));
-    if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
-    if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
-    if (filters.drives.length) params.set('drive', filters.drives.join(','));
+    // Debounce URL updates to prevent excessive calls
+    urlSyncTimeoutRef.current = setTimeout(() => {
+      const params = new URLSearchParams();
 
-    if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
-    if (filters.yearTo) params.set('yearMax', filters.yearTo);
-    if (filters.mileageFrom) params.set('mileageMin', filters.mileageFrom);
-    if (filters.mileageTo) params.set('mileageMax', filters.mileageTo);
-    if (filters.priceFrom) params.set('priceMin', filters.priceFrom);
-    if (filters.priceTo) params.set('priceMax', filters.priceTo);
-    if (filters.powerFrom) params.set('powerMin', filters.powerFrom);
-    if (filters.powerTo) params.set('powerMax', filters.powerTo);
-    if (filters.capacityFrom) params.set('capacityMin', filters.capacityFrom);
-    if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
+      if (filters.makes.length) params.set('make', filters.makes.join(','));
+      if (filters.models.length) params.set('model', filters.models.join(','));
+      if (filters.fuelTypes.length) params.set('fuelType', filters.fuelTypes.join(','));
+      if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
+      if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
+      if (filters.drives.length) params.set('drive', filters.drives.join(','));
 
-    if (filters.query) params.set('q', filters.query);
-    if (sortBy !== 'newest') params.set('sortBy', sortBy);
+      if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
+      if (filters.yearTo) params.set('yearMax', filters.yearTo);
+      if (filters.mileageFrom) params.set('mileageMin', filters.mileageFrom);
+      if (filters.mileageTo) params.set('mileageMax', filters.mileageTo);
+      if (filters.priceFrom) params.set('priceMin', filters.priceFrom);
+      if (filters.priceTo) params.set('priceMax', filters.priceTo);
+      if (filters.powerFrom) params.set('powerMin', filters.powerFrom);
+      if (filters.powerTo) params.set('powerMax', filters.powerTo);
+      if (filters.capacityFrom) params.set('capacityMin', filters.capacityFrom);
+      if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
 
-    setSearchParams(params, { replace: true });
-  }, [filters, sortBy, setSearchParams]);
+      if (filters.query) params.set('q', filters.query);
+      if (sortBy !== 'newest') params.set('sortBy', sortBy);
+      if (page > 1) params.set('page', page.toString());
+      if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
 
+      setSearchParams(params, { replace: true });
+    }, 100);
 
-  const { data, isLoading } = useListings(filters, sortBy);
+    return () => {
+      if (urlSyncTimeoutRef.current) {
+        clearTimeout(urlSyncTimeoutRef.current);
+      }
+    };
+  }, [filters, sortBy, page, perPage, setSearchParams]);
+
+  React.useEffect(() => {
+    const nextPage = parseNumberParam(searchParams.get('page'), 1);
+    const nextPerPageRaw = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
+    const nextPerPage = PAGE_SIZE_OPTIONS.includes(nextPerPageRaw) ? nextPerPageRaw : DEFAULT_PER_PAGE;
+
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
+
+    if (nextPerPage !== perPage) {
+      setPerPage(nextPerPage);
+    }
+  }, [searchParams]); // Remove page and perPage from dependencies to avoid loops
+
+  const { data, isLoading } = useListings(filters, sortBy, page, perPage);
   const { data: options } = useListingOptions();
   const listings = data?.listings || [];
+  const totalCount = data?.count ?? listings.length;
+  const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((totalCount || 1) / perPage));
 
-  const handleClearFilters = () => {
+  // Debug logging
+  console.log('SearchPage state:', {
+    filters,
+    sortBy,
+    page,
+    perPage,
+    listingsCount: listings.length,
+    totalCount,
+    isLoading,
+    hasData: !!data
+  });
+
+  const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
+    setFilters(updatedFilters);
+    setPage(1);
+  }, []);
+
+  const handleClearFilters = React.useCallback(() => {
     setFilters(emptyFilters);
-  };
+    setPage(1);
+  }, []);
 
-  const hasActiveFilters = Object.values(filters).some((v) =>
-    Array.isArray(v) ? v.length > 0 : v !== ''
+  const hasActiveFilters = React.useMemo(() =>
+    Object.values(filters).some((v) =>
+      Array.isArray(v) ? v.length > 0 : v !== ''
+    ),
+    [filters]
   );
+
+  const handlePageChange = React.useCallback((newPage: number) => {
+    const safePage = Math.min(Math.max(newPage, 1), totalPages);
+    setPage(safePage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [totalPages]);
+
+  const handlePerPageChange = React.useCallback((value: string) => {
+    const parsed = parseInt(value, 10);
+    const validated = PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PER_PAGE;
+    setPerPage(validated);
+    setPage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,9 +208,9 @@ export default function SearchPage() {
             <div className="sticky top-16 h-[calc(100vh-4rem)] pt-4">
               <FilterPanel
                 filters={filters}
-                onFilterChange={setFilters}
+                onFilterChange={handleFilterChange}
                 onClear={handleClearFilters}
-                resultCount={listings.length}
+                resultCount={totalCount}
                 availableMakes={options?.makes || []}
                 availableModels={options?.models || []}
               />
@@ -130,14 +221,17 @@ export default function SearchPage() {
           <div className="flex-1 min-w-0">
             <ActiveFilters
               filters={filters}
-              onFilterChange={setFilters}
+              onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
-              resultCount={listings.length}
+              resultCount={totalCount}
               sortBy={sortBy}
-              onSortChange={setSortBy}
+              onSortChange={(value) => {
+                setSortBy(value);
+                setPage(1);
+              }}
             />
 
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
@@ -153,9 +247,42 @@ export default function SearchPage() {
                 </div>
               )}
             </div>
+
+            {!isLoading && (
+              <div className="mt-8 flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="text-sm text-muted-foreground">
+                    {t('common.found')}: <span className="font-semibold text-foreground">{totalCount}</span> {t('common.offers')}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">{t('common.perPage')}</span>
+                    <Select value={perPage.toString()} onValueChange={handlePerPageChange}>
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAGE_SIZE_OPTIONS.map((size) => (
+                          <SelectItem key={size} value={size.toString()}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <ListingPagination
+                  page={page}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
           </div>
         </div>
       </main>
+
+      <ScrollToTopButton />
+      <Footer />
     </div>
   );
 }

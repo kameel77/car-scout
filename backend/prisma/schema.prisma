@@ -176,6 +176,19 @@ model AppSettings {
   brokerFeePctPln     Float    @default(3.5) @map("broker_fee_pct_pln")
   brokerFeePctEur     Float    @default(3.5) @map("broker_fee_pct_eur")
   autoRefreshImages   Boolean  @default(false) @map("auto_refresh_images")
+  legalDocuments      Json?    @map("legal_documents")
+  legalCompanyName    String?  @map("legal_company_name")
+  legalAddress        String?  @map("legal_address")
+  legalContactEmail   String?  @map("legal_contact_email")
+  legalContactPhone   String?  @map("legal_contact_phone")
+  legalVatId          String?  @map("legal_vat_id")
+  legalRegisterNumber String?  @map("legal_register_number")
+  legalRepresentative String?  @map("legal_representative")
+  headerLogoUrl       String?  @map("header_logo_url")
+  footerLogoUrl       String?  @map("footer_logo_url")
+  legalSloganPl       String?  @map("legal_slogan_pl")
+  legalSloganEn       String?  @map("legal_slogan_en")
+  legalSloganDe       String?  @map("legal_slogan_de")
   
   updatedAt           DateTime @updatedAt @map("updated_at")
 
@@ -195,4 +208,30 @@ model Translation {
 
   @@index([category])
   @@map("translations")
+}
+
+// ============ FAQ ENTRIES ============
+enum FaqPage {
+  home
+  offers
+  contact
+}
+
+model FaqEntry {
+  id           String   @id @default(cuid())
+  page         FaqPage
+  sortOrder    Int      @default(0) @map("sort_order")
+  questionPl   String   @map("question_pl")
+  answerPl     String   @map("answer_pl") @db.Text
+  questionEn   String   @map("question_en")
+  answerEn     String   @map("answer_en") @db.Text
+  questionDe   String   @map("question_de")
+  answerDe     String   @map("answer_de") @db.Text
+  isPublished  Boolean  @default(true) @map("is_published")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([page, sortOrder])
+  @@map("faq_entries")
 }

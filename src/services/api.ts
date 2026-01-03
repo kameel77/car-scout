@@ -1,7 +1,9 @@
 import type { TranslationEntry, TranslationPayload } from '@/types/translations';
 import type { User, UserPayload } from '@/types/user';
+import type { FaqEntry, FaqPayload } from '@/types/faq';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Default to relative /api so it works behind the same host without extra env.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // Auth API
 export const authApi = {
@@ -39,6 +41,53 @@ export const authApi = {
         });
 
         return response.json();
+    }
+};
+
+// FAQ API
+export const faqApi = {
+    list: async (params: { page?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page);
+
+        const response = await fetch(`${API_BASE_URL}/api/faq?${queryParams.toString()}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to fetch FAQ entries');
+        }
+
+        return response.json();
+    },
+    save: async (payload: FaqPayload, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/faq`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to save FAQ entry');
+        }
+        return data;
+    },
+    delete: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/faq/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to delete FAQ entry');
+        }
+        return data;
     }
 };
 
@@ -169,10 +218,30 @@ export const listingsApi = {
             if (filters.sortBy) params.append('sortBy', filters.sortBy);
             if (filters.query) params.append('q', filters.query);
             if (filters.currency) params.append('currency', filters.currency);
+            if (filters.page) params.append('page', filters.page.toString());
+            if (filters.perPage) params.append('perPage', filters.perPage.toString());
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/listings?${params.toString()}`);
-        return response.json();
+        const url = `${API_BASE_URL}/api/listings?${params.toString()}`;
+        console.log('Making API call to:', url);
+
+        try {
+            const response = await fetch(url);
+            console.log('API response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API error:', response.status, errorText);
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('API data received:', data);
+            return data;
+        } catch (error) {
+            console.error('API call failed:', error);
+            throw error;
+        }
     },
 
     getListing: async (id: string) => {
@@ -202,10 +271,15 @@ export const listingsApi = {
         return response.json();
     },
 
-    refreshImages: async (id: string, token: string) => {
+    refreshImages: async (id: string, token?: string) => {
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/listings/${id}/refresh-images`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers
         });
 
         if (!response.ok) {
@@ -222,6 +296,26 @@ export const settingsApi = {
     getSettings: async () => {
         const response = await fetch(`${API_BASE_URL}/api/settings`);
         return response.json();
+    },
+
+    uploadLogo: async (file: File, target: 'header' | 'footer', token: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('target', target);
+
+        const response = await fetch(`${API_BASE_URL}/api/settings/logo`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Logo upload failed');
+        }
+        return data as { url: string };
     },
 
     updateSettings: async (settings: any, token: string) => {

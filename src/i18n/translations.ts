@@ -25,6 +25,8 @@ export const translations = {
         results: "wyników",
         found: "Znaleziono",
         offers: "ofert",
+        perPage: "na stronę",
+        toTop: "Do góry",
       },
 
       // Navigation
@@ -152,6 +154,9 @@ export const translations = {
         firstRegistration: "Data pierwszej rejestracji",
         registrationNumber: "Numer rejestracyjny",
         lowestPrice: "Najniższa cena z 30 dni",
+        archivedTitle: "Ogłoszenie jest już nieaktualne",
+        archivedDescription: "Zostało ono automatycznie zarchiwizowane, ponieważ nie jest już dostępne u źródła lub wystąpił błąd danych.",
+        returnToSearch: "Wróć na stronę wyszukiwania",
       },
 
       // Equipment sections
@@ -271,6 +276,20 @@ export const translations = {
         system_start_stop: "System Start-Stop",
         bezkluczykowy_dostep: "Bezkluczykowy dostęp",
       },
+      footer: {
+        legal: "Informacje prawne",
+        documents: "Dokumenty",
+        imprint: "Imprint / Impressum",
+        privacy: "Polityka prywatności",
+        terms: "Regulamin / AGB",
+        cookies: "Polityka cookies",
+        contact: "Kontakt",
+        company: "Dane podmiotu",
+        vat: "NIP / VAT ID",
+        register: "Rejestr (KRS/Handelsregister)",
+        representative: "Osoba uprawniona do reprezentacji",
+        missing: "Brak podpiętego dokumentu dla tego języka.",
+      },
     },
   },
 
@@ -300,6 +319,8 @@ export const translations = {
         results: "results",
         found: "Found",
         offers: "offers",
+        perPage: "per page",
+        toTop: "Back to top",
       },
 
       // Navigation
@@ -427,6 +448,9 @@ export const translations = {
         firstRegistration: "First registration",
         registrationNumber: "Registration number",
         lowestPrice: "Lowest price in 30 days",
+        archivedTitle: "This listing is no longer current",
+        archivedDescription: "It has been automatically archived because it is no longer available from the source or there was a data error.",
+        returnToSearch: "Return to search page",
       },
 
       // Equipment sections
@@ -545,6 +569,20 @@ export const translations = {
         matrycowe_led: "Matrix LED",
         system_start_stop: "Start-Stop system",
         bezkluczykowy_dostep: "Keyless access",
+      },
+      footer: {
+        legal: "Legal",
+        documents: "Documents",
+        imprint: "Imprint",
+        privacy: "Privacy Policy",
+        terms: "Terms & Conditions",
+        cookies: "Cookie Policy",
+        contact: "Contact",
+        company: "Company info",
+        vat: "VAT / Tax ID",
+        register: "Registry number",
+        representative: "Authorized representative",
+        missing: "No document linked for this language.",
       },
     },
   },
@@ -702,6 +740,9 @@ export const translations = {
         firstRegistration: "Erstzulassung",
         registrationNumber: "Kennzeichen",
         lowestPrice: "Niedrigster Preis in 30 Tagen",
+        archivedTitle: "Diese Anzeige ist nicht mehr aktuell",
+        archivedDescription: "Sie wurde automatisch archiviert, da sie nicht mehr von der Quelle verfügbar ist oder ein Datenfehler aufgetreten ist.",
+        returnToSearch: "Zurück zur Suchseite",
       },
 
       // Equipment sections
@@ -820,6 +861,20 @@ export const translations = {
         matrycowe_led: "Matrix-LED",
         system_start_stop: "Start-Stopp-System",
         bezkluczykowy_dostep: "Keyless Entry",
+      },
+      footer: {
+        legal: "Rechtliches",
+        documents: "Dokumente",
+        imprint: "Impressum",
+        privacy: "Datenschutzerklärung",
+        terms: "AGB / Nutzungsbedingungen",
+        cookies: "Cookie-Richtlinie",
+        contact: "Kontakt",
+        company: "Unternehmensdaten",
+        vat: "USt-IdNr.",
+        register: "Handelsregister",
+        representative: "Vertretungsberechtigte Person",
+        missing: "Kein Dokument für diese Sprache hinterlegt.",
       },
     },
   },

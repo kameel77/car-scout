@@ -15,12 +15,13 @@ import { useListing } from '@/hooks/useListings';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { listingsApi } from '@/services/api';
+import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/utils/formatters';
+import type { FaqEntry } from '@/types/faq';
 import {
   Dialog,
   DialogContent,
@@ -30,10 +31,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
+import { Footer } from '@/components/Footer';
 
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, token } = useAuth();
@@ -44,13 +46,74 @@ export default function ListingDetailPage() {
   const { priceType } = usePriceSettings();
   const listing = data?.listing;
 
+  // Store search parameters for return navigation
+  const [searchParams, setSearchParams] = React.useState<string>('');
+
+  React.useEffect(() => {
+    // Check if there are search parameters in the current URL (from search page)
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    if (urlSearchParams.toString()) {
+      setSearchParams(urlSearchParams.toString());
+    } else {
+      // If no search params in URL, try to get from sessionStorage
+      const stored = sessionStorage.getItem('searchParams');
+      if (stored) {
+        setSearchParams(stored);
+      }
+    }
+  }, []);
+
   const [refreshing, setRefreshing] = React.useState(false);
   const [showArchiveModal, setShowArchiveModal] = React.useState(false);
   const autoRefreshTriggered = React.useRef(false);
 
+  const { data: faqData } = useQuery({
+    queryKey: ['faq', 'offers'],
+    queryFn: () => faqApi.list({ page: 'offers' }),
+    staleTime: 5 * 60 * 1000
+  });
+
+  const handleRefreshImages = React.useCallback(async () => {
+    if (!id || !token) return;
+
+    try {
+      setRefreshing(true);
+      await listingsApi.refreshImages(id, token);
+      await queryClient.invalidateQueries({ queryKey: ['listing', id] });
+      await queryClient.invalidateQueries({ queryKey: ['listings'] });
+      toast.success('Zdjęcia zostały zaktualizowane');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('Auto-archived')) {
+        setShowArchiveModal(true);
+      } else {
+        toast.error(message || 'Błąd podczas odświeżania zdjęć');
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [id, queryClient, token]);
+
+  const handleAutoRefreshImages = React.useCallback(async () => {
+    if (!id) return;
+
+    try {
+      // For auto-refresh, we don't show loading state or toast notifications
+      await listingsApi.refreshImages(id, token);
+      await queryClient.invalidateQueries({ queryKey: ['listing', id] });
+      await queryClient.invalidateQueries({ queryKey: ['listings'] });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('Auto-archived')) {
+        setShowArchiveModal(true);
+      }
+      // Don't show error toast for auto-refresh to avoid disturbing users
+    }
+  }, [id, queryClient, token]);
+
   // Auto-check images and refresh if broken (when enabled in settings)
   React.useEffect(() => {
-    if (!listing || !settings?.autoRefreshImages || !token) return;
+    if (!listing || !settings?.autoRefreshImages) return;
     if (autoRefreshTriggered.current) return;
 
     const urls = listing.image_urls || [];
@@ -82,33 +145,12 @@ export default function ListingDetailPage() {
 
       if (failed > 0) {
         autoRefreshTriggered.current = true;
-        await handleRefreshImages();
+        await handleAutoRefreshImages();
       }
     };
 
     checkImages();
-  }, [listing, settings?.autoRefreshImages, token]);
-
-  const handleRefreshImages = async () => {
-    if (!id || !token) return;
-
-    try {
-      setRefreshing(true);
-      await listingsApi.refreshImages(id, token);
-      await queryClient.invalidateQueries({ queryKey: ['listing', id] });
-      await queryClient.invalidateQueries({ queryKey: ['listings'] });
-      toast.success('Zdjęcia zostały zaktualizowane');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      if (message.includes('Auto-archived')) {
-        setShowArchiveModal(true);
-      } else {
-        toast.error(message || 'Błąd podczas odświeżania zdjęć');
-      }
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  }, [listing, settings?.autoRefreshImages, handleAutoRefreshImages]);
 
   const priceInfo = React.useMemo(() => {
     if (!listing) return { primaryLabel: '', secondaryLabel: null };
@@ -135,7 +177,26 @@ export default function ListingDetailPage() {
     }
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
-  }, [listing, settings, priceType]);
+  }, [listing, settings, priceType, t]);
+
+  const faqs = React.useMemo(() => {
+    const entries = (faqData?.entries || []) as FaqEntry[];
+    return entries
+      .filter((entry) => entry.isPublished)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [faqData]);
+
+  const getLocalizedQA = (entry: FaqEntry) => {
+    const lang = (i18n.language || 'pl').slice(0, 2);
+    switch (lang) {
+      case 'en':
+        return { question: entry.questionEn, answer: entry.answerEn };
+      case 'de':
+        return { question: entry.questionDe, answer: entry.answerDe };
+      default:
+        return { question: entry.questionPl, answer: entry.answerPl };
+    }
+  };
 
   if (isLoading) {
     return (
@@ -231,13 +292,31 @@ export default function ListingDetailPage() {
               <SpecificationsTable specifications={listing.specifications} />
             </section>
 
-            <Separator />
-
             {/* Equipment */}
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.equipment')}</h2>
               <EquipmentDisplay equipment={listing.equipment} />
             </section>
+
+            <Separator />
+
+            {/* FAQ */}
+            {faqs.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="font-heading text-xl font-semibold">{t('nav.faq', 'FAQ')}</h2>
+                <div className="space-y-3">
+                  {faqs.map((faq) => {
+                    const { question, answer } = getLocalizedQA(faq);
+                    return (
+                      <div key={faq.id} className="rounded-lg border border-border bg-card p-4 shadow-sm">
+                        <h3 className="text-lg font-semibold text-foreground">{question}</h3>
+                        <p className="mt-2 text-muted-foreground whitespace-pre-line">{answer}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -334,6 +413,8 @@ export default function ListingDetailPage() {
         </div>
       </main>
 
+      <Footer />
+
       {/* Mobile Sticky CTA */}
       <div className="sticky-cta">
         <div className="flex gap-3">
@@ -361,19 +442,22 @@ export default function ListingDetailPage() {
               <div className="p-2 bg-destructive/10 rounded-full">
                 <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
-              <DialogTitle className="text-xl">Ogłoszenie jest już nieaktualne</DialogTitle>
+              <DialogTitle className="text-xl">{t('detail.archivedTitle')}</DialogTitle>
             </div>
             <DialogDescription className="text-base pt-2">
-              Zostało ono automatycznie zarchiwizowane, ponieważ nie jest już dostępne u źródła lub wystąpił błąd danych.
+              {t('detail.archivedDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-6">
             <Button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                const targetUrl = searchParams ? `/?${searchParams}` : '/';
+                navigate(targetUrl);
+              }}
               className="w-full gap-2"
               size="lg"
             >
-              Wróć na stronę wyszukiwania
+              {t('detail.returnToSearch')}
             </Button>
           </DialogFooter>
         </DialogContent>
