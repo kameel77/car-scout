@@ -3,7 +3,7 @@ import type { User, UserPayload } from '@/types/user';
 import type { FaqEntry, FaqPayload } from '@/types/faq';
 
 // Default to relative /api so it works behind the same host without extra env.
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // Auth API
 export const authApi = {
