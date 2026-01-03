@@ -32,9 +32,9 @@ RUN npm run build || npx tsc
 # Production stage
 FROM node:20-slim AS runner
 
-# Ensure openssl is available for Prisma runtime
+# Ensure openssl and curl are available for Prisma runtime and healthchecks
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends openssl && \
+    apt-get install -y --no-install-recommends openssl curl && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
