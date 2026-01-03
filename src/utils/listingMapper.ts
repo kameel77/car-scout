@@ -1,7 +1,8 @@
 import { Listing } from '@/data/mockData';
 
 export function mapBackendListingToFrontend(backendListing: any): Listing {
-    return {
+    try {
+        return {
         listing_id: backendListing.id, // ID refers to internal ID (CUID), listingId is external ID
         listing_url: backendListing.listingUrl,
         make: backendListing.make,
@@ -45,11 +46,15 @@ export function mapBackendListingToFrontend(backendListing: any): Listing {
 
             // 1. Start with data from specsJson if it exists
             if (backendListing.specsJson) {
-                const parsed = typeof backendListing.specsJson === 'string'
-                    ? JSON.parse(backendListing.specsJson)
-                    : backendListing.specsJson;
-                if (Array.isArray(parsed)) {
-                    specs.push(...parsed);
+                try {
+                    const parsed = typeof backendListing.specsJson === 'string'
+                        ? JSON.parse(backendListing.specsJson)
+                        : backendListing.specsJson;
+                    if (Array.isArray(parsed)) {
+                        specs.push(...parsed);
+                    }
+                } catch (error) {
+                    console.warn('Failed to parse specsJson:', error);
                 }
             }
 
@@ -83,4 +88,8 @@ export function mapBackendListingToFrontend(backendListing: any): Listing {
             other: backendListing.equipmentOther || []
         }
     };
+    } catch (error) {
+        console.error('Failed to map backend listing to frontend:', error, backendListing);
+        throw error; // Re-throw to let React Query handle it
+    }
 }
