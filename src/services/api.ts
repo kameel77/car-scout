@@ -8,7 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 // Auth API
 export const authApi = {
     login: async (email: string, password: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -23,7 +23,7 @@ export const authApi = {
     },
 
     me: async (token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -35,7 +35,7 @@ export const authApi = {
     },
 
     logout: async (token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -50,7 +50,7 @@ export const faqApi = {
         const queryParams = new URLSearchParams();
         if (params.page) queryParams.append('page', params.page);
 
-        const response = await fetch(`${API_BASE_URL}/api/faq?${queryParams.toString()}`, {
+        const response = await fetch(`${API_BASE_URL}/faq?${queryParams.toString()}`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
         });
 
@@ -62,7 +62,7 @@ export const faqApi = {
         return response.json();
     },
     save: async (payload: FaqPayload, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/faq`, {
+        const response = await fetch(`${API_BASE_URL}/faq`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ export const faqApi = {
         return data;
     },
     delete: async (id: string, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/faq/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/faq/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -97,7 +97,7 @@ export const importApi = {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/import/csv`, {
+        const response = await fetch(`${API_BASE_URL}/import/csv`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -112,7 +112,7 @@ export const importApi = {
     },
 
     uploadJSON: async (data: any[], token: string, source?: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/import/csv-data`, {
+        const response = await fetch(`${API_BASE_URL}/import/csv-data`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ export const importApi = {
     },
 
     getHistory: async (token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/import/history`, {
+        const response = await fetch(`${API_BASE_URL}/import/history`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -138,7 +138,7 @@ export const importApi = {
     },
 
     getImportDetails: async (id: string, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/import/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/import/${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -161,7 +161,7 @@ export const analyticsApi = {
         if (params.groupBy) queryParams.append('groupBy', params.groupBy);
 
         const response = await fetch(
-            `${API_BASE_URL}/api/analytics/price-trends?${queryParams}`,
+            `${API_BASE_URL}/analytics/price-trends?${queryParams}`,
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
 
@@ -173,7 +173,7 @@ export const analyticsApi = {
 export const listingsApi = {
     getListingOptions: async () => {
         // Options are public, no token needed
-        const response = await fetch(`${API_BASE_URL}/api/listings/options`);
+        const response = await fetch(`${API_BASE_URL}/listings/options`);
         if (!response.ok) {
             throw new Error('Failed to fetch listing options');
         }
@@ -222,17 +222,17 @@ export const listingsApi = {
             if (filters.perPage) params.append('perPage', filters.perPage.toString());
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/listings?${params.toString()}`);
+        const response = await fetch(`${API_BASE_URL}/listings?${params.toString()}`);
         return response.json();
     },
 
     getListing: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/listings/${id}`);
+        const response = await fetch(`${API_BASE_URL}/listings/${id}`);
         return response.json();
     },
 
     archiveListing: async (id: string, reason: string, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/archive`, {
+        const response = await fetch(`${API_BASE_URL}/listings/${id}/archive`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -245,7 +245,7 @@ export const listingsApi = {
     },
 
     restoreListing: async (id: string, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/restore`, {
+        const response = await fetch(`${API_BASE_URL}/listings/${id}/restore`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -259,7 +259,7 @@ export const listingsApi = {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/refresh-images`, {
+        const response = await fetch(`${API_BASE_URL}/listings/${id}/refresh-images`, {
             method: 'POST',
             headers
         });
@@ -276,7 +276,7 @@ export const listingsApi = {
 // Settings API
 export const settingsApi = {
     getSettings: async () => {
-        const response = await fetch(`${API_BASE_URL}/api/settings`);
+        const response = await fetch(`${API_BASE_URL}/settings`);
         return response.json();
     },
 
@@ -285,7 +285,7 @@ export const settingsApi = {
         formData.append('file', file);
         formData.append('target', target);
 
-        const response = await fetch(`${API_BASE_URL}/api/settings/logo`, {
+        const response = await fetch(`${API_BASE_URL}/settings/logo`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -301,7 +301,7 @@ export const settingsApi = {
     },
 
     updateSettings: async (settings: any, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/settings`, {
+        const response = await fetch(`${API_BASE_URL}/settings`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -314,7 +314,7 @@ export const settingsApi = {
     },
 
     recalculatePrices: async (token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/settings/recalculate`, {
+        const response = await fetch(`${API_BASE_URL}/settings/recalculate`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -333,7 +333,7 @@ export const translationsApi = {
         if (params?.category) queryParams.append('category', params.category);
         if (params?.search) queryParams.append('search', params.search);
 
-        const response = await fetch(`${API_BASE_URL}/api/translations?${queryParams.toString()}`, {
+        const response = await fetch(`${API_BASE_URL}/translations?${queryParams.toString()}`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
         });
 
@@ -345,7 +345,7 @@ export const translationsApi = {
     },
 
     save: async (payload: TranslationPayload, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/translations`, {
+        const response = await fetch(`${API_BASE_URL}/translations`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -363,7 +363,7 @@ export const translationsApi = {
     },
 
     delete: async (id: string, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/translations/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/translations/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -380,7 +380,7 @@ export const translationsApi = {
 // Users API
 export const usersApi = {
     list: async (token: string): Promise<{ users: User[] }> => {
-        const response = await fetch(`${API_BASE_URL}/api/users`, {
+        const response = await fetch(`${API_BASE_URL}/users`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) {
@@ -389,7 +389,7 @@ export const usersApi = {
         return response.json();
     },
     create: async (payload: UserPayload, token: string): Promise<{ user: User }> => {
-        const response = await fetch(`${API_BASE_URL}/api/users`, {
+        const response = await fetch(`${API_BASE_URL}/users`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -404,7 +404,7 @@ export const usersApi = {
         return data;
     },
     update: async (id: string, payload: UserPayload, token: string): Promise<{ user: User }> => {
-        const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -419,7 +419,7 @@ export const usersApi = {
         return data;
     },
     delete: async (id: string, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
