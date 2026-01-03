@@ -20,6 +20,7 @@ export function useListings(filters: FilterState, sortBy: string, page: number, 
     return useQuery<ListingsResponse>({
         queryKey: ['listings', filters, sortBy, page, perPage, currency],
         queryFn: async () => {
+            console.log('Fetching listings with filters:', filters, 'sortBy:', sortBy, 'page:', page);
             const data = await listingsApi.getListings({
                 ...filters,
                 sortBy,
@@ -27,8 +28,27 @@ export function useListings(filters: FilterState, sortBy: string, page: number, 
                 page,
                 perPage
             });
+            console.log('API response:', data);
+
+            let mappedListings: any[] = [];
+            try {
+                mappedListings = data.listings.map((listing: any, index: number) => {
+                    try {
+                        return mapBackendListingToFrontend(listing);
+                    } catch (error) {
+                        console.error(`Failed to map listing ${index}:`, error, listing);
+                        return null; // Return null for failed mappings
+                    }
+                }).filter((listing: any) => listing !== null); // Filter out failed mappings
+
+                console.log(`Successfully mapped ${mappedListings.length} out of ${data.listings.length} listings`);
+            } catch (error) {
+                console.error('Failed to map listings:', error);
+                mappedListings = [];
+            }
+
             return {
-                listings: data.listings.map(mapBackendListingToFrontend),
+                listings: mappedListings,
                 count: data.count,
                 page: data.page,
                 perPage: data.perPage,

@@ -154,6 +154,18 @@ export default function SearchPage() {
   const totalCount = data?.count ?? listings.length;
   const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((totalCount || 1) / perPage));
 
+  // Debug logging
+  console.log('SearchPage state:', {
+    filters,
+    sortBy,
+    page,
+    perPage,
+    listingsCount: listings.length,
+    totalCount,
+    isLoading,
+    hasData: !!data
+  });
+
   const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
     setFilters(updatedFilters);
     setPage(1);
