@@ -21,40 +21,50 @@ export function useListings(filters: FilterState, sortBy: string, page: number, 
         queryKey: ['listings', filters, sortBy, page, perPage, currency],
         queryFn: async () => {
             console.log('Fetching listings with filters:', filters, 'sortBy:', sortBy, 'page:', page);
-            const data = await listingsApi.getListings({
-                ...filters,
-                sortBy,
-                currency,
-                page,
-                perPage
-            });
-            console.log('API response:', data);
-
-            let mappedListings: any[] = [];
             try {
-                mappedListings = data.listings
-                    .map((listing: any, index: number) => {
-                        const mapped = mapBackendListingToFrontend(listing);
-                        if (!mapped) {
-                            console.warn(`Failed to map listing ${index}:`, listing);
-                        }
-                        return mapped;
-                    })
-                    .filter((listing: any) => listing !== null); // Filter out failed mappings
+                const data = await listingsApi.getListings({
+                    ...filters,
+                    sortBy,
+                    currency,
+                    page,
+                    perPage
+                });
+                console.log('API response received:', {
+                    hasData: !!data,
+                    listingsCount: data?.listings?.length || 0,
+                    totalCount: data?.count || 0
+                });
+                console.log('Raw API response:', data);
 
-                console.log(`Successfully mapped ${mappedListings.length} out of ${data.listings.length} listings`);
+                let mappedListings: any[] = [];
+                try {
+                    mappedListings = data.listings
+                        .map((listing: any, index: number) => {
+                            const mapped = mapBackendListingToFrontend(listing);
+                            if (!mapped) {
+                                console.warn(`Failed to map listing ${index}:`, listing);
+                            }
+                            return mapped;
+                        })
+                        .filter((listing: any) => listing !== null); // Filter out failed mappings
+
+                    console.log(`Successfully mapped ${mappedListings.length} out of ${data.listings.length} listings`);
+                } catch (error) {
+                    console.error('Failed to map listings:', error);
+                    mappedListings = [];
+                }
+
+                return {
+                    listings: mappedListings,
+                    count: data.count,
+                    page: data.page,
+                    perPage: data.perPage,
+                    totalPages: data.totalPages
+                };
             } catch (error) {
-                console.error('Failed to map listings:', error);
-                mappedListings = [];
+                console.error('Failed to fetch listings:', error);
+                throw error;
             }
-
-            return {
-                listings: mappedListings,
-                count: data.count,
-                page: data.page,
-                perPage: data.perPage,
-                totalPages: data.totalPages
-            };
         }
     });
 }

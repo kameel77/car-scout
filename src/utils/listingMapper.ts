@@ -4,9 +4,18 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
     try {
         // Ensure required fields exist, return null if critical data is missing
         if (!backendListing.id || !backendListing.make || !backendListing.model) {
-            console.warn('Missing required fields in listing:', backendListing.id);
+            console.warn('Missing required fields in listing:', {
+                id: backendListing.id,
+                make: backendListing.make,
+                model: backendListing.model,
+                hasId: !!backendListing.id,
+                hasMake: !!backendListing.make,
+                hasModel: !!backendListing.model
+            });
             return null;
         }
+
+        console.log('Mapping listing:', backendListing.id, backendListing.make, backendListing.model);
 
         return {
             listing_id: backendListing.id,
