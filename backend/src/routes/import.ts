@@ -1,7 +1,10 @@
 import { FastifyInstance } from 'fastify';
 import { parse } from 'csv-parse/sync';
 import { syncListingsFromCSV } from '../services/sync.service.js';
-import type { CSVRow } from '../types/csv.types.js';
+import type { CSVRow, ImportMode } from '../types/csv.types.js';
+
+const parseImportMode = (mode?: string): ImportMode =>
+    mode === 'merge' ? 'merge' : 'replace';
 
 export async function importRoutes(fastify: FastifyInstance) {
     // OPCJA A: Upload pliku CSV
@@ -10,6 +13,8 @@ export async function importRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const data = await request.file();
+            const { mode } = request.query as { mode?: string };
+            const importMode = parseImportMode(mode);
 
             if (!data) {
                 return reply.code(400).send({ error: 'No file uploaded' });
@@ -35,7 +40,8 @@ export async function importRoutes(fastify: FastifyInstance) {
                 fastify.prisma,
                 records,
                 request.user!.userId,
-                data.filename
+                data.filename,
+                importMode
             );
 
             fastify.log.info({
@@ -70,16 +76,19 @@ export async function importRoutes(fastify: FastifyInstance) {
                         type: 'array',
                         items: { type: 'object' }
                     },
-                    source: { type: 'string' }
+                    source: { type: 'string' },
+                    mode: { type: 'string', enum: ['replace', 'merge'], default: 'replace' }
                 }
             }
         }
     }, async (request, reply) => {
         try {
-            const { data, source } = request.body as {
+            const { data, source, mode } = request.body as {
                 data: CSVRow[];
-                source?: string
+                source?: string;
+                mode?: ImportMode;
             };
+            const importMode = parseImportMode(mode);
 
             if (!data || data.length === 0) {
                 return reply.code(400).send({ error: 'Data array is empty' });
@@ -90,7 +99,8 @@ export async function importRoutes(fastify: FastifyInstance) {
                 fastify.prisma,
                 data,
                 request.user!.userId,
-                source || 'api-json-upload'
+                source || 'api-json-upload',
+                importMode
             );
 
             fastify.log.info({

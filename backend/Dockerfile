@@ -46,6 +46,7 @@ RUN npm ci --omit=dev
 # Copy built artifacts and necessary files
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/add-admin.cjs ./add-admin.cjs
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 

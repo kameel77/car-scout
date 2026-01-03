@@ -1,12 +1,13 @@
 import { PrismaClient } from '@prisma/client';
-import type { CSVRow, SyncResult } from '../types/csv.types.js';
+import type { CSVRow, SyncResult, ImportMode } from '../types/csv.types.js';
 import { mapCSVToListing, mapCSVToListingUpdate } from './csv-mapper.js';
 
 export async function syncListingsFromCSV(
     prisma: PrismaClient,
     csvData: CSVRow[],
     userId: string,
-    source?: string
+    source?: string,
+    importMode: ImportMode = 'replace'
 ): Promise<SyncResult> {
     const startTime = Date.now();
 
@@ -58,11 +59,13 @@ export async function syncListingsFromCSV(
             }
         }
 
-        for (const listing of existingListings) {
-            const key = listing.vin || listing.listingId;
-            // Archive only active listings that disappeared from CSV
-            if (!listing.isArchived && key && !csvVINSet.has(key)) {
-                toArchive.push(listing);
+        if (importMode === 'replace') {
+            for (const listing of existingListings) {
+                const key = listing.vin || listing.listingId;
+                // Archive only active listings that disappeared from CSV
+                if (!listing.isArchived && key && !csvVINSet.has(key)) {
+                    toArchive.push(listing);
+                }
             }
         }
 
@@ -187,7 +190,7 @@ export async function syncListingsFromCSV(
             importLogId: importLog.id
         };
     }, {
-        timeout: 30000, // allow more time for larger CSV imports
+        timeout: 180000, // allow more time for larger CSV imports (~3 min)
         maxWait: 5000
     });
 }

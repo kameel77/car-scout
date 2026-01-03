@@ -76,8 +76,10 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     const priceChanges = await fastify.prisma.$queryRaw`
       WITH ranked_prices AS (
         SELECT 
-          ph.*,
-          l.make, l.model, l.vin, l.listing_id,
+          ph.listing_id,
+          ph.price_pln,
+          ph.changed_at,
+          l.make, l.model, l.vin, l.listing_id as external_listing_id,
           LAG(ph.price_pln) OVER (
             PARTITION BY ph.listing_id 
             ORDER BY ph.changed_at

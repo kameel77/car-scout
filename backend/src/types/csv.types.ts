@@ -44,6 +44,8 @@ export interface CSVRow {
     specs_json: string;
 }
 
+export type ImportMode = 'replace' | 'merge';
+
 export interface SyncResult {
     totalRows: number;
     inserted: number;
