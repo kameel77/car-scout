@@ -59,8 +59,11 @@ await fastify.register(cors, {
         const allowedOrigins = [
             ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []),
             ...(process.env.VITE_API_URL ? process.env.VITE_API_URL.split(',') : []),
+            ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
+            ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
             'http://localhost:5173',
-            'http://localhost:8080'
+            'http://localhost:8080',
+            'https://askauto.de'
         ]
             .map(originOnly)
             .filter(Boolean);
