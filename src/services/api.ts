@@ -4,8 +4,8 @@ import type { FaqEntry, FaqPayload } from '@/types/faq';
 
 type ImportMode = 'replace' | 'merge';
 
-// Default to relative /api so it works behind the same host without extra env.
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// Default: dev hits same origin (proxy), prod uses /api behind reverse proxy.
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '/api');
 
 // Auth API
 export const authApi = {
