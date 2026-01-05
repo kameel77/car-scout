@@ -58,12 +58,12 @@ await fastify.register(cors, {
 
         const allowedOrigins = [
             ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []),
-            ...(process.env.VITE_API_URL ? process.env.VITE_API_URL.split(',') : []),
+            ...(process.env.VITE_FRONTEND_URL ? process.env.VITE_FRONTEND_URL.split(',') : []),
+            ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
+            ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
             'http://localhost:5173',
             'http://localhost:8080'
-        ]
-            .map(originOnly)
-            .filter(Boolean);
+        ].map(originOnly).filter(Boolean);
 
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return cb(null, true);
