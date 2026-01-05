@@ -108,9 +108,19 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
       LIMIT 50
     `;
 
+    const sanitize = (rows: any[]) =>
+      rows.map(row =>
+        Object.fromEntries(
+          Object.entries(row).map(([key, value]) => [
+            key,
+            typeof value === 'bigint' ? Number(value) : value
+          ])
+        )
+      );
+
     const result = {
-      trends,
-      priceChanges,
+      trends: sanitize(trends as any[]),
+      priceChanges: sanitize(priceChanges as any[]),
       config: {
         days,
         groupBy: effectiveGroupBy,

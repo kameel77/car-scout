@@ -47,12 +47,13 @@ await fastify.register(cors, {
     origin: (origin, cb) => {
         // allow multiple origins via comma-separated env
         const originOnly = (value: string) => {
+            const cleanValue = value.trim().replace(/^["']|["']$/g, '');
             try {
-                const url = new URL(value.trim());
+                const url = new URL(cleanValue);
                 return `${url.protocol}//${url.host}`;
             } catch {
                 // if it's already just origin or invalid, fall back to trimmed value without trailing slash
-                return value.trim().replace(/\/+$/, '');
+                return cleanValue.replace(/\/+$/, '');
             }
         };
 
@@ -168,6 +169,7 @@ import { settingsRoutes } from './routes/settings.js';
 import { translationRoutes } from './routes/translations.js';
 import { userRoutes } from './routes/users.js';
 import { faqRoutes } from './routes/faq.js';
+import { leadRoutes } from './routes/leads.js';
 
 await fastify.register(authRoutes);
 await fastify.register(importRoutes);
@@ -177,6 +179,7 @@ await fastify.register(settingsRoutes);
 await fastify.register(translationRoutes);
 await fastify.register(userRoutes);
 await fastify.register(faqRoutes);
+await fastify.register(leadRoutes);
 
 // Serve uploaded assets (logos)
 const __filename = fileURLToPath(import.meta.url);
@@ -196,9 +199,9 @@ fastify.get('/uploads/:folder/:file', async (request, reply) => {
         const ext = path.extname(filePath).toLowerCase();
         const mime = ext === '.svg' ? 'image/svg+xml'
             : ext === '.png' ? 'image/png'
-            : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
-            : ext === '.webp' ? 'image/webp'
-            : 'application/octet-stream';
+                : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+                    : ext === '.webp' ? 'image/webp'
+                        : 'application/octet-stream';
         reply.header('Content-Type', mime);
         return reply.send(createReadStream(filePath));
     } catch {

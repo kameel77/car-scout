@@ -80,6 +80,7 @@ model Listing {
   updatedAt             DateTime  @updatedAt @map("updated_at")
   
   priceHistory          PriceHistory[]
+  leads                 Lead[]
   
   @@index([make, model])
   @@index([pricePln])
@@ -88,6 +89,30 @@ model Listing {
   @@index([vin])
   @@index([listingId])
   @@map("listings")
+}
+
+// ============ LEADS ============
+model Lead {
+  id                 String   @id @default(cuid())
+  listingId          String   @map("listing_id")
+  listing            Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  name               String
+  email              String
+  phone              String?
+  preferredContact   String   @default("email") @map("preferred_contact")
+  message            String   @db.Text
+  status             String   @default("new")
+  referenceNumber    String   @unique @map("reference_number")
+
+  consentMarketingAt DateTime? @map("consent_marketing_at")
+  consentPrivacyAt   DateTime? @map("consent_privacy_at")
+
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([listingId])
+  @@map("leads")
 }
 
 // ============ DEALERS ============
