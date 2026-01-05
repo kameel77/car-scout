@@ -450,3 +450,43 @@ export const usersApi = {
         return data;
     }
 };
+
+// Leads API
+export const leadsApi = {
+    submitLead: async (data: {
+        listingId: string;
+        name: string;
+        email: string;
+        phone?: string;
+        preferredContact: 'email' | 'phone';
+        message: string;
+        consentMarketing: boolean;
+        consentPrivacy: boolean;
+    }) => {
+        const response = await fetch(`${API_BASE_URL}/api/leads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to submit lead');
+        }
+
+        return response.json();
+    },
+
+    getLeads: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/leads`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to load leads');
+        }
+
+        return response.json();
+    }
+};

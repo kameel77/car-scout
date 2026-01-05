@@ -1,5 +1,5 @@
 import React from 'react';
-import { mockLeads, Lead } from '@/data/mockData';
+import { Lead } from '@/data/mockData';
 import {
     Table,
     TableBody,
@@ -21,7 +21,8 @@ import {
     Phone,
     Info,
     DollarSign,
-    Search
+    Search,
+    Loader2
 } from 'lucide-react';
 import { formatNumber } from '@/utils/formatters';
 import { Link } from 'react-router-dom';
@@ -40,11 +41,67 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuth } from '@/contexts/AuthContext';
+import { leadsApi } from '@/services/api';
+import { useQuery } from '@tanstack/react-query';
 
 export function LeadList() {
-    const [leads, setLeads] = React.useState(mockLeads);
+    const { token } = useAuth();
     const [selectedLead, setSelectedLead] = React.useState<Lead | null>(null);
     const [searchQuery, setSearchQuery] = React.useState('');
+    const { data, isLoading, isFetching, isError } = useQuery({
+        queryKey: ['leads', token],
+        queryFn: async () => {
+            if (!token) throw new Error('Brak tokenu');
+            return leadsApi.getLeads(token);
+        },
+        enabled: !!token
+    });
+
+    const mappedLeads = React.useMemo<Lead[]>(() => {
+        const formatDate = (value?: string) => {
+            if (!value) return '---';
+            const date = new Date(value);
+            return isNaN(date.getTime()) ? '---' : date.toLocaleString('pl-PL');
+        };
+
+        return (data?.leads || []).map((lead: any): Lead => {
+            const listing = lead.listing || {};
+            const dealer = listing.dealer || {};
+
+            const listingAddress = [dealer.addressLine1, dealer.addressLine2, dealer.addressLine3]
+                .filter(Boolean)
+                .join(', ');
+
+            return {
+                id: lead.id,
+                name: lead.name,
+                email: lead.email,
+                phone: lead.phone,
+                message: lead.message,
+                status: lead.status || 'new',
+                listing_id: lead.listingId || lead.listing?.id || '',
+                listing_make: listing.make || '---',
+                listing_model: listing.model || '',
+                listing_vin: listing.vin,
+                listing_price: listing.priceDisplay || (listing.pricePln ? `${listing.pricePln} PLN` : '---'),
+                listing_year: listing.productionYear,
+                listing_mileage: listing.mileageKm ? `${formatNumber(listing.mileageKm)} km` : undefined,
+                dealer_price_net_pln: listing.dealerPriceNetPln,
+                dealer_price_net_eur: listing.dealerPriceNetEur,
+                broker_price_pln: listing.brokerPricePln,
+                broker_price_eur: listing.brokerPriceEur,
+                dealer_name: dealer.name,
+                dealer_address: listingAddress || dealer.city,
+                dealer_phone: dealer.contactPhone,
+                consent_marketing_at: formatDate(lead.consentMarketingAt),
+                consent_privacy_at: formatDate(lead.consentPrivacyAt),
+                created_at: formatDate(lead.createdAt)
+            };
+        });
+    }, [data]);
+
+    const loading = isLoading || (isFetching && mappedLeads.length === 0);
 
     const anonymizeLead = (id: string) => {
         if (window.confirm('Czy na pewno chcesz zanonimizować dane tego klienta? Tej operacji nie można cofnąć.')) {
@@ -63,11 +120,11 @@ export function LeadList() {
     };
 
     const filteredLeads = React.useMemo(() => {
-        return leads.filter(lead =>
+        return mappedLeads.filter(lead =>
             lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             lead.email.toLowerCase().includes(searchQuery.toLowerCase())
         );
-    }, [leads, searchQuery]);
+    }, [mappedLeads, searchQuery]);
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -85,6 +142,31 @@ export function LeadList() {
                 return <Badge variant="outline">{status}</Badge>;
         }
     };
+
+    if (!token) {
+        return (
+            <div className="bg-white rounded-xl shadow-sm border p-6 text-sm text-muted-foreground">
+                Wymagane jest ponowne zalogowanie, aby wyświetlić leady.
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-xl shadow-sm border p-8 flex items-center gap-3 text-sm text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                Ładowanie leadów...
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className="bg-white rounded-xl shadow-sm border p-6 text-sm text-destructive">
+                Nie udało się pobrać leadów. Sprawdź połączenie z API.
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-4">

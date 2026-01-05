@@ -20,6 +20,7 @@ import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
 import { Footer } from '@/components/Footer';
+import { leadsApi } from '@/services/api';
 
 const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
@@ -108,10 +109,22 @@ export default function LeadFormPage() {
   const onSubmit = async (formData: LeadFormData) => {
     setStatus('loading');
     try {
-      // Simulate API call to backend/api/leads
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const ref = `AF-${Date.now().toString().slice(-8)}`;
-      setReferenceNumber(ref);
+      if (!id) {
+        throw new Error('Brak ID ogłoszenia');
+      }
+
+      const { lead } = await leadsApi.submitLead({
+        listingId: id,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        preferredContact: formData.preferredContact,
+        message: formData.message,
+        consentMarketing: formData.consentMarketing,
+        consentPrivacy: formData.consentPrivacy
+      });
+
+      setReferenceNumber(lead?.referenceNumber || lead?.id || '');
       setStatus('success');
     } catch (e) {
       setStatus('error');
