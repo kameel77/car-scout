@@ -260,3 +260,31 @@ model FaqEntry {
   @@index([page, sortOrder])
   @@map("faq_entries")
 }
+
+// ============ FINANCING ============
+model FinancingProduct {
+  id                String   @id @default(cuid())
+  category          String   // 'CREDIT', 'LEASING', 'RENT'
+  name              String?
+  currency          String   @default("PLN")
+  
+  // Rates
+  referenceRate     Float    @map("reference_rate") // Wibor/Euribor %
+  margin            Float    // %
+  commission        Float    // %
+  
+  // Constraints
+  maxInitialPayment Float    @map("max_initial_payment") // % for leasing/rent, value for credit? Spec says "max pierwsza wpłata"
+  maxFinalPayment   Float    @map("max_final_payment") // %
+  minInstallments   Int      @map("min_installments")
+  maxInstallments   Int      @map("max_installments")
+  
+  isDefault         Boolean  @default(false) @map("is_default")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("financing_products")
+  @@index([category])
+  @@index([isDefault])
+}

@@ -11,6 +11,7 @@ export function AdminNav() {
   const navItems = [
     { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager'] },
     { href: '/admin/translations', label: 'Translations', icon: Languages, roles: ['admin', 'manager'] },
+    { href: '/admin/financing', label: 'Finansowanie', icon: Users, roles: ['admin', 'manager'] },
     { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, roles: ['admin', 'manager'] },
     { href: '/admin/users', label: 'Users', icon: Users, roles: ['admin'] },
   ] as const;
@@ -18,28 +19,28 @@ export function AdminNav() {
   return (
     <div className="flex items-center gap-2">
       {navItems
-        .filter((item) => !user || item.roles.includes(user.role))
+        .filter((item) => !user || (item.roles as readonly string[]).includes(user.role))
         .map((item) => {
-        const isActive = location.pathname === item.href;
-        const Icon = item.icon;
+          const isActive = location.pathname === item.href;
+          const Icon = item.icon;
 
-        return (
-          <Button
-            key={item.href}
-            asChild
-            variant={isActive ? 'default' : 'outline'}
-            className={cn(
-              'shadow-sm',
-              isActive && 'bg-blue-600 hover:bg-blue-700 text-white'
-            )}
-          >
-            <Link to={item.href} className="flex items-center gap-2">
-              <Icon className="w-4 h-4" />
-              <span>{item.label}</span>
-            </Link>
-          </Button>
-        );
-      })}
+          return (
+            <Button
+              key={item.href}
+              asChild
+              variant={isActive ? 'default' : 'outline'}
+              className={cn(
+                'shadow-sm',
+                isActive && 'bg-blue-600 hover:bg-blue-700 text-white'
+              )}
+            >
+              <Link to={item.href} className="flex items-center gap-2">
+                <Icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </Link>
+            </Button>
+          );
+        })}
     </div>
   );
 }

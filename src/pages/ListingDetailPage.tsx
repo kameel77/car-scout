@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
+import { FinancingCalculator } from '@/components/FinancingCalculator';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/utils/formatters';
@@ -296,6 +297,16 @@ export default function ListingDetailPage() {
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.equipment')}</h2>
               <EquipmentDisplay equipment={listing.equipment} />
+            </section>
+
+            <Separator />
+
+            {/* Financing Calculator */}
+            <section>
+              <FinancingCalculator
+                price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
+                currency={settings?.displayCurrency || 'PLN'}
+              />
             </section>
 
             <Separator />

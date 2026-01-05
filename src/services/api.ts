@@ -1,6 +1,7 @@
 import type { TranslationEntry, TranslationPayload } from '@/types/translations';
 import type { User, UserPayload } from '@/types/user';
 import type { FaqEntry, FaqPayload } from '@/types/faq';
+import type { FinancingProduct, FinancingProductPayload } from '@/types/financing';
 
 type ImportMode = 'replace' | 'merge';
 
@@ -487,6 +488,74 @@ export const leadsApi = {
             throw new Error(error.error || 'Failed to load leads');
         }
 
+        return response.json();
+    }
+};
+
+// Financing API
+export const financingApi = {
+    list: async (token: string): Promise<{ products: FinancingProduct[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/products`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch financing products');
+        }
+        return response.json();
+    },
+
+    listPublic: async (): Promise<{ products: FinancingProduct[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/calculator`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch financing calculator data');
+        }
+        return response.json();
+    },
+
+    create: async (payload: FinancingProductPayload, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/products`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create financing product');
+        }
+        return response.json();
+    },
+
+    update: async (id: string, payload: Partial<FinancingProductPayload>, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/products/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update financing product');
+        }
+        return response.json();
+    },
+
+    delete: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/products/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete financing product');
+        }
         return response.json();
     }
 };
