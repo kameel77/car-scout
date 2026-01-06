@@ -215,6 +215,9 @@ model AppSettings {
   legalSloganEn       String?  @map("legal_slogan_en")
   legalSloganDe       String?  @map("legal_slogan_de")
   
+  financingCalculatorEnabled  Boolean @default(true) @map("financing_calculator_enabled")
+  financingCalculatorLocation String  @default("main") @map("financing_calculator_location") // 'main' | 'sidebar'
+  
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")

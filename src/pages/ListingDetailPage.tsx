@@ -301,13 +301,15 @@ export default function ListingDetailPage() {
 
             <Separator />
 
-            {/* Financing Calculator */}
-            <section>
-              <FinancingCalculator
-                price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
-                currency={settings?.displayCurrency || 'PLN'}
-              />
-            </section>
+            {/* Financing Calculator - Main Content */}
+            {(settings?.financingCalculatorEnabled ?? true) && (settings?.financingCalculatorLocation === 'main' || !settings?.financingCalculatorLocation) && (
+              <section>
+                <FinancingCalculator
+                  price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
+                  currency={settings?.displayCurrency || 'PLN'}
+                />
+              </section>
+            )}
 
             <Separator />
 
@@ -389,6 +391,20 @@ export default function ListingDetailPage() {
                   </div>
                 )}
               </motion.div>
+
+              {/* Financing Calculator - Sidebar Widget */}
+              {(settings?.financingCalculatorEnabled ?? true) && settings?.financingCalculatorLocation === 'sidebar' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <FinancingCalculator
+                    price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
+                    currency={settings?.displayCurrency || 'PLN'}
+                  />
+                </motion.div>
+              )}
 
               {/* Dealer Card */}
               {canManage && (

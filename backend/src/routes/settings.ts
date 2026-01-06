@@ -28,6 +28,9 @@ type SettingsPayload = {
     legalSloganPl?: string | null;
     legalSloganEn?: string | null;
     legalSloganDe?: string | null;
+
+    financingCalculatorEnabled?: boolean;
+    financingCalculatorLocation?: string;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -169,7 +172,12 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     footerLogoUrl: data.footerLogoUrl || null,
                     legalSloganPl: data.legalSloganPl || null,
                     legalSloganEn: data.legalSloganEn || null,
-                    legalSloganDe: data.legalSloganDe || null
+                    legalSloganDe: data.legalSloganDe || null,
+
+                    financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined
+                        ? Boolean(data.financingCalculatorEnabled)
+                        : undefined,
+                    financingCalculatorLocation: data.financingCalculatorLocation
                 },
                 create: {
                     id: 'default',
@@ -191,7 +199,12 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     footerLogoUrl: data.footerLogoUrl || null,
                     legalSloganPl: data.legalSloganPl || null,
                     legalSloganEn: data.legalSloganEn || null,
-                    legalSloganDe: data.legalSloganDe || null
+                    legalSloganDe: data.legalSloganDe || null,
+
+                    financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined
+                        ? Boolean(data.financingCalculatorEnabled)
+                        : true,
+                    financingCalculatorLocation: data.financingCalculatorLocation || 'main'
                 }
             });
 

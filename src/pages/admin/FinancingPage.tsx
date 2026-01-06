@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { financingApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { FinancingProduct, FinancingProductPayload } from '@/types/financing';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { settingsApi } from '@/services/api';
 import { AdminNav } from '@/components/admin/AdminNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { LogOut, Plus, RefreshCw, Trash2, Edit } from 'lucide-react';
 
@@ -34,6 +37,7 @@ export default function FinancingPage() {
     const { user, token, logout } = useAuth();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { data: settings, refetch: refetchSettings } = useAppSettings();
 
     const [activeTab, setActiveTab] = React.useState<string>('CREDIT');
     const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -126,6 +130,26 @@ export default function FinancingPage() {
         saveMutation.mutate(formData);
     };
 
+    const updateSettingsMutation = useMutation({
+        mutationFn: (newSettings: any) => {
+            if (!token) throw new Error('Brak tokenu');
+            return settingsApi.updateSettings(newSettings, token);
+        },
+        onSuccess: () => {
+            toast.success('Ustawienia zaktualizowane');
+            refetchSettings();
+        },
+        onError: () => toast.error('Błąd aktualizacji ustawień')
+    });
+
+    const handleSettingsChange = (key: string, value: any) => {
+        if (!settings) return;
+        updateSettingsMutation.mutate({
+            ...settings,
+            [key]: value
+        });
+    };
+
     const handleNumberChange = (field: keyof FinancingProductPayload, value: string) => {
         const num = parseFloat(value);
         setFormData(prev => ({
@@ -156,7 +180,54 @@ export default function FinancingPage() {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+                {/* Global Settings Card */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Konfiguracja Kalkulatora</CardTitle>
+                        <CardDescription>Ustawienia widoczności i umiejscowienia kalkulatora na stronie oferty</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="text-base">Pokaż kalkulator na karcie pojazdu</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Włącz lub wyłącz widoczność modułu finansowania dla klientów
+                                </p>
+                            </div>
+                            <Switch
+                                checked={settings?.financingCalculatorEnabled ?? true}
+                                onCheckedChange={(checked) => handleSettingsChange('financingCalculatorEnabled', checked)}
+                            />
+                        </div>
+
+                        <div className="space-y-3">
+                            <Label className="text-base">Umiejscowienie kalkulatora</Label>
+                            <RadioGroup
+                                value={settings?.financingCalculatorLocation ?? 'main'}
+                                onValueChange={(val) => handleSettingsChange('financingCalculatorLocation', val)}
+                                className="grid grid-cols-2 gap-4"
+                            >
+                                <div>
+                                    <RadioGroupItem value="main" id="loc-main" className="peer sr-only" />
+                                    <Label htmlFor="loc-main" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                        <span className="mb-2 text-lg font-semibold">Część Główna</span>
+                                        <span className="text-sm text-center text-muted-foreground">Pod specyfikacją i wyposażeniem (domyślne)</span>
+                                    </Label>
+                                </div>
+                                <div>
+                                    <RadioGroupItem value="sidebar" id="loc-sidebar" className="peer sr-only" />
+                                    <Label htmlFor="loc-sidebar" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                        <span className="mb-2 text-lg font-semibold">Panel Boczny (Widget)</span>
+                                        <span className="text-sm text-center text-muted-foreground">Pod ceną i przyciskami (wąski wariant)</span>
+                                    </Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
