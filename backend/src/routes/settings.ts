@@ -115,24 +115,33 @@ async function recalculateAllPrices(fastify: FastifyInstance) {
 export async function settingsRoutes(fastify: FastifyInstance) {
     // Get current settings
     fastify.get('/api/settings', async (request, reply) => {
-        let settings = await fastify.prisma.appSettings.findUnique({
-            where: { id: 'default' }
-        });
+        try {
+            let settings = await fastify.prisma.appSettings.findUnique({
+                where: { id: 'default' }
+            });
 
-        // If no settings exist yet, create default entry
-        if (!settings) {
-            settings = await fastify.prisma.appSettings.create({
-                data: {
-                    id: 'default',
-                    legalDocuments: normalizeLegalDocuments({})
-                }
+            // If no settings exist yet, create default entry
+            if (!settings) {
+                fastify.log.info('Settings not found, creating default...');
+                settings = await fastify.prisma.appSettings.create({
+                    data: {
+                        id: 'default',
+                        legalDocuments: normalizeLegalDocuments({})
+                    }
+                });
+            }
+
+            return {
+                ...settings,
+                legalDocuments: normalizeLegalDocuments(settings.legalDocuments)
+            };
+        } catch (error) {
+            fastify.log.error(error, 'Failed to get settings');
+            return reply.code(500).send({
+                error: 'Failed to fetch settings',
+                message: error instanceof Error ? error.message : 'Unknown error'
             });
         }
-
-        return {
-            ...settings,
-            legalDocuments: normalizeLegalDocuments(settings.legalDocuments)
-        };
     });
 
     // Update settings
