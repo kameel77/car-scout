@@ -46,17 +46,33 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
 
   const isSearchPage = location.pathname === '/' || location.pathname === '/search';
 
+  const getHeaderLogoText = () => {
+    if (!settings) return null;
+    const lang = i18n.language;
+    if (lang === 'de') return settings.headerLogoTextDe;
+    if (lang === 'en') return settings.headerLogoTextEn;
+    return settings.headerLogoTextPl;
+  };
+
+  const headerLogoText = getHeaderLogoText();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="container flex h-[var(--header-height)] items-center justify-between gap-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
+        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <img
             src={buildAssetUrl(settings?.headerLogoUrl) || '/askauto_logo.svg'}
             alt="AskAuto"
             className="h-[3.25rem] w-auto max-w-[260px] object-contain"
             loading="lazy"
           />
+          {headerLogoText && (
+            <span
+              className="text-xs text-muted-foreground leading-tight border-l pl-3 border-border hidden sm:block"
+              dangerouslySetInnerHTML={{ __html: headerLogoText }}
+            />
+          )}
         </Link>
 
         {/* Desktop Navigation */}

@@ -8,7 +8,14 @@ import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
 import { SpecificationsTable } from '@/components/SpecificationsTable';
 import { EquipmentDisplay } from '@/components/EquipmentDisplay';
+import { MarkdownText } from '@/components/MarkdownText';
 import { Button } from '@/components/ui/button';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useListing } from '@/hooks/useListings';
@@ -170,9 +177,11 @@ export default function ListingDetailPage() {
       const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
-      const secondaryLabel = isNetPrimary
-        ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
-        : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`;
+      const secondaryLabel = user
+        ? (isNetPrimary
+          ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
+          : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
+        : null;
 
       return { primaryLabel, secondaryLabel };
     }
@@ -318,15 +327,25 @@ export default function ListingDetailPage() {
               <section className="space-y-3">
                 <h2 className="font-heading text-xl font-semibold">{t('nav.faq', 'FAQ')}</h2>
                 <div className="space-y-3">
-                  {faqs.map((faq) => {
-                    const { question, answer } = getLocalizedQA(faq);
-                    return (
-                      <div key={faq.id} className="rounded-lg border border-border bg-card p-4 shadow-sm">
-                        <h3 className="text-lg font-semibold text-foreground">{question}</h3>
-                        <p className="mt-2 text-muted-foreground whitespace-pre-line">{answer}</p>
-                      </div>
-                    );
-                  })}
+                  <Accordion type="multiple" className="w-full space-y-3">
+                    {faqs.map((faq) => {
+                      const { question, answer } = getLocalizedQA(faq);
+                      return (
+                        <AccordionItem
+                          key={faq.id}
+                          value={faq.id}
+                          className="rounded-lg border border-border bg-card shadow-sm px-4"
+                        >
+                          <AccordionTrigger className="text-lg font-semibold text-foreground hover:no-underline text-left py-4">
+                            {question}
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4 text-muted-foreground whitespace-pre-line">
+                            <MarkdownText text={answer} />
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 </div>
               </section>
             )}
