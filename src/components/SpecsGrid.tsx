@@ -34,7 +34,7 @@ export function SpecsGrid(props: SpecsGridProps) {
     { key: 'fuelType', icon: Fuel, label: t('filters.fuelType'), value: translateTechnicalValue('fuel', props.fuelType, t) },
     { key: 'transmission', icon: Settings2, label: t('filters.transmission'), value: translateTechnicalValue('transmission', props.transmission, t) },
     { key: 'drive', icon: Cog, label: t('filters.drive'), value: translateTechnicalValue('drive', props.drive, t) },
-    { key: 'power', icon: Zap, label: t('listing.hp'), value: `${props.power} ${t('listing.hp')}` },
+    { key: 'power', icon: Zap, label: t('filters.power'), value: `${props.power} ${t('listing.hp')}` },
     { key: 'capacity', icon: Hash, label: t('filters.engineCapacity'), value: `${formatNumber(props.capacity)} ${t('listing.ccm')}` },
     { key: 'bodyType', icon: Car, label: t('filters.bodyType'), value: translateTechnicalValue('body', props.bodyType, t) },
   ];

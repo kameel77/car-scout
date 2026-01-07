@@ -61,7 +61,7 @@ export const translations = {
         drive: "Napęd",
         transmission: "Skrzynia biegów",
         power: "Moc",
-        engineCapacity: "Pojemność silnika",
+        engineCapacity: "Pojemność skokowa",
         bodyType: "Typ nadwozia",
         price: "Cena",
         selectMake: "Wybierz markę",
@@ -424,7 +424,7 @@ export const translations = {
       listing: {
         viewOffer: "View offer",
         km: "km",
-        hp: "hp",
+        hp: "HP",
         ccm: "cc",
         year: "year",
         dealer: "Dealer",
@@ -721,8 +721,8 @@ export const translations = {
         year: "Jahr",
         dealer: "Händler",
         location: "Standort",
-        net: "Preise netto",
-        gross: "Preise brutto",
+        net: "Nettopreise",
+        gross: "Bruttopreise",
       },
 
       // Listing detail

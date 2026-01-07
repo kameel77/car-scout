@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { formatPrice } from '@/utils/formatters';
+import { translateTechnicalValue } from '@/utils/i18n-utils';
 
 interface ListingCardProps {
   listing: Listing;
@@ -109,11 +110,15 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Fuel className="h-3.5 w-3.5" />
-              <span className="capitalize">{listing.fuel_type}</span>
+              <span className="capitalize">
+                {translateTechnicalValue('fuel', listing.fuel_type, t)}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Settings2 className="h-3.5 w-3.5" />
-              <span className="capitalize">{listing.transmission}</span>
+              <span className="capitalize">
+                {translateTechnicalValue('transmission', listing.transmission, t)}
+              </span>
             </div>
           </div>
 
