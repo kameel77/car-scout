@@ -436,7 +436,7 @@ export default function LeadFormPage() {
                 </Button>
 
                 <p className="text-center text-[10px] text-muted-foreground mt-4 italic">
-                  * Pola oznaczone gwiazdką są wymagane
+                  {t('lead.requiredFields')}
                 </p>
               </form>
             </div>
