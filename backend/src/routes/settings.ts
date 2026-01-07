@@ -24,6 +24,9 @@ type SettingsPayload = {
     legalRegisterNumber?: string | null;
     legalRepresentative?: string | null;
     headerLogoUrl?: string | null;
+    headerLogoTextPl?: string | null;
+    headerLogoTextEn?: string | null;
+    headerLogoTextDe?: string | null;
     footerLogoUrl?: string | null;
     legalSloganPl?: string | null;
     legalSloganEn?: string | null;
@@ -166,6 +169,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     legalRegisterNumber: data.legalRegisterNumber || null,
                     legalRepresentative: data.legalRepresentative || null,
                     headerLogoUrl: data.headerLogoUrl || null,
+                    headerLogoTextPl: data.headerLogoTextPl || null,
+                    headerLogoTextEn: data.headerLogoTextEn || null,
+                    headerLogoTextDe: data.headerLogoTextDe || null,
                     footerLogoUrl: data.footerLogoUrl || null,
                     legalSloganPl: data.legalSloganPl || null,
                     legalSloganEn: data.legalSloganEn || null,
@@ -188,6 +194,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     legalRegisterNumber: data.legalRegisterNumber || null,
                     legalRepresentative: data.legalRepresentative || null,
                     headerLogoUrl: data.headerLogoUrl || null,
+                    headerLogoTextPl: data.headerLogoTextPl || null,
+                    headerLogoTextEn: data.headerLogoTextEn || null,
+                    headerLogoTextDe: data.headerLogoTextDe || null,
                     footerLogoUrl: data.footerLogoUrl || null,
                     legalSloganPl: data.legalSloganPl || null,
                     legalSloganEn: data.legalSloganEn || null,

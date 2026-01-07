@@ -58,7 +58,10 @@ export function SettingsModule() {
         legalDocuments: withLegalDocs(data?.legalDocuments),
         legalSloganPl: data?.legalSloganPl || '',
         legalSloganEn: data?.legalSloganEn || '',
-        legalSloganDe: data?.legalSloganDe || ''
+        legalSloganDe: data?.legalSloganDe || '',
+        headerLogoTextPl: data?.headerLogoTextPl || '',
+        headerLogoTextEn: data?.headerLogoTextEn || '',
+        headerLogoTextDe: data?.headerLogoTextDe || ''
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -497,6 +500,42 @@ export function SettingsModule() {
                     </div>
 
                     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <p className="font-semibold text-foreground">Tekst przy logo (Header)</p>
+                                <p className="text-xs text-slate-500">Tekst wyświetlany obok logo w nagłówku (PL/EN/DE). Obsługuje znacznik &lt;br&gt;.</p>
+                            </div>
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-3 mb-6">
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">PL</Label>
+                                <Input
+                                    value={settings.headerLogoTextPl || ''}
+                                    onChange={(e) => setSettings({ ...settings, headerLogoTextPl: e.target.value })}
+                                    placeholder="Tekst PL"
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">EN</Label>
+                                <Input
+                                    value={settings.headerLogoTextEn || ''}
+                                    onChange={(e) => setSettings({ ...settings, headerLogoTextEn: e.target.value })}
+                                    placeholder="Text EN"
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">DE</Label>
+                                <Input
+                                    value={settings.headerLogoTextDe || ''}
+                                    onChange={(e) => setSettings({ ...settings, headerLogoTextDe: e.target.value })}
+                                    placeholder="Text DE"
+                                    className="bg-white"
+                                />
+                            </div>
+                        </div>
+
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <p className="font-semibold text-foreground">Slogan przy logo</p>
