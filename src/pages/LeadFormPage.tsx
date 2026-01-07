@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useListing } from '@/hooks/useListings';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
@@ -48,6 +49,7 @@ export default function LeadFormPage() {
   const { data, isLoading: isListingLoading } = useListing(id);
   const { data: settingsData } = useAppSettings();
   const { priceType } = usePriceSettings();
+  const { user } = useAuth();
   const listing = data?.listing;
 
   const priceInfo = React.useMemo(() => {
@@ -67,9 +69,11 @@ export default function LeadFormPage() {
       const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
-      const secondaryLabel = isNetPrimary
-        ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
-        : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`;
+      const secondaryLabel = user
+        ? (isNetPrimary
+          ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
+          : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
+        : null;
 
       return { primaryLabel, secondaryLabel };
     }
