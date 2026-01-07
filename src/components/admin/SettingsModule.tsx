@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Languages, Coins, Percent, RefreshCw, Save, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 
 type LegalDocKey = 'imprint' | 'privacyPolicy' | 'terms' | 'cookies';
 type LegalDocumentsState = Record<LegalDocKey, Record<string, string>>;
@@ -43,6 +44,7 @@ const withLegalDocs = (raw: any): LegalDocumentsState => ({
 export function SettingsModule() {
     const { token } = useAuth();
     const queryClient = useQueryClient();
+    const { priceType, setPriceType } = usePriceSettings();
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
     const [settings, setSettings] = React.useState<any>(null);
@@ -369,6 +371,25 @@ export function SettingsModule() {
                                 <Percent className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                             </div>
                         </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <Label className="text-sm font-bold">Domyślny typ ceny (podstawowy)</Label>
+                        <Select
+                            value={priceType}
+                            onValueChange={(val) => setPriceType(val as 'gross' | 'net')}
+                        >
+                            <SelectTrigger className="w-full bg-white">
+                                <SelectValue placeholder="Wybierz typ ceny" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="gross">Brutto (z VAT)</SelectItem>
+                                <SelectItem value="net">Netto (bez VAT)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">
+                            Określa, która cena będzie wyświetlana jako główna (większa) w serwisie.
+                        </p>
                     </div>
 
                     {/* Automatic update info */}

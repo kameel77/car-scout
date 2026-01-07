@@ -19,6 +19,7 @@ import {
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { cn } from '@/lib/utils';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ActiveFiltersProps {
   filters: FilterState;
@@ -46,6 +47,7 @@ export function ActiveFilters({
 }: ActiveFiltersProps) {
   const { t } = useTranslation();
   const { priceType, setPriceType } = usePriceSettings();
+  const { user } = useAuth();
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState(filters.query || '');
   const [isUserTyping, setIsUserTyping] = React.useState(false);
@@ -221,21 +223,23 @@ export function ActiveFilters({
             </SheetContent>
           </Sheet>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 flex-1">
-                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                {t('listing.gross')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                {t('listing.net')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 flex-1">
+                  {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
+                  {t('listing.gross')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
+                  {t('listing.net')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -268,36 +272,38 @@ export function ActiveFilters({
             <span className="font-semibold text-foreground">{resultCount}</span> {t('common.offers')}
           </div>
 
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder={t('search.placeholder', 'Pozwól, że znajdę to za Ciebie...')}
-            value={searchValue}
-            onChange={(e) => {
-              setIsUserTyping(true);
-              setSearchValue(e.target.value);
-            }}
-            className="pl-9 w-full bg-background border-primary/20 focus-visible:ring-primary/30 active:scale-[1.01] transition-all"
-            disabled={false}
-            readOnly={false}
-          />
-        </div>
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder={t('search.placeholder', 'Pozwól, że znajdę to za Ciebie...')}
+              value={searchValue}
+              onChange={(e) => {
+                setIsUserTyping(true);
+                setSearchValue(e.target.value);
+              }}
+              className="pl-9 w-full bg-background border-primary/20 focus-visible:ring-primary/30 active:scale-[1.01] transition-all"
+              disabled={false}
+              readOnly={false}
+            />
+          </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 whitespace-nowrap">
-                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                {t('listing.gross')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                {t('listing.net')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 whitespace-nowrap">
+                  {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
+                  {t('listing.gross')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
+                  {t('listing.net')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

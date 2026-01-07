@@ -15,21 +15,44 @@ dotenv.config();
 const prisma = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+// Configure Redis with timeouts and limited retries for production robustness
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    connectTimeout: 5000,
+    maxRetriesPerRequest: 1,
+    retryStrategy: (times) => {
+        // Only retry a few times during startup
+        if (times > 3) {
+            console.log('❌ Redis: Max retries reached, giving up.');
+            return null;
+        }
+        const delay = Math.min(times * 200, 1000);
+        return delay;
+    }
+});
+
+// Helper for timing out long operations
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+    const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+    );
+    return Promise.race([promise, timeout]);
+}
 
 // Test connections on startup
 async function testConnections() {
     try {
-        console.log('Testing database connection...');
-        await prisma.$queryRaw`SELECT 1`;
+        console.log('Testing associations (Prisma)...');
+        // Use timeout for DB check to prevent hanging
+        await withTimeout(prisma.$queryRaw`SELECT 1`, 5000, 'Database connection timeout (5s)');
         console.log('✅ Database connected');
 
         console.log('Testing Redis connection...');
-        await redis.ping();
+        await withTimeout(redis.ping(), 5000, 'Redis connection timeout (5s)');
         console.log('✅ Redis connected');
     } catch (error) {
-        console.error('❌ Connection test failed:', error);
-        // Don't exit in production, just log the error
+        console.error('⚠️ Connection test failed:', error instanceof Error ? error.message : error);
+        // Don't exit in production, let the health check report it
         if (process.env.NODE_ENV === 'development') {
             process.exit(1);
         }
@@ -114,20 +137,22 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
     }
 });
 
-// Health check
+// Health check with timeouts
 fastify.get('/health', async () => {
     try {
-        // Test database connection
-        await fastify.prisma.$queryRaw`SELECT 1`;
+        // Test database connection with timeout
+        await withTimeout(fastify.prisma.$queryRaw`SELECT 1`, 3000, 'DB timeout');
+        const dbStatus = 'connected';
 
-        // Test Redis connection
-        await fastify.redis.ping();
+        // Test Redis connection with timeout
+        await withTimeout(fastify.redis.ping(), 3000, 'Redis timeout');
+        const redisStatus = 'connected';
 
         return {
             status: 'ok',
             timestamp: new Date().toISOString(),
-            database: 'connected',
-            redis: 'connected'
+            database: dbStatus,
+            redis: redisStatus
         };
     } catch (error) {
         fastify.log.error(error, 'Health check failed');

@@ -176,9 +176,11 @@ export default function ListingDetailPage() {
       const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
-      const secondaryLabel = isNetPrimary
-        ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
-        : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`;
+      const secondaryLabel = user
+        ? (isNetPrimary
+          ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
+          : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
+        : null;
 
       return { primaryLabel, secondaryLabel };
     }
