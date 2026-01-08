@@ -28,6 +28,8 @@ interface ActiveFiltersProps {
   resultCount: number;
   sortBy: string;
   onSortChange: (value: string) => void;
+  availableMakes: string[];
+  availableModels: { make: string; model: string }[];
 }
 
 const sortOptions = [
@@ -44,6 +46,8 @@ export function ActiveFilters({
   resultCount,
   sortBy,
   onSortChange,
+  availableMakes,
+  availableModels,
 }: ActiveFiltersProps) {
   const { t } = useTranslation();
   const { priceType, setPriceType } = usePriceSettings();
@@ -207,8 +211,8 @@ export function ActiveFilters({
                   }}
                   resultCount={resultCount}
                   className="shadow-none p-0"
-                  availableMakes={[]}
-                  availableModels={[]}
+                  availableMakes={availableMakes}
+                  availableModels={availableModels}
                 />
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t">
