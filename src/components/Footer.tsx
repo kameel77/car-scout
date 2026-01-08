@@ -76,13 +76,12 @@ export function Footer() {
               loading="lazy"
             />
           ) : (
-            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-300">
-              <Shield className="h-4 w-4 text-amber-300" />
-              {t('footer.legal')}
-            </div>
+            <span className="text-xl font-bold text-white">
+              Car Scout
+            </span>
           )}
           {sloganText && (
-              <p className="text-base font-semibold text-slate-50">{sloganText}</p>
+            <p className="text-base font-semibold text-slate-50">{sloganText}</p>
           )}
         </div>
 
