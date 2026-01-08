@@ -76,7 +76,7 @@ export function Footer() {
               loading="lazy"
             />
           ) : (
-            <span className="text-xl font-extrabold text-white">
+            <span className="text-xl font-black text-white">
               Car Scout
             </span>
           )}

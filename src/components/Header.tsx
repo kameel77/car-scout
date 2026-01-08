@@ -69,7 +69,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
               loading="lazy"
             />
           ) : (
-            <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Car Scout
             </span>
           )}
@@ -128,7 +128,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                     loading="lazy"
                   />
                 ) : (
-                  <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  <span className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     Car Scout
                   </span>
                 )}
