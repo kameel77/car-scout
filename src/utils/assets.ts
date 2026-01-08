@@ -11,6 +11,7 @@ const apiBaseWithoutApi = () => {
 export function buildAssetUrl(url?: string | null): string | undefined {
   if (!url) return undefined;
   if (/^https?:\/\//i.test(url)) return url;
+  if (/^data:/i.test(url)) return url;
 
   const base = apiBaseWithoutApi();
   if (!base) return url;
