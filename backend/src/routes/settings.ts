@@ -258,13 +258,15 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Invalid file type. Use png/jpg/svg/webp.' });
         }
 
-        await fs.mkdir(LOGO_DIR, { recursive: true });
-        const filename = `${target}-logo-${Date.now()}${ext}`;
-        const filePath = path.join(LOGO_DIR, filename);
         const buffer = await file.toBuffer();
-        await fs.writeFile(filePath, buffer);
+        const mimeType = ext === '.svg' ? 'image/svg+xml'
+            : ext === '.png' ? 'image/png'
+                : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+                    : ext === '.webp' ? 'image/webp'
+                        : 'image/png'; // fallback
 
-        const url = `/uploads/logos/${filename}`;
+        const base64 = buffer.toString('base64');
+        const url = `data:${mimeType};base64,${base64}`;
 
         await fastify.prisma.appSettings.upsert({
             where: { id: 'default' },
