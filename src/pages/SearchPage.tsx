@@ -229,6 +229,8 @@ export default function SearchPage() {
                 setSortBy(value);
                 setPage(1);
               }}
+              availableMakes={options?.makes || []}
+              availableModels={options?.models || []}
             />
 
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
