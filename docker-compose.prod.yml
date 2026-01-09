@@ -16,9 +16,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - carscout-network
-      - coolify
 
   # Redis Cache Container
   redis:
@@ -26,9 +23,6 @@ services:
     restart: unless-stopped
     volumes:
       - redis_data_prod:/data
-    networks:
-      - carscout-network
-      - coolify
 
   # Backend API Container
   backend:
@@ -61,9 +55,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-    networks:
-      - carscout-network
-      - coolify
 
   # Frontend Container (Nginx)
   frontend:
@@ -77,8 +68,6 @@ services:
       - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       - backend
-    networks:
-      - carscout-network
 
 volumes:
   postgres_data_prod:
@@ -86,7 +75,6 @@ volumes:
 
 
 networks:
-  carscout-network:
-    driver: bridge
-  coolify:
+  default:
+    name: coolify
     external: true
