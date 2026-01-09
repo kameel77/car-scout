@@ -255,17 +255,23 @@ export async function listingRoutes(fastify: FastifyInstance) {
             const rawCount = await fastify.prisma.listing.count();
             const activeCount = await fastify.prisma.listing.count({ where: { isArchived: false } });
             const userCount = await fastify.prisma.user.count();
-            const firstUser = await fastify.prisma.user.findFirst({ select: { email: true, id: true, role: true } });
-            const firstListing = await fastify.prisma.listing.findFirst({ select: { id: true, make: true, brokerPricePln: true } });
+
+            // Raw SQL checks via Prisma to see what it's actually looking at
+            const dbName = await fastify.prisma.$queryRaw`SELECT current_database()`;
+            const currentUser = await fastify.prisma.$queryRaw`SELECT current_user`;
+            const tables = await fastify.prisma.$queryRaw`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
 
             return {
                 prismaReport: {
                     totalListings: rawCount,
                     activeListings: activeCount,
                     totalUsers: userCount,
-                    firstUser,
-                    firstListing,
-                    dbUrl: process.env.DATABASE_URL?.replace(/:([^:@]+)@/, ':****@') // Hide password
+                    dbInfo: {
+                        dbName,
+                        currentUser,
+                        tables
+                    },
+                    dbUrl: process.env.DATABASE_URL?.replace(/:([^:@]+)@/, ':****@')
                 }
             };
         } catch (error) {
