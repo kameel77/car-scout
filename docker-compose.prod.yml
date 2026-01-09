@@ -37,8 +37,8 @@ services:
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-carscout_user}:${POSTGRES_PASSWORD:-carscout_password}@postgres:5432/${POSTGRES_DB:-carscout}
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-carscout_user}:${POSTGRES_PASSWORD:-carscout_password}@postgres:5432/${POSTGRES_DB:-carscout}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: 3000
