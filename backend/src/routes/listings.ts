@@ -102,8 +102,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const where = {
             ...searchFilter,
-                make: makes ? { in: makes, mode: 'insensitive' as const } : undefined,
-                model: models ? { in: models, mode: 'insensitive' as const } : undefined,
+            make: makes ? { in: makes, mode: 'insensitive' as const } : undefined,
+            model: models ? { in: models, mode: 'insensitive' as const } : undefined,
 
             [priceField]: {
                 gte: priceMin ? parseInt(priceMin) : undefined,
@@ -246,6 +246,29 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 error: 'Refresh failed',
                 message: error instanceof Error ? error.message : 'Unknown error'
             });
+        });
+
+    // DEBUG: Get raw counts from Prisma to diagnose visibility issues
+    fastify.get('/api/debug-data', async (request, reply) => {
+        try {
+            const rawCount = await fastify.prisma.listing.count();
+            const activeCount = await fastify.prisma.listing.count({ where: { isArchived: false } });
+            const userCount = await fastify.prisma.user.count();
+            const firstUser = await fastify.prisma.user.findFirst({ select: { email: true, id: true, role: true } });
+            const firstListing = await fastify.prisma.listing.findFirst({ select: { id: true, make: true, brokerPricePln: true } });
+
+            return {
+                prismaReport: {
+                    totalListings: rawCount,
+                    activeListings: activeCount,
+                    totalUsers: userCount,
+                    firstUser,
+                    firstListing,
+                    dbUrl: process.env.DATABASE_URL?.replace(/:([^:@]+)@/, ':****@') // Hide password
+                }
+            };
+        } catch (error) {
+            return { error: error instanceof Error ? error.message : 'Prisma error' };
         }
     });
 }
