@@ -267,8 +267,15 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
             `;
 
+            // Helper to handle BigInt serialization
+            const serialize = (obj: any): any => {
+                return JSON.parse(JSON.stringify(obj, (key, value) =>
+                    typeof value === 'bigint' ? value.toString() : value
+                ));
+            };
+
             return {
-                prismaReport: {
+                prismaReport: serialize({
                     totalListings: rawCount,
                     totalUsers: userCount,
                     diagnostics: {
@@ -278,7 +285,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                         tablesWithCounts
                     },
                     dbUrl: process.env.DATABASE_URL?.replace(/:([^:@]+)@/, ':****@')
-                }
+                })
             };
         } catch (error) {
             return { error: error instanceof Error ? error.message : 'Prisma error' };
