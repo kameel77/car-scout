@@ -61,6 +61,7 @@ services:
       start_period: 30s
     networks:
       - carscout-network
+      - coolify
 
   # Frontend Container (Nginx)
   frontend:
@@ -85,3 +86,5 @@ volumes:
 networks:
   carscout-network:
     driver: bridge
+  coolify:
+    external: true
