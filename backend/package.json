@@ -8,7 +8,7 @@
         "dev": "tsx watch src/server.ts",
         "build": "tsc",
         "start": "node dist/server.js",
-        "create-admin": "tsx src/scripts/create-admin.ts",
+        "create-admin": "node add-admin.cjs",
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
         "prisma:studio": "prisma studio",
