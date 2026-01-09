@@ -248,47 +248,4 @@ export async function listingRoutes(fastify: FastifyInstance) {
             });
         }
     });
-
-    // DEBUG: Get raw counts from Prisma to diagnose visibility issues
-    fastify.get('/api/debug-data', async (request, reply) => {
-        try {
-            const rawCount = await fastify.prisma.listing.count();
-            const activeCount = await fastify.prisma.listing.count({ where: { isArchived: false } });
-            const userCount = await fastify.prisma.user.count();
-
-            // Raw SQL checks to bypass Prisma mapping and see exactly what's in the DB
-            const dbIdentity = await fastify.prisma.$queryRaw`SELECT current_database(), current_user, inet_server_addr(), inet_server_port()`;
-            const rawListingCount = await fastify.prisma.$queryRaw`SELECT count(*) FROM public.listings`;
-            const rawUserCount = await fastify.prisma.$queryRaw`SELECT count(*) FROM public.users`;
-            const tablesWithCounts = await fastify.prisma.$queryRaw`
-                SELECT table_name, 
-                (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I', table_name), false, true, '')))[1]::text::int as row_count
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-            `;
-
-            // Helper to handle BigInt serialization
-            const serialize = (obj: any): any => {
-                return JSON.parse(JSON.stringify(obj, (key, value) =>
-                    typeof value === 'bigint' ? value.toString() : value
-                ));
-            };
-
-            return {
-                prismaReport: serialize({
-                    totalListings: rawCount,
-                    totalUsers: userCount,
-                    diagnostics: {
-                        dbIdentity,
-                        rawListingCount,
-                        rawUserCount,
-                        tablesWithCounts
-                    },
-                    dbUrl: process.env.DATABASE_URL?.replace(/:([^:@]+)@/, ':****@')
-                })
-            };
-        } catch (error) {
-            return { error: error instanceof Error ? error.message : 'Prisma error' };
-        }
-    });
 }
