@@ -246,7 +246,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 error: 'Refresh failed',
                 message: error instanceof Error ? error.message : 'Unknown error'
             });
-        });
+        }
+    });
 
     // DEBUG: Get raw counts from Prisma to diagnose visibility issues
     fastify.get('/api/debug-data', async (request, reply) => {
