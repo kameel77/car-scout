@@ -256,20 +256,26 @@ export async function listingRoutes(fastify: FastifyInstance) {
             const activeCount = await fastify.prisma.listing.count({ where: { isArchived: false } });
             const userCount = await fastify.prisma.user.count();
 
-            // Raw SQL checks via Prisma to see what it's actually looking at
-            const dbName = await fastify.prisma.$queryRaw`SELECT current_database()`;
-            const currentUser = await fastify.prisma.$queryRaw`SELECT current_user`;
-            const tables = await fastify.prisma.$queryRaw`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
+            // Raw SQL checks to bypass Prisma mapping and see exactly what's in the DB
+            const dbIdentity = await fastify.prisma.$queryRaw`SELECT current_database(), current_user, inet_server_addr(), inet_server_port()`;
+            const rawListingCount = await fastify.prisma.$queryRaw`SELECT count(*) FROM public.listings`;
+            const rawUserCount = await fastify.prisma.$queryRaw`SELECT count(*) FROM public.users`;
+            const tablesWithCounts = await fastify.prisma.$queryRaw`
+                SELECT table_name, 
+                (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I', table_name), false, true, '')))[1]::text::int as row_count
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+            `;
 
             return {
                 prismaReport: {
                     totalListings: rawCount,
-                    activeListings: activeCount,
                     totalUsers: userCount,
-                    dbInfo: {
-                        dbName,
-                        currentUser,
-                        tables
+                    diagnostics: {
+                        dbIdentity,
+                        rawListingCount,
+                        rawUserCount,
+                        tablesWithCounts
                     },
                     dbUrl: process.env.DATABASE_URL?.replace(/:([^:@]+)@/, ':****@')
                 }
