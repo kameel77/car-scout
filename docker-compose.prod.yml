@@ -1,6 +1,14 @@
 version: '3.8'
 
 services:
+  ${REDIS_SERVICE_NAME:-carscout-redis}:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - ${REDIS_DATA_VOLUME:-redis_data}:/data
+    networks:
+      - carscout-private
+
   # Backend API Container
   backend:
     build:
@@ -10,8 +18,9 @@ services:
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     environment:
+      # Use Coolify's standalone database
       DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
+      REDIS_URL: ${REDIS_URL:-redis://${REDIS_SERVICE_NAME:-carscout-redis}:6379}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: 3000
@@ -45,6 +54,10 @@ services:
       - backend
     networks:
       - carscout-private
+
+volumes:
+  ${REDIS_DATA_VOLUME:-redis_data}:
+
 
 networks:
   carscout-private:
