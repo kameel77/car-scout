@@ -32,9 +32,7 @@ services:
       carscout-private:
         aliases:
           - backend-internal
-      coolify:
-
-        # Frontend Container (Nginx)
+      coolify: {} # Frontend Container (Nginx)
   frontend:
     build:
       context: .
@@ -48,6 +46,7 @@ services:
       - backend
     networks:
       - carscout-private
+      - coolify
 
 networks:
   carscout-private:
