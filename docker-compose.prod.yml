@@ -1,32 +1,6 @@
 version: '3.8'
 
 services:
-  # Unique names to avoid DNS conflicts in shared network
-  carscout-postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-carscout_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carscout_password}
-      POSTGRES_DB: ${POSTGRES_DB:-carscout}
-    volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carscout_user} -d ${POSTGRES_DB:-carscout}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - carscout-private
-
-  carscout-redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    volumes:
-      - redis_data_prod:/data
-    networks:
-      - carscout-private
-
   # Backend API Container
   backend:
     build:
@@ -36,9 +10,8 @@ services:
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     environment:
-      # Prioritize DATABASE_URL from Coolify, fallback to local with NEW unique name
-      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-carscout_user}:${POSTGRES_PASSWORD:-carscout_password}@carscout-postgres:5432/${POSTGRES_DB:-carscout}}
-      REDIS_URL: ${REDIS_URL:-redis://carscout-redis:6379}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: 3000
@@ -48,9 +21,6 @@ services:
       ANALYTICS_MAX_DAYS: ${ANALYTICS_MAX_DAYS:-365}
       ANALYTICS_CACHE_TTL: ${ANALYTICS_CACHE_TTL:-300}
       CORS_ORIGINS: ${CORS_ORIGINS}
-    depends_on:
-      carscout-redis:
-        condition: service_started
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
       interval: 10s
@@ -76,14 +46,10 @@ services:
     networks:
       - carscout-private
 
-volumes:
-  postgres_data_prod:
-  redis_data_prod:
-
-
 networks:
   carscout-private:
     driver: bridge
+    name: "carscout-${DEPLOY_ENV:-prod}-private"
   coolify:
     name: coolify
     external: true
