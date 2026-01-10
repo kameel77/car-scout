@@ -29,10 +29,12 @@ services:
       retries: 10
       start_period: 30s
     networks:
-      - carscout-private
-      - coolify
+      carscout-private:
+        aliases:
+          - backend-internal
+      coolify:
 
-  # Frontend Container (Nginx)
+        # Frontend Container (Nginx)
   frontend:
     build:
       context: .
