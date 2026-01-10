@@ -50,7 +50,7 @@ services:
 networks:
   carscout-private:
     driver: bridge
-    name: "carscout-${DEPLOY_ENV:-prod}-private"
+    name: "${COMPOSE_PROJECT_NAME}-private"
   coolify:
     name: coolify
     external: true
