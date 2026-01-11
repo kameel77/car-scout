@@ -1,30 +1,30 @@
-
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 
-interface SeoConfig {
+export interface SeoConfig {
     gtmId?: string;
     homeTitle?: string;
     homeDescription?: string;
     homeOgImage?: string;
+    listingTitle?: string;
+    listingDescription?: string;
 }
 
-export function SeoManager() {
-    const { data: seoConfig } = useQuery<SeoConfig>({
+export function useSeoConfig() {
+    return useQuery<SeoConfig>({
         queryKey: ['seo-config'],
         queryFn: async () => {
-            const token = localStorage.getItem('token');
-            // Public endpoint for reading SEO config? 
-            // Actually my plan said GET /api/seo is public (implied).
-            // Let's check backend implementation again. 
-            // Yes, GET /api/seo in backend/src/routes/seo.ts does NOT have preHandler auth.
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/seo`);
             if (!res.ok) throw new Error('Failed to fetch SEO config');
             return res.json();
         },
         staleTime: 1000 * 60 * 5, // 5 minutes
     });
+}
+
+export function SeoManager() {
+    const { data: seoConfig } = useSeoConfig();
 
     useEffect(() => {
         if (seoConfig?.gtmId) {
