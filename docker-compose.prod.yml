@@ -3,6 +3,7 @@ version: '3.8'
 services:
   # Backend API Container
   backend:
+    container_name: "${COMPOSE_PROJECT_NAME}-backend"
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -10,7 +11,6 @@ services:
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     environment:
-      # Use Coolify's standalone database
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
@@ -31,14 +31,17 @@ services:
     networks:
       carscout-private:
         aliases:
-          - backend-internal
-      coolify: {} # Frontend Container (Nginx)
+          - backend-api # Stack-local alias for Nginx
+      coolify: {}
+
+  # Frontend Container (Nginx)
   frontend:
+    container_name: "${COMPOSE_PROJECT_NAME}-frontend"
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_API_URL: ${VITE_API_URL:-/api}
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-8080}:80"
