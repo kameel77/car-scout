@@ -15,11 +15,32 @@ export function useSeoConfig() {
     return useQuery<SeoConfig>({
         queryKey: ['seo-config'],
         queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/seo`);
-            if (!res.ok) throw new Error('Failed to fetch SEO config');
-            return res.json();
+            // Determine API URL: prefer VITE_API_URL, fallback to direct localhost:3000 for dev to bypass potential proxy issues
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000';
+            const endpoint = `${apiUrl}/api/seo`;
+
+            console.log(`[useSeoConfig] Fetching SEO config from: ${endpoint}`);
+
+            try {
+                const res = await fetch(endpoint);
+                console.log(`[useSeoConfig] Response status: ${res.status}`);
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('[useSeoConfig] Error response:', text);
+                    throw new Error(`Failed to fetch SEO config: ${res.status}`);
+                }
+
+                const data = await res.json();
+                console.log('[useSeoConfig] Data received:', data);
+                return data;
+            } catch (error) {
+                console.error('[useSeoConfig] Fetch error:', error);
+                throw error;
+            }
         },
         staleTime: 1000 * 60 * 5, // 5 minutes
+        refetchOnWindowFocus: false // Reduce spam
     });
 }
 
