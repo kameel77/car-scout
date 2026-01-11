@@ -128,7 +128,7 @@ export default function SeoPage() {
                                                 </p>
                                             </div>
                                             <div className="flex justify-end pt-4">
-                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading}>
+                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading} className="bg-blue-600 hover:bg-blue-700">
                                                     {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
                                                 </Button>
                                             </div>
@@ -155,7 +155,7 @@ export default function SeoPage() {
                                                 <Input id="homeOgImage" {...register("homeOgImage")} placeholder="https://..." />
                                             </div>
                                             <div className="flex justify-end pt-4">
-                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading}>
+                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading} className="bg-blue-600 hover:bg-blue-700">
                                                     {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
                                                 </Button>
                                             </div>
@@ -192,7 +192,7 @@ export default function SeoPage() {
                                                 <Textarea id="listingDescription" {...register("listingDescription")} placeholder="Zobacz ofertę {{make}} {{model}} z roku {{year}}..." />
                                             </div>
                                             <div className="flex justify-end pt-4">
-                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading}>
+                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading} className="bg-blue-600 hover:bg-blue-700">
                                                     {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
                                                 </Button>
                                             </div>
