@@ -196,6 +196,7 @@ import { userRoutes } from './routes/users.js';
 import { faqRoutes } from './routes/faq.js';
 import { leadRoutes } from './routes/leads.js';
 import { financingRoutes } from './routes/financing.js';
+import { seoRoutes } from './routes/seo.js';
 
 await fastify.register(authRoutes);
 await fastify.register(importRoutes);
@@ -207,6 +208,7 @@ await fastify.register(userRoutes);
 await fastify.register(faqRoutes);
 await fastify.register(leadRoutes);
 await fastify.register(financingRoutes);
+await fastify.register(seoRoutes);
 
 // Serve uploaded assets (logos)
 const __filename = fileURLToPath(import.meta.url);

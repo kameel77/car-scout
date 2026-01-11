@@ -1,47 +1,18 @@
 version: '3.8'
 
 services:
-  # Database Container
-  postgres:
-    image: postgres:16-alpine
-    container_name: carscout-postgres-prod
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-carscout_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carscout_password}
-      POSTGRES_DB: ${POSTGRES_DB:-carscout}
-    volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carscout_user} -d ${POSTGRES_DB:-carscout}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - carscout-network
-
-  # Redis Cache Container
-  redis:
-    image: redis:7-alpine
-    container_name: carscout-redis-prod
-    restart: unless-stopped
-    volumes:
-      - redis_data_prod:/data
-    networks:
-      - carscout-network
-
   # Backend API Container
   backend:
+    container_name: "${COMPOSE_PROJECT_NAME}-backend"
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: carscout-backend-prod
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-carscout_user}:${POSTGRES_PASSWORD:-carscout_password}@postgres:5432/${POSTGRES_DB:-carscout}
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: 3000
@@ -51,41 +22,39 @@ services:
       ANALYTICS_MAX_DAYS: ${ANALYTICS_MAX_DAYS:-365}
       ANALYTICS_CACHE_TTL: ${ANALYTICS_CACHE_TTL:-300}
       CORS_ORIGINS: ${CORS_ORIGINS}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
     networks:
-      - carscout-network
+      carscout-private:
+        aliases:
+          - backend-api # Stack-local alias for Nginx
+      coolify: {}
 
   # Frontend Container (Nginx)
   frontend:
+    container_name: "${COMPOSE_PROJECT_NAME}-frontend"
     build:
       context: .
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
-    container_name: carscout-frontend-prod
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       - backend
     networks:
-      - carscout-network
-
-volumes:
-  postgres_data_prod:
-  redis_data_prod:
-
+      - carscout-private
+      - coolify
 
 networks:
-  carscout-network:
+  carscout-private:
     driver: bridge
+    name: "${COMPOSE_PROJECT_NAME}-private"
+  coolify:
+    name: coolify
+    external: true

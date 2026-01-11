@@ -102,8 +102,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const where = {
             ...searchFilter,
-                make: makes ? { in: makes, mode: 'insensitive' as const } : undefined,
-                model: models ? { in: models, mode: 'insensitive' as const } : undefined,
+            make: makes ? { in: makes, mode: 'insensitive' as const } : undefined,
+            model: models ? { in: models, mode: 'insensitive' as const } : undefined,
 
             [priceField]: {
                 gte: priceMin ? parseInt(priceMin) : undefined,

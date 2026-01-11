@@ -294,3 +294,24 @@ model FinancingProduct {
   @@index([category])
   @@index([isDefault])
 }
+
+// ============ SEO CONFIG ============
+model SeoConfig {
+  id              String   @id @default("default")
+  
+  // global
+  gtmId           String?  @map("gtm_id") // GTM-XXXXXX
+  
+  // homepage
+  homeTitle       String?  @map("home_title")
+  homeDescription String?  @map("home_description") @db.Text
+  homeOgImage     String?  @map("home_og_image")
+  
+  // listings (templates)
+  listingTitle       String? @map("listing_title") 
+  listingDescription String? @map("listing_description") @db.Text
+  
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("seo_config")
+}

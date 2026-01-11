@@ -41,6 +41,9 @@ import {
 import { AlertTriangle } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
+import { MetaHead } from '@/components/seo/MetaHead';
+import { useSeoConfig } from '@/components/seo/SeoManager';
+
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t, i18n } = useTranslation();
@@ -51,6 +54,7 @@ export default function ListingDetailPage() {
 
   const { data, isLoading } = useListing(id);
   const { data: settings } = useAppSettings();
+  const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
   const listing = data?.listing;
 
@@ -235,8 +239,67 @@ export default function ListingDetailPage() {
 
   const title = `${listing.make} ${listing.model} ${listing.version}`;
 
+  // Prepare SEO values
+  const metaTitle = listing && seoConfig?.listingTitle
+    ? seoConfig.listingTitle
+      .replace('{{make}}', listing.make)
+      .replace('{{model}}', listing.model)
+      .replace('{{year}}', listing.production_year.toString())
+      .replace('{{price}}', formatPrice(listing.price_pln, 'PLN'))
+      .replace('{{fuel}}', listing.fuel_type || '')
+    : title;
+
+  const metaDesc = listing && seoConfig?.listingDescription
+    ? seoConfig.listingDescription
+      .replace('{{make}}', listing.make)
+      .replace('{{model}}', listing.model)
+      .replace('{{year}}', listing.production_year.toString())
+      .replace('{{price}}', formatPrice(listing.price_pln, 'PLN'))
+      .replace('{{fuel}}', listing.fuel_type || '')
+    : '';
+
+  // Prepare Schema.org
+  const schema = listing ? {
+    "@context": "https://schema.org/",
+    "@type": "Car",
+    "name": title,
+    "image": listing.primary_image_url || listing.image_urls?.[0],
+    "description": metaDesc,
+    "brand": {
+      "@type": "Brand",
+      "name": listing.make
+    },
+    "model": listing.model,
+    "vehicleModelDate": listing.production_year,
+    "mileageFromOdometer": {
+      "@type": "QuantitativeValue",
+      "value": listing.mileage_km,
+      "unitCode": "KMT"
+    },
+    "vehicleEngine": {
+      "@type": "EngineSpecification",
+      "fuelType": listing.fuel_type
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": window.location.href,
+      "priceCurrency": "PLN",
+      "price": listing.price_pln,
+      "itemCondition": "https://schema.org/UsedCondition",
+      "availability": "https://schema.org/InStock"
+    }
+  } : undefined;
+
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {listing && (
+        <MetaHead
+          title={metaTitle}
+          description={metaDesc}
+          image={listing.primary_image_url || listing.image_urls?.[0]}
+          schema={schema}
+        />
+      )}
       <Header />
 
       <main className="container py-6">

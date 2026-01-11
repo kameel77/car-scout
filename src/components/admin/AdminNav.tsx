@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Languages, LayoutDashboard, Users, HelpCircle } from 'lucide-react';
+import { Languages, LayoutDashboard, Users, HelpCircle, Search } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,6 +12,7 @@ export function AdminNav() {
     { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager'] },
     { href: '/admin/translations', label: 'Translations', icon: Languages, roles: ['admin', 'manager'] },
     { href: '/admin/financing', label: 'Finansowanie', icon: Users, roles: ['admin', 'manager'] },
+    { href: '/admin/seo', label: 'SEO', icon: Search, roles: ['admin', 'manager'] },
     { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, roles: ['admin', 'manager'] },
     { href: '/admin/users', label: 'Users', icon: Users, roles: ['admin'] },
   ] as const;

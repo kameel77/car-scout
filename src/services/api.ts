@@ -2,11 +2,20 @@ import type { TranslationEntry, TranslationPayload } from '@/types/translations'
 import type { User, UserPayload } from '@/types/user';
 import type { FaqEntry, FaqPayload } from '@/types/faq';
 import type { FinancingProduct, FinancingProductPayload } from '@/types/financing';
+import type { SeoConfig } from '@/components/seo/SeoManager';
 
 type ImportMode = 'replace' | 'merge';
 
-// Default: dev hits same origin (proxy), prod uses /api behind reverse proxy.
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '/api');
+// Default: dev hits same origin (proxy), prod uses current origin relative path if not specified.
+// We strip trailing /api because all API endpoints in this file are already prefixed with /api/
+let API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '');
+
+if (API_BASE_URL.endsWith('/api')) {
+    API_BASE_URL = API_BASE_URL.slice(0, -4);
+}
+if (API_BASE_URL.endsWith('/api/')) {
+    API_BASE_URL = API_BASE_URL.slice(0, -5);
+}
 
 // Auth API
 export const authApi = {
@@ -531,7 +540,7 @@ export const financingApi = {
 
     update: async (id: string, payload: Partial<FinancingProductPayload>, token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/financing/products/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -556,6 +565,34 @@ export const financingApi = {
             const error = await response.json();
             throw new Error(error.error || 'Failed to delete financing product');
         }
+        return response.json();
+    }
+};
+
+// SEO API
+export const seoApi = {
+    getConfig: async () => {
+        const response = await fetch(`${API_BASE_URL}/api/seo`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch SEO config');
+        }
+        return response.json() as Promise<SeoConfig>;
+    },
+    updateConfig: async (data: SeoConfig, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/seo`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to update SEO config');
+        }
+
         return response.json();
     }
 };

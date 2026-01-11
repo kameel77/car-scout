@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
@@ -16,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { MetaHead } from '@/components/seo/MetaHead';
+import { useSeoConfig } from '@/components/seo/SeoManager';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -37,10 +40,6 @@ const emptyFilters: FilterState = {
   query: '',
 };
 
-import { useSearchParams } from 'react-router-dom';
-
-// ... (keep constant emptyFilters)
-
 // Helper to parse arrays from URL
 const parseArray = (param: string | null) => param ? param.split(',') : [];
 
@@ -55,6 +54,7 @@ const parseNumberParam = (value: string | null, fallback: number) => {
 export default function SearchPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { data: seoConfig } = useSeoConfig();
 
   // Initialize from URL
   const [filters, setFilters] = React.useState<FilterState>(() => {
@@ -146,25 +146,13 @@ export default function SearchPage() {
     if (nextPerPage !== perPage) {
       setPerPage(nextPerPage);
     }
-  }, [searchParams]); // Remove page and perPage from dependencies to avoid loops
+  }, [searchParams]);
 
   const { data, isLoading } = useListings(filters, sortBy, page, perPage);
   const { data: options } = useListingOptions();
   const listings = data?.listings || [];
   const totalCount = data?.count ?? listings.length;
   const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((totalCount || 1) / perPage));
-
-  // Debug logging
-  console.log('SearchPage state:', {
-    filters,
-    sortBy,
-    page,
-    perPage,
-    listingsCount: listings.length,
-    totalCount,
-    isLoading,
-    hasData: !!data
-  });
 
   const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
     setFilters(updatedFilters);
@@ -199,6 +187,19 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <MetaHead
+        title={seoConfig?.homeTitle}
+        description={seoConfig?.homeDescription}
+        image={seoConfig?.homeOgImage}
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "Car Scout",
+          "url": window.location.origin,
+          "logo": seoConfig?.homeOgImage
+        }}
+      />
+
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
       <main className="container pt-0 pb-6">
