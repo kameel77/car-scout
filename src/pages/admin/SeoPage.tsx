@@ -40,7 +40,8 @@ export default function SeoPage() {
     const mutation = useMutation({
         mutationFn: async (data: SeoConfig) => {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/seo`, {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000';
+            const res = await fetch(`${apiUrl}/api/seo`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
