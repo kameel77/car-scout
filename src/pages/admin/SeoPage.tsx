@@ -92,11 +92,7 @@ export default function SeoPage() {
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="space-y-6">
-                    <div className="flex items-center justify-end">
-                        <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading}>
-                            {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
-                        </Button>
-                    </div>
+
 
                     {isLoading ? (
                         <div className="p-12 flex justify-center">
@@ -158,6 +154,11 @@ export default function SeoPage() {
                                                 <Label htmlFor="homeOgImage">Obrazek Udostępniania (OG Image URL)</Label>
                                                 <Input id="homeOgImage" {...register("homeOgImage")} placeholder="https://..." />
                                             </div>
+                                            <div className="flex justify-end pt-4">
+                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading}>
+                                                    {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
+                                                </Button>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </TabsContent>
@@ -189,6 +190,11 @@ export default function SeoPage() {
                                             <div className="space-y-2">
                                                 <Label htmlFor="listingDescription">Szablon Opisu</Label>
                                                 <Textarea id="listingDescription" {...register("listingDescription")} placeholder="Zobacz ofertę {{make}} {{model}} z roku {{year}}..." />
+                                            </div>
+                                            <div className="flex justify-end pt-4">
+                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading}>
+                                                    {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
+                                                </Button>
                                             </div>
                                         </CardContent>
                                     </Card>
