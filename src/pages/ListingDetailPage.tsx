@@ -538,10 +538,6 @@ export default function ListingDetailPage() {
               }}
               className="w-full gap-2"
               size="lg"
-              onClick={() => {
-                const targetUrl = searchParams ? `/?${searchParams}` : '/';
-                navigate(targetUrl);
-              }}
             >
               {t('detail.returnToSearch')}
             </Button>
