@@ -75,7 +75,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
     });
 
     // Admin: Update product
-    fastify.put('/api/financing/products/:id', {
+    fastify.patch('/api/financing/products/:id', {
         preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         try {
