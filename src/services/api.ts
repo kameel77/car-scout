@@ -4,7 +4,16 @@ import type { FaqEntry, FaqPayload } from '@/types/faq';
 
 type ImportMode = 'replace' | 'merge';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '');
+// Default: dev hits same origin (proxy), prod uses current origin relative path if not specified.
+// We strip trailing /api because all API endpoints in this file are already prefixed with /api/
+let API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '');
+
+if (API_BASE_URL.endsWith('/api')) {
+    API_BASE_URL = API_BASE_URL.slice(0, -4);
+}
+if (API_BASE_URL.endsWith('/api/')) {
+    API_BASE_URL = API_BASE_URL.slice(0, -5);
+}
 
 // Auth API
 export const authApi = {
