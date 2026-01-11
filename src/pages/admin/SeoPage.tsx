@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Tags, Globe, FileText, Code } from "lucide-react";
+import { Search, Tags, Globe, FileText, Code, LogOut } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface SeoConfig {
     gtmId: string;
@@ -23,7 +25,14 @@ interface SeoConfig {
 export default function SeoPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("general");
+
+    const handleLogout = () => {
+        logout();
+        navigate('/admin/login');
+    };
 
     const { data: config, isLoading } = useQuery<SeoConfig>({
         queryKey: ['seo-config-admin'],
@@ -73,27 +82,56 @@ export default function SeoPage() {
         mutation.mutate(data);
     };
 
-    if (isLoading) return <div className="p-8">Ładowanie...</div>;
-
     return (
-        <div className="flex h-screen bg-gray-50">
-            <AdminNav />
-            <div className="flex-1 overflow-auto">
-                <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
-                    <div className="max-w-4xl mx-auto space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h1 className="text-3xl font-bold text-gray-900">Zarządzanie SEO</h1>
-                            <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending}>
-                                {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            {/* Header - Consistent with AdminDashboard */}
+            <header className="bg-white border-b shadow-sm sticky top-0 z-30">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                Zarządzanie SEO
+                            </h1>
+                            <p className="text-sm text-gray-600">
+                                Konfiguracja meta tagów i integracji
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <AdminNav />
+                            <Button onClick={handleLogout} variant="outline">
+                                <LogOut className="w-4 h-4 mr-2" />
+                                Logout
                             </Button>
                         </div>
+                    </div>
+                </div>
+            </header>
 
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="space-y-6">
+                    <div className="flex items-center justify-end">
+                        <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading}>
+                            {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
+                        </Button>
+                    </div>
+
+                    {isLoading ? (
+                        <div className="p-12 flex justify-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+                        </div>
+                    ) : (
                         <form onSubmit={handleSubmit(onSubmit)}>
                             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                                <TabsList>
-                                    <TabsTrigger value="general" className="gap-2"><Code className="w-4 h-4" /> Ogólne / GTM</TabsTrigger>
-                                    <TabsTrigger value="home" className="gap-2"><Globe className="w-4 h-4" /> Strona Główna</TabsTrigger>
-                                    <TabsTrigger value="listings" className="gap-2"><Tags className="w-4 h-4" /> Szablony Ofert</TabsTrigger>
+                                <TabsList className="bg-white border">
+                                    <TabsTrigger value="general" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                                        <Code className="w-4 h-4" /> Ogólne / GTM
+                                    </TabsTrigger>
+                                    <TabsTrigger value="home" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                                        <Globe className="w-4 h-4" /> Strona Główna
+                                    </TabsTrigger>
+                                    <TabsTrigger value="listings" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                                        <Tags className="w-4 h-4" /> Szablony Ofert
+                                    </TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent value="general">
@@ -145,14 +183,14 @@ export default function SeoPage() {
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
-                                            <div className="p-4 bg-muted rounded-md text-sm mb-4">
+                                            <div className="p-4 bg-blue-50 text-blue-800 rounded-md text-sm mb-4 border border-blue-100">
                                                 <p className="font-semibold mb-2">Dostępne zmienne:</p>
                                                 <div className="flex gap-2 flex-wrap">
-                                                    <code className="bg-white px-2 py-1 rounded border">{"{{make}}"}</code>
-                                                    <code className="bg-white px-2 py-1 rounded border">{"{{model}}"}</code>
-                                                    <code className="bg-white px-2 py-1 rounded border">{"{{year}}"}</code>
-                                                    <code className="bg-white px-2 py-1 rounded border">{"{{price}}"}</code>
-                                                    <code className="bg-white px-2 py-1 rounded border">{"{{fuel}}"}</code>
+                                                    <code className="bg-white px-2 py-1 rounded border border-blue-200 text-xs">{"{{make}}"}</code>
+                                                    <code className="bg-white px-2 py-1 rounded border border-blue-200 text-xs">{"{{model}}"}</code>
+                                                    <code className="bg-white px-2 py-1 rounded border border-blue-200 text-xs">{"{{year}}"}</code>
+                                                    <code className="bg-white px-2 py-1 rounded border border-blue-200 text-xs">{"{{price}}"}</code>
+                                                    <code className="bg-white px-2 py-1 rounded border border-blue-200 text-xs">{"{{fuel}}"}</code>
                                                 </div>
                                             </div>
 
@@ -169,9 +207,9 @@ export default function SeoPage() {
                                 </TabsContent>
                             </Tabs>
                         </form>
-                    </div>
+                    )}
                 </div>
-            </div>
+            </main>
         </div>
     );
 }
