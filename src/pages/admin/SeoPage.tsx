@@ -130,6 +130,11 @@ export default function SeoPage() {
                                                     Pozostaw puste aby wyłączyć GTM. Kontener zostanie załadowany automatycznie na każdej stronie.
                                                 </p>
                                             </div>
+                                            <div className="flex justify-end pt-4">
+                                                <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading}>
+                                                    {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
+                                                </Button>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </TabsContent>
