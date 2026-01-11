@@ -1,33 +1,38 @@
 # AGENTS: Car Scout
 
-Minimal guide for AI/code assistants (Cursor, Codex, Antigravity).
+Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad tym repozytorium.
 
-## Environment & URLs
-- Do not hardcode URLs. Frontend reads `VITE_API_URL`; set it to backend origin **without** `/api` (e.g. `https://api.example.com`). Client appends `/api/...` itself. In dev, leave empty to use Vite proxy.
-- Dev proxy target comes from `VITE_DEV_API_URL` or `VITE_API_URL` (fallback `http://localhost:3000`); defined in `vite.config.ts`.
-- Backend CORS whitelist reads comma-separated envs: `FRONTEND_URL`, `VITE_FRONTEND_URL`, `CORS_ORIGINS`, `ALLOWED_ORIGINS`. Include all front origins (staging/prod) there.
-- `docker-compose.prod.yml` forwards `CORS_ORIGINS` to backend and builds frontend with `VITE_API_URL`.
+## 1. Ogólne zasady postępowania
+1. **Analiza przed implementacją**: Zawsze dokładnie analizuj istniejący kod przed zaproponowaniem zmian.
+2. **Standardy kodowania**: Trzymaj się stylu obecnego w projekcie (TypeScript, Fastify, React, Tailwind/Shadcn UI).
+3. **Dokumentacja pomysłów**: Każdy techniczny dług, pomysł na nową funkcjonalność lub optymalizację musi zostać odnotowany w pliku [new_features.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/new_features.md).
+4. **Bezpieczeństwo**: Nigdy nie usuwaj istniejących mechanizmów autoryzacji ani walidacji bez wyraźnego polecenia.
+5. **Weryfikacja**: Proponuj i przeprowadzaj weryfikację zmian (testy, przeglądarka).
 
-## CORS rules (backend/src/server.ts)
-- Allowed if origin is in the env lists above, localhost (dev), or matches `*.sslip.io`.
-- No hardcoded production domains—use env lists.
-- If adding a new frontend domain, update envs rather than code.
+## 2. Technologie i Architektura
+- **Backend**: Fastify, Prisma, PostgreSQL.
+- **Frontend**: React, Vite, TanStack Query, Shadcn UI.
+- **I18n**: System obsługuje wiele języków (PL, DE, EN). Pamiętaj o synchronizacji (komponent `LanguageSync`) i dynamicznych tłumaczeniach.
+- **Ceny**: Ceny są automatycznie przeliczane przy każdej zmianie ustawień globalnych (marże, kursy walut) w `backend/src/routes/settings.ts`.
+- **Loga**: Loga (header/footer) są przechowywane w formacie Base64 w tabeli `AppSettings`.
 
-## Safety & tooling
-- Use `rg` for searches; avoid destructive git commands (no `reset --hard` or `checkout --`).
-- Default to ASCII edits; keep existing formatting.
-- For edits, prefer `apply_patch`. Do not revert unrelated user changes.
+## 3. Środowisko i Konfiguracja (Deployment / Coolify)
+- **Separacja Środowisk**: Każde środowisko (np. staging, production) na Coolify jest w pełni izolowane.
+- **Bazy danych**: Usługi **Postgres** oraz **Redis** są zainstalowane jako osobne serwisy w ramach danego środowiska na Coolify. Nie są częścią głównego `docker-compose`.
+- **Wymagana zgoda**: Agent nie może wprowadzać zmian w konfiguracji `docker-compose`, backendzie ani API, które wpływałyby na separację środowisk lub wymagałyby zmian w zmiennych środowiskowych (ENV) bez wyraźnej zgody użytkownika.
+- **Zmienne ENV**:
+    - Frontend czyta `VITE_API_URL` (backend origin bez `/api`). W dev używa proxy z `vite.config.ts`.
+    - Backend CORS whitelist: `FRONTEND_URL`, `VITE_FRONTEND_URL`, `CORS_ORIGINS`, `ALLOWED_ORIGINS`.
+- **CORS**: Reguły w `backend/src/server.ts`. Nie hardkoduj domen produkcyjnych – używaj list w ENV.
+- **Proxy**: Odwrócone proxy zawsze dostarcza ścieżkę `/api`. Klient zawsze woła `/api/...`.
 
-## Testing/build
-- Backend dev: `npm run dev` in `backend/`.
-- Frontend dev: `npm run dev` in repo root (Vite). Ensure envs loaded.
-- Run tests only if relevant or requested; note when not run.
+## 4. Narzędzia i Bezpieczeństwo Danych
+- Używaj `rg` (ripgrep) do przeszukiwania kodu.
+- Unikaj destrukcyjnych komend git (`reset --hard`).
+- Nie loguj sekretów ani tokenów.
+- Nie dotykaj bezpośrednio bazy danych ani backupów (Coolify) bez wyraźnej potrzeby.
 
-## Deployment notes
-- Prod/staging should set:
-  - Backend: `CORS_ORIGINS` (front origins), optional `FRONTEND_URL`, `VITE_FRONTEND_URL`.
-  - Frontend: `VITE_API_URL` = backend origin (no `/api`).
-- Reverse proxy provides `/api` path; client always calls `/api/...`.
-
-## Data handling
-- Do not log secrets or tokens. Avoid touching DB/backups unless asked.
+## 5. Development i Build
+- **Backend dev**: `npm run dev` w katalogu `backend/`.
+- **Frontend dev**: `npm run dev` w głównym katalogu repozytorium.
+- Uruchamiaj testy (jeśli istnieją) przed zakończeniem zadania.
