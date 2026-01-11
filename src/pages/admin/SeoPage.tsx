@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,15 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-
-interface SeoConfig {
-    gtmId: string;
-    homeTitle: string;
-    homeDescription: string;
-    homeOgImage: string;
-    listingTitle: string;
-    listingDescription: string;
-}
+import { useSeoConfig, type SeoConfig } from "@/components/seo/SeoManager";
 
 export default function SeoPage() {
     const { toast } = useToast();
@@ -34,17 +26,8 @@ export default function SeoPage() {
         navigate('/admin/login');
     };
 
-    const { data: config, isLoading } = useQuery<SeoConfig>({
-        queryKey: ['seo-config-admin'],
-        queryFn: async () => {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/seo`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (!res.ok) throw new Error('Failed to fetch SEO config');
-            return res.json();
-        }
-    });
+    // Use shared hook for consistent caching and instant load
+    const { data: config, isLoading } = useSeoConfig();
 
     const { register, handleSubmit, reset, setValue } = useForm<SeoConfig>();
 
@@ -70,7 +53,6 @@ export default function SeoPage() {
         },
         onSuccess: () => {
             toast({ title: "Sukces", description: "Ustawienia SEO zostały zapisane." });
-            queryClient.invalidateQueries({ queryKey: ['seo-config-admin'] });
             queryClient.invalidateQueries({ queryKey: ['seo-config'] }); // Invalidate global config
         },
         onError: () => {
