@@ -4,12 +4,7 @@ import type { FaqEntry, FaqPayload } from '@/types/faq';
 
 type ImportMode = 'replace' | 'merge';
 
-// Default: dev hits same origin (proxy), prod uses /api behind reverse proxy.
-// If VITE_API_URL ends with /api, remove it to avoid double /api in URLs
-let API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '/api');
-if (API_BASE_URL.endsWith('/api')) {
-  API_BASE_URL = API_BASE_URL.slice(0, -4); // Remove /api from end
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '');
 
 // Auth API
 export const authApi = {
