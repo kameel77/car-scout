@@ -13,6 +13,7 @@ import { AdminNav } from "@/components/admin/AdminNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSeoConfig, type SeoConfig } from "@/components/seo/SeoManager";
+import { seoApi } from "@/services/api";
 
 export default function SeoPage() {
     const { toast } = useToast();
@@ -40,17 +41,8 @@ export default function SeoPage() {
     const mutation = useMutation({
         mutationFn: async (data: SeoConfig) => {
             const token = localStorage.getItem('auth_token');
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000';
-            const res = await fetch(`${apiUrl}/api/seo`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-            if (!res.ok) throw new Error('Failed to update config');
-            return res.json();
+            if (!token) throw new Error('No auth token found');
+            return seoApi.updateConfig(data, token);
         },
         onSuccess: () => {
             toast({ title: "Sukces", description: "Ustawienia SEO zostały zapisane." });

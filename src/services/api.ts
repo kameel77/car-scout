@@ -1,6 +1,7 @@
 import type { TranslationEntry, TranslationPayload } from '@/types/translations';
 import type { User, UserPayload } from '@/types/user';
 import type { FaqEntry, FaqPayload } from '@/types/faq';
+import type { SeoConfig } from '@/components/seo/SeoManager';
 
 type ImportMode = 'replace' | 'merge';
 
@@ -493,6 +494,34 @@ export const leadsApi = {
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.error || 'Failed to load leads');
+        }
+
+        return response.json();
+    }
+};
+
+// SEO API
+export const seoApi = {
+    getConfig: async () => {
+        const response = await fetch(`${API_BASE_URL}/api/seo`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch SEO config');
+        }
+        return response.json() as Promise<SeoConfig>;
+    },
+    updateConfig: async (data: SeoConfig, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/seo`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to update SEO config');
         }
 
         return response.json();
