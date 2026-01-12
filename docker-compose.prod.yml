@@ -8,8 +8,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "${BACKEND_PORT:-3000}:3000"
+    expose:
+      - "3000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
@@ -43,8 +43,8 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-8080}:80"
+    expose:
+      - "80"
     depends_on:
       - backend
     networks:
