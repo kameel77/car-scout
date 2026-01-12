@@ -54,4 +54,6 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 EXPOSE 3000
 
 # Start command (with migrations)
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# Using ; instead of && to ensure server starts even if migrations have conflicts,
+# allowing terminal access for manual resolution (e.g. npx prisma migrate resolve).
+CMD ["sh", "-c", "npx prisma migrate deploy; node dist/server.js"]
