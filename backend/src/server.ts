@@ -31,6 +31,10 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
     }
 });
 
+redis.on('error', (err) => {
+    console.error('❌ Redis Connection Error:', err);
+});
+
 // Helper for timing out long operations
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
     const timeout = new Promise<never>((_, reject) =>
@@ -138,7 +142,7 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
 });
 
 // Health check with timeouts
-fastify.get('/health', async () => {
+fastify.get('/health', async (request, reply) => {
     try {
         // Test database connection with timeout
         await withTimeout(fastify.prisma.$queryRaw`SELECT 1`, 3000, 'DB timeout');
@@ -156,13 +160,11 @@ fastify.get('/health', async () => {
         };
     } catch (error) {
         fastify.log.error(error, 'Health check failed');
-        return {
+        return reply.code(500).send({
             status: 'error',
             timestamp: new Date().toISOString(),
-            error: error instanceof Error ? error.message : 'Unknown error',
-            database: 'unknown',
-            redis: 'unknown'
-        };
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 });
 
@@ -259,6 +261,11 @@ process.on('SIGINT', async () => {
     await prisma.$disconnect();
     await redis.quit();
     process.exit(0);
+});
+
+// Prevent process from crashing on unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 start();
