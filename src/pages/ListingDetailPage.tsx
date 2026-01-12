@@ -373,9 +373,9 @@ export default function ListingDetailPage() {
 
             <Separator />
 
-            {/* Financing Calculator - Main Content */}
-            {(settings?.financingCalculatorEnabled ?? true) && (settings?.financingCalculatorLocation === 'main' || !settings?.financingCalculatorLocation) && (
-              <section>
+            {/* Financing Calculator - Main Content area (Always visible on mobile, conditional on desktop) */}
+            {(settings?.financingCalculatorEnabled ?? true) && (
+              <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
                 <FinancingCalculator
                   price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
                   currency={settings?.displayCurrency || 'PLN'}
