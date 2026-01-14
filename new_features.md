@@ -3,7 +3,7 @@
 Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które pojawiają się w trakcie rozwoju projektu.
 
 ## 1. Funkcjonalności
-- [ ] (Wkrótce)
+- [ ] Cena specjalna z zaszyfrowanego parametru `offer` zapisywana w cookie oraz uwzględniana w cenach i kalkulatorze finansowania.
 
 ## 2. UI i UX
 - [ ] (Wkrótce)

@@ -6,8 +6,9 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 1. **Analiza przed implementacją**: Zawsze dokładnie analizuj istniejący kod przed zaproponowaniem zmian.
 2. **Standardy kodowania**: Trzymaj się stylu obecnego w projekcie (TypeScript, Fastify, React, Tailwind/Shadcn UI).
 3. **Dokumentacja pomysłów**: Każdy techniczny dług, pomysł na nową funkcjonalność lub optymalizację musi zostać odnotowany w pliku [new_features.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/new_features.md).
-4. **Bezpieczeństwo**: Nigdy nie usuwaj istniejących mechanizmów autoryzacji ani walidacji bez wyraźnego polecenia.
-5. **Weryfikacja**: Proponuj i przeprowadzaj weryfikację zmian (testy, przeglądarka).
+4. **Dokumentacja funkcjonalności**: Każda nowa funkcjonalność lub zmiana zachowania istniejącej musi zostać opisana w pliku `features_desc.md`.
+5. **Bezpieczeństwo**: Nigdy nie usuwaj istniejących mechanizmów autoryzacji ani walidacji bez wyraźnego polecenia.
+6. **Weryfikacja**: Proponuj i przeprowadzaj weryfikację zmian (testy, przeglądarka).
 
 ## 2. Technologie i Architektura
 - **Backend**: Fastify, Prisma, PostgreSQL.
