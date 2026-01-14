@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PriceSettingsProvider } from "@/contexts/PriceSettingsContext";
+import { SpecialOfferProvider } from "@/contexts/SpecialOfferContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import SearchPage from "./pages/SearchPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
@@ -38,12 +39,13 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<SearchPage />} />
-                <Route path="/search" element={<SearchPage />} />
-                <Route path="/listing/:id" element={<ListingDetailPage />} />
-                <Route path="/listing/:id/lead" element={<LeadFormPage />} />
+              <SpecialOfferProvider>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<SearchPage />} />
+                  <Route path="/search" element={<SearchPage />} />
+                  <Route path="/listing/:id" element={<ListingDetailPage />} />
+                  <Route path="/listing/:id/lead" element={<LeadFormPage />} />
 
                 {/* Admin routes */}
                 <Route path="/admin/login" element={<LoginPage />} />
@@ -96,8 +98,9 @@ const App = () => (
                   }
                 />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </SpecialOfferProvider>
             </BrowserRouter>
           </TooltipProvider>
         </PriceSettingsProvider>

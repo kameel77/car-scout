@@ -138,6 +138,7 @@ export const translations = {
         mileage: "Przebieg",
         net: "ceny netto",
         gross: "ceny brutto",
+        specialOffer: "Oferta dla Ciebie",
       },
 
       // Listing detail
@@ -434,6 +435,7 @@ export const translations = {
         mileage: "Mileage",
         net: "net prices",
         gross: "gross prices",
+        specialOffer: "Your special offer",
       },
 
       // Listing detail
@@ -728,6 +730,7 @@ export const translations = {
         mileage: "Kilometerstand",
         net: "Nettopreise",
         gross: "Bruttopreise",
+        specialOffer: "Angebot für dich",
       },
 
       // Listing detail

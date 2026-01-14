@@ -5,11 +5,13 @@ import { motion } from 'framer-motion';
 import { MapPin, Calendar, Gauge, Fuel, Settings2, Zap, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
-import { cn } from '@/lib/utils';
 
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { formatPrice } from '@/utils/formatters';
+import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
+import { SpecialOfferTag } from '@/components/SpecialOfferTag';
+import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { translateTechnicalValue } from '@/utils/i18n-utils';
 
 interface ListingCardProps {
@@ -21,6 +23,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
   const { t } = useTranslation();
   const { data: settings } = useAppSettings();
   const { priceType } = usePriceSettings();
+  const { discount, hasSpecialOffer } = useSpecialOffer();
 
   const priceInfo = React.useMemo(() => {
     const currency = settings?.displayCurrency || 'PLN';
@@ -32,10 +35,15 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
       basePrice = listing.broker_price_pln;
     }
 
+    if (basePrice === 0 && currency === 'PLN' && listing.price_pln) {
+      basePrice = listing.price_pln;
+    }
+
     if (basePrice > 0) {
+      const discountedPrice = applySpecialOfferDiscount(basePrice, discount);
       const isNetPrimary = priceType === 'net';
-      const primaryPrice = isNetPrimary ? Math.round(basePrice / 1.23) : basePrice;
-      const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
+      const primaryPrice = isNetPrimary ? Math.round(discountedPrice / 1.23) : discountedPrice;
+      const secondaryPrice = isNetPrimary ? discountedPrice : Math.round(discountedPrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
       // Secondary price intentionally omitted on listing cards (kept in detail view)
@@ -45,7 +53,13 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
     }
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
-  }, [listing, settings, priceType]);
+  }, [listing, settings, priceType, discount]);
+
+  const handleSpecialOfferClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.reload();
+  };
 
   const handleListingClick = () => {
     // Store current search parameters in sessionStorage for return navigation
@@ -72,6 +86,12 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+          {hasSpecialOffer && (
+            <div className="absolute top-3 left-3">
+              <SpecialOfferTag onClick={handleSpecialOfferClick} />
+            </div>
+          )}
 
           {/* Price Badge */}
           <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md flex flex-col md:flex-row md:items-baseline md:gap-2 items-end md:items-baseline">

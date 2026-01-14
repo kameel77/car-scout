@@ -21,14 +21,17 @@ import { Badge } from '@/components/ui/badge';
 import { useListing } from '@/hooks/useListings';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import { FinancingCalculator } from '@/components/FinancingCalculator';
+import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/utils/formatters';
+import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import type { FaqEntry } from '@/types/faq';
 import {
   Dialog,
@@ -56,6 +59,7 @@ export default function ListingDetailPage() {
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
+  const { discount, hasSpecialOffer } = useSpecialOffer();
   const listing = data?.listing;
 
   // Store search parameters for return navigation
@@ -175,10 +179,15 @@ export default function ListingDetailPage() {
       basePrice = listing.broker_price_pln;
     }
 
+    if (basePrice === 0 && currency === 'PLN' && listing.price_pln) {
+      basePrice = listing.price_pln;
+    }
+
     if (basePrice > 0) {
+      const discountedPrice = applySpecialOfferDiscount(basePrice, discount);
       const isNetPrimary = priceType === 'net';
-      const primaryPrice = isNetPrimary ? Math.round(basePrice / 1.23) : basePrice;
-      const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
+      const primaryPrice = isNetPrimary ? Math.round(discountedPrice / 1.23) : discountedPrice;
+      const secondaryPrice = isNetPrimary ? discountedPrice : Math.round(discountedPrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
       const secondaryLabel = user
@@ -191,7 +200,7 @@ export default function ListingDetailPage() {
     }
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
-  }, [listing, settings, priceType, t]);
+  }, [listing, settings, priceType, t, discount]);
 
   const faqs = React.useMemo(() => {
     const entries = (faqData?.entries || []) as FaqEntry[];
@@ -238,6 +247,7 @@ export default function ListingDetailPage() {
   }
 
   const title = `${listing.make} ${listing.model} ${listing.version}`;
+  const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
 
   // Prepare SEO values
   const metaTitle = listing && seoConfig?.listingTitle
@@ -245,7 +255,7 @@ export default function ListingDetailPage() {
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
-      .replace('{{price}}', formatPrice(listing.price_pln, 'PLN'))
+      .replace('{{price}}', formatPrice(discountedListingPrice, 'PLN'))
       .replace('{{fuel}}', listing.fuel_type || '')
     : title;
 
@@ -254,7 +264,7 @@ export default function ListingDetailPage() {
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
-      .replace('{{price}}', formatPrice(listing.price_pln, 'PLN'))
+      .replace('{{price}}', formatPrice(discountedListingPrice, 'PLN'))
       .replace('{{fuel}}', listing.fuel_type || '')
     : '';
 
@@ -284,7 +294,7 @@ export default function ListingDetailPage() {
       "@type": "Offer",
       "url": window.location.href,
       "priceCurrency": "PLN",
-      "price": listing.price_pln,
+      "price": discountedListingPrice,
       "itemCondition": "https://schema.org/UsedCondition",
       "availability": "https://schema.org/InStock"
     }
@@ -335,6 +345,9 @@ export default function ListingDetailPage() {
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
+                  {hasSpecialOffer && (
+                    <SpecialOfferTag className="mt-2 md:mt-0" />
+                  )}
                   <Badge variant="secondary" className="text-xs w-fit">
                     {t('detail.lowestPrice')}
                   </Badge>
@@ -377,7 +390,10 @@ export default function ListingDetailPage() {
             {(settings?.financingCalculatorEnabled ?? true) && (
               <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
                 <FinancingCalculator
-                  price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
+                  price={applySpecialOfferDiscount(
+                    priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln,
+                    discount
+                  )}
                   currency={settings?.displayCurrency || 'PLN'}
                 />
               </section>
@@ -429,6 +445,9 @@ export default function ListingDetailPage() {
                     <span className="font-heading text-3xl font-bold text-accent">
                       {priceInfo.primaryLabel}
                     </span>
+                    {hasSpecialOffer && (
+                      <SpecialOfferTag />
+                    )}
                   </div>
                   {priceInfo.secondaryLabel && (
                     <span className="text-sm text-muted-foreground font-medium">
@@ -482,7 +501,10 @@ export default function ListingDetailPage() {
                   transition={{ delay: 0.1 }}
                 >
                   <FinancingCalculator
-                    price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
+                    price={applySpecialOfferDiscount(
+                      priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln,
+                      discount
+                    )}
                     currency={settings?.displayCurrency || 'PLN'}
                   />
                 </motion.div>

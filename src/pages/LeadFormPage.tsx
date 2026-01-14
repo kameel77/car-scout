@@ -16,10 +16,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useListing } from '@/hooks/useListings';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
+import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { Footer } from '@/components/Footer';
 import { leadsApi } from '@/services/api';
 
@@ -49,6 +51,7 @@ export default function LeadFormPage() {
   const { data, isLoading: isListingLoading } = useListing(id);
   const { data: settingsData } = useAppSettings();
   const { priceType } = usePriceSettings();
+  const { discount } = useSpecialOffer();
   const { user } = useAuth();
   const listing = data?.listing;
 
@@ -63,10 +66,15 @@ export default function LeadFormPage() {
       basePrice = listing.broker_price_pln;
     }
 
+    if (basePrice === 0 && currency === 'PLN' && listing.price_pln) {
+      basePrice = listing.price_pln;
+    }
+
     if (basePrice > 0) {
+      const discountedPrice = applySpecialOfferDiscount(basePrice, discount);
       const isNetPrimary = priceType === 'net';
-      const primaryPrice = isNetPrimary ? Math.round(basePrice / 1.23) : basePrice;
-      const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
+      const primaryPrice = isNetPrimary ? Math.round(discountedPrice / 1.23) : discountedPrice;
+      const secondaryPrice = isNetPrimary ? discountedPrice : Math.round(discountedPrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
       const secondaryLabel = user
@@ -79,7 +87,7 @@ export default function LeadFormPage() {
     }
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
-  }, [listing, settingsData, priceType, t]);
+  }, [listing, settingsData, priceType, t, discount]);
 
   const {
     register,
