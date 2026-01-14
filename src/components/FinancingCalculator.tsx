@@ -27,6 +27,9 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
 
     const [activeCategory, setActiveCategory] = React.useState<string>(categories[0] || 'LEASING');
     const [selectedProduct, setSelectedProduct] = React.useState<FinancingProduct | null>(null);
+    const [failedProducts, setFailedProducts] = React.useState<Set<string>>(new Set());
+    const [externalInstallment, setExternalInstallment] = React.useState<number | null>(null);
+    const [externalLoading, setExternalLoading] = React.useState(false);
 
     // State for calculation parameters
     const [months, setMonths] = React.useState(36);
@@ -40,26 +43,82 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
         }
     }, [categories, activeCategory]);
 
-    React.useEffect(() => {
-        const product = products.find(p => p.category === activeCategory && p.isDefault)
-            || products.find(p => p.category === activeCategory);
-        setSelectedProduct(product || null);
+    const initialPaymentAmount = Math.round(price * initialPaymentPct / 100);
+    const finalPaymentAmount = Math.round(price * finalPaymentPct / 100);
+    const amountToFinance = price - initialPaymentAmount;
 
-        // Set defaults from product
-        if (product) {
-            setMonths(Math.max(product.minInstallments, Math.min(product.maxInstallments, 36)));
-            // Default 10% or max allowed if less
-            setInitialPaymentPct(Math.min(10, product.maxInitialPayment));
-            // Default 20% or max allowed if less
-            setFinalPaymentPct(Math.min(20, product.maxFinalPayment));
-        }
-    }, [activeCategory, products]);
+    const candidateProduct = React.useMemo(() => {
+        const eligibleProducts = products
+            .filter(p => p.category === activeCategory)
+            .filter(p => !failedProducts.has(p.id))
+            .filter(p => (p.minAmount == null || amountToFinance >= p.minAmount))
+            .filter(p => (p.maxAmount == null || amountToFinance <= p.maxAmount));
+
+        const sorted = [...eligibleProducts].sort((a, b) => {
+            const priorityDiff = (b.priority ?? 0) - (a.priority ?? 0);
+            if (priorityDiff !== 0) return priorityDiff;
+            if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+            return 0;
+        });
+
+        return sorted[0] || null;
+    }, [activeCategory, amountToFinance, failedProducts, products]);
+
+    React.useEffect(() => {
+        setSelectedProduct(prev => (prev?.id === candidateProduct?.id ? prev : candidateProduct));
+    }, [candidateProduct]);
+
+    React.useEffect(() => {
+        if (!selectedProduct) return;
+        setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
+        setInitialPaymentPct(Math.min(10, selectedProduct.maxInitialPayment));
+        setFinalPaymentPct(Math.min(20, selectedProduct.maxFinalPayment));
+    }, [selectedProduct?.id]);
 
     if (isLoading || products.length === 0) {
         return null;
     }
 
     if (!selectedProduct) return null;
+
+    React.useEffect(() => {
+        let isCancelled = false;
+        const calculateExternal = async () => {
+            if (!selectedProduct || selectedProduct.provider !== 'INBANK') {
+                setExternalInstallment(null);
+                setExternalLoading(false);
+                return;
+            }
+
+            setExternalLoading(true);
+            try {
+                const response = await financingApi.calculate({
+                    productId: selectedProduct.id,
+                    price,
+                    downPaymentAmount: initialPaymentAmount,
+                    period: months,
+                });
+                if (!isCancelled) {
+                    setExternalInstallment(response.monthlyInstallment);
+                }
+            } catch (error) {
+                if (!isCancelled) {
+                    setFailedProducts(prev => new Set([...prev, selectedProduct.id]));
+                    setExternalInstallment(null);
+                }
+            } finally {
+                if (!isCancelled) {
+                    setExternalLoading(false);
+                }
+            }
+        };
+
+        calculateExternal();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [selectedProduct, price, initialPaymentAmount, months]);
 
     // Calculation Logic (Simplified Leasing/Credit approximation)
     // Monthly Installment = (Capital + TotalInterest) / Months
@@ -81,10 +140,6 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
     // MonthlyRate = (Ref + Margin) / 100 / 12
     // PMT = (LoanAmount - Balloon / (1+MonthlyRate)^Months) * (MonthlyRate / (1 - (1+MonthlyRate)^-Months))
 
-    const initialPaymentAmount = Math.round(price * initialPaymentPct / 100);
-    const finalPaymentAmount = Math.round(price * finalPaymentPct / 100);
-    const amountToFinance = price - initialPaymentAmount;
-
     // Rate per month
     const annualRate = selectedProduct.referenceRate + selectedProduct.margin;
     const monthlyRate = annualRate / 100 / 12;
@@ -103,6 +158,7 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
     // Add commission? Usually commission is upfront or added to financing.
     // Spec says: "prowizja za uruchomienie kredytu w procetach". Usually upfront.
     const commissionAmount = amountToFinance * selectedProduct.commission / 100;
+    const displayInstallment = selectedProduct.provider === 'INBANK' ? externalInstallment : monthlyInstallment;
 
     return (
         <Card className="border-slate-200">
@@ -187,23 +243,31 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
                     <div className="flex flex-col items-center justify-center text-center space-y-2">
                         <span className="text-sm text-muted-foreground font-medium uppercase tracking-wide">Miesięczna rata</span>
                         <span className="text-4xl font-bold text-primary">
-                            {formatPrice(monthlyInstallment, currency)}
+                            {selectedProduct.provider === 'INBANK' && externalLoading && displayInstallment == null
+                                ? '...'
+                                : formatPrice(displayInstallment ?? monthlyInstallment, currency)}
                         </span>
                         {selectedProduct.category === 'LEASING' && (
                             <span className="text-xs text-muted-foreground">netto (bez VAT)</span>
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-200">
-                        <div>
-                            <span className="block text-xs text-muted-foreground">Prowizja (jednorazowo)</span>
-                            <span className="font-medium">{formatPrice(commissionAmount, currency)}</span>
+                    {selectedProduct.provider === 'INBANK' ? (
+                        <div className="mt-6 pt-4 border-t border-slate-200 text-sm text-muted-foreground text-center">
+                            Rata wyliczana na podstawie kalkulacji banku.
                         </div>
-                        <div className="text-right">
-                            <span className="block text-xs text-muted-foreground">RRSO / Oprocentowanie</span>
-                            <span className="font-medium">{(annualRate).toFixed(2)}%</span>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-200">
+                            <div>
+                                <span className="block text-xs text-muted-foreground">Prowizja (jednorazowo)</span>
+                                <span className="font-medium">{formatPrice(commissionAmount, currency)}</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="block text-xs text-muted-foreground">RRSO / Oprocentowanie</span>
+                                <span className="font-medium">{(annualRate).toFixed(2)}%</span>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 p-3 rounded text-blue-800">

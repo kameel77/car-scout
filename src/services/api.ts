@@ -1,7 +1,12 @@
 import type { TranslationEntry, TranslationPayload } from '@/types/translations';
 import type { User, UserPayload } from '@/types/user';
 import type { FaqEntry, FaqPayload } from '@/types/faq';
-import type { FinancingProduct, FinancingProductPayload } from '@/types/financing';
+import type {
+    FinancingProduct,
+    FinancingProductPayload,
+    FinancingProviderConnection,
+    FinancingProviderConnectionPayload
+} from '@/types/financing';
 import type { SeoConfig } from '@/components/seo/SeoManager';
 
 type ImportMode = 'replace' | 'merge';
@@ -521,6 +526,21 @@ export const financingApi = {
         return response.json();
     },
 
+    calculate: async (payload: { productId: string; price: number; downPaymentAmount: number; period: number }) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/calculate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to calculate financing');
+        }
+
+        return response.json() as Promise<{ monthlyInstallment: number; provider: string }>;
+    },
+
     create: async (payload: FinancingProductPayload, token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/financing/products`, {
             method: 'POST',
@@ -564,6 +584,64 @@ export const financingApi = {
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to delete financing product');
+        }
+        return response.json();
+    },
+
+    listConnections: async (token: string): Promise<{ connections: FinancingProviderConnection[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/connections`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch financing connections');
+        }
+        return response.json();
+    },
+
+    createConnection: async (payload: FinancingProviderConnectionPayload, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/connections`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create financing connection');
+        }
+        return response.json();
+    },
+
+    updateConnection: async (id: string, payload: Partial<FinancingProviderConnectionPayload>, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/connections/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update financing connection');
+        }
+        return response.json();
+    },
+
+    deleteConnection: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/connections/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete financing connection');
         }
         return response.json();
     }

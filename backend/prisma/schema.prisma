@@ -273,6 +273,11 @@ model FinancingProduct {
   category          String   // 'CREDIT', 'LEASING', 'RENT'
   name              String?
   currency          String   @default("PLN")
+  provider          String   @default("OWN") // 'OWN', 'INBANK', ...
+  priority          Int      @default(0)
+  minAmount         Float?   @map("min_amount")
+  maxAmount         Float?   @map("max_amount")
+  providerConfig    Json?    @map("provider_config")
   
   // Rates
   referenceRate     Float    @map("reference_rate") // Wibor/Euribor %
@@ -293,6 +298,23 @@ model FinancingProduct {
   @@map("financing_products")
   @@index([category])
   @@index([isDefault])
+}
+
+model FinancingProviderConnection {
+  id         String   @id @default(cuid())
+  provider   String
+  name       String
+  apiBaseUrl String  @map("api_base_url")
+  apiKey     String  @map("api_key")
+  apiSecret  String? @map("api_secret")
+  isActive   Boolean @default(true) @map("is_active")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("financing_provider_connections")
+  @@index([provider])
+  @@index([provider, isActive])
 }
 
 // ============ SEO CONFIG ============
