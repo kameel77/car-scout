@@ -80,6 +80,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
             if (!config.productCode || !config.paymentDay) {
                 return reply.code(422).send({ error: 'Missing provider configuration' });
             }
+
+            // Inbank API calculation payload
             const payload = {
                 productCode: config.productCode,
                 amount: data.price - data.downPaymentAmount,
@@ -101,13 +103,19 @@ export async function financingRoutes(fastify: FastifyInstance) {
             });
 
             if (!response.ok) {
-                const errorText = await response.text().catch(() => '');
-                return reply.code(502).send({ error: 'Provider request failed', details: errorText });
+                const errorData = await response.json().catch(() => ({})) as { message?: string; error?: string };
+                return reply.code(502).send({
+                    error: 'Provider request failed',
+                    details: errorData?.message || errorData?.error || 'Unknown provider error'
+                });
             }
 
             const result = await response.json().catch(() => ({}));
+
+            // Inbank documentation says paymentAmountMonthly
             const monthlyInstallment = Number(
-                (result as any)?.monthlyPayment
+                (result as any)?.paymentAmountMonthly
+                ?? (result as any)?.monthlyPayment
                 ?? (result as any)?.monthlyInstallment
                 ?? (result as any)?.paymentAmount
                 ?? (result as any)?.installmentAmount
@@ -148,7 +156,11 @@ export async function financingRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         try {
-            const data = FinancingProductSchema.parse(request.body);
+            const rawData = FinancingProductSchema.parse(request.body);
+            const data = {
+                ...rawData,
+                providerConfig: rawData.providerConfig ?? undefined
+            };
 
             // If this is set as default, unset others in same category
             if (data.isDefault) {
@@ -175,7 +187,11 @@ export async function financingRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
-            const data = FinancingProductSchema.partial().parse(request.body);
+            const rawData = FinancingProductSchema.partial().parse(request.body);
+            const data = {
+                ...rawData,
+                providerConfig: rawData.providerConfig ?? undefined
+            };
 
             // If this is set as default, unset others in same category
             if (data.isDefault) {
