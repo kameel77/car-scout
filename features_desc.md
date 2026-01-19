@@ -46,3 +46,24 @@ payload: offerDiscount=5000
 base64url: b2ZmZXJEaXNjb3VudD01MDAw
 finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 ```
+
+## 2. Produkty kredytowe z integracjami instytucji finansowych
+- **Cel**: umożliwienie administratorowi dodawania produktów kredytowych od wielu partnerów (np. Inbank) oraz sterowanie tym, który produkt jest widoczny na karcie oferty.
+- **Zasada działania**:
+  - Administrator wybiera partnera finansowego podczas dodawania nowego produktu kredytowego.
+  - Dla integracji bankowych (np. Inbank) wysokość raty jest liczona na podstawie wywołań API partnera.
+  - Dla „Produktu własnego” używany jest dotychczasowy, lokalny mechanizm kalkulacji.
+  - Widoczność produktów na karcie oferty jest konfigurowalna w panelu administratora jako **lista z priorytetem i warunkami** (np. zakres kwoty finansowania = cena sprzedaży minus pierwsza wpłata).
+  - Gdy integracja bankowa nie zwróci kalkulacji (błąd/timeout), system **automatycznie przełącza się na „Produkt własny”**.
+  - Integracje mogą wymagać różnego zakresu danych wejściowych — każdy partner ma własny adapter mapujący dane z kalkulatora.
+- **Konfiguracja połączeń**:
+  - Dostępny jest moduł konfiguracji połączeń z instytucjami (docelowe środowisko produkcyjne i klucze).
+  - Konfiguracja przechowuje dane niezbędne do autoryzacji i obsługi API dla każdego partnera.
+- **Wymagane dane dla Inbank (przykład)**:
+  - `productCode` (z konfiguracji produktu)
+  - `amount` = cena sprzedaży minus pierwsza wpłata
+  - `period` (z kalkulatora)
+  - `paymentDay` (z konfiguracji produktu)
+  - `downPaymentAmount` (z kalkulatora)
+  - `currency` (np. PLN, z konfiguracji produktu)
+  - `responseLevel` (np. `simple`, z konfiguracji produktu)
