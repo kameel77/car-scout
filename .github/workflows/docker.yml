@@ -58,3 +58,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_API_URL=/api
+            DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
