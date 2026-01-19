@@ -20,11 +20,14 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# Runtime backend proxy target (override via env)
+ENV BACKEND_URL=http://backend:3000
+
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy Nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy Nginx config template for envsubst
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
 

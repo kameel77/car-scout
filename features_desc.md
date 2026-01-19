@@ -67,3 +67,10 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - `downPaymentAmount` (z kalkulatora)
   - `currency` (np. PLN, z konfiguracji produktu)
   - `responseLevel` (np. `simple`, z konfiguracji produktu)
+
+## 3. Konfiguracja proxy API frontendu przez zmienne srodowiskowe
+- **Cel**: umozliwienie wdrozen z roznymi adresami backendu (Coolify, docker-compose) bez zmian w kodzie frontendu.
+- **Zachowanie**:
+  - Obraz frontendu podstawia adres backendu w konfiguracji Nginx przez zmienna `BACKEND_URL`.
+  - Domyslna wartosc to `http://backend:3000`, co pasuje do srodowiska docker-compose.
+  - W srodowiskach zarzadzanych (np. Coolify) `BACKEND_URL` powinien wskazywac na wewnetrzny adres backendu.
