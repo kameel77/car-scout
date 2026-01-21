@@ -64,6 +64,7 @@ export default function FinancingPage() {
     const { data: settings, refetch: refetchSettings } = useAppSettings();
 
     const [activeTab, setActiveTab] = React.useState<string>('CREDIT');
+    const [isChoiceModalOpen, setIsChoiceModalOpen] = React.useState(false);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [formData, setFormData] = React.useState<FinancingProductPayload>(EMPTY_FORM);
@@ -162,7 +163,16 @@ export default function FinancingPage() {
         navigate('/admin/login');
     };
 
-    const handleOpenModal = (product?: FinancingProduct) => {
+    const handleOpenChoiceModal = () => {
+        setIsChoiceModalOpen(true);
+    };
+
+    const handleSelectProvider = (provider: FinancingProductPayload['provider']) => {
+        setIsChoiceModalOpen(false);
+        handleOpenModal(undefined, provider);
+    };
+
+    const handleOpenModal = (product?: FinancingProduct, forcedProvider?: FinancingProductPayload['provider']) => {
         if (product) {
             setEditingId(product.id);
             setFormData({
@@ -193,6 +203,7 @@ export default function FinancingPage() {
             setFormData({
                 ...EMPTY_FORM,
                 category: activeTab as any,
+                provider: forcedProvider || 'OWN',
             });
         }
         setIsModalOpen(true);
@@ -447,7 +458,7 @@ export default function FinancingPage() {
                                 <CardTitle>Produkty Finansowe</CardTitle>
                                 <CardDescription>Lista aktywnych produktów dla kalkulatora</CardDescription>
                             </div>
-                            <Button onClick={() => handleOpenModal()}>
+                            <Button onClick={handleOpenChoiceModal}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Dodaj Produkt
                             </Button>
@@ -586,28 +597,12 @@ export default function FinancingPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Partner</Label>
-                                <select
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                                    value={formData.provider}
-                                    onChange={e => {
-                                        const provider = e.target.value as FinancingProductPayload['provider'];
-                                        setFormData(p => ({
-                                            ...p,
-                                            provider,
-                                            providerConfig: {
-                                                ...(p.providerConfig || {}),
-                                                currency: p.currency,
-                                                responseLevel: (p.providerConfig?.responseLevel || 'simple'),
-                                            }
-                                        }));
-                                    }}
-                                >
-                                    <option value="INBANK">Inbank</option>
-                                    <option value="OWN">Produkt własny</option>
-                                </select>
+                                <div className="flex h-10 w-full rounded-md border border-input bg-slate-100 px-3 py-2 text-sm font-medium">
+                                    {formData.provider === 'INBANK' ? 'Inbank' : 'Produkt własny'}
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label>Priorytet</Label>
@@ -617,6 +612,9 @@ export default function FinancingPage() {
                                     onChange={e => handleNumberChange('priority', e.target.value)}
                                 />
                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Zakres kwoty (min / max)</Label>
                                 <div className="grid grid-cols-2 gap-2">
@@ -634,6 +632,16 @@ export default function FinancingPage() {
                                         placeholder="max"
                                         onChange={e => handleOptionalNumberChange('maxAmount', e.target.value)}
                                     />
+                                </div>
+                            </div>
+                            <div className="space-y-2 flex items-end pb-2">
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id="is-default"
+                                        checked={formData.isDefault}
+                                        onCheckedChange={c => setFormData(p => ({ ...p, isDefault: c }))}
+                                    />
+                                    <Label htmlFor="is-default">Domyślny dla kategorii</Label>
                                 </div>
                             </div>
                         </div>
@@ -725,12 +733,7 @@ export default function FinancingPage() {
                             </div>
                             <div className="space-y-2 flex items-end pb-2">
                                 <div className="flex items-center space-x-2">
-                                    <Switch
-                                        id="is-default"
-                                        checked={formData.isDefault}
-                                        onCheckedChange={c => setFormData(p => ({ ...p, isDefault: c }))}
-                                    />
-                                    <Label htmlFor="is-default">Domyślny</Label>
+                                    {/* Placeholder to maintain grid spacing */}
                                 </div>
                             </div>
                         </div>
@@ -841,6 +844,44 @@ export default function FinancingPage() {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isChoiceModalOpen} onOpenChange={setIsChoiceModalOpen}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Dodaj nowy produkt finansowy</DialogTitle>
+                        <DialogDescription>
+                            Wybierz partnera finansowego dla tego produktu.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 py-6">
+                        <button
+                            onClick={() => handleSelectProvider('INBANK')}
+                            className="flex flex-col items-center justify-center p-6 space-y-4 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-slate-50 transition-all group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Plus className="w-6 h-6" />
+                            </div>
+                            <div className="text-center">
+                                <div className="font-bold text-lg">Inbank</div>
+                                <div className="text-sm text-muted-foreground">Automatyczna kalkulacja przez API</div>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => handleSelectProvider('OWN')}
+                            className="flex flex-col items-center justify-center p-6 space-y-4 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-slate-50 transition-all group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Edit className="w-6 h-6" />
+                            </div>
+                            <div className="text-center">
+                                <div className="font-bold text-lg">Produkt własny</div>
+                                <div className="text-sm text-muted-foreground">Stałe oprocentowanie i marża</div>
+                            </div>
+                        </button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

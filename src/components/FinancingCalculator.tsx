@@ -22,8 +22,14 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
         staleTime: 5 * 60 * 1000,
     });
 
-    const products = (data?.products || []) as FinancingProduct[];
-    const categories = Array.from(new Set(products.map(p => p.category))).sort();
+    const products = React.useMemo(
+        () => (data?.products ?? []) as FinancingProduct[],
+        [data?.products]
+    );
+    const categories = React.useMemo(
+        () => Array.from(new Set(products.map(p => p.category))).sort(),
+        [products]
+    );
 
     const [activeCategory, setActiveCategory] = React.useState<string>(categories[0] || 'LEASING');
     const [selectedProduct, setSelectedProduct] = React.useState<FinancingProduct | null>(null);
@@ -48,18 +54,42 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
     const amountToFinance = price - initialPaymentAmount;
 
     const candidateProduct = React.useMemo(() => {
-        const eligibleProducts = products
-            .filter(p => p.category === activeCategory)
-            .filter(p => !failedProducts.has(p.id))
-            .filter(p => (p.minAmount == null || amountToFinance >= p.minAmount))
-            .filter(p => (p.maxAmount == null || amountToFinance <= p.maxAmount));
+        // Step 1: Filter products by category, failed status, and amount
+        const eligibleProducts = products.filter(p => {
+            if (p.category !== activeCategory) return false;
+            if (failedProducts.has(p.id)) return false;
 
+            // Priority is given to amount range
+            if (p.minAmount != null && amountToFinance < p.minAmount) return false;
+            if (p.maxAmount != null && amountToFinance > p.maxAmount) return false;
+
+            return true;
+        });
+
+        // Step 2: Sort by priority (desc), then isDefault (desc)
         const sorted = [...eligibleProducts].sort((a, b) => {
             const priorityDiff = (b.priority ?? 0) - (a.priority ?? 0);
             if (priorityDiff !== 0) return priorityDiff;
+
+            // Then prefer default
             if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+
+            // Then prefer OWN products as more stable fallback if all else equal
+            if (a.provider !== b.provider) {
+                if (a.provider === 'OWN') return 1;
+                if (b.provider === 'OWN') return -1;
+            }
+
             return 0;
         });
+
+        // Step 3: If no eligible product matches amount range, still try to find at least one from "OWN" products
+        // as a ultimate fallback, even if they don't exactly match the range (if range is not strict)
+        if (sorted.length === 0) {
+            return products.find(p => p.category === activeCategory && p.provider === 'OWN' && p.isDefault)
+                || products.find(p => p.category === activeCategory && p.provider === 'OWN')
+                || null;
+        }
 
         return sorted[0] || null;
     }, [activeCategory, amountToFinance, failedProducts, products]);
@@ -67,19 +97,6 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
     React.useEffect(() => {
         setSelectedProduct(prev => (prev?.id === candidateProduct?.id ? prev : candidateProduct));
     }, [candidateProduct]);
-
-    React.useEffect(() => {
-        if (!selectedProduct) return;
-        setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
-        setInitialPaymentPct(Math.min(10, selectedProduct.maxInitialPayment));
-        setFinalPaymentPct(Math.min(20, selectedProduct.maxFinalPayment));
-    }, [selectedProduct?.id]);
-
-    if (isLoading || products.length === 0) {
-        return null;
-    }
-
-    if (!selectedProduct) return null;
 
     React.useEffect(() => {
         let isCancelled = false;
@@ -103,6 +120,8 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
                 }
             } catch (error) {
                 if (!isCancelled) {
+                    console.error('Inbank calculation failed:', error);
+                    // Add to failed set to trigger fallback to next candidate
                     setFailedProducts(prev => new Set([...prev, selectedProduct.id]));
                     setExternalInstallment(null);
                 }
@@ -119,6 +138,19 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
             isCancelled = true;
         };
     }, [selectedProduct, price, initialPaymentAmount, months]);
+
+    React.useEffect(() => {
+        if (!selectedProduct) return;
+        setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
+        setInitialPaymentPct(Math.min(10, selectedProduct.maxInitialPayment));
+        setFinalPaymentPct(Math.min(20, selectedProduct.maxFinalPayment));
+    }, [selectedProduct]);
+
+    if (isLoading || products.length === 0) {
+        return null;
+    }
+
+    if (!selectedProduct) return null;
 
     // Calculation Logic (Simplified Leasing/Credit approximation)
     // Monthly Installment = (Capital + TotalInterest) / Months
