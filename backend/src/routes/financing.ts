@@ -91,10 +91,13 @@ export async function financingRoutes(fastify: FastifyInstance) {
             };
 
             // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
-            const baseUrl = process.env.INBANK_BASE_URL || connection.apiBaseUrl.replace(/\/$/, '');
+            const baseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
             const apiKey = config.apiKey || connection.apiKey;
             const shopUuid = config.shopUuid || connection.shopUuid;
-            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
+
+            // Avoid double /partner if user included it in baseUrl
+            const path = `/partner/v2/shops/${shopUuid}/calculations`;
+            const url = baseUrl.endsWith('/partner') ? `${baseUrl.slice(0, -8)}${path}` : `${baseUrl}${path}`;
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -334,10 +337,12 @@ export async function financingRoutes(fastify: FastifyInstance) {
             };
 
             // Inbank API application path: /partner/v2/shops/:shop_uuid/applications
-            const baseUrl = process.env.INBANK_BASE_URL || connection.apiBaseUrl.replace(/\/$/, '');
+            const baseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
             const apiKey = config.apiKey || connection.apiKey;
             const shopUuid = config.shopUuid || connection.shopUuid;
-            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/applications`;
+
+            const path = `/partner/v2/shops/${shopUuid}/applications`;
+            const url = baseUrl.endsWith('/partner') ? `${baseUrl.slice(0, -8)}${path}` : `${baseUrl}${path}`;
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -406,8 +411,9 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(400).send({ error: 'Missing required fields' });
             }
 
-            const baseUrl = process.env.INBANK_BASE_URL || apiBaseUrl.replace(/\/$/, '');
-            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
+            const baseUrl = (process.env.INBANK_BASE_URL || apiBaseUrl).replace(/\/$/, '');
+            const path = `/partner/v2/shops/${shopUuid}/calculations`;
+            const url = baseUrl.endsWith('/partner') ? `${baseUrl.slice(0, -8)}${path}` : `${baseUrl}${path}`;
 
             // Use a dummy calculation as a test
             const payload = {
@@ -427,6 +433,14 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
             const result = await response.json().catch(() => ({}));
 
+            // LOGGING FOR DEBUGGING
+            console.log('--- INBANK TEST CONNECTION ---');
+            console.log('URL:', url);
+            console.log('Payload:', JSON.stringify(payload));
+            console.log('Response status:', response.status);
+            console.log('Response body:', JSON.stringify(result));
+            console.log('------------------------------');
+
             if (response.status === 401 || response.status === 403) {
                 return { success: false, details: 'Błąd autoryzacji (API Key)' };
             }
@@ -440,12 +454,14 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return { success: true, details: response.ok ? 'Sukces' : 'Połączono (Błąd walidacji danych testowych - OK)' };
             }
 
+            const errorDetail = Array.isArray(result.error) ? result.error.join(', ') : (result.message || result.error);
+
             return {
                 success: false,
-                details: (result as any)?.message || (result as any)?.error || `Błąd HTTP: ${response.status}`
+                details: errorDetail || `Błąd HTTP: ${response.status}`
             };
         } catch (error) {
-            fastify.log.error(error);
+            console.error('Inbank test connection exception:', error);
             return { success: false, details: error instanceof Error ? error.message : 'Błąd połączenia' };
         }
     });
