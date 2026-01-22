@@ -2,17 +2,19 @@ import { FastifyInstance } from 'fastify';
 import { refreshListingImages } from '../services/image-refresh.service.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
-    // Get filter options (makes and models)
+    // Get filter options (makes and models) - only active listings
     fastify.get('/api/listings/options', async (request, reply) => {
-        // fetch distinct makes
+        // fetch distinct makes from non-archived listings
         const makesRaw = await fastify.prisma.listing.findMany({
+            where: { isArchived: false },
             select: { make: true },
             distinct: ['make'],
             orderBy: { make: 'asc' }
         });
 
-        // fetch distinct models with their makes
+        // fetch distinct models with their makes from non-archived listings
         const modelsRaw = await fastify.prisma.listing.findMany({
+            where: { isArchived: false },
             select: { make: true, model: true },
             distinct: ['make', 'model'],
             orderBy: { model: 'asc' }
