@@ -11,6 +11,12 @@ interface LeadPayload {
     message: string;
     consentMarketing?: boolean;
     consentPrivacy?: boolean;
+    // Financing fields
+    financingProductId?: string;
+    financingAmount?: number;
+    financingPeriod?: number;
+    financingDownPayment?: number;
+    financingInstallment?: number;
 }
 
 const generateReference = () => {
@@ -21,23 +27,14 @@ const generateReference = () => {
 export async function leadRoutes(fastify: FastifyInstance) {
     // Create new lead from public form
     fastify.post('/api/leads', async (request, reply) => {
-        const {
-            listingId,
-            name,
-            email,
-            phone,
-            preferredContact,
-            message,
-            consentMarketing,
-            consentPrivacy
-        } = request.body as LeadPayload;
+        const data = request.body as LeadPayload;
 
-        if (!listingId || !name || !email || !message) {
+        if (!data.listingId || !data.name || !data.email || !data.message) {
             return reply.code(400).send({ error: 'listingId, name, email and message are required' });
         }
 
         const listing = await fastify.prisma.listing.findUnique({
-            where: { id: listingId },
+            where: { id: data.listingId },
             include: { dealer: true }
         });
 
@@ -47,16 +44,22 @@ export async function leadRoutes(fastify: FastifyInstance) {
 
         const lead = await fastify.prisma.lead.create({
             data: {
-                listingId,
-                name,
-                email,
-                phone,
-                preferredContact: preferredContact || 'email',
-                message,
+                listingId: data.listingId,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                preferredContact: data.preferredContact || 'email',
+                message: data.message,
                 status: 'new',
                 referenceNumber: generateReference(),
-                consentMarketingAt: consentMarketing ? new Date() : null,
-                consentPrivacyAt: consentPrivacy ? new Date() : null
+                consentMarketingAt: data.consentMarketing ? new Date() : null,
+                consentPrivacyAt: data.consentPrivacy ? new Date() : null,
+                // Financing data
+                financingProductId: data.financingProductId,
+                financingAmount: data.financingAmount,
+                financingPeriod: data.financingPeriod,
+                financingDownPayment: data.financingDownPayment,
+                financingInstallment: data.financingInstallment,
             },
             include: {
                 listing: {

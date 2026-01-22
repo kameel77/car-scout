@@ -390,6 +390,7 @@ export default function ListingDetailPage() {
             {(settings?.financingCalculatorEnabled ?? true) && (
               <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
                 <FinancingCalculator
+                  listingId={listing.listing_id}
                   price={applySpecialOfferDiscount(
                     priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln,
                     discount
@@ -501,6 +502,7 @@ export default function ListingDetailPage() {
                   transition={{ delay: 0.1 }}
                 >
                   <FinancingCalculator
+                    listingId={listing.listing_id}
                     price={applySpecialOfferDiscount(
                       priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln,
                       discount

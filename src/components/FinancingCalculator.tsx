@@ -9,13 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatPrice } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 import { Calculator, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 interface FinancingCalculatorProps {
+    listingId?: string;
     price: number;
     currency?: string;
 }
 
-export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalculatorProps) {
+export function FinancingCalculator({ listingId, price, currency = 'PLN' }: FinancingCalculatorProps) {
+    const navigate = useNavigate();
     const { data, isLoading } = useQuery({
         queryKey: ['financing-calculator'],
         queryFn: () => financingApi.listPublic(),
@@ -31,7 +35,9 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
         [products]
     );
 
-    const [activeCategory, setActiveCategory] = React.useState<string>(categories[0] || 'LEASING');
+    const [activeCategory, setActiveCategory] = React.useState<FinancingProduct['category']>(
+        (categories[0] as FinancingProduct['category']) || 'LEASING'
+    );
     const [selectedProduct, setSelectedProduct] = React.useState<FinancingProduct | null>(null);
     const [failedProducts, setFailedProducts] = React.useState<Set<string>>(new Set());
     const [externalInstallment, setExternalInstallment] = React.useState<number | null>(null);
@@ -45,7 +51,7 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
     // Update selected product when category changes
     React.useEffect(() => {
         if (categories.length > 0 && !categories.includes(activeCategory)) {
-            setActiveCategory(categories[0] as string);
+            setActiveCategory(categories[0] as FinancingProduct['category']);
         }
     }, [categories, activeCategory]);
 
@@ -201,7 +207,7 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+                <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as FinancingProduct['category'])} className="w-full">
                     <TabsList className="w-full justify-start grid grid-cols-3">
                         {categories.map(cat => (
                             <TabsTrigger key={cat} value={cat}>
@@ -309,6 +315,27 @@ export function FinancingCalculator({ price, currency = 'PLN' }: FinancingCalcul
                         Ostateczna oferta zależy od oceny zdolności kredytowej.
                     </p>
                 </div>
+
+                {listingId && (
+                    <Button
+                        variant="hero"
+                        size="lg"
+                        className="w-full shadow-lg shadow-primary/20"
+                        onClick={() => navigate(`/listing/${listingId}/lead`, {
+                            state: {
+                                financing: {
+                                    productId: selectedProduct.id,
+                                    amount: amountToFinance,
+                                    period: months,
+                                    downPayment: initialPaymentAmount,
+                                    installment: displayInstallment ?? monthlyInstallment
+                                }
+                            }
+                        })}
+                    >
+                        Kontynuuj z tym finansowaniem
+                    </Button>
+                )}
             </CardContent>
         </Card>
     );

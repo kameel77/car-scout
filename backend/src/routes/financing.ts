@@ -287,16 +287,102 @@ export async function financingRoutes(fastify: FastifyInstance) {
     });
 
     // Admin: Delete provider connection
-    fastify.delete('/api/financing/connections/:id', {
+    // Admin: Submit application to provider
+    fastify.post('/api/financing/apply/:leadId', {
         preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         try {
-            const { id } = request.params as { id: string };
-            await fastify.prisma.financingProviderConnection.delete({ where: { id } });
-            return { success: true };
+            const { leadId } = request.params as { leadId: string };
+            const lead = await fastify.prisma.lead.findUnique({
+                where: { id: leadId },
+                include: { financingProduct: true }
+            });
+
+            if (!lead) return reply.code(404).send({ error: 'Lead not found' });
+            if (!lead.financingProduct) return reply.code(400).send({ error: 'Lead has no financing product' });
+            if (lead.financingProduct.provider !== 'INBANK') {
+                return reply.code(400).send({ error: 'Only INBANK provider is supported for API submission' });
+            }
+
+            const connection = await fastify.prisma.financingProviderConnection.findFirst({
+                where: { provider: lead.financingProduct.provider, isActive: true }
+            });
+
+            if (!connection) return reply.code(409).send({ error: 'Connection not configured' });
+
+            const config = (lead.financingProduct.providerConfig || {}) as Record<string, any>;
+
+            // Construct application payload
+            const payload = {
+                productCode: config.productCode,
+                amount: lead.financingAmount,
+                period: lead.financingPeriod,
+                downPaymentAmount: lead.financingDownPayment,
+                paymentDay: config.paymentDay,
+                currency: config.currency || lead.financingProduct.currency,
+                customer: {
+                    name: lead.name,
+                    email: lead.email,
+                    phone: lead.phone,
+                },
+                externalReference: lead.referenceNumber,
+                callbackUrl: `${process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000'}/api/financing/webhooks/inbank`,
+            };
+
+            const response = await fetch(`${connection.apiBaseUrl}/applications`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-KEY': connection.apiKey,
+                    ...(connection.apiSecret ? { 'X-API-SECRET': connection.apiSecret } : {}),
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                return reply.code(502).send({
+                    error: 'Provider application failed',
+                    details: result?.message || result?.error || 'Unknown provider error'
+                });
+            }
+
+            // Update lead with external status
+            await fastify.prisma.lead.update({
+                where: { id: leadId },
+                data: {
+                    externalId: (result as any)?.id || (result as any)?.applicationId,
+                    externalStatus: (result as any)?.status || 'SUBMITTED',
+                    status: 'applied'
+                }
+            });
+
+            return { success: true, result };
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) });
+        }
+    });
+
+    // Public: Inbank Webhook
+    fastify.post('/api/financing/webhooks/inbank', async (request, reply) => {
+        try {
+            const body = request.body as any;
+            const externalId = body.id || body.applicationId;
+            const status = body.status;
+
+            if (!externalId) return reply.code(400).send({ error: 'Missing ID' });
+
+            await fastify.prisma.lead.updateMany({
+                where: { externalId },
+                data: { externalStatus: status }
+            });
+
+            return { success: true };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.code(500).send({ error: 'Internal Server Error' });
         }
     });
 }

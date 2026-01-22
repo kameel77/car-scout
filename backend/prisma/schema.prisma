@@ -13,6 +13,7 @@ model Listing {
   listingId             String?   @unique @map("listing_id")
   listingUrl            String?   @map("listing_url")
   scrapedAt             DateTime? @map("scraped_at")
+  marketplace           String?   @map("marketplace")
   
   // Vehicle Info
   make                  String
@@ -88,6 +89,7 @@ model Listing {
   @@index([isArchived])
   @@index([vin])
   @@index([listingId])
+  @@index([marketplace])
   @@map("listings")
 }
 
@@ -105,6 +107,18 @@ model Lead {
   status             String   @default("new")
   referenceNumber    String   @unique @map("reference_number")
 
+  // Financing Info
+  financingProductId String?   @map("financing_product_id")
+  financingProduct   FinancingProduct? @relation(fields: [financingProductId], references: [id])
+  
+  financingAmount    Float?    @map("financing_amount")
+  financingPeriod    Int?      @map("financing_period")
+  financingDownPayment Float?  @map("financing_down_payment")
+  financingInstallment Float?   @map("financing_installment")
+  
+  externalId         String?   @map("external_id")
+  externalStatus     String?   @map("external_status")
+
   consentMarketingAt DateTime? @map("consent_marketing_at")
   consentPrivacyAt   DateTime? @map("consent_privacy_at")
 
@@ -112,6 +126,7 @@ model Lead {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@index([listingId])
+  @@index([financingProductId])
   @@map("leads")
 }
 
@@ -291,6 +306,8 @@ model FinancingProduct {
   maxInstallments   Int      @map("max_installments")
   
   isDefault         Boolean  @default(false) @map("is_default")
+  
+  leads             Lead[]
   
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")

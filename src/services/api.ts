@@ -477,6 +477,11 @@ export const leadsApi = {
         message: string;
         consentMarketing: boolean;
         consentPrivacy: boolean;
+        financingProductId?: string;
+        financingAmount?: number;
+        financingPeriod?: number;
+        financingDownPayment?: number;
+        financingInstallment?: number;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads`, {
             method: 'POST',
@@ -500,6 +505,20 @@ export const leadsApi = {
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.error || 'Failed to load leads');
+        }
+
+        return response.json();
+    },
+
+    applyForFinancing: async (leadId: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/apply/${leadId}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to submit financing application');
         }
 
         return response.json();
