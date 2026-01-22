@@ -91,13 +91,12 @@ export async function financingRoutes(fastify: FastifyInstance) {
             };
 
             // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
-            const baseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
+            const rawBaseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
+            const baseUrl = rawBaseUrl.replace(/\/partner(\/v2)?$/, '');
             const apiKey = config.apiKey || connection.apiKey;
             const shopUuid = config.shopUuid || connection.shopUuid;
 
-            // Avoid double /partner if user included it in baseUrl
-            const path = `/partner/v2/shops/${shopUuid}/calculations`;
-            const url = baseUrl.endsWith('/partner') ? `${baseUrl.slice(0, -8)}${path}` : `${baseUrl}${path}`;
+            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -337,12 +336,12 @@ export async function financingRoutes(fastify: FastifyInstance) {
             };
 
             // Inbank API application path: /partner/v2/shops/:shop_uuid/applications
-            const baseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
+            const rawBaseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
+            const baseUrl = rawBaseUrl.replace(/\/partner(\/v2)?$/, '');
             const apiKey = config.apiKey || connection.apiKey;
             const shopUuid = config.shopUuid || connection.shopUuid;
 
-            const path = `/partner/v2/shops/${shopUuid}/applications`;
-            const url = baseUrl.endsWith('/partner') ? `${baseUrl.slice(0, -8)}${path}` : `${baseUrl}${path}`;
+            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/applications`;
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -411,9 +410,9 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(400).send({ error: 'Missing required fields' });
             }
 
-            const baseUrl = (process.env.INBANK_BASE_URL || apiBaseUrl).replace(/\/$/, '');
-            const path = `/partner/v2/shops/${shopUuid}/calculations`;
-            const url = baseUrl.endsWith('/partner') ? `${baseUrl.slice(0, -8)}${path}` : `${baseUrl}${path}`;
+            const rawBaseUrl = (process.env.INBANK_BASE_URL || apiBaseUrl).replace(/\/$/, '');
+            const baseUrl = rawBaseUrl.replace(/\/partner(\/v2)?$/, '');
+            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
 
             // Use a dummy calculation as a test
             const payload = {
