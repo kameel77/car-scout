@@ -344,7 +344,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
             if (!response.ok) {
                 return reply.code(502).send({
                     error: 'Provider application failed',
-                    details: result?.message || result?.error || 'Unknown provider error'
+                    details: (result as any)?.message || (result as any)?.error || 'Unknown provider error'
                 });
             }
 
