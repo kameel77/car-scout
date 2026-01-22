@@ -431,7 +431,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 body: JSON.stringify(payload),
             });
 
-            const result = await response.json().catch(() => ({}));
+            const result: any = await response.json().catch(() => ({}));
 
             // LOGGING FOR DEBUGGING
             console.log('--- INBANK TEST CONNECTION ---');
