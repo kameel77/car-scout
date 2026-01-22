@@ -24,6 +24,8 @@ export type FinancingProductPayload = Omit<FinancingProduct, 'id' | 'createdAt' 
 
 export interface FinancingProviderConfig {
     productCode?: string;
+    apiKey?: string;
+    shopUuid?: string;
     paymentDay?: number;
     responseLevel?: 'simple' | 'full';
     currency?: string;
@@ -36,6 +38,7 @@ export interface FinancingProviderConnection {
     apiBaseUrl: string;
     apiKey: string;
     apiSecret?: string | null;
+    shopUuid?: string | null;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;

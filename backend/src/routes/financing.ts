@@ -27,6 +27,7 @@ const FinancingConnectionSchema = z.object({
     apiBaseUrl: z.string().url(),
     apiKey: z.string(),
     apiSecret: z.string().optional().nullable(),
+    shopUuid: z.string().optional().nullable(),
     isActive: z.boolean().default(true),
 });
 
@@ -92,12 +93,17 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 responseLevel: config.responseLevel || 'simple',
             };
 
-            const response = await fetch(connection.apiBaseUrl, {
+            // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
+            const baseUrl = process.env.INBANK_BASE_URL || connection.apiBaseUrl.replace(/\/$/, '');
+            const apiKey = config.apiKey || connection.apiKey;
+            const shopUuid = config.shopUuid || connection.shopUuid;
+            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-API-KEY': connection.apiKey,
-                    ...(connection.apiSecret ? { 'X-API-SECRET': connection.apiSecret } : {}),
+                    'Authorization': `Bearer ${apiKey}`,
                 },
                 body: JSON.stringify(payload),
             });
@@ -329,12 +335,17 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 callbackUrl: `${process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000'}/api/financing/webhooks/inbank`,
             };
 
-            const response = await fetch(`${connection.apiBaseUrl}/applications`, {
+            // Inbank API application path: /partner/v2/shops/:shop_uuid/applications
+            const baseUrl = process.env.INBANK_BASE_URL || connection.apiBaseUrl.replace(/\/$/, '');
+            const apiKey = config.apiKey || connection.apiKey;
+            const shopUuid = config.shopUuid || connection.shopUuid;
+            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/applications`;
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-API-KEY': connection.apiKey,
-                    ...(connection.apiSecret ? { 'X-API-SECRET': connection.apiSecret } : {}),
+                    'Authorization': `Bearer ${apiKey}`,
                 },
                 body: JSON.stringify(payload),
             });

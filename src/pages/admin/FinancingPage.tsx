@@ -54,6 +54,7 @@ const EMPTY_CONNECTION_FORM: FinancingProviderConnectionPayload = {
     apiBaseUrl: '',
     apiKey: '',
     apiSecret: '',
+    shopUuid: '',
     isActive: true,
 };
 
@@ -218,6 +219,7 @@ export default function FinancingPage() {
                 apiBaseUrl: connection.apiBaseUrl,
                 apiKey: connection.apiKey,
                 apiSecret: connection.apiSecret || '',
+                shopUuid: connection.shopUuid || '',
                 isActive: connection.isActive,
             });
         } else {
@@ -651,13 +653,31 @@ export default function FinancingPage() {
                                 <div>
                                     <Label className="text-sm text-muted-foreground">Konfiguracja Inbank</Label>
                                 </div>
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Kod produktu</Label>
+                                        <Label>Kod produktu (wymagane)</Label>
                                         <Input
                                             value={formData.providerConfig?.productCode || ''}
                                             onChange={e => handleProviderConfigChange('productCode', e.target.value)}
-                                            placeholder="product_code_here"
+                                            placeholder="np. car_loan_pledge_..."
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Shop UUID (nadpisuje połączenie)</Label>
+                                        <Input
+                                            value={formData.providerConfig?.shopUuid || ''}
+                                            onChange={e => handleProviderConfigChange('shopUuid', e.target.value)}
+                                            placeholder="138d0594-..."
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>API Key (nadpisuje)</Label>
+                                        <Input
+                                            value={formData.providerConfig?.apiKey || ''}
+                                            onChange={e => handleProviderConfigChange('apiKey', e.target.value)}
+                                            placeholder="efbb4..."
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -801,13 +821,23 @@ export default function FinancingPage() {
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label>URL API (pełny endpoint kalkulatora)</Label>
-                            <Input
-                                value={connectionFormData.apiBaseUrl}
-                                onChange={e => setConnectionFormData(p => ({ ...p, apiBaseUrl: e.target.value }))}
-                                placeholder="https://api.inbank.eu/..."
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>URL API (bazowy, np. https://api-demo.inbank.eu)</Label>
+                                <Input
+                                    value={connectionFormData.apiBaseUrl}
+                                    onChange={e => setConnectionFormData(p => ({ ...p, apiBaseUrl: e.target.value }))}
+                                    placeholder="https://api-demo.inbank.eu"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Shop UUID</Label>
+                                <Input
+                                    value={connectionFormData.shopUuid || ''}
+                                    onChange={e => setConnectionFormData(p => ({ ...p, shopUuid: e.target.value }))}
+                                    placeholder="138d0594-..."
+                                />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

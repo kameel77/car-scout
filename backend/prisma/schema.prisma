@@ -324,6 +324,7 @@ model FinancingProviderConnection {
   apiBaseUrl String  @map("api_base_url")
   apiKey     String  @map("api_key")
   apiSecret  String? @map("api_secret")
+  shopUuid   String? @map("shop_uuid")
   isActive   Boolean @default(true) @map("is_active")
 
   createdAt  DateTime @default(now()) @map("created_at")
