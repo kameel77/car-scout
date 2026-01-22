@@ -84,13 +84,13 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
             // Inbank API calculation payload
             const payload = {
-                productCode: config.productCode,
+                product_code: config.productCode,
                 amount: data.price - data.downPaymentAmount,
                 period: data.period,
-                paymentDay: config.paymentDay,
-                downPaymentAmount: data.downPaymentAmount,
+                payment_day: config.paymentDay,
+                down_payment_amount: data.downPaymentAmount,
                 currency: config.currency || product.currency,
-                responseLevel: config.responseLevel || 'simple',
+                response_level: config.responseLevel || 'simple',
             };
 
             // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
@@ -118,13 +118,14 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
             const result = await response.json().catch(() => ({}));
 
-            // Inbank documentation says paymentAmountMonthly
+            // Inbank documentation says payment_amount_monthly or installment_amount
             const monthlyInstallment = Number(
-                (result as any)?.paymentAmountMonthly
-                ?? (result as any)?.monthlyPayment
-                ?? (result as any)?.monthlyInstallment
-                ?? (result as any)?.paymentAmount
+                (result as any)?.payment_amount_monthly
+                ?? (result as any)?.paymentAmountMonthly
+                ?? (result as any)?.installment_amount
                 ?? (result as any)?.installmentAmount
+                ?? (result as any)?.monthly_payment
+                ?? (result as any)?.monthlyPayment
             );
 
             if (!Number.isFinite(monthlyInstallment)) {
@@ -320,19 +321,19 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
             // Construct application payload
             const payload = {
-                productCode: config.productCode,
+                product_code: config.productCode,
                 amount: lead.financingAmount,
                 period: lead.financingPeriod,
-                downPaymentAmount: lead.financingDownPayment,
-                paymentDay: config.paymentDay,
+                down_payment_amount: lead.financingDownPayment,
+                payment_day: config.paymentDay,
                 currency: config.currency || lead.financingProduct.currency,
                 customer: {
                     name: lead.name,
                     email: lead.email,
                     phone: lead.phone,
                 },
-                externalReference: lead.referenceNumber,
-                callbackUrl: `${process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000'}/api/financing/webhooks/inbank`,
+                external_reference: lead.referenceNumber,
+                callback_url: `${process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000'}/api/financing/webhooks/inbank`,
             };
 
             // Inbank API application path: /partner/v2/shops/:shop_uuid/applications
