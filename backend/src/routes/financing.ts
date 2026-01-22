@@ -82,15 +82,12 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(422).send({ error: 'Missing provider configuration' });
             }
 
-            // Inbank API calculation payload
+            // Inbank API calculation payload - strictly minimal as per docs
             const payload = {
                 product_code: config.productCode,
                 amount: data.price - data.downPaymentAmount,
                 period: data.period,
-                payment_day: config.paymentDay,
-                down_payment_amount: data.downPaymentAmount,
-                currency: config.currency || product.currency,
-                response_level: config.responseLevel || 'simple',
+                payment_day: config.paymentDay
             };
 
             // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
@@ -395,6 +392,61 @@ export async function financingRoutes(fastify: FastifyInstance) {
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
+    // Admin: Test provider connection
+    fastify.post('/api/financing/test-connection', {
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+    }, async (request, reply) => {
+        try {
+            const { apiBaseUrl, apiKey, shopUuid } = request.body as { apiBaseUrl: string; apiKey: string; shopUuid: string };
+
+            if (!apiBaseUrl || !apiKey || !shopUuid) {
+                return reply.code(400).send({ error: 'Missing required fields' });
+            }
+
+            const baseUrl = process.env.INBANK_BASE_URL || apiBaseUrl.replace(/\/$/, '');
+            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
+
+            // Use a dummy calculation as a test
+            const payload = {
+                product_code: 'test', // We expect 422 or 401/403, but not 404 or connection error
+                amount: 10000,
+                period: 12
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (response.status === 401 || response.status === 403) {
+                return { success: false, details: 'Błąd autoryzacji (API Key)' };
+            }
+
+            if (response.status === 404) {
+                return { success: false, details: 'Nie znaleziono sklepu (Shop UUID lub URL)' };
+            }
+
+            // 422 is actually a "good" sign for connection/auth, it just means our dummy payload was invalid (which we expect)
+            if (response.ok || response.status === 422) {
+                return { success: true, details: response.ok ? 'Sukces' : 'Połączono (Błąd walidacji danych testowych - OK)' };
+            }
+
+            return {
+                success: false,
+                details: (result as any)?.message || (result as any)?.error || `Błąd HTTP: ${response.status}`
+            };
+        } catch (error) {
+            fastify.log.error(error);
+            return { success: false, details: error instanceof Error ? error.message : 'Błąd połączenia' };
         }
     });
 }

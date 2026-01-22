@@ -285,6 +285,12 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                                 ? '...'
                                 : formatPrice(displayInstallment ?? monthlyInstallment, currency)}
                         </span>
+                        {selectedProduct.provider === 'INBANK' && displayInstallment == null && !externalLoading && (
+                            <div className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-1">
+                                <Info className="w-3 h-3" />
+                                Kalkulacja szacunkowa
+                            </div>
+                        )}
                         {selectedProduct.category === 'LEASING' && (
                             <span className="text-xs text-muted-foreground">netto (bez VAT)</span>
                         )}

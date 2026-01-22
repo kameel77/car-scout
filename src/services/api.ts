@@ -663,6 +663,22 @@ export const financingApi = {
             throw new Error(error.error || 'Failed to delete financing connection');
         }
         return response.json();
+    },
+
+    testConnection: async (payload: { apiBaseUrl: string; apiKey: string; shopUuid: string }, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/financing/test-connection`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Connection test failed');
+        }
+        return response.json();
     }
 };
 

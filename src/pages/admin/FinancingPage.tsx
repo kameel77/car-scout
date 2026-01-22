@@ -145,6 +145,23 @@ export default function FinancingPage() {
         },
     });
 
+    const testConnectionMutation = useMutation({
+        mutationFn: (payload: { apiBaseUrl: string; apiKey: string; shopUuid: string }) => {
+            if (!token) throw new Error('Brak tokenu');
+            return financingApi.testConnection(payload, token);
+        },
+        onSuccess: (data: any) => {
+            if (data.success) {
+                toast.success('Połączenie poprawne! API odpowiedziało.');
+            } else {
+                toast.error(`Błąd połączenia: ${data.details || 'Nieznany błąd'}`);
+            }
+        },
+        onError: (error: any) => {
+            toast.error(error?.message || 'Błąd komunikacji z serwerem');
+        },
+    });
+
     const deleteConnectionMutation = useMutation({
         mutationFn: (id: string) => {
             if (!token) throw new Error('Brak tokenu');
@@ -663,24 +680,6 @@ export default function FinancingPage() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Shop UUID (nadpisuje połączenie)</Label>
-                                        <Input
-                                            value={formData.providerConfig?.shopUuid || ''}
-                                            onChange={e => handleProviderConfigChange('shopUuid', e.target.value)}
-                                            placeholder="138d0594-..."
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>API Key (nadpisuje)</Label>
-                                        <Input
-                                            value={formData.providerConfig?.apiKey || ''}
-                                            onChange={e => handleProviderConfigChange('apiKey', e.target.value)}
-                                            placeholder="efbb4..."
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
                                         <Label>Dzień płatności</Label>
                                         <Input
                                             type="number"
@@ -692,6 +691,8 @@ export default function FinancingPage() {
                                             }}
                                         />
                                     </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <Label>Response level</Label>
                                         <select
@@ -857,13 +858,29 @@ export default function FinancingPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center space-x-2">
-                            <Switch
-                                id="connection-active"
-                                checked={connectionFormData.isActive}
-                                onCheckedChange={checked => setConnectionFormData(p => ({ ...p, isActive: checked }))}
-                            />
-                            <Label htmlFor="connection-active">Aktywne</Label>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <Switch
+                                    id="connection-active"
+                                    checked={connectionFormData.isActive}
+                                    onCheckedChange={checked => setConnectionFormData(p => ({ ...p, isActive: checked }))}
+                                />
+                                <Label htmlFor="connection-active">Aktywne</Label>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => testConnectionMutation.mutate({
+                                    apiBaseUrl: connectionFormData.apiBaseUrl,
+                                    apiKey: connectionFormData.apiKey,
+                                    shopUuid: connectionFormData.shopUuid || ''
+                                })}
+                                disabled={testConnectionMutation.isPending || !connectionFormData.apiBaseUrl || !connectionFormData.apiKey}
+                            >
+                                {testConnectionMutation.isPending ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                                Testuj połączenie
+                            </Button>
                         </div>
 
                         <DialogFooter>
