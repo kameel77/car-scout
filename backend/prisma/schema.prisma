@@ -13,6 +13,7 @@ model Listing {
   listingId             String?   @unique @map("listing_id")
   listingUrl            String?   @map("listing_url")
   scrapedAt             DateTime? @map("scraped_at")
+  marketplace           String?   @map("marketplace")
   
   // Vehicle Info
   make                  String
@@ -88,6 +89,7 @@ model Listing {
   @@index([isArchived])
   @@index([vin])
   @@index([listingId])
+  @@index([marketplace])
   @@map("listings")
 }
 
@@ -105,6 +107,18 @@ model Lead {
   status             String   @default("new")
   referenceNumber    String   @unique @map("reference_number")
 
+  // Financing Info
+  financingProductId String?   @map("financing_product_id")
+  financingProduct   FinancingProduct? @relation(fields: [financingProductId], references: [id])
+  
+  financingAmount    Float?    @map("financing_amount")
+  financingPeriod    Int?      @map("financing_period")
+  financingDownPayment Float?  @map("financing_down_payment")
+  financingInstallment Float?   @map("financing_installment")
+  
+  externalId         String?   @map("external_id")
+  externalStatus     String?   @map("external_status")
+
   consentMarketingAt DateTime? @map("consent_marketing_at")
   consentPrivacyAt   DateTime? @map("consent_privacy_at")
 
@@ -112,6 +126,7 @@ model Lead {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@index([listingId])
+  @@index([financingProductId])
   @@map("leads")
 }
 
@@ -273,6 +288,11 @@ model FinancingProduct {
   category          String   // 'CREDIT', 'LEASING', 'RENT'
   name              String?
   currency          String   @default("PLN")
+  provider          String   @default("OWN") // 'OWN', 'INBANK', ...
+  priority          Int      @default(0)
+  minAmount         Float?   @map("min_amount")
+  maxAmount         Float?   @map("max_amount")
+  providerConfig    Json?    @map("provider_config")
   
   // Rates
   referenceRate     Float    @map("reference_rate") // Wibor/Euribor %
@@ -284,8 +304,11 @@ model FinancingProduct {
   maxFinalPayment   Float    @map("max_final_payment") // %
   minInstallments   Int      @map("min_installments")
   maxInstallments   Int      @map("max_installments")
+  hasBalloonPayment Boolean  @default(true) @map("has_balloon_payment")
   
   isDefault         Boolean  @default(false) @map("is_default")
+  
+  leads             Lead[]
   
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
@@ -293,6 +316,24 @@ model FinancingProduct {
   @@map("financing_products")
   @@index([category])
   @@index([isDefault])
+}
+
+model FinancingProviderConnection {
+  id         String   @id @default(cuid())
+  provider   String
+  name       String
+  apiBaseUrl String  @map("api_base_url")
+  apiKey     String  @map("api_key")
+  apiSecret  String? @map("api_secret")
+  shopUuid   String? @map("shop_uuid")
+  isActive   Boolean @default(true) @map("is_active")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("financing_provider_connections")
+  @@index([provider])
+  @@index([provider, isActive])
 }
 
 // ============ SEO CONFIG ============

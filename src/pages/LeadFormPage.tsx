@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle, AlertCircle, Loader2, MessageCircle, ShieldCheck, Zap } from 'lucide-react';
@@ -45,6 +45,15 @@ export default function LeadFormPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const financingData = location.state?.financing as {
+    productId: string;
+    amount: number;
+    period: number;
+    downPayment: number;
+    installment: number;
+  } | undefined;
+
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [referenceNumber, setReferenceNumber] = React.useState('');
 
@@ -133,7 +142,13 @@ export default function LeadFormPage() {
         preferredContact: formData.preferredContact,
         message: formData.message,
         consentMarketing: formData.consentMarketing,
-        consentPrivacy: formData.consentPrivacy
+        consentPrivacy: formData.consentPrivacy,
+        // Passing financing data
+        financingProductId: financingData?.productId,
+        financingAmount: financingData?.amount,
+        financingPeriod: financingData?.period,
+        financingDownPayment: financingData?.downPayment,
+        financingInstallment: financingData?.installment,
       });
 
       setReferenceNumber(lead?.referenceNumber || lead?.id || '');
@@ -299,6 +314,22 @@ export default function LeadFormPage() {
 
           {/* Right Side: Enhanced Form */}
           <div className="lg:col-span-7 order-1 lg:order-2">
+            {financingData && (
+              <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-indigo-400 tracking-widest leading-none mb-1">Wybrane finansowanie</p>
+                  <p className="text-sm font-bold text-indigo-900">
+                    {formatNumber(financingData.installment)} PLN / mies.
+                    <span className="text-indigo-400 font-normal ml-2">({financingData.period} m-cy)</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase font-bold text-indigo-400 tracking-widest leading-none mb-1">Wpłata własna</p>
+                  <p className="text-sm font-bold text-indigo-900">{formatNumber(financingData.downPayment)} PLN</p>
+                </div>
+              </div>
+            )}
+
             <div className="bg-card rounded-2xl shadow-sm border p-8 lg:p-10">
               <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">

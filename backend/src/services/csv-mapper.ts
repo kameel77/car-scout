@@ -1,10 +1,12 @@
 import { Prisma } from '@prisma/client';
 import type { CSVRow } from '../types/csv.types.js';
+import { getMarketplaceFromUrl } from '../utils/url-utils.js';
 
 export function mapCSVToListing(row: CSVRow, dealerId?: string): Prisma.ListingCreateInput {
     return {
         listingId: row.listing_id || undefined,
         listingUrl: row.listing_url || undefined,
+        marketplace: getMarketplaceFromUrl(row.listing_url),
         scrapedAt: row.scraped_at ? new Date(row.scraped_at) : undefined,
 
         make: row.make,
