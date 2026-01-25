@@ -46,6 +46,22 @@ const FinancingCalculateSchema = z.object({
 const vehisTokenCache = new Map<string, { token: string; expiresAt: number }>();
 const VEHIS_TOKEN_TTL_MS = 50 * 60 * 1000;
 
+const fetchWithTimeout = async (url: string, options: any, timeoutMs = 15000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (e) {
+        clearTimeout(id);
+        throw e;
+    }
+};
+
 const getVehisToken = async (connection: { apiBaseUrl: string; apiKey: string; apiSecret?: string | null }) => {
     const baseUrl = connection.apiBaseUrl.replace(/\/$/, '');
     const cacheKey = `${baseUrl}:${connection.apiKey}`;
@@ -64,7 +80,10 @@ const getVehisToken = async (connection: { apiBaseUrl: string; apiKey: string; a
         password: connection.apiSecret || process.env.VEHIS_PASSWORD || ''
     });
 
-    const response = await fetch(loginUrl, {
+    console.log('--- VEHIS LOGIN REQUEST ---');
+    console.log('URL:', loginUrl);
+
+    const response = await fetchWithTimeout(loginUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -193,6 +212,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
             const finalPaymentPercent = data.finalPaymentPercent ?? 0;
             const vehicleState = data.mileageKm != null && data.mileageKm > 10 ? 1 : 0;
 
+            // Vehis requires net price. We receive gross from frontend.
+            const netPrice = Math.round(data.price / 1.23);
             const vehisPayload = {
                 client: clientType,
                 initialFee: Math.max(1, Math.min(50, Math.round(initialFeePercent))),
@@ -202,7 +223,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
                     {
                         state: vehicleState,
                         manufacturing_year: data.manufacturingYear,
-                        price: Math.round(data.price)
+                        price: netPrice
                     }
                 ]
             };
@@ -215,7 +236,11 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 });
 
                 const vehisUrl = `${connection.apiBaseUrl.replace(/\/$/, '')}/broker/calculate`;
-                const response = await fetch(vehisUrl, {
+                console.log('--- VEHIS CALCULATE REQUEST ---');
+                console.log('URL:', vehisUrl);
+                console.log('Payload:', JSON.stringify(vehisPayload, null, 2));
+
+                const response = await fetchWithTimeout(vehisUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -233,6 +258,10 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 }
 
                 const result = await response.json().catch(() => ({}));
+
+                console.log('--- VEHIS RESPONSE ---');
+                console.log('Status:', response.status);
+                console.log('Body:', JSON.stringify(result, null, 2));
 
                 // Vehis returns rich object for broker/calculate
                 // We wrap it to match user's requested format for preview
