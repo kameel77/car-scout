@@ -55,7 +55,7 @@ function EquipmentSectionComponent({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
-      className="equipment-section break-inside-avoid mb-8"
+      className="equipment-section break-inside-avoid pb-8 inline-block w-full"
     >
       <div className="equipment-title mb-3">
         <Icon className="h-5 w-5 text-primary" />
