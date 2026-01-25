@@ -59,8 +59,8 @@ const getVehisToken = async (connection: { apiBaseUrl: string; apiKey: string; a
 
     const loginUrl = `${baseUrl}/login`;
     const body = new URLSearchParams({
-        email: connection.apiKey,
-        password: connection.apiSecret
+        email: connection.apiKey || process.env.VEHIS_LOGIN || '',
+        password: connection.apiSecret || process.env.VEHIS_PASSWORD || ''
     });
 
     const response = await fetch(loginUrl, {
@@ -190,7 +190,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
             const clientType = config.clientType === 'consumer' ? 'consumer' : 'entrepreneur';
             const initialFeePercent = data.initialFeePercent ?? Math.round((data.downPaymentAmount / data.price) * 100);
             const finalPaymentPercent = data.finalPaymentPercent ?? 0;
-            const vehicleState = data.mileageKm != null && data.mileageKm > 0 ? 1 : 0;
+            const vehicleState = data.mileageKm != null && data.mileageKm > 10 ? 1 : 0;
 
             const vehisPayload = {
                 client: clientType,
@@ -537,8 +537,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 const baseUrl = apiBaseUrl.replace(/\/$/, '');
                 const url = `${baseUrl}/login`;
                 const body = new URLSearchParams({
-                    email: apiKey,
-                    password: apiSecret
+                    email: apiKey || process.env.VEHIS_LOGIN || '',
+                    password: apiSecret || process.env.VEHIS_PASSWORD || ''
                 });
 
                 const response = await fetch(url, {
