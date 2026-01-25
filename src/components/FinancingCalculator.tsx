@@ -149,7 +149,10 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
         if (!selectedProduct) return;
         setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
         setInitialPaymentPct(Math.min(10, selectedProduct.maxInitialPayment));
-        setFinalPaymentPct(Math.min(20, selectedProduct.maxFinalPayment));
+        setFinalPaymentPct(selectedProduct.hasBalloonPayment
+            ? Math.min(20, selectedProduct.maxFinalPayment)
+            : 0
+        );
     }, [selectedProduct]);
 
     if (isLoading || products.length === 0) {
@@ -258,23 +261,25 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                     </div>
 
                     {/* Final Payment Slider (Balloon) */}
-                    <div className="space-y-3">
-                        <div className="flex justify-between">
-                            <Label>Wykup (Rata balonowa)</Label>
-                            <div className="text-right">
-                                <span className="font-semibold block">{finalPaymentPct}%</span>
-                                <span className="text-xs text-muted-foreground">{formatPrice(finalPaymentAmount, currency)}</span>
+                    {selectedProduct.hasBalloonPayment && (
+                        <div className="space-y-3">
+                            <div className="flex justify-between">
+                                <Label>Wykup (Rata balonowa)</Label>
+                                <div className="text-right">
+                                    <span className="font-semibold block">{finalPaymentPct}%</span>
+                                    <span className="text-xs text-muted-foreground">{formatPrice(finalPaymentAmount, currency)}</span>
+                                </div>
                             </div>
+                            <Slider
+                                value={[finalPaymentPct]}
+                                min={0}
+                                max={selectedProduct.maxFinalPayment}
+                                step={5}
+                                onValueChange={v => setFinalPaymentPct(v[0])}
+                                className="py-2"
+                            />
                         </div>
-                        <Slider
-                            value={[finalPaymentPct]}
-                            min={0}
-                            max={selectedProduct.maxFinalPayment}
-                            step={5}
-                            onValueChange={v => setFinalPaymentPct(v[0])}
-                            className="py-2"
-                        />
-                    </div>
+                    )}
                 </div>
 
                 <div className="bg-slate-50 rounded-lg p-6 mt-6 border border-slate-100">

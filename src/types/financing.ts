@@ -15,6 +15,7 @@ export interface FinancingProduct {
     maxFinalPayment: number;
     minInstallments: number;
     maxInstallments: number;
+    hasBalloonPayment: boolean;
     isDefault: boolean;
     createdAt: string;
     updatedAt: string;

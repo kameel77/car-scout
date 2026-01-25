@@ -18,6 +18,7 @@ const FinancingProductSchema = z.object({
     maxFinalPayment: z.number(),
     minInstallments: z.number().int(),
     maxInstallments: z.number().int(),
+    hasBalloonPayment: z.boolean().default(true),
     isDefault: z.boolean().default(false),
 });
 

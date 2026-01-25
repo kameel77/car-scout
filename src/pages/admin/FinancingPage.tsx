@@ -45,6 +45,7 @@ const EMPTY_FORM: FinancingProductPayload = {
     maxFinalPayment: 0,
     minInstallments: 12,
     maxInstallments: 84,
+    hasBalloonPayment: true,
     isDefault: false,
 };
 
@@ -214,6 +215,7 @@ export default function FinancingPage() {
                 maxFinalPayment: product.maxFinalPayment,
                 minInstallments: product.minInstallments,
                 maxInstallments: product.maxInstallments,
+                hasBalloonPayment: product.hasBalloonPayment ?? true,
                 isDefault: product.isDefault,
             });
         } else {
@@ -222,6 +224,7 @@ export default function FinancingPage() {
                 ...EMPTY_FORM,
                 category: activeTab as any,
                 provider: forcedProvider || 'OWN',
+                hasBalloonPayment: forcedProvider === 'INBANK' ? false : true,
             });
         }
         setIsModalOpen(true);
@@ -653,16 +656,6 @@ export default function FinancingPage() {
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2 flex items-end pb-2">
-                                <div className="flex items-center space-x-2">
-                                    <Switch
-                                        id="is-default"
-                                        checked={formData.isDefault}
-                                        onCheckedChange={c => setFormData(p => ({ ...p, isDefault: c }))}
-                                    />
-                                    <Label htmlFor="is-default">Domyślny dla kategorii</Label>
-                                </div>
-                            </div>
                         </div>
 
                         {formData.provider === 'INBANK' && (
@@ -775,6 +768,31 @@ export default function FinancingPage() {
                                     value={formData.maxInstallments}
                                     onChange={e => handleNumberChange('maxInstallments', e.target.value)}
                                 />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 border-t pt-4 bg-slate-50/50 -mx-6 px-6 py-4">
+                            <div className="flex items-center space-x-3">
+                                <Switch
+                                    id="has-balloon"
+                                    checked={formData.hasBalloonPayment}
+                                    onCheckedChange={checked => setFormData(p => ({ ...p, hasBalloonPayment: checked }))}
+                                />
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="has-balloon" className="text-sm font-semibold cursor-pointer">Obsługa raty balonowej</Label>
+                                    <p className="text-[10px] text-muted-foreground">Czy produkt pozwala na ustalenie wykupu (ostatniej raty).</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <Switch
+                                    id="is-default"
+                                    checked={formData.isDefault}
+                                    onCheckedChange={checked => setFormData(p => ({ ...p, isDefault: checked }))}
+                                />
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="is-default" className="text-sm font-semibold cursor-pointer">Produkt domyślny</Label>
+                                    <p className="text-[10px] text-muted-foreground">Główny produkt wybrany na start w kalkulatorze.</p>
+                                </div>
                             </div>
                         </div>
 

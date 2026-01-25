@@ -304,6 +304,7 @@ model FinancingProduct {
   maxFinalPayment   Float    @map("max_final_payment") // %
   minInstallments   Int      @map("min_installments")
   maxInstallments   Int      @map("max_installments")
+  hasBalloonPayment Boolean  @default(true) @map("has_balloon_payment")
   
   isDefault         Boolean  @default(false) @map("is_default")
   
