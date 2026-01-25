@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
     FinancingProduct,
     FinancingProductPayload,
+    FinancingProviderConfig,
     FinancingProviderConnection,
     FinancingProviderConnectionPayload
 } from '@/types/financing';
@@ -246,7 +247,10 @@ export default function FinancingPage() {
                 ...EMPTY_FORM,
                 category: forcedProvider === 'VEHIS' ? 'LEASING' : (activeTab as any),
                 provider: forcedProvider || 'OWN',
-                providerConfig,
+                providerConfig: {
+                    ...providerConfig,
+                    responseLevel: (providerConfig as any).responseLevel || 'simple',
+                } as FinancingProviderConfig,
                 hasBalloonPayment: forcedProvider === 'INBANK' ? false : true,
             });
         }
