@@ -146,7 +146,7 @@ export default function FinancingPage() {
     });
 
     const testConnectionMutation = useMutation({
-        mutationFn: (payload: { apiBaseUrl: string; apiKey: string; shopUuid: string }) => {
+        mutationFn: (payload: { provider: FinancingProviderConnectionPayload['provider']; apiBaseUrl: string; apiKey: string; apiSecret?: string; shopUuid?: string }) => {
             if (!token) throw new Error('Brak tokenu');
             return financingApi.testConnection(payload, token);
         },
@@ -193,6 +193,18 @@ export default function FinancingPage() {
     const handleOpenModal = (product?: FinancingProduct, forcedProvider?: FinancingProductPayload['provider']) => {
         if (product) {
             setEditingId(product.id);
+            const defaultProviderConfig = product.provider === 'INBANK'
+                ? {
+                    productCode: '',
+                    paymentDay: undefined,
+                    responseLevel: 'simple',
+                    currency: product.currency,
+                }
+                : product.provider === 'VEHIS'
+                    ? {
+                        clientType: 'entrepreneur',
+                    }
+                    : {};
             setFormData({
                 category: product.category,
                 name: product.name || '',
@@ -201,12 +213,7 @@ export default function FinancingPage() {
                 priority: product.priority ?? 0,
                 minAmount: product.minAmount ?? null,
                 maxAmount: product.maxAmount ?? null,
-                providerConfig: product.providerConfig ?? {
-                    productCode: '',
-                    paymentDay: undefined,
-                    responseLevel: 'simple',
-                    currency: product.currency,
-                },
+                providerConfig: product.providerConfig ?? defaultProviderConfig,
                 referenceRate: product.referenceRate,
                 margin: product.margin,
                 commission: product.commission,
@@ -217,11 +224,27 @@ export default function FinancingPage() {
                 isDefault: product.isDefault,
             });
         } else {
+            if (forcedProvider === 'VEHIS' && activeTab !== 'LEASING') {
+                setActiveTab('LEASING');
+            }
             setEditingId(null);
+            const providerConfig = forcedProvider === 'INBANK'
+                ? {
+                    productCode: '',
+                    paymentDay: undefined,
+                    responseLevel: 'simple',
+                    currency: 'PLN',
+                }
+                : forcedProvider === 'VEHIS'
+                    ? {
+                        clientType: 'entrepreneur',
+                    }
+                    : {};
             setFormData({
                 ...EMPTY_FORM,
-                category: activeTab as any,
+                category: forcedProvider === 'VEHIS' ? 'LEASING' : (activeTab as any),
                 provider: forcedProvider || 'OWN',
+                providerConfig,
             });
         }
         setIsModalOpen(true);
@@ -427,7 +450,7 @@ export default function FinancingPage() {
                                         connections.map((connection) => (
                                             <TableRow key={connection.id}>
                                                 <TableCell className="font-medium">
-                                                    {connection.provider === 'INBANK' ? 'Inbank' : connection.provider}
+                                    {connection.provider === 'INBANK' ? 'Inbank' : connection.provider === 'VEHIS' ? 'Vehis' : connection.provider}
                                                 </TableCell>
                                                 <TableCell>{connection.name}</TableCell>
                                                 <TableCell className="truncate max-w-[240px]">{connection.apiBaseUrl}</TableCell>
@@ -527,7 +550,13 @@ export default function FinancingPage() {
                                             filteredProducts.map((product) => (
                                                 <TableRow key={product.id}>
                                                     <TableCell className="font-medium">{product.name || '-'}</TableCell>
-                                                    <TableCell>{product.provider === 'INBANK' ? 'Inbank' : 'Produkt własny'}</TableCell>
+                                                    <TableCell>
+                                                        {product.provider === 'INBANK'
+                                                            ? 'Inbank'
+                                                            : product.provider === 'VEHIS'
+                                                                ? 'Vehis'
+                                                                : 'Produkt własny'}
+                                                    </TableCell>
                                                     <TableCell>{product.currency}</TableCell>
                                                     <TableCell>{product.priority ?? 0}</TableCell>
                                                     <TableCell>
@@ -620,7 +649,7 @@ export default function FinancingPage() {
                             <div className="space-y-2">
                                 <Label>Partner</Label>
                                 <div className="flex h-10 w-full rounded-md border border-input bg-slate-100 px-3 py-2 text-sm font-medium">
-                                    {formData.provider === 'INBANK' ? 'Inbank' : 'Produkt własny'}
+                                    {formData.provider === 'INBANK' ? 'Inbank' : formData.provider === 'VEHIS' ? 'Vehis' : 'Produkt własny'}
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -702,6 +731,27 @@ export default function FinancingPage() {
                                         >
                                             <option value="simple">simple</option>
                                             <option value="full">full</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {formData.provider === 'VEHIS' && (
+                            <div className="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+                                <div>
+                                    <Label className="text-sm text-muted-foreground">Konfiguracja Vehis</Label>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Typ klienta</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                                            value={formData.providerConfig?.clientType || 'entrepreneur'}
+                                            onChange={e => handleProviderConfigChange('clientType', e.target.value)}
+                                        >
+                                            <option value="entrepreneur">Przedsiębiorca</option>
+                                            <option value="consumer">Konsument</option>
                                         </select>
                                     </div>
                                 </div>
@@ -810,6 +860,7 @@ export default function FinancingPage() {
                                 }))}
                             >
                                 <option value="INBANK">Inbank</option>
+                                <option value="VEHIS">Vehis</option>
                             </select>
                         </div>
 
@@ -824,36 +875,41 @@ export default function FinancingPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>URL API (bazowy, np. https://api-demo.inbank.eu)</Label>
+                                <Label>URL API (bazowy)</Label>
                                 <Input
                                     value={connectionFormData.apiBaseUrl}
                                     onChange={e => setConnectionFormData(p => ({ ...p, apiBaseUrl: e.target.value }))}
-                                    placeholder="https://api-demo.inbank.eu"
+                                    placeholder={connectionFormData.provider === 'VEHIS'
+                                        ? 'https://sandbox-vash.vehistools.pl/api'
+                                        : 'https://api-demo.inbank.eu'}
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label>Shop UUID</Label>
-                                <Input
-                                    value={connectionFormData.shopUuid || ''}
-                                    onChange={e => setConnectionFormData(p => ({ ...p, shopUuid: e.target.value }))}
-                                    placeholder="138d0594-..."
-                                />
-                            </div>
+                            {connectionFormData.provider === 'INBANK' && (
+                                <div className="space-y-2">
+                                    <Label>Shop UUID</Label>
+                                    <Input
+                                        value={connectionFormData.shopUuid || ''}
+                                        onChange={e => setConnectionFormData(p => ({ ...p, shopUuid: e.target.value }))}
+                                        placeholder="138d0594-..."
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>API Key</Label>
+                                <Label>{connectionFormData.provider === 'VEHIS' ? 'Email' : 'API Key'}</Label>
                                 <Input
                                     value={connectionFormData.apiKey}
                                     onChange={e => setConnectionFormData(p => ({ ...p, apiKey: e.target.value }))}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>API Secret (opcjonalnie)</Label>
+                                <Label>{connectionFormData.provider === 'VEHIS' ? 'Hasło' : 'API Secret (opcjonalnie)'}</Label>
                                 <Input
                                     value={connectionFormData.apiSecret || ''}
                                     onChange={e => setConnectionFormData(p => ({ ...p, apiSecret: e.target.value }))}
+                                    type={connectionFormData.provider === 'VEHIS' ? 'password' : 'text'}
                                 />
                             </div>
                         </div>
@@ -872,11 +928,17 @@ export default function FinancingPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => testConnectionMutation.mutate({
+                                    provider: connectionFormData.provider,
                                     apiBaseUrl: connectionFormData.apiBaseUrl,
                                     apiKey: connectionFormData.apiKey,
+                                    apiSecret: connectionFormData.apiSecret || '',
                                     shopUuid: connectionFormData.shopUuid || ''
                                 })}
-                                disabled={testConnectionMutation.isPending || !connectionFormData.apiBaseUrl || !connectionFormData.apiKey}
+                                disabled={testConnectionMutation.isPending
+                                    || !connectionFormData.apiBaseUrl
+                                    || !connectionFormData.apiKey
+                                    || (connectionFormData.provider === 'INBANK' && !connectionFormData.shopUuid)
+                                    || (connectionFormData.provider === 'VEHIS' && !connectionFormData.apiSecret)}
                             >
                                 {testConnectionMutation.isPending ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                                 Testuj połączenie
@@ -902,7 +964,7 @@ export default function FinancingPage() {
                             Wybierz partnera finansowego dla tego produktu.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-4 py-6">
+                    <div className="grid grid-cols-3 gap-4 py-6">
                         <button
                             onClick={() => handleSelectProvider('INBANK')}
                             className="flex flex-col items-center justify-center p-6 space-y-4 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-slate-50 transition-all group"
@@ -913,6 +975,19 @@ export default function FinancingPage() {
                             <div className="text-center">
                                 <div className="font-bold text-lg">Inbank</div>
                                 <div className="text-sm text-muted-foreground">Automatyczna kalkulacja przez API</div>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => handleSelectProvider('VEHIS')}
+                            className="flex flex-col items-center justify-center p-6 space-y-4 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-slate-50 transition-all group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Plus className="w-6 h-6" />
+                            </div>
+                            <div className="text-center">
+                                <div className="font-bold text-lg">Vehis leasing</div>
+                                <div className="text-sm text-muted-foreground">Leasing z kalkulacją Vehis API</div>
                             </div>
                         </button>
 

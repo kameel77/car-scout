@@ -68,7 +68,34 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - `currency` (np. PLN, z konfiguracji produktu)
   - `responseLevel` (np. `simple`, z konfiguracji produktu)
 
-## 3. Konfiguracja proxy API frontendu przez zmienne srodowiskowe
+## 3. Integracja VASH (Vehis Tools) dla kalkulacji leasingu
+- **Cel**: obsługa zewnętrznych kalkulacji leasingowych (VASH) obok produktów własnych i Inbank, z możliwością użycia danych pojazdów z VASH jako źródła kalkulacji.
+- **Konfiguracja w panelu**:
+  - Administrator dodaje połączenie „Vehis” z danymi logowania (email/hasło) oraz bazowym URL API.
+  - Dostępny jest test połączenia, który weryfikuje poprawność logowania przez `/login`.
+  - Produkt „Vehis leasing” jest dostępny jako jeden z produktów leasingowych i może być oznaczony jako domyślny.
+- **Źródło danych**:
+  - Wyszukanie pojazdu po fragmencie nazwy przez `/broker/search` lub pobranie listy przez `/broker/subjects` w celu uzyskania `subjectId` i szczegółów pojazdu.
+  - `subjectId` staje się kluczowym identyfikatorem do dalszych wyliczeń.
+- **Zakresy opłat**:
+  - Endpoint `/broker/calculation/value/{subjectId}` zwraca dopuszczalne zakresy opłaty wstępnej oraz wykupu dla danego pojazdu.
+  - Te wartości powinny zasilać ograniczenia sliderów w kalkulatorze leasingu (min/max/default).
+- **Kalkulacja rat**:
+  - Endpoint `/broker/calculate` wylicza ratę na podstawie:
+    - `client`: `consumer` lub `entrepreneur` (mapowanie na typ klienta w aplikacji),
+    - `initialFee`: procent opłaty wstępnej,
+    - `repurchase`: procent wykupu,
+    - `duration`: okres w miesiącach (36/48/60),
+    - `cars`: lista aut z parametrami `state` (nowe/używane), `manufacturing_year`, `price`.
+  - Do wyliczenia raty endpoint `/broker/calculate` **nie wymaga `subjectId`** — jest używany tylko do pobrania zakresów opłat w `/broker/calculation/value/{subjectId}`.
+- **Autoryzacja**:
+  - Token uzyskiwany przez `/login` z `email` i `password` (token przechowywany bezpiecznie, np. w cache z TTL).
+  - Każde zapytanie do API VASH wymaga nagłówka autoryzacyjnego z tokenem.
+- **Obsługa błędów i fallback**:
+  - Przy błędach API VASH kalkulator powinien przełączać się na produkt własny (analogicznie do obecnego fallbacku Inbank).
+  - Logika retry i krótkie cache’owanie odpowiedzi ograniczy liczbę wywołań i opóźnienia.
+
+## 4. Konfiguracja proxy API frontendu przez zmienne srodowiskowe
 - **Cel**: umozliwienie wdrozen z roznymi adresami backendu (Coolify, docker-compose) bez zmian w kodzie frontendu.
 - **Zachowanie**:
   - Obraz frontendu podstawia adres backendu w konfiguracji Nginx przez zmienna `BACKEND_URL`.

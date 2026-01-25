@@ -396,6 +396,8 @@ export default function ListingDetailPage() {
                     discount
                   )}
                   currency={settings?.displayCurrency || 'PLN'}
+                  manufacturingYear={listing.production_year}
+                  mileageKm={listing.mileage_km}
                 />
               </section>
             )}
@@ -508,6 +510,8 @@ export default function ListingDetailPage() {
                       discount
                     )}
                     currency={settings?.displayCurrency || 'PLN'}
+                    manufacturingYear={listing.production_year}
+                    mileageKm={listing.mileage_km}
                   />
                 </motion.div>
               )}
