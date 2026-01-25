@@ -55,9 +55,9 @@ function EquipmentSectionComponent({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
-      className="equipment-section"
+      className="equipment-section break-inside-avoid mb-8"
     >
-      <div className="equipment-title">
+      <div className="equipment-title mb-3">
         <Icon className="h-5 w-5 text-primary" />
         <span>{title}</span>
         <span className="text-sm font-normal text-muted-foreground">
@@ -86,9 +86,13 @@ function EquipmentSectionComponent({
 export function EquipmentDisplay({ equipment }: EquipmentDisplayProps) {
   const { t } = useTranslation();
 
+  const activeSections = sectionConfig.filter(
+    (section) => (equipment[section.key] || []).length > 0
+  );
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {sectionConfig.map((section, index) => (
+    <div className="columns-1 md:columns-2 gap-8 space-y-0">
+      {activeSections.map((section, index) => (
         <EquipmentSectionComponent
           key={section.key}
           title={t(section.labelKey)}

@@ -270,7 +270,7 @@ export function FinancingCalculator({
                             value={[initialPaymentPct]}
                             min={selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0}
                             max={selectedProduct.maxInitialPayment}
-                            step={5}
+                            step={1}
                             onValueChange={v => setInitialPaymentPct(v[0])}
                             className="py-2"
                         />
@@ -290,7 +290,7 @@ export function FinancingCalculator({
                                 value={[finalPaymentPct]}
                                 min={selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0}
                                 max={selectedProduct.maxFinalPayment}
-                                step={5}
+                                step={1}
                                 onValueChange={v => setFinalPaymentPct(v[0])}
                                 className="py-2"
                             />
