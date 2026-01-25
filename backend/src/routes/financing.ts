@@ -233,13 +233,37 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 }
 
                 const result = await response.json().catch(() => ({}));
-                const monthlyInstallment = Number((result as any)?.cars?.[0]?.installment);
 
+                // Vehis returns rich object for broker/calculate
+                // We wrap it to match user's requested format for preview
+                const monthlyInstallment = Number((result as any)?.cars?.[0]?.installment);
                 if (!Number.isFinite(monthlyInstallment)) {
                     return reply.code(502).send({ error: 'Invalid provider response', details: result });
                 }
 
-                return { monthlyInstallment, provider: product.provider };
+                // Construct rich preview response
+                const richResult = result as any;
+                const richPreview = {
+                    client: richResult.client,
+                    initialFee: richResult.initialFee,
+                    repurchase: richResult.repurchase,
+                    duration: richResult.duration,
+                    cars: (richResult.cars || []).map((car: any) => ({
+                        state: car.state,
+                        manufacturing_year: car.manufacturing_year,
+                        price: car.price,
+                        installment: car.installment,
+                        initialFee: car.initialFee,
+                        repurchase: car.repurchase,
+                        wibor: car.wibor
+                    }))
+                };
+
+                return {
+                    monthlyInstallment,
+                    provider: product.provider,
+                    ...richPreview
+                };
             } catch (error) {
                 return reply.code(502).send({
                     error: 'Provider request failed',

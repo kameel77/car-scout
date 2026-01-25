@@ -135,6 +135,8 @@ export function FinancingCalculator({
                 });
                 if (!isCancelled) {
                     setExternalInstallment(response.monthlyInstallment);
+                    // We could also store more info here if needed for UI, 
+                    // but for compatibility with existing code we just use monthlyInstallment.
                 }
             } catch (error) {
                 if (!isCancelled) {

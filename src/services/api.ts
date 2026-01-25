@@ -566,7 +566,23 @@ export const financingApi = {
             throw new Error(error.error || 'Failed to calculate financing');
         }
 
-        return response.json() as Promise<{ monthlyInstallment: number; provider: string }>;
+        return response.json() as Promise<{
+            monthlyInstallment: number;
+            provider: string;
+            client?: string;
+            initialFee?: number;
+            repurchase?: number;
+            duration?: number;
+            cars?: Array<{
+                state: number;
+                manufacturing_year: number;
+                price: number;
+                installment: number;
+                initialFee: number;
+                repurchase: number;
+                wibor: string;
+            }>;
+        }>;
     },
 
     create: async (payload: FinancingProductPayload, token: string) => {
