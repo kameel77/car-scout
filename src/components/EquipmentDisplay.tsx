@@ -91,7 +91,7 @@ export function EquipmentDisplay({ equipment }: EquipmentDisplayProps) {
   );
 
   return (
-    <div className="columns-1 md:columns-2 gap-8 space-y-0">
+    <div className="columns-1 md:columns-2 gap-8 space-y-0 pb-8">
       {activeSections.map((section, index) => (
         <EquipmentSectionComponent
           key={section.key}
