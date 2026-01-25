@@ -37,7 +37,54 @@ const FinancingCalculateSchema = z.object({
     price: z.number(),
     downPaymentAmount: z.number(),
     period: z.number().int(),
+    initialFeePercent: z.number().optional(),
+    finalPaymentPercent: z.number().optional(),
+    manufacturingYear: z.number().int().optional(),
+    mileageKm: z.number().int().optional(),
 });
+
+const vehisTokenCache = new Map<string, { token: string; expiresAt: number }>();
+const VEHIS_TOKEN_TTL_MS = 50 * 60 * 1000;
+
+const getVehisToken = async (connection: { apiBaseUrl: string; apiKey: string; apiSecret?: string | null }) => {
+    const baseUrl = connection.apiBaseUrl.replace(/\/$/, '');
+    const cacheKey = `${baseUrl}:${connection.apiKey}`;
+    const cached = vehisTokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.token;
+    }
+
+    if (!connection.apiKey || !connection.apiSecret) {
+        throw new Error('Missing Vehis credentials');
+    }
+
+    const loginUrl = `${baseUrl}/login`;
+    const body = new URLSearchParams({
+        email: connection.apiKey || process.env.VEHIS_LOGIN || '',
+        password: connection.apiSecret || process.env.VEHIS_PASSWORD || ''
+    });
+
+    const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as { message?: string };
+        throw new Error(errorData?.message || 'Vehis authentication failed');
+    }
+
+    const result = await response.json().catch(() => ({})) as { token?: string };
+    if (!result.token) {
+        throw new Error('Vehis authentication failed');
+    }
+
+    vehisTokenCache.set(cacheKey, { token: result.token, expiresAt: Date.now() + VEHIS_TOKEN_TTL_MS });
+    return result.token;
+};
 
 export async function financingRoutes(fastify: FastifyInstance) {
     // Public: Get active products for calculator
@@ -66,7 +113,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(404).send({ error: 'Product not found' });
             }
 
-            if (product.provider !== 'INBANK') {
+            if (product.provider !== 'INBANK' && product.provider !== 'VEHIS') {
                 return reply.code(400).send({ error: 'Unsupported provider' });
             }
 
@@ -78,61 +125,127 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(409).send({ error: 'Connection not configured' });
             }
 
-            const config = (product.providerConfig || {}) as Record<string, any>;
-            if (!config.productCode || !config.paymentDay) {
-                return reply.code(422).send({ error: 'Missing provider configuration' });
+            if (product.provider === 'INBANK') {
+                const config = (product.providerConfig || {}) as Record<string, any>;
+                if (!config.productCode || !config.paymentDay) {
+                    return reply.code(422).send({ error: 'Missing provider configuration' });
+                }
+
+                // Inbank API calculation payload - strictly minimal as per docs
+                const payload = {
+                    product_code: config.productCode,
+                    amount: data.price - data.downPaymentAmount,
+                    period: data.period,
+                    payment_day: config.paymentDay
+                };
+
+                // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
+                const rawBaseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
+                const baseUrl = rawBaseUrl.replace(/\/partner(\/v2)?$/, '');
+                const apiKey = config.apiKey || connection.apiKey;
+                const shopUuid = config.shopUuid || connection.shopUuid;
+
+                const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({})) as { message?: string; error?: string };
+                    return reply.code(502).send({
+                        error: 'Provider request failed',
+                        details: errorData?.message || errorData?.error || 'Unknown provider error'
+                    });
+                }
+
+                const result = await response.json().catch(() => ({}));
+
+                // Inbank documentation says payment_amount_monthly or installment_amount
+                const monthlyInstallment = Number(
+                    (result as any)?.payment_amount_monthly
+                    ?? (result as any)?.paymentAmountMonthly
+                    ?? (result as any)?.installment_amount
+                    ?? (result as any)?.installmentAmount
+                    ?? (result as any)?.monthly_payment
+                    ?? (result as any)?.monthlyPayment
+                );
+
+                if (!Number.isFinite(monthlyInstallment)) {
+                    return reply.code(502).send({ error: 'Invalid provider response', details: result });
+                }
+
+                return { monthlyInstallment, provider: product.provider };
             }
 
-            // Inbank API calculation payload - strictly minimal as per docs
-            const payload = {
-                product_code: config.productCode,
-                amount: data.price - data.downPaymentAmount,
-                period: data.period,
-                payment_day: config.paymentDay
+            const config = (product.providerConfig || {}) as Record<string, any>;
+            if (!data.manufacturingYear) {
+                return reply.code(422).send({ error: 'Missing vehicle year' });
+            }
+
+            const clientType = config.clientType === 'consumer' ? 'consumer' : 'entrepreneur';
+            const initialFeePercent = data.initialFeePercent ?? Math.round((data.downPaymentAmount / data.price) * 100);
+            const finalPaymentPercent = data.finalPaymentPercent ?? 0;
+            const vehicleState = data.mileageKm != null && data.mileageKm > 10 ? 1 : 0;
+
+            const vehisPayload = {
+                client: clientType,
+                initialFee: Math.max(1, Math.min(50, Math.round(initialFeePercent))),
+                repurchase: Math.max(1, Math.min(35, Math.round(finalPaymentPercent))),
+                duration: data.period,
+                cars: [
+                    {
+                        state: vehicleState,
+                        manufacturing_year: data.manufacturingYear,
+                        price: Math.round(data.price)
+                    }
+                ]
             };
 
-            // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
-            const rawBaseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
-            const baseUrl = rawBaseUrl.replace(/\/partner(\/v2)?$/, '');
-            const apiKey = config.apiKey || connection.apiKey;
-            const shopUuid = config.shopUuid || connection.shopUuid;
+            try {
+                const token = await getVehisToken({
+                    apiBaseUrl: connection.apiBaseUrl,
+                    apiKey: connection.apiKey,
+                    apiSecret: connection.apiSecret
+                });
 
-            const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
+                const vehisUrl = `${connection.apiBaseUrl.replace(/\/$/, '')}/broker/calculate`;
+                const response = await fetch(vehisUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(vehisPayload)
+                });
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify(payload),
-            });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({})) as { message?: string };
+                    return reply.code(502).send({
+                        error: 'Provider request failed',
+                        details: errorData?.message || 'Unknown provider error'
+                    });
+                }
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({})) as { message?: string; error?: string };
+                const result = await response.json().catch(() => ({}));
+                const monthlyInstallment = Number((result as any)?.cars?.[0]?.installment);
+
+                if (!Number.isFinite(monthlyInstallment)) {
+                    return reply.code(502).send({ error: 'Invalid provider response', details: result });
+                }
+
+                return { monthlyInstallment, provider: product.provider };
+            } catch (error) {
                 return reply.code(502).send({
                     error: 'Provider request failed',
-                    details: errorData?.message || errorData?.error || 'Unknown provider error'
+                    details: error instanceof Error ? error.message : 'Unknown provider error'
                 });
             }
-
-            const result = await response.json().catch(() => ({}));
-
-            // Inbank documentation says payment_amount_monthly or installment_amount
-            const monthlyInstallment = Number(
-                (result as any)?.payment_amount_monthly
-                ?? (result as any)?.paymentAmountMonthly
-                ?? (result as any)?.installment_amount
-                ?? (result as any)?.installmentAmount
-                ?? (result as any)?.monthly_payment
-                ?? (result as any)?.monthlyPayment
-            );
-
-            if (!Number.isFinite(monthlyInstallment)) {
-                return reply.code(502).send({ error: 'Invalid provider response', details: result });
-            }
-
-            return { monthlyInstallment, provider: product.provider };
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) });
@@ -405,9 +518,49 @@ export async function financingRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         try {
-            const { apiBaseUrl, apiKey, shopUuid } = request.body as { apiBaseUrl: string; apiKey: string; shopUuid: string };
+            const { provider, apiBaseUrl, apiKey, apiSecret, shopUuid } = request.body as {
+                provider?: string;
+                apiBaseUrl: string;
+                apiKey: string;
+                apiSecret?: string;
+                shopUuid?: string;
+            };
 
-            if (!apiBaseUrl || !apiKey || !shopUuid) {
+            if (!apiBaseUrl || !apiKey) {
+                return reply.code(400).send({ error: 'Missing required fields' });
+            }
+
+            if (provider === 'VEHIS') {
+                if (!apiSecret) {
+                    return reply.code(400).send({ error: 'Missing required fields' });
+                }
+
+                const baseUrl = apiBaseUrl.replace(/\/$/, '');
+                const url = `${baseUrl}/login`;
+                const body = new URLSearchParams({
+                    email: apiKey || process.env.VEHIS_LOGIN || '',
+                    password: apiSecret || process.env.VEHIS_PASSWORD || ''
+                });
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body
+                });
+
+                const result: any = await response.json().catch(() => ({}));
+
+                if (response.ok && result?.token) {
+                    return { success: true, details: 'Sukces' };
+                }
+
+                const errorDetail = result?.message || 'Błąd autoryzacji (Email/Hasło)';
+                return { success: false, details: errorDetail };
+            }
+
+            if (!shopUuid) {
                 return reply.code(400).send({ error: 'Missing required fields' });
             }
 

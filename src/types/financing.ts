@@ -3,7 +3,7 @@ export interface FinancingProduct {
     category: 'CREDIT' | 'LEASING' | 'RENT';
     name?: string;
     currency: string;
-    provider: 'OWN' | 'INBANK';
+    provider: 'OWN' | 'INBANK' | 'VEHIS';
     priority: number;
     minAmount?: number | null;
     maxAmount?: number | null;
@@ -30,11 +30,12 @@ export interface FinancingProviderConfig {
     paymentDay?: number;
     responseLevel?: 'simple' | 'full';
     currency?: string;
+    clientType?: 'consumer' | 'entrepreneur';
 }
 
 export interface FinancingProviderConnection {
     id: string;
-    provider: 'INBANK' | 'OWN';
+    provider: 'INBANK' | 'OWN' | 'VEHIS';
     name: string;
     apiBaseUrl: string;
     apiKey: string;

@@ -16,9 +16,17 @@ interface FinancingCalculatorProps {
     listingId?: string;
     price: number;
     currency?: string;
+    manufacturingYear?: number;
+    mileageKm?: number;
 }
 
-export function FinancingCalculator({ listingId, price, currency = 'PLN' }: FinancingCalculatorProps) {
+export function FinancingCalculator({
+    listingId,
+    price,
+    currency = 'PLN',
+    manufacturingYear,
+    mileageKm
+}: FinancingCalculatorProps) {
     const navigate = useNavigate();
     const { data, isLoading } = useQuery({
         queryKey: ['financing-calculator'],
@@ -107,7 +115,7 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
     React.useEffect(() => {
         let isCancelled = false;
         const calculateExternal = async () => {
-            if (!selectedProduct || selectedProduct.provider !== 'INBANK') {
+            if (!selectedProduct || selectedProduct.provider === 'OWN') {
                 setExternalInstallment(null);
                 setExternalLoading(false);
                 return;
@@ -120,13 +128,17 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                     price,
                     downPaymentAmount: initialPaymentAmount,
                     period: months,
+                    initialFeePercent: initialPaymentPct,
+                    finalPaymentPercent: finalPaymentPct,
+                    manufacturingYear,
+                    mileageKm
                 });
                 if (!isCancelled) {
                     setExternalInstallment(response.monthlyInstallment);
                 }
             } catch (error) {
                 if (!isCancelled) {
-                    console.error('Inbank calculation failed:', error);
+                    console.error('External calculation failed:', error);
                     // Add to failed set to trigger fallback to next candidate
                     setFailedProducts(prev => new Set([...prev, selectedProduct.id]));
                     setExternalInstallment(null);
@@ -143,14 +155,16 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
         return () => {
             isCancelled = true;
         };
-    }, [selectedProduct, price, initialPaymentAmount, months]);
+    }, [selectedProduct, price, initialPaymentAmount, initialPaymentPct, finalPaymentPct, months, manufacturingYear, mileageKm]);
 
     React.useEffect(() => {
         if (!selectedProduct) return;
+        const vehisMinInitial = selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0;
+        const vehisMinFinal = selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0;
         setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
-        setInitialPaymentPct(Math.min(10, selectedProduct.maxInitialPayment));
+        setInitialPaymentPct(Math.max(vehisMinInitial, Math.min(10, selectedProduct.maxInitialPayment)));
         setFinalPaymentPct(selectedProduct.hasBalloonPayment
-            ? Math.min(20, selectedProduct.maxFinalPayment)
+            ? Math.max(vehisMinFinal, Math.min(20, selectedProduct.maxFinalPayment))
             : 0
         );
     }, [selectedProduct]);
@@ -199,7 +213,7 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
     // Add commission? Usually commission is upfront or added to financing.
     // Spec says: "prowizja za uruchomienie kredytu w procetach". Usually upfront.
     const commissionAmount = amountToFinance * selectedProduct.commission / 100;
-    const displayInstallment = selectedProduct.provider === 'INBANK' ? externalInstallment : monthlyInstallment;
+    const displayInstallment = selectedProduct.provider === 'OWN' ? monthlyInstallment : externalInstallment;
 
     return (
         <Card className="border-slate-200">
@@ -252,7 +266,7 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                         </div>
                         <Slider
                             value={[initialPaymentPct]}
-                            min={0}
+                            min={selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0}
                             max={selectedProduct.maxInitialPayment}
                             step={5}
                             onValueChange={v => setInitialPaymentPct(v[0])}
@@ -272,7 +286,7 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                             </div>
                             <Slider
                                 value={[finalPaymentPct]}
-                                min={0}
+                                min={selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0}
                                 max={selectedProduct.maxFinalPayment}
                                 step={5}
                                 onValueChange={v => setFinalPaymentPct(v[0])}
@@ -290,7 +304,7 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                                 ? '...'
                                 : formatPrice(displayInstallment ?? monthlyInstallment, currency)}
                         </span>
-                        {selectedProduct.provider === 'INBANK' && displayInstallment == null && !externalLoading && (
+                        {selectedProduct.provider !== 'OWN' && displayInstallment == null && !externalLoading && (
                             <div className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-1">
                                 <Info className="w-3 h-3" />
                                 Kalkulacja szacunkowa
@@ -301,9 +315,9 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                         )}
                     </div>
 
-                    {selectedProduct.provider === 'INBANK' ? (
+                    {selectedProduct.provider !== 'OWN' ? (
                         <div className="mt-6 pt-4 border-t border-slate-200 text-sm text-muted-foreground text-center">
-                            Rata wyliczana na podstawie kalkulacji banku.
+                            Rata wyliczana na podstawie kalkulacji partnera finansowego.
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-200">
@@ -348,6 +362,6 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                     </Button>
                 )}
             </CardContent>
-        </Card>
+        </Card >
     );
 }
