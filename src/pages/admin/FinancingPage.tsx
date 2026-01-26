@@ -215,7 +215,7 @@ export default function FinancingPage() {
                 priority: product.priority ?? 0,
                 minAmount: product.minAmount ?? null,
                 maxAmount: product.maxAmount ?? null,
-                providerConfig: product.providerConfig ?? defaultProviderConfig,
+                providerConfig: (product.providerConfig ?? defaultProviderConfig) as FinancingProviderConfig,
                 referenceRate: product.referenceRate,
                 margin: product.margin,
                 commission: product.commission,
@@ -249,7 +249,7 @@ export default function FinancingPage() {
                 provider: forcedProvider || 'OWN',
                 providerConfig: {
                     ...providerConfig,
-                    responseLevel: (providerConfig as any).responseLevel || 'simple',
+                    responseLevel: ((providerConfig as any).responseLevel || 'simple') as "simple" | "full",
                 } as FinancingProviderConfig,
                 hasBalloonPayment: forcedProvider === 'INBANK' ? false : true,
             });
@@ -345,136 +345,234 @@ export default function FinancingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50/50">
-            <header className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl font-bold text-foreground">Finansowanie</h1>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Finansowanie
+                </h1>
+                <p className="text-gray-600">
+                    Zarządzaj ofertą produktów finansowych (Kredyt, Leasing, Najem).
+                </p>
+            </div>
+
+            {/* Global Settings Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Konfiguracja Kalkulatora</CardTitle>
+                    <CardDescription>Ustawienia widoczności i umiejscowienia kalkulatora na stronie oferty</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label className="text-base">Pokaż kalkulator na karcie pojazdu</Label>
                             <p className="text-sm text-muted-foreground">
-                                Zarządzaj ofertą produktów finansowych (Kredyt, Leasing, Najem)
+                                Włącz lub wyłącz widoczność modułu finansowania dla klientów
                             </p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <AdminNav />
-                            <Button onClick={handleLogout} variant="outline" size="sm">
-                                <LogOut className="w-4 h-4 mr-2" />
-                                Logout
-                            </Button>
-                        </div>
+                        <Switch
+                            checked={settings?.financingCalculatorEnabled ?? true}
+                            onCheckedChange={(checked) => handleSettingsChange('financingCalculatorEnabled', checked)}
+                        />
                     </div>
-                </div>
-            </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-
-                {/* Global Settings Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Konfiguracja Kalkulatora</CardTitle>
-                        <CardDescription>Ustawienia widoczności i umiejscowienia kalkulatora na stronie oferty</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label className="text-base">Pokaż kalkulator na karcie pojazdu</Label>
-                                <p className="text-sm text-muted-foreground">
-                                    Włącz lub wyłącz widoczność modułu finansowania dla klientów
-                                </p>
-                            </div>
-                            <Switch
-                                checked={settings?.financingCalculatorEnabled ?? true}
-                                onCheckedChange={(checked) => handleSettingsChange('financingCalculatorEnabled', checked)}
-                            />
-                        </div>
-
-                        <div className="space-y-3">
-                            <Label className="text-base">Umiejscowienie kalkulatora</Label>
-                            <RadioGroup
-                                value={settings?.financingCalculatorLocation ?? 'main'}
-                                onValueChange={(val) => handleSettingsChange('financingCalculatorLocation', val)}
-                                className="grid grid-cols-2 gap-4"
-                            >
-                                <div>
-                                    <RadioGroupItem value="main" id="loc-main" className="peer sr-only" />
-                                    <Label htmlFor="loc-main" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                        <span className="mb-2 text-lg font-semibold">Część Główna</span>
-                                        <span className="text-sm text-center text-muted-foreground">Pod specyfikacją i wyposażeniem (domyślne)</span>
-                                    </Label>
-                                </div>
-                                <div>
-                                    <RadioGroupItem value="sidebar" id="loc-sidebar" className="peer sr-only" />
-                                    <Label htmlFor="loc-sidebar" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                        <span className="mb-2 text-lg font-semibold">Panel Boczny (Widget)</span>
-                                        <span className="text-sm text-center text-muted-foreground">Pod ceną i przyciskami (wąski wariant)</span>
-                                    </Label>
-                                </div>
-                            </RadioGroup>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                        <Label className="text-base">Umiejscowienie kalkulatora</Label>
+                        <RadioGroup
+                            value={settings?.financingCalculatorLocation ?? 'main'}
+                            onValueChange={(val) => handleSettingsChange('financingCalculatorLocation', val)}
+                            className="grid grid-cols-2 gap-4"
+                        >
                             <div>
-                                <CardTitle>Połączenia z instytucjami</CardTitle>
-                                <CardDescription>Konfiguracja połączeń do API partnerów finansowych</CardDescription>
+                                <RadioGroupItem value="main" id="loc-main" className="peer sr-only" />
+                                <Label htmlFor="loc-main" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <span className="mb-2 text-lg font-semibold">Część Główna</span>
+                                    <span className="text-sm text-center text-muted-foreground">Pod specyfikacją i wyposażeniem (domyślne)</span>
+                                </Label>
                             </div>
-                            <Button onClick={() => handleOpenConnectionModal()}>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Dodaj Połączenie
-                            </Button>
+                            <div>
+                                <RadioGroupItem value="sidebar" id="loc-sidebar" className="peer sr-only" />
+                                <Label htmlFor="loc-sidebar" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <span className="mb-2 text-lg font-semibold">Panel Boczny (Widget)</span>
+                                    <span className="text-sm text-center text-muted-foreground">Pod ceną i przyciskami (wąski wariant)</span>
+                                </Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Połączenia z instytucjami</CardTitle>
+                            <CardDescription>Konfiguracja połączeń do API partnerów finansowych</CardDescription>
                         </div>
-                    </CardHeader>
-                    <CardContent>
+                        <Button onClick={() => handleOpenConnectionModal()}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Dodaj Połączenie
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Partner</TableHead>
+                                    <TableHead>Nazwa</TableHead>
+                                    <TableHead>URL API</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Akcje</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isConnectionsLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                            <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
+                                            Ładowanie...
+                                        </TableCell>
+                                    </TableRow>
+                                ) : connections.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                            Brak skonfigurowanych połączeń.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    connections.map((connection) => (
+                                        <TableRow key={connection.id}>
+                                            <TableCell className="font-medium">
+                                                {connection.provider === 'INBANK' ? 'Inbank' : connection.provider === 'VEHIS' ? 'Vehis' : connection.provider}
+                                            </TableCell>
+                                            <TableCell>{connection.name}</TableCell>
+                                            <TableCell className="truncate max-w-[240px]">{connection.apiBaseUrl}</TableCell>
+                                            <TableCell>
+                                                {connection.isActive ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                        Aktywne
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                        Nieaktywne
+                                                    </span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="ghost" size="sm" onClick={() => handleOpenConnectionModal(connection)}>
+                                                        <Edit className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-600 hover:text-red-700"
+                                                        onClick={() => {
+                                                            if (confirm('Czy na pewno usunąć to połączenie?')) {
+                                                                deleteConnectionMutation.mutate(connection.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Produkty Finansowe</CardTitle>
+                            <CardDescription>Lista aktywnych produktów dla kalkulatora</CardDescription>
+                        </div>
+                        <Button onClick={handleOpenChoiceModal}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Dodaj Produkt
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                        <TabsList>
+                            <TabsTrigger value="CREDIT">Kredyt</TabsTrigger>
+                            <TabsTrigger value="LEASING">Leasing</TabsTrigger>
+                            <TabsTrigger value="RENT">Najem</TabsTrigger>
+                        </TabsList>
+
                         <div className="rounded-md border">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Partner</TableHead>
                                         <TableHead>Nazwa</TableHead>
-                                        <TableHead>URL API</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        <TableHead>Partner</TableHead>
+                                        <TableHead>Waluta</TableHead>
+                                        <TableHead>Priorytet</TableHead>
+                                        <TableHead>Zakres kwoty</TableHead>
+                                        <TableHead>WIBOR/EURIBOR</TableHead>
+                                        <TableHead>Marża</TableHead>
+                                        <TableHead>Prowizja</TableHead>
+                                        <TableHead>Max Wpłata</TableHead>
+                                        <TableHead>Raty (min-max)</TableHead>
+                                        <TableHead>Domyślny</TableHead>
                                         <TableHead className="text-right">Akcje</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isConnectionsLoading ? (
+                                    {isLoading ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                            <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                                                 <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
                                                 Ładowanie...
                                             </TableCell>
                                         </TableRow>
-                                    ) : connections.length === 0 ? (
+                                    ) : filteredProducts.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                                Brak skonfigurowanych połączeń.
+                                            <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                                                Brak produktów w tej kategorii.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        connections.map((connection) => (
-                                            <TableRow key={connection.id}>
-                                                <TableCell className="font-medium">
-                                                    {connection.provider === 'INBANK' ? 'Inbank' : connection.provider === 'VEHIS' ? 'Vehis' : connection.provider}
-                                                </TableCell>
-                                                <TableCell>{connection.name}</TableCell>
-                                                <TableCell className="truncate max-w-[240px]">{connection.apiBaseUrl}</TableCell>
+                                        filteredProducts.map((product) => (
+                                            <TableRow key={product.id}>
+                                                <TableCell className="font-medium">{product.name || '-'}</TableCell>
                                                 <TableCell>
-                                                    {connection.isActive ? (
+                                                    {product.provider === 'INBANK'
+                                                        ? 'Inbank'
+                                                        : product.provider === 'VEHIS'
+                                                            ? 'Vehis'
+                                                            : 'Produkt własny'}
+                                                </TableCell>
+                                                <TableCell>{product.currency}</TableCell>
+                                                <TableCell>{product.priority ?? 0}</TableCell>
+                                                <TableCell>
+                                                    {product.minAmount != null || product.maxAmount != null
+                                                        ? `${product.minAmount ?? '-'} - ${product.maxAmount ?? '-'}`
+                                                        : '-'}
+                                                </TableCell>
+                                                <TableCell>{product.referenceRate}%</TableCell>
+                                                <TableCell>{product.margin}%</TableCell>
+                                                <TableCell>{product.commission}%</TableCell>
+                                                <TableCell>{product.maxInitialPayment}%</TableCell>
+                                                <TableCell>{product.minInstallments}-{product.maxInstallments}</TableCell>
+                                                <TableCell>
+                                                    {product.isDefault && (
                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                                            Aktywne
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                                                            Nieaktywne
+                                                            Default
                                                         </span>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        <Button variant="ghost" size="sm" onClick={() => handleOpenConnectionModal(connection)}>
+                                                        <Button variant="ghost" size="sm" onClick={() => handleOpenModal(product)}>
                                                             <Edit className="w-4 h-4" />
                                                         </Button>
                                                         <Button
@@ -482,8 +580,8 @@ export default function FinancingPage() {
                                                             size="sm"
                                                             className="text-red-600 hover:text-red-700"
                                                             onClick={() => {
-                                                                if (confirm('Czy na pewno usunąć to połączenie?')) {
-                                                                    deleteConnectionMutation.mutate(connection.id);
+                                                                if (confirm('Czy na pewno usunąć ten produkt?')) {
+                                                                    deleteMutation.mutate(product.id);
                                                                 }
                                                             }}
                                                         >
@@ -497,121 +595,9 @@ export default function FinancingPage() {
                                 </TableBody>
                             </Table>
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle>Produkty Finansowe</CardTitle>
-                                <CardDescription>Lista aktywnych produktów dla kalkulatora</CardDescription>
-                            </div>
-                            <Button onClick={handleOpenChoiceModal}>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Dodaj Produkt
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                            <TabsList>
-                                <TabsTrigger value="CREDIT">Kredyt</TabsTrigger>
-                                <TabsTrigger value="LEASING">Leasing</TabsTrigger>
-                                <TabsTrigger value="RENT">Najem</TabsTrigger>
-                            </TabsList>
-
-                            <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Nazwa</TableHead>
-                                            <TableHead>Partner</TableHead>
-                                            <TableHead>Waluta</TableHead>
-                                            <TableHead>Priorytet</TableHead>
-                                            <TableHead>Zakres kwoty</TableHead>
-                                            <TableHead>WIBOR/EURIBOR</TableHead>
-                                            <TableHead>Marża</TableHead>
-                                            <TableHead>Prowizja</TableHead>
-                                            <TableHead>Max Wpłata</TableHead>
-                                            <TableHead>Raty (min-max)</TableHead>
-                                            <TableHead>Domyślny</TableHead>
-                                            <TableHead className="text-right">Akcje</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {isLoading ? (
-                                            <TableRow>
-                                                <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
-                                                    <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
-                                                    Ładowanie...
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : filteredProducts.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
-                                                    Brak produktów w tej kategorii.
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            filteredProducts.map((product) => (
-                                                <TableRow key={product.id}>
-                                                    <TableCell className="font-medium">{product.name || '-'}</TableCell>
-                                                    <TableCell>
-                                                        {product.provider === 'INBANK'
-                                                            ? 'Inbank'
-                                                            : product.provider === 'VEHIS'
-                                                                ? 'Vehis'
-                                                                : 'Produkt własny'}
-                                                    </TableCell>
-                                                    <TableCell>{product.currency}</TableCell>
-                                                    <TableCell>{product.priority ?? 0}</TableCell>
-                                                    <TableCell>
-                                                        {product.minAmount != null || product.maxAmount != null
-                                                            ? `${product.minAmount ?? '-'} - ${product.maxAmount ?? '-'}`
-                                                            : '-'}
-                                                    </TableCell>
-                                                    <TableCell>{product.referenceRate}%</TableCell>
-                                                    <TableCell>{product.margin}%</TableCell>
-                                                    <TableCell>{product.commission}%</TableCell>
-                                                    <TableCell>{product.maxInitialPayment}%</TableCell>
-                                                    <TableCell>{product.minInstallments}-{product.maxInstallments}</TableCell>
-                                                    <TableCell>
-                                                        {product.isDefault && (
-                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                                                Default
-                                                            </span>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            <Button variant="ghost" size="sm" onClick={() => handleOpenModal(product)}>
-                                                                <Edit className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="text-red-600 hover:text-red-700"
-                                                                onClick={() => {
-                                                                    if (confirm('Czy na pewno usunąć ten produkt?')) {
-                                                                        deleteMutation.mutate(product.id);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </Tabs>
-                    </CardContent>
-                </Card>
-            </main>
+                    </Tabs>
+                </CardContent>
+            </Card>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-2xl">
@@ -1028,6 +1014,6 @@ export default function FinancingPage() {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

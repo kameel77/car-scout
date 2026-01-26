@@ -77,24 +77,23 @@ export default function LoginPage() {
                         >
                             {isLoading ? 'Signing in...' : 'Sign In'}
                         </Button>
-                        <div className="text-center mt-4">
+                        <div className="text-center mt-4 space-y-4">
                             <button
                                 type="button"
                                 onClick={() => navigate('/admin/forgot-password')}
-                                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+                                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors block w-full"
                             >
                                 Zapomniałeś hasła?
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/')}
+                                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium transition-colors block w-full"
+                            >
+                                &larr; wróć do serwisu
+                            </button>
                         </div>
                     </form>
-
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs text-blue-800 dark:text-blue-200">
-                            <strong>Default credentials:</strong><br />
-                            Email: admin@carscout.pl<br />
-                            Password: admin123
-                        </p>
-                    </div>
                 </CardContent>
             </Card>
         </div>
