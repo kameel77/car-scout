@@ -545,7 +545,16 @@ export const financingApi = {
         return response.json();
     },
 
-    calculate: async (payload: { productId: string; price: number; downPaymentAmount: number; period: number }) => {
+    calculate: async (payload: {
+        productId: string;
+        price: number;
+        downPaymentAmount: number;
+        period: number;
+        initialFeePercent?: number;
+        finalPaymentPercent?: number;
+        manufacturingYear?: number;
+        mileageKm?: number;
+    }) => {
         const response = await fetch(`${API_BASE_URL}/api/financing/calculate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -557,7 +566,23 @@ export const financingApi = {
             throw new Error(error.error || 'Failed to calculate financing');
         }
 
-        return response.json() as Promise<{ monthlyInstallment: number; provider: string }>;
+        return response.json() as Promise<{
+            monthlyInstallment: number;
+            provider: string;
+            client?: string;
+            initialFee?: number;
+            repurchase?: number;
+            duration?: number;
+            cars?: Array<{
+                state: number;
+                manufacturing_year: number;
+                price: number;
+                installment: number;
+                initialFee: number;
+                repurchase: number;
+                wibor: string;
+            }>;
+        }>;
     },
 
     create: async (payload: FinancingProductPayload, token: string) => {
@@ -665,7 +690,7 @@ export const financingApi = {
         return response.json();
     },
 
-    testConnection: async (payload: { apiBaseUrl: string; apiKey: string; shopUuid: string }, token: string) => {
+    testConnection: async (payload: { provider: string; apiBaseUrl: string; apiKey: string; apiSecret?: string; shopUuid?: string }, token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/financing/test-connection`, {
             method: 'POST',
             headers: {

@@ -16,9 +16,17 @@ interface FinancingCalculatorProps {
     listingId?: string;
     price: number;
     currency?: string;
+    manufacturingYear?: number;
+    mileageKm?: number;
 }
 
-export function FinancingCalculator({ listingId, price, currency = 'PLN' }: FinancingCalculatorProps) {
+export function FinancingCalculator({
+    listingId,
+    price,
+    currency = 'PLN',
+    manufacturingYear,
+    mileageKm
+}: FinancingCalculatorProps) {
     const navigate = useNavigate();
     const { data, isLoading } = useQuery({
         queryKey: ['financing-calculator'],
@@ -107,7 +115,7 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
     React.useEffect(() => {
         let isCancelled = false;
         const calculateExternal = async () => {
-            if (!selectedProduct || selectedProduct.provider !== 'INBANK') {
+            if (!selectedProduct || selectedProduct.provider === 'OWN') {
                 setExternalInstallment(null);
                 setExternalLoading(false);
                 return;
@@ -120,13 +128,19 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                     price,
                     downPaymentAmount: initialPaymentAmount,
                     period: months,
+                    initialFeePercent: initialPaymentPct,
+                    finalPaymentPercent: finalPaymentPct,
+                    manufacturingYear,
+                    mileageKm
                 });
                 if (!isCancelled) {
                     setExternalInstallment(response.monthlyInstallment);
+                    // We could also store more info here if needed for UI, 
+                    // but for compatibility with existing code we just use monthlyInstallment.
                 }
             } catch (error) {
                 if (!isCancelled) {
-                    console.error('Inbank calculation failed:', error);
+                    console.error('External calculation failed:', error);
                     // Add to failed set to trigger fallback to next candidate
                     setFailedProducts(prev => new Set([...prev, selectedProduct.id]));
                     setExternalInstallment(null);
@@ -143,14 +157,16 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
         return () => {
             isCancelled = true;
         };
-    }, [selectedProduct, price, initialPaymentAmount, months]);
+    }, [selectedProduct, price, initialPaymentAmount, initialPaymentPct, finalPaymentPct, months, manufacturingYear, mileageKm]);
 
     React.useEffect(() => {
         if (!selectedProduct) return;
+        const vehisMinInitial = selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0;
+        const vehisMinFinal = selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0;
         setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
-        setInitialPaymentPct(Math.min(10, selectedProduct.maxInitialPayment));
+        setInitialPaymentPct(Math.max(vehisMinInitial, Math.min(10, selectedProduct.maxInitialPayment)));
         setFinalPaymentPct(selectedProduct.hasBalloonPayment
-            ? Math.min(20, selectedProduct.maxFinalPayment)
+            ? Math.max(vehisMinFinal, Math.min(20, selectedProduct.maxFinalPayment))
             : 0
         );
     }, [selectedProduct]);
@@ -199,131 +215,142 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
     // Add commission? Usually commission is upfront or added to financing.
     // Spec says: "prowizja za uruchomienie kredytu w procetach". Usually upfront.
     const commissionAmount = amountToFinance * selectedProduct.commission / 100;
-    const displayInstallment = selectedProduct.provider === 'INBANK' ? externalInstallment : monthlyInstallment;
+    const displayInstallment = selectedProduct.provider === 'OWN' ? monthlyInstallment : externalInstallment;
 
     return (
-        <Card className="border-slate-200">
-            <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl font-heading">
+        <Card className="border-slate-200 shadow-none">
+            <CardHeader className="pb-3 pt-4">
+                <CardTitle className="flex items-center gap-2 text-lg font-heading">
                     <Calculator className="w-5 h-5 text-primary" />
                     Kalkulator finansowania
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 pt-0">
                 <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as FinancingProduct['category'])} className="w-full">
-                    <TabsList className="w-full justify-start grid grid-cols-3">
+                    <TabsList className="w-full justify-start grid grid-cols-3 h-9">
                         {categories.map(cat => (
-                            <TabsTrigger key={cat} value={cat}>
+                            <TabsTrigger key={cat} value={cat} className="text-xs py-1">
                                 {cat === 'CREDIT' ? 'Kredyt' : cat === 'LEASING' ? 'Leasing' : 'Najem'}
                             </TabsTrigger>
                         ))}
                     </TabsList>
                 </Tabs>
 
-                <div className="space-y-6 pt-2">
+                <div className="space-y-4 pt-1">
                     {/* Installments Slider */}
-                    <div className="space-y-3">
-                        <div className="flex justify-between">
-                            <Label>Okres finansowania (miesiące)</Label>
-                            <span className="font-semibold">{months} mies.</span>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-baseline">
+                            <Label className="text-sm">Okres finansowania</Label>
+                            <span className="font-semibold text-sm">{months} mies.</span>
                         </div>
-                        <Slider
-                            value={[months]}
-                            min={selectedProduct.minInstallments}
-                            max={selectedProduct.maxInstallments}
-                            step={12}
-                            onValueChange={v => setMonths(v[0])}
-                            className="py-2"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{selectedProduct.minInstallments}</span>
-                            <span>{selectedProduct.maxInstallments}</span>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-muted-foreground w-4">{selectedProduct.minInstallments}</span>
+                            <Slider
+                                value={[months]}
+                                min={selectedProduct.minInstallments}
+                                max={selectedProduct.maxInstallments}
+                                step={12}
+                                onValueChange={v => setMonths(v[0])}
+                                className="flex-1"
+                            />
+                            <span className="text-[10px] text-muted-foreground w-4">{selectedProduct.maxInstallments}</span>
                         </div>
                     </div>
 
                     {/* Initial Payment Slider */}
-                    <div className="space-y-3">
-                        <div className="flex justify-between">
-                            <Label>Wpłata własna</Label>
-                            <div className="text-right">
-                                <span className="font-semibold block">{initialPaymentPct}%</span>
-                                <span className="text-xs text-muted-foreground">{formatPrice(initialPaymentAmount, currency)}</span>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-baseline">
+                            <Label className="text-sm">Wpłata własna</Label>
+                            <div className="text-right flex items-baseline gap-2">
+                                <span className="font-semibold text-sm">{initialPaymentPct}%</span>
+                                <span className="text-[10px] text-muted-foreground">{formatPrice(initialPaymentAmount, currency)}</span>
                             </div>
                         </div>
-                        <Slider
-                            value={[initialPaymentPct]}
-                            min={0}
-                            max={selectedProduct.maxInitialPayment}
-                            step={5}
-                            onValueChange={v => setInitialPaymentPct(v[0])}
-                            className="py-2"
-                        />
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-muted-foreground w-4">
+                                {selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0}%
+                            </span>
+                            <Slider
+                                value={[initialPaymentPct]}
+                                min={selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0}
+                                max={selectedProduct.maxInitialPayment}
+                                step={1}
+                                onValueChange={v => setInitialPaymentPct(v[0])}
+                                className="flex-1"
+                            />
+                            <span className="text-[10px] text-muted-foreground w-4">{selectedProduct.maxInitialPayment}%</span>
+                        </div>
                     </div>
 
                     {/* Final Payment Slider (Balloon) */}
                     {selectedProduct.hasBalloonPayment && (
-                        <div className="space-y-3">
-                            <div className="flex justify-between">
-                                <Label>Wykup (Rata balonowa)</Label>
-                                <div className="text-right">
-                                    <span className="font-semibold block">{finalPaymentPct}%</span>
-                                    <span className="text-xs text-muted-foreground">{formatPrice(finalPaymentAmount, currency)}</span>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-baseline">
+                                <Label className="text-sm">Wykup (Rata balonowa)</Label>
+                                <div className="text-right flex items-baseline gap-2">
+                                    <span className="font-semibold text-sm">{finalPaymentPct}%</span>
+                                    <span className="text-[10px] text-muted-foreground">{formatPrice(finalPaymentAmount, currency)}</span>
                                 </div>
                             </div>
-                            <Slider
-                                value={[finalPaymentPct]}
-                                min={0}
-                                max={selectedProduct.maxFinalPayment}
-                                step={5}
-                                onValueChange={v => setFinalPaymentPct(v[0])}
-                                className="py-2"
-                            />
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] text-muted-foreground w-4">
+                                    {selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0}%
+                                </span>
+                                <Slider
+                                    value={[finalPaymentPct]}
+                                    min={selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0}
+                                    max={selectedProduct.maxFinalPayment}
+                                    step={1}
+                                    onValueChange={v => setFinalPaymentPct(v[0])}
+                                    className="flex-1"
+                                />
+                                <span className="text-[10px] text-muted-foreground w-4">{selectedProduct.maxFinalPayment}%</span>
+                            </div>
                         </div>
                     )}
                 </div>
 
-                <div className="bg-slate-50 rounded-lg p-6 mt-6 border border-slate-100">
-                    <div className="flex flex-col items-center justify-center text-center space-y-2">
-                        <span className="text-sm text-muted-foreground font-medium uppercase tracking-wide">Miesięczna rata</span>
-                        <span className="text-4xl font-bold text-primary">
+                <div className="bg-slate-50 rounded-lg p-4 mt-2 border border-slate-100">
+                    <div className="flex flex-col items-center justify-center text-center space-y-1">
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Miesięczna rata</span>
+                        <span className="text-3xl font-bold text-primary">
                             {selectedProduct.provider === 'INBANK' && externalLoading && displayInstallment == null
                                 ? '...'
                                 : formatPrice(displayInstallment ?? monthlyInstallment, currency)}
                         </span>
-                        {selectedProduct.provider === 'INBANK' && displayInstallment == null && !externalLoading && (
-                            <div className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-1">
-                                <Info className="w-3 h-3" />
+                        {selectedProduct.provider !== 'OWN' && displayInstallment == null && !externalLoading && (
+                            <div className="flex items-center gap-1 text-[9px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-1">
+                                <Info className="w-2.5 h-2.5" />
                                 Kalkulacja szacunkowa
                             </div>
                         )}
                         {selectedProduct.category === 'LEASING' && (
-                            <span className="text-xs text-muted-foreground">netto (bez VAT)</span>
+                            <span className="text-[10px] text-muted-foreground">netto (bez VAT)</span>
                         )}
                     </div>
 
-                    {selectedProduct.provider === 'INBANK' ? (
-                        <div className="mt-6 pt-4 border-t border-slate-200 text-sm text-muted-foreground text-center">
-                            Rata wyliczana na podstawie kalkulacji banku.
+                    {selectedProduct.provider !== 'OWN' ? (
+                        <div className="mt-4 pt-3 border-t border-slate-200 text-[11px] text-muted-foreground text-center">
+                            Rata wyliczana na podstawie kalkulacji partnera.
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-200">
+                        <div className="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-slate-200">
                             <div>
-                                <span className="block text-xs text-muted-foreground">Prowizja (jednorazowo)</span>
-                                <span className="font-medium">{formatPrice(commissionAmount, currency)}</span>
+                                <span className="block text-[10px] text-muted-foreground">Prowizja</span>
+                                <span className="font-medium text-xs">{formatPrice(commissionAmount, currency)}</span>
                             </div>
                             <div className="text-right">
-                                <span className="block text-xs text-muted-foreground">RRSO / Oprocentowanie</span>
-                                <span className="font-medium">{(annualRate).toFixed(2)}%</span>
+                                <span className="block text-[10px] text-muted-foreground">RRSO / Oproc.</span>
+                                <span className="font-medium text-xs">{(annualRate).toFixed(2)}%</span>
                             </div>
                         </div>
                     )}
                 </div>
 
-                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 p-3 rounded text-blue-800">
-                    <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-blue-50/50 p-2.5 rounded text-blue-800">
+                    <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                     <p>
-                        Kalkulacja ma charakter poglądowy i nie stanowi oferty w rozumieniu kodeksu cywilnego.
-                        Ostateczna oferta zależy od oceny zdolności kredytowej.
+                        Kalkulacja ma charakter poglądowy i nie stanowi oferty.
                     </p>
                 </div>
 
@@ -348,6 +375,6 @@ export function FinancingCalculator({ listingId, price, currency = 'PLN' }: Fina
                     </Button>
                 )}
             </CardContent>
-        </Card>
+        </Card >
     );
 }

@@ -392,10 +392,12 @@ export default function ListingDetailPage() {
                 <FinancingCalculator
                   listingId={listing.listing_id}
                   price={applySpecialOfferDiscount(
-                    priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln,
+                    priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : (listing.broker_price_pln || listing.price_pln),
                     discount
                   )}
                   currency={settings?.displayCurrency || 'PLN'}
+                  manufacturingYear={listing.production_year}
+                  mileageKm={listing.mileage_km}
                 />
               </section>
             )}
@@ -504,10 +506,12 @@ export default function ListingDetailPage() {
                   <FinancingCalculator
                     listingId={listing.listing_id}
                     price={applySpecialOfferDiscount(
-                      priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln,
+                      priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : (listing.broker_price_pln || listing.price_pln),
                       discount
                     )}
                     currency={settings?.displayCurrency || 'PLN'}
+                    manufacturingYear={listing.production_year}
+                    mileageKm={listing.mileage_km}
                   />
                 </motion.div>
               )}
