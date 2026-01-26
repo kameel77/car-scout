@@ -55,11 +55,8 @@ async function testConnections() {
         await withTimeout(redis.ping(), 5000, 'Redis connection timeout (5s)');
         console.log('✅ Redis connected');
     } catch (error) {
+        // Log failure but don't exit, let the health check report it
         console.error('⚠️ Connection test failed:', error instanceof Error ? error.message : error);
-        // Don't exit in production, let the health check report it
-        if (process.env.NODE_ENV === 'development') {
-            process.exit(1);
-        }
     }
 }
 

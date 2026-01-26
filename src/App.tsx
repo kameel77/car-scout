@@ -19,6 +19,8 @@ import FinancingPage from "./pages/admin/FinancingPage";
 import NotFound from "./pages/NotFound";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
+import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/admin/ResetPasswordPage";
 import './i18n';
 
 import { HelmetProvider } from 'react-helmet-async';
@@ -47,56 +49,58 @@ const App = () => (
                   <Route path="/listing/:id" element={<ListingDetailPage />} />
                   <Route path="/listing/:id/lead" element={<LeadFormPage />} />
 
-                {/* Admin routes */}
-                <Route path="/admin/login" element={<LoginPage />} />
-                <Route
-                  path="/admin/dashboard"
-                  element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <AdminDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/translations"
-                  element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <TranslationsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/seo"
-                  element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <SeoPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/faq"
-                  element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <FaqPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/financing"
-                  element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <FinancingPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/users"
-                  element={
-                    <ProtectedRoute allowedRoles={['admin']}>
-                      <UsersPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Admin routes */}
+                  <Route path="/admin/login" element={<LoginPage />} />
+                  <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
+                  <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
+                  <Route
+                    path="/admin/dashboard"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                        <AdminDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/translations"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                        <TranslationsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/seo"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                        <SeoPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/faq"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                        <FaqPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/financing"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                        <FinancingPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/users"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin']}>
+                        <UsersPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

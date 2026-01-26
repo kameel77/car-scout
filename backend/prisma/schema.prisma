@@ -200,6 +200,9 @@ model User {
   isActive  Boolean  @default(true) @map("is_active")
   lastLogin DateTime? @map("last_login")
   
+  resetPasswordToken   String?   @map("reset_password_token")
+  resetPasswordExpires DateTime? @map("reset_password_expires")
+  
   importLogs ImportLog[]
   
   createdAt DateTime @default(now()) @map("created_at")
