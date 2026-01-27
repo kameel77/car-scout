@@ -61,6 +61,17 @@ export const authApi = {
     }
 };
 
+export const crmTrackingApi = {
+    trackVisit: async (payload: { uuid: string; sessionId: string; url: string; visitedAt?: string }) => {
+        await fetch(`${API_BASE_URL}/api/crm-tracking/visit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            keepalive: true
+        });
+    }
+};
+
 // FAQ API
 export const faqApi = {
     list: async (params: { page?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {

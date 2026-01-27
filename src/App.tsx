@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PriceSettingsProvider } from "@/contexts/PriceSettingsContext";
 import { SpecialOfferProvider } from "@/contexts/SpecialOfferContext";
+import { CrmTrackingProvider } from "@/contexts/CrmTrackingContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import SearchPage from "./pages/SearchPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
@@ -43,71 +44,73 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <SpecialOfferProvider>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<SearchPage />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route path="/listing/:id" element={<ListingDetailPage />} />
-                  <Route path="/listing/:id/lead" element={<LeadFormPage />} />
+                <CrmTrackingProvider>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/" element={<SearchPage />} />
+                    <Route path="/search" element={<SearchPage />} />
+                    <Route path="/listing/:id" element={<ListingDetailPage />} />
+                    <Route path="/listing/:id/lead" element={<LeadFormPage />} />
 
-                  {/* Admin routes */}
-                  <Route path="/admin/login" element={<LoginPage />} />
-                  <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
-                  <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
+                    {/* Admin routes */}
+                    <Route path="/admin/login" element={<LoginPage />} />
+                    <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
 
-                  <Route element={<AdminLayout />}>
-                    <Route
-                      path="/admin/dashboard"
-                      element={
-                        <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                          <AdminDashboard />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin/translations"
-                      element={
-                        <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                          <TranslationsPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin/seo"
-                      element={
-                        <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                          <SeoPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin/faq"
-                      element={
-                        <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                          <FaqPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin/financing"
-                      element={
-                        <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                          <FinancingPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin/users"
-                      element={
-                        <ProtectedRoute allowedRoles={['admin']}>
-                          <UsersPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                  </Route>
+                    <Route element={<AdminLayout />}>
+                      <Route
+                        path="/admin/dashboard"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <AdminDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/translations"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <TranslationsPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/seo"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <SeoPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/faq"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <FaqPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/financing"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <FinancingPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/users"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin']}>
+                            <UsersPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                    </Route>
 
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </CrmTrackingProvider>
               </SpecialOfferProvider>
             </BrowserRouter>
           </TooltipProvider>

@@ -339,6 +339,33 @@ model FinancingProviderConnection {
   @@index([provider, isActive])
 }
 
+// ============ CRM TRACKING ============
+model CrmTrackingSession {
+  id         String   @id
+  uuid       String
+  lastSeenAt DateTime @map("last_seen_at")
+  visits     CrmTrackingVisit[]
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([uuid])
+  @@map("crm_tracking_sessions")
+}
+
+model CrmTrackingVisit {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  session   CrmTrackingSession @relation(fields: [sessionId], references: [id])
+  url       String
+  visitedAt DateTime @map("visited_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@map("crm_tracking_visits")
+}
+
 // ============ SEO CONFIG ============
 model SeoConfig {
   id              String   @id @default("default")

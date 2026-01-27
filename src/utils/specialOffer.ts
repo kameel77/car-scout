@@ -25,6 +25,7 @@ export const parseDiscountFromOfferParam = (value?: string | null): number | nul
     const decoded = decodeBase64Url(value);
     if (!decoded) return null;
     const params = new URLSearchParams(decoded);
+    if (params.get('uuid')) return null;
     const direct = parseDiscountValue(params.get('offerDiscount'));
     if (direct !== null) return direct;
     return parseDiscountValue(params.get('discount'));
