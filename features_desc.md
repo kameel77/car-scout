@@ -101,3 +101,14 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Obraz frontendu podstawia adres backendu w konfiguracji Nginx przez zmienna `BACKEND_URL`.
   - Domyslna wartosc to `http://backend:3000`, co pasuje do srodowiska docker-compose.
   - W srodowiskach zarzadzanych (np. Coolify) `BACKEND_URL` powinien wskazywac na wewnetrzny adres backendu.
+
+## 5. Ukrycie znacznika "Najniższa cena z 30 dni"
+- **Cel**: uproszczenie karty oferty przez usunięcie znacznika informującego o najniższej cenie z 30 dni.
+- **Zachowanie**:
+  - Znacznik nie jest renderowany ani w widoku mobilnym, ani w bocznej karcie ceny.
+
+## 6. Sekcja "Dlaczego my" na stronie oferty
+- **Cel**: wzmocnienie zaufania klienta przez przedstawienie powodów wyboru oferty.
+- **Zachowanie**:
+  - Sekcja pojawia się na stronie oferty nad FAQ.
+  - Składa się z czterech kafelków z ikonami i krótkim opisem.

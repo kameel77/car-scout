@@ -103,8 +103,8 @@ export default function UsersPage() {
           Zarządzaj kontami administratorów i managerów.
         </p>
       </div>
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="shadow-sm border-slate-200">
+      <div className="grid lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1 shadow-sm border-slate-200">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Plus className="w-4 h-4 text-blue-600" />
@@ -204,7 +204,7 @@ export default function UsersPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-slate-200">
+        <Card className="lg:col-span-2 shadow-sm border-slate-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Lista użytkowników</CardTitle>
             <CardDescription>Zobacz i zarządzaj kontami.</CardDescription>

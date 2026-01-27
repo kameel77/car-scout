@@ -43,7 +43,7 @@ export function AdminSidebar() {
             )}
         >
             {/* Sidebar Header */}
-            <div className="flex items-center justify-between p-6 border-b">
+            <div className="h-20 flex items-center justify-between px-6 border-b shrink-0">
                 <AnimatePresence mode="wait">
                     {!isCollapsed && (
                         <motion.div

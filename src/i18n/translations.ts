@@ -159,6 +159,26 @@ export const translations = {
         archivedTitle: "Ogłoszenie jest już nieaktualne",
         archivedDescription: "Zostało ono automatycznie zarchiwizowane, ponieważ nie jest już dostępne u źródła lub wystąpił błąd danych.",
         returnToSearch: "Wróć na stronę wyszukiwania",
+        whyUs: {
+          overline: "Dlaczego my",
+          title: "Pewny wybór bez zbędnych obietnic",
+          item1: {
+            title: "Samochody od sprawdzonego dostawcy",
+            description: "Każdą ofertę weryfikujemy, zanim trafi na stronę.",
+          },
+          item2: {
+            title: "Nowe i używane z gwarancją",
+            description: "Masz jasne warunki i pewny stan techniczny.",
+          },
+          item3: {
+            title: "Doświadczony zespół konsultantów",
+            description: "Mówimy wprost i pomagamy wybrać najlepszą opcję.",
+          },
+          item4: {
+            title: "Finansowanie dla osób i firm",
+            description: "Dobieramy formę finansowania do Twojej sytuacji.",
+          },
+        },
       },
 
       // Equipment sections
@@ -456,6 +476,26 @@ export const translations = {
         archivedTitle: "This listing is no longer current",
         archivedDescription: "It has been automatically archived because it is no longer available from the source or there was a data error.",
         returnToSearch: "Return to search page",
+        whyUs: {
+          overline: "Why us",
+          title: "A confident choice, no fluff",
+          item1: {
+            title: "Cars from a trusted supplier",
+            description: "We verify every offer before it goes live.",
+          },
+          item2: {
+            title: "New and used with warranty",
+            description: "Clear terms and a confirmed technical condition.",
+          },
+          item3: {
+            title: "Experienced consultant team",
+            description: "We speak plainly and help you pick the best option.",
+          },
+          item4: {
+            title: "Financing for individuals and companies",
+            description: "We match financing to your situation.",
+          },
+        },
       },
 
       // Equipment sections
@@ -751,6 +791,26 @@ export const translations = {
         archivedTitle: "Diese Anzeige ist nicht mehr aktuell",
         archivedDescription: "Sie wurde automatisch archiviert, da sie nicht mehr von der Quelle verfügbar ist oder ein Datenfehler aufgetreten ist.",
         returnToSearch: "Zurück zur Suchseite",
+        whyUs: {
+          overline: "Warum wir",
+          title: "Eine sichere Wahl, ohne Floskeln",
+          item1: {
+            title: "Fahrzeuge von vertrauenswürdigen Anbietern",
+            description: "Wir prüfen jedes Angebot, bevor es online geht.",
+          },
+          item2: {
+            title: "Neu- und Gebrauchtwagen mit Garantie",
+            description: "Klare Bedingungen und geprüfter Zustand.",
+          },
+          item3: {
+            title: "Erfahrenes Beratungsteam",
+            description: "Wir sprechen Klartext und helfen bei der Auswahl.",
+          },
+          item4: {
+            title: "Finanzierung für Privat- und Firmenkunden",
+            description: "Wir finden die passende Finanzierung.",
+          },
+        },
       },
 
       // Equipment sections
