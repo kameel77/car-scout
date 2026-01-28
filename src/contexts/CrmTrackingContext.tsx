@@ -2,10 +2,9 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { useLocation } from 'react-router-dom';
 import { crmTrackingApi } from '@/services/api';
 import {
-    CRM_OFFER_PARAM,
+    parseOfferParam,
+    OFFER_PARAM,
     generateSessionId,
-    parseOfferDiscount,
-    parseOfferPayload,
     readCrmOfferDiscount,
     readCrmSessionId,
     readCrmUuid,
@@ -38,37 +37,43 @@ export function CrmTrackingProvider({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
-        const offerParam = params.get(CRM_OFFER_PARAM);
-        const payload = parseOfferPayload(offerParam);
-        if (!payload) return;
+        const offerParam = params.get(OFFER_PARAM);
+        const parsed = parseOfferParam(offerParam);
 
-        const payloadUuid = payload.get('uuid');
-        const payloadDiscount = parseOfferDiscount(payload.get('offerDiscount'));
-
-        if (payloadUuid) {
-            writeCrmUuid(payloadUuid);
-            setUuid(payloadUuid);
-        }
-
-        if (payloadDiscount !== null) {
-            writeCrmOfferDiscount(payloadDiscount);
-            setOfferDiscount(payloadDiscount);
+        if (parsed.type === 'crm_tracking') {
+            writeCrmUuid(parsed.uuid);
+            setUuid(parsed.uuid);
+            writeCrmOfferDiscount(parsed.discount);
+            setOfferDiscount(parsed.discount);
         }
     }, [location.search]);
 
     useEffect(() => {
         if (!uuid || !sessionId) return;
-        if (location.pathname.startsWith('/admin')) return;
 
-        const visitedAt = new Date().toISOString();
-        const url = `${location.pathname}${location.search}`;
+        // Exclude admin and internal pages
+        const excludedPaths = ['/admin', '/dashboard', '/api'];
+        if (excludedPaths.some(path => location.pathname.startsWith(path))) return;
 
-        crmTrackingApi.trackVisit({
-            uuid,
-            sessionId,
-            url,
-            visitedAt
-        }).catch(() => undefined);
+        // Debounce rapid navigation
+        const timeoutId = setTimeout(() => {
+            const visitedAt = new Date().toISOString();
+            const url = `${location.pathname}${location.search}`;
+
+            crmTrackingApi.trackVisit({
+                uuid,
+                sessionId,
+                url,
+                visitedAt
+            }).catch((error) => {
+                // Only log in development
+                if (import.meta.env.DEV) {
+                    console.warn('Failed to track visit:', error);
+                }
+            });
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timeoutId);
     }, [location.pathname, location.search, sessionId, uuid]);
 
     const value = useMemo(() => ({

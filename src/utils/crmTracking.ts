@@ -1,32 +1,17 @@
-import { parseDiscountValue } from '@/utils/specialOffer';
+// Re-export unified offer parser
+export { parseOfferParam, OFFER_PARAM } from './offerParser';
 
 const CRM_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10;
 
-export const CRM_OFFER_PARAM = 'offer';
 export const CRM_UUID_COOKIE = 'crm_tracking_uuid';
 export const CRM_SESSION_COOKIE = 'crm_tracking_session';
 export const CRM_OFFER_DISCOUNT_COOKIE = 'crm_offer_discount';
 
-const decodeBase64Url = (value: string): string | null => {
+const parseDiscountValue = (value?: string | null): number | null => {
     if (!value) return null;
-    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized.padEnd(normalized.length + (4 - (normalized.length % 4)) % 4, '=');
-    try {
-        return typeof window !== 'undefined' ? window.atob(padded) : null;
-    } catch (error) {
-        return null;
-    }
-};
-
-export const parseOfferPayload = (value?: string | null): URLSearchParams | null => {
-    if (!value) return null;
-    const decoded = decodeBase64Url(value);
-    if (!decoded) return null;
-    return new URLSearchParams(decoded);
-};
-
-export const parseOfferDiscount = (value?: string | null): number | null => {
-    return parseDiscountValue(value);
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return null;
+    return Math.round(parsed);
 };
 
 const readCookie = (name: string): string | null => {
@@ -47,7 +32,7 @@ export const readCrmSessionId = (): string | null => {
 
 export const readCrmOfferDiscount = (): number | null => {
     const value = readCookie(CRM_OFFER_DISCOUNT_COOKIE);
-    return parseOfferDiscount(value);
+    return parseDiscountValue(value);
 };
 
 const writeCookie = (name: string, value: string): void => {
