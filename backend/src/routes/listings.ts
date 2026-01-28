@@ -227,14 +227,18 @@ export async function listingRoutes(fastify: FastifyInstance) {
             // For auto-refresh, check if autoRefreshImages setting is enabled
             try {
                 const settings = await fastify.prisma.appSettings.findFirst();
+                // If settings are missing, we default to "auto-refresh disabled" instead of 500
                 if (!settings?.autoRefreshImages) {
                     return reply.code(403).send({
                         error: 'Auto-refresh not enabled'
                     });
                 }
             } catch (error) {
+                fastify.log.error(error, 'Refresh-images: Settings check failed');
+                // Return 500 only if there's a serious DB error, but give more context
                 return reply.code(500).send({
-                    error: 'Settings check failed'
+                    error: 'Settings check failed',
+                    message: error instanceof Error ? error.message : 'Unknown error'
                 });
             }
         }

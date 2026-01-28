@@ -38,16 +38,24 @@ export async function faqRoutes(fastify: FastifyInstance) {
             where.isPublished = true;
         }
 
-        const entries = await fastify.prisma.faqEntry.findMany({
-            where,
-            orderBy: [
-                { page: 'asc' },
-                { sortOrder: 'asc' },
-                { createdAt: 'desc' }
-            ]
-        });
+        try {
+            const entries = await fastify.prisma.faqEntry.findMany({
+                where,
+                orderBy: [
+                    { page: 'asc' },
+                    { sortOrder: 'asc' },
+                    { createdAt: 'desc' }
+                ]
+            });
 
-        return { entries };
+            return { entries };
+        } catch (error) {
+            fastify.log.error(error, 'FAQ: List failed');
+            return reply.code(500).send({
+                error: 'Internal Server Error',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     });
 
     // Create or update FAQ entry

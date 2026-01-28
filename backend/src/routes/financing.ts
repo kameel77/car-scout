@@ -110,14 +110,22 @@ export async function financingRoutes(fastify: FastifyInstance) {
     fastify.get('/api/financing/calculator', async (request, reply) => {
         // We want all products so the calculator can switch tabs. 
         // Maybe we only want "valid" ones? For now return all.
-        const products = await fastify.prisma.financingProduct.findMany({
-            orderBy: [
-                { category: 'asc' },
-                { priority: 'desc' },
-                { isDefault: 'desc' } // Default first
-            ]
-        });
-        return { products };
+        try {
+            const products = await fastify.prisma.financingProduct.findMany({
+                orderBy: [
+                    { category: 'asc' },
+                    { priority: 'desc' },
+                    { isDefault: 'desc' } // Default first
+                ]
+            });
+            return { products };
+        } catch (error) {
+            fastify.log.error(error, 'Financing: Calculator products fetch failed');
+            return reply.code(500).send({
+                error: 'Internal Server Error',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     });
 
     // Public: Calculate installment for provider-based products
