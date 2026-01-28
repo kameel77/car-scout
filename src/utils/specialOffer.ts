@@ -1,5 +1,6 @@
 // Re-export unified offer parser
-export { parseOfferParam, OFFER_PARAM } from './offerParser';
+import { parseOfferParam, OFFER_PARAM } from './offerParser';
+export { parseOfferParam, OFFER_PARAM };
 
 export const SPECIAL_OFFER_COOKIE = 'special_offer_discount';
 const SPECIAL_OFFER_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10;
