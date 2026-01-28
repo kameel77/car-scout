@@ -1,32 +1,39 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
-        const success = await login(email, password);
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/reset-password-request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
 
-        if (success) {
-            toast.success('Logged in successfully');
-            navigate('/admin/dashboard');
-        } else {
-            toast.error('Invalid credentials');
+            const data = await response.json();
+
+            if (response.ok) {
+                toast.success('Jeśli konto istnieje, link do resetu został wygenerowany (sprawdź konsolę backendu)');
+                // We don't necessarily want to redirect immediately so they can read the message
+            } else {
+                toast.error(data.error || 'Wystąpił błąd');
+            }
+        } catch (error) {
+            toast.error('Błąd połączenia z serwerem');
+        } finally {
+            setIsLoading(false);
         }
-
-        setIsLoading(false);
     };
 
     return (
@@ -34,10 +41,10 @@ export default function LoginPage() {
             <Card className="w-full max-w-md shadow-2xl">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        Car Scout Admin
+                        Resetuj hasło
                     </CardTitle>
                     <CardDescription className="text-center">
-                        Sign in to access the admin panel
+                        Podaj swój adres email, aby otrzymać link do resetu hasła
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -56,42 +63,20 @@ export default function LoginPage() {
                                 disabled={isLoading}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label htmlFor="password" className="text-sm font-medium">
-                                Password
-                            </label>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                disabled={isLoading}
-                            />
-                        </div>
                         <Button
                             type="submit"
                             className="w-full"
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Signing in...' : 'Sign In'}
+                            {isLoading ? 'Wysyłanie...' : 'Wyślij link do resetu'}
                         </Button>
-                        <div className="text-center mt-4 space-y-4">
-                            <button
-                                type="button"
-                                onClick={() => navigate('/admin/forgot-password')}
-                                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors block w-full"
+                        <div className="text-center mt-4">
+                            <Link
+                                to="/admin/login"
+                                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                             >
-                                Zapomniałeś hasła?
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => navigate('/')}
-                                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium transition-colors block w-full"
-                            >
-                                &larr; wróć do serwisu
-                            </button>
+                                Powrót do logowania
+                            </Link>
                         </div>
                     </form>
                 </CardContent>

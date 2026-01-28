@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
@@ -17,7 +17,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import { useListing } from '@/hooks/useListings';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
@@ -348,9 +347,6 @@ export default function ListingDetailPage() {
                   {hasSpecialOffer && (
                     <SpecialOfferTag className="mt-2 md:mt-0" />
                   )}
-                  <Badge variant="secondary" className="text-xs w-fit">
-                    {t('detail.lowestPrice')}
-                  </Badge>
                 </div>
               </div>
             </div>
@@ -401,6 +397,56 @@ export default function ListingDetailPage() {
                 />
               </section>
             )}
+
+            <Separator />
+
+            {/* Why Us */}
+            <section className="rounded-2xl border border-border bg-card/60 p-6 shadow-card space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{t('detail.whyUs.overline')}</p>
+                <h2 className="font-heading text-xl font-semibold text-foreground">
+                  {t('detail.whyUs.title')}
+                </h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <ShieldCheck className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-foreground">{t('detail.whyUs.item1.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.whyUs.item1.description')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <BadgeCheck className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-foreground">{t('detail.whyUs.item2.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.whyUs.item2.description')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <Users className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-foreground">{t('detail.whyUs.item3.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.whyUs.item3.description')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <Banknote className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-foreground">{t('detail.whyUs.item4.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.whyUs.item4.description')}</p>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <Separator />
 
@@ -458,9 +504,6 @@ export default function ListingDetailPage() {
                     </span>
                   )}
                 </div>
-                <Badge variant="secondary" className="text-xs w-fit">
-                  {t('detail.lowestPrice')}
-                </Badge>
 
                 <div className="space-y-3 pt-2">
                   <Button asChild variant="hero" className="w-full" size="lg">
