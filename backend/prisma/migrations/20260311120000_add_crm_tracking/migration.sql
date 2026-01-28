@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "crm_tracking_sessions" (
+CREATE TABLE IF NOT EXISTS "crm_tracking_sessions" (
     "id" TEXT NOT NULL,
     "uuid" TEXT NOT NULL,
     "last_seen_at" TIMESTAMP(3) NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE "crm_tracking_sessions" (
 );
 
 -- CreateTable
-CREATE TABLE "crm_tracking_visits" (
+CREATE TABLE IF NOT EXISTS "crm_tracking_visits" (
     "id" TEXT NOT NULL,
     "session_id" TEXT NOT NULL,
     "url" TEXT NOT NULL,
@@ -21,10 +21,15 @@ CREATE TABLE "crm_tracking_visits" (
 );
 
 -- CreateIndex
-CREATE INDEX "crm_tracking_sessions_uuid_idx" ON "crm_tracking_sessions"("uuid");
+CREATE INDEX IF NOT EXISTS "crm_tracking_sessions_uuid_idx" ON "crm_tracking_sessions"("uuid");
 
 -- CreateIndex
-CREATE INDEX "crm_tracking_visits_session_id_idx" ON "crm_tracking_visits"("session_id");
+CREATE INDEX IF NOT EXISTS "crm_tracking_visits_session_id_idx" ON "crm_tracking_visits"("session_id");
 
 -- AddForeignKey
-ALTER TABLE "crm_tracking_visits" ADD CONSTRAINT "crm_tracking_visits_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "crm_tracking_sessions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'crm_tracking_visits_session_id_fkey') THEN
+        ALTER TABLE "crm_tracking_visits" ADD CONSTRAINT "crm_tracking_visits_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "crm_tracking_sessions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    END IF;
+END $$;
