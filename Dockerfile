@@ -21,7 +21,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Runtime backend proxy target (override via env)
-ENV BACKEND_URL=http://backend:3000
+ENV BACKEND_URL=http://backend-api:3000
 
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
