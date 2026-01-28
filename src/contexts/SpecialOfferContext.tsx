@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-    SPECIAL_OFFER_QUERY_PARAM,
+    OFFER_PARAM,
     parseDiscountFromOfferParam,
     readSpecialOfferDiscount,
     writeSpecialOfferDiscount,
@@ -20,7 +20,7 @@ export function SpecialOfferProvider({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
-        const paramValue = params.get(SPECIAL_OFFER_QUERY_PARAM);
+        const paramValue = params.get(OFFER_PARAM);
         const parsed = parseDiscountFromOfferParam(paramValue);
 
         if (parsed !== null) {

@@ -7,6 +7,7 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 - [ ] Integracje produktów kredytowych (np. Inbank) z modułem finansowania, z możliwością wyboru dostawcy i produktu na karcie oferty przez administratora (lista z priorytetem/warunkami).
 - [ ] Moduł konfiguracji połączeń z instytucjami finansowymi (produkcyjne środowiska i klucze API).
 - [x] Integracja VASH (Vehis Tools) do kalkulacji leasingu dla pojazdów zewnętrznych, działająca równolegle do produktów własnych i Inbank (pobieranie subjectId, zakresów wykupu/opłaty wstępnej i kalkulacji rat).
+- [ ] Integracja CRM/CMS: link z zaszyfrowanym UUID klienta (i parametrami kalkulatora) + cookie zbierające odwiedzane URL-e z timestampami + API do odczytu danych dla CMS.
 
 ## 2. UI i UX
 - [ ] Panel administratora: wybór partnera finansowego przy dodawaniu nowego produktu kredytowego (np. Inbank, Produkt własny) wraz z konfiguracją widoczności na karcie oferty.

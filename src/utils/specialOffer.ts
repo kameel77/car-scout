@@ -1,4 +1,6 @@
-export const SPECIAL_OFFER_QUERY_PARAM = 'offer';
+// Re-export unified offer parser
+export { parseOfferParam, OFFER_PARAM } from './offerParser';
+
 export const SPECIAL_OFFER_COOKIE = 'special_offer_discount';
 const SPECIAL_OFFER_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10;
 
@@ -9,25 +11,16 @@ export const parseDiscountValue = (value?: string | null): number | null => {
     return Math.round(parsed);
 };
 
-const decodeBase64Url = (value: string): string | null => {
-    if (!value) return null;
-    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized.padEnd(normalized.length + (4 - (normalized.length % 4)) % 4, '=');
-    try {
-        return typeof window !== 'undefined' ? window.atob(padded) : null;
-    } catch (error) {
-        return null;
-    }
-};
-
+/**
+ * Parse discount from offer parameter (special offers only, not CRM tracking)
+ * @deprecated Use parseOfferParam instead for type-safe parsing
+ */
 export const parseDiscountFromOfferParam = (value?: string | null): number | null => {
-    if (!value) return null;
-    const decoded = decodeBase64Url(value);
-    if (!decoded) return null;
-    const params = new URLSearchParams(decoded);
-    const direct = parseDiscountValue(params.get('offerDiscount'));
-    if (direct !== null) return direct;
-    return parseDiscountValue(params.get('discount'));
+    const parsed = parseOfferParam(value);
+    if (parsed.type === 'special_offer') {
+        return parsed.discount;
+    }
+    return null;
 };
 
 export const applySpecialOfferDiscount = (price: number, discount: number): number => {

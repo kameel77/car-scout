@@ -8,6 +8,7 @@ import type {
     FinancingProviderConnectionPayload
 } from '@/types/financing';
 import type { SeoConfig } from '@/components/seo/SeoManager';
+import type { CrmTrackingVisit, CrmTrackingResponse } from '@/types/crmTracking';
 
 type ImportMode = 'replace' | 'merge';
 
@@ -56,6 +57,47 @@ export const authApi = {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
+
+        return response.json();
+    }
+};
+
+export const crmTrackingApi = {
+    trackVisit: async (payload: CrmTrackingVisit): Promise<{ success: boolean }> => {
+        const response = await fetch(`${API_BASE_URL}/api/crm-tracking/visit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            keepalive: true
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to track visit');
+        }
+
+        return response.json();
+    },
+
+    getTracking: async (
+        uuid: string,
+        params?: { from?: string; to?: string },
+        token?: string
+    ): Promise<CrmTrackingResponse> => {
+        const queryParams = new URLSearchParams(params as Record<string, string>);
+        const headers: Record<string, string> = {};
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(
+            `${API_BASE_URL}/api/crm-tracking/${uuid}?${queryParams}`,
+            { headers }
+        );
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch tracking data');
+        }
 
         return response.json();
     }
