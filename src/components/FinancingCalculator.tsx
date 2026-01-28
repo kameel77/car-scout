@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Calculator, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useCrmTracking } from '@/contexts/CrmTrackingContext';
 
 interface FinancingCalculatorProps {
     listingId?: string;
@@ -28,6 +29,7 @@ export function FinancingCalculator({
     mileageKm
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
+    const { offerDiscount } = useCrmTracking();
     const { data, isLoading } = useQuery({
         queryKey: ['financing-calculator'],
         queryFn: () => financingApi.listPublic(),
@@ -55,6 +57,10 @@ export function FinancingCalculator({
     const [months, setMonths] = React.useState(36);
     const [initialPaymentPct, setInitialPaymentPct] = React.useState(10);
     const [finalPaymentPct, setFinalPaymentPct] = React.useState(20);
+    const offerInitialPaymentPct = React.useMemo(() => {
+        if (!offerDiscount || !Number.isFinite(price) || price <= 0) return null;
+        return Math.round((offerDiscount / price) * 100);
+    }, [offerDiscount, price]);
 
     // Update selected product when category changes
     React.useEffect(() => {
@@ -164,12 +170,15 @@ export function FinancingCalculator({
         const vehisMinInitial = selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0;
         const vehisMinFinal = selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0;
         setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
-        setInitialPaymentPct(Math.max(vehisMinInitial, Math.min(10, selectedProduct.maxInitialPayment)));
+        const initialFromOffer = offerInitialPaymentPct != null
+            ? Math.max(vehisMinInitial, Math.min(offerInitialPaymentPct, selectedProduct.maxInitialPayment))
+            : Math.max(vehisMinInitial, Math.min(10, selectedProduct.maxInitialPayment));
+        setInitialPaymentPct(initialFromOffer);
         setFinalPaymentPct(selectedProduct.hasBalloonPayment
             ? Math.max(vehisMinFinal, Math.min(20, selectedProduct.maxFinalPayment))
             : 0
         );
-    }, [selectedProduct]);
+    }, [offerInitialPaymentPct, selectedProduct]);
 
     if (isLoading || products.length === 0) {
         return null;
