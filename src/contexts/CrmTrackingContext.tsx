@@ -1,10 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { crmTrackingApi } from '@/services/api';
-import {
-    parseOfferParam,
-    OFFER_PARAM,
-    generateSessionId,
+generateSessionId,
     readCrmOfferDiscount,
     readCrmSessionId,
     readCrmUuid,
@@ -12,6 +9,7 @@ import {
     writeCrmSessionId,
     writeCrmUuid,
 } from '@/utils/crmTracking';
+import { parseOfferParam, OFFER_PARAM } from '@/utils/offerParser';
 
 interface CrmTrackingContextType {
     uuid: string | null;
