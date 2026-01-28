@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { crmTrackingApi } from '@/services/api';
-generateSessionId,
+import {
+    generateSessionId,
     readCrmOfferDiscount,
     readCrmSessionId,
     readCrmUuid,
