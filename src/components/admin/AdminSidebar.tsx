@@ -11,7 +11,9 @@ import {
     ChevronLeft,
     ChevronRight,
     UserCircle,
-    Banknote
+    Banknote,
+    Upload,
+    BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +25,8 @@ export function AdminSidebar() {
 
     const navItems = [
         { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager'] },
+        { href: '/admin/import', label: 'Import', icon: Upload, roles: ['admin', 'manager'] },
+        { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'manager'] },
         { href: '/admin/translations', label: 'Translations', icon: Languages, roles: ['admin', 'manager'] },
         { href: '/admin/financing', label: 'Finansowanie', icon: Banknote, roles: ['admin', 'manager'] },
         { href: '/admin/seo', label: 'SEO', icon: Search, roles: ['admin', 'manager'] },

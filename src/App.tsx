@@ -17,6 +17,8 @@ import TranslationsPage from "./pages/admin/TranslationsPage";
 import UsersPage from "./pages/admin/UsersPage";
 import FaqPage from "./pages/admin/FaqPage";
 import FinancingPage from "./pages/admin/FinancingPage";
+import ImportPage from "./pages/admin/ImportPage";
+import PriceAnalyticsPage from "./pages/admin/PriceAnalyticsPage";
 import NotFound from "./pages/NotFound";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
@@ -95,6 +97,22 @@ const App = () => (
                         element={
                           <ProtectedRoute allowedRoles={['admin', 'manager']}>
                             <FinancingPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/import"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ImportPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/analytics"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <PriceAnalyticsPage />
                           </ProtectedRoute>
                         }
                       />
