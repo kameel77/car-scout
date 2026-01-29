@@ -31,7 +31,7 @@ services:
     networks:
       carscout-private:
         aliases:
-          - backend-api # Stack-local alias for Nginx
+          - backend # Stack-local alias for Nginx
       coolify: {}
 
   # Frontend Container (Nginx)
@@ -43,7 +43,7 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
     environment:
-      BACKEND_URL: ${BACKEND_URL:-http://backend-api:3000}
+      BACKEND_URL: ${BACKEND_URL:-http://backend:3000}
     restart: unless-stopped
     expose:
       - "80"
