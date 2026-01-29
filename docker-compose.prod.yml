@@ -32,7 +32,6 @@ services:
       carscout-private:
         aliases:
           - backend # Stack-local alias for Nginx
-      coolify: {}
 
   # Frontend Container (Nginx)
   frontend:
