@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   # Backend API Container
-  backend:
-    container_name: "${COMPOSE_PROJECT_NAME}-backend"
+  carsalon-api:
+    container_name: "${COMPOSE_PROJECT_NAME}-api"
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -31,7 +31,8 @@ services:
     networks:
       carscout-private:
         aliases:
-          - backend # Stack-local alias for Nginx
+          - backend # Still allow frontend to use 'backend' internally
+      coolify: {}
 
   # Frontend Container (Nginx)
   frontend:
@@ -47,7 +48,7 @@ services:
     expose:
       - "80"
     depends_on:
-      - backend
+      - carsalon-api
     networks:
       - carscout-private
       - coolify
