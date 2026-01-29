@@ -42,6 +42,7 @@ export interface Listing {
     driverAssist: string[];
     other: string[];
   };
+  is_archived?: boolean;
 }
 
 export interface Lead {

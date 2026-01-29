@@ -19,6 +19,7 @@ import FaqPage from "./pages/admin/FaqPage";
 import FinancingPage from "./pages/admin/FinancingPage";
 import ImportPage from "./pages/admin/ImportPage";
 import PriceAnalyticsPage from "./pages/admin/PriceAnalyticsPage";
+import ListingManagementPage from "./pages/admin/ListingManagementPage";
 import NotFound from "./pages/NotFound";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
@@ -65,6 +66,14 @@ const App = () => (
                         element={
                           <ProtectedRoute allowedRoles={['admin', 'manager']}>
                             <AdminDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/listings"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ListingManagementPage />
                           </ProtectedRoute>
                         }
                       />

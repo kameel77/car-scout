@@ -13,7 +13,8 @@ import {
     UserCircle,
     Banknote,
     Upload,
-    BarChart3
+    BarChart3,
+    Car
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +26,7 @@ export function AdminSidebar() {
 
     const navItems = [
         { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager'] },
+        { href: '/admin/listings', label: 'Pojazdy', icon: Car, roles: ['admin', 'manager'] },
         { href: '/admin/import', label: 'Import', icon: Upload, roles: ['admin', 'manager'] },
         { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'manager'] },
         { href: '/admin/translations', label: 'Translations', icon: Languages, roles: ['admin', 'manager'] },
