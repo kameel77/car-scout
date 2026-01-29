@@ -15,10 +15,8 @@ COPY prisma ./prisma/
 # Install dependencies
 RUN npm ci
 
-# Prisma needs a connection string even to generate the client.
-# Provide a sensible default that can be overridden at build time.
-ARG DATABASE_URL="postgresql://user:password@localhost:5432/db"
-ENV DATABASE_URL=$DATABASE_URL
+# DATABASE_URL should be provided as an environment variable at runtime.
+# It is used by Prisma for migrations and the server for connections.
 
 # Generate Prisma client
 RUN npx prisma generate
