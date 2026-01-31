@@ -1,39 +1,52 @@
 import { Listing } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Eye,
     Archive,
     MoreVertical,
-    Calendar,
-    Gauge,
-    Fuel,
-    Settings2
+    Trash2,
 } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
+import { getListingUrlPath } from '@/utils/url-utils';
 
 interface AdminListingItemProps {
     listing: Listing;
+    isSelected?: boolean;
+    onSelect?: (id: string, selected: boolean) => void;
     onArchive?: (id: string) => void;
     onRestore?: (id: string) => void;
+    onDelete?: (id: string) => void;
 }
 
-export function AdminListingItem({ listing, onArchive, onRestore }: AdminListingItemProps) {
+export function AdminListingItem({ listing, isSelected = false, onSelect, onArchive, onRestore, onDelete }: AdminListingItemProps) {
     const isArchived = listing.is_archived;
 
     return (
         <div className={cn(
-            "group bg-white rounded-xl border p-4 hover:shadow-md transition-all duration-200",
-            isArchived && "opacity-75 bg-gray-50"
+            "group bg-white rounded-xl border p-3 hover:shadow-md transition-all duration-200",
+            isArchived && "opacity-75 bg-gray-50",
+            isSelected && "ring-2 ring-blue-500 border-blue-500"
         )}>
-            <div className="flex gap-6">
+            <div className="flex items-center gap-4">
+                {/* Checkbox */}
+                <div className="shrink-0 pl-1">
+                    <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => onSelect?.(listing.listing_id, checked as boolean)}
+                        className="h-5 w-5"
+                    />
+                </div>
+
                 {/* Thumbnail */}
-                <div className="relative w-48 h-32 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                <div className="relative w-24 h-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                     {listing.primary_image_url ? (
                         <img
                             src={listing.primary_image_url}
@@ -47,95 +60,110 @@ export function AdminListingItem({ listing, onArchive, onRestore }: AdminListing
                     )}
                     {isArchived && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <span className="text-white font-bold text-xs uppercase tracking-wider bg-black/60 px-2 py-1 rounded">
+                            <span className="text-white font-bold text-[8px] uppercase tracking-wider bg-black/60 px-1 py-0.5 rounded">
                                 Archiwalny
                             </span>
                         </div>
                     )}
                 </div>
 
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-2">
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">
-                                {listing.make} {listing.model}
-                            </h3>
-                            <p className="text-sm text-gray-500 truncate">
-                                {listing.version}
-                            </p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-lg font-bold text-blue-600">
-                                {listing.price_display}
-                            </p>
-                            {listing.vin && (
-                                <p className="text-[10px] text-gray-400 font-mono mt-1">
-                                    VIN: {listing.vin}
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                {/* Identity Group (3 rows) */}
+                <div className="w-48 shrink-0 min-w-0">
+                    <h3 className="text-sm font-bold text-gray-900 leading-tight truncate">
+                        {listing.make} {listing.model}
+                    </h3>
+                    <p className="text-xs text-gray-500 truncate">
+                        {listing.version}
+                    </p>
+                    <p className="text-[10px] text-gray-400 font-mono truncate">
+                        {listing.vin || 'Brak VIN'}
+                    </p>
+                </div>
 
-                    {/* Specs Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 mt-4">
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                            <span>{listing.production_year}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                            <Gauge className="w-3.5 h-3.5 text-gray-400" />
-                            <span>{listing.mileage_km.toLocaleString()} km</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                            <Fuel className="w-3.5 h-3.5 text-gray-400" />
-                            <span className="capitalize">{listing.fuel_type}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                            <Settings2 className="w-3.5 h-3.5 text-gray-400" />
-                            <span className="truncate">{listing.transmission}</span>
-                        </div>
+                {/* Specs Columns */}
+                <div className="flex-1 grid grid-cols-5 gap-4 items-center">
+                    <div className="text-xs text-center text-gray-600 truncate px-1">
+                        <span className="block text-[10px] text-gray-400 mb-0.5 uppercase tracking-tighter">Nadwozie</span>
+                        {listing.body_type}
+                    </div>
+                    <div className="text-xs text-center text-gray-600 truncate px-1 border-l">
+                        <span className="block text-[10px] text-gray-400 mb-0.5 uppercase tracking-tighter">Rocznik</span>
+                        {listing.production_year}
+                    </div>
+                    <div className="text-xs text-center text-gray-600 truncate px-1 border-l">
+                        <span className="block text-[10px] text-gray-400 mb-0.5 uppercase tracking-tighter">Przebieg</span>
+                        {listing.mileage_km.toLocaleString()} km
+                    </div>
+                    <div className="text-xs text-center text-gray-600 truncate px-1 border-l">
+                        <span className="block text-[10px] text-gray-400 mb-0.5 uppercase tracking-tighter">Paliwo</span>
+                        <span className="capitalize">{listing.fuel_type}</span>
+                    </div>
+                    <div className="text-xs text-center text-gray-600 truncate px-1 border-l">
+                        <span className="block text-[10px] text-gray-400 mb-0.5 uppercase tracking-tighter">Skrzynia</span>
+                        <span className="truncate">{listing.transmission}</span>
                     </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-col items-end justify-between">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500">
-                                <MoreVertical className="w-4 h-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem asChild>
-                                <a href={`/listing/${listing.listing_id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                                    <Eye className="w-4 h-4" />
-                                    <span>Zobacz w serwisie</span>
-                                </a>
-                            </DropdownMenuItem>
-                            {isArchived ? (
-                                <DropdownMenuItem onClick={() => onRestore?.(listing.listing_id)} className="text-green-600">
-                                    <Archive className="w-4 h-4 mr-2" />
-                                    <span>Przywróć</span>
-                                </DropdownMenuItem>
-                            ) : (
-                                <DropdownMenuItem onClick={() => onArchive?.(listing.listing_id)} className="text-red-600">
-                                    <Archive className="w-4 h-4 mr-2" />
-                                    <span>Archiwizuj</span>
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                {/* Price Group */}
+                <div className="w-40 shrink-0 text-right pr-2">
+                    <p className="text-sm font-bold text-blue-600">
+                        {listing.price_display}
+                    </p>
+                    {(listing.dealer_price_net_pln || listing.broker_price_pln) && (
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                            Cena netto: {(listing.dealer_price_net_pln || listing.broker_price_pln || 0).toLocaleString('pl-PL')} PLN
+                        </p>
+                    )}
+                </div>
 
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5" asChild>
-                            <a href={`/listing/${listing.listing_id}`} target="_blank" rel="noopener noreferrer">
-                                <Eye className="w-3.5 h-3.5" />
-                                Podgląd
-                            </a>
+                {/* Actions Menu */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:bg-gray-100 rounded-full">
+                            <MoreVertical className="w-4 h-4" />
                         </Button>
-                    </div>
-                </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem asChild>
+                            <a 
+                                href={getListingUrlPath({
+                                    id: listing.listing_id,
+                                    make: listing.make,
+                                    model: listing.model,
+                                    version: listing.version,
+                                    productionYear: listing.production_year,
+                                    bodyType: listing.body_type,
+                                    fuelType: listing.fuel_type
+                                })} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="flex items-center gap-2"
+                            >
+                                <Eye className="w-4 h-4" />
+                                <span>Zobacz w serwisie</span>
+                            </a>
+                        </DropdownMenuItem>
+                        {isArchived ? (
+                            <DropdownMenuItem onClick={() => onRestore?.(listing.listing_id)} className="text-green-600">
+                                <Archive className="w-4 h-4 mr-2" />
+                                <span>Przywróć</span>
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem onClick={() => onArchive?.(listing.listing_id)} className="text-red-600">
+                                <Archive className="w-4 h-4 mr-2" />
+                                <span>Archiwizuj</span>
+                            </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                            onClick={() => onDelete?.(listing.listing_id)} 
+                            className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            <span>Usuń definitywnie</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );

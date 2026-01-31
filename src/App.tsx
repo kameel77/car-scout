@@ -52,6 +52,9 @@ const App = () => (
                     {/* Public routes */}
                     <Route path="/" element={<SearchPage />} />
                     <Route path="/search" element={<SearchPage />} />
+                    <Route path="/oferta/:slug" element={<ListingDetailPage />} />
+                    <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
+                    {/* Legacy routes - kept for backward compatibility during transition */}
                     <Route path="/listing/:id" element={<ListingDetailPage />} />
                     <Route path="/listing/:id/lead" element={<LeadFormPage />} />
 

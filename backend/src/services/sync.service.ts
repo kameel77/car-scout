@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import type { CSVRow, SyncResult, ImportMode } from '../types/csv.types.js';
 import { mapCSVToListing, mapCSVToListingUpdate } from './csv-mapper.js';
+import { generateListingSlug } from '../utils/url-utils.js';
 
 export async function syncListingsFromCSV(
     prisma: PrismaClient,
@@ -146,6 +147,24 @@ export async function syncListingsFromCSV(
                     pricePln: l.pricePln,
                     changedAt: new Date()
                 }))
+            });
+        }
+
+        // 5.5 Generate and update slugs for new listings
+        for (const listing of newListings) {
+            const slug = generateListingSlug(
+                listing.make,
+                listing.model,
+                listing.version,
+                listing.productionYear,
+                listing.bodyType,
+                listing.fuelType,
+                listing.id
+            );
+
+            await tx.listing.update({
+                where: { id: listing.id },
+                data: { slug }
             });
         }
 

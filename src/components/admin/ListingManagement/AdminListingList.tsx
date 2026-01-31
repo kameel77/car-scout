@@ -1,31 +1,67 @@
 import { Listing } from '@/data/mockData';
 import { AdminListingItem } from './AdminListingItem';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface AdminListingListProps {
     listings: Listing[];
     isLoading: boolean;
+    selectedIds: string[];
+    onSelectionChange: (ids: string[]) => void;
     onArchive?: (id: string) => void;
     onRestore?: (id: string) => void;
+    onDelete?: (id: string) => void;
 }
 
-export function AdminListingList({ listings, isLoading, onArchive, onRestore }: AdminListingListProps) {
+export function AdminListingList({ 
+    listings, 
+    isLoading, 
+    selectedIds, 
+    onSelectionChange,
+    onArchive, 
+    onRestore,
+    onDelete 
+}: AdminListingListProps) {
+    const handleSelect = (id: string, selected: boolean) => {
+        if (selected) {
+            onSelectionChange([...selectedIds, id]);
+        } else {
+            onSelectionChange(selectedIds.filter(selectedId => selectedId !== id));
+        }
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            onSelectionChange(listings.map(l => l.listing_id));
+        } else {
+            onSelectionChange([]);
+        }
+    };
+
+    const allSelected = listings.length > 0 && listings.every(l => selectedIds.includes(l.listing_id));
+    const someSelected = selectedIds.length > 0 && !allSelected;
+
     if (isLoading) {
         return (
-            <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="bg-white rounded-xl border p-4 h-[120px] animate-pulse">
-                        <div className="flex gap-6 h-full">
-                            <div className="w-48 h-full bg-gray-100 rounded-lg" />
-                            <div className="flex-1 space-y-3 py-1">
-                                <div className="h-4 bg-gray-100 rounded w-1/3" />
-                                <div className="h-3 bg-gray-100 rounded w-1/4" />
-                                <div className="grid grid-cols-4 gap-4 mt-auto">
-                                    <div className="h-3 bg-gray-100 rounded" />
-                                    <div className="h-3 bg-gray-100 rounded" />
-                                    <div className="h-3 bg-gray-100 rounded" />
-                                    <div className="h-3 bg-gray-100 rounded" />
-                                </div>
+            <div className="space-y-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="bg-white rounded-xl border p-3 h-[80px] animate-pulse">
+                        <div className="flex items-center gap-4 h-full">
+                            <div className="w-6 h-6 bg-gray-100 rounded shrink-0" />
+                            <div className="w-24 h-16 bg-gray-100 rounded-lg shrink-0" />
+                            <div className="w-48 space-y-2">
+                                <div className="h-3 bg-gray-100 rounded w-3/4" />
+                                <div className="h-2 bg-gray-100 rounded w-1/2" />
+                            </div>
+                            <div className="flex-1 grid grid-cols-5 gap-4">
+                                <div className="h-2 bg-gray-50 rounded" />
+                                <div className="h-2 bg-gray-50 rounded" />
+                                <div className="h-2 bg-gray-50 rounded" />
+                                <div className="h-2 bg-gray-50 rounded" />
+                                <div className="h-2 bg-gray-50 rounded" />
+                            </div>
+                            <div className="w-32 text-right">
+                                <div className="h-3 bg-gray-100 rounded w-2/3 ml-auto" />
                             </div>
                         </div>
                     </div>
@@ -50,14 +86,38 @@ export function AdminListingList({ listings, isLoading, onArchive, onRestore }: 
 
     return (
         <div className="space-y-4">
-            {listings.map((listing) => (
-                <AdminListingItem
-                    key={listing.listing_id}
-                    listing={listing}
-                    onArchive={onArchive}
-                    onRestore={onRestore}
-                />
-            ))}
+            {/* Header with select all */}
+            <div className="flex items-center gap-4 px-3 py-2 bg-gray-50 rounded-lg border">
+                <div className="shrink-0 pl-1">
+                    <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                        className="h-5 w-5"
+                    />
+                </div>
+                <span className="text-sm text-gray-600">
+                    {selectedIds.length > 0 ? (
+                        <>Zaznaczono <strong>{selectedIds.length}</strong> z {listings.length}</>
+                    ) : (
+                        <>Zaznacz wszystkie ({listings.length})</>
+                    )}
+                </span>
+            </div>
+
+            {/* Listings */}
+            <div className="space-y-3">
+                {listings.map((listing) => (
+                    <AdminListingItem
+                        key={listing.listing_id}
+                        listing={listing}
+                        isSelected={selectedIds.includes(listing.listing_id)}
+                        onSelect={handleSelect}
+                        onArchive={onArchive}
+                        onRestore={onRestore}
+                        onDelete={onDelete}
+                    />
+                ))}
+            </div>
         </div>
     );
 }
