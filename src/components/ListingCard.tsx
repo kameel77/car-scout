@@ -13,6 +13,7 @@ import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { translateTechnicalValue } from '@/utils/i18n-utils';
+import { getListingUrlPath } from '@/utils/url-utils';
 
 interface ListingCardProps {
   listing: Listing;
@@ -76,7 +77,15 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
       transition={{ duration: 0.3, delay: index * 0.05 }}
       className="listing-card group"
     >
-      <Link to={`/listing/${listing.listing_id}`} onClick={handleListingClick} className="block">
+      <Link to={getListingUrlPath({
+        id: listing.listing_id,
+        make: listing.make,
+        model: listing.model,
+        version: listing.version,
+        productionYear: listing.production_year,
+        bodyType: listing.body_type,
+        fuelType: listing.fuel_type
+      })} onClick={handleListingClick} className="block">
         {/* Image */}
         <div className="relative aspect-[16/10] overflow-hidden">
           <img
@@ -159,7 +168,15 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
       {/* CTA */}
       <div className="px-4 pb-4">
         <Button asChild variant="outline-primary" className="w-full group/btn">
-          <Link to={`/listing/${listing.listing_id}`}>
+          <Link to={getListingUrlPath({
+            id: listing.listing_id,
+            make: listing.make,
+            model: listing.model,
+            version: listing.version,
+            productionYear: listing.production_year,
+            bodyType: listing.body_type,
+            fuelType: listing.fuel_type
+          })}>
             {t('listing.viewOffer')}
             <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
           </Link>

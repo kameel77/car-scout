@@ -15,3 +15,6 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 ## 3. Optymalizacje
 - [ ] **Optymalizacja zapisu ustawień (Bulk Update)**: Zmiana sposobu aktualizacji cen ofert w `recalculateAllPrices` na zapytanie zbiorcze, aby uniknąć problemów z wydajnością przy dużej liczbie ofert.
 - [ ] **Przetwarzanie w tle dla ciężkich operacji**: Przeniesienie długotrwałych procesów (jak przeliczanie wszystkich cen) do kolejki zadań w tle (np. BullMQ/Redis), aby nie blokować interfejsu administratora.
+
+## 4. Zrealizowane
+- [x] **Nowa struktura URL dla ofert**: Zmiana URL-i z `/listing/:id` na format SEO-friendly: `/oferta/marka-model-trim-rocznik-typ-paliwo-id_ogloszenia`. Wdrożone w branchu `new-url` (2025-01-30).

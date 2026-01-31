@@ -12,6 +12,7 @@ model Listing {
   id                    String    @id @default(cuid())
   listingId             String?   @unique @map("listing_id")
   listingUrl            String?   @map("listing_url")
+  slug                  String?   @unique @map("slug")
   scrapedAt             DateTime? @map("scraped_at")
   marketplace           String?   @map("marketplace")
   
@@ -90,6 +91,7 @@ model Listing {
   @@index([vin])
   @@index([listingId])
   @@index([marketplace])
+  @@index([slug])
   @@map("listings")
 }
 

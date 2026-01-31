@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { refreshListingImages } from '../services/image-refresh.service.js';
+import { generateListingSlug, extractListingIdFromSlug } from '../utils/url-utils.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
     // Get filter options (makes and models) - only active listings
@@ -156,7 +157,47 @@ export async function listingRoutes(fastify: FastifyInstance) {
         };
     });
 
-    // Get single listing with price history
+    // Get single listing by slug with price history
+    fastify.get('/api/listings/by-slug/:slug', async (request, reply) => {
+        const { slug } = request.params as { slug: string };
+
+        // Try to find by slug first
+        let listing = await fastify.prisma.listing.findUnique({
+            where: { slug },
+            include: {
+                dealer: true,
+                priceHistory: {
+                    orderBy: { changedAt: 'desc' },
+                    take: 30
+                }
+            }
+        });
+
+        // If not found by slug, try to extract ID from slug and find by ID
+        if (!listing) {
+            const idFromSlug = extractListingIdFromSlug(slug);
+            if (idFromSlug) {
+                listing = await fastify.prisma.listing.findUnique({
+                    where: { id: idFromSlug },
+                    include: {
+                        dealer: true,
+                        priceHistory: {
+                            orderBy: { changedAt: 'desc' },
+                            take: 30
+                        }
+                    }
+                });
+            }
+        }
+
+        if (!listing) {
+            return reply.code(404).send({ error: 'Listing not found' });
+        }
+
+        return { listing };
+    });
+
+    // Get single listing by ID with price history (for backward compatibility)
     fastify.get('/api/listings/:id', async (request, reply) => {
         const { id } = request.params as { id: string };
 
@@ -213,6 +254,28 @@ export async function listingRoutes(fastify: FastifyInstance) {
         });
 
         return { listing };
+    });
+
+    // Delete listing permanently (admin only)
+    fastify.delete('/api/listings/:id', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        try {
+            // Due to onDelete: Cascade in schema, related records (leads, priceHistory) will be deleted automatically
+            await fastify.prisma.listing.delete({
+                where: { id }
+            });
+
+            return { success: true, message: 'Listing deleted permanently' };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.code(500).send({
+                error: 'Failed to delete listing',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     });
 
     // Refresh images from source (admin only for manual refresh, public for auto-refresh)

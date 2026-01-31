@@ -303,8 +303,16 @@ export const listingsApi = {
         }
     },
 
-    getListing: async (id: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/listings/${id}`);
+    getListing: async (idOrSlug: string) => {
+        // Check if the identifier looks like a slug (contains hyphens and is longer than typical ID)
+        // or if it's a legacy ID format (just call the regular endpoint)
+        const isSlug = idOrSlug.includes('-') && idOrSlug.length > 25;
+        
+        const endpoint = isSlug 
+            ? `${API_BASE_URL}/api/listings/by-slug/${idOrSlug}`
+            : `${API_BASE_URL}/api/listings/${idOrSlug}`;
+            
+        const response = await fetch(endpoint);
         return response.json();
     },
 
@@ -326,6 +334,20 @@ export const listingsApi = {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
+
+        return response.json();
+    },
+
+    deleteListing: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Delete failed');
+        }
 
         return response.json();
     },

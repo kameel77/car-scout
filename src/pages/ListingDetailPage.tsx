@@ -31,6 +31,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
+import { getListingUrlPath } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
 import {
   Dialog,
@@ -47,14 +48,16 @@ import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 
 export default function ListingDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, token } = useAuth();
   const canManage = user?.role === 'admin' || user?.role === 'manager';
 
-  const { data, isLoading } = useListing(id);
+  // Use slug if available (new URL format), otherwise fall back to id (legacy format)
+  const listingIdentifier = slug || id;
+  const { data, isLoading } = useListing(listingIdentifier);
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
@@ -507,7 +510,15 @@ export default function ListingDetailPage() {
 
                 <div className="space-y-3 pt-2">
                   <Button asChild variant="hero" className="w-full" size="lg">
-                    <Link to={`/listing/${listing.listing_id}/lead`}>
+                    <Link to={`${getListingUrlPath({
+                      id: listing.listing_id,
+                      make: listing.make,
+                      model: listing.model,
+                      version: listing.version,
+                      productionYear: listing.production_year,
+                      bodyType: listing.body_type,
+                      fuelType: listing.fuel_type
+                    })}/lead`}>
                       <MessageSquare className="h-5 w-5" />
                       {t('detail.askAbout')}
                     </Link>
@@ -608,7 +619,15 @@ export default function ListingDetailPage() {
             {t('detail.call')}
           </Button>
           <Button asChild variant="hero" size="lg" className="flex-1">
-            <Link to={`/listing/${listing.listing_id}/lead`}>
+            <Link to={`${getListingUrlPath({
+              id: listing.listing_id,
+              make: listing.make,
+              model: listing.model,
+              version: listing.version,
+              productionYear: listing.production_year,
+              bodyType: listing.body_type,
+              fuelType: listing.fuel_type
+            })}/lead`}>
               {t('detail.sendInquiry')}
             </Link>
           </Button>
