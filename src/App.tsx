@@ -17,6 +17,9 @@ import TranslationsPage from "./pages/admin/TranslationsPage";
 import UsersPage from "./pages/admin/UsersPage";
 import FaqPage from "./pages/admin/FaqPage";
 import FinancingPage from "./pages/admin/FinancingPage";
+import ImportPage from "./pages/admin/ImportPage";
+import PriceAnalyticsPage from "./pages/admin/PriceAnalyticsPage";
+import ListingManagementPage from "./pages/admin/ListingManagementPage";
 import NotFound from "./pages/NotFound";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
@@ -49,6 +52,9 @@ const App = () => (
                     {/* Public routes */}
                     <Route path="/" element={<SearchPage />} />
                     <Route path="/search" element={<SearchPage />} />
+                    <Route path="/oferta/:slug" element={<ListingDetailPage />} />
+                    <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
+                    {/* Legacy routes - kept for backward compatibility during transition */}
                     <Route path="/listing/:id" element={<ListingDetailPage />} />
                     <Route path="/listing/:id/lead" element={<LeadFormPage />} />
 
@@ -63,6 +69,14 @@ const App = () => (
                         element={
                           <ProtectedRoute allowedRoles={['admin', 'manager']}>
                             <AdminDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/listings"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ListingManagementPage />
                           </ProtectedRoute>
                         }
                       />
@@ -95,6 +109,22 @@ const App = () => (
                         element={
                           <ProtectedRoute allowedRoles={['admin', 'manager']}>
                             <FinancingPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/import"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ImportPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/analytics"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <PriceAnalyticsPage />
                           </ProtectedRoute>
                         }
                       />

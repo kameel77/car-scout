@@ -22,6 +22,7 @@ import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
+import { getListingUrlPath } from '@/utils/url-utils';
 import { Footer } from '@/components/Footer';
 import { leadsApi } from '@/services/api';
 
@@ -42,8 +43,11 @@ const leadSchema = z.object({
 type LeadFormData = z.infer<typeof leadSchema>;
 
 export default function LeadFormPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const { t } = useTranslation();
+  
+  // Use slug if available (new URL format), otherwise fall back to id (legacy format)
+  const listingIdentifier = slug || id;
   const navigate = useNavigate();
   const location = useLocation();
   const financingData = location.state?.financing as {
@@ -57,7 +61,7 @@ export default function LeadFormPage() {
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [referenceNumber, setReferenceNumber] = React.useState('');
 
-  const { data, isLoading: isListingLoading } = useListing(id);
+  const { data, isLoading: isListingLoading } = useListing(listingIdentifier);
   const { data: settingsData } = useAppSettings();
   const { priceType } = usePriceSettings();
   const { discount } = useSpecialOffer();
@@ -214,7 +218,15 @@ export default function LeadFormPage() {
                 <Link to="/">{t('lead.backToResults', 'Wróć do wyszukiwarki')}</Link>
               </Button>
               <Button asChild variant="ghost">
-                <Link to={`/listing/${listing.listing_id}`}>{t('lead.backToOffer', 'Wróć do ogłoszenia')}</Link>
+                <Link to={getListingUrlPath({
+                  id: listing.listing_id,
+                  make: listing.make,
+                  model: listing.model,
+                  version: listing.version,
+                  productionYear: listing.production_year,
+                  bodyType: listing.body_type,
+                  fuelType: listing.fuel_type
+                })}>{t('lead.backToOffer', 'Wróć do ogłoszenia')}</Link>
               </Button>
             </div>
           </motion.div>

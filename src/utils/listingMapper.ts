@@ -38,6 +38,7 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             registration_number: backendListing.registrationNumber || '',
             primary_image_url: backendListing.primaryImageUrl || '',
             image_urls: backendListing.imageUrls || [],
+            is_archived: backendListing.isArchived || false,
 
             // Calculated Prices
             dealer_price_net_pln: backendListing.dealerPriceNetPln,

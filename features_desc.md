@@ -124,3 +124,73 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Frontend dekoduje payload, używa `offerDiscount` do ustawienia wartości pierwszej wpłaty oraz zapisuje `uuid` i identyfikator sesji śledzenia w cookie z maksymalnym czasem życia.
   - Podczas nawigacji aplikacja zapisuje do cookie (lub synchronizuje z backendem) odwiedzane URL-e i timestampy.
   - Backend udostępnia API do pobrania historii odwiedzin na podstawie UUID klienta, aby CMS mógł pobrać dane do dalszej analizy.
+
+## 8. Nowa struktura URL dla ofert (SEO-friendly)
+- **Cel**: poprawa SEO i czytelności URL-i dla ofert pojazdów.
+- **Zmiana**:
+  - Stary format: `/listing/<ID>` (np. `/listing/clh123abc456`)
+  - Nowy format: `/oferta/marka-model-trim-rocznik-typ-paliwo-id_ogloszenia` (np. `/oferta/bmw-3-series-320d-xdrive-2020-sedan-diesel-clh123abc456`)
+- **Zachowanie**:
+  - Wszystkie nowe linki generowane przez aplikację używają nowego formatu.
+  - Stary format `/listing/:id` nadal działa (backward compatibility) - obsługiwany przez ten sam komponent.
+  - Przy imporcie CSV automatycznie generowany jest slug dla każdej oferty.
+  - Slug zawiera: markę, model, wersję/trim, rocznik, typ nadwozia, rodzaj paliwa oraz ID oferty.
+  - Polskie znaki są transliterowane do ASCII (np. 'ł' → 'l', 'ą' → 'a').
+  - Wielokrotne spacje i myślniki są normalizowane.
+- **API**:
+  - Nowy endpoint: `GET /api/listings/by-slug/:slug`
+  - Endpoint obsługuje zarówno pełne slugi jak i fallback do ID (jeśli slug nie zostanie znaleziony).
+- **Komponenty zaktualizowane**:
+  - `ListingCard` - generowanie nowych linków
+  - `ListingDetailPage` - obsługa nowego parametru `:slug`
+  - `LeadFormPage` - obsługa nowego parametru oraz linki powrotne
+  - `App.tsx` - nowe ścieżki routing
+- **Migracja**:
+  - Dodano pole `slug` do tabeli `listings` (unikalne, indeksowane).
+  - Przy kolejnym imporcie CSV wszystkie oferty otrzymają automatycznie wygenerowane slugi.
+
+## 9. Archiwizacja ofert w panelu administratora
+- **Cel**: umożliwienie administratorowi usuwania widoczności pojazdów w serwisie bez ich fizycznego usuwania z bazy.
+- **Lokalizacja**: Panel administratora → Pojazdy (ListingManagementPage).
+- **Zachowanie**:
+  - Na liście pojazdów dostępne jest mini menu (trzy kropki) przy każdej ofercie.
+  - Dla aktywnych ofert: opcja "Archiwizuj" (czerwona) - ukrywa pojazd w serwisie.
+  - Dla zarchiwizowanych ofert: opcja "Przywróć" (zielona) - przywraca widoczność.
+  - Opcja "Usuń definitywnie" (ciemnoczerwona) - trwale usuwa pojazd z bazy (z separatorem nad nią dla wyróżnienia).
+  - Zarchiwizowane oferty są oznaczone etykietą "Archiwalny" na liście.
+  - Zarchiwizowane oferty nie pojawiają się w wynikach wyszukiwania dla klientów.
+  - Link "Zobacz w serwisie" otwiera ofertę w nowym oknie (dla weryfikacji).
+- **API**:
+  - `POST /api/listings/:id/archive` - archiwizacja oferty.
+  - `POST /api/listings/:id/restore` - przywrócenie oferty.
+  - `DELETE /api/listings/:id` - trwałe usunięcie oferty (admin only).
+- **Komponenty**:
+  - `AdminListingList` - lista pojazdów z obsługą archiwizacji.
+  - `AdminListingItem` - pojedynczy wiersz z mini menu akcji.
+  - `ListingManagementPage` - strona zarządzania z handlerami archiwizacji.
+
+## 10. Masowe akcje na ofertach w panelu administratora
+- **Cel**: umożliwienie administratorowi wykonywania akcji na wielu ofertach jednocześnie, co przyspiesza zarządzanie dużą liczbą pojazdów.
+- **Lokalizacja**: Panel administratora → Pojazdy (ListingManagementPage).
+- **Zachowanie**:
+  - Przy każdej ofercie na liście dostępny jest checkbox do zaznaczania.
+  - W nagłówku listy znajduje się checkbox "Zaznacz wszystkie" - zaznacza/odznacza wszystkie oferty na aktualnej stronie.
+  - Po zaznaczeniu minimum jednej oferty pojawia się pasek akcji masowych (niebieski).
+  - Pasek wyświetla liczbę zaznaczonych ofert i przycisk "Wyczyść" do odznaczenia wszystkich.
+  - Dostępne akcje masowe:
+    - **Archiwizuj** (czerwona) - ukrywa wszystkie zaznaczone oferty w serwisie.
+    - **Przywróć** (zielona) - przywraca widoczność zaznaczonych ofert.
+    - **Usuń definitywnie** (ciemnoczerwona) - trwale usuwa zaznaczone oferty z bazy danych.
+  - Przed wykonaniem akcji masowej wyświetlane jest okno potwierdzenia z informacją o liczbie ofert.
+  - Dla akcji usuwania okno potwierdzenia zawiera dodatkowe ostrzeżenie o nieodwracalności operacji.
+  - Akcje masowe wykonywane są równolegle (Promise.all) dla wydajności.
+  - Po zakończeniu wyświetlane jest powiadomienie z liczbą przetworzonych ofert.
+  - Zaznaczenie jest automatycznie czyszczone po udanej akcji masowej.
+- **Komponenty**:
+  - `AdminListingItem` - checkbox przy każdej ofercie, obsługa zaznaczania.
+  - `AdminListingList` - nagłówek z checkboxem "Zaznacz wszystkie", zarządzanie stanem zaznaczenia.
+  - `ListingManagementPage` - pasek akcji masowych, okna potwierdzenia, logika wykonywania akcji masowych.
+- **API**:
+  - Wykorzystuje istniejące endpointy `POST /api/listings/:id/archive` i `POST /api/listings/:id/restore`.
+  - Wywołania wykonywane równolegle dla wszystkich zaznaczonych ofert.
+  - **Usuwanie**: `DELETE /api/listings/:id` - trwałe usunięcie oferty wraz z powiązanymi danymi (leady, historia cen) przez `onDelete: Cascade` w schemacie Prisma.
