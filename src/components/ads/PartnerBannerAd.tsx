@@ -28,7 +28,7 @@ export function PartnerBannerAd({
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
-                "relative w-full rounded-xl overflow-hidden bg-accent group border border-accent/20",
+                "relative w-full rounded-xl overflow-hidden group border border-accent/20",
                 className
             )}
         >
