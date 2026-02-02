@@ -37,8 +37,17 @@ export function PartnerBannerAd({
 
             {imageUrl && (
                 <div className="absolute inset-0">
-                    <img src={imageUrl} alt="" className="w-full h-full object-cover opacity-40 mix-blend-overlay" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-accent via-accent/80 to-transparent" />
+                    <img
+                        src={imageUrl}
+                        alt=""
+                        className={cn(
+                            "w-full h-full object-cover transition-opacity duration-300",
+                            overlayOpacity > 0 ? "opacity-40 mix-blend-overlay" : "opacity-100"
+                        )}
+                    />
+                    {overlayOpacity > 0 && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-accent via-accent/80 to-transparent" />
+                    )}
                 </div>
             )}
 
