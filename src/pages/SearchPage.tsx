@@ -21,6 +21,7 @@ import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
 import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
+import { ADS_CONFIG } from '@/config/ads';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -241,11 +242,11 @@ export default function SearchPage() {
             {!isLoading && listings.length > 0 && (
               <div className="mt-4">
                 <PartnerBannerAd
-                  title="Najlepsze Finansowanie dla Twojej Firmy"
-                  subtitle="Sprawdź ofertę leasingu operacyjnego z ratą od 101%."
-                  ctaText="Oblicz Ratę"
-                  url="#"
-                  imageUrl="https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=1200"
+                  title={ADS_CONFIG.searchTopBanner.title}
+                  subtitle={ADS_CONFIG.searchTopBanner.subtitle}
+                  ctaText={ADS_CONFIG.searchTopBanner.ctaText}
+                  url={ADS_CONFIG.searchTopBanner.url}
+                  imageUrl={ADS_CONFIG.searchTopBanner.imageUrl}
                 />
               </div>
             )}
@@ -266,18 +267,21 @@ export default function SearchPage() {
 
                   // Inject an ad after every 6th item (at index 5, 11, etc.)
                   if ((index + 1) % 6 === 0) {
-                    elements.push(
-                      <PartnerAdCard
-                        key={`ad-${index}`}
-                        index={index + 1}
-                        title="Ubezpieczenie OC/AC z rabatem do 20%"
-                        description="Porównaj oferty 30 towarzystw i znajdź najtańszą polisę dla Twojego nowego samochodu."
-                        ctaText="Sprawdź ceny"
-                        url="#"
-                        brandName="Link4"
-                        imageUrl="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=800"
-                      />
-                    );
+                    const ad = ADS_CONFIG.searchGridAds[0]; // For now using first ad
+                    if (ad) {
+                      elements.push(
+                        <PartnerAdCard
+                          key={`ad-${index}`}
+                          index={index + 1}
+                          title={ad.title}
+                          description={ad.description}
+                          ctaText={ad.ctaText}
+                          url={ad.url}
+                          brandName={ad.brandName}
+                          imageUrl={ad.imageUrl}
+                        />
+                      );
+                    }
                   }
 
                   return elements;

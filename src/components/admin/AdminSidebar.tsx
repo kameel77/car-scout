@@ -14,7 +14,8 @@ import {
     Banknote,
     Upload,
     BarChart3,
-    Car
+    Car,
+    Handshake
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +34,7 @@ export function AdminSidebar() {
         { href: '/admin/financing', label: 'Finansowanie', icon: Banknote, roles: ['admin', 'manager'] },
         { href: '/admin/seo', label: 'SEO', icon: Search, roles: ['admin', 'manager'] },
         { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, roles: ['admin', 'manager'] },
+        { href: '/admin/partners', label: 'Partnerzy', icon: Handshake, roles: ['admin', 'manager'] },
         { href: '/admin/users', label: 'Users', icon: Users, roles: ['admin'] },
     ] as const;
 
