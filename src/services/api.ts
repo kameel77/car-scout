@@ -9,6 +9,7 @@ import type {
 } from '@/types/financing';
 import type { SeoConfig } from '@/components/seo/SeoManager';
 import type { CrmTrackingVisit, CrmTrackingResponse } from '@/types/crmTracking';
+import type { PartnerAd, PartnerAdPayload } from '@/types/partnerAds';
 
 type ImportMode = 'replace' | 'merge';
 
@@ -307,11 +308,11 @@ export const listingsApi = {
         // Check if the identifier looks like a slug (contains hyphens and is longer than typical ID)
         // or if it's a legacy ID format (just call the regular endpoint)
         const isSlug = idOrSlug.includes('-') && idOrSlug.length > 25;
-        
-        const endpoint = isSlug 
+
+        const endpoint = isSlug
             ? `${API_BASE_URL}/api/listings/by-slug/${idOrSlug}`
             : `${API_BASE_URL}/api/listings/${idOrSlug}`;
-            
+
         const response = await fetch(endpoint);
         return response.json();
     },
@@ -795,6 +796,75 @@ export const seoApi = {
             throw new Error(error.error || 'Failed to update SEO config');
         }
 
+        return response.json();
+    }
+};
+
+// Partner Ads API
+export const partnerAdsApi = {
+    list: async (placement?: string): Promise<{ ads: PartnerAd[] }> => {
+        const params = new URLSearchParams();
+        if (placement) params.append('placement', placement);
+
+        const response = await fetch(`${API_BASE_URL}/api/partner-ads?${params}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch ads');
+        }
+        return response.json();
+    },
+
+    listAdmin: async (token: string): Promise<{ ads: PartnerAd[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/partner-ads`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch admin ads');
+        }
+        return response.json();
+    },
+
+    create: async (payload: PartnerAdPayload, token: string): Promise<{ ad: PartnerAd }> => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/partner-ads`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to create ad');
+        }
+        return response.json();
+    },
+
+    update: async (id: string, payload: Partial<PartnerAdPayload>, token: string): Promise<{ ad: PartnerAd }> => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/partner-ads/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to update ad');
+        }
+        return response.json();
+    },
+
+    delete: async (id: string, token: string): Promise<{ success: boolean }> => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/partner-ads/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to delete ad');
+        }
         return response.json();
     }
 };

@@ -44,7 +44,7 @@ import {
 import { AlertTriangle } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
-import { ADS_CONFIG } from '@/config/ads';
+import { usePartnerAds } from '@/hooks/usePartnerAds';
 
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
@@ -60,6 +60,8 @@ export default function ListingDetailPage() {
   // Use slug if available (new URL format), otherwise fall back to id (legacy format)
   const listingIdentifier = slug || id;
   const { data, isLoading } = useListing(listingIdentifier);
+  const { data: adsData } = usePartnerAds('DETAIL_SIDEBAR');
+  const sidebarAds = adsData?.ads || [];
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
@@ -405,12 +407,19 @@ export default function ListingDetailPage() {
 
             {/* Mobile Partner Ad */}
             <div className="lg:hidden">
-              {ADS_CONFIG.detailSidebarAds[0] && (
+              {sidebarAds.filter(a => a.isActive).slice(0, 1).map(ad => (
                 <PartnerSidebarAd
-                  {...ADS_CONFIG.detailSidebarAds[0]}
+                  key={ad.id}
+                  title={ad.title}
+                  description={ad.description || ''}
+                  ctaText={ad.ctaText}
+                  url={ad.url}
+                  brandName={ad.brandName}
+                  imageUrl={ad.imageUrl}
+                  features={ad.features}
                   className="my-6"
                 />
-              )}
+              ))}
             </div>
 
             <Separator />
@@ -583,11 +592,18 @@ export default function ListingDetailPage() {
               )}
 
               {/* Sidebar Ad Placement */}
-              {ADS_CONFIG.detailSidebarAds[0] && (
+              {sidebarAds.filter(a => a.isActive).slice(0, 1).map(ad => (
                 <PartnerSidebarAd
-                  {...ADS_CONFIG.detailSidebarAds[0]}
+                  key={ad.id}
+                  title={ad.title}
+                  description={ad.description || ''}
+                  ctaText={ad.ctaText}
+                  url={ad.url}
+                  brandName={ad.brandName}
+                  imageUrl={ad.imageUrl}
+                  features={ad.features}
                 />
-              )}
+              ))}
 
               {/* Dealer Card */}
               {canManage && (

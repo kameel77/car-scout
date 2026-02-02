@@ -21,7 +21,7 @@ import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
 import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
-import { ADS_CONFIG } from '@/config/ads';
+import { usePartnerAds } from '@/hooks/usePartnerAds';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -153,6 +153,8 @@ export default function SearchPage() {
 
   const { data, isLoading } = useListings(filters, sortBy, page, perPage);
   const { data: options } = useListingOptions();
+  const { data: adsData } = usePartnerAds();
+  const partnersAds = adsData?.ads || [];
   const listings = data?.listings || [];
   const totalCount = data?.count ?? listings.length;
   const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((totalCount || 1) / perPage));
@@ -239,15 +241,18 @@ export default function SearchPage() {
             />
 
             {/* Top Banner Ad */}
-            {!isLoading && listings.length > 0 && (
+            {!isLoading && listings.length > 0 && partnersAds.find(a => a.placement === 'SEARCH_TOP' && a.isActive) && (
               <div className="mt-4">
-                <PartnerBannerAd
-                  title={ADS_CONFIG.searchTopBanner.title}
-                  subtitle={ADS_CONFIG.searchTopBanner.subtitle}
-                  ctaText={ADS_CONFIG.searchTopBanner.ctaText}
-                  url={ADS_CONFIG.searchTopBanner.url}
-                  imageUrl={ADS_CONFIG.searchTopBanner.imageUrl}
-                />
+                {partnersAds.filter(a => a.placement === 'SEARCH_TOP' && a.isActive).slice(0, 1).map(ad => (
+                  <PartnerBannerAd
+                    key={ad.id}
+                    title={ad.title}
+                    subtitle={ad.subtitle}
+                    ctaText={ad.ctaText}
+                    url={ad.url}
+                    imageUrl={ad.imageUrl || ''}
+                  />
+                ))}
               </div>
             )}
 
@@ -267,18 +272,21 @@ export default function SearchPage() {
 
                   // Inject an ad after every 6th item (at index 5, 11, etc.)
                   if ((index + 1) % 6 === 0) {
-                    const ad = ADS_CONFIG.searchGridAds[0]; // For now using first ad
+                    const gridAds = partnersAds.filter(a => a.placement === 'SEARCH_GRID' && a.isActive);
+                    const adIndex = Math.floor((index + 1) / 6) - 1;
+                    const ad = gridAds[adIndex % gridAds.length];
+
                     if (ad) {
                       elements.push(
                         <PartnerAdCard
                           key={`ad-${index}`}
                           index={index + 1}
                           title={ad.title}
-                          description={ad.description}
+                          description={ad.description || ''}
                           ctaText={ad.ctaText}
                           url={ad.url}
                           brandName={ad.brandName}
-                          imageUrl={ad.imageUrl}
+                          imageUrl={ad.imageUrl || ''}
                         />
                       );
                     }
