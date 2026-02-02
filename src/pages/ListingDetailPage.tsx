@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
@@ -401,6 +402,23 @@ export default function ListingDetailPage() {
               </section>
             )}
 
+            {/* Mobile Partner Ad */}
+            <div className="lg:hidden">
+              <PartnerSidebarAd
+                title="Rozszerzona Gwarancja dla Twojego Auta"
+                description="Zabezpiecz się przed nieprzewidzianymi kosztami napraw nawet do 36 miesięcy."
+                ctaText="Poznaj pakiety"
+                url="#"
+                features={[
+                  "Ochrona silnika i skrzyni biegów",
+                  "Bezgotówkowe naprawy w całej Polsce",
+                  "Auto zastępcze na czas naprawy"
+                ]}
+                brandName="Defend Insurance"
+                className="my-6"
+              />
+            </div>
+
             <Separator />
 
             {/* Why Us */}
@@ -569,6 +587,20 @@ export default function ListingDetailPage() {
                   />
                 </motion.div>
               )}
+
+              {/* Sidebar Ad Placement */}
+              <PartnerSidebarAd
+                title="Rozszerzona Gwarancja dla Twojego Auta"
+                description="Zabezpiecz się przed nieprzewidzianymi kosztami napraw nawet do 36 miesięcy."
+                ctaText="Poznaj pakiety"
+                url="#"
+                features={[
+                  "Ochrona silnika i skrzyni biegów",
+                  "Bezgotówkowe naprawy",
+                  "Auto zastępcze"
+                ]}
+                brandName="Defend Insurance"
+              />
 
               {/* Dealer Card */}
               {canManage && (

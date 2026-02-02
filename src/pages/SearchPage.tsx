@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
+import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
+import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -228,21 +230,58 @@ export default function SearchPage() {
               sortBy={sortBy}
               onSortChange={(value) => {
                 setSortBy(value);
+                setPage(page === 1 ? 1 : 1); // Reset to page 1 on sort change
                 setPage(1);
               }}
               availableMakes={options?.makes || []}
               availableModels={options?.models || []}
             />
 
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {/* Top Banner Ad */}
+            {!isLoading && listings.length > 0 && (
+              <div className="mt-4">
+                <PartnerBannerAd
+                  title="Najlepsze Finansowanie dla Twojej Firmy"
+                  subtitle="Sprawdź ofertę leasingu operacyjnego z ratą od 101%."
+                  ctaText="Oblicz Ratę"
+                  url="#"
+                  imageUrl="https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=1200"
+                />
+              </div>
+            )}
+
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
                 ))
               ) : listings.length > 0 ? (
-                listings.map((listing, index) => (
-                  <ListingCard key={listing.listing_id} listing={listing} index={index} />
-                ))
+                listings.map((listing, index) => {
+                  const elements = [];
+
+                  // Add the listing card
+                  elements.push(
+                    <ListingCard key={listing.listing_id} listing={listing} index={index} />
+                  );
+
+                  // Inject an ad after every 6th item (at index 5, 11, etc.)
+                  if ((index + 1) % 6 === 0) {
+                    elements.push(
+                      <PartnerAdCard
+                        key={`ad-${index}`}
+                        index={index + 1}
+                        title="Ubezpieczenie OC/AC z rabatem do 20%"
+                        description="Porównaj oferty 30 towarzystw i znajdź najtańszą polisę dla Twojego nowego samochodu."
+                        ctaText="Sprawdź ceny"
+                        url="#"
+                        brandName="Link4"
+                        imageUrl="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=800"
+                      />
+                    );
+                  }
+
+                  return elements;
+                })
               ) : (
                 <div className="col-span-full py-16 text-center">
                   <p className="text-lg font-medium text-foreground">{t('empty.noResults')}</p>
