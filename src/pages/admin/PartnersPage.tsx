@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 
 export default function AdminPartnersPage() {
     const { t } = useTranslation();
@@ -48,6 +49,7 @@ export default function AdminPartnersPage() {
     const queryClient = useQueryClient();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingAd, setEditingAd] = useState<PartnerAd | null>(null);
+    const [overlayOpacity, setOverlayOpacity] = useState(0.9);
 
     // Fetch Ads
     const { data, isLoading, error } = useQuery({
@@ -102,6 +104,7 @@ export default function AdminPartnersPage() {
             brandName: formData.get('brandName') as string,
             priority: parseInt(formData.get('priority') as string) || 0,
             isActive: formData.get('isActive') === 'on',
+            overlayOpacity: overlayOpacity,
             features: featuresString ? featuresString.split(',').map(f => f.trim()) : []
         };
 
@@ -114,11 +117,13 @@ export default function AdminPartnersPage() {
 
     const openCreateDialog = () => {
         setEditingAd(null);
+        setOverlayOpacity(0.9);
         setIsDialogOpen(true);
     };
 
     const openEditDialog = (ad: PartnerAd) => {
         setEditingAd(ad);
+        setOverlayOpacity(ad.overlayOpacity ?? 0.9);
         setIsDialogOpen(true);
     };
 
@@ -259,8 +264,8 @@ export default function AdminPartnersPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="title">Tytuł reklamy</Label>
-                                <Input id="title" name="title" defaultValue={editingAd?.title} required placeholder="Główny tekst reklamy" />
+                                <Label htmlFor="title">Tytuł reklamy (Opcjonalny)</Label>
+                                <Input id="title" name="title" defaultValue={editingAd?.title} placeholder="Główny tekst reklamy" />
                             </div>
 
                             <div className="space-y-2">
@@ -275,13 +280,32 @@ export default function AdminPartnersPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="ctaText">Tekst przycisku (CTA)</Label>
-                                    <Input id="ctaText" name="ctaText" defaultValue={editingAd?.ctaText || 'Sprawdź ofertę'} required />
+                                    <Label htmlFor="ctaText">Tekst przycisku (Opcjonalny)</Label>
+                                    <Input id="ctaText" name="ctaText" defaultValue={editingAd?.ctaText} placeholder="np. Sprawdź ofertę" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="priority">Priorytet (Sortowanie)</Label>
                                     <Input id="priority" name="priority" type="number" defaultValue={editingAd?.priority || 0} />
                                 </div>
+                            </div>
+
+                            <div className="space-y-4 p-3 border rounded-lg bg-orange-50/50">
+                                <div className="flex justify-between items-center">
+                                    <Label>Przezroczystość tła (Baner)</Label>
+                                    <span className="text-xs font-mono bg-orange-100 px-1.5 py-0.5 rounded text-orange-700">
+                                        {Math.round(overlayOpacity * 100)}%
+                                    </span>
+                                </div>
+                                <Slider
+                                    value={[overlayOpacity]}
+                                    min={0}
+                                    max={1}
+                                    step={0.05}
+                                    onValueChange={(val) => setOverlayOpacity(val[0])}
+                                />
+                                <p className="text-[10px] text-muted-foreground">
+                                    Kontroluje stopień przezroczystości pomarańczowego tła w formacie Baner Górny.
+                                </p>
                             </div>
 
                             <div className="space-y-2">

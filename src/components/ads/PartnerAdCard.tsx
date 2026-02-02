@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface PartnerAdCardProps {
-    title: string;
-    description: string;
-    imageUrl: string;
-    ctaText: string;
+    title?: string;
+    description?: string;
+    imageUrl?: string;
+    ctaText?: string;
     url: string;
     brandName?: string;
     index?: number;
@@ -37,7 +37,7 @@ export function PartnerAdCard({
                 <div className="relative aspect-[16/10] overflow-hidden">
                     <img
                         src={imageUrl}
-                        alt={title}
+                        alt={title || "Reklama"}
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                     />
@@ -60,27 +60,33 @@ export function PartnerAdCard({
 
                 {/* Content */}
                 <div className="p-4 space-y-3 flex-1">
-                    <div>
-                        <h3 className="font-heading text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors min-h-[3.5rem]">
-                            {title}
-                        </h3>
-                    </div>
+                    {title && (
+                        <div>
+                            <h3 className="font-heading text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors min-h-[3.5rem]">
+                                {title}
+                            </h3>
+                        </div>
+                    )}
 
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                        {description}
-                    </p>
+                    {description && (
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                            {description}
+                        </p>
+                    )}
                 </div>
             </a>
 
             {/* CTA */}
-            <div className="px-4 pb-4 mt-auto">
-                <Button asChild variant="hero" className="w-full group/btn">
-                    <a href={url} target="_blank" rel="noopener noreferrer">
-                        {ctaText}
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                    </a>
-                </Button>
-            </div>
+            {ctaText && (
+                <div className="px-4 pb-4 mt-auto">
+                    <Button asChild variant="hero" className="w-full group/btn">
+                        <a href={url} target="_blank" rel="noopener noreferrer">
+                            {ctaText}
+                            <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                        </a>
+                    </Button>
+                </div>
+            )}
         </motion.div>
     );
 }

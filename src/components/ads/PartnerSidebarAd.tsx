@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface PartnerSidebarAdProps {
-    title: string;
-    description: string;
+    title?: string;
+    description?: string;
     imageUrl?: string;
-    ctaText: string;
+    ctaText?: string;
     url: string;
     features?: string[];
     brandName?: string;
@@ -44,18 +44,22 @@ export function PartnerSidebarAd({
 
             {imageUrl && (
                 <div className="aspect-[16/9] overflow-hidden">
-                    <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
+                    <img src={imageUrl} alt={title || "Reklama"} className="w-full h-full object-cover" />
                 </div>
             )}
 
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 text-left">
                 <div className="space-y-2">
-                    <h3 className="font-heading text-xl font-bold text-foreground leading-tight">
-                        {title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                        {description}
-                    </p>
+                    {title && (
+                        <h3 className="font-heading text-xl font-bold text-foreground leading-tight">
+                            {title}
+                        </h3>
+                    )}
+                    {description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            {description}
+                        </p>
+                    )}
                 </div>
 
                 {features && features.length > 0 && (
@@ -69,12 +73,14 @@ export function PartnerSidebarAd({
                     </ul>
                 )}
 
-                <Button asChild variant="hero" className="w-full group/btn" size="lg">
-                    <a href={url} target="_blank" rel="noopener noreferrer">
-                        {ctaText}
-                        <ArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-1" />
-                    </a>
-                </Button>
+                {ctaText && (
+                    <Button asChild variant="hero" className="w-full group/btn" size="lg">
+                        <a href={url} target="_blank" rel="noopener noreferrer">
+                            {ctaText}
+                            <ArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-1" />
+                        </a>
+                    </Button>
+                )}
             </div>
         </motion.div>
     );

@@ -5,16 +5,17 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
     // Schema for Ad validation
     const adSchema = z.object({
         placement: z.enum(['SEARCH_GRID', 'SEARCH_TOP', 'DETAIL_SIDEBAR']),
-        title: z.string().min(1),
+        title: z.string().optional(),
         description: z.string().optional(),
         subtitle: z.string().optional(),
-        ctaText: z.string().min(1),
+        ctaText: z.string().optional(),
         url: z.string().url(),
         imageUrl: z.string().optional(),
         brandName: z.string().optional(),
         features: z.array(z.string()).optional(),
         priority: z.number().int().optional(),
-        isActive: z.boolean().optional()
+        isActive: z.boolean().optional(),
+        overlayOpacity: z.number().min(0).max(1).optional()
     });
 
     // Public: List active ads by placement
@@ -56,8 +57,10 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
         const ad = await fastify.prisma.partnerAd.create({
             data: {
                 ...data,
+                title: data.title as any,
+                ctaText: data.ctaText as any,
                 features: data.features || []
-            }
+            } as any
         });
 
         return { ad };
