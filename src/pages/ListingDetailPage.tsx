@@ -44,6 +44,7 @@ import {
 import { AlertTriangle } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
+import { ADS_CONFIG } from '@/config/ads';
 
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
@@ -404,19 +405,12 @@ export default function ListingDetailPage() {
 
             {/* Mobile Partner Ad */}
             <div className="lg:hidden">
-              <PartnerSidebarAd
-                title="Rozszerzona Gwarancja dla Twojego Auta"
-                description="Zabezpiecz się przed nieprzewidzianymi kosztami napraw nawet do 36 miesięcy."
-                ctaText="Poznaj pakiety"
-                url="#"
-                features={[
-                  "Ochrona silnika i skrzyni biegów",
-                  "Bezgotówkowe naprawy w całej Polsce",
-                  "Auto zastępcze na czas naprawy"
-                ]}
-                brandName="Defend Insurance"
-                className="my-6"
-              />
+              {ADS_CONFIG.detailSidebarAds[0] && (
+                <PartnerSidebarAd
+                  {...ADS_CONFIG.detailSidebarAds[0]}
+                  className="my-6"
+                />
+              )}
             </div>
 
             <Separator />
@@ -589,18 +583,11 @@ export default function ListingDetailPage() {
               )}
 
               {/* Sidebar Ad Placement */}
-              <PartnerSidebarAd
-                title="Rozszerzona Gwarancja dla Twojego Auta"
-                description="Zabezpiecz się przed nieprzewidzianymi kosztami napraw nawet do 36 miesięcy."
-                ctaText="Poznaj pakiety"
-                url="#"
-                features={[
-                  "Ochrona silnika i skrzyni biegów",
-                  "Bezgotówkowe naprawy",
-                  "Auto zastępcze"
-                ]}
-                brandName="Defend Insurance"
-              />
+              {ADS_CONFIG.detailSidebarAds[0] && (
+                <PartnerSidebarAd
+                  {...ADS_CONFIG.detailSidebarAds[0]}
+                />
+              )}
 
               {/* Dealer Card */}
               {canManage && (

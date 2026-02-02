@@ -31,6 +31,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { SeoManager } from '@/components/seo/SeoManager';
 import SeoPage from "./pages/admin/SeoPage";
 import AdminLayout from "./components/admin/AdminLayout";
+import AdminPartnersPage from "./pages/admin/PartnersPage";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +102,14 @@ const App = () => (
                         element={
                           <ProtectedRoute allowedRoles={['admin', 'manager']}>
                             <FaqPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/partners"
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <AdminPartnersPage />
                           </ProtectedRoute>
                         }
                       />
