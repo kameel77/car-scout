@@ -12,6 +12,7 @@ interface PartnerSidebarAdProps {
     url: string;
     features?: string[];
     brandName?: string;
+    overlayOpacity?: number;
     className?: string;
 }
 
@@ -23,6 +24,7 @@ export function PartnerSidebarAd({
     url,
     features,
     brandName,
+    overlayOpacity = 0.9,
     className
 }: PartnerSidebarAdProps) {
     return (
@@ -30,11 +32,12 @@ export function PartnerSidebarAd({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-                "bg-card rounded-xl shadow-card overflow-hidden border border-border/50",
+                "bg-card rounded-xl shadow-card overflow-hidden border border-border/50 relative",
                 className
             )}
         >
-            <div className="p-1 border-b border-border/50 flex justify-between items-center bg-muted/30 px-3">
+            <div className="absolute inset-0 bg-accent" style={{ opacity: overlayOpacity }} />
+            <div className="relative p-1 border-b border-border/50 flex justify-between items-center bg-muted/30 px-3">
                 <div className="flex items-center gap-1.5">
                     <Info className="h-3 w-3 text-muted-foreground" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Partner</span>

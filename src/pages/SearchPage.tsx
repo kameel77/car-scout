@@ -251,6 +251,7 @@ export default function SearchPage() {
                     ctaText={ad.ctaText}
                     url={ad.url}
                     imageUrl={ad.imageUrl || ''}
+                    overlayOpacity={ad.overlayOpacity}
                   />
                 ))}
               </div>
@@ -287,6 +288,7 @@ export default function SearchPage() {
                           url={ad.url}
                           brandName={ad.brandName}
                           imageUrl={ad.imageUrl || ''}
+                          overlayOpacity={ad.overlayOpacity}
                         />
                       );
                     }

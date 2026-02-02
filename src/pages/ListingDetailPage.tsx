@@ -417,6 +417,7 @@ export default function ListingDetailPage() {
                   brandName={ad.brandName}
                   imageUrl={ad.imageUrl}
                   features={ad.features}
+                  overlayOpacity={ad.overlayOpacity}
                   className="my-6"
                 />
               ))}
@@ -602,6 +603,7 @@ export default function ListingDetailPage() {
                   brandName={ad.brandName}
                   imageUrl={ad.imageUrl}
                   features={ad.features}
+                  overlayOpacity={ad.overlayOpacity}
                 />
               ))}
 

@@ -11,6 +11,7 @@ interface PartnerAdCardProps {
     ctaText?: string;
     url: string;
     brandName?: string;
+    overlayOpacity?: number;
     index?: number;
     className?: string;
 }
@@ -22,6 +23,7 @@ export function PartnerAdCard({
     ctaText,
     url,
     brandName,
+    overlayOpacity = 0.9,
     index = 0,
     className
 }: PartnerAdCardProps) {
@@ -29,7 +31,7 @@ export function PartnerAdCard({
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
+            transition={{ duration: 0.3 }}
             className={cn("listing-card group flex flex-col h-full", className)}
         >
             <a href={url} target="_blank" rel="noopener noreferrer" className="block flex-1">
@@ -41,6 +43,7 @@ export function PartnerAdCard({
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                     />
+                    <div className="absolute inset-0 bg-accent" style={{ opacity: overlayOpacity }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                     {/* Ad Badge */}
