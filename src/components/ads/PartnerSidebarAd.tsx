@@ -36,7 +36,10 @@ export function PartnerSidebarAd({
                 className
             )}
         >
-            <div className="absolute inset-0 bg-accent" style={{ opacity: overlayOpacity }} />
+            <div
+                className="absolute inset-0 bg-accent pointer-events-none transition-opacity duration-300"
+                style={{ opacity: overlayOpacity }}
+            />
             <div className="relative p-1 border-b border-border/50 flex justify-between items-center bg-muted/30 px-3">
                 <div className="flex items-center gap-1.5">
                     <Info className="h-3 w-3 text-muted-foreground" />
@@ -46,8 +49,16 @@ export function PartnerSidebarAd({
             </div>
 
             {imageUrl && (
-                <div className="aspect-[16/9] overflow-hidden">
-                    <img src={imageUrl} alt={title || "Reklama"} className="w-full h-full object-cover" />
+                <div className="aspect-[16/9] overflow-hidden relative pointer-events-none">
+                    <img
+                        src={imageUrl}
+                        alt={title || "Reklama"}
+                        className={cn(
+                            "w-full h-full object-cover transition-all duration-300",
+                            overlayOpacity >= 0.1 ? "mix-blend-multiply" : ""
+                        )}
+                        style={{ opacity: 1 - (overlayOpacity * 0.4) }}
+                    />
                 </div>
             )}
 

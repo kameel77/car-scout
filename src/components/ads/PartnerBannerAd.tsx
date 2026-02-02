@@ -33,21 +33,26 @@ export function PartnerBannerAd({
             )}
         >
             {/* Background Image/Overlay */}
-            <div className="absolute inset-0 bg-accent" style={{ opacity: overlayOpacity }} />
+            <div
+                className="absolute inset-0 bg-accent pointer-events-none transition-opacity duration-300"
+                style={{ opacity: overlayOpacity }}
+            />
 
             {imageUrl && (
-                <div className="absolute inset-0">
+                <div className="absolute inset-0 pointer-events-none">
                     <img
                         src={imageUrl}
                         alt=""
                         className={cn(
-                            "w-full h-full object-cover transition-opacity duration-300",
-                            overlayOpacity > 0 ? "opacity-40 mix-blend-overlay" : "opacity-100"
+                            "w-full h-full object-cover transition-all duration-300",
+                            overlayOpacity >= 0.1 ? "mix-blend-overlay" : ""
                         )}
+                        style={{ opacity: 1 - (overlayOpacity * 0.6) }}
                     />
-                    {overlayOpacity > 0 && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-accent via-accent/80 to-transparent" />
-                    )}
+                    <div
+                        className="absolute inset-0 bg-gradient-to-r from-accent via-accent/80 to-transparent transition-opacity duration-300"
+                        style={{ opacity: overlayOpacity }}
+                    />
                 </div>
             )}
 

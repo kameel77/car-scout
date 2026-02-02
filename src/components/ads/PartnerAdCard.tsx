@@ -44,7 +44,7 @@ export function PartnerAdCard({
                         loading="lazy"
                     />
                     <div
-                        className="absolute inset-0 bg-accent transition-opacity duration-300"
+                        className="absolute inset-0 bg-accent transition-opacity duration-300 pointer-events-none"
                         style={{ opacity: overlayOpacity }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
