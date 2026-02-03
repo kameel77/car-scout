@@ -313,6 +313,13 @@ export const translations = {
         representative: "Osoba uprawniona do reprezentacji",
         missing: "Brak podpiętego dokumentu dla tego języka.",
       },
+      // Ads
+      ads: {
+        partnerOffer: "Oferta Partnerska",
+        advertisement: "Reklama",
+        partner: "Partner",
+        learnMore: "Dowiedz się więcej",
+      },
     },
   },
 
@@ -630,6 +637,13 @@ export const translations = {
         representative: "Authorized representative",
         missing: "No document linked for this language.",
       },
+      // Ads
+      ads: {
+        partnerOffer: "Partner Offer",
+        advertisement: "Sponsored",
+        partner: "Partner",
+        learnMore: "Learn more",
+      },
     },
   },
 
@@ -944,6 +958,13 @@ export const translations = {
         register: "Handelsregister",
         representative: "Vertretungsberechtigte Person",
         missing: "Kein Dokument für diese Sprache hinterlegt.",
+      },
+      // Ads
+      ads: {
+        partnerOffer: "Partnerangebot",
+        advertisement: "Anzeige",
+        partner: "Partner",
+        learnMore: "Mehr erfahren",
       },
     },
   },

@@ -43,6 +43,8 @@ import {
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
+import { usePartnerAds } from '@/hooks/usePartnerAds';
 
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
@@ -58,6 +60,8 @@ export default function ListingDetailPage() {
   // Use slug if available (new URL format), otherwise fall back to id (legacy format)
   const listingIdentifier = slug || id;
   const { data, isLoading } = useListing(listingIdentifier);
+  const { data: adsData } = usePartnerAds('DETAIL_SIDEBAR');
+  const sidebarAds = adsData?.ads || [];
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
@@ -251,9 +255,15 @@ export default function ListingDetailPage() {
   const title = `${listing.make} ${listing.model} ${listing.version}`;
   const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
 
+  const lang = i18n.language;
+  const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
+
   // Prepare SEO values
-  const metaTitle = listing && seoConfig?.listingTitle
-    ? seoConfig.listingTitle
+  const listingTitleTemplate = (seoConfig ? (seoConfig as any)[`listingTitle${suffix}`] : undefined) || seoConfig?.listingTitle;
+  const listingDescriptionTemplate = (seoConfig ? (seoConfig as any)[`listingDescription${suffix}`] : undefined) || seoConfig?.listingDescription;
+
+  const metaTitle = listing && listingTitleTemplate
+    ? listingTitleTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
@@ -261,8 +271,8 @@ export default function ListingDetailPage() {
       .replace('{{fuel}}', listing.fuel_type || '')
     : title;
 
-  const metaDesc = listing && seoConfig?.listingDescription
-    ? seoConfig.listingDescription
+  const metaDesc = listing && listingDescriptionTemplate
+    ? listingDescriptionTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
@@ -400,6 +410,25 @@ export default function ListingDetailPage() {
                 />
               </section>
             )}
+
+            {/* Mobile Partner Ad */}
+            <div className="lg:hidden">
+              {sidebarAds.filter(a => a.isActive).map(ad => (
+                <PartnerSidebarAd
+                  key={ad.id}
+                  title={(ad as any)[`title${suffix}`] || ad.title}
+                  description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                  ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
+                  url={ad.url}
+                  brandName={ad.brandName}
+                  imageUrl={ad.imageUrl}
+                  features={ad.features}
+                  overlayOpacity={ad.overlayOpacity}
+                  hideUiElements={ad.hideUiElements}
+                  className="my-6"
+                />
+              ))}
+            </div>
 
             <Separator />
 
@@ -569,6 +598,22 @@ export default function ListingDetailPage() {
                   />
                 </motion.div>
               )}
+
+              {/* Sidebar Ad Placement */}
+              {sidebarAds.filter(a => a.isActive).map(ad => (
+                <PartnerSidebarAd
+                  key={ad.id}
+                  title={(ad as any)[`title${suffix}`] || ad.title}
+                  description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                  ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
+                  url={ad.url}
+                  brandName={ad.brandName}
+                  imageUrl={ad.imageUrl}
+                  features={ad.features}
+                  overlayOpacity={ad.overlayOpacity}
+                  hideUiElements={ad.hideUiElements}
+                />
+              ))}
 
               {/* Dealer Card */}
               {canManage && (

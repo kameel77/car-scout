@@ -32,6 +32,10 @@ type SettingsPayload = {
     legalSloganEn?: string | null;
     legalSloganDe?: string | null;
 
+    siteNamePl?: string | null;
+    siteNameEn?: string | null;
+    siteNameDe?: string | null;
+
     financingCalculatorEnabled?: boolean;
     financingCalculatorLocation?: string;
 };
@@ -188,6 +192,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     legalSloganPl: data.legalSloganPl || null,
                     legalSloganEn: data.legalSloganEn || null,
                     legalSloganDe: data.legalSloganDe || null,
+                    siteNamePl: data.siteNamePl || null,
+                    siteNameEn: data.siteNameEn || null,
+                    siteNameDe: data.siteNameDe || null,
 
                     financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined
                         ? Boolean(data.financingCalculatorEnabled)
@@ -218,6 +225,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     legalSloganPl: data.legalSloganPl || null,
                     legalSloganEn: data.legalSloganEn || null,
                     legalSloganDe: data.legalSloganDe || null,
+                    siteNamePl: data.siteNamePl || null,
+                    siteNameEn: data.siteNameEn || null,
+                    siteNameDe: data.siteNameDe || null,
 
                     financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined
                         ? Boolean(data.financingCalculatorEnabled)

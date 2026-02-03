@@ -113,20 +113,50 @@ export default function SeoPage() {
                                         <CardTitle>Meta Tagi Strony Głównej</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="homeTitle">Tytuł (Title)</Label>
-                                            <Input id="homeTitle" {...register("homeTitle")} placeholder="Car Scout - Najlepsze samochody" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="homeDescription">Opis (Description)</Label>
-                                            <Textarea id="homeDescription" {...register("homeDescription")} placeholder="Znajdź, sprawdź i zamów..." />
-                                        </div>
+                                        <Tabs defaultValue="pl" className="w-full">
+                                            <TabsList className="grid w-full grid-cols-3">
+                                                <TabsTrigger value="pl">Polski</TabsTrigger>
+                                                <TabsTrigger value="en">English</TabsTrigger>
+                                                <TabsTrigger value="de">Deutsch</TabsTrigger>
+                                            </TabsList>
+                                            <TabsContent value="pl" className="space-y-4 pt-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="homeTitle">Tytuł (Title - PL)</Label>
+                                                    <Input id="homeTitle" {...register("homeTitle")} placeholder="Twoja Platforma - Najlepsze samochody" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="homeDescription">Opis (Description - PL)</Label>
+                                                    <Textarea id="homeDescription" {...register("homeDescription")} placeholder="Znajdź, sprawdź i zamów..." />
+                                                </div>
+                                            </TabsContent>
+                                            <TabsContent value="en" className="space-y-4 pt-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="homeTitleEn">Title (EN)</Label>
+                                                    <Input id="homeTitleEn" {...register("homeTitleEn")} placeholder="Your Platform - Best Cars" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="homeDescriptionEn">Description (EN)</Label>
+                                                    <Textarea id="homeDescriptionEn" {...register("homeDescriptionEn")} placeholder="Find, check and order..." />
+                                                </div>
+                                            </TabsContent>
+                                            <TabsContent value="de" className="space-y-4 pt-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="homeTitleDe">Titel (DE)</Label>
+                                                    <Input id="homeTitleDe" {...register("homeTitleDe")} placeholder="Deine Plattform - Beste Autos" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="homeDescriptionDe">Beschreibung (DE)</Label>
+                                                    <Textarea id="homeDescriptionDe" {...register("homeDescriptionDe")} placeholder="Suchen, prüfen und bestellen..." />
+                                                </div>
+                                            </TabsContent>
+                                        </Tabs>
+
                                         <div className="space-y-2">
                                             <Label htmlFor="homeOgImage">Obrazek Udostępniania (OG Image URL)</Label>
                                             <Input id="homeOgImage" {...register("homeOgImage")} placeholder="https://..." />
                                         </div>
                                         <div className="flex justify-end pt-4">
-                                            <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading} className="bg-blue-600 hover:bg-blue-700">
+                                            <Button type="submit" disabled={mutation.isPending || isLoading} className="bg-blue-600 hover:bg-blue-700">
                                                 {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
                                             </Button>
                                         </div>
@@ -154,16 +184,46 @@ export default function SeoPage() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="listingTitle">Szablon Tytułu</Label>
-                                            <Input id="listingTitle" {...register("listingTitle")} placeholder="{{make}} {{model}} {{year}} - Sprawdź cenę!" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="listingDescription">Szablon Opisu</Label>
-                                            <Textarea id="listingDescription" {...register("listingDescription")} placeholder="Zobacz ofertę {{make}} {{model}} z roku {{year}}..." />
-                                        </div>
+                                        <Tabs defaultValue="pl" className="w-full">
+                                            <TabsList className="grid w-full grid-cols-3">
+                                                <TabsTrigger value="pl">Polski</TabsTrigger>
+                                                <TabsTrigger value="en">English</TabsTrigger>
+                                                <TabsTrigger value="de">Deutsch</TabsTrigger>
+                                            </TabsList>
+                                            <TabsContent value="pl" className="space-y-4 pt-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="listingTitle">Szablon Tytułu (PL)</Label>
+                                                    <Input id="listingTitle" {...register("listingTitle")} placeholder="{{make}} {{model}} {{year}} - Sprawdź cenę!" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="listingDescription">Szablon Opisu (PL)</Label>
+                                                    <Textarea id="listingDescription" {...register("listingDescription")} placeholder="Zobacz ofertę {{make}} {{model}} z roku {{year}}..." />
+                                                </div>
+                                            </TabsContent>
+                                            <TabsContent value="en" className="space-y-4 pt-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="listingTitleEn">Title Template (EN)</Label>
+                                                    <Input id="listingTitleEn" {...register("listingTitleEn")} placeholder="{{make}} {{model}} {{year}} - Check price!" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="listingDescriptionEn">Description Template (EN)</Label>
+                                                    <Textarea id="listingDescriptionEn" {...register("listingDescriptionEn")} placeholder="See offer for {{make}} {{model}} from {{year}}..." />
+                                                </div>
+                                            </TabsContent>
+                                            <TabsContent value="de" className="space-y-4 pt-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="listingTitleDe">Titel-Vorlage (DE)</Label>
+                                                    <Input id="listingTitleDe" {...register("listingTitleDe")} placeholder="{{make}} {{model}} {{year}} - Preis prüfen!" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="listingDescriptionDe">Beschreibung-Vorlage (DE)</Label>
+                                                    <Textarea id="listingDescriptionDe" {...register("listingDescriptionDe")} placeholder="Siehe Angebot für {{make}} {{model}} aus {{year}}..." />
+                                                </div>
+                                            </TabsContent>
+                                        </Tabs>
+
                                         <div className="flex justify-end pt-4">
-                                            <Button onClick={handleSubmit(onSubmit)} disabled={mutation.isPending || isLoading} className="bg-blue-600 hover:bg-blue-700">
+                                            <Button type="submit" disabled={mutation.isPending || isLoading} className="bg-blue-600 hover:bg-blue-700">
                                                 {mutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
                                             </Button>
                                         </div>

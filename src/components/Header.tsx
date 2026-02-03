@@ -28,7 +28,7 @@ interface HeaderProps {
 
 export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   const { t, i18n } = useTranslation();
-  const { data: settings } = useAppSettings();
+  const { data: settings, isLoading: isSettingsLoading } = useAppSettings();
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -54,7 +54,43 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
     return settings.headerLogoTextPl;
   };
 
+  const getSiteName = () => {
+    if (!settings) return 'Car Scout';
+    const lang = i18n.language;
+    let name = '';
+    if (lang === 'de') name = settings.siteNameDe;
+    else if (lang === 'en') name = settings.siteNameEn;
+    else name = settings.siteNamePl;
+
+    return name?.trim() || 'Car Scout';
+  };
+
+  const getSiteNameParts = () => {
+    const name = getSiteName();
+    if (name === 'Car Scout') return { part1: 'Car', part2: 'Scout' };
+
+    const firstSpaceIndex = name.indexOf(' ');
+    if (firstSpaceIndex === -1) {
+      if (name.length > 8) {
+        // If it's one long word, just return it as part1
+        return { part1: name, part2: '' };
+      }
+      return { part1: name, part2: '' };
+    }
+
+    return {
+      part1: name.substring(0, firstSpaceIndex),
+      part2: name.substring(firstSpaceIndex + 1)
+    };
+  };
+
   const headerLogoText = getHeaderLogoText();
+  const siteName = getSiteName();
+  const { part1, part2 } = getSiteNameParts();
+
+  if (isSettingsLoading) {
+    return <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80"><div className="container flex h-20 items-center justify-between"></div></header>;
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -64,13 +100,14 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           {settings?.headerLogoUrl ? (
             <img
               src={buildAssetUrl(settings.headerLogoUrl)}
-              alt="Car Scout"
+              alt={siteName}
               className="h-[3.25rem] w-auto max-w-[260px] object-contain"
               loading="lazy"
             />
           ) : (
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Car Scout
+            <h1 className="text-3xl font-bold tracking-tight">
+              <span className="text-primary">{part1}</span>
+              {part2 && <span className="text-accent">{part2}</span>}
             </h1>
           )}
           {headerLogoText && (
@@ -123,13 +160,14 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 {settings?.headerLogoUrl ? (
                   <img
                     src={buildAssetUrl(settings.headerLogoUrl)}
-                    alt="Car Scout"
+                    alt={siteName}
                     className="h-[3.25rem] w-auto max-w-[260px] object-contain"
                     loading="lazy"
                   />
                 ) : (
-                  <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    Car Scout
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    <span className="text-primary">{part1}</span>
+                    {part2 && <span className="text-accent">{part2}</span>}
                   </h1>
                 )}
               </div>
