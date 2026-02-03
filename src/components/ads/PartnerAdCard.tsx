@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,8 @@ interface PartnerAdCardProps {
     ctaText?: string;
     url: string;
     brandName?: string;
+    features?: string[];
+    hideUiElements?: boolean;
     overlayOpacity?: number;
     index?: number;
     className?: string;
@@ -23,10 +26,13 @@ export function PartnerAdCard({
     ctaText,
     url,
     brandName,
+    features = [],
+    hideUiElements = false,
     overlayOpacity = 0.9,
     index = 0,
     className
 }: PartnerAdCardProps) {
+    const { t } = useTranslation();
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -39,7 +45,7 @@ export function PartnerAdCard({
                 <div className="relative aspect-[16/10] overflow-hidden">
                     <img
                         src={imageUrl}
-                        alt={title || "Reklama"}
+                        alt={title || t('ads.advertisement')}
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                     />
@@ -52,7 +58,7 @@ export function PartnerAdCard({
                     {/* Ad Badge */}
                     <div className="absolute top-3 left-3 px-2 py-1 bg-background/90 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground border border-border flex items-center gap-1">
                         <Info className="h-3 w-3" />
-                        Reklama
+                        {t('ads.advertisement')}
                     </div>
 
                     {brandName && (
@@ -65,25 +71,41 @@ export function PartnerAdCard({
                 </div>
 
                 {/* Content */}
-                <div className="p-4 space-y-3 flex-1">
-                    {title && (
-                        <div>
-                            <h3 className="font-heading text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors min-h-[3.5rem]">
-                                {title}
-                            </h3>
-                        </div>
-                    )}
+                {!hideUiElements && (
+                    <div className="p-4 space-y-3 flex-1">
+                        {title && (
+                            <div>
+                                <h3 className="font-heading text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors min-h-[3rem] leading-tight">
+                                    {title}
+                                </h3>
+                            </div>
+                        )}
 
-                    {description && (
-                        <p className="text-sm text-muted-foreground line-clamp-3">
-                            {description}
-                        </p>
-                    )}
-                </div>
+                        {features.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                                {features.slice(0, 3).map((feature, idx) => (
+                                    <span key={idx} className="bg-muted px-2 py-0.5 rounded text-[10px] text-muted-foreground font-medium border border-border/50">
+                                        {feature}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        {description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                                {description}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {hideUiElements && (
+                    <div className="flex-1" />
+                )}
             </a>
 
             {/* CTA */}
-            {ctaText && (
+            {!hideUiElements && ctaText && (
                 <div className="px-4 pb-4 mt-auto">
                     <Button asChild variant="hero" className="w-full group/btn">
                         <a href={url} target="_blank" rel="noopener noreferrer">

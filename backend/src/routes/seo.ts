@@ -25,19 +25,35 @@ export async function seoRoutes(fastify: FastifyInstance) {
             update: {
                 gtmId: data.gtmId,
                 homeTitle: data.homeTitle,
+                homeTitleEn: data.homeTitleEn,
+                homeTitleDe: data.homeTitleDe,
                 homeDescription: data.homeDescription,
+                homeDescriptionEn: data.homeDescriptionEn,
+                homeDescriptionDe: data.homeDescriptionDe,
                 homeOgImage: data.homeOgImage,
                 listingTitle: data.listingTitle,
-                listingDescription: data.listingDescription
+                listingTitleEn: data.listingTitleEn,
+                listingTitleDe: data.listingTitleDe,
+                listingDescription: data.listingDescription,
+                listingDescriptionEn: data.listingDescriptionEn,
+                listingDescriptionDe: data.listingDescriptionDe
             },
             create: {
                 id: 'default',
                 gtmId: data.gtmId,
                 homeTitle: data.homeTitle,
+                homeTitleEn: data.homeTitleEn,
+                homeTitleDe: data.homeTitleDe,
                 homeDescription: data.homeDescription,
+                homeDescriptionEn: data.homeDescriptionEn,
+                homeDescriptionDe: data.homeDescriptionDe,
                 homeOgImage: data.homeOgImage,
                 listingTitle: data.listingTitle,
-                listingDescription: data.listingDescription
+                listingTitleEn: data.listingTitleEn,
+                listingTitleDe: data.listingTitleDe,
+                listingDescription: data.listingDescription,
+                listingDescriptionEn: data.listingDescriptionEn,
+                listingDescriptionDe: data.listingDescriptionDe
             }
         });
 

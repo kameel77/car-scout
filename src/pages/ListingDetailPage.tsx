@@ -255,9 +255,15 @@ export default function ListingDetailPage() {
   const title = `${listing.make} ${listing.model} ${listing.version}`;
   const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
 
+  const lang = i18n.language;
+  const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
+
   // Prepare SEO values
-  const metaTitle = listing && seoConfig?.listingTitle
-    ? seoConfig.listingTitle
+  const listingTitleTemplate = (seoConfig as any)[`listingTitle${suffix}`] || seoConfig?.listingTitle;
+  const listingDescriptionTemplate = (seoConfig as any)[`listingDescription${suffix}`] || seoConfig?.listingDescription;
+
+  const metaTitle = listing && listingTitleTemplate
+    ? listingTitleTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
@@ -265,8 +271,8 @@ export default function ListingDetailPage() {
       .replace('{{fuel}}', listing.fuel_type || '')
     : title;
 
-  const metaDesc = listing && seoConfig?.listingDescription
-    ? seoConfig.listingDescription
+  const metaDesc = listing && listingDescriptionTemplate
+    ? listingDescriptionTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
@@ -407,17 +413,18 @@ export default function ListingDetailPage() {
 
             {/* Mobile Partner Ad */}
             <div className="lg:hidden">
-              {sidebarAds.filter(a => a.isActive).slice(0, 1).map(ad => (
+              {sidebarAds.filter(a => a.isActive).map(ad => (
                 <PartnerSidebarAd
                   key={ad.id}
-                  title={ad.title}
-                  description={ad.description || ''}
-                  ctaText={ad.ctaText}
+                  title={(ad as any)[`title${suffix}`] || ad.title}
+                  description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                  ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
                   url={ad.url}
                   brandName={ad.brandName}
                   imageUrl={ad.imageUrl}
                   features={ad.features}
                   overlayOpacity={ad.overlayOpacity}
+                  hideUiElements={ad.hideUiElements}
                   className="my-6"
                 />
               ))}
@@ -593,17 +600,18 @@ export default function ListingDetailPage() {
               )}
 
               {/* Sidebar Ad Placement */}
-              {sidebarAds.filter(a => a.isActive).slice(0, 1).map(ad => (
+              {sidebarAds.filter(a => a.isActive).map(ad => (
                 <PartnerSidebarAd
                   key={ad.id}
-                  title={ad.title}
-                  description={ad.description || ''}
-                  ctaText={ad.ctaText}
+                  title={(ad as any)[`title${suffix}`] || ad.title}
+                  description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                  ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
                   url={ad.url}
                   brandName={ad.brandName}
                   imageUrl={ad.imageUrl}
                   features={ad.features}
                   overlayOpacity={ad.overlayOpacity}
+                  hideUiElements={ad.hideUiElements}
                 />
               ))}
 

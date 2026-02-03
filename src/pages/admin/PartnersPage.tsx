@@ -42,6 +42,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminPartnersPage() {
     const { t } = useTranslation();
@@ -96,11 +97,21 @@ export default function AdminPartnersPage() {
         const adData = {
             placement: formData.get('placement') as AdPlacement,
             title: formData.get('title') as string,
+            titleEn: formData.get('titleEn') as string,
+            titleDe: formData.get('titleDe') as string,
             description: formData.get('description') as string,
+            descriptionEn: formData.get('descriptionEn') as string,
+            descriptionDe: formData.get('descriptionDe') as string,
             subtitle: formData.get('subtitle') as string,
+            subtitleEn: formData.get('subtitleEn') as string,
+            subtitleDe: formData.get('subtitleDe') as string,
             ctaText: formData.get('ctaText') as string,
+            ctaTextEn: formData.get('ctaTextEn') as string,
+            ctaTextDe: formData.get('ctaTextDe') as string,
             url: formData.get('url') as string,
             imageUrl: formData.get('imageUrl') as string,
+            mobileImageUrl: formData.get('mobileImageUrl') as string,
+            hideUiElements: formData.get('hideUiElements') === 'on',
             brandName: formData.get('brandName') as string,
             priority: parseInt(formData.get('priority') as string) || 0,
             isActive: formData.get('isActive') === 'on',
@@ -263,30 +274,71 @@ export default function AdminPartnersPage() {
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="title">Tytuł reklamy (Opcjonalny)</Label>
-                                <Input id="title" name="title" defaultValue={editingAd?.title} placeholder="Główny tekst reklamy" />
-                            </div>
+                            <Tabs defaultValue="pl" className="w-full">
+                                <TabsList className="grid w-full grid-cols-3">
+                                    <TabsTrigger value="pl">Polski</TabsTrigger>
+                                    <TabsTrigger value="en">English</TabsTrigger>
+                                    <TabsTrigger value="de">Deutsch</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="pl" className="space-y-4 pt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="title">Tytuł reklamy (PL)</Label>
+                                        <Input id="title" name="title" defaultValue={editingAd?.title} placeholder="Główny tekst reklamy" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="subtitle">Podtytuł / Slogan (PL)</Label>
+                                        <Input id="subtitle" name="subtitle" defaultValue={editingAd?.subtitle} placeholder="Opcjonalny slogan" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="description">Opis korzyści (PL)</Label>
+                                        <Input id="description" name="description" defaultValue={editingAd?.description} placeholder="Dłuższy opis oferty" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ctaText">Tekst przycisku (PL)</Label>
+                                        <Input id="ctaText" name="ctaText" defaultValue={editingAd?.ctaText} placeholder="np. Sprawdź ofertę" />
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="en" className="space-y-4 pt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="titleEn">Ad Title (EN)</Label>
+                                        <Input id="titleEn" name="titleEn" defaultValue={editingAd?.titleEn} placeholder="Main ad text in English" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="subtitleEn">Subtitle / Slogan (EN)</Label>
+                                        <Input id="subtitleEn" name="subtitleEn" defaultValue={editingAd?.subtitleEn} placeholder="Optional slogan in English" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="descriptionEn">Description (EN)</Label>
+                                        <Input id="descriptionEn" name="descriptionEn" defaultValue={editingAd?.descriptionEn} placeholder="Longer offer description" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ctaTextEn">CTA Button Text (EN)</Label>
+                                        <Input id="ctaTextEn" name="ctaTextEn" defaultValue={editingAd?.ctaTextEn} placeholder="e.g. Check Offer" />
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="de" className="space-y-4 pt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="titleDe">Anzeigentitel (DE)</Label>
+                                        <Input id="titleDe" name="titleDe" defaultValue={editingAd?.titleDe} placeholder="Haupttext der Anzeige auf Deutsch" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="subtitleDe">Untertitel / Slogan (DE)</Label>
+                                        <Input id="subtitleDe" name="subtitleDe" defaultValue={editingAd?.subtitleDe} placeholder="Optionaler Slogan auf Deutsch" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="descriptionDe">Beschreibung (DE)</Label>
+                                        <Input id="descriptionDe" name="descriptionDe" defaultValue={editingAd?.descriptionDe} placeholder="Längere Angebotsbeschreibung" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ctaTextDe">CTA-Button-Text (DE)</Label>
+                                        <Input id="ctaTextDe" name="ctaTextDe" defaultValue={editingAd?.ctaTextDe} placeholder="z.B. Angebot ansehen" />
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
 
                             <div className="space-y-2">
-                                <Label htmlFor="subtitle">Podtytuł / Slogan</Label>
-                                <Input id="subtitle" name="subtitle" defaultValue={editingAd?.subtitle} placeholder="Opcjonalny tekst uzupełniający" />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="description">Opis korzyści</Label>
-                                <Input id="description" name="description" defaultValue={editingAd?.description} placeholder="Dłuższy opis oferty" />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="ctaText">Tekst przycisku (Opcjonalny)</Label>
-                                    <Input id="ctaText" name="ctaText" defaultValue={editingAd?.ctaText} placeholder="np. Sprawdź ofertę" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="priority">Priorytet (Sortowanie)</Label>
-                                    <Input id="priority" name="priority" type="number" defaultValue={editingAd?.priority || 0} />
-                                </div>
+                                <Label htmlFor="priority">Priorytet (Sortowanie)</Label>
+                                <Input id="priority" name="priority" type="number" defaultValue={editingAd?.priority || 0} />
                             </div>
 
                             <div className="space-y-4 p-3 border rounded-lg bg-orange-50/50">
@@ -314,8 +366,23 @@ export default function AdminPartnersPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="imageUrl">URL Obrazka / Baneru</Label>
+                                <Label htmlFor="imageUrl">URL Obrazka / Baneru (Desktop)</Label>
                                 <Input id="imageUrl" name="imageUrl" defaultValue={editingAd?.imageUrl} placeholder="https://images.unsplash.com/..." />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="mobileImageUrl">URL Obrazka / Baneru (Mobile - Opcjonalny)</Label>
+                                <Input id="mobileImageUrl" name="mobileImageUrl" defaultValue={editingAd?.mobileImageUrl} placeholder="https://images.unsplash.com/..." />
+                            </div>
+
+                            <div className="flex items-center space-x-2 p-3 border rounded-lg bg-orange-50/30">
+                                <Switch id="hideUiElements" name="hideUiElements" defaultChecked={editingAd?.hideUiElements} />
+                                <div className="grid gap-1.5 leading-none">
+                                    <Label htmlFor="hideUiElements">Schowaj elementy graficzne</Label>
+                                    <p className="text-xs text-muted-foreground italic">
+                                        Ukrywa tytuły, opisy i przyciski (użyj dla gotowych banerów graficznych)
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="space-y-2">

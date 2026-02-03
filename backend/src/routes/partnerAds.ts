@@ -6,11 +6,21 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
     const adSchema = z.object({
         placement: z.enum(['SEARCH_GRID', 'SEARCH_TOP', 'DETAIL_SIDEBAR']),
         title: z.string().optional(),
+        titleEn: z.string().optional(),
+        titleDe: z.string().optional(),
         description: z.string().optional(),
+        descriptionEn: z.string().optional(),
+        descriptionDe: z.string().optional(),
         subtitle: z.string().optional(),
+        subtitleEn: z.string().optional(),
+        subtitleDe: z.string().optional(),
         ctaText: z.string().optional(),
+        ctaTextEn: z.string().optional(),
+        ctaTextDe: z.string().optional(),
         url: z.string().url(),
         imageUrl: z.string().optional(),
+        mobileImageUrl: z.string().optional(),
+        hideUiElements: z.boolean().optional(),
         brandName: z.string().optional(),
         features: z.array(z.string()).optional(),
         priority: z.number().int().optional(),
@@ -57,10 +67,8 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
         const ad = await fastify.prisma.partnerAd.create({
             data: {
                 ...data,
-                title: data.title as any,
-                ctaText: data.ctaText as any,
                 features: data.features || []
-            } as any
+            }
         });
 
         return { ad };

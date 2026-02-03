@@ -190,11 +190,18 @@ export default function SearchPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  const { i18n } = useTranslation();
+  const lang = i18n.language;
+  const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
+
+  const homeTitle = (seoConfig as any)[`homeTitle${suffix}`] || seoConfig?.homeTitle;
+  const homeDescription = (seoConfig as any)[`homeDescription${suffix}`] || seoConfig?.homeDescription;
+
   return (
     <div className="min-h-screen bg-background">
       <MetaHead
-        title={seoConfig?.homeTitle}
-        description={seoConfig?.homeDescription}
+        title={homeTitle}
+        description={homeDescription}
         image={seoConfig?.homeOgImage}
         schema={{
           "@context": "https://schema.org",
@@ -246,9 +253,9 @@ export default function SearchPage() {
                 {partnersAds.filter(a => a.placement === 'SEARCH_TOP' && a.isActive).slice(0, 1).map(ad => (
                   <PartnerBannerAd
                     key={ad.id}
-                    title={ad.title}
-                    subtitle={ad.subtitle}
-                    ctaText={ad.ctaText}
+                    title={(ad as any)[`title${suffix}`] || ad.title}
+                    subtitle={(ad as any)[`subtitle${suffix}`] || ad.subtitle}
+                    ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
                     url={ad.url}
                     imageUrl={ad.imageUrl || ''}
                     overlayOpacity={ad.overlayOpacity}
@@ -282,9 +289,9 @@ export default function SearchPage() {
                         <PartnerAdCard
                           key={`ad-${index}`}
                           index={index + 1}
-                          title={ad.title}
-                          description={ad.description || ''}
-                          ctaText={ad.ctaText}
+                          title={(ad as any)[`title${suffix}`] || ad.title}
+                          description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                          ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
                           url={ad.url}
                           brandName={ad.brandName}
                           imageUrl={ad.imageUrl || ''}

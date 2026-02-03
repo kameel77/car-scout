@@ -379,12 +379,20 @@ model SeoConfig {
   
   // homepage
   homeTitle       String?  @map("home_title")
+  homeTitleEn     String?  @map("home_title_en")
+  homeTitleDe     String?  @map("home_title_de")
   homeDescription String?  @map("home_description") @db.Text
+  homeDescriptionEn String?  @map("home_description_en") @db.Text
+  homeDescriptionDe String?  @map("home_description_de") @db.Text
   homeOgImage     String?  @map("home_og_image")
   
   // listings (templates)
   listingTitle       String? @map("listing_title") 
+  listingTitleEn     String? @map("listing_title_en")
+  listingTitleDe     String? @map("listing_title_de")
   listingDescription String? @map("listing_description") @db.Text
+  listingDescriptionEn String? @map("listing_description_en") @db.Text
+  listingDescriptionDe String? @map("listing_description_de") @db.Text
   
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -396,11 +404,21 @@ model PartnerAd {
   id           String   @id @default(cuid())
   placement    String   // 'SEARCH_GRID', 'SEARCH_TOP', 'DETAIL_SIDEBAR'
   title        String?
+  titleEn      String?  @map("title_en")
+  titleDe      String?  @map("title_de")
   description  String?  @db.Text
+  descriptionEn String? @map("description_en") @db.Text
+  descriptionDe String? @map("description_de") @db.Text
   subtitle     String?
+  subtitleEn   String?  @map("subtitle_en")
+  subtitleDe   String?  @map("subtitle_de")
   ctaText      String?  @map("cta_text")
+  ctaTextEn    String?  @map("cta_text_en")
+  ctaTextDe    String?  @map("cta_text_de")
   url          String
   imageUrl     String?  @map("image_url")
+  mobileImageUrl String? @map("mobile_image_url")
+  hideUiElements Boolean  @default(false) @map("hide_ui_elements")
   brandName    String?  @map("brand_name")
   features     String[] @default([])
   priority     Int      @default(0)
