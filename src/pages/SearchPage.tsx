@@ -275,6 +275,8 @@ export default function SearchPage() {
                     ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
                     url={ad.url}
                     imageUrl={ad.imageUrl || ''}
+                    mobileImageUrl={ad.mobileImageUrl || undefined}
+                    hideUiElements={ad.hideUiElements}
                     overlayOpacity={ad.overlayOpacity}
                   />
                 ))}
