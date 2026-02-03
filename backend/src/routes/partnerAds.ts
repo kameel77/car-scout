@@ -5,27 +5,27 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
     // Schema for Ad validation
     const adSchema = z.object({
         placement: z.enum(['SEARCH_GRID', 'SEARCH_TOP', 'DETAIL_SIDEBAR']),
-        title: z.string().optional(),
-        titleEn: z.string().optional(),
-        titleDe: z.string().optional(),
-        description: z.string().optional(),
-        descriptionEn: z.string().optional(),
-        descriptionDe: z.string().optional(),
-        subtitle: z.string().optional(),
-        subtitleEn: z.string().optional(),
-        subtitleDe: z.string().optional(),
-        ctaText: z.string().optional(),
-        ctaTextEn: z.string().optional(),
-        ctaTextDe: z.string().optional(),
+        title: z.string().nullable().optional(),
+        titleEn: z.string().nullable().optional(),
+        titleDe: z.string().nullable().optional(),
+        description: z.string().nullable().optional(),
+        descriptionEn: z.string().nullable().optional(),
+        descriptionDe: z.string().nullable().optional(),
+        subtitle: z.string().nullable().optional(),
+        subtitleEn: z.string().nullable().optional(),
+        subtitleDe: z.string().nullable().optional(),
+        ctaText: z.string().nullable().optional(),
+        ctaTextEn: z.string().nullable().optional(),
+        ctaTextDe: z.string().nullable().optional(),
         url: z.string().url(),
-        imageUrl: z.string().optional(),
-        mobileImageUrl: z.string().optional(),
+        imageUrl: z.string().nullable().optional(),
+        mobileImageUrl: z.string().nullable().optional(),
         hideUiElements: z.boolean().optional(),
-        brandName: z.string().optional(),
+        brandName: z.string().nullable().optional(),
         features: z.array(z.string()).optional(),
-        priority: z.number().int().optional(),
+        priority: z.preprocess((val) => (typeof val === 'string' ? parseInt(val, 10) : val), z.number().int()).optional(),
         isActive: z.boolean().optional(),
-        overlayOpacity: z.number().min(0).max(1).optional()
+        overlayOpacity: z.preprocess((val) => (typeof val === 'string' ? parseFloat(val) : val), z.number().min(0).max(1)).optional()
     });
 
     // Public: List active ads by placement
@@ -62,31 +62,53 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
     fastify.post('/api/admin/partner-ads', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
-        const data = adSchema.parse(request.body);
+        try {
+            const data = adSchema.parse(request.body);
 
-        const ad = await fastify.prisma.partnerAd.create({
-            data: {
-                ...data,
-                features: data.features || []
+            const ad = await fastify.prisma.partnerAd.create({
+                data: {
+                    ...data,
+                    features: data.features || []
+                }
+            });
+
+            return { ad };
+        } catch (error: any) {
+            fastify.log.error(error);
+            if (error instanceof z.ZodError) {
+                return reply.status(400).send({ error: 'Validation Error', details: error.errors });
             }
-        });
-
-        return { ad };
+            return reply.status(500).send({ error: error.message || 'Internal Server Error' });
+        }
     });
 
     // Admin: Update ad
     fastify.patch('/api/admin/partner-ads/:id', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
-        const { id } = request.params as { id: string };
-        const data = adSchema.partial().parse(request.body);
+        try {
+            const { id } = request.params as { id: string };
+            const data = adSchema.partial().parse(request.body);
 
-        const ad = await fastify.prisma.partnerAd.update({
-            where: { id },
-            data
-        });
+            // Clean up nulls to undefined or pass them if allowed
+            const updateData: any = { ...data };
+            if (data.features) {
+                updateData.features = { set: data.features };
+            }
 
-        return { ad };
+            const ad = await fastify.prisma.partnerAd.update({
+                where: { id },
+                data: updateData
+            });
+
+            return { ad };
+        } catch (error: any) {
+            fastify.log.error(error);
+            if (error instanceof z.ZodError) {
+                return reply.status(400).send({ error: 'Validation Error', details: error.errors });
+            }
+            return reply.status(500).send({ error: error.message || 'Internal Server Error' });
+        }
     });
 
     // Admin: Delete ad

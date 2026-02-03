@@ -30,6 +30,7 @@ export function AdminSidebar() {
     const { i18n } = useTranslation();
 
     const siteName = React.useMemo(() => {
+        if (!settings) return '';
         const lang = i18n.language.slice(0, 2).toLowerCase();
         const candidates = [
             lang === 'en' ? settings?.siteNameEn : null,
@@ -41,7 +42,7 @@ export function AdminSidebar() {
         ];
         const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
         return pick?.trim() || 'Car Scout';
-    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
 
     const initial = siteName.charAt(0).toUpperCase();
     const initials = siteName.split(' ').map(s => s.charAt(0)).join('').toUpperCase().slice(0, 2);

@@ -19,6 +19,7 @@ export default function LoginPage() {
     const { i18n } = useTranslation();
 
     const siteName = React.useMemo(() => {
+        if (!settings) return '';
         const langCode = i18n.language.slice(0, 2).toLowerCase();
         const candidates = [
             langCode === 'en' ? settings?.siteNameEn : null,
@@ -30,7 +31,7 @@ export default function LoginPage() {
         ];
         const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
         return pick?.trim() || 'Car Scout';
-    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

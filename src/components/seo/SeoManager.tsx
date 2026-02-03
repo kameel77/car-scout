@@ -45,6 +45,7 @@ export function SeoManager() {
 
     const { data: settings } = useAppSettings();
     const siteName = React.useMemo(() => {
+        if (!settings) return '';
         const langCode = i18n.language.slice(0, 2).toLowerCase();
         const candidates = [
             langCode === 'en' ? settings?.siteNameEn : null,
@@ -56,7 +57,7 @@ export function SeoManager() {
         ];
         const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
         return pick?.trim() || 'Car Scout';
-    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
 
     useEffect(() => {
         if (seoConfig?.gtmId) {

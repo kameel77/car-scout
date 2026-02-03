@@ -65,7 +65,8 @@ export function Footer() {
   }, [i18n.language, settings?.legalSloganEn, settings?.legalSloganDe, settings?.legalSloganPl]);
 
   const siteName = React.useMemo(() => {
-    const lang = normalizeLang(i18n.language);
+    if (!settings) return '';
+    const lang = i18n.language.slice(0, 2).toLowerCase();
     const candidates = [
       lang === 'en' ? settings?.siteNameEn : null,
       lang === 'de' ? settings?.siteNameDe : null,
@@ -76,7 +77,7 @@ export function Footer() {
     ];
     const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
     return pick?.trim() || 'Car Scout';
-  }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
+  }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
 
   return (
     <footer className="mt-12 border-t bg-slate-950 text-slate-100">

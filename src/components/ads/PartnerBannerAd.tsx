@@ -34,7 +34,6 @@ export function PartnerBannerAd({
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
                 "relative w-full rounded-xl overflow-hidden group border border-accent/20",
-                "aspect-[3/1] md:aspect-[5/1] lg:aspect-[7/1] min-h-[140px] md:min-h-[160px]",
                 className
             )}
         >
@@ -45,17 +44,17 @@ export function PartnerBannerAd({
             />
 
             {imageUrl && (
-                <div className="absolute inset-0 pointer-events-none">
+                <div className="w-full h-auto">
                     {/* Desktop/Tablet Image */}
                     <img
                         src={imageUrl}
                         alt=""
                         className={cn(
-                            "w-full h-full object-cover transition-all duration-300",
+                            "w-full h-auto transition-all duration-300 block",
                             mobileImageUrl ? "hidden md:block" : "block",
-                            overlayOpacity >= 0.1 ? "mix-blend-overlay" : ""
+                            overlayOpacity >= 0.1 && !hideUiElements ? "mix-blend-overlay" : ""
                         )}
-                        style={{ opacity: 1 - (overlayOpacity * 0.6) }}
+                        style={{ opacity: hideUiElements ? 1 : 1 - (overlayOpacity * 0.6) }}
                     />
                     {/* Mobile Image */}
                     {mobileImageUrl && (
@@ -63,21 +62,23 @@ export function PartnerBannerAd({
                             src={mobileImageUrl}
                             alt=""
                             className={cn(
-                                "w-full h-full object-cover transition-all duration-300 md:hidden",
-                                overlayOpacity >= 0.1 ? "mix-blend-overlay" : ""
+                                "w-full h-auto transition-all duration-300 md:hidden",
+                                overlayOpacity >= 0.1 && !hideUiElements ? "mix-blend-overlay" : ""
                             )}
-                            style={{ opacity: 1 - (overlayOpacity * 0.6) }}
+                            style={{ opacity: hideUiElements ? 1 : 1 - (overlayOpacity * 0.6) }}
                         />
                     )}
-                    <div
-                        className="absolute inset-0 bg-gradient-to-r from-accent via-accent/80 to-transparent transition-opacity duration-300"
-                        style={{ opacity: overlayOpacity }}
-                    />
+                    {!hideUiElements && (
+                        <div
+                            className="absolute inset-0 bg-gradient-to-r from-accent via-accent/80 to-transparent transition-opacity duration-300"
+                            style={{ opacity: overlayOpacity }}
+                        />
+                    )}
                 </div>
             )}
 
             {!hideUiElements && (
-                <div className="relative p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="absolute inset-0 z-10 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-1 max-w-2xl text-left">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="px-1.5 py-0.5 bg-white/20 backdrop-blur-sm rounded text-[9px] font-bold uppercase tracking-widest text-white border border-white/20 flex items-center gap-1">
