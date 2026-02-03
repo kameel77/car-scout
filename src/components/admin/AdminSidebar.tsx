@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -18,12 +18,33 @@ import {
     Handshake
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function AdminSidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const location = useLocation();
     const { user } = useAuth();
+    const { data: settings } = useAppSettings();
+    const { i18n } = useTranslation();
+
+    const siteName = React.useMemo(() => {
+        const lang = i18n.language.slice(0, 2).toLowerCase();
+        const candidates = [
+            lang === 'en' ? settings?.siteNameEn : null,
+            lang === 'de' ? settings?.siteNameDe : null,
+            lang === 'pl' ? settings?.siteNamePl : null,
+            settings?.siteNameEn,
+            settings?.siteNameDe,
+            settings?.siteNamePl
+        ];
+        const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
+        return pick?.trim() || 'Car Scout';
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
+
+    const initial = siteName.charAt(0).toUpperCase();
+    const initials = siteName.split(' ').map(s => s.charAt(0)).join('').toUpperCase().slice(0, 2);
 
     const navItems = [
         { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager'] },
@@ -61,10 +82,10 @@ export function AdminSidebar() {
                             className="flex items-center gap-2"
                         >
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold">
-                                C
+                                {initials.length > 0 ? initial : 'C'}
                             </div>
                             <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent truncate">
-                                Car Scout
+                                {siteName}
                             </h2>
                         </motion.div>
                     )}
@@ -76,7 +97,7 @@ export function AdminSidebar() {
                             className="mx-auto"
                         >
                             <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold">
-                                CS
+                                {initials || 'CS'}
                             </div>
                         </motion.div>
                     )}

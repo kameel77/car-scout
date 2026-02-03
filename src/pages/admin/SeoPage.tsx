@@ -122,7 +122,7 @@ export default function SeoPage() {
                                             <TabsContent value="pl" className="space-y-4 pt-4">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="homeTitle">Tytuł (Title - PL)</Label>
-                                                    <Input id="homeTitle" {...register("homeTitle")} placeholder="Car Scout - Najlepsze samochody" />
+                                                    <Input id="homeTitle" {...register("homeTitle")} placeholder="Twoja Platforma - Najlepsze samochody" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="homeDescription">Opis (Description - PL)</Label>
@@ -132,7 +132,7 @@ export default function SeoPage() {
                                             <TabsContent value="en" className="space-y-4 pt-4">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="homeTitleEn">Title (EN)</Label>
-                                                    <Input id="homeTitleEn" {...register("homeTitleEn")} placeholder="Car Scout - Best Cars" />
+                                                    <Input id="homeTitleEn" {...register("homeTitleEn")} placeholder="Your Platform - Best Cars" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="homeDescriptionEn">Description (EN)</Label>
@@ -142,7 +142,7 @@ export default function SeoPage() {
                                             <TabsContent value="de" className="space-y-4 pt-4">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="homeTitleDe">Titel (DE)</Label>
-                                                    <Input id="homeTitleDe" {...register("homeTitleDe")} placeholder="Car Scout - Beste Autos" />
+                                                    <Input id="homeTitleDe" {...register("homeTitleDe")} placeholder="Deine Plattform - Beste Autos" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="homeDescriptionDe">Beschreibung (DE)</Label>

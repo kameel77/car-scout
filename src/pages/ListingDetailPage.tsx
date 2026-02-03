@@ -259,8 +259,8 @@ export default function ListingDetailPage() {
   const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
 
   // Prepare SEO values
-  const listingTitleTemplate = (seoConfig as any)[`listingTitle${suffix}`] || seoConfig?.listingTitle;
-  const listingDescriptionTemplate = (seoConfig as any)[`listingDescription${suffix}`] || seoConfig?.listingDescription;
+  const listingTitleTemplate = (seoConfig ? (seoConfig as any)[`listingTitle${suffix}`] : undefined) || seoConfig?.listingTitle;
+  const listingDescriptionTemplate = (seoConfig ? (seoConfig as any)[`listingDescription${suffix}`] : undefined) || seoConfig?.listingDescription;
 
   const metaTitle = listing && listingTitleTemplate
     ? listingTitleTemplate

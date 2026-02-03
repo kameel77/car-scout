@@ -64,6 +64,20 @@ export function Footer() {
     return pick?.trim() || '';
   }, [i18n.language, settings?.legalSloganEn, settings?.legalSloganDe, settings?.legalSloganPl]);
 
+  const siteName = React.useMemo(() => {
+    const lang = normalizeLang(i18n.language);
+    const candidates = [
+      lang === 'en' ? settings?.siteNameEn : null,
+      lang === 'de' ? settings?.siteNameDe : null,
+      lang === 'pl' ? settings?.siteNamePl : null,
+      settings?.siteNameEn,
+      settings?.siteNameDe,
+      settings?.siteNamePl
+    ];
+    const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
+    return pick?.trim() || 'Car Scout';
+  }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
+
   return (
     <footer className="mt-12 border-t bg-slate-950 text-slate-100">
       <div className="container py-10 grid gap-10 lg:grid-cols-3">
@@ -77,7 +91,7 @@ export function Footer() {
             />
           ) : (
             <span className="text-xl font-black text-white">
-              Car Scout
+              {siteName}
             </span>
           )}
           {sloganText && (

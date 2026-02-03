@@ -237,6 +237,9 @@ model AppSettings {
   legalSloganPl       String?  @map("legal_slogan_pl")
   legalSloganEn       String?  @map("legal_slogan_en")
   legalSloganDe       String?  @map("legal_slogan_de")
+  siteNamePl          String?  @map("site_name_pl")
+  siteNameEn          String?  @map("site_name_en")
+  siteNameDe          String?  @map("site_name_de")
   
   financingCalculatorEnabled  Boolean @default(true) @map("financing_calculator_enabled")
   financingCalculatorLocation String  @default("main") @map("financing_calculator_location") // 'main' | 'sidebar'

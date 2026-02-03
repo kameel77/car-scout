@@ -54,7 +54,19 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
     return settings.headerLogoTextPl;
   };
 
+  const getSiteName = () => {
+    if (!settings) return 'Car Scout';
+    const lang = i18n.language;
+    let name = '';
+    if (lang === 'de') name = settings.siteNameDe;
+    else if (lang === 'en') name = settings.siteNameEn;
+    else name = settings.siteNamePl;
+
+    return name?.trim() || 'Car Scout';
+  };
+
   const headerLogoText = getHeaderLogoText();
+  const siteName = getSiteName();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -64,14 +76,20 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           {settings?.headerLogoUrl ? (
             <img
               src={buildAssetUrl(settings.headerLogoUrl)}
-              alt="Car Scout"
+              alt={siteName}
               className="h-[3.25rem] w-auto max-w-[260px] object-contain"
               loading="lazy"
             />
           ) : (
             <h1 className="text-3xl font-bold tracking-tight">
-              <span className="text-primary">Car</span>
-              <span className="text-accent">Scout</span>
+              {siteName === 'Car Scout' ? (
+                <>
+                  <span className="text-primary">Car</span>
+                  <span className="text-accent">Scout</span>
+                </>
+              ) : (
+                <span className="text-primary">{siteName}</span>
+              )}
             </h1>
           )}
           {headerLogoText && (
@@ -124,14 +142,20 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 {settings?.headerLogoUrl ? (
                   <img
                     src={buildAssetUrl(settings.headerLogoUrl)}
-                    alt="Car Scout"
+                    alt={siteName}
                     className="h-[3.25rem] w-auto max-w-[260px] object-contain"
                     loading="lazy"
                   />
                 ) : (
                   <h1 className="text-3xl font-bold tracking-tight">
-                    <span className="text-primary">Car</span>
-                    <span className="text-accent">Scout</span>
+                    {siteName === 'Car Scout' ? (
+                      <>
+                        <span className="text-primary">Car</span>
+                        <span className="text-accent">Scout</span>
+                      </>
+                    ) : (
+                      <span className="text-primary">{siteName}</span>
+                    )}
                   </h1>
                 )}
               </div>

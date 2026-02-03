@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import React from 'react';
 
 export interface SeoConfig {
     gtmId?: string;
@@ -38,8 +40,23 @@ export function SeoManager() {
     const lang = i18n.language;
     const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
 
-    const homeTitle = (seoConfig as any)[`homeTitle${suffix}`] || seoConfig?.homeTitle;
-    const homeDescription = (seoConfig as any)[`homeDescription${suffix}`] || seoConfig?.homeDescription;
+    const homeTitle = (seoConfig ? (seoConfig as any)[`homeTitle${suffix}`] : undefined) || seoConfig?.homeTitle;
+    const homeDescription = (seoConfig ? (seoConfig as any)[`homeDescription${suffix}`] : undefined) || seoConfig?.homeDescription;
+
+    const { data: settings } = useAppSettings();
+    const siteName = React.useMemo(() => {
+        const langCode = i18n.language.slice(0, 2).toLowerCase();
+        const candidates = [
+            langCode === 'en' ? settings?.siteNameEn : null,
+            langCode === 'de' ? settings?.siteNameDe : null,
+            langCode === 'pl' ? settings?.siteNamePl : null,
+            settings?.siteNameEn,
+            settings?.siteNameDe,
+            settings?.siteNamePl
+        ];
+        const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
+        return pick?.trim() || 'Car Scout';
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
 
     useEffect(() => {
         if (seoConfig?.gtmId) {
@@ -66,7 +83,7 @@ export function SeoManager() {
             <meta charSet="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             {/* Fallback title if individual pages don't set it */}
-            <title>{homeTitle || 'Car Scout'}</title>
+            <title>{homeTitle || siteName}</title>
             <meta name="description" content={homeDescription || ''} />
         </Helmet>
     );

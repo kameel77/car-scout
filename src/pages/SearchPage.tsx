@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
 import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
@@ -194,8 +195,23 @@ export default function SearchPage() {
   const lang = i18n.language;
   const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
 
-  const homeTitle = (seoConfig as any)[`homeTitle${suffix}`] || seoConfig?.homeTitle;
-  const homeDescription = (seoConfig as any)[`homeDescription${suffix}`] || seoConfig?.homeDescription;
+  const homeTitle = (seoConfig ? (seoConfig as any)[`homeTitle${suffix}`] : undefined) || seoConfig?.homeTitle;
+  const homeDescription = (seoConfig ? (seoConfig as any)[`homeDescription${suffix}`] : undefined) || seoConfig?.homeDescription;
+
+  const { data: settings } = useAppSettings();
+  const siteName = React.useMemo(() => {
+    const langCode = i18n.language.slice(0, 2).toLowerCase();
+    const candidates = [
+      langCode === 'en' ? settings?.siteNameEn : null,
+      langCode === 'de' ? settings?.siteNameDe : null,
+      langCode === 'pl' ? settings?.siteNamePl : null,
+      settings?.siteNameEn,
+      settings?.siteNameDe,
+      settings?.siteNamePl
+    ];
+    const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
+    return pick?.trim() || 'Car Scout';
+  }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -206,7 +222,7 @@ export default function SearchPage() {
         schema={{
           "@context": "https://schema.org",
           "@type": "Organization",
-          "name": "Car Scout",
+          "name": siteName,
           "url": window.location.origin,
           "logo": seoConfig?.homeOgImage
         }}

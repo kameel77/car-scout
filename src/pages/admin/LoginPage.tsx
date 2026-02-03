@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { useTranslation } from 'react-i18next';
+import React from 'react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -12,6 +15,22 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const { data: settings } = useAppSettings();
+    const { i18n } = useTranslation();
+
+    const siteName = React.useMemo(() => {
+        const langCode = i18n.language.slice(0, 2).toLowerCase();
+        const candidates = [
+            langCode === 'en' ? settings?.siteNameEn : null,
+            langCode === 'de' ? settings?.siteNameDe : null,
+            langCode === 'pl' ? settings?.siteNamePl : null,
+            settings?.siteNameEn,
+            settings?.siteNameDe,
+            settings?.siteNamePl
+        ];
+        const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
+        return pick?.trim() || 'Car Scout';
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,7 +53,7 @@ export default function LoginPage() {
             <Card className="w-full max-w-md shadow-2xl">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        Car Scout Admin
+                        {siteName} Admin
                     </CardTitle>
                     <CardDescription className="text-center">
                         Sign in to access the admin panel
