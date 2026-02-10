@@ -8,7 +8,9 @@ COPY package*.json ./
 RUN npm ci
 
 # Copy source code
-COPY . .
+# Build argument for the app directory (default to carsalon)
+ARG APP_NAME=carsalon
+COPY apps/${APP_NAME} .
 
 # Build arguments for frontend env vars
 ARG VITE_API_URL

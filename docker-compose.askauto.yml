@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # AskAuto Frontend Container
+  askauto:
+    container_name: "${COMPOSE_PROJECT_NAME}-askauto"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        APP_NAME: askauto
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://backend:3000}
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - carscout-private
+      - coolify
+  # Backend (Optional, if you want a dedicated backend for carsalon, or connect to existing)
+  # If connecting to existing backend in the same network, omit this or use external links.
+
+networks:
+  carscout-private:
+    driver: bridge
+    name: "${COMPOSE_PROJECT_NAME}-private"
+  coolify:
+    name: coolify
+    external: true

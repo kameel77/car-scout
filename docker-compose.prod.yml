@@ -5,7 +5,7 @@ services:
   carscout-api:
     container_name: "${COMPOSE_PROJECT_NAME}-api"
     build:
-      context: ./backend
+      context: ./apps/backend
       dockerfile: Dockerfile
     restart: unless-stopped
     expose:
@@ -34,16 +34,18 @@ services:
           - backend # Still allow frontend to use 'backend' internally
       coolify: {}
 
-  # Frontend Container (Nginx)
-  frontend:
-    container_name: "${COMPOSE_PROJECT_NAME}-frontend"
+  # Frontend Container (CarSalon)
+  carsalon:
+    container_name: "${COMPOSE_PROJECT_NAME}-carsalon"
     build:
       context: .
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
+        APP_NAME: carsalon
     environment:
       BACKEND_URL: ${BACKEND_URL:-http://backend:3000}
+
     restart: unless-stopped
     expose:
       - "80"
