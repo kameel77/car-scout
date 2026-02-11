@@ -354,11 +354,6 @@ export function FinancingCalculator({
                     {selectedProduct.provider !== 'OWN' ? (
                         <div className="mt-4 pt-3 border-t border-slate-200 text-[11px] text-muted-foreground text-center">
                             Rata wyliczana na podstawie kalkulacji partnera.
-                            {offerInitialPayment && (
-                                <span className="block mt-1">
-                                    W kalkulacji założono pierwszą wpłatę na poziomie {formatPrice(offerInitialPayment, currency)}. Możesz dokonać wyższej wpłaty zmieniając kwotę suwakiem kalkulatora.
-                                </span>
-                            )}
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-slate-200">
@@ -370,6 +365,12 @@ export function FinancingCalculator({
                                 <span className="block text-[10px] text-muted-foreground">RRSO / Oproc.</span>
                                 <span className="font-medium text-xs">{(annualRate).toFixed(2)}%</span>
                             </div>
+                        </div>
+                    )}
+
+                    {offerInitialPayment && (
+                        <div className="mt-4 pt-3 border-t border-slate-200 text-[11px] text-muted-foreground text-center">
+                            W kalkulacji założono pierwszą wpłatę na poziomie {formatPrice(offerInitialPayment, currency)}. Możesz dokonać wyższej wpłaty zmieniając kwotę suwakiem kalkulatora.
                         </div>
                     )}
                 </div>

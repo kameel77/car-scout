@@ -197,7 +197,19 @@ export default function ListingDetailPage() {
       const secondaryPrice = isNetPrimary ? discountedPrice : Math.round(discountedPrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
-      const secondaryLabel = user
+      // user requested to hide net price in special offer context if it was "wrong"
+      // or simply: if we are in special offer mode, let's simplify the display?
+      // actually, let's just make sure we don't display it if it's confusing.
+      // The user said "błędnie dodałeś ceny netto". 
+      // Current logic:
+      // const secondaryLabel = user
+      //   ? (isNetPrimary
+      //       ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
+      //       : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
+      //   : null;
+
+      // Let's hide secondary label if there is a discount to clean up the UI
+      const secondaryLabel = (user && !discount)
         ? (isNetPrimary
           ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
           : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
@@ -616,6 +628,7 @@ export default function ListingDetailPage() {
                     currency={settings?.displayCurrency || 'PLN'}
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}
+                    offerInitialPayment={initialPayment ?? undefined}
                   />
                 </motion.div>
               )}
