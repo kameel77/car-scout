@@ -3,7 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { financingApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { FinancingProduct, FinancingProductPayload } from '@/types/financing';
+import {
+    FinancingProduct,
+    FinancingProductPayload,
+    FinancingProviderConfig,
+    FinancingProviderConnection,
+    FinancingProviderConnectionPayload
+} from '@/types/financing';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { settingsApi } from '@/services/api';
 import { AdminNav } from '@/components/admin/AdminNav';
@@ -23,6 +29,16 @@ const EMPTY_FORM: FinancingProductPayload = {
     category: 'CREDIT',
     name: '',
     currency: 'PLN',
+    provider: 'OWN',
+    priority: 0,
+    minAmount: null,
+    maxAmount: null,
+    providerConfig: {
+        productCode: '',
+        paymentDay: undefined,
+        responseLevel: 'simple',
+        currency: 'PLN',
+    },
     referenceRate: 0,
     margin: 0,
     commission: 0,
@@ -30,7 +46,18 @@ const EMPTY_FORM: FinancingProductPayload = {
     maxFinalPayment: 0,
     minInstallments: 12,
     maxInstallments: 84,
+    hasBalloonPayment: true,
     isDefault: false,
+};
+
+const EMPTY_CONNECTION_FORM: FinancingProviderConnectionPayload = {
+    provider: 'INBANK',
+    name: '',
+    apiBaseUrl: '',
+    apiKey: '',
+    apiSecret: '',
+    shopUuid: '',
+    isActive: true,
 };
 
 export default function FinancingPage() {
@@ -40,9 +67,13 @@ export default function FinancingPage() {
     const { data: settings, refetch: refetchSettings } = useAppSettings();
 
     const [activeTab, setActiveTab] = React.useState<string>('CREDIT');
+    const [isChoiceModalOpen, setIsChoiceModalOpen] = React.useState(false);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [formData, setFormData] = React.useState<FinancingProductPayload>(EMPTY_FORM);
+    const [isConnectionModalOpen, setIsConnectionModalOpen] = React.useState(false);
+    const [editingConnectionId, setEditingConnectionId] = React.useState<string | null>(null);
+    const [connectionFormData, setConnectionFormData] = React.useState<FinancingProviderConnectionPayload>(EMPTY_CONNECTION_FORM);
 
     const { data, isLoading } = useQuery({
         queryKey: ['financing-products'],
@@ -53,8 +84,18 @@ export default function FinancingPage() {
         enabled: !!token,
     });
 
+    const { data: connectionsData, isLoading: isConnectionsLoading } = useQuery({
+        queryKey: ['financing-connections'],
+        queryFn: async () => {
+            if (!token) return { connections: [] };
+            return financingApi.listConnections(token);
+        },
+        enabled: !!token,
+    });
+
     const products = (data?.products || []) as FinancingProduct[];
     const filteredProducts = products.filter(p => p.category === activeTab);
+    const connections = (connectionsData?.connections || []) as FinancingProviderConnection[];
 
     const saveMutation = useMutation({
         mutationFn: (payload: FinancingProductPayload) => {
@@ -88,18 +129,93 @@ export default function FinancingPage() {
         },
     });
 
+    const saveConnectionMutation = useMutation({
+        mutationFn: (payload: FinancingProviderConnectionPayload) => {
+            if (!token) throw new Error('Brak tokenu');
+            if (editingConnectionId) {
+                return financingApi.updateConnection(editingConnectionId, payload, token);
+            }
+            return financingApi.createConnection(payload, token);
+        },
+        onSuccess: () => {
+            toast.success(editingConnectionId ? 'Połączenie zaktualizowane' : 'Połączenie dodane');
+            queryClient.invalidateQueries({ queryKey: ['financing-connections'] });
+            handleCloseConnectionModal();
+        },
+        onError: (error: any) => {
+            toast.error(error?.message || 'Błąd zapisu');
+        },
+    });
+
+    const testConnectionMutation = useMutation({
+        mutationFn: (payload: { provider: FinancingProviderConnectionPayload['provider']; apiBaseUrl: string; apiKey: string; apiSecret?: string; shopUuid?: string }) => {
+            if (!token) throw new Error('Brak tokenu');
+            return financingApi.testConnection(payload, token);
+        },
+        onSuccess: (data: any) => {
+            if (data.success) {
+                toast.success('Połączenie poprawne! API odpowiedziało.');
+            } else {
+                toast.error(`Błąd połączenia: ${data.details || 'Nieznany błąd'}`);
+            }
+        },
+        onError: (error: any) => {
+            toast.error(error?.message || 'Błąd komunikacji z serwerem');
+        },
+    });
+
+    const deleteConnectionMutation = useMutation({
+        mutationFn: (id: string) => {
+            if (!token) throw new Error('Brak tokenu');
+            return financingApi.deleteConnection(id, token);
+        },
+        onSuccess: () => {
+            toast.success('Połączenie usunięte');
+            queryClient.invalidateQueries({ queryKey: ['financing-connections'] });
+        },
+        onError: (error: any) => {
+            toast.error(error?.message || 'Nie udało się usunąć połączenia');
+        },
+    });
+
     const handleLogout = () => {
         logout();
         navigate('/admin/login');
     };
 
-    const handleOpenModal = (product?: FinancingProduct) => {
+    const handleOpenChoiceModal = () => {
+        setIsChoiceModalOpen(true);
+    };
+
+    const handleSelectProvider = (provider: FinancingProductPayload['provider']) => {
+        setIsChoiceModalOpen(false);
+        handleOpenModal(undefined, provider);
+    };
+
+    const handleOpenModal = (product?: FinancingProduct, forcedProvider?: FinancingProductPayload['provider']) => {
         if (product) {
             setEditingId(product.id);
+            const defaultProviderConfig = product.provider === 'INBANK'
+                ? {
+                    productCode: '',
+                    paymentDay: undefined,
+                    responseLevel: 'simple',
+                    currency: product.currency,
+                }
+                : product.provider === 'VEHIS'
+                    ? {
+                        clientType: 'entrepreneur',
+                    }
+                    : {};
             setFormData({
                 category: product.category,
                 name: product.name || '',
                 currency: product.currency,
+                provider: product.provider,
+                priority: product.priority ?? 0,
+                minAmount: product.minAmount ?? null,
+                maxAmount: product.maxAmount ?? null,
+                providerConfig: (product.providerConfig ?? defaultProviderConfig) as FinancingProviderConfig,
                 referenceRate: product.referenceRate,
                 margin: product.margin,
                 commission: product.commission,
@@ -107,16 +223,57 @@ export default function FinancingPage() {
                 maxFinalPayment: product.maxFinalPayment,
                 minInstallments: product.minInstallments,
                 maxInstallments: product.maxInstallments,
+                hasBalloonPayment: product.hasBalloonPayment ?? true,
                 isDefault: product.isDefault,
             });
         } else {
+            if (forcedProvider === 'VEHIS' && activeTab !== 'LEASING') {
+                setActiveTab('LEASING');
+            }
             setEditingId(null);
+            const providerConfig = forcedProvider === 'INBANK'
+                ? {
+                    productCode: '',
+                    paymentDay: undefined,
+                    responseLevel: 'simple',
+                    currency: 'PLN',
+                }
+                : forcedProvider === 'VEHIS'
+                    ? {
+                        clientType: 'entrepreneur',
+                    }
+                    : {};
             setFormData({
                 ...EMPTY_FORM,
-                category: activeTab as any,
+                category: forcedProvider === 'VEHIS' ? 'LEASING' : (activeTab as any),
+                provider: forcedProvider || 'OWN',
+                providerConfig: {
+                    ...providerConfig,
+                    responseLevel: ((providerConfig as any).responseLevel || 'simple') as "simple" | "full",
+                } as FinancingProviderConfig,
+                hasBalloonPayment: forcedProvider === 'INBANK' ? false : true,
             });
         }
         setIsModalOpen(true);
+    };
+
+    const handleOpenConnectionModal = (connection?: FinancingProviderConnection) => {
+        if (connection) {
+            setEditingConnectionId(connection.id);
+            setConnectionFormData({
+                provider: connection.provider,
+                name: connection.name,
+                apiBaseUrl: connection.apiBaseUrl,
+                apiKey: connection.apiKey,
+                apiSecret: connection.apiSecret || '',
+                shopUuid: connection.shopUuid || '',
+                isActive: connection.isActive,
+            });
+        } else {
+            setEditingConnectionId(null);
+            setConnectionFormData(EMPTY_CONNECTION_FORM);
+        }
+        setIsConnectionModalOpen(true);
     };
 
     const handleCloseModal = () => {
@@ -125,9 +282,20 @@ export default function FinancingPage() {
         setFormData(EMPTY_FORM);
     };
 
+    const handleCloseConnectionModal = () => {
+        setIsConnectionModalOpen(false);
+        setEditingConnectionId(null);
+        setConnectionFormData(EMPTY_CONNECTION_FORM);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         saveMutation.mutate(formData);
+    };
+
+    const handleConnectionSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        saveConnectionMutation.mutate(connectionFormData);
     };
 
     const updateSettingsMutation = useMutation({
@@ -158,172 +326,278 @@ export default function FinancingPage() {
         }));
     };
 
+    const handleOptionalNumberChange = (field: keyof FinancingProductPayload, value: string) => {
+        const num = value === '' ? null : parseFloat(value);
+        setFormData(prev => ({
+            ...prev,
+            [field]: value === '' || isNaN(num as number) ? null : num
+        }));
+    };
+
+    const handleProviderConfigChange = (field: string, value: string | number | undefined) => {
+        setFormData(prev => ({
+            ...prev,
+            providerConfig: {
+                ...(prev.providerConfig || {}),
+                [field]: value,
+            }
+        }));
+    };
+
     return (
-        <div className="min-h-screen bg-gray-50/50">
-            <header className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl font-bold text-foreground">Finansowanie</h1>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Finansowanie
+                </h1>
+                <p className="text-gray-600">
+                    Zarządzaj ofertą produktów finansowych (Kredyt, Leasing, Najem).
+                </p>
+            </div>
+
+            {/* Global Settings Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Konfiguracja Kalkulatora</CardTitle>
+                    <CardDescription>Ustawienia widoczności i umiejscowienia kalkulatora na stronie oferty</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label className="text-base">Pokaż kalkulator na karcie pojazdu</Label>
                             <p className="text-sm text-muted-foreground">
-                                Zarządzaj ofertą produktów finansowych (Kredyt, Leasing, Najem)
+                                Włącz lub wyłącz widoczność modułu finansowania dla klientów
                             </p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <AdminNav />
-                            <Button onClick={handleLogout} variant="outline" size="sm">
-                                <LogOut className="w-4 h-4 mr-2" />
-                                Logout
-                            </Button>
-                        </div>
+                        <Switch
+                            checked={settings?.financingCalculatorEnabled ?? true}
+                            onCheckedChange={(checked) => handleSettingsChange('financingCalculatorEnabled', checked)}
+                        />
                     </div>
-                </div>
-            </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-
-                {/* Global Settings Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Konfiguracja Kalkulatora</CardTitle>
-                        <CardDescription>Ustawienia widoczności i umiejscowienia kalkulatora na stronie oferty</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label className="text-base">Pokaż kalkulator na karcie pojazdu</Label>
-                                <p className="text-sm text-muted-foreground">
-                                    Włącz lub wyłącz widoczność modułu finansowania dla klientów
-                                </p>
-                            </div>
-                            <Switch
-                                checked={settings?.financingCalculatorEnabled ?? true}
-                                onCheckedChange={(checked) => handleSettingsChange('financingCalculatorEnabled', checked)}
-                            />
-                        </div>
-
-                        <div className="space-y-3">
-                            <Label className="text-base">Umiejscowienie kalkulatora</Label>
-                            <RadioGroup
-                                value={settings?.financingCalculatorLocation ?? 'main'}
-                                onValueChange={(val) => handleSettingsChange('financingCalculatorLocation', val)}
-                                className="grid grid-cols-2 gap-4"
-                            >
-                                <div>
-                                    <RadioGroupItem value="main" id="loc-main" className="peer sr-only" />
-                                    <Label htmlFor="loc-main" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                        <span className="mb-2 text-lg font-semibold">Część Główna</span>
-                                        <span className="text-sm text-center text-muted-foreground">Pod specyfikacją i wyposażeniem (domyślne)</span>
-                                    </Label>
-                                </div>
-                                <div>
-                                    <RadioGroupItem value="sidebar" id="loc-sidebar" className="peer sr-only" />
-                                    <Label htmlFor="loc-sidebar" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                        <span className="mb-2 text-lg font-semibold">Panel Boczny (Widget)</span>
-                                        <span className="text-sm text-center text-muted-foreground">Pod ceną i przyciskami (wąski wariant)</span>
-                                    </Label>
-                                </div>
-                            </RadioGroup>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                        <Label className="text-base">Umiejscowienie kalkulatora</Label>
+                        <RadioGroup
+                            value={settings?.financingCalculatorLocation ?? 'main'}
+                            onValueChange={(val) => handleSettingsChange('financingCalculatorLocation', val)}
+                            className="grid grid-cols-2 gap-4"
+                        >
                             <div>
-                                <CardTitle>Produkty Finansowe</CardTitle>
-                                <CardDescription>Lista aktywnych produktów dla kalkulatora</CardDescription>
+                                <RadioGroupItem value="main" id="loc-main" className="peer sr-only" />
+                                <Label htmlFor="loc-main" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <span className="mb-2 text-lg font-semibold">Część Główna</span>
+                                    <span className="text-sm text-center text-muted-foreground">Pod specyfikacją i wyposażeniem (domyślne)</span>
+                                </Label>
                             </div>
-                            <Button onClick={() => handleOpenModal()}>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Dodaj Produkt
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                            <TabsList>
-                                <TabsTrigger value="CREDIT">Kredyt</TabsTrigger>
-                                <TabsTrigger value="LEASING">Leasing</TabsTrigger>
-                                <TabsTrigger value="RENT">Najem</TabsTrigger>
-                            </TabsList>
+                            <div>
+                                <RadioGroupItem value="sidebar" id="loc-sidebar" className="peer sr-only" />
+                                <Label htmlFor="loc-sidebar" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <span className="mb-2 text-lg font-semibold">Panel Boczny (Widget)</span>
+                                    <span className="text-sm text-center text-muted-foreground">Pod ceną i przyciskami (wąski wariant)</span>
+                                </Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+                </CardContent>
+            </Card>
 
-                            <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Nazwa</TableHead>
-                                            <TableHead>Waluta</TableHead>
-                                            <TableHead>WIBOR/EURIBOR</TableHead>
-                                            <TableHead>Marża</TableHead>
-                                            <TableHead>Prowizja</TableHead>
-                                            <TableHead>Max Wpłata</TableHead>
-                                            <TableHead>Raty (min-max)</TableHead>
-                                            <TableHead>Domyślny</TableHead>
-                                            <TableHead className="text-right">Akcje</TableHead>
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Połączenia z instytucjami</CardTitle>
+                            <CardDescription>Konfiguracja połączeń do API partnerów finansowych</CardDescription>
+                        </div>
+                        <Button onClick={() => handleOpenConnectionModal()}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Dodaj Połączenie
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Partner</TableHead>
+                                    <TableHead>Nazwa</TableHead>
+                                    <TableHead>URL API</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Akcje</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isConnectionsLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                            <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
+                                            Ładowanie...
+                                        </TableCell>
+                                    </TableRow>
+                                ) : connections.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                            Brak skonfigurowanych połączeń.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    connections.map((connection) => (
+                                        <TableRow key={connection.id}>
+                                            <TableCell className="font-medium">
+                                                {connection.provider === 'INBANK' ? 'Inbank' : connection.provider === 'VEHIS' ? 'Vehis' : connection.provider}
+                                            </TableCell>
+                                            <TableCell>{connection.name}</TableCell>
+                                            <TableCell className="truncate max-w-[240px]">{connection.apiBaseUrl}</TableCell>
+                                            <TableCell>
+                                                {connection.isActive ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                        Aktywne
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                        Nieaktywne
+                                                    </span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="ghost" size="sm" onClick={() => handleOpenConnectionModal(connection)}>
+                                                        <Edit className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-600 hover:text-red-700"
+                                                        onClick={() => {
+                                                            if (confirm('Czy na pewno usunąć to połączenie?')) {
+                                                                deleteConnectionMutation.mutate(connection.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {isLoading ? (
-                                            <TableRow>
-                                                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                                    <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
-                                                    Ładowanie...
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Produkty Finansowe</CardTitle>
+                            <CardDescription>Lista aktywnych produktów dla kalkulatora</CardDescription>
+                        </div>
+                        <Button onClick={handleOpenChoiceModal}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Dodaj Produkt
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                        <TabsList>
+                            <TabsTrigger value="CREDIT">Kredyt</TabsTrigger>
+                            <TabsTrigger value="LEASING">Leasing</TabsTrigger>
+                            <TabsTrigger value="RENT">Najem</TabsTrigger>
+                        </TabsList>
+
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nazwa</TableHead>
+                                        <TableHead>Partner</TableHead>
+                                        <TableHead>Waluta</TableHead>
+                                        <TableHead>Priorytet</TableHead>
+                                        <TableHead>Zakres kwoty</TableHead>
+                                        <TableHead>WIBOR/EURIBOR</TableHead>
+                                        <TableHead>Marża</TableHead>
+                                        <TableHead>Prowizja</TableHead>
+                                        <TableHead>Max Wpłata</TableHead>
+                                        <TableHead>Raty (min-max)</TableHead>
+                                        <TableHead>Domyślny</TableHead>
+                                        <TableHead className="text-right">Akcje</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                                                <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
+                                                Ładowanie...
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : filteredProducts.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                                                Brak produktów w tej kategorii.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredProducts.map((product) => (
+                                            <TableRow key={product.id}>
+                                                <TableCell className="font-medium">{product.name || '-'}</TableCell>
+                                                <TableCell>
+                                                    {product.provider === 'INBANK'
+                                                        ? 'Inbank'
+                                                        : product.provider === 'VEHIS'
+                                                            ? 'Vehis'
+                                                            : 'Produkt własny'}
+                                                </TableCell>
+                                                <TableCell>{product.currency}</TableCell>
+                                                <TableCell>{product.priority ?? 0}</TableCell>
+                                                <TableCell>
+                                                    {product.minAmount != null || product.maxAmount != null
+                                                        ? `${product.minAmount ?? '-'} - ${product.maxAmount ?? '-'}`
+                                                        : '-'}
+                                                </TableCell>
+                                                <TableCell>{product.referenceRate}%</TableCell>
+                                                <TableCell>{product.margin}%</TableCell>
+                                                <TableCell>{product.commission}%</TableCell>
+                                                <TableCell>{product.maxInitialPayment}%</TableCell>
+                                                <TableCell>{product.minInstallments}-{product.maxInstallments}</TableCell>
+                                                <TableCell>
+                                                    {product.isDefault && (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                            Default
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="ghost" size="sm" onClick={() => handleOpenModal(product)}>
+                                                            <Edit className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-red-600 hover:text-red-700"
+                                                            onClick={() => {
+                                                                if (confirm('Czy na pewno usunąć ten produkt?')) {
+                                                                    deleteMutation.mutate(product.id);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ) : filteredProducts.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                                    Brak produktów w tej kategorii.
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            filteredProducts.map((product) => (
-                                                <TableRow key={product.id}>
-                                                    <TableCell className="font-medium">{product.name || '-'}</TableCell>
-                                                    <TableCell>{product.currency}</TableCell>
-                                                    <TableCell>{product.referenceRate}%</TableCell>
-                                                    <TableCell>{product.margin}%</TableCell>
-                                                    <TableCell>{product.commission}%</TableCell>
-                                                    <TableCell>{product.maxInitialPayment}%</TableCell>
-                                                    <TableCell>{product.minInstallments}-{product.maxInstallments}</TableCell>
-                                                    <TableCell>
-                                                        {product.isDefault && (
-                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                                                Default
-                                                            </span>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            <Button variant="ghost" size="sm" onClick={() => handleOpenModal(product)}>
-                                                                <Edit className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="text-red-600 hover:text-red-700"
-                                                                onClick={() => {
-                                                                    if (confirm('Czy na pewno usunąć ten produkt?')) {
-                                                                        deleteMutation.mutate(product.id);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </Tabs>
-                    </CardContent>
-                </Card>
-            </main>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </Tabs>
+                </CardContent>
+            </Card>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-2xl">
@@ -349,13 +623,123 @@ export default function FinancingPage() {
                                 <select
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                                     value={formData.currency}
-                                    onChange={e => setFormData(p => ({ ...p, currency: e.target.value }))}
+                                    onChange={e => setFormData(p => ({
+                                        ...p,
+                                        currency: e.target.value,
+                                        providerConfig: {
+                                            ...(p.providerConfig || {}),
+                                            currency: e.target.value,
+                                        }
+                                    }))}
                                 >
                                     <option value="PLN">PLN</option>
                                     <option value="EUR">EUR</option>
                                 </select>
                             </div>
                         </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Partner</Label>
+                                <div className="flex h-10 w-full rounded-md border border-input bg-slate-100 px-3 py-2 text-sm font-medium">
+                                    {formData.provider === 'INBANK' ? 'Inbank' : formData.provider === 'VEHIS' ? 'Vehis' : 'Produkt własny'}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Priorytet</Label>
+                                <Input
+                                    type="number" step="1" required
+                                    value={formData.priority}
+                                    onChange={e => handleNumberChange('priority', e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Zakres kwoty (min / max)</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Input
+                                        type="number"
+                                        step="1"
+                                        value={formData.minAmount ?? ''}
+                                        placeholder="min"
+                                        onChange={e => handleOptionalNumberChange('minAmount', e.target.value)}
+                                    />
+                                    <Input
+                                        type="number"
+                                        step="1"
+                                        value={formData.maxAmount ?? ''}
+                                        placeholder="max"
+                                        onChange={e => handleOptionalNumberChange('maxAmount', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {formData.provider === 'INBANK' && (
+                            <div className="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+                                <div>
+                                    <Label className="text-sm text-muted-foreground">Konfiguracja Inbank</Label>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Kod produktu (wymagane)</Label>
+                                        <Input
+                                            value={formData.providerConfig?.productCode || ''}
+                                            onChange={e => handleProviderConfigChange('productCode', e.target.value)}
+                                            placeholder="np. car_loan_pledge_..."
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Dzień płatności</Label>
+                                        <Input
+                                            type="number"
+                                            step="1"
+                                            value={formData.providerConfig?.paymentDay ?? ''}
+                                            onChange={e => {
+                                                const value = e.target.value === '' ? undefined : Number(e.target.value);
+                                                handleProviderConfigChange('paymentDay', value);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Response level</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                                            value={formData.providerConfig?.responseLevel || 'simple'}
+                                            onChange={e => handleProviderConfigChange('responseLevel', e.target.value)}
+                                        >
+                                            <option value="simple">simple</option>
+                                            <option value="full">full</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {formData.provider === 'VEHIS' && (
+                            <div className="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+                                <div>
+                                    <Label className="text-sm text-muted-foreground">Konfiguracja Vehis</Label>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Typ klienta</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                                            value={formData.providerConfig?.clientType || 'entrepreneur'}
+                                            onChange={e => handleProviderConfigChange('clientType', e.target.value)}
+                                        >
+                                            <option value="entrepreneur">Przedsiębiorca</option>
+                                            <option value="consumer">Konsument</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
@@ -403,12 +787,7 @@ export default function FinancingPage() {
                             </div>
                             <div className="space-y-2 flex items-end pb-2">
                                 <div className="flex items-center space-x-2">
-                                    <Switch
-                                        id="is-default"
-                                        checked={formData.isDefault}
-                                        onCheckedChange={c => setFormData(p => ({ ...p, isDefault: c }))}
-                                    />
-                                    <Label htmlFor="is-default">Domyślny</Label>
+                                    {/* Placeholder to maintain grid spacing */}
                                 </div>
                             </div>
                         </div>
@@ -432,6 +811,31 @@ export default function FinancingPage() {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-4 border-t pt-4 bg-slate-50/50 -mx-6 px-6 py-4">
+                            <div className="flex items-center space-x-3">
+                                <Switch
+                                    id="has-balloon"
+                                    checked={formData.hasBalloonPayment}
+                                    onCheckedChange={checked => setFormData(p => ({ ...p, hasBalloonPayment: checked }))}
+                                />
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="has-balloon" className="text-sm font-semibold cursor-pointer">Obsługa raty balonowej</Label>
+                                    <p className="text-[10px] text-muted-foreground">Czy produkt pozwala na ustalenie wykupu (ostatniej raty).</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <Switch
+                                    id="is-default"
+                                    checked={formData.isDefault}
+                                    onCheckedChange={checked => setFormData(p => ({ ...p, isDefault: checked }))}
+                                />
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="is-default" className="text-sm font-semibold cursor-pointer">Produkt domyślny</Label>
+                                    <p className="text-[10px] text-muted-foreground">Główny produkt wybrany na start w kalkulatorze.</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={handleCloseModal}>Anuluj</Button>
                             <Button type="submit" disabled={saveMutation.isPending}>
@@ -442,6 +846,174 @@ export default function FinancingPage() {
                     </form>
                 </DialogContent>
             </Dialog>
-        </div>
+
+            <Dialog open={isConnectionModalOpen} onOpenChange={setIsConnectionModalOpen}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>{editingConnectionId ? 'Edytuj połączenie' : 'Dodaj połączenie'}</DialogTitle>
+                        <DialogDescription>
+                            Skonfiguruj dostęp do API partnera finansowego.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleConnectionSubmit} className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Partner</Label>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                                value={connectionFormData.provider}
+                                onChange={e => setConnectionFormData(p => ({
+                                    ...p,
+                                    provider: e.target.value as FinancingProviderConnectionPayload['provider']
+                                }))}
+                            >
+                                <option value="INBANK">Inbank</option>
+                                <option value="VEHIS">Vehis</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Nazwa połączenia</Label>
+                            <Input
+                                value={connectionFormData.name}
+                                onChange={e => setConnectionFormData(p => ({ ...p, name: e.target.value }))}
+                                placeholder="np. Inbank Produkcja"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>URL API (bazowy)</Label>
+                                <Input
+                                    value={connectionFormData.apiBaseUrl}
+                                    onChange={e => setConnectionFormData(p => ({ ...p, apiBaseUrl: e.target.value }))}
+                                    placeholder={connectionFormData.provider === 'VEHIS'
+                                        ? 'https://sandbox-vash.vehistools.pl/api'
+                                        : 'https://api-demo.inbank.eu'}
+                                />
+                            </div>
+                            {connectionFormData.provider === 'INBANK' && (
+                                <div className="space-y-2">
+                                    <Label>Shop UUID</Label>
+                                    <Input
+                                        value={connectionFormData.shopUuid || ''}
+                                        onChange={e => setConnectionFormData(p => ({ ...p, shopUuid: e.target.value }))}
+                                        placeholder="138d0594-..."
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>{connectionFormData.provider === 'VEHIS' ? 'Email' : 'API Key'}</Label>
+                                <Input
+                                    value={connectionFormData.apiKey}
+                                    onChange={e => setConnectionFormData(p => ({ ...p, apiKey: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>{connectionFormData.provider === 'VEHIS' ? 'Hasło' : 'API Secret (opcjonalnie)'}</Label>
+                                <Input
+                                    value={connectionFormData.apiSecret || ''}
+                                    onChange={e => setConnectionFormData(p => ({ ...p, apiSecret: e.target.value }))}
+                                    type={connectionFormData.provider === 'VEHIS' ? 'password' : 'text'}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <Switch
+                                    id="connection-active"
+                                    checked={connectionFormData.isActive}
+                                    onCheckedChange={checked => setConnectionFormData(p => ({ ...p, isActive: checked }))}
+                                />
+                                <Label htmlFor="connection-active">Aktywne</Label>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => testConnectionMutation.mutate({
+                                    provider: connectionFormData.provider,
+                                    apiBaseUrl: connectionFormData.apiBaseUrl,
+                                    apiKey: connectionFormData.apiKey,
+                                    apiSecret: connectionFormData.apiSecret || '',
+                                    shopUuid: connectionFormData.shopUuid || ''
+                                })}
+                                disabled={testConnectionMutation.isPending
+                                    || !connectionFormData.apiBaseUrl
+                                    || !connectionFormData.apiKey
+                                    || (connectionFormData.provider === 'INBANK' && !connectionFormData.shopUuid)
+                                    || (connectionFormData.provider === 'VEHIS' && !connectionFormData.apiSecret)}
+                            >
+                                {testConnectionMutation.isPending ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                                Testuj połączenie
+                            </Button>
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={handleCloseConnectionModal}>Anuluj</Button>
+                            <Button type="submit" disabled={saveConnectionMutation.isPending}>
+                                {saveConnectionMutation.isPending && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
+                                Zapisz
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isChoiceModalOpen} onOpenChange={setIsChoiceModalOpen}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Dodaj nowy produkt finansowy</DialogTitle>
+                        <DialogDescription>
+                            Wybierz partnera finansowego dla tego produktu.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-3 gap-4 py-6">
+                        <button
+                            onClick={() => handleSelectProvider('INBANK')}
+                            className="flex flex-col items-center justify-center p-6 space-y-4 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-slate-50 transition-all group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Plus className="w-6 h-6" />
+                            </div>
+                            <div className="text-center">
+                                <div className="font-bold text-lg">Inbank</div>
+                                <div className="text-sm text-muted-foreground">Automatyczna kalkulacja przez API</div>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => handleSelectProvider('VEHIS')}
+                            className="flex flex-col items-center justify-center p-6 space-y-4 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-slate-50 transition-all group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Plus className="w-6 h-6" />
+                            </div>
+                            <div className="text-center">
+                                <div className="font-bold text-lg">Vehis leasing</div>
+                                <div className="text-sm text-muted-foreground">Leasing z kalkulacją Vehis API</div>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => handleSelectProvider('OWN')}
+                            className="flex flex-col items-center justify-center p-6 space-y-4 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-slate-50 transition-all group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Edit className="w-6 h-6" />
+                            </div>
+                            <div className="text-center">
+                                <div className="font-bold text-lg">Produkt własny</div>
+                                <div className="text-sm text-muted-foreground">Stałe oprocentowanie i marża</div>
+                            </div>
+                        </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 }

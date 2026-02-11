@@ -19,6 +19,10 @@ import {
 } from '@/components/ui/select';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
+import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
+import { usePartnerAds } from '@/hooks/usePartnerAds';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -81,7 +85,7 @@ export default function SearchPage() {
     };
   });
 
-  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || 'newest');
+  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || 'year_desc');
   const initialPage = parseNumberParam(searchParams.get('page'), 1);
   const initialPerPage = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
   const [page, setPage] = React.useState(initialPage);
@@ -120,7 +124,7 @@ export default function SearchPage() {
       if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
 
       if (filters.query) params.set('q', filters.query);
-      if (sortBy !== 'newest') params.set('sortBy', sortBy);
+      if (sortBy !== 'year_desc') params.set('sortBy', sortBy);
       if (page > 1) params.set('page', page.toString());
       if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
 
@@ -150,6 +154,8 @@ export default function SearchPage() {
 
   const { data, isLoading } = useListings(filters, sortBy, page, perPage);
   const { data: options } = useListingOptions();
+  const { data: adsData } = usePartnerAds();
+  const partnersAds = adsData?.ads || [];
   const listings = data?.listings || [];
   const totalCount = data?.count ?? listings.length;
   const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((totalCount || 1) / perPage));
@@ -185,16 +191,39 @@ export default function SearchPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  const { i18n } = useTranslation();
+  const lang = i18n.language;
+  const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
+
+  const homeTitle = (seoConfig ? (seoConfig as any)[`homeTitle${suffix}`] : undefined) || seoConfig?.homeTitle;
+  const homeDescription = (seoConfig ? (seoConfig as any)[`homeDescription${suffix}`] : undefined) || seoConfig?.homeDescription;
+
+  const { data: settings } = useAppSettings();
+  const siteName = React.useMemo(() => {
+    if (!settings) return '';
+    const langCode = i18n.language.slice(0, 2).toLowerCase();
+    const candidates = [
+      langCode === 'en' ? settings?.siteNameEn : null,
+      langCode === 'de' ? settings?.siteNameDe : null,
+      langCode === 'pl' ? settings?.siteNamePl : null,
+      settings?.siteNameEn,
+      settings?.siteNameDe,
+      settings?.siteNamePl
+    ];
+    const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
+    return pick?.trim() || 'Car Scout';
+  }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
+
   return (
     <div className="min-h-screen bg-background">
       <MetaHead
-        title={seoConfig?.homeTitle}
-        description={seoConfig?.homeDescription}
+        title={homeTitle}
+        description={homeDescription}
         image={seoConfig?.homeOgImage}
         schema={{
           "@context": "https://schema.org",
           "@type": "Organization",
-          "name": "Car Scout",
+          "name": siteName,
           "url": window.location.origin,
           "logo": seoConfig?.homeOgImage
         }}
@@ -228,21 +257,72 @@ export default function SearchPage() {
               sortBy={sortBy}
               onSortChange={(value) => {
                 setSortBy(value);
+                setPage(page === 1 ? 1 : 1); // Reset to page 1 on sort change
                 setPage(1);
               }}
               availableMakes={options?.makes || []}
               availableModels={options?.models || []}
             />
 
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {/* Top Banner Ad */}
+            {!isLoading && listings.length > 0 && partnersAds.find(a => a.placement === 'SEARCH_TOP' && a.isActive) && (
+              <div className="mt-4">
+                {partnersAds.filter(a => a.placement === 'SEARCH_TOP' && a.isActive).slice(0, 1).map(ad => (
+                  <PartnerBannerAd
+                    key={ad.id}
+                    title={(ad as any)[`title${suffix}`] || ad.title}
+                    subtitle={(ad as any)[`subtitle${suffix}`] || ad.subtitle}
+                    ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
+                    url={ad.url}
+                    imageUrl={ad.imageUrl || ''}
+                    mobileImageUrl={ad.mobileImageUrl || undefined}
+                    hideUiElements={ad.hideUiElements}
+                    overlayOpacity={ad.overlayOpacity}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
                 ))
               ) : listings.length > 0 ? (
-                listings.map((listing, index) => (
-                  <ListingCard key={listing.listing_id} listing={listing} index={index} />
-                ))
+                listings.map((listing, index) => {
+                  const elements = [];
+
+                  // Add the listing card
+                  elements.push(
+                    <ListingCard key={listing.listing_id} listing={listing} index={index} />
+                  );
+
+                  // Inject an ad after every 6th item (at index 5, 11, etc.)
+                  if ((index + 1) % 6 === 0) {
+                    const gridAds = partnersAds.filter(a => a.placement === 'SEARCH_GRID' && a.isActive);
+                    const adIndex = Math.floor((index + 1) / 6) - 1;
+                    const ad = gridAds[adIndex % gridAds.length];
+
+                    if (ad) {
+                      elements.push(
+                        <PartnerAdCard
+                          key={`ad-${index}`}
+                          index={index + 1}
+                          title={(ad as any)[`title${suffix}`] || ad.title}
+                          description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                          ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
+                          url={ad.url}
+                          brandName={ad.brandName}
+                          imageUrl={ad.imageUrl || ''}
+                          overlayOpacity={ad.overlayOpacity}
+                          hideUiElements={ad.hideUiElements}
+                        />
+                      );
+                    }
+                  }
+
+                  return elements;
+                })
               ) : (
                 <div className="col-span-full py-16 text-center">
                   <p className="text-lg font-medium text-foreground">{t('empty.noResults')}</p>

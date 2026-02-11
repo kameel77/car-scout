@@ -124,6 +124,7 @@ export const translations = {
         mostExpensive: "Najdroższe",
         lowestMileage: "Najmniejszy przebieg",
         newest: "Najmłodszy rocznik",
+        recentlyAdded: "Ostatnio dodane",
       },
 
       // Listing card
@@ -138,6 +139,7 @@ export const translations = {
         mileage: "Przebieg",
         net: "ceny netto",
         gross: "ceny brutto",
+        specialOffer: "Oferta dla Ciebie",
       },
 
       // Listing detail
@@ -158,6 +160,29 @@ export const translations = {
         archivedTitle: "Ogłoszenie jest już nieaktualne",
         archivedDescription: "Zostało ono automatycznie zarchiwizowane, ponieważ nie jest już dostępne u źródła lub wystąpił błąd danych.",
         returnToSearch: "Wróć na stronę wyszukiwania",
+        notFoundTitle: "Przepraszamy, nie możemy wyświetlić tej oferty.",
+        notFoundDescription: "Niestety najprawdopodobiej ktoś był szybszy...",
+        backToResults: "Wróć do wyników wyszukiwania",
+        whyUs: {
+          overline: "Dlaczego my",
+          title: "Pewny wybór bez zbędnych obietnic",
+          item1: {
+            title: "Samochody od sprawdzonego dostawcy",
+            description: "Każdą ofertę weryfikujemy, zanim trafi na stronę.",
+          },
+          item2: {
+            title: "Nowe i używane z gwarancją",
+            description: "Masz jasne warunki i pewny stan techniczny.",
+          },
+          item3: {
+            title: "Doświadczony zespół konsultantów",
+            description: "Mówimy wprost i pomagamy wybrać najlepszą opcję.",
+          },
+          item4: {
+            title: "Finansowanie dla osób i firm",
+            description: "Dobieramy formę finansowania do Twojej sytuacji.",
+          },
+        },
       },
 
       // Equipment sections
@@ -292,6 +317,13 @@ export const translations = {
         representative: "Osoba uprawniona do reprezentacji",
         missing: "Brak podpiętego dokumentu dla tego języka.",
       },
+      // Ads
+      ads: {
+        partnerOffer: "Oferta Partnerska",
+        advertisement: "Reklama",
+        partner: "Partner",
+        learnMore: "Dowiedz się więcej",
+      },
     },
   },
 
@@ -419,7 +451,8 @@ export const translations = {
         cheapest: "Cheapest",
         mostExpensive: "Most expensive",
         lowestMileage: "Lowest mileage",
-        newest: "Newest",
+        newest: "Newest year",
+        recentlyAdded: "Recently added",
       },
 
       // Listing card
@@ -434,6 +467,7 @@ export const translations = {
         mileage: "Mileage",
         net: "net prices",
         gross: "gross prices",
+        specialOffer: "Your special offer",
       },
 
       // Listing detail
@@ -454,6 +488,29 @@ export const translations = {
         archivedTitle: "This listing is no longer current",
         archivedDescription: "It has been automatically archived because it is no longer available from the source or there was a data error.",
         returnToSearch: "Return to search page",
+        notFoundTitle: "Sorry, we cannot display this offer.",
+        notFoundDescription: "Unfortunately, someone was probably faster...",
+        backToResults: "Back to search results",
+        whyUs: {
+          overline: "Why us",
+          title: "A confident choice, no fluff",
+          item1: {
+            title: "Cars from a trusted supplier",
+            description: "We verify every offer before it goes live.",
+          },
+          item2: {
+            title: "New and used with warranty",
+            description: "Clear terms and a confirmed technical condition.",
+          },
+          item3: {
+            title: "Experienced consultant team",
+            description: "We speak plainly and help you pick the best option.",
+          },
+          item4: {
+            title: "Financing for individuals and companies",
+            description: "We match financing to your situation.",
+          },
+        },
       },
 
       // Equipment sections
@@ -588,6 +645,13 @@ export const translations = {
         representative: "Authorized representative",
         missing: "No document linked for this language.",
       },
+      // Ads
+      ads: {
+        partnerOffer: "Partner Offer",
+        advertisement: "Sponsored",
+        partner: "Partner",
+        learnMore: "Learn more",
+      },
     },
   },
 
@@ -713,7 +777,8 @@ export const translations = {
         cheapest: "Günstigste",
         mostExpensive: "Teuerste",
         lowestMileage: "Niedrigster Km-Stand",
-        newest: "Neueste",
+        newest: "Neueste Baujahr",
+        recentlyAdded: "Zuletzt hinzugefügt",
       },
 
       // Listing card
@@ -728,6 +793,7 @@ export const translations = {
         mileage: "Kilometerstand",
         net: "Nettopreise",
         gross: "Bruttopreise",
+        specialOffer: "Angebot für dich",
       },
 
       // Listing detail
@@ -748,6 +814,29 @@ export const translations = {
         archivedTitle: "Diese Anzeige ist nicht mehr aktuell",
         archivedDescription: "Sie wurde automatisch archiviert, da sie nicht mehr von der Quelle verfügbar ist oder ein Datenfehler aufgetreten ist.",
         returnToSearch: "Zurück zur Suchseite",
+        notFoundTitle: "Entschuldigung, wir können dieses Angebot nicht anzeigen.",
+        notFoundDescription: "Leider war wahrscheinlich jemand schneller...",
+        backToResults: "Zurück zu den Suchergebnissen",
+        whyUs: {
+          overline: "Warum wir",
+          title: "Eine sichere Wahl, ohne Floskeln",
+          item1: {
+            title: "Fahrzeuge von vertrauenswürdigen Anbietern",
+            description: "Wir prüfen jedes Angebot, bevor es online geht.",
+          },
+          item2: {
+            title: "Neu- und Gebrauchtwagen mit Garantie",
+            description: "Klare Bedingungen und geprüfter Zustand.",
+          },
+          item3: {
+            title: "Erfahrenes Beratungsteam",
+            description: "Wir sprechen Klartext und helfen bei der Auswahl.",
+          },
+          item4: {
+            title: "Finanzierung für Privat- und Firmenkunden",
+            description: "Wir finden die passende Finanzierung.",
+          },
+        },
       },
 
       // Equipment sections
@@ -881,6 +970,13 @@ export const translations = {
         register: "Handelsregister",
         representative: "Vertretungsberechtigte Person",
         missing: "Kein Dokument für diese Sprache hinterlegt.",
+      },
+      // Ads
+      ads: {
+        partnerOffer: "Partnerangebot",
+        advertisement: "Anzeige",
+        partner: "Partner",
+        learnMore: "Mehr erfahren",
       },
     },
   },

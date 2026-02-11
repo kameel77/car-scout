@@ -42,6 +42,7 @@ export interface Listing {
     driverAssist: string[];
     other: string[];
   };
+  is_archived?: boolean;
 }
 
 export interface Lead {
@@ -50,7 +51,7 @@ export interface Lead {
   email: string;
   phone?: string;
   message: string;
-  status: 'new' | 'contacted' | 'in_progress' | 'sold' | 'closed';
+  status: 'new' | 'contacted' | 'in_progress' | 'sold' | 'closed' | 'applied';
   listing_id: string;
   listing_make: string;
   listing_model: string;
@@ -68,6 +69,16 @@ export interface Lead {
   consent_marketing_at: string;
   consent_privacy_at: string;
   created_at: string;
+
+  // Financing fields
+  financing_product_id?: string;
+  financing_amount?: number;
+  financing_period?: number;
+  financing_down_payment?: number;
+  financing_installment?: number;
+  external_id?: string;
+  external_status?: string;
+  provider?: string;
 }
 
 export interface Make {

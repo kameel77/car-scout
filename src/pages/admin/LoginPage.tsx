@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { useTranslation } from 'react-i18next';
+import React from 'react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -12,6 +15,23 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const { data: settings } = useAppSettings();
+    const { i18n } = useTranslation();
+
+    const siteName = React.useMemo(() => {
+        if (!settings) return '';
+        const langCode = i18n.language.slice(0, 2).toLowerCase();
+        const candidates = [
+            langCode === 'en' ? settings?.siteNameEn : null,
+            langCode === 'de' ? settings?.siteNameDe : null,
+            langCode === 'pl' ? settings?.siteNamePl : null,
+            settings?.siteNameEn,
+            settings?.siteNameDe,
+            settings?.siteNamePl
+        ];
+        const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
+        return pick?.trim() || 'Car Scout';
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,7 +54,7 @@ export default function LoginPage() {
             <Card className="w-full max-w-md shadow-2xl">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        Car Scout Admin
+                        {siteName} Admin
                     </CardTitle>
                     <CardDescription className="text-center">
                         Sign in to access the admin panel
@@ -77,15 +97,23 @@ export default function LoginPage() {
                         >
                             {isLoading ? 'Signing in...' : 'Sign In'}
                         </Button>
+                        <div className="text-center mt-4 space-y-4">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/admin/forgot-password')}
+                                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors block w-full"
+                            >
+                                Zapomniałeś hasła?
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/')}
+                                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium transition-colors block w-full"
+                            >
+                                &larr; wróć do serwisu
+                            </button>
+                        </div>
                     </form>
-
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs text-blue-800 dark:text-blue-200">
-                            <strong>Default credentials:</strong><br />
-                            Email: admin@carscout.pl<br />
-                            Password: admin123
-                        </p>
-                    </div>
                 </CardContent>
             </Card>
         </div>

@@ -43,10 +43,12 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from '@/contexts/AuthContext';
 import { leadsApi } from '@/services/api';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export function LeadList() {
     const { token } = useAuth();
+    const queryClient = useQueryClient();
     const [selectedLead, setSelectedLead] = React.useState<Lead | null>(null);
     const [searchQuery, setSearchQuery] = React.useState('');
     const { data, isLoading, isFetching, isError } = useQuery({
@@ -96,7 +98,16 @@ export function LeadList() {
                 dealer_phone: dealer.contactPhone,
                 consent_marketing_at: formatDate(lead.consentMarketingAt),
                 consent_privacy_at: formatDate(lead.consentPrivacyAt),
-                created_at: formatDate(lead.createdAt)
+                created_at: formatDate(lead.createdAt),
+                // Financing mapping
+                financing_product_id: lead.financingProductId,
+                financing_amount: lead.financingAmount,
+                financing_period: lead.financingPeriod,
+                financing_down_payment: lead.financingDownPayment,
+                financing_installment: lead.financingInstallment,
+                external_id: lead.externalId,
+                external_status: lead.externalStatus,
+                provider: lead.financingProduct?.provider
             };
         });
     }, [data]);
@@ -105,17 +116,7 @@ export function LeadList() {
 
     const anonymizeLead = (id: string) => {
         if (window.confirm('Czy na pewno chcesz zanonimizować dane tego klienta? Tej operacji nie można cofnąć.')) {
-            setLeads(prev => prev.map(l => {
-                if (l.id === id) {
-                    return {
-                        ...l,
-                        name: 'Użytkownik zanonimizowany',
-                        email: 'xxx@anonymized.com',
-                        phone: '-----------',
-                    };
-                }
-                return l;
-            }));
+            toast.info('Funkcja anonimizacji w przygotowaniu');
         }
     };
 
@@ -136,6 +137,8 @@ export function LeadList() {
                 return <Badge variant="secondary" className="bg-purple-500 text-white hover:bg-purple-600">W toku</Badge>;
             case 'sold':
                 return <Badge variant="default" className="bg-green-600 hover:bg-green-700">Sprzedane</Badge>;
+            case 'applied':
+                return <Badge variant="default" className="bg-indigo-600 hover:bg-indigo-700">Wysłano wniosek</Badge>;
             case 'closed':
                 return <Badge variant="outline">Zamknięty</Badge>;
             default:
@@ -261,6 +264,34 @@ export function LeadList() {
                                                 </TooltipContent>
                                             </Tooltip>
 
+                                            {lead.provider === 'INBANK' && lead.status !== 'applied' && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={async () => {
+                                                                if (confirm('Czy na pewno wysłać ten wniosek do Inbank?')) {
+                                                                    try {
+                                                                        await leadsApi.applyForFinancing(lead.id, token);
+                                                                        toast.success('Wniosek został wysłany do Inbank');
+                                                                        queryClient.invalidateQueries({ queryKey: ['leads'] });
+                                                                    } catch (e: any) {
+                                                                        toast.error(e.message || 'Błąd wysyłki wniosku');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="h-8 w-8 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50"
+                                                        >
+                                                            <ShieldCheck className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Wyślij do Inbank</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )}
+
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
                                                     <Button
@@ -380,6 +411,37 @@ export function LeadList() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Financing Info Section */}
+                            {selectedLead.financing_product_id && (
+                                <div className="space-y-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                                    <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-400 flex items-center gap-2">
+                                        <DollarSign className="h-3 w-3" /> Parametry finansowania ({selectedLead.provider})
+                                    </h4>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] uppercase text-indigo-400 font-bold tracking-wider">Kwota</p>
+                                            <p className="text-sm font-bold">{formatNumber(selectedLead.financing_amount || 0)} PLN</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] uppercase text-indigo-400 font-bold tracking-wider">Okres</p>
+                                            <p className="text-sm font-bold">{selectedLead.financing_period} m-cy</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] uppercase text-indigo-400 font-bold tracking-wider">Rata</p>
+                                            <p className="text-sm font-bold text-indigo-700">{formatNumber(selectedLead.financing_installment || 0)} PLN</p>
+                                        </div>
+                                    </div>
+                                    {selectedLead.external_id && (
+                                        <div className="pt-2 mt-2 border-t border-indigo-100 flex justify-between items-center">
+                                            <span className="text-[11px] text-indigo-500 font-medium">ID wniosku: <span className="font-bold">{selectedLead.external_id}</span></span>
+                                            <Badge variant="outline" className="text-[10px] bg-white border-indigo-200 text-indigo-600 uppercase">
+                                                Status: {selectedLead.external_status || 'Nieznany'}
+                                            </Badge>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Message Content */}
                             <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">

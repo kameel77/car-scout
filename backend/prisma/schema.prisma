@@ -7,233 +7,207 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============ LISTINGS ============
 model Listing {
-  id                    String    @id @default(cuid())
-  listingId             String?   @unique @map("listing_id")
-  listingUrl            String?   @map("listing_url")
-  scrapedAt             DateTime? @map("scraped_at")
-  
-  // Vehicle Info
-  make                  String
-  model                 String
-  version               String?
-  vin                   String?   @unique
-  
-  // Pricing
-  pricePln              Int       @map("price_pln")
-  priceDisplay          String?   @map("price_display")
-  
-  // Dynamic Calculated Pricing
-  dealerPriceNetPln     Float?    @map("dealer_price_net_pln")
-  dealerPriceNetEur     Float?    @map("dealer_price_net_eur")
-  brokerPricePln        Int?      @map("broker_price_pln")
-  brokerPriceEur        Int?      @map("broker_price_eur")
-  
-  omnibusLowest30dPln   Int?      @map("omnibus_lowest_30d_pln")
-  omnibusText           String?   @map("omnibus_text")
-  
-  // Technical Specs
-  productionYear        Int       @map("production_year")
-  mileageKm             Int       @map("mileage_km")
-  fuelType              String?   @map("fuel_type")
-  transmission          String?
-  enginePowerHp         Int?      @map("engine_power_hp")
-  engineCapacityCm3     Int?      @map("engine_capacity_cm3")
-  drive                 String?
-  bodyType              String?   @map("body_type")
-  doors                 Int?
-  seats                 Int?
-  color                 String?
-  paintType             String?   @map("paint_type")
-  
-  // Registration
-  registrationNumber    String?   @map("registration_number")
-  firstRegistrationDate String?   @map("first_registration_date")
-  
-  // Images
-  primaryImageUrl       String?   @map("primary_image_url")
-  imageCount            Int?      @map("image_count")
-  imageUrls             String[]  @map("image_urls")
-  
-  // Dealer Info
-  dealerId              String?   @map("dealer_id")
-  dealer                Dealer?   @relation(fields: [dealerId], references: [id])
-  
-  // Equipment
-  equipmentAudioMultimedia  String[] @map("equipment_audio_multimedia")
-  equipmentSafety           String[] @map("equipment_safety")
-  equipmentComfortExtras    String[] @map("equipment_comfort_extras")
-  equipmentOther            String[] @map("equipment_other")
-  
-  // Additional Info
-  additionalInfoHeader  String?   @map("additional_info_header")
-  additionalInfoContent String?   @map("additional_info_content") @db.Text
-  specsJson             Json?     @map("specs_json")
-  
-  // Archive & Audit
-  isArchived            Boolean   @default(false) @map("is_archived")
-  archivedAt            DateTime? @map("archived_at")
-  archivedReason        String?   @map("archived_reason")
-  
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
-  
-  priceHistory          PriceHistory[]
-  leads                 Lead[]
-  
+  id                       String         @id @default(cuid())
+  listingId                String?        @unique @map("listing_id")
+  listingUrl               String?        @map("listing_url")
+  scrapedAt                DateTime?      @map("scraped_at")
+  make                     String
+  model                    String
+  version                  String?
+  vin                      String?        @unique
+  pricePln                 Int            @map("price_pln")
+  priceDisplay             String?        @map("price_display")
+  omnibusLowest30dPln      Int?           @map("omnibus_lowest_30d_pln")
+  omnibusText              String?        @map("omnibus_text")
+  productionYear           Int            @map("production_year")
+  mileageKm                Int            @map("mileage_km")
+  fuelType                 String?        @map("fuel_type")
+  transmission             String?
+  enginePowerHp            Int?           @map("engine_power_hp")
+  engineCapacityCm3        Int?           @map("engine_capacity_cm3")
+  drive                    String?
+  bodyType                 String?        @map("body_type")
+  doors                    Int?
+  seats                    Int?
+  color                    String?
+  paintType                String?        @map("paint_type")
+  registrationNumber       String?        @map("registration_number")
+  firstRegistrationDate    String?        @map("first_registration_date")
+  primaryImageUrl          String?        @map("primary_image_url")
+  imageCount               Int?           @map("image_count")
+  imageUrls                String[]       @map("image_urls")
+  dealerId                 String?        @map("dealer_id")
+  equipmentAudioMultimedia String[]       @map("equipment_audio_multimedia")
+  equipmentSafety          String[]       @map("equipment_safety")
+  equipmentComfortExtras   String[]       @map("equipment_comfort_extras")
+  equipmentOther           String[]       @map("equipment_other")
+  additionalInfoHeader     String?        @map("additional_info_header")
+  additionalInfoContent    String?        @map("additional_info_content")
+  specsJson                Json?          @map("specs_json")
+  isArchived               Boolean        @default(false) @map("is_archived")
+  archivedAt               DateTime?      @map("archived_at")
+  archivedReason           String?        @map("archived_reason")
+  createdAt                DateTime       @default(now()) @map("created_at")
+  updatedAt                DateTime       @updatedAt @map("updated_at")
+  brokerPriceEur           Int?           @map("broker_price_eur")
+  brokerPricePln           Int?           @map("broker_price_pln")
+  dealerPriceNetEur        Float?         @map("dealer_price_net_eur")
+  dealerPriceNetPln        Float?         @map("dealer_price_net_pln")
+  marketplace              String?        @map("marketplace")
+  slug                     String?        @unique @map("slug")
+  leads                    Lead[]
+  dealer                   Dealer?        @relation(fields: [dealerId], references: [id])
+  priceHistory             PriceHistory[]
+
   @@index([make, model])
   @@index([pricePln])
   @@index([productionYear])
   @@index([isArchived])
   @@index([vin])
   @@index([listingId])
+  @@index([marketplace])
+  @@index([slug])
   @@map("listings")
 }
 
-// ============ LEADS ============
 model Lead {
-  id                 String   @id @default(cuid())
-  listingId          String   @map("listing_id")
-  listing            Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
-
-  name               String
-  email              String
-  phone              String?
-  preferredContact   String   @default("email") @map("preferred_contact")
-  message            String   @db.Text
-  status             String   @default("new")
-  referenceNumber    String   @unique @map("reference_number")
-
-  consentMarketingAt DateTime? @map("consent_marketing_at")
-  consentPrivacyAt   DateTime? @map("consent_privacy_at")
-
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id                   String            @id @default(cuid())
+  listingId            String            @map("listing_id")
+  name                 String
+  email                String
+  phone                String?
+  preferredContact     String            @default("email") @map("preferred_contact")
+  message              String
+  status               String            @default("new")
+  referenceNumber      String            @unique @map("reference_number")
+  consentMarketingAt   DateTime?         @map("consent_marketing_at")
+  consentPrivacyAt     DateTime?         @map("consent_privacy_at")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+  externalId           String?           @map("external_id")
+  externalStatus       String?           @map("external_status")
+  financingAmount      Float?            @map("financing_amount")
+  financingDownPayment Float?            @map("financing_down_payment")
+  financingInstallment Float?            @map("financing_installment")
+  financingPeriod      Int?              @map("financing_period")
+  financingProductId   String?           @map("financing_product_id")
+  financingProduct     FinancingProduct? @relation(fields: [financingProductId], references: [id])
+  listing              Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([listingId])
+  @@index([financingProductId])
   @@map("leads")
 }
 
-// ============ DEALERS ============
 model Dealer {
-  id                  String    @id @default(cuid())
-  name                String
-  addressLine1        String    @map("address_line1")
-  addressLine2        String?   @map("address_line2")
-  addressLine3        String?   @map("address_line3")
-  city                String?
-  contactPhone        String?   @map("contact_phone")
-  googleRating        Float?    @map("google_rating")
-  googleReviewCount   Int?      @map("google_review_count")
-  googleLink          String?   @map("google_link")
-  
-  listings            Listing[]
-  
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  
+  id                String    @id @default(cuid())
+  name              String
+  addressLine1      String    @map("address_line1")
+  addressLine2      String?   @map("address_line2")
+  addressLine3      String?   @map("address_line3")
+  city              String?
+  contactPhone      String?   @map("contact_phone")
+  googleRating      Float?    @map("google_rating")
+  googleReviewCount Int?      @map("google_review_count")
+  googleLink        String?   @map("google_link")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  listings          Listing[]
+
   @@unique([name, addressLine1])
   @@map("dealers")
 }
 
-// ============ PRICE HISTORY ============
 model PriceHistory {
-  id         String   @id @default(cuid())
-  listingId  String   @map("listing_id")
-  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  
-  pricePln   Int      @map("price_pln")
-  changedAt  DateTime @default(now()) @map("changed_at")
-  
+  id        String   @id @default(cuid())
+  listingId String   @map("listing_id")
+  pricePln  Int      @map("price_pln")
+  changedAt DateTime @default(now()) @map("changed_at")
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
   @@index([listingId, changedAt])
   @@map("price_history")
 }
 
-// ============ IMPORT LOGS ============
 model ImportLog {
-  id          String   @id @default(cuid())
-  importedBy  String   @map("imported_by")
-  user        User     @relation(fields: [importedBy], references: [id])
-  
-  fileName    String?  @map("file_name")
-  totalRows   Int      @map("total_rows")
-  inserted    Int
-  updated     Int
-  archived    Int
-  failed      Int      @default(0)
-  
-  status      String
-  errorLog    Json?    @map("error_log")
-  
-  importedAt  DateTime @default(now()) @map("imported_at")
-  duration    Int?
-  
+  id         String   @id @default(cuid())
+  importedBy String   @map("imported_by")
+  fileName   String?  @map("file_name")
+  totalRows  Int      @map("total_rows")
+  inserted   Int
+  updated    Int
+  archived   Int
+  failed     Int      @default(0)
+  status     String
+  errorLog   Json?    @map("error_log")
+  importedAt DateTime @default(now()) @map("imported_at")
+  duration   Int?
+  user       User     @relation(fields: [importedBy], references: [id])
+
   @@index([importedBy])
   @@index([importedAt])
   @@map("import_logs")
 }
 
-// ============ USERS ============
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      String   @default("admin")
-  
-  isActive  Boolean  @default(true) @map("is_active")
-  lastLogin DateTime? @map("last_login")
-  
-  importLogs ImportLog[]
-  
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
+  id                   String      @id @default(cuid())
+  email                String      @unique
+  password             String
+  name                 String?
+  role                 String      @default("admin")
+  isActive             Boolean     @default(true) @map("is_active")
+  lastLogin            DateTime?   @map("last_login")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+  resetPasswordExpires DateTime?   @map("reset_password_expires")
+  resetPasswordToken   String?     @map("reset_password_token")
+  importLogs           ImportLog[]
+
   @@map("users")
 }
 
 model AppSettings {
-  id                  String   @id @default("default")
-  enabledLanguages    String[] @default(["pl"]) @map("enabled_languages")
-  displayCurrency     String   @default("PLN") @map("display_currency")
-  eurExRate           Float    @default(4.30) @map("eur_ex_rate")
-  brokerFeePctPln     Float    @default(3.5) @map("broker_fee_pct_pln")
-  brokerFeePctEur     Float    @default(3.5) @map("broker_fee_pct_eur")
-  autoRefreshImages   Boolean  @default(false) @map("auto_refresh_images")
-  legalDocuments      Json?    @map("legal_documents")
-  legalCompanyName    String?  @map("legal_company_name")
-  legalAddress        String?  @map("legal_address")
-  legalContactEmail   String?  @map("legal_contact_email")
-  legalContactPhone   String?  @map("legal_contact_phone")
-  legalVatId          String?  @map("legal_vat_id")
-  legalRegisterNumber String?  @map("legal_register_number")
-  legalRepresentative String?  @map("legal_representative")
-  headerLogoUrl       String?  @map("header_logo_url")
-  headerLogoTextPl    String?  @map("header_logo_text_pl")
-  headerLogoTextEn    String?  @map("header_logo_text_en")
-  headerLogoTextDe    String?  @map("header_logo_text_de")
-  footerLogoUrl       String?  @map("footer_logo_url")
-  legalSloganPl       String?  @map("legal_slogan_pl")
-  legalSloganEn       String?  @map("legal_slogan_en")
-  legalSloganDe       String?  @map("legal_slogan_de")
-  
-  financingCalculatorEnabled  Boolean @default(true) @map("financing_calculator_enabled")
-  financingCalculatorLocation String  @default("main") @map("financing_calculator_location") // 'main' | 'sidebar'
-  
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                          String   @id @default("default")
+  enabledLanguages            String[] @default(["pl"]) @map("enabled_languages")
+  displayCurrency             String   @default("PLN") @map("display_currency")
+  eurExRate                   Float    @default(4.30) @map("eur_ex_rate")
+  brokerFeePctPln             Float    @default(3.5) @map("broker_fee_pct_pln")
+  brokerFeePctEur             Float    @default(3.5) @map("broker_fee_pct_eur")
+  updatedAt                   DateTime @updatedAt @map("updated_at")
+  financingCalculatorEnabled  Boolean  @default(true) @map("financing_calculator_enabled")
+  financingCalculatorLocation String   @default("main") @map("financing_calculator_location")
+  legalDocuments              Json?    @map("legal_documents")
+  legalCompanyName            String?  @map("legal_company_name")
+  legalAddress                String?  @map("legal_address")
+  legalContactEmail           String?  @map("legal_contact_email")
+  legalContactPhone           String?  @map("legal_contact_phone")
+  legalVatId                  String?  @map("legal_vat_id")
+  legalRegisterNumber         String?  @map("legal_register_number")
+  legalRepresentative         String?  @map("legal_representative")
+  headerLogoUrl               String?  @map("header_logo_url")
+  footerLogoUrl               String?  @map("footer_logo_url")
+  legalSloganPl               String?  @map("legal_slogan_pl")
+  legalSloganEn               String?  @map("legal_slogan_en")
+  legalSloganDe               String?  @map("legal_slogan_de")
+  autoRefreshImages           Boolean  @default(false) @map("auto_refresh_images")
+  headerLogoTextPl            String?  @map("header_logo_text_pl")
+  headerLogoTextEn            String?  @map("header_logo_text_en")
+  headerLogoTextDe            String?  @map("header_logo_text_de")
+  siteNameDe                  String?  @map("site_name_de")
+  siteNameEn                  String?  @map("site_name_en")
+  siteNamePl                  String?  @map("site_name_pl")
 
   @@map("app_settings")
 }
 
 model Translation {
   id          String   @id @default(cuid())
-  category    String   // 'fuel', 'transmission', 'body', 'feature', etc.
-  sourceValue String   @unique @map("source_value") // Original value (e.g. in Polish)
+  category    String
+  sourceValue String   @unique @map("source_value")
   pl          String?
   en          String?
   de          String?
-  
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -241,77 +215,150 @@ model Translation {
   @@map("translations")
 }
 
-// ============ FAQ ENTRIES ============
-enum FaqPage {
-  home
-  offers
-  contact
-}
-
 model FaqEntry {
-  id           String   @id @default(cuid())
-  page         FaqPage
-  sortOrder    Int      @default(0) @map("sort_order")
-  questionPl   String   @map("question_pl")
-  answerPl     String   @map("answer_pl") @db.Text
-  questionEn   String   @map("question_en")
-  answerEn     String   @map("answer_en") @db.Text
-  questionDe   String   @map("question_de")
-  answerDe     String   @map("answer_de") @db.Text
-  isPublished  Boolean  @default(true) @map("is_published")
-
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  page        FaqPage
+  sortOrder   Int      @default(0) @map("sort_order")
+  questionPl  String   @map("question_pl")
+  answerPl    String   @map("answer_pl")
+  questionEn  String   @map("question_en")
+  answerEn    String   @map("answer_en")
+  questionDe  String   @map("question_de")
+  answerDe    String   @map("answer_de")
+  isPublished Boolean  @default(true) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([page, sortOrder])
   @@map("faq_entries")
 }
 
-// ============ FINANCING ============
 model FinancingProduct {
   id                String   @id @default(cuid())
-  category          String   // 'CREDIT', 'LEASING', 'RENT'
+  category          String
   name              String?
   currency          String   @default("PLN")
-  
-  // Rates
-  referenceRate     Float    @map("reference_rate") // Wibor/Euribor %
-  margin            Float    // %
-  commission        Float    // %
-  
-  // Constraints
-  maxInitialPayment Float    @map("max_initial_payment") // % for leasing/rent, value for credit? Spec says "max pierwsza wpłata"
-  maxFinalPayment   Float    @map("max_final_payment") // %
+  referenceRate     Float    @map("reference_rate")
+  margin            Float
+  commission        Float
+  maxInitialPayment Float    @map("max_initial_payment")
+  maxFinalPayment   Float    @map("max_final_payment")
   minInstallments   Int      @map("min_installments")
   maxInstallments   Int      @map("max_installments")
-  
   isDefault         Boolean  @default(false) @map("is_default")
-  
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
+  provider          String   @default("OWN")
+  priority          Int      @default(0)
+  minAmount         Float?   @map("min_amount")
+  maxAmount         Float?   @map("max_amount")
+  providerConfig    Json?    @map("provider_config")
+  hasBalloonPayment Boolean  @default(true) @map("has_balloon_payment")
+  leads             Lead[]
 
-  @@map("financing_products")
   @@index([category])
   @@index([isDefault])
+  @@map("financing_products")
 }
 
-// ============ SEO CONFIG ============
+model FinancingProviderConnection {
+  id         String   @id @default(cuid())
+  provider   String
+  name       String
+  apiBaseUrl String   @map("api_base_url")
+  apiKey     String   @map("api_key")
+  apiSecret  String?  @map("api_secret")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  shopUuid   String?  @map("shop_uuid")
+
+  @@index([provider])
+  @@index([provider, isActive])
+  @@map("financing_provider_connections")
+}
+
+model CrmTrackingSession {
+  id         String             @id
+  uuid       String
+  lastSeenAt DateTime           @map("last_seen_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+  visits     CrmTrackingVisit[]
+
+  @@index([uuid])
+  @@index([uuid, lastSeenAt])
+  @@map("crm_tracking_sessions")
+}
+
+model CrmTrackingVisit {
+  id        String             @id @default(cuid())
+  sessionId String             @map("session_id")
+  url       String
+  visitedAt DateTime           @map("visited_at")
+  createdAt DateTime           @default(now()) @map("created_at")
+  session   CrmTrackingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, visitedAt])
+  @@map("crm_tracking_visits")
+}
+
 model SeoConfig {
-  id              String   @id @default("default")
-  
-  // global
-  gtmId           String?  @map("gtm_id") // GTM-XXXXXX
-  
-  // homepage
-  homeTitle       String?  @map("home_title")
-  homeDescription String?  @map("home_description") @db.Text
-  homeOgImage     String?  @map("home_og_image")
-  
-  // listings (templates)
-  listingTitle       String? @map("listing_title") 
-  listingDescription String? @map("listing_description") @db.Text
-  
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default("default")
+  gtmId                String?  @map("gtm_id")
+  homeTitle            String?  @map("home_title")
+  homeDescription      String?  @map("home_description")
+  homeOgImage          String?  @map("home_og_image")
+  listingTitle         String?  @map("listing_title")
+  listingDescription   String?  @map("listing_description")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  homeDescriptionDe    String?  @map("home_description_de")
+  homeDescriptionEn    String?  @map("home_description_en")
+  homeTitleDe          String?  @map("home_title_de")
+  homeTitleEn          String?  @map("home_title_en")
+  listingDescriptionDe String?  @map("listing_description_de")
+  listingDescriptionEn String?  @map("listing_description_en")
+  listingTitleDe       String?  @map("listing_title_de")
+  listingTitleEn       String?  @map("listing_title_en")
 
   @@map("seo_config")
+}
+
+model PartnerAd {
+  id             String   @id @default(cuid())
+  placement      String
+  title          String?
+  description    String?
+  subtitle       String?
+  ctaText        String?  @map("cta_text")
+  url            String
+  imageUrl       String?  @map("image_url")
+  brandName      String?  @map("brand_name")
+  features       String[] @default([])
+  priority       Int      @default(0)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  overlayOpacity Float    @default(0.9) @map("overlay_opacity")
+  ctaTextDe      String?  @map("cta_text_de")
+  ctaTextEn      String?  @map("cta_text_en")
+  descriptionDe  String?  @map("description_de")
+  descriptionEn  String?  @map("description_en")
+  subtitleDe     String?  @map("subtitle_de")
+  subtitleEn     String?  @map("subtitle_en")
+  titleDe        String?  @map("title_de")
+  titleEn        String?  @map("title_en")
+  hideUiElements Boolean  @default(false) @map("hide_ui_elements")
+  mobileImageUrl String?  @map("mobile_image_url")
+
+  @@index([placement])
+  @@index([isActive])
+  @@map("partner_ads")
+}
+
+enum FaqPage {
+  home
+  offers
+  contact
 }

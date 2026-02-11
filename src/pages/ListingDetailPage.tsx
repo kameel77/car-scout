@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
@@ -17,18 +17,21 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import { useListing } from '@/hooks/useListings';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import { FinancingCalculator } from '@/components/FinancingCalculator';
+import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/utils/formatters';
+import { applySpecialOfferDiscount } from '@/utils/specialOffer';
+import { getListingUrlPath } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
 import {
   Dialog,
@@ -40,22 +43,30 @@ import {
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
+import { usePartnerAds } from '@/hooks/usePartnerAds';
 
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 
 export default function ListingDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, token } = useAuth();
   const canManage = user?.role === 'admin' || user?.role === 'manager';
 
-  const { data, isLoading } = useListing(id);
+  // Use slug if available (new URL format), otherwise fall back to id (legacy format)
+  const listingIdentifier = slug || id;
+  const { data, isLoading } = useListing(listingIdentifier);
+  const { data: adsData } = usePartnerAds('DETAIL_SIDEBAR');
+  const sidebarAds = adsData?.ads || [];
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
+  const { discount, initialPayment: contextInitialPayment, hasSpecialOffer } = useSpecialOffer();
+  const initialPayment = contextInitialPayment || discount;
   const listing = data?.listing;
 
   // Store search parameters for return navigation
@@ -175,13 +186,30 @@ export default function ListingDetailPage() {
       basePrice = listing.broker_price_pln;
     }
 
+    if (basePrice === 0 && currency === 'PLN' && listing.price_pln) {
+      basePrice = listing.price_pln;
+    }
+
     if (basePrice > 0) {
+      const discountedPrice = applySpecialOfferDiscount(basePrice, discount);
       const isNetPrimary = priceType === 'net';
-      const primaryPrice = isNetPrimary ? Math.round(basePrice / 1.23) : basePrice;
-      const secondaryPrice = isNetPrimary ? basePrice : Math.round(basePrice / 1.23);
+      const primaryPrice = isNetPrimary ? Math.round(discountedPrice / 1.23) : discountedPrice;
+      const secondaryPrice = isNetPrimary ? discountedPrice : Math.round(discountedPrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
-      const secondaryLabel = user
+      // user requested to hide net price in special offer context if it was "wrong"
+      // or simply: if we are in special offer mode, let's simplify the display?
+      // actually, let's just make sure we don't display it if it's confusing.
+      // The user said "błędnie dodałeś ceny netto". 
+      // Current logic:
+      // const secondaryLabel = user
+      //   ? (isNetPrimary
+      //       ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
+      //       : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
+      //   : null;
+
+      // Let's hide secondary label if there is a discount to clean up the UI
+      const secondaryLabel = (user && !discount)
         ? (isNetPrimary
           ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
           : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
@@ -191,7 +219,7 @@ export default function ListingDetailPage() {
     }
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
-  }, [listing, settings, priceType, t]);
+  }, [listing, settings, priceType, t, discount]);
 
   const faqs = React.useMemo(() => {
     const entries = (faqData?.entries || []) as FaqEntry[];
@@ -223,38 +251,54 @@ export default function ListingDetailPage() {
     );
   }
 
-  if (!listing) {
+  if (!listing || (listing.is_archived && !canManage)) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container py-16 text-center">
-          <p className="text-lg">{t('empty.noResults')}</p>
-          <Button asChild className="mt-4">
-            <Link to="/">{t('common.back')}</Link>
+        <div className="container py-24 text-center max-w-2xl mx-auto space-y-6">
+          <div className="bg-destructive/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-bold font-heading text-foreground">
+            {t('detail.notFoundTitle')}
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            {t('detail.notFoundDescription')}
+          </p>
+          <Button asChild size="lg" className="mt-8">
+            <Link to="/">{t('detail.backToResults')}</Link>
           </Button>
         </div>
+        <Footer />
       </div>
     );
   }
 
   const title = `${listing.make} ${listing.model} ${listing.version}`;
+  const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
+
+  const lang = i18n.language;
+  const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
 
   // Prepare SEO values
-  const metaTitle = listing && seoConfig?.listingTitle
-    ? seoConfig.listingTitle
+  const listingTitleTemplate = (seoConfig ? (seoConfig as any)[`listingTitle${suffix}`] : undefined) || seoConfig?.listingTitle;
+  const listingDescriptionTemplate = (seoConfig ? (seoConfig as any)[`listingDescription${suffix}`] : undefined) || seoConfig?.listingDescription;
+
+  const metaTitle = listing && listingTitleTemplate
+    ? listingTitleTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
-      .replace('{{price}}', formatPrice(listing.price_pln, 'PLN'))
+      .replace('{{price}}', formatPrice(discountedListingPrice, 'PLN'))
       .replace('{{fuel}}', listing.fuel_type || '')
     : title;
 
-  const metaDesc = listing && seoConfig?.listingDescription
-    ? seoConfig.listingDescription
+  const metaDesc = listing && listingDescriptionTemplate
+    ? listingDescriptionTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
-      .replace('{{price}}', formatPrice(listing.price_pln, 'PLN'))
+      .replace('{{price}}', formatPrice(discountedListingPrice, 'PLN'))
       .replace('{{fuel}}', listing.fuel_type || '')
     : '';
 
@@ -284,7 +328,7 @@ export default function ListingDetailPage() {
       "@type": "Offer",
       "url": window.location.href,
       "priceCurrency": "PLN",
-      "price": listing.price_pln,
+      "price": discountedListingPrice,
       "itemCondition": "https://schema.org/UsedCondition",
       "availability": "https://schema.org/InStock"
     }
@@ -335,11 +379,16 @@ export default function ListingDetailPage() {
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
-                  <Badge variant="secondary" className="text-xs w-fit">
-                    {t('detail.lowestPrice')}
-                  </Badge>
+                  {hasSpecialOffer && (
+                    <SpecialOfferTag className="mt-2 md:mt-0" />
+                  )}
                 </div>
               </div>
+              {hasSpecialOffer && initialPayment && (
+                <div className="text-xs text-muted-foreground mt-1 mb-4">
+                  (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
+                </div>
+              )}
             </div>
 
             {/* Key Parameters */}
@@ -377,11 +426,87 @@ export default function ListingDetailPage() {
             {(settings?.financingCalculatorEnabled ?? true) && (
               <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
                 <FinancingCalculator
-                  price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
+                  listingId={listing.listing_id}
+                  price={applySpecialOfferDiscount(
+                    priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : (listing.broker_price_pln || listing.price_pln),
+                    discount
+                  )}
                   currency={settings?.displayCurrency || 'PLN'}
+                  manufacturingYear={listing.production_year}
+                  mileageKm={listing.mileage_km}
+                  offerInitialPayment={initialPayment ?? undefined}
                 />
               </section>
             )}
+
+            {/* Mobile Partner Ad */}
+            <div className="lg:hidden">
+              {sidebarAds.filter(a => a.isActive).map(ad => (
+                <PartnerSidebarAd
+                  key={ad.id}
+                  title={(ad as any)[`title${suffix}`] || ad.title}
+                  description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                  ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
+                  url={ad.url}
+                  brandName={ad.brandName}
+                  imageUrl={ad.imageUrl}
+                  features={ad.features}
+                  overlayOpacity={ad.overlayOpacity}
+                  hideUiElements={ad.hideUiElements}
+                  className="my-6"
+                />
+              ))}
+            </div>
+
+            <Separator />
+
+            {/* Why Us */}
+            <section className="rounded-2xl border border-border bg-card/60 p-6 shadow-card space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{t('detail.whyUs.overline')}</p>
+                <h2 className="font-heading text-xl font-semibold text-foreground">
+                  {t('detail.whyUs.title')}
+                </h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <ShieldCheck className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-foreground">{t('detail.whyUs.item1.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.whyUs.item1.description')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <BadgeCheck className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-foreground">{t('detail.whyUs.item2.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.whyUs.item2.description')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <Users className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-foreground">{t('detail.whyUs.item3.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.whyUs.item3.description')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <Banknote className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-foreground">{t('detail.whyUs.item4.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.whyUs.item4.description')}</p>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <Separator />
 
@@ -429,20 +554,33 @@ export default function ListingDetailPage() {
                     <span className="font-heading text-3xl font-bold text-accent">
                       {priceInfo.primaryLabel}
                     </span>
+                    {hasSpecialOffer && (
+                      <SpecialOfferTag />
+                    )}
                   </div>
                   {priceInfo.secondaryLabel && (
                     <span className="text-sm text-muted-foreground font-medium">
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
+                  {hasSpecialOffer && initialPayment && (
+                    <span className="text-xs text-muted-foreground mt-0.5">
+                      (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
+                    </span>
+                  )}
                 </div>
-                <Badge variant="secondary" className="text-xs w-fit">
-                  {t('detail.lowestPrice')}
-                </Badge>
 
                 <div className="space-y-3 pt-2">
                   <Button asChild variant="hero" className="w-full" size="lg">
-                    <Link to={`/listing/${listing.listing_id}/lead`}>
+                    <Link to={`${getListingUrlPath({
+                      id: listing.listing_id,
+                      make: listing.make,
+                      model: listing.model,
+                      version: listing.version,
+                      productionYear: listing.production_year,
+                      bodyType: listing.body_type,
+                      fuelType: listing.fuel_type
+                    })}/lead`}>
                       <MessageSquare className="h-5 w-5" />
                       {t('detail.askAbout')}
                     </Link>
@@ -482,11 +620,34 @@ export default function ListingDetailPage() {
                   transition={{ delay: 0.1 }}
                 >
                   <FinancingCalculator
-                    price={priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : listing.price_pln}
+                    listingId={listing.listing_id}
+                    price={applySpecialOfferDiscount(
+                      priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : (listing.broker_price_pln || listing.price_pln),
+                      discount
+                    )}
                     currency={settings?.displayCurrency || 'PLN'}
+                    manufacturingYear={listing.production_year}
+                    mileageKm={listing.mileage_km}
+                    offerInitialPayment={initialPayment ?? undefined}
                   />
                 </motion.div>
               )}
+
+              {/* Sidebar Ad Placement */}
+              {sidebarAds.filter(a => a.isActive).map(ad => (
+                <PartnerSidebarAd
+                  key={ad.id}
+                  title={(ad as any)[`title${suffix}`] || ad.title}
+                  description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                  ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
+                  url={ad.url}
+                  brandName={ad.brandName}
+                  imageUrl={ad.imageUrl}
+                  features={ad.features}
+                  overlayOpacity={ad.overlayOpacity}
+                  hideUiElements={ad.hideUiElements}
+                />
+              ))}
 
               {/* Dealer Card */}
               {canManage && (
@@ -520,7 +681,7 @@ export default function ListingDetailPage() {
             </div>
           </div>
         </div>
-      </main>
+      </main >
 
       <Footer />
 
@@ -537,7 +698,15 @@ export default function ListingDetailPage() {
             {t('detail.call')}
           </Button>
           <Button asChild variant="hero" size="lg" className="flex-1">
-            <Link to={`/listing/${listing.listing_id}/lead`}>
+            <Link to={`${getListingUrlPath({
+              id: listing.listing_id,
+              make: listing.make,
+              model: listing.model,
+              version: listing.version,
+              productionYear: listing.production_year,
+              bodyType: listing.body_type,
+              fuelType: listing.fuel_type
+            })}/lead`}>
               {t('detail.sendInquiry')}
             </Link>
           </Button>
@@ -571,6 +740,6 @@ export default function ListingDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }

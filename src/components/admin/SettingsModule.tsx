@@ -63,7 +63,10 @@ export function SettingsModule() {
         legalSloganDe: data?.legalSloganDe || '',
         headerLogoTextPl: data?.headerLogoTextPl || '',
         headerLogoTextEn: data?.headerLogoTextEn || '',
-        headerLogoTextDe: data?.headerLogoTextDe || ''
+        headerLogoTextDe: data?.headerLogoTextDe || '',
+        siteNamePl: data?.siteNamePl || '',
+        siteNameEn: data?.siteNameEn || '',
+        siteNameDe: data?.siteNameDe || ''
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -521,6 +524,42 @@ export function SettingsModule() {
                     </div>
 
                     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <p className="font-semibold text-foreground">Nazwa Platformy (Globalna)</p>
+                                <p className="text-xs text-slate-500">Główna nazwa wyświetlana w nagłówku, stopce i sidebarze (PL/EN/DE).</p>
+                            </div>
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-3 mb-6">
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">PL</Label>
+                                <Input
+                                    value={settings.siteNamePl || ''}
+                                    onChange={(e) => setSettings({ ...settings, siteNamePl: e.target.value })}
+                                    placeholder="Car Scout"
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">EN</Label>
+                                <Input
+                                    value={settings.siteNameEn || ''}
+                                    onChange={(e) => setSettings({ ...settings, siteNameEn: e.target.value })}
+                                    placeholder="Car Scout"
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wide text-slate-600">DE</Label>
+                                <Input
+                                    value={settings.siteNameDe || ''}
+                                    onChange={(e) => setSettings({ ...settings, siteNameDe: e.target.value })}
+                                    placeholder="Car Scout"
+                                    className="bg-white"
+                                />
+                            </div>
+                        </div>
+
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <p className="font-semibold text-foreground">Tekst przy logo (Header)</p>
