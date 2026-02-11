@@ -4,7 +4,9 @@ import {
     OFFER_PARAM,
     parseDiscountFromOfferParam,
     readSpecialOfferDiscount,
+    readSpecialOfferInitialPayment,
     writeSpecialOfferDiscount,
+    writeSpecialOfferInitialPayment,
 } from '@/utils/specialOffer';
 
 interface SpecialOfferContextType {
@@ -29,6 +31,7 @@ export function SpecialOfferProvider({ children }: { children: React.ReactNode }
             writeSpecialOfferDiscount(parsed.discount);
             setDiscount(parsed.discount);
             if (parsed.initialPayment) {
+                writeSpecialOfferInitialPayment(parsed.initialPayment);
                 setInitialPayment(parsed.initialPayment);
             }
             return;
@@ -38,7 +41,12 @@ export function SpecialOfferProvider({ children }: { children: React.ReactNode }
         if (cookieValue !== null && cookieValue !== discount) {
             setDiscount(cookieValue);
         }
-    }, [location.search, discount]);
+
+        const initialPaymentCookie = readSpecialOfferInitialPayment();
+        if (initialPaymentCookie !== null && initialPaymentCookie !== initialPayment) {
+            setInitialPayment(initialPaymentCookie);
+        }
+    }, [location.search, discount, initialPayment]);
 
     const value = useMemo(() => ({
         discount,
