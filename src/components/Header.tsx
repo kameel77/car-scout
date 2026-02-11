@@ -121,30 +121,32 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-4">
           {/* Language Switcher */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Globe className="h-4 w-4" />
-                <span>{currentLanguage.flag}</span>
-                <span className="hidden lg:inline">{currentLanguage.label}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {enabledLanguages.map((lang) => (
-                <DropdownMenuItem
-                  key={lang.code}
-                  onClick={() => handleLanguageChange(lang.code)}
-                  className={cn(
-                    'gap-2',
-                    i18n.language === lang.code && 'bg-accent'
-                  )}
-                >
-                  <span>{lang.flag}</span>
-                  <span>{lang.label}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {enabledLanguages.length > 1 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <Globe className="h-4 w-4" />
+                  <span>{currentLanguage.flag}</span>
+                  <span className="hidden lg:inline">{currentLanguage.label}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {enabledLanguages.map((lang) => (
+                  <DropdownMenuItem
+                    key={lang.code}
+                    onClick={() => handleLanguageChange(lang.code)}
+                    className={cn(
+                      'gap-2',
+                      i18n.language === lang.code && 'bg-accent'
+                    )}
+                  >
+                    <span>{lang.flag}</span>
+                    <span>{lang.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -172,27 +174,29 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 )}
               </div>
 
-              <div className="space-y-4">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {t('header.language')}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {enabledLanguages.map((lang) => (
-                    <Button
-                      key={lang.code}
-                      variant={i18n.language === lang.code ? 'chip-active' : 'chip'}
-                      size="chip"
-                      onClick={() => {
-                        handleLanguageChange(lang.code);
-                        setIsOpen(false);
-                      }}
-                    >
-                      <span>{lang.flag}</span>
-                      <span>{lang.label}</span>
-                    </Button>
-                  ))}
+              {enabledLanguages.length > 1 && (
+                <div className="space-y-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {t('header.language')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {enabledLanguages.map((lang) => (
+                      <Button
+                        key={lang.code}
+                        variant={i18n.language === lang.code ? 'chip-active' : 'chip'}
+                        size="chip"
+                        onClick={() => {
+                          handleLanguageChange(lang.code);
+                          setIsOpen(false);
+                        }}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.label}</span>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </SheetContent>
         </Sheet>

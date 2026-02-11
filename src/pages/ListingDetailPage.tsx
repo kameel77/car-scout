@@ -238,16 +238,25 @@ export default function ListingDetailPage() {
     );
   }
 
-  if (!listing) {
+  if (!listing || (listing.is_archived && !canManage)) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container py-16 text-center">
-          <p className="text-lg">{t('empty.noResults')}</p>
-          <Button asChild className="mt-4">
-            <Link to="/">{t('common.back')}</Link>
+        <div className="container py-24 text-center max-w-2xl mx-auto space-y-6">
+          <div className="bg-destructive/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-bold font-heading text-foreground">
+            {t('detail.notFoundTitle')}
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            {t('detail.notFoundDescription')}
+          </p>
+          <Button asChild size="lg" className="mt-8">
+            <Link to="/">{t('detail.backToResults')}</Link>
           </Button>
         </div>
+        <Footer />
       </div>
     );
   }
