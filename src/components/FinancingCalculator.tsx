@@ -19,6 +19,7 @@ interface FinancingCalculatorProps {
     currency?: string;
     manufacturingYear?: number;
     mileageKm?: number;
+    offerInitialPayment?: number;
 }
 
 export function FinancingCalculator({
@@ -26,7 +27,8 @@ export function FinancingCalculator({
     price,
     currency = 'PLN',
     manufacturingYear,
-    mileageKm
+    mileageKm,
+    offerInitialPayment
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
     const { offerDiscount } = useCrmTracking();
@@ -167,18 +169,29 @@ export function FinancingCalculator({
 
     React.useEffect(() => {
         if (!selectedProduct) return;
-        const vehisMinInitial = selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0;
+        // User requested 0% min initial payment (previously was 1% for Vehis)
+        const vehisMinInitial = 0;
         const vehisMinFinal = selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0;
         setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
-        const initialFromOffer = offerInitialPaymentPct != null
-            ? Math.max(vehisMinInitial, Math.min(offerInitialPaymentPct, selectedProduct.maxInitialPayment))
-            : Math.max(vehisMinInitial, Math.min(10, selectedProduct.maxInitialPayment));
+
+        // If there is a special offer initial payment (discount used as initial),
+        // we set the calculator's 'Wpłata własna' slider to 0 by default.
+        let initialFromOffer: number;
+        if (offerInitialPayment && offerInitialPayment > 0) {
+            initialFromOffer = 0;
+        } else {
+            // Fallback to CRM tracking offer or default 10%
+            initialFromOffer = offerInitialPaymentPct != null
+                ? Math.max(vehisMinInitial, Math.min(offerInitialPaymentPct, selectedProduct.maxInitialPayment))
+                : Math.max(vehisMinInitial, Math.min(10, selectedProduct.maxInitialPayment));
+        }
+
         setInitialPaymentPct(initialFromOffer);
         setFinalPaymentPct(selectedProduct.hasBalloonPayment
             ? Math.max(vehisMinFinal, Math.min(20, selectedProduct.maxFinalPayment))
             : 0
         );
-    }, [offerInitialPaymentPct, selectedProduct]);
+    }, [offerInitialPaymentPct, selectedProduct, offerInitialPayment]);
 
     if (isLoading || products.length === 0) {
         return null;
@@ -277,11 +290,11 @@ export function FinancingCalculator({
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] text-muted-foreground w-4">
-                                {selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0}%
+                                0%
                             </span>
                             <Slider
                                 value={[initialPaymentPct]}
-                                min={selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0}
+                                min={0}
                                 max={selectedProduct.maxInitialPayment}
                                 step={1}
                                 onValueChange={v => setInitialPaymentPct(v[0])}
@@ -352,6 +365,12 @@ export function FinancingCalculator({
                                 <span className="block text-[10px] text-muted-foreground">RRSO / Oproc.</span>
                                 <span className="font-medium text-xs">{(annualRate).toFixed(2)}%</span>
                             </div>
+                        </div>
+                    )}
+
+                    {offerInitialPayment && (
+                        <div className="mt-4 pt-3 border-t border-slate-200 text-[11px] text-muted-foreground text-center">
+                            W kalkulacji założono pierwszą wpłatę na poziomie {formatPrice(offerInitialPayment, currency)}. Możesz dokonać wyższej wpłaty zmieniając kwotę suwakiem kalkulatora.
                         </div>
                     )}
                 </div>

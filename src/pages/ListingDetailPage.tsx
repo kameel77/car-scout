@@ -65,7 +65,8 @@ export default function ListingDetailPage() {
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
-  const { discount, hasSpecialOffer } = useSpecialOffer();
+  const { discount, initialPayment: contextInitialPayment, hasSpecialOffer } = useSpecialOffer();
+  const initialPayment = contextInitialPayment || discount;
   const listing = data?.listing;
 
   // Store search parameters for return navigation
@@ -196,7 +197,19 @@ export default function ListingDetailPage() {
       const secondaryPrice = isNetPrimary ? discountedPrice : Math.round(discountedPrice / 1.23);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
-      const secondaryLabel = user
+      // user requested to hide net price in special offer context if it was "wrong"
+      // or simply: if we are in special offer mode, let's simplify the display?
+      // actually, let's just make sure we don't display it if it's confusing.
+      // The user said "błędnie dodałeś ceny netto". 
+      // Current logic:
+      // const secondaryLabel = user
+      //   ? (isNetPrimary
+      //       ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
+      //       : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
+      //   : null;
+
+      // Let's hide secondary label if there is a discount to clean up the UI
+      const secondaryLabel = (user && !discount)
         ? (isNetPrimary
           ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
           : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
@@ -238,16 +251,25 @@ export default function ListingDetailPage() {
     );
   }
 
-  if (!listing) {
+  if (!listing || (listing.is_archived && !canManage)) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container py-16 text-center">
-          <p className="text-lg">{t('empty.noResults')}</p>
-          <Button asChild className="mt-4">
-            <Link to="/">{t('common.back')}</Link>
+        <div className="container py-24 text-center max-w-2xl mx-auto space-y-6">
+          <div className="bg-destructive/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-bold font-heading text-foreground">
+            {t('detail.notFoundTitle')}
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            {t('detail.notFoundDescription')}
+          </p>
+          <Button asChild size="lg" className="mt-8">
+            <Link to="/">{t('detail.backToResults')}</Link>
           </Button>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -362,6 +384,11 @@ export default function ListingDetailPage() {
                   )}
                 </div>
               </div>
+              {hasSpecialOffer && initialPayment && (
+                <div className="text-xs text-muted-foreground mt-1 mb-4">
+                  (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
+                </div>
+              )}
             </div>
 
             {/* Key Parameters */}
@@ -407,6 +434,7 @@ export default function ListingDetailPage() {
                   currency={settings?.displayCurrency || 'PLN'}
                   manufacturingYear={listing.production_year}
                   mileageKm={listing.mileage_km}
+                  offerInitialPayment={initialPayment ?? undefined}
                 />
               </section>
             )}
@@ -535,6 +563,11 @@ export default function ListingDetailPage() {
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
+                  {hasSpecialOffer && initialPayment && (
+                    <span className="text-xs text-muted-foreground mt-0.5">
+                      (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-3 pt-2">
@@ -595,6 +628,7 @@ export default function ListingDetailPage() {
                     currency={settings?.displayCurrency || 'PLN'}
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}
+                    offerInitialPayment={initialPayment ?? undefined}
                   />
                 </motion.div>
               )}
@@ -647,7 +681,7 @@ export default function ListingDetailPage() {
             </div>
           </div>
         </div>
-      </main>
+      </main >
 
       <Footer />
 
@@ -706,6 +740,6 @@ export default function ListingDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }

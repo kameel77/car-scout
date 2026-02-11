@@ -6,7 +6,9 @@ import {
     Archive,
     MoreVertical,
     Trash2,
+    Copy,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -28,6 +30,26 @@ interface AdminListingItemProps {
 
 export function AdminListingItem({ listing, isSelected = false, onSelect, onArchive, onRestore, onDelete }: AdminListingItemProps) {
     const isArchived = listing.is_archived;
+    const { toast } = useToast();
+
+    const handleCopyLink = () => {
+        const path = getListingUrlPath({
+            id: listing.listing_id,
+            make: listing.make,
+            model: listing.model,
+            version: listing.version,
+            productionYear: listing.production_year,
+            bodyType: listing.body_type,
+            fuelType: listing.fuel_type
+        });
+        const url = `${window.location.origin}${path}`;
+
+        navigator.clipboard.writeText(url);
+        toast({
+            title: "Skopiowano link",
+            description: "Link do ogłoszenia został skopiowany do schowka.",
+        });
+    };
 
     return (
         <div className={cn(
@@ -125,7 +147,7 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onArch
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem asChild>
-                            <a 
+                            <a
                                 href={getListingUrlPath({
                                     id: listing.listing_id,
                                     make: listing.make,
@@ -134,14 +156,18 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onArch
                                     productionYear: listing.production_year,
                                     bodyType: listing.body_type,
                                     fuelType: listing.fuel_type
-                                })} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                                })}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="flex items-center gap-2"
                             >
                                 <Eye className="w-4 h-4" />
                                 <span>Zobacz w serwisie</span>
                             </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleCopyLink}>
+                            <Copy className="w-4 h-4 mr-2" />
+                            <span>Kopiuj link</span>
                         </DropdownMenuItem>
                         {isArchived ? (
                             <DropdownMenuItem onClick={() => onRestore?.(listing.listing_id)} className="text-green-600">
@@ -155,8 +181,8 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onArch
                             </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                            onClick={() => onDelete?.(listing.listing_id)} 
+                        <DropdownMenuItem
+                            onClick={() => onDelete?.(listing.listing_id)}
                             className="text-red-700 hover:text-red-800 hover:bg-red-50"
                         >
                             <Trash2 className="w-4 h-4 mr-2" />

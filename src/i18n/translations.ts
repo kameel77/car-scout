@@ -160,6 +160,9 @@ export const translations = {
         archivedTitle: "Ogłoszenie jest już nieaktualne",
         archivedDescription: "Zostało ono automatycznie zarchiwizowane, ponieważ nie jest już dostępne u źródła lub wystąpił błąd danych.",
         returnToSearch: "Wróć na stronę wyszukiwania",
+        notFoundTitle: "Przepraszamy, nie możemy wyświetlić tej oferty.",
+        notFoundDescription: "Niestety najprawdopodobiej ktoś był szybszy...",
+        backToResults: "Wróć do wyników wyszukiwania",
         whyUs: {
           overline: "Dlaczego my",
           title: "Pewny wybór bez zbędnych obietnic",
@@ -485,6 +488,9 @@ export const translations = {
         archivedTitle: "This listing is no longer current",
         archivedDescription: "It has been automatically archived because it is no longer available from the source or there was a data error.",
         returnToSearch: "Return to search page",
+        notFoundTitle: "Sorry, we cannot display this offer.",
+        notFoundDescription: "Unfortunately, someone was probably faster...",
+        backToResults: "Back to search results",
         whyUs: {
           overline: "Why us",
           title: "A confident choice, no fluff",
@@ -808,6 +814,9 @@ export const translations = {
         archivedTitle: "Diese Anzeige ist nicht mehr aktuell",
         archivedDescription: "Sie wurde automatisch archiviert, da sie nicht mehr von der Quelle verfügbar ist oder ein Datenfehler aufgetreten ist.",
         returnToSearch: "Zurück zur Suchseite",
+        notFoundTitle: "Entschuldigung, wir können dieses Angebot nicht anzeigen.",
+        notFoundDescription: "Leider war wahrscheinlich jemand schneller...",
+        backToResults: "Zurück zu den Suchergebnissen",
         whyUs: {
           overline: "Warum wir",
           title: "Eine sichere Wahl, ohne Floskeln",
