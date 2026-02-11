@@ -315,6 +315,7 @@ export default function SearchPage() {
                           brandName={ad.brandName}
                           imageUrl={ad.imageUrl || ''}
                           overlayOpacity={ad.overlayOpacity}
+                          hideUiElements={ad.hideUiElements}
                         />
                       );
                     }

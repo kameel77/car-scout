@@ -44,13 +44,15 @@ export function PartnerSidebarAd({
                 className="absolute inset-0 bg-accent pointer-events-none transition-opacity duration-300"
                 style={{ opacity: overlayOpacity }}
             />
-            <div className="relative p-1 border-b border-border/50 flex justify-between items-center bg-muted/30 px-3">
-                <div className="flex items-center gap-1.5">
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('ads.partner')}</span>
+            {!hideUiElements && (
+                <div className="relative p-1 border-b border-border/50 flex justify-between items-center bg-muted/30 px-3">
+                    <div className="flex items-center gap-1.5">
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('ads.partner')}</span>
+                    </div>
+                    {brandName && <span className="text-[10px] font-medium text-muted-foreground">{brandName}</span>}
                 </div>
-                {brandName && <span className="text-[10px] font-medium text-muted-foreground">{brandName}</span>}
-            </div>
+            )}
 
             {imageUrl && (
                 <div className="aspect-[16/9] overflow-hidden relative pointer-events-none">
