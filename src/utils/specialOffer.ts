@@ -46,23 +46,5 @@ export const writeSpecialOfferDiscount = (discount: number): void => {
     if (typeof document === 'undefined') return;
     const normalized = Math.max(0, Math.round(discount));
     const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
-    document.cookie = `${SPECIAL_OFFER_COOKIE}=${encodeURIComponent(normalized)}; max-age=${SPECIAL_OFFER_MAX_AGE_SECONDS}; path=/; SameSite=Lax${secure}`;
-};
-
-export const SPECIAL_OFFER_INITIAL_PAYMENT_COOKIE = 'special_offer_initial_payment';
-
-export const readSpecialOfferInitialPayment = (): number | null => {
-    if (typeof document === 'undefined') return null;
-    const cookies = document.cookie ? document.cookie.split('; ') : [];
-    const cookie = cookies.find((item) => item.startsWith(`${SPECIAL_OFFER_INITIAL_PAYMENT_COOKIE}=`));
-    if (!cookie) return null;
-    const value = decodeURIComponent(cookie.split('=').slice(1).join('='));
-    return parseDiscountValue(value);
-};
-
-export const writeSpecialOfferInitialPayment = (amount: number): void => {
-    if (typeof document === 'undefined') return;
-    const normalized = Math.max(0, Math.round(amount));
-    const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
-    document.cookie = `${SPECIAL_OFFER_INITIAL_PAYMENT_COOKIE}=${encodeURIComponent(normalized)}; max-age=${SPECIAL_OFFER_MAX_AGE_SECONDS}; path=/; SameSite=Lax${secure}`;
+    document.cookie = `${SPECIAL_OFFER_COOKIE}=${encodeURIComponent(normalized)}; Max-Age=${SPECIAL_OFFER_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${secure}`;
 };
