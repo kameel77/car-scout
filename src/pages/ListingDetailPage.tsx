@@ -65,7 +65,8 @@ export default function ListingDetailPage() {
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
-  const { discount, initialPayment, hasSpecialOffer } = useSpecialOffer();
+  const { discount, initialPayment: contextInitialPayment, hasSpecialOffer } = useSpecialOffer();
+  const initialPayment = contextInitialPayment || discount;
   const listing = data?.listing;
 
   // Store search parameters for return navigation
