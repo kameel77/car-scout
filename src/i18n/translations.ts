@@ -124,6 +124,7 @@ export const translations = {
         mostExpensive: "Najdroższe",
         lowestMileage: "Najmniejszy przebieg",
         newest: "Najmłodszy rocznik",
+        recentlyAdded: "Ostatnio dodane",
       },
 
       // Listing card
@@ -447,7 +448,8 @@ export const translations = {
         cheapest: "Cheapest",
         mostExpensive: "Most expensive",
         lowestMileage: "Lowest mileage",
-        newest: "Newest",
+        newest: "Newest year",
+        recentlyAdded: "Recently added",
       },
 
       // Listing card
@@ -769,7 +771,8 @@ export const translations = {
         cheapest: "Günstigste",
         mostExpensive: "Teuerste",
         lowestMileage: "Niedrigster Km-Stand",
-        newest: "Neueste",
+        newest: "Neueste Baujahr",
+        recentlyAdded: "Zuletzt hinzugefügt",
       },
 
       // Listing card

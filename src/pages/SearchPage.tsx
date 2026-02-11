@@ -85,7 +85,7 @@ export default function SearchPage() {
     };
   });
 
-  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || 'newest');
+  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || 'year_desc');
   const initialPage = parseNumberParam(searchParams.get('page'), 1);
   const initialPerPage = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
   const [page, setPage] = React.useState(initialPage);
@@ -124,7 +124,7 @@ export default function SearchPage() {
       if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
 
       if (filters.query) params.set('q', filters.query);
-      if (sortBy !== 'newest') params.set('sortBy', sortBy);
+      if (sortBy !== 'year_desc') params.set('sortBy', sortBy);
       if (page > 1) params.set('page', page.toString());
       if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
 
@@ -275,6 +275,8 @@ export default function SearchPage() {
                     ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
                     url={ad.url}
                     imageUrl={ad.imageUrl || ''}
+                    mobileImageUrl={ad.mobileImageUrl || undefined}
+                    hideUiElements={ad.hideUiElements}
                     overlayOpacity={ad.overlayOpacity}
                   />
                 ))}
@@ -313,6 +315,7 @@ export default function SearchPage() {
                           brandName={ad.brandName}
                           imageUrl={ad.imageUrl || ''}
                           overlayOpacity={ad.overlayOpacity}
+                          hideUiElements={ad.hideUiElements}
                         />
                       );
                     }

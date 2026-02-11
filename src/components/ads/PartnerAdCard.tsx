@@ -56,12 +56,14 @@ export function PartnerAdCard({
                     <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                     {/* Ad Badge */}
-                    <div className="absolute top-3 left-3 px-2 py-1 bg-background/90 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground border border-border flex items-center gap-1">
-                        <Info className="h-3 w-3" />
-                        {t('ads.advertisement')}
-                    </div>
+                    {!hideUiElements && (
+                        <div className="absolute top-3 left-3 px-2 py-1 bg-background/90 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground border border-border flex items-center gap-1">
+                            <Info className="h-3 w-3" />
+                            {t('ads.advertisement')}
+                        </div>
+                    )}
 
-                    {brandName && (
+                    {!hideUiElements && brandName && (
                         <div className="absolute bottom-3 left-3 px-3 py-1 bg-accent/90 backdrop-blur-sm rounded-lg shadow-md">
                             <span className="font-heading text-xs font-bold text-white uppercase tracking-wider">
                                 {brandName}
