@@ -33,10 +33,11 @@ interface ActiveFiltersProps {
 }
 
 const sortOptions = [
-  { value: 'cheapest', label: 'sort.cheapest' },
-  { value: 'expensive', label: 'sort.mostExpensive' },
-  { value: 'mileage', label: 'sort.lowestMileage' },
-  { value: 'newest', label: 'sort.newest' },
+  { value: 'price_asc', label: 'sort.cheapest' },
+  { value: 'price_desc', label: 'sort.mostExpensive' },
+  { value: 'mileage_asc', label: 'sort.lowestMileage' },
+  { value: 'year_desc', label: 'sort.newest' },
+  { value: 'newest', label: 'sort.recentlyAdded' },
 ];
 
 export function ActiveFilters({

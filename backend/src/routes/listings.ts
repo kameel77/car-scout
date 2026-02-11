@@ -67,13 +67,17 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const orderBy: any = {};
         switch (sortBy) {
+            case 'cheapest':
             case 'price_asc': orderBy[priceField] = 'asc'; break;
+            case 'expensive':
             case 'price_desc': orderBy[priceField] = 'desc'; break;
             case 'year_asc': orderBy.productionYear = 'asc'; break;
             case 'year_desc': orderBy.productionYear = 'desc'; break;
+            case 'mileage':
             case 'mileage_asc': orderBy.mileageKm = 'asc'; break;
             case 'mileage_desc': orderBy.mileageKm = 'desc'; break;
-            case 'newest': default: orderBy.createdAt = 'desc'; break;
+            case 'newest': orderBy.createdAt = 'desc'; break;
+            default: orderBy.productionYear = 'desc'; break; // Default to newest production year
         }
 
         // Search logic
