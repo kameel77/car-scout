@@ -16,10 +16,13 @@ export const parseDiscountValue = (value?: string | null): number | null => {
  * Parse discount from offer parameter (special offers only, not CRM tracking)
  * @deprecated Use parseOfferParam instead for type-safe parsing
  */
-export const parseDiscountFromOfferParam = (value?: string | null): number | null => {
+export const parseDiscountFromOfferParam = (value?: string | null): { discount: number; initialPayment?: number } | null => {
     const parsed = parseOfferParam(value);
     if (parsed.type === 'special_offer') {
-        return parsed.discount;
+        return {
+            discount: parsed.discount,
+            initialPayment: parsed.initialPayment
+        };
     }
     return null;
 };

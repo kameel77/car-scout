@@ -19,6 +19,7 @@ interface FinancingCalculatorProps {
     currency?: string;
     manufacturingYear?: number;
     mileageKm?: number;
+    offerInitialPayment?: number;
 }
 
 export function FinancingCalculator({
@@ -26,7 +27,8 @@ export function FinancingCalculator({
     price,
     currency = 'PLN',
     manufacturingYear,
-    mileageKm
+    mileageKm,
+    offerInitialPayment
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
     const { offerDiscount } = useCrmTracking();
@@ -341,6 +343,11 @@ export function FinancingCalculator({
                     {selectedProduct.provider !== 'OWN' ? (
                         <div className="mt-4 pt-3 border-t border-slate-200 text-[11px] text-muted-foreground text-center">
                             Rata wyliczana na podstawie kalkulacji partnera.
+                            {offerInitialPayment && (
+                                <span className="block mt-1">
+                                    W kalkulacji założono pierwszą wpłatę na poziomie {formatPrice(offerInitialPayment, currency)}. Możesz dokonać wyższej wpłaty zmieniając kwotę suwakiem kalkulatora.
+                                </span>
+                            )}
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-slate-200">

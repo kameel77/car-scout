@@ -44,6 +44,7 @@ export function CrmTrackingProvider({ children }: { children: React.ReactNode })
             setUuid(parsed.uuid);
             writeCrmOfferDiscount(parsed.discount);
             setOfferDiscount(parsed.discount);
+            // We might want to track initialPayment in CRM too later, but for now ignoring it
         }
     }, [location.search]);
 

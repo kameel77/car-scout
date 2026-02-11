@@ -65,7 +65,7 @@ export default function ListingDetailPage() {
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
-  const { discount, hasSpecialOffer } = useSpecialOffer();
+  const { discount, initialPayment, hasSpecialOffer } = useSpecialOffer();
   const listing = data?.listing;
 
   // Store search parameters for return navigation
@@ -371,6 +371,11 @@ export default function ListingDetailPage() {
                   )}
                 </div>
               </div>
+              {hasSpecialOffer && initialPayment && (
+                <div className="text-xs text-muted-foreground mt-1 mb-4">
+                  (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
+                </div>
+              )}
             </div>
 
             {/* Key Parameters */}
@@ -416,6 +421,7 @@ export default function ListingDetailPage() {
                   currency={settings?.displayCurrency || 'PLN'}
                   manufacturingYear={listing.production_year}
                   mileageKm={listing.mileage_km}
+                  offerInitialPayment={initialPayment ?? undefined}
                 />
               </section>
             )}
@@ -544,6 +550,11 @@ export default function ListingDetailPage() {
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
+                  {hasSpecialOffer && initialPayment && (
+                    <span className="text-xs text-muted-foreground mt-0.5">
+                      (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-3 pt-2">
@@ -656,7 +667,7 @@ export default function ListingDetailPage() {
             </div>
           </div>
         </div>
-      </main>
+      </main >
 
       <Footer />
 
@@ -715,6 +726,6 @@ export default function ListingDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }

@@ -9,6 +9,7 @@ import {
 
 interface SpecialOfferContextType {
     discount: number;
+    initialPayment: number | null;
     hasSpecialOffer: boolean;
 }
 
@@ -17,6 +18,7 @@ const SpecialOfferContext = createContext<SpecialOfferContextType | undefined>(u
 export function SpecialOfferProvider({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const [discount, setDiscount] = useState<number>(() => readSpecialOfferDiscount() ?? 0);
+    const [initialPayment, setInitialPayment] = useState<number | null>(null);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -24,8 +26,11 @@ export function SpecialOfferProvider({ children }: { children: React.ReactNode }
         const parsed = parseDiscountFromOfferParam(paramValue);
 
         if (parsed !== null) {
-            writeSpecialOfferDiscount(parsed);
-            setDiscount(parsed);
+            writeSpecialOfferDiscount(parsed.discount);
+            setDiscount(parsed.discount);
+            if (parsed.initialPayment) {
+                setInitialPayment(parsed.initialPayment);
+            }
             return;
         }
 
@@ -37,8 +42,9 @@ export function SpecialOfferProvider({ children }: { children: React.ReactNode }
 
     const value = useMemo(() => ({
         discount,
+        initialPayment,
         hasSpecialOffer: discount > 0,
-    }), [discount]);
+    }), [discount, initialPayment]);
 
     return (
         <SpecialOfferContext.Provider value={value}>
