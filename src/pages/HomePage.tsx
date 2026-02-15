@@ -216,8 +216,20 @@ export default function HomePage() {
       <section className="home-cta-section" id="kontakt">
         <div className="home-cta-box home-reveal">
           <h2>Gotowy na <span>swoje nowe auto</span>?</h2>
-          <p>Zostaw kontakt i znajdźmy razem ofertę idealną dla Ciebie.</p>
-          <Link to="/samochody" className="home-btn-primary"><CarFront size={18} />&nbsp;Znajdź auto</Link>
+          <p>Zostaw numer — oddzwonimy w ciągu 15 minut i pomożemy Ci znaleźć idealne auto.</p>
+          <form
+            className="home-cta-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              alert('Dziękujemy! Odezwiemy się wkrótce.');
+            }}
+          >
+            <input type="tel" placeholder="Twój numer telefonu" required />
+            <button type="submit" className="home-btn-primary">
+              <CarFront size={18} />&nbsp;Zadzwoń do mnie
+            </button>
+          </form>
+          <p className="home-cta-note">Bezpłatnie i bez zobowiązań. Obsługujemy klientów w całej Polsce.</p>
         </div>
       </section>
 
