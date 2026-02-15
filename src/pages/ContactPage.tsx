@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { LandingHeader } from '@/components/LandingHeader';
+import { Header } from '@/components/Header';
 import './home-page.css';
 
 export default function ContactPage() {
   return (
     <div className="landing-page-root">
-      <LandingHeader />
+      <Header />
 
       <section className="home-hero">
         <div className="home-hero__inner" style={{ gridTemplateColumns: '1fr' }}>

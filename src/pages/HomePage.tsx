@@ -15,7 +15,7 @@ import {
   CarFront,
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { LandingHeader } from '@/components/LandingHeader';
+import { Header } from '@/components/Header';
 import './home-page.css';
 
 const faqs = [
@@ -63,7 +63,7 @@ export default function HomePage() {
 
   return (
     <div className="landing-page-root">
-      <LandingHeader />
+      <Header />
 
       <section className="home-hero">
         <div className="home-hero__inner">
