@@ -361,4 +361,5 @@ enum FaqPage {
   home
   offers
   contact
+  faq
 }

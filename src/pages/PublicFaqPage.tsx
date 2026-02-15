@@ -48,9 +48,19 @@ export default function PublicFaqPage() {
 
     const getLocalized = (item: any, field: string) => {
         const langCode = i18n.language.slice(0, 2).toLowerCase();
-        const langSuffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
-        const key = `${field}${langSuffix}`;
-        return item[key] || item[`${field}Pl`];
+        const suffixes: Record<string, string[]> = {
+            pl: ['Pl', 'En', 'De'],
+            en: ['En', 'Pl', 'De'],
+            de: ['De', 'Pl', 'En']
+        };
+
+        const priority = suffixes[langCode] || ['Pl', 'En', 'De'];
+
+        for (const suffix of priority) {
+            const val = item[`${field}${suffix}`];
+            if (val && val.trim()) return val;
+        }
+        return '';
     };
 
     const categories = [
@@ -74,14 +84,17 @@ export default function PublicFaqPage() {
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(item => {
-                const q = getLocalized(item, 'question').toLowerCase();
-                const a = getLocalized(item, 'answer').toLowerCase();
-                return q.includes(query) || a.includes(query);
+                const question = getLocalized(item, 'question').toLowerCase();
+                const answer = getLocalized(item, 'answer').toLowerCase();
+                return question.includes(query) || answer.includes(query);
             });
         }
 
         return filtered;
     }, [data, searchQuery, selectedPage, i18n.language]);
+
+    // Check if the current context has its own questions, if not and category is not all, maybe show special message
+    // Actually, just standard filtering is fine.
 
     return (
         <div className="landing-page-root min-h-screen flex flex-col">
