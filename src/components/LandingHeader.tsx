@@ -43,7 +43,7 @@ export function LandingHeader() {
 
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="landing-nav__mobile-btn" aria-label="Otwórz menu">
+            <Button variant="ghost" size="icon" className="landing-nav__mobile-btn md:!hidden" aria-label="Otwórz menu">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
