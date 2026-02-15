@@ -11,6 +11,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import SearchPage from "./pages/SearchPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
 import LeadFormPage from "./pages/LeadFormPage";
+import HomePage from "./pages/HomePage";
+import ContactPage from "./pages/ContactPage";
 import LoginPage from "./pages/admin/LoginPage";
 import AdminDashboard from "./pages/admin/DashboardPage";
 import TranslationsPage from "./pages/admin/TranslationsPage";
@@ -51,8 +53,10 @@ const App = () => (
                 <CrmTrackingProvider>
                   <Routes>
                     {/* Public routes */}
-                    <Route path="/" element={<SearchPage />} />
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/samochody" element={<SearchPage />} />
                     <Route path="/search" element={<SearchPage />} />
+                    <Route path="/kontakt" element={<ContactPage />} />
                     <Route path="/oferta/:slug" element={<ListingDetailPage />} />
                     <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                     {/* Legacy routes - kept for backward compatibility during transition */}
