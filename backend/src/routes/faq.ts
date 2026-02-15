@@ -89,21 +89,24 @@ export async function faqRoutes(fastify: FastifyInstance) {
             isPublished: payload.isPublished ?? true
         };
 
-        let entry;
-        if (payload.id) {
-            try {
+        try {
+            let entry;
+            if (payload.id) {
                 entry = await fastify.prisma.faqEntry.update({
                     where: { id: payload.id },
                     data
                 });
-            } catch (error) {
-                return reply.code(404).send({ error: 'FAQ entry not found' });
+            } else {
+                entry = await fastify.prisma.faqEntry.create({ data });
             }
-        } else {
-            entry = await fastify.prisma.faqEntry.create({ data });
+            return { entry };
+        } catch (error) {
+            fastify.log.error(error, 'FAQ: Save failed');
+            return reply.code(500).send({
+                error: 'Internal Server Error',
+                message: error instanceof Error ? error.message : 'Unknown error during FAQ save'
+            });
         }
-
-        return { entry };
     });
 
     // Delete FAQ entry

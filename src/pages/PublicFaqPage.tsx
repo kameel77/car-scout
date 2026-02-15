@@ -48,19 +48,8 @@ export default function PublicFaqPage() {
 
     const getLocalized = (item: any, field: string) => {
         const langCode = i18n.language.slice(0, 2).toLowerCase();
-        const suffixes: Record<string, string[]> = {
-            pl: ['Pl', 'En', 'De'],
-            en: ['En', 'Pl', 'De'],
-            de: ['De', 'Pl', 'En']
-        };
-
-        const priority = suffixes[langCode] || ['Pl', 'En', 'De'];
-
-        for (const suffix of priority) {
-            const val = item[`${field}${suffix}`];
-            if (val && val.trim()) return val;
-        }
-        return '';
+        const suffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
+        return item[`${field}${suffix}`] || '';
     };
 
     const categories = [
@@ -79,6 +68,16 @@ export default function PublicFaqPage() {
         if (selectedPage !== 'all') {
             filtered = filtered.filter(item => item.page === selectedPage);
         }
+
+        // Only show items that have both question and answer in the current language
+        const langCode = i18n.language.slice(0, 2).toLowerCase();
+        const suffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
+
+        filtered = filtered.filter(item => {
+            const hasQ = item[`question${suffix}`]?.trim();
+            const hasA = item[`answer${suffix}`]?.trim();
+            return hasQ && hasA;
+        });
 
         // Filter by search query
         if (searchQuery.trim()) {
