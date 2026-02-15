@@ -21,6 +21,7 @@ const PAGE_OPTIONS: { value: FaqPageType; label: string }[] = [
   { value: 'home', label: 'Strona główna' },
   { value: 'offers', label: 'Strona oferty' },
   { value: 'contact', label: 'Strona kontaktowa' },
+  { value: 'faq', label: 'Strona FAQ' },
 ];
 
 const EMPTY_FORM: FaqPayload = {

@@ -31,35 +31,57 @@ function FaqItem({ question, answer, isOpen, onClick }: FaqItemProps) {
 }
 
 export default function PublicFaqPage() {
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation();
     const [searchQuery, setSearchQuery] = React.useState('');
+    const [selectedPage, setSelectedPage] = React.useState<string>('all');
     const [openId, setOpenId] = React.useState<string | null>(null);
 
     const { data, isLoading } = useQuery({
         queryKey: ['public-faq'],
         queryFn: async () => {
             const response = await faqApi.list({});
-            return response.entries.filter(e => e.isPublished);
+            return (response.entries || [])
+                .filter((e: any) => e.isPublished)
+                .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
         }
     });
 
     const getLocalized = (item: any, field: string) => {
-        const lang = i18n.language.charAt(0).toUpperCase() + i18n.language.slice(1);
-        const key = `${field}${lang}`;
+        const langCode = i18n.language.slice(0, 2).toLowerCase();
+        const langSuffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
+        const key = `${field}${langSuffix}`;
         return item[key] || item[`${field}Pl`];
     };
 
+    const categories = [
+        { id: 'all', label: 'Wszystkie' },
+        { id: 'faq', label: 'Ogólne' },
+        { id: 'offers', label: 'Proces zakupu' },
+        { id: 'home', label: 'O nas' },
+        { id: 'contact', label: 'Kontakt' },
+    ];
+
     const filteredFaqs = React.useMemo(() => {
         if (!data) return [];
-        if (!searchQuery.trim()) return data;
+        let filtered = data;
 
-        const query = searchQuery.toLowerCase();
-        return data.filter(item => {
-            const q = getLocalized(item, 'question').toLowerCase();
-            const a = getLocalized(item, 'answer').toLowerCase();
-            return q.includes(query) || a.includes(query);
-        });
-    }, [data, searchQuery, i18n.language]);
+        // Filter by page category if selected
+        if (selectedPage !== 'all') {
+            filtered = filtered.filter(item => item.page === selectedPage);
+        }
+
+        // Filter by search query
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(item => {
+                const q = getLocalized(item, 'question').toLowerCase();
+                const a = getLocalized(item, 'answer').toLowerCase();
+                return q.includes(query) || a.includes(query);
+            });
+        }
+
+        return filtered;
+    }, [data, searchQuery, selectedPage, i18n.language]);
 
     return (
         <div className="landing-page-root min-h-screen flex flex-col">
@@ -93,41 +115,67 @@ export default function PublicFaqPage() {
                     </div>
                 </section>
 
-                {/* FAQ Content */}
+                {/* Categories & FAQ Content */}
                 <section className="py-20 px-6 bg-white">
-                    <div className="max-width-900 mx-auto">
-                        {isLoading ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-4 text-[#8D91A5]">
-                                <Loader2 className="w-10 h-10 animate-spin text-[#F97316]" />
-                                <p>Ładowanie odpowiedzi...</p>
-                            </div>
-                        ) : filteredFaqs.length > 0 ? (
-                            <div className="space-y-4">
-                                {filteredFaqs.map((faq) => (
-                                    <FaqItem
-                                        key={faq.id}
-                                        question={getLocalized(faq, 'question')}
-                                        answer={getLocalized(faq, 'answer')}
-                                        isOpen={openId === faq.id}
-                                        onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-20">
-                                <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <HelpCircle className="w-10 h-10 text-[#8D91A5]" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-[#2D3142] mb-2">Nie znaleźliśmy odpowiedzi</h3>
-                                <p className="text-[#4A4E69]">Spróbuj wpisać inne słowo kluczowe lub skontaktuj się z nami.</p>
+                    <div className="max-width-1200 mx-auto">
+                        {/* Category Tabs */}
+                        <div className="flex flex-wrap justify-center gap-2 mb-12">
+                            {categories.map((cat) => (
                                 <button
-                                    onClick={() => setSearchQuery('')}
-                                    className="mt-6 text-[#F97316] font-semibold hover:underline"
+                                    key={cat.id}
+                                    onClick={() => {
+                                        setSelectedPage(cat.id);
+                                        setOpenId(null);
+                                    }}
+                                    className={cn(
+                                        "px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200",
+                                        selectedPage === cat.id
+                                            ? "bg-[#F97316] text-white shadow-lg shadow-orange-100"
+                                            : "bg-slate-50 text-[#4A4E69] hover:bg-slate-100"
+                                    )}
                                 >
-                                    Pokaż wszystkie pytania
+                                    {cat.label}
                                 </button>
-                            </div>
-                        )}
+                            ))}
+                        </div>
+
+                        <div className="max-width-900 mx-auto">
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-4 text-[#8D91A5]">
+                                    <Loader2 className="w-10 h-10 animate-spin text-[#F97316]" />
+                                    <p>Ładowanie odpowiedzi...</p>
+                                </div>
+                            ) : filteredFaqs.length > 0 ? (
+                                <div className="space-y-4">
+                                    {filteredFaqs.map((faq) => (
+                                        <FaqItem
+                                            key={faq.id}
+                                            question={getLocalized(faq, 'question')}
+                                            answer={getLocalized(faq, 'answer')}
+                                            isOpen={openId === faq.id}
+                                            onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-20">
+                                    <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <HelpCircle className="w-10 h-10 text-[#8D91A5]" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-[#2D3142] mb-2">Nie znaleźliśmy odpowiedzi</h3>
+                                    <p className="text-[#4A4E69]">Spróbuj wpisać inne słowo kluczowe lub skontaktuj się z nami.</p>
+                                    <button
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setSelectedPage('all');
+                                        }}
+                                        className="mt-6 text-[#F97316] font-semibold hover:underline"
+                                    >
+                                        Pokaż wszystkie pytania
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </section>
 

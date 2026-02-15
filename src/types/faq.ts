@@ -1,4 +1,4 @@
-export type FaqPage = 'home' | 'offers' | 'contact';
+export type FaqPage = 'home' | 'offers' | 'contact' | 'faq';
 
 export interface FaqEntry {
   id: string;

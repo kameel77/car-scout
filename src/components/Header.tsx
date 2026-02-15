@@ -27,10 +27,9 @@ interface HeaderProps {
 }
 
 const navLinks = [
-  { label: 'Strona główna', to: '/' },
   { label: 'Samochody', to: '/samochody' },
-  { label: 'Kontakt', to: '/kontakt' },
   { label: 'FAQ', to: '/faq' },
+  { label: 'Kontakt', to: '/kontakt' },
 ];
 
 export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
@@ -97,38 +96,38 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   return (
     <header id="landing-nav" className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
       <div className="container flex h-[72px] items-center justify-between gap-4">
-        <div className="flex items-center gap-10">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0">
-            {settings?.headerLogoUrl ? (
-              <img
-                src={buildAssetUrl(settings.headerLogoUrl)}
-                alt={siteName}
-                className="h-[2.5rem] w-auto max-w-[200px] object-contain"
-                loading="lazy"
-              />
-            ) : (
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                <span className="text-[#2D3142]">{part1}</span>
-                {part2 && <span className="text-[#F97316]">{part2}</span>}
-              </h1>
-            )}
-            {headerLogoText && (
-              <span
-                className="text-[10px] text-muted-foreground leading-tight border-l pl-3 border-border hidden sm:block max-w-[120px]"
-                dangerouslySetInnerHTML={{ __html: headerLogoText }}
-              />
-            )}
-          </Link>
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0">
+          {settings?.headerLogoUrl ? (
+            <img
+              src={buildAssetUrl(settings.headerLogoUrl)}
+              alt={siteName}
+              className="h-[2.5rem] w-auto max-w-[200px] object-contain"
+              loading="lazy"
+            />
+          ) : (
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              <span className="text-[#2D3142]">{part1}</span>
+              {part2 && <span className="text-[#F97316]">{part2}</span>}
+            </h1>
+          )}
+          {headerLogoText && (
+            <span
+              className="text-[10px] text-muted-foreground leading-tight border-l pl-3 border-border hidden sm:block max-w-[120px]"
+              dangerouslySetInnerHTML={{ __html: headerLogoText }}
+            />
+          )}
+        </Link>
 
-          {/* Desktop Navigation Links */}
+        {/* Desktop Navigation & Actions */}
+        <div className="hidden md:flex items-center gap-10">
           <nav className="hidden lg:flex items-center gap-8">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  "text-sm font-medium transition-all hover:text-[#F97316]",
+                  "text-base font-semibold transition-all hover:text-[#F97316]",
                   location.pathname === link.to ? "text-[#F97316]" : "text-[#4A4E69]"
                 )}
               >
@@ -136,45 +135,44 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
               </Link>
             ))}
           </nav>
-        </div>
 
-        {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-6">
-          {/* Language Switcher */}
-          {enabledLanguages.length > 1 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-[#4A4E69] hover:bg-slate-100">
-                  <Globe className="h-4 w-4" />
-                  <span>{currentLanguage.flag}</span>
-                  <span className="hidden xl:inline">{currentLanguage.label}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {enabledLanguages.map((lang) => (
-                  <DropdownMenuItem
-                    key={lang.code}
-                    onClick={() => handleLanguageChange(lang.code)}
-                    className={cn(
-                      'gap-2',
-                      i18n.language === lang.code && 'bg-orange-50 text-orange-600'
-                    )}
-                  >
-                    <span>{lang.flag}</span>
-                    <span>{lang.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <div className="flex items-center gap-6">
+            {/* Language Switcher */}
+            {enabledLanguages.length > 1 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2 text-[#4A4E69] hover:bg-slate-100">
+                    <Globe className="h-4 w-4" />
+                    <span>{currentLanguage.flag}</span>
+                    <span className="hidden xl:inline">{currentLanguage.label}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {enabledLanguages.map((lang) => (
+                    <DropdownMenuItem
+                      key={lang.code}
+                      onClick={() => handleLanguageChange(lang.code)}
+                      className={cn(
+                        'gap-2',
+                        i18n.language === lang.code && 'bg-orange-50 text-orange-600'
+                      )}
+                    >
+                      <span>{lang.flag}</span>
+                      <span>{lang.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
-          {/* CTA Button */}
-          <Link
-            to="/samochody"
-            className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-[#F97316] px-6 text-sm font-semibold text-white transition-all hover:bg-[#EA580C] hover:shadow-lg hover:shadow-orange-200 active:scale-95"
-          >
-            Znajdź auto
-          </Link>
+            {/* CTA Button */}
+            <Link
+              to="/samochody"
+              className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-[#F97316] px-6 text-sm font-semibold text-white transition-all hover:bg-[#EA580C] hover:shadow-lg hover:shadow-orange-200 active:scale-95"
+            >
+              Znajdź auto
+            </Link>
+          </div>
         </div>
 
         {/* Mobile Menu */}
