@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -13,7 +14,7 @@ import {
     SelectValue
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Languages, Coins, Percent, RefreshCw, Save, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
+import { Languages, Coins, Percent, RefreshCw, Save, CheckCircle2, AlertCircle, Upload, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
@@ -66,7 +67,10 @@ export function SettingsModule() {
         headerLogoTextDe: data?.headerLogoTextDe || '',
         siteNamePl: data?.siteNamePl || '',
         siteNameEn: data?.siteNameEn || '',
-        siteNameDe: data?.siteNameDe || ''
+        siteNameDe: data?.siteNameDe || '',
+        defaultOgTitle: data?.defaultOgTitle || '',
+        defaultOgDescription: data?.defaultOgDescription || '',
+        defaultOgImage: data?.defaultOgImage || ''
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -641,6 +645,79 @@ export function SettingsModule() {
                         >
                             {saving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                             Zapisz ustawienia prawne
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* OpenGraph Settings */}
+            <Card className="shadow-sm border-slate-200 md:col-span-2">
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-green-500" />
+                        Udostępnianie w Social Media (OpenGraph)
+                    </CardTitle>
+                    <CardDescription>Skonfiguruj jak Twoja strona wygląda po wklejeniu linku na Facebooku, LinkedIn czy WhatsApp.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="og-title" className="text-sm font-bold">Tytuł OpenGraph</Label>
+                                <Input
+                                    id="og-title"
+                                    value={settings.defaultOgTitle || ''}
+                                    onChange={(e) => setSettings({ ...settings, defaultOgTitle: e.target.value })}
+                                    placeholder="Car Scout - Twoje auto w zasięgu ręki"
+                                    className="bg-white"
+                                />
+                                <p className="text-xs text-slate-500">Domyślny tytuł przy udostępnianiu strony głównej (jeśli nie wybrano innego w SEO).</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="og-description" className="text-sm font-bold">Opis OpenGraph</Label>
+                                <Textarea
+                                    id="og-description"
+                                    value={settings.defaultOgDescription || ''}
+                                    onChange={(e) => setSettings({ ...settings, defaultOgDescription: e.target.value })}
+                                    placeholder="Przeglądaj setki ofert od sprawdzonych dealerów..."
+                                    className="bg-white min-h-[100px]"
+                                />
+                                <p className="text-xs text-slate-500">Krótki opis widoczny pod tytułem w mediach społecznościowych.</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="og-image" className="text-sm font-bold">Grafika OpenGraph (URL)</Label>
+                                <Input
+                                    id="og-image"
+                                    value={settings.defaultOgImage || ''}
+                                    onChange={(e) => setSettings({ ...settings, defaultOgImage: e.target.value })}
+                                    placeholder="https://twojadomena.pl/og-image.jpg"
+                                    className="bg-white"
+                                />
+                                <p className="text-xs text-slate-500">Link do obrazka (zalecane 1200x630px). Jeśli puste, wyświetli się domyślny logotyp.</p>
+                            </div>
+                            {settings.defaultOgImage && (
+                                <div className="p-2 border rounded bg-slate-50">
+                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Podgląd grafiki:</p>
+                                    <img
+                                        src={settings.defaultOgImage}
+                                        alt="OG Preview"
+                                        className="w-full h-auto rounded border shadow-sm max-h-[150px] object-cover"
+                                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                        <Button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            {saving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Zapisz ustawienia OpenGraph
                         </Button>
                     </div>
                 </CardContent>
