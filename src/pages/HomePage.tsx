@@ -133,7 +133,7 @@ export default function HomePage() {
         <div className="home-section__header home-reveal">
           <span className="home-section__tag">Prosty proces</span>
           <h2>Jak <span>kupić auto</span> z CarSalon?</h2>
-          <p>Cały proces zakupu trwa kilka dni. Ty odpoczywasz — my załatwiamy formalności.</p>
+          <p>Cały proces zakupu trwa kilka dni. Ty wybierasz - my załatwiamy formalności.</p>
         </div>
         <div className="home-steps-grid">
           {[
@@ -143,8 +143,10 @@ export default function HomePage() {
             ['4', 'Odbierz kluczyki', 'Formalności ogarniamy za Ciebie, Ty odbierasz gotowe auto.'],
           ].map(([step, title, desc]) => (
             <article key={step} className="home-step-card home-reveal">
-              <div className="home-step-card__number">{step}</div>
-              <h3>{title}</h3>
+              <div className="home-step-card__header">
+                <div className="home-step-card__number">{step}</div>
+                <h3>{title}</h3>
+              </div>
               <p>{desc}</p>
             </article>
           ))}
@@ -178,7 +180,8 @@ export default function HomePage() {
       <section className="home-section" id="oferta">
         <div className="home-section__header home-reveal">
           <span className="home-section__tag">Oferta</span>
-          <h2>Nowe i <span>używane</span> - Ty wybierasz</h2>
+          <h2>Nowe i <span>używane</span>. Po prostu wybierz</h2>
+          <p>W naszej ofercie znajdziesz setki pojazdów od zaufanych dealerów w całej Polsce.</p>
         </div>
         <div className="home-offer-grid">
           <article className="home-offer-card home-reveal">
@@ -202,10 +205,11 @@ export default function HomePage() {
         <div className="home-section__header home-reveal">
           <span className="home-section__tag">Opinie klientów</span>
           <h2>Zaufali <span>nam</span></h2>
+          <p>Zobacz, co mówią o nas klienci, którzy mieli okazję z nami współpracować.</p>
         </div>
         <div className="home-testimonials-grid">
           {[
-            ['PM', 'Piotr M.', 'BMW 520d · Leasing', 'Konsultant dobrał idealne auto i pomógł z leasingiem — szybko i konkretnie.'],
+            ['PM', 'Piotr M.', 'BMW 520d · Leasing', 'Konsultant dobrał idealne auto i pomógł z leasingiem, szybko i konkretnie.'],
             ['MT', 'Monika T.', 'Audi Q2 TFSI · Kredyt', 'Pierwszy zakup auta bez stresu. Wszystko jasno wyjaśnione krok po kroku.'],
             ['TW', 'Tomasz W.', '3x Škoda Octavia · Leasing', 'Potrzebowałem 3 aut do firmy. Doradca ogarnął to sprawnie i na dobrych warunkach.'],
           ].map(([avatar, name, car, text]) => (
@@ -223,12 +227,13 @@ export default function HomePage() {
           <div className="home-section__header home-reveal">
             <span className="home-section__tag">FAQ</span>
             <h2>Masz <span>pytania</span>?</h2>
+            <p>Odpowiadamy na najczęściej zadawane pytania naszych klientów.</p>
           </div>
           <div className="home-faq-list">
             {dynamicFaqs.map((item, idx) => (
               <div className={`home-faq-item ${openFaq === idx ? 'open' : ''}`} key={item.id}>
                 <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="home-faq-question">
-                  {item.q}
+                  <h3>{item.q}</h3>
                   <ChevronDown size={18} />
                 </button>
                 <div className="home-faq-answer"><p>{item.a}</p></div>
