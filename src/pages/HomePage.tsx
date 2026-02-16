@@ -14,27 +14,50 @@ import {
   Clock3,
   CarFront,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { faqApi } from '@/services/api';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import './home-page.css';
 
-const faqs = [
-  {
-    q: 'Czy muszę wpłacać zaliczkę?',
-    a: 'Nie — kontakt z nami jest całkowicie bezpłatny i niezobowiązujący. Zaliczka pojawia się dopiero po wyborze auta i finansowania.',
-  },
-  {
-    q: 'Jakie formy finansowania oferujecie?',
-    a: 'Leasing, kredyt samochodowy, wynajem długoterminowy oraz zakup gotówkowy.',
-  },
-  {
-    q: 'Ile trwa cały proces?',
-    a: 'Najczęściej od 3 do 10 dni roboczych — zależnie od dostępności auta i formy finansowania.',
-  },
-];
+
 
 export default function HomePage() {
   const [openFaq, setOpenFaq] = React.useState<number | null>(0);
+  const { i18n } = useTranslation();
+
+  const { data: faqData } = useQuery({
+    queryKey: ['home-faq'],
+    queryFn: async () => {
+      const response = await faqApi.list({ page: 'home' });
+      return (response.entries || [])
+        .filter((e: any) => e.isPublished)
+        .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    }
+  });
+
+  const getLocalized = (item: any, field: string) => {
+    const langCode = i18n.language.slice(0, 2).toLowerCase();
+    const suffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
+    return item[`${field}${suffix}`] || '';
+  };
+
+  const dynamicFaqs = React.useMemo(() => {
+    if (!faqData) return [];
+    const langCode = i18n.language.slice(0, 2).toLowerCase();
+    const suffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
+
+    return faqData.filter((item: any) => {
+      const hasQ = item[`question${suffix}`]?.trim();
+      const hasA = item[`answer${suffix}`]?.trim();
+      return hasQ && hasA;
+    }).map((item: any) => ({
+      id: item.id,
+      q: getLocalized(item, 'question'),
+      a: getLocalized(item, 'answer')
+    }));
+  }, [faqData, i18n.language]);
 
   React.useEffect(() => {
     const onScroll = () => {
@@ -86,7 +109,7 @@ export default function HomePage() {
           <div className="home-hero__visual">
             <img src="https://krqwvegfxnlwdhgjuflh.supabase.co/storage/v1/object/public/public-img/car-salon-hero.jpg" alt="CarSalon - auta" />
             <div className="home-hero__stat home-hero__stat--left">
-              <strong>2 500+</strong>
+              <strong>500+</strong>
               <small>aut w ofercie</small>
             </div>
             <div className="home-hero__stat home-hero__stat--right">
@@ -116,7 +139,7 @@ export default function HomePage() {
           {[
             ['1', 'Zostaw kontakt', 'Podaj numer telefonu, a konsultant oddzwoni i pozna Twoje potrzeby.'],
             ['2', 'Dopasujemy ofertę', 'Wybierzemy auta od sprawdzonych dealerów dopasowane do Ciebie.'],
-            ['3', 'Dobierzemy finansowanie', 'Leasing, kredyt lub wynajem — dobierzemy najlepszą opcję.'],
+            ['3', 'Dobierzemy finansowanie', 'Leasing, kredyt lub wynajem - dobierzemy najlepszą opcję.'],
             ['4', 'Odbierz kluczyki', 'Formalności ogarniamy za Ciebie, Ty odbierasz gotowe auto.'],
           ].map(([step, title, desc]) => (
             <article key={step} className="home-step-card home-reveal">
@@ -155,7 +178,7 @@ export default function HomePage() {
       <section className="home-section" id="oferta">
         <div className="home-section__header home-reveal">
           <span className="home-section__tag">Oferta</span>
-          <h2>Nowe i <span>używane</span> — Ty wybierasz</h2>
+          <h2>Nowe i <span>używane</span> - Ty wybierasz</h2>
         </div>
         <div className="home-offer-grid">
           <article className="home-offer-card home-reveal">
@@ -178,13 +201,13 @@ export default function HomePage() {
       <section className="home-section home-section--white">
         <div className="home-section__header home-reveal">
           <span className="home-section__tag">Opinie klientów</span>
-          <h2>Zaufali nam <span>setki kierowców</span></h2>
+          <h2>Zaufali <span>nam</span></h2>
         </div>
         <div className="home-testimonials-grid">
           {[
-            ['MK', 'Marek K.', 'Peugeot 3008 · Leasing', 'Konsultant dobrał idealne auto i pomógł z leasingiem — szybko i konkretnie.'],
-            ['AN', 'Anna N.', 'MINI Cooper · Kredyt', 'Pierwszy zakup auta bez stresu. Wszystko jasno wyjaśnione krok po kroku.'],
-            ['TW', 'Tomasz W.', '3x Škoda Octavia · Leasing', 'Potrzebowałem 3 aut do firmy. CarSalon ogarnął to sprawnie i na dobrych warunkach.'],
+            ['PM', 'Piotr M.', 'BMW 520d · Leasing', 'Konsultant dobrał idealne auto i pomógł z leasingiem — szybko i konkretnie.'],
+            ['MT', 'Monika T.', 'Audi Q2 TFSI · Kredyt', 'Pierwszy zakup auta bez stresu. Wszystko jasno wyjaśnione krok po kroku.'],
+            ['TW', 'Tomasz W.', '3x Škoda Octavia · Leasing', 'Potrzebowałem 3 aut do firmy. Doradca ogarnął to sprawnie i na dobrych warunkach.'],
           ].map(([avatar, name, car, text]) => (
             <article key={name as string} className="home-testimonial-card home-reveal">
               <div className="home-stars">★★★★★</div>
@@ -195,23 +218,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="home-section" id="faq">
-        <div className="home-section__header home-reveal">
-          <span className="home-section__tag">FAQ</span>
-          <h2>Masz <span>pytania</span>?</h2>
-        </div>
-        <div className="home-faq-list">
-          {faqs.map((item, idx) => (
-            <div className={`home-faq-item ${openFaq === idx ? 'open' : ''}`} key={item.q}>
-              <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="home-faq-question">
-                {item.q}
-                <ChevronDown size={18} />
-              </button>
-              <div className="home-faq-answer"><p>{item.a}</p></div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {dynamicFaqs.length > 0 && (
+        <section className="home-section" id="faq">
+          <div className="home-section__header home-reveal">
+            <span className="home-section__tag">FAQ</span>
+            <h2>Masz <span>pytania</span>?</h2>
+          </div>
+          <div className="home-faq-list">
+            {dynamicFaqs.map((item, idx) => (
+              <div className={`home-faq-item ${openFaq === idx ? 'open' : ''}`} key={item.id}>
+                <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="home-faq-question">
+                  {item.q}
+                  <ChevronDown size={18} />
+                </button>
+                <div className="home-faq-answer"><p>{item.a}</p></div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="home-cta-section" id="kontakt">
         <div className="home-cta-box home-reveal">
