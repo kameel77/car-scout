@@ -82,7 +82,7 @@ export default function HomePage() {
       window.removeEventListener('scroll', onScroll);
       observer.disconnect();
     };
-  }, []);
+  }, [dynamicFaqs.length]);
 
   return (
     <div className="landing-page-root">
