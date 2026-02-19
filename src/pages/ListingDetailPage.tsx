@@ -266,7 +266,7 @@ export default function ListingDetailPage() {
             {t('detail.notFoundDescription')}
           </p>
           <Button asChild size="lg" className="mt-8">
-            <Link to="/">{t('detail.backToResults')}</Link>
+            <Link to="/samochody">{t('detail.backToResults')}</Link>
           </Button>
         </div>
         <Footer />
@@ -349,7 +349,7 @@ export default function ListingDetailPage() {
       <main className="container py-6">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link to="/" className="hover:text-foreground transition-colors">
+          <Link to="/samochody" className="hover:text-foreground transition-colors">
             {t('nav.search')}
           </Link>
           <ChevronRight className="h-4 w-4" />
@@ -729,7 +729,7 @@ export default function ListingDetailPage() {
           <DialogFooter className="mt-6">
             <Button
               onClick={() => {
-                const targetUrl = searchParams ? `/?${searchParams}` : '/';
+                const targetUrl = searchParams ? `/samochody?${searchParams}` : '/samochody';
                 navigate(targetUrl);
               }}
               className="w-full gap-2"

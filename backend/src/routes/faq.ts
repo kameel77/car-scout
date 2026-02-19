@@ -1,18 +1,18 @@
 import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
 
-const PAGE_OPTIONS = ['home', 'offers', 'contact'] as const;
+const PAGE_OPTIONS = ['home', 'offers', 'contact', 'faq'] as const;
 
 type FaqPayload = {
     id?: string;
     page: (typeof PAGE_OPTIONS)[number];
     sortOrder?: number;
-    questionPl: string;
-    answerPl: string;
-    questionEn: string;
-    answerEn: string;
-    questionDe: string;
-    answerDe: string;
+    questionPl?: string;
+    answerPl?: string;
+    questionEn?: string;
+    answerEn?: string;
+    questionDe?: string;
+    answerDe?: string;
     isPublished?: boolean;
 };
 
@@ -68,48 +68,45 @@ export async function faqRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Invalid or missing page' });
         }
 
-        const requiredFields = [
-            'questionPl',
-            'answerPl',
-            'questionEn',
-            'answerEn',
-            'questionDe',
-            'answerDe'
-        ] as const;
+        // Check if at least one language is filled
+        const hasPl = payload.questionPl?.trim() && payload.answerPl?.trim();
+        const hasEn = payload.questionEn?.trim() && payload.answerEn?.trim();
+        const hasDe = payload.questionDe?.trim() && payload.answerDe?.trim();
 
-        for (const field of requiredFields) {
-            if (!payload[field] || payload[field].trim() === '') {
-                return reply.code(400).send({ error: `${field} is required` });
-            }
+        if (!hasPl && !hasEn && !hasDe) {
+            return reply.code(400).send({ error: 'At least one language must have both question and answer filled' });
         }
 
         const data = {
             page: payload.page,
             sortOrder: payload.sortOrder ?? 0,
-            questionPl: payload.questionPl.trim(),
-            answerPl: payload.answerPl.trim(),
-            questionEn: payload.questionEn.trim(),
-            answerEn: payload.answerEn.trim(),
-            questionDe: payload.questionDe.trim(),
-            answerDe: payload.answerDe.trim(),
+            questionPl: payload.questionPl?.trim() || '',
+            answerPl: payload.answerPl?.trim() || '',
+            questionEn: payload.questionEn?.trim() || '',
+            answerEn: payload.answerEn?.trim() || '',
+            questionDe: payload.questionDe?.trim() || '',
+            answerDe: payload.answerDe?.trim() || '',
             isPublished: payload.isPublished ?? true
         };
 
-        let entry;
-        if (payload.id) {
-            try {
+        try {
+            let entry;
+            if (payload.id) {
                 entry = await fastify.prisma.faqEntry.update({
                     where: { id: payload.id },
                     data
                 });
-            } catch (error) {
-                return reply.code(404).send({ error: 'FAQ entry not found' });
+            } else {
+                entry = await fastify.prisma.faqEntry.create({ data });
             }
-        } else {
-            entry = await fastify.prisma.faqEntry.create({ data });
+            return { entry };
+        } catch (error) {
+            fastify.log.error(error, 'FAQ: Save failed');
+            return reply.code(500).send({
+                error: 'Internal Server Error',
+                message: error instanceof Error ? error.message : 'Unknown error during FAQ save'
+            });
         }
-
-        return { entry };
     });
 
     // Delete FAQ entry

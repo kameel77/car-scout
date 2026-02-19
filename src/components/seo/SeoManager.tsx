@@ -78,6 +78,10 @@ export function SeoManager() {
         }
     }, [seoConfig?.gtmId]);
 
+    const finalOgTitle = seoConfig?.homeTitle || (settings as any)?.defaultOgTitle || homeTitle || siteName || 'Car Scout';
+    const finalOgDescription = seoConfig?.homeDescription || (settings as any)?.defaultOgDescription || homeDescription || '';
+    const finalOgImage = seoConfig?.homeOgImage || (settings as any)?.defaultOgImage || '';
+
     return (
         <Helmet>
             {/* Default/Global Meta Tags */}
@@ -86,6 +90,18 @@ export function SeoManager() {
             {/* Fallback title if individual pages don't set it */}
             <title>{homeTitle || siteName}</title>
             <meta name="description" content={homeDescription || ''} />
+
+            {/* OG Tags */}
+            <meta property="og:type" content="website" />
+            <meta property="og:title" content={finalOgTitle} />
+            <meta property="og:description" content={finalOgDescription} />
+            {finalOgImage && <meta property="og:image" content={finalOgImage} />}
+
+            {/* Twitter Tags */}
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content={finalOgTitle} />
+            <meta name="twitter:description" content={finalOgDescription} />
+            {finalOgImage && <meta name="twitter:image" content={finalOgImage} />}
         </Helmet>
     );
 }

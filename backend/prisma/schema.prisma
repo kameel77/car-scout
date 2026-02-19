@@ -197,6 +197,9 @@ model AppSettings {
   siteNameDe                  String?  @map("site_name_de")
   siteNameEn                  String?  @map("site_name_en")
   siteNamePl                  String?  @map("site_name_pl")
+  defaultOgTitle              String?  @map("default_og_title")
+  defaultOgDescription        String?  @map("default_og_description")
+  defaultOgImage              String?  @map("default_og_image")
 
   @@map("app_settings")
 }
@@ -361,4 +364,5 @@ enum FaqPage {
   home
   offers
   contact
+  faq
 }

@@ -38,6 +38,10 @@ type SettingsPayload = {
 
     financingCalculatorEnabled?: boolean;
     financingCalculatorLocation?: string;
+
+    defaultOgTitle?: string | null;
+    defaultOgDescription?: string | null;
+    defaultOgImage?: string | null;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -199,7 +203,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined
                         ? Boolean(data.financingCalculatorEnabled)
                         : undefined,
-                    financingCalculatorLocation: data.financingCalculatorLocation
+                    financingCalculatorLocation: data.financingCalculatorLocation,
+                    defaultOgTitle: data.defaultOgTitle || null,
+                    defaultOgDescription: data.defaultOgDescription || null,
+                    defaultOgImage: data.defaultOgImage || null
                 },
                 create: {
                     id: 'default',
@@ -232,7 +239,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined
                         ? Boolean(data.financingCalculatorEnabled)
                         : true,
-                    financingCalculatorLocation: data.financingCalculatorLocation || 'main'
+                    financingCalculatorLocation: data.financingCalculatorLocation || 'main',
+                    defaultOgTitle: data.defaultOgTitle || null,
+                    defaultOgDescription: data.defaultOgDescription || null,
+                    defaultOgImage: data.defaultOgImage || null
                 }
             });
 
