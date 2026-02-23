@@ -120,10 +120,24 @@ export function FinancingCalculator({
         setSelectedProduct(prev => (prev?.id === candidateProduct?.id ? prev : candidateProduct));
     }, [candidateProduct]);
 
+    // Track how many external products have failed to prevent infinite retry loop
+    const failedCountRef = React.useRef(0);
+    const MAX_EXTERNAL_FAILURES = 3;
+
     React.useEffect(() => {
         let isCancelled = false;
+        let debounceTimer: ReturnType<typeof setTimeout>;
+
         const calculateExternal = async () => {
             if (!selectedProduct || selectedProduct.provider === 'OWN') {
+                setExternalInstallment(null);
+                setExternalLoading(false);
+                return;
+            }
+
+            // If too many external products have failed, skip API call and fall back silently
+            if (failedCountRef.current >= MAX_EXTERNAL_FAILURES) {
+                console.warn(`Skipping external calculation: ${failedCountRef.current} failures reached limit`);
                 setExternalInstallment(null);
                 setExternalLoading(false);
                 return;
@@ -143,12 +157,13 @@ export function FinancingCalculator({
                 });
                 if (!isCancelled) {
                     setExternalInstallment(response.monthlyInstallment);
-                    // We could also store more info here if needed for UI, 
-                    // but for compatibility with existing code we just use monthlyInstallment.
+                    // Reset failure counter on success
+                    failedCountRef.current = 0;
                 }
             } catch (error) {
                 if (!isCancelled) {
                     console.error('External calculation failed:', error);
+                    failedCountRef.current += 1;
                     // Add to failed set to trigger fallback to next candidate
                     setFailedProducts(prev => new Set([...prev, selectedProduct.id]));
                     setExternalInstallment(null);
@@ -160,10 +175,12 @@ export function FinancingCalculator({
             }
         };
 
-        calculateExternal();
+        // Debounce external API calls to prevent rapid-fire requests
+        debounceTimer = setTimeout(calculateExternal, 500);
 
         return () => {
             isCancelled = true;
+            clearTimeout(debounceTimer);
         };
     }, [selectedProduct, price, initialPaymentAmount, initialPaymentPct, finalPaymentPct, months, manufacturingYear, mileageKm]);
 

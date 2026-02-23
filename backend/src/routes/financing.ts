@@ -158,13 +158,18 @@ export async function financingRoutes(fastify: FastifyInstance) {
                     return reply.code(422).send({ error: 'Missing provider configuration' });
                 }
 
-                // Inbank API calculation payload - strictly minimal as per docs
-                const payload = {
+                // Inbank API calculation payload
+                const payload: Record<string, any> = {
                     product_code: config.productCode,
                     amount: data.price - data.downPaymentAmount,
                     period: data.period,
                     payment_day: config.paymentDay
                 };
+
+                // Include response_level if configured (production API may require it)
+                if (config.responseLevel) {
+                    payload.response_level = config.responseLevel;
+                }
 
                 // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
                 const rawBaseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
@@ -173,6 +178,13 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 const shopUuid = config.shopUuid || connection.shopUuid;
 
                 const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
+
+                console.log('--- INBANK CALCULATE REQUEST ---');
+                console.log('URL:', url);
+                console.log('Payload:', JSON.stringify(payload));
+                console.log('API Key (first 8 chars):', apiKey?.substring(0, 8) + '...');
+                console.log('Shop UUID:', shopUuid);
+                console.log('Product Code:', config.productCode);
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -183,27 +195,39 @@ export async function financingRoutes(fastify: FastifyInstance) {
                     body: JSON.stringify(payload),
                 });
 
+                const responseText = await response.text();
+
+                console.log('--- INBANK CALCULATE RESPONSE ---');
+                console.log('Status:', response.status);
+                console.log('Body:', responseText);
+                console.log('---------------------------------');
+
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({})) as { message?: string; error?: string };
+                    let errorData: any = {};
+                    try { errorData = JSON.parse(responseText); } catch { }
                     return reply.code(502).send({
                         error: 'Provider request failed',
-                        details: errorData?.message || errorData?.error || 'Unknown provider error'
+                        details: errorData?.message || errorData?.error || responseText || 'Unknown provider error',
+                        statusCode: response.status
                     });
                 }
 
-                const result = await response.json().catch(() => ({}));
+                let result: any = {};
+                try { result = JSON.parse(responseText); } catch { }
 
                 // Inbank documentation says payment_amount_monthly or installment_amount
                 const monthlyInstallment = Number(
-                    (result as any)?.payment_amount_monthly
-                    ?? (result as any)?.paymentAmountMonthly
-                    ?? (result as any)?.installment_amount
-                    ?? (result as any)?.installmentAmount
-                    ?? (result as any)?.monthly_payment
-                    ?? (result as any)?.monthlyPayment
+                    result?.payment_amount_monthly
+                    ?? result?.paymentAmountMonthly
+                    ?? result?.installment_amount
+                    ?? result?.installmentAmount
+                    ?? result?.monthly_payment
+                    ?? result?.monthlyPayment
                 );
 
                 if (!Number.isFinite(monthlyInstallment)) {
+                    console.log('--- INBANK: Could not extract monthly installment from response ---');
+                    console.log('Parsed result keys:', Object.keys(result));
                     return reply.code(502).send({ error: 'Invalid provider response', details: result });
                 }
 
