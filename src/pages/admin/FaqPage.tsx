@@ -21,6 +21,7 @@ const PAGE_OPTIONS: { value: FaqPageType; label: string }[] = [
   { value: 'home', label: 'Strona główna' },
   { value: 'offers', label: 'Strona oferty' },
   { value: 'contact', label: 'Strona kontaktowa' },
+  { value: 'faq', label: 'Strona FAQ' },
 ];
 
 const EMPTY_FORM: FaqPayload = {
@@ -101,20 +102,14 @@ export default function FaqPage() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    const requiredFields: (keyof FaqPayload)[] = [
-      'questionPl',
-      'answerPl',
-      'questionEn',
-      'answerEn',
-      'questionDe',
-      'answerDe',
-    ];
 
-    for (const field of requiredFields) {
-      if (!formState[field] || (formState[field] as string).trim() === '') {
-        toast.error('Wszystkie pola pytania i odpowiedzi są wymagane');
-        return;
-      }
+    const hasPl = formState.questionPl?.trim() && formState.answerPl?.trim();
+    const hasEn = formState.questionEn?.trim() && formState.answerEn?.trim();
+    const hasDe = formState.questionDe?.trim() && formState.answerDe?.trim();
+
+    if (!hasPl && !hasEn && !hasDe) {
+      toast.error('Przynajmniej jeden język musi mieć wypełnione zarówno pytanie, jak i odpowiedź');
+      return;
     }
 
     saveMutation.mutate();
