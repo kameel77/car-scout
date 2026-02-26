@@ -56,6 +56,7 @@ export default function LeadFormPage() {
     period: number;
     downPayment: number;
     installment: number;
+    finalPayment: number;
   } | undefined;
 
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -153,6 +154,7 @@ export default function LeadFormPage() {
         financingPeriod: financingData?.period,
         financingDownPayment: financingData?.downPayment,
         financingInstallment: financingData?.installment,
+        financingFinalPayment: financingData?.finalPayment,
       });
 
       setReferenceNumber(lead?.referenceNumber || lead?.id || '');

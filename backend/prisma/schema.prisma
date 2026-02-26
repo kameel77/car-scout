@@ -90,6 +90,7 @@ model Lead {
   financingAmount      Float?            @map("financing_amount")
   financingDownPayment Float?            @map("financing_down_payment")
   financingInstallment Float?            @map("financing_installment")
+  financingFinalPayment Float?           @map("financing_final_payment")
   financingPeriod      Int?              @map("financing_period")
   financingProductId   String?           @map("financing_product_id")
   financingProduct     FinancingProduct? @relation(fields: [financingProductId], references: [id])

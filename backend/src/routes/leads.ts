@@ -18,6 +18,7 @@ interface LeadPayload {
     financingPeriod?: number;
     financingDownPayment?: number;
     financingInstallment?: number;
+    financingFinalPayment?: number;
 }
 
 const generateReference = () => {
@@ -61,6 +62,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 financingPeriod: data.financingPeriod,
                 financingDownPayment: data.financingDownPayment,
                 financingInstallment: data.financingInstallment,
+                financingFinalPayment: data.financingFinalPayment,
             },
             include: {
                 listing: {

@@ -547,6 +547,7 @@ export const leadsApi = {
         financingPeriod?: number;
         financingDownPayment?: number;
         financingInstallment?: number;
+        financingFinalPayment?: number;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads`, {
             method: 'POST',

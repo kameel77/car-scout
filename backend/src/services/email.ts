@@ -43,6 +43,19 @@ export const sendLeadEmail = async (
         ? `[CarSalon] ${subjectTitle} (Tel): ${lead.name}`
         : `[CarSalon] ${subjectTitle}: ${lead.listing?.make} ${lead.listing?.model}`;
 
+    const listingSlug = lead.listing?.slug || [
+        lead.listing?.make,
+        lead.listing?.model,
+        lead.listing?.version,
+        lead.listing?.productionYear,
+        lead.listing?.bodyType,
+        lead.listing?.fuelType,
+        lead.listing?.listingId || lead.listing?.id
+    ]
+        .filter(Boolean)
+        .map(s => String(s).toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-'))
+        .join('-');
+
     const listingDetails = lead.listing ? `
         <h3>Szczegóły pojazdu</h3>
         <ul>
@@ -53,7 +66,7 @@ export const sendLeadEmail = async (
             <li><strong>Przebieg:</strong> ${lead.listing.mileageKm} km</li>
             <li><strong>Dealer:</strong> ID: ${lead.listing.dealerId || 'Brak'}</li>
         </ul>
-        <p><a href="https://carsalon.pl/o/${lead.listing.slug || lead.listing.id}">Link do ogłoszenia (orientacyjny)</a></p>
+        <p><a href="https://carsalon.pl/oferta/${listingSlug}">Link do ogłoszenia</a></p>
     ` : '<p><strong>Typ zgłoszenia:</strong> Zapytanie ogólne / Szybki kontakt ze strony głównej</p>';
 
     const financingDetails = lead.financingProductId ? `
@@ -61,9 +74,10 @@ export const sendLeadEmail = async (
         <ul>
             ${lead.financingProduct ? `<li><strong>Wybrany produkt:</strong> ${lead.financingProduct.name || lead.financingProduct.category} (Provider: ${lead.financingProduct.provider})</li>` : ''}
             <li><strong>Kwota finansowania:</strong> ${lead.financingAmount} PLN</li>
-            <li><strong>Wpłata własna:</strong> ${lead.financingDownPayment} PLN</li>
-            <li><strong>Miesięczna Rata:</strong> ${lead.financingInstallment} PLN</li>
             <li><strong>Deklarowany okres:</strong> ${lead.financingPeriod} mies.</li>
+            <li><strong>Pierwsza wpłata:</strong> ${lead.financingDownPayment} PLN</li>
+            <li><strong>Miesięczna Rata:</strong> ${lead.financingInstallment} PLN</li>
+            <li><strong>Ostatnia Rata (Wykup):</strong> ${lead.financingFinalPayment} PLN</li>
         </ul>
     ` : '';
 
