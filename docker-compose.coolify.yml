@@ -36,6 +36,9 @@ services:
       carscout-private:
         aliases:
           - backend
+      coolify:
+        aliases:
+          - "${COMPOSE_PROJECT_NAME}-backend"
 
   # Frontend (Nginx) — pulled from GHCR
   frontend:
