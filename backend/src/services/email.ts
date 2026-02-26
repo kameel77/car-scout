@@ -23,7 +23,12 @@ export const sendLeadEmail = async (
         auth: {
             user: settings.smtpUser,
             pass: settings.smtpPassword
-        }
+        },
+        connectionTimeout: 10000, // 10s
+        socketTimeout: 15000,     // 15s
+        greetingTimeout: 5000,    // 5s
+        logger: true,
+        debug: true
     });
 
     const isQuickContact = !lead.listingId;
@@ -91,6 +96,7 @@ export const sendLeadEmail = async (
     `;
 
     try {
+        fastify.log.info({ host: settings.smtpHost, port: settings.smtpPort }, 'Attempting to send mail via SMTP...');
         await transporter.sendMail({
             from: `"CarSalon Powiadomienia" <${settings.smtpFromEmail || settings.smtpUser}>`,
             to: settings.smtpRecipientEmail,
@@ -99,6 +105,6 @@ export const sendLeadEmail = async (
         });
         fastify.log.info(`Email notification sent for lead ${lead.id} to ${settings.smtpRecipientEmail}`);
     } catch (error) {
-        fastify.log.error(error, 'Failed to send email notification');
+        fastify.log.error(error, 'Failed to send email notification in email.ts');
     }
 };

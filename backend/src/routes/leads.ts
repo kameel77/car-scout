@@ -72,7 +72,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
 
         // Wyślij powiadomienie email (nie blokując odpowiedzi API)
         sendLeadEmail(fastify, lead as any).catch((err: any) => {
-            fastify.log.error('Error sending lead notification email', err);
+            fastify.log.error(err, 'Error sending lead notification email');
         });
 
         return { lead };
@@ -102,7 +102,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
 
         // Wyślij powiadomienie email (nie blokując odpowiedzi API)
         sendLeadEmail(fastify, lead as any).catch((err: any) => {
-            fastify.log.error('Error sending quick lead notification email', err);
+            fastify.log.error(err, 'Error sending quick lead notification email');
         });
 
         return { success: true, lead };
