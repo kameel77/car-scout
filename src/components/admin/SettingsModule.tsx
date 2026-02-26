@@ -70,7 +70,13 @@ export function SettingsModule() {
         siteNameDe: data?.siteNameDe || '',
         defaultOgTitle: data?.defaultOgTitle || '',
         defaultOgDescription: data?.defaultOgDescription || '',
-        defaultOgImage: data?.defaultOgImage || ''
+        defaultOgImage: data?.defaultOgImage || '',
+        smtpHost: data?.smtpHost || '',
+        smtpPort: data?.smtpPort || 465,
+        smtpUser: data?.smtpUser || '',
+        smtpPassword: data?.smtpPassword || '',
+        smtpFromEmail: data?.smtpFromEmail || '',
+        smtpRecipientEmail: data?.smtpRecipientEmail || ''
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -718,6 +724,99 @@ export function SettingsModule() {
                         >
                             {saving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                             Zapisz ustawienia OpenGraph
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* SMTP Setting */}
+            <Card className="shadow-sm border-slate-200 md:col-span-2">
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                        Konfiguracja e-mail (SMTP)
+                    </CardTitle>
+                    <CardDescription>Ustaw dane serwera pocztowego (np. Gmail) do wysyłania powiadomień o leadach.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="smtp-host" className="text-sm font-bold">Serwer SMTP (Host)</Label>
+                                <Input
+                                    id="smtp-host"
+                                    value={settings.smtpHost || ''}
+                                    onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value })}
+                                    placeholder="smtp.gmail.com"
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="smtp-port" className="text-sm font-bold">Port SMTP</Label>
+                                <Input
+                                    id="smtp-port"
+                                    type="number"
+                                    value={settings.smtpPort || ''}
+                                    onChange={(e) => setSettings({ ...settings, smtpPort: parseInt(e.target.value, 10) || 465 })}
+                                    placeholder="465"
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="smtp-user" className="text-sm font-bold">Użytkownik SMTP (zazwyczaj adres e-mail)</Label>
+                                <Input
+                                    id="smtp-user"
+                                    value={settings.smtpUser || ''}
+                                    onChange={(e) => setSettings({ ...settings, smtpUser: e.target.value })}
+                                    placeholder="kontakt@twojadomena.pl"
+                                    className="bg-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="smtp-password" className="text-sm font-bold">Hasło SMTP (lub Hasło Aplikacji)</Label>
+                                <Input
+                                    id="smtp-password"
+                                    type="password"
+                                    value={settings.smtpPassword || ''}
+                                    onChange={(e) => setSettings({ ...settings, smtpPassword: e.target.value })}
+                                    placeholder="Wprowadź hasło"
+                                    className="bg-white"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="smtp-from" className="text-sm font-bold">Adres nadawcy (From)</Label>
+                                <Input
+                                    id="smtp-from"
+                                    value={settings.smtpFromEmail || ''}
+                                    onChange={(e) => setSettings({ ...settings, smtpFromEmail: e.target.value })}
+                                    placeholder="powiadomienia@carsalon.pl"
+                                    className="bg-white"
+                                />
+                                <p className="text-xs text-slate-500">Adres e-mail widoczny jako nadawca powiadomień.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="smtp-recipient" className="text-sm font-bold">Adres docelowy (do powiadomień o leadach)</Label>
+                                <Input
+                                    id="smtp-recipient"
+                                    value={settings.smtpRecipientEmail || ''}
+                                    onChange={(e) => setSettings({ ...settings, smtpRecipientEmail: e.target.value })}
+                                    placeholder="sprzedaz@carsalon.pl"
+                                    className="bg-white"
+                                />
+                                <p className="text-xs text-slate-500">Na ten adres będą przychodzić wiadomości kontaktowe od klientów.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                        <Button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            {saving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Zapisz ustawienia SMTP
                         </Button>
                     </div>
                 </CardContent>
