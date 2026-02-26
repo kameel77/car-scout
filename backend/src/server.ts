@@ -30,7 +30,7 @@ const start = async () => {
         }
 
         const port = parseInt(process.env.PORT || '3000');
-        await app.listen({ port, host: '0.0.0.0' });
+        await app.listen({ port, host: '::' });
         console.log(`🚀 Server listening on port ${port}`);
 
         // Graceful shutdown
