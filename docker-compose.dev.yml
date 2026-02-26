@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Backend API Container — pulled from GHCR
+  carscout-api:
+    image: ghcr.io/kameel77/car-scout-backend:${IMAGE_TAG:-dev}
+    container_name: "${COMPOSE_PROJECT_NAME}-api"
+    restart: unless-stopped
+    expose:
+      - "${PORT:-3000}"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: ${PORT:-3000}
+      NODE_ENV: production
+      FRONTEND_URL: ${FRONTEND_URL}
+      ANALYTICS_DEFAULT_DAYS: ${ANALYTICS_DEFAULT_DAYS:-30}
+      ANALYTICS_MAX_DAYS: ${ANALYTICS_MAX_DAYS:-365}
+      ANALYTICS_CACHE_TTL: ${ANALYTICS_CACHE_TTL:-300}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      carscout-private:
+        aliases:
+          - backend # Stable DNS name for nginx upstream
+      coolify:
+        aliases:
+          - backend # IPv4 via coolify network for nginx resolver
+
+  # Frontend Container (Nginx) — pulled from GHCR
+  frontend:
+    image: ghcr.io/kameel77/car-scout-frontend:${IMAGE_TAG:-dev}
+    container_name: "${COMPOSE_PROJECT_NAME}-frontend"
+    environment:
+      # Backend URL uses Docker service DNS — never stale IPs
+      BACKEND_URL: ${BACKEND_URL:-http://backend:3000}
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      carscout-api:
+        condition: service_healthy
+    networks:
+      - carscout-private
+      - coolify
+
+networks:
+  carscout-private:
+    driver: bridge
+    name: "${COMPOSE_PROJECT_NAME}-private"
+  coolify:
+    name: coolify
+    external: true

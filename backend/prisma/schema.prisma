@@ -73,7 +73,7 @@ model Listing {
 
 model Lead {
   id                   String            @id @default(cuid())
-  listingId            String            @map("listing_id")
+  listingId            String?           @map("listing_id")
   name                 String
   email                String
   phone                String?
@@ -90,10 +90,11 @@ model Lead {
   financingAmount      Float?            @map("financing_amount")
   financingDownPayment Float?            @map("financing_down_payment")
   financingInstallment Float?            @map("financing_installment")
+  financingFinalPayment Float?           @map("financing_final_payment")
   financingPeriod      Int?              @map("financing_period")
   financingProductId   String?           @map("financing_product_id")
   financingProduct     FinancingProduct? @relation(fields: [financingProductId], references: [id])
-  listing              Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listing              Listing?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([listingId])
   @@index([financingProductId])
@@ -200,6 +201,12 @@ model AppSettings {
   defaultOgTitle              String?  @map("default_og_title")
   defaultOgDescription        String?  @map("default_og_description")
   defaultOgImage              String?  @map("default_og_image")
+  smtpHost                    String?  @map("smtp_host")
+  smtpPort                    Int?     @map("smtp_port")
+  smtpUser                    String?  @map("smtp_user")
+  smtpPassword                String?  @map("smtp_password")
+  smtpFromEmail               String?  @map("smtp_from_email")
+  smtpRecipientEmail          String?  @map("smtp_recipient_email")
 
   @@map("app_settings")
 }

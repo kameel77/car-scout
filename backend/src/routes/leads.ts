@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { sendLeadEmail } from '../services/email.js';
 
 type PreferredContact = 'email' | 'phone';
 
@@ -17,6 +18,7 @@ interface LeadPayload {
     financingPeriod?: number;
     financingDownPayment?: number;
     financingInstallment?: number;
+    financingFinalPayment?: number;
 }
 
 const generateReference = () => {
@@ -60,15 +62,52 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 financingPeriod: data.financingPeriod,
                 financingDownPayment: data.financingDownPayment,
                 financingInstallment: data.financingInstallment,
+                financingFinalPayment: data.financingFinalPayment,
             },
             include: {
                 listing: {
                     include: { dealer: true }
-                }
+                },
+                financingProduct: true
             }
         });
 
+        // Wyślij powiadomienie email (nie blokując odpowiedzi API)
+        sendLeadEmail(fastify, lead as any).catch((err: any) => {
+            fastify.log.error(err, 'Error sending lead notification email');
+        });
+
         return { lead };
+    });
+
+    // Create new quick contact lead from CTA
+    fastify.post('/api/leads/quick', async (request, reply) => {
+        const body = request.body as any;
+        const phone = body.phone;
+        const name = body.name || 'Szybki Kontakt';
+
+        if (!phone) {
+            return reply.code(400).send({ error: 'phone is required' });
+        }
+
+        const lead = await fastify.prisma.lead.create({
+            data: {
+                name: name,
+                email: 'brak@email.pl', // Wymagane pole z prisma schema
+                phone: phone,
+                preferredContact: 'phone',
+                message: 'Prośba o szybki kontakt telefoniczny.',
+                status: 'quick_contact',
+                referenceNumber: generateReference(),
+            }
+        });
+
+        // Wyślij powiadomienie email (nie blokując odpowiedzi API)
+        sendLeadEmail(fastify, lead as any).catch((err: any) => {
+            fastify.log.error(err, 'Error sending quick lead notification email');
+        });
+
+        return { success: true, lead };
     });
 
     // Get leads for backoffice (requires auth)

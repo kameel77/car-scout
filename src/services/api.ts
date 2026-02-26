@@ -547,6 +547,7 @@ export const leadsApi = {
         financingPeriod?: number;
         financingDownPayment?: number;
         financingInstallment?: number;
+        financingFinalPayment?: number;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads`, {
             method: 'POST',
@@ -584,6 +585,20 @@ export const leadsApi = {
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.error || 'Failed to submit financing application');
+        }
+
+        return response.json();
+    },
+    submitQuickLead: async (data: { phone: string; name?: string; }) => {
+        const response = await fetch(`${API_BASE_URL}/api/leads/quick`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to submit quick lead');
         }
 
         return response.json();
