@@ -42,6 +42,13 @@ type SettingsPayload = {
     defaultOgTitle?: string | null;
     defaultOgDescription?: string | null;
     defaultOgImage?: string | null;
+
+    smtpHost?: string | null;
+    smtpPort?: number | string | null;
+    smtpUser?: string | null;
+    smtpPassword?: string | null;
+    smtpFromEmail?: string | null;
+    smtpRecipientEmail?: string | null;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -206,7 +213,14 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     financingCalculatorLocation: data.financingCalculatorLocation,
                     defaultOgTitle: data.defaultOgTitle || null,
                     defaultOgDescription: data.defaultOgDescription || null,
-                    defaultOgImage: data.defaultOgImage || null
+                    defaultOgImage: data.defaultOgImage || null,
+
+                    smtpHost: data.smtpHost || null,
+                    smtpPort: data.smtpPort ? toNumberOrFallback(data.smtpPort, 465) : null,
+                    smtpUser: data.smtpUser || null,
+                    smtpPassword: data.smtpPassword || null,
+                    smtpFromEmail: data.smtpFromEmail || null,
+                    smtpRecipientEmail: data.smtpRecipientEmail || null
                 },
                 create: {
                     id: 'default',
@@ -242,7 +256,14 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     financingCalculatorLocation: data.financingCalculatorLocation || 'main',
                     defaultOgTitle: data.defaultOgTitle || null,
                     defaultOgDescription: data.defaultOgDescription || null,
-                    defaultOgImage: data.defaultOgImage || null
+                    defaultOgImage: data.defaultOgImage || null,
+
+                    smtpHost: data.smtpHost || null,
+                    smtpPort: data.smtpPort ? toNumberOrFallback(data.smtpPort, 465) : null,
+                    smtpUser: data.smtpUser || null,
+                    smtpPassword: data.smtpPassword || null,
+                    smtpFromEmail: data.smtpFromEmail || null,
+                    smtpRecipientEmail: data.smtpRecipientEmail || null
                 }
             });
 

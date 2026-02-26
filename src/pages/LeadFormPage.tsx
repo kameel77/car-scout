@@ -45,7 +45,7 @@ type LeadFormData = z.infer<typeof leadSchema>;
 export default function LeadFormPage() {
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const { t } = useTranslation();
-  
+
   // Use slug if available (new URL format), otherwise fall back to id (legacy format)
   const listingIdentifier = slug || id;
   const navigate = useNavigate();
@@ -134,12 +134,12 @@ export default function LeadFormPage() {
   const onSubmit = async (formData: LeadFormData) => {
     setStatus('loading');
     try {
-      if (!id) {
-        throw new Error('Brak ID ogłoszenia');
+      if (!listing?.listing_id) {
+        throw new Error('Brak ogłoszenia do przypisania');
       }
 
       const { lead } = await leadsApi.submitLead({
-        listingId: id,
+        listingId: listing.listing_id,
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
