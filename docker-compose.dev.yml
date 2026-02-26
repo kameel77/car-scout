@@ -30,7 +30,9 @@ services:
       carscout-private:
         aliases:
           - backend # Stable DNS name for nginx upstream
-      coolify: {}
+      coolify:
+        aliases:
+          - backend # IPv4 via coolify network for nginx resolver
 
   # Frontend Container (Nginx) — pulled from GHCR
   frontend:
