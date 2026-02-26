@@ -36,9 +36,6 @@ services:
       carscout-private:
         aliases:
           - backend
-      coolify:
-        aliases:
-          - backend
 
   # Frontend (Nginx) — pulled from GHCR
   frontend:
