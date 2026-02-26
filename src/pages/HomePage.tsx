@@ -249,9 +249,39 @@ export default function HomePage() {
           <p>Zostaw numer — oddzwonimy w ciągu 15 minut i pomożemy Ci znaleźć idealne auto.</p>
           <form
             className="home-cta-form"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              alert('Dziękujemy! Odezwiemy się wkrótce.');
+              const form = e.target as HTMLFormElement;
+              const phoneInput = form.querySelector('input[type="tel"]') as HTMLInputElement;
+              const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+              const phone = phoneInput.value;
+
+              if (!phone) return;
+
+              try {
+                button.disabled = true;
+                const originalText = button.innerHTML;
+                button.innerHTML = 'Wysyłanie...';
+
+                await leadsApi.submitQuickLead({ phone });
+
+                button.innerHTML = 'Wysłano pomyślnie!';
+                button.style.backgroundColor = '#10b981';
+                button.style.color = 'white';
+                phoneInput.value = '';
+
+                setTimeout(() => {
+                  button.disabled = false;
+                  button.innerHTML = originalText;
+                  button.style.backgroundColor = '';
+                  button.style.color = '';
+                }, 3000);
+              } catch (error) {
+                console.error('Failed to submit quick contact form:', error);
+                alert('Wystąpił błąd podczas wysyłania formularza. Spróbuj ponownie.');
+                button.disabled = false;
+                button.innerHTML = 'Zadzwoń do mnie';
+              }
             }}
           >
             <input type="tel" placeholder="Twój numer telefonu" required />
