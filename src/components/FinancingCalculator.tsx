@@ -400,6 +400,7 @@ export function FinancingCalculator({
                                     amount: amountToFinance,
                                     period: months,
                                     downPayment: initialPaymentAmount,
+                                    finalPayment: finalPaymentAmount,
                                     installment: displayInstallment ?? monthlyInstallment
                                 }
                             }
