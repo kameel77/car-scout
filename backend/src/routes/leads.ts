@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { sendLeadEmail } from '../services/email';
+import { sendLeadEmail } from '../services/email.js';
 
 type PreferredContact = 'email' | 'phone';
 
