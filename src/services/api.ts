@@ -370,6 +370,18 @@ export const listingsApi = {
         }
 
         return response.json();
+    },
+
+    getListingsByIds: async (ids: string[]) => {
+        if (!ids.length) return { listings: [] };
+
+        const response = await fetch(`${API_BASE_URL}/api/listings/by-ids?ids=${ids.join(',')}`);
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        return response.json();
     }
 };
 

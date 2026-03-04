@@ -161,6 +161,36 @@ export async function listingRoutes(fastify: FastifyInstance) {
         };
     });
 
+    // Get multiple listings by IDs (for personal offer / CRM selection)
+    fastify.get('/api/listings/by-ids', async (request, reply) => {
+        const { ids } = request.query as { ids?: string };
+
+        if (!ids || !ids.trim()) {
+            return reply.code(400).send({ error: 'Missing ids parameter' });
+        }
+
+        const idList = ids.split(',').map(id => id.trim()).filter(Boolean);
+
+        if (idList.length === 0) {
+            return { listings: [] };
+        }
+
+        // Limit to 20 IDs for safety
+        const limitedIds = idList.slice(0, 20);
+
+        const listings = await fastify.prisma.listing.findMany({
+            where: {
+                id: { in: limitedIds },
+                isArchived: false
+            },
+            include: {
+                dealer: true
+            }
+        });
+
+        return { listings };
+    });
+
     // Get single listing by slug with price history
     fastify.get('/api/listings/by-slug/:slug', async (request, reply) => {
         const { slug } = request.params as { slug: string };

@@ -38,8 +38,8 @@ const parseDiscountValue = (value?: string | null): number | null => {
 };
 
 export type OfferType =
-    | { type: 'special_offer'; discount: number; initialPayment?: number }
-    | { type: 'crm_tracking'; uuid: string; discount: number; initialPayment?: number }
+    | { type: 'special_offer'; discount: number; initialPayment?: number; selectedIds?: string[] }
+    | { type: 'crm_tracking'; uuid: string; discount: number; initialPayment?: number; selectedIds?: string[] }
     | { type: 'invalid' };
 
 /**
@@ -59,6 +59,10 @@ export const parseOfferParam = (value?: string | null): OfferType => {
     const uuid = params.get('uuid');
     const discount = parseDiscountValue(params.get('offerDiscount') || params.get('discount'));
     const initialPayment = parseDiscountValue(params.get('initialPayment')); // Reuse parseDiscountValue as it parses positive integers
+    const selectedIdsRaw = params.get('selectedIds');
+    const selectedIds = selectedIdsRaw
+        ? selectedIdsRaw.split(',').map(id => id.trim()).filter(Boolean)
+        : undefined;
 
     // CRM tracking: has UUID + discount
     if (uuid && discount !== null) {
@@ -66,7 +70,8 @@ export const parseOfferParam = (value?: string | null): OfferType => {
             type: 'crm_tracking',
             uuid,
             discount,
-            initialPayment: initialPayment ?? undefined
+            initialPayment: initialPayment ?? undefined,
+            selectedIds: selectedIds?.length ? selectedIds : undefined
         };
     }
 
@@ -75,7 +80,8 @@ export const parseOfferParam = (value?: string | null): OfferType => {
         return {
             type: 'special_offer',
             discount,
-            initialPayment: initialPayment ?? undefined
+            initialPayment: initialPayment ?? undefined,
+            selectedIds: selectedIds?.length ? selectedIds : undefined
         };
     }
 

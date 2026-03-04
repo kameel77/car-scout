@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { PriceSettingsProvider } from "@/contexts/PriceSettingsContext";
 import { SpecialOfferProvider } from "@/contexts/SpecialOfferContext";
 import { CrmTrackingProvider } from "@/contexts/CrmTrackingContext";
+import { PersonalOfferProvider } from "@/contexts/PersonalOfferContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import SearchPage from "./pages/SearchPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
@@ -35,6 +36,7 @@ import { SeoManager } from '@/components/seo/SeoManager';
 import SeoPage from "./pages/admin/SeoPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminPartnersPage from "./pages/admin/PartnersPage";
+import PersonalOfferPage from "./pages/PersonalOfferPage";
 
 const queryClient = new QueryClient();
 
@@ -52,109 +54,112 @@ const App = () => (
             <BrowserRouter>
               <SpecialOfferProvider>
                 <CrmTrackingProvider>
-                  <Routes>
-                    {/* Public routes */}
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/samochody" element={<SearchPage />} />
-                    <Route path="/search" element={<SearchPage />} />
-                    <Route path="/kontakt" element={<ContactPage />} />
-                    <Route path="/faq" element={<PublicFaqPage />} />
-                    <Route path="/oferta/:slug" element={<ListingDetailPage />} />
-                    <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
-                    {/* Legacy routes - kept for backward compatibility during transition */}
-                    <Route path="/listing/:id" element={<ListingDetailPage />} />
-                    <Route path="/listing/:id/lead" element={<LeadFormPage />} />
+                  <PersonalOfferProvider>
+                    <Routes>
+                      {/* Public routes */}
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/samochody" element={<SearchPage />} />
+                      <Route path="/search" element={<SearchPage />} />
+                      <Route path="/kontakt" element={<ContactPage />} />
+                      <Route path="/faq" element={<PublicFaqPage />} />
+                      <Route path="/oferta/:slug" element={<ListingDetailPage />} />
+                      <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
+                      <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
+                      {/* Legacy routes - kept for backward compatibility during transition */}
+                      <Route path="/listing/:id" element={<ListingDetailPage />} />
+                      <Route path="/listing/:id/lead" element={<LeadFormPage />} />
 
-                    {/* Admin routes */}
-                    <Route path="/admin/login" element={<LoginPage />} />
-                    <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
+                      {/* Admin routes */}
+                      <Route path="/admin/login" element={<LoginPage />} />
+                      <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
+                      <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
 
-                    <Route element={<AdminLayout />}>
-                      <Route
-                        path="/admin/dashboard"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <AdminDashboard />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/listings"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <ListingManagementPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/translations"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <TranslationsPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/seo"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <SeoPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/faq"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <FaqPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/partners"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <AdminPartnersPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/financing"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <FinancingPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/import"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <ImportPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/analytics"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                            <PriceAnalyticsPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/users"
-                        element={
-                          <ProtectedRoute allowedRoles={['admin']}>
-                            <UsersPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                    </Route>
+                      <Route element={<AdminLayout />}>
+                        <Route
+                          path="/admin/dashboard"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <AdminDashboard />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/listings"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <ListingManagementPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/translations"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <TranslationsPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/seo"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <SeoPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/faq"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <FaqPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/partners"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <AdminPartnersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/financing"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <FinancingPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/import"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <ImportPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/analytics"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <PriceAnalyticsPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/users"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin']}>
+                              <UsersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                      </Route>
 
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </PersonalOfferProvider>
                 </CrmTrackingProvider>
               </SpecialOfferProvider>
             </BrowserRouter>

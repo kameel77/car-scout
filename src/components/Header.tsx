@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Car, Globe, X, Menu } from 'lucide-react';
+import { Car, Globe, X, Menu, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
+import { usePersonalOffer } from '@/contexts/PersonalOfferContext';
 
 const ALL_LANGUAGES = [
   { code: 'pl', label: 'Polski', flag: '🇵🇱' },
@@ -38,6 +39,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
+  const { hasPersonalOffer } = usePersonalOffer();
 
   const enabledLanguages = React.useMemo(() => {
     const codes = settings?.enabledLanguages || ['pl'];
@@ -134,6 +136,20 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 {link.label}
               </Link>
             ))}
+            {hasPersonalOffer && (
+              <Link
+                to="/dla-ciebie"
+                className={cn(
+                  "flex items-center gap-1.5 text-sm font-bold px-4 py-1.5 rounded-full transition-all",
+                  location.pathname === '/dla-ciebie'
+                    ? "bg-gradient-to-r from-orange-500 to-amber-400 text-white shadow-md shadow-orange-200"
+                    : "bg-gradient-to-r from-orange-50 to-amber-50 text-orange-600 hover:from-orange-100 hover:to-amber-100 border border-orange-200"
+                )}
+              >
+                <Gift className="h-3.5 w-3.5" />
+                Oferta dla Ciebie
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-6">
@@ -220,6 +236,21 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                       {link.label}
                     </Link>
                   ))}
+                  {hasPersonalOffer && (
+                    <Link
+                      to="/dla-ciebie"
+                      onClick={() => setIsOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2 text-lg font-semibold p-2 rounded-lg transition-colors",
+                        location.pathname === '/dla-ciebie'
+                          ? "bg-gradient-to-r from-orange-500 to-amber-400 text-white"
+                          : "bg-gradient-to-r from-orange-50 to-amber-50 text-orange-600 border border-orange-200"
+                      )}
+                    >
+                      <Gift className="h-4 w-4" />
+                      Oferta dla Ciebie
+                    </Link>
+                  )}
                   <Link
                     to="/samochody"
                     onClick={() => setIsOpen(false)}
