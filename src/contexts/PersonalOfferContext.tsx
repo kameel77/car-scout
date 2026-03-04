@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { parseOfferParam, OFFER_PARAM } from '@/utils/offerParser';
 import { readPersonalOfferIds, writePersonalOfferIds } from '@/utils/personalOffer';
 
@@ -12,6 +12,7 @@ const PersonalOfferContext = createContext<PersonalOfferContextType | undefined>
 
 export function PersonalOfferProvider({ children }: { children: React.ReactNode }) {
     const location = useLocation();
+    const navigate = useNavigate();
     const [selectedIds, setSelectedIds] = useState<string[]>(() => readPersonalOfferIds());
 
     useEffect(() => {
@@ -22,6 +23,11 @@ export function PersonalOfferProvider({ children }: { children: React.ReactNode 
         if (parsed.type !== 'invalid' && parsed.selectedIds?.length) {
             writePersonalOfferIds(parsed.selectedIds);
             setSelectedIds(parsed.selectedIds);
+
+            // Auto-redirect to personal offer page when visiting with offer param
+            if (location.pathname !== '/dla-ciebie') {
+                navigate('/dla-ciebie', { replace: true });
+            }
             return;
         }
 
