@@ -97,11 +97,17 @@ export async function buildApp(): Promise<FastifyInstance> {
                 }
             };
 
+            const extractOrigins = (envVar?: string) => {
+                if (!envVar) return [];
+                const cleanVar = envVar.trim().replace(/^["']|["']$/g, '');
+                return cleanVar.split(',');
+            };
+
             const allowedOrigins = [
-                ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []),
-                ...(process.env.VITE_FRONTEND_URL ? process.env.VITE_FRONTEND_URL.split(',') : []),
-                ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
-                ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
+                ...extractOrigins(process.env.FRONTEND_URL),
+                ...extractOrigins(process.env.VITE_FRONTEND_URL),
+                ...extractOrigins(process.env.CORS_ORIGINS),
+                ...extractOrigins(process.env.ALLOWED_ORIGINS),
                 'http://localhost:5173',
                 'http://localhost:8080'
             ].map(originOnly).filter(Boolean);
