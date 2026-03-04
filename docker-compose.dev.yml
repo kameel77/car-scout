@@ -4,6 +4,7 @@ services:
   # Backend API Container — pulled from GHCR
   carscout-api:
     image: ghcr.io/kameel77/car-scout-backend:${IMAGE_TAG:-dev}
+    pull_policy: always
     container_name: "${COMPOSE_PROJECT_NAME}-api"
     restart: unless-stopped
     expose:
@@ -37,6 +38,7 @@ services:
   # Frontend Container (Nginx) — pulled from GHCR
   frontend:
     image: ghcr.io/kameel77/car-scout-frontend:${IMAGE_TAG:-dev}
+    pull_policy: always
     container_name: "${COMPOSE_PROJECT_NAME}-frontend"
     environment:
       # Backend URL uses Docker service DNS — never stale IPs
