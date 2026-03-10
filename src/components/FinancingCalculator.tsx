@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Calculator, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useCrmTracking } from '@/contexts/CrmTrackingContext';
+
 
 interface FinancingCalculatorProps {
     listingId?: string;
@@ -31,7 +31,7 @@ export function FinancingCalculator({
     offerInitialPayment
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
-    const { offerDiscount } = useCrmTracking();
+
     const { data, isLoading } = useQuery({
         queryKey: ['financing-calculator'],
         queryFn: () => financingApi.listPublic(),
@@ -60,9 +60,9 @@ export function FinancingCalculator({
     const [initialPaymentPct, setInitialPaymentPct] = React.useState(10);
     const [finalPaymentPct, setFinalPaymentPct] = React.useState(20);
     const offerInitialPaymentPct = React.useMemo(() => {
-        if (!offerDiscount || !Number.isFinite(price) || price <= 0) return null;
-        return Math.round((offerDiscount / price) * 100);
-    }, [offerDiscount, price]);
+        if (!offerInitialPayment || !Number.isFinite(price) || price <= 0) return null;
+        return Math.round((offerInitialPayment / price) * 100);
+    }, [offerInitialPayment, price]);
 
     // Update selected product when category changes
     React.useEffect(() => {

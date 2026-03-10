@@ -18,7 +18,7 @@ export const parseDiscountValue = (value?: string | null): number | null => {
  */
 export const parseDiscountFromOfferParam = (value?: string | null): { discount: number; initialPayment?: number } | null => {
     const parsed = parseOfferParam(value);
-    if (parsed.type === 'special_offer') {
+    if (parsed.type === 'special_offer' || parsed.type === 'crm_tracking') {
         return {
             discount: parsed.discount,
             initialPayment: parsed.initialPayment

@@ -65,8 +65,7 @@ export default function ListingDetailPage() {
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
-  const { discount, initialPayment: contextInitialPayment, hasSpecialOffer } = useSpecialOffer();
-  const initialPayment = contextInitialPayment || discount;
+  const { discount, initialPayment, hasSpecialOffer } = useSpecialOffer();
   const listing = data?.listing;
 
   // Store search parameters for return navigation
@@ -384,7 +383,12 @@ export default function ListingDetailPage() {
                   )}
                 </div>
               </div>
-              {hasSpecialOffer && initialPayment && (
+              {hasSpecialOffer && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  (rabat specjalny: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
+                </div>
+              )}
+              {initialPayment != null && (
                 <div className="text-xs text-muted-foreground mt-1 mb-4">
                   (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
                 </div>
@@ -563,7 +567,12 @@ export default function ListingDetailPage() {
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
-                  {hasSpecialOffer && initialPayment && (
+                  {hasSpecialOffer && (
+                    <span className="text-xs text-muted-foreground mt-0.5">
+                      (rabat specjalny: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
+                    </span>
+                  )}
+                  {initialPayment != null && (
                     <span className="text-xs text-muted-foreground mt-0.5">
                       (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
                     </span>
