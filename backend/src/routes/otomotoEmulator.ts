@@ -6,16 +6,25 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
     // Middleware for basic API Key authentication
     fastify.addHook('preHandler', async (request, reply) => {
         const authHeader = request.headers.authorization;
-        const expectedToken = process.env.OTOMOTO_EMULATOR_API_KEY;
         
-        if (!expectedToken) {
-            fastify.log.warn('OTOMOTO_EMULATOR_API_KEY is not set in environment. Emulator is disabled.');
-            return reply.code(401).send({ error: 'Emulator API Key not configured on the server.' });
-        }
-
-        if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return reply.code(401).send({ error: 'Unauthorized. Invalid or missing Bearer token.' });
         }
+
+        const token = authHeader.replace('Bearer ', '').trim();
+
+        // Sprawdź w bazie czy istnieje aktywny partner z tym API Key
+        const partner = await fastify.prisma.partner.findUnique({
+            where: { apiKey: token, isActive: true }
+        });
+
+        if (!partner) {
+            fastify.log.warn(`Otomoto Emulator: Nieudana próba dostępu z tokenem: ${token.substring(0, 5)}...`);
+            return reply.code(401).send({ error: 'Unauthorized. Invalid API Key or Partner is inactive.' });
+        }
+
+        // Dodaj partnera do żądania na wypadek, gdybyśmy potrzebowali NIP / kontakt w handlerze
+        (request as any).partner = partner;
     });
 
     // Create or update advert (Upsert by VIN or ID)
