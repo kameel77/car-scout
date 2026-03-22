@@ -29,6 +29,9 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy Nginx config template for envsubst
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
+# Copy rate limiting config (http-level directives, not templated)
+COPY nginx-rate-limit.conf /etc/nginx/conf.d/rate-limit.conf
+
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]

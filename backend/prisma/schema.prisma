@@ -373,3 +373,20 @@ enum FaqPage {
   contact
   faq
 }
+
+model Partner {
+  id              String   @id @default(cuid())
+  name            String
+  apiKey          String   @unique @map("api_key")
+  nip             String?
+  contactPerson   String?  @map("contact_person")
+  contactEmail    String?  @map("contact_email")
+  contactPhone    String?  @map("contact_phone")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([apiKey])
+  @@index([isActive])
+  @@map("partners")
+}
