@@ -23,6 +23,8 @@ import { financingRoutes } from './routes/financing.js';
 import { seoRoutes } from './routes/seo.js';
 import { crmTrackingRoutes } from './routes/crmTracking.js';
 import { partnerAdsRoutes } from './routes/partnerAds.js';
+import { otomotoEmulatorRoutes } from './routes/otomotoEmulator.js';
+import { partnerManagementRoutes } from './routes/partners.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -213,6 +215,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(seoRoutes);
     await fastify.register(crmTrackingRoutes);
     await fastify.register(partnerAdsRoutes);
+    await fastify.register(otomotoEmulatorRoutes);
+    await fastify.register(partnerManagementRoutes);
 
     // Static files
     fastify.get('/uploads/:folder/:file', async (request, reply) => {
