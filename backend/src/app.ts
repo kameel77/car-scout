@@ -25,6 +25,11 @@ import { crmTrackingRoutes } from './routes/crmTracking.js';
 import { partnerAdsRoutes } from './routes/partnerAds.js';
 import { otomotoEmulatorRoutes } from './routes/otomotoEmulator.js';
 import { partnerManagementRoutes } from './routes/partners.js';
+import { rentalUploadRoutes } from './routes/rental-upload.js';
+import { rentalVehicleRoutes } from './routes/rental-vehicles.js';
+import { rentalCompanyRoutes } from './routes/rental-companies.js';
+import { rentalMatrixRoutes } from './routes/rental-matrix.js';
+import { rentalPublicRoutes } from './routes/rental-public.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -135,7 +140,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(multipart, {
         limits: {
             fileSize: 100 * 1024 * 1024,
-            files: 1
+            files: 20
         }
     });
 
@@ -217,16 +222,14 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(partnerAdsRoutes);
     await fastify.register(otomotoEmulatorRoutes);
     await fastify.register(partnerManagementRoutes);
+    await fastify.register(rentalUploadRoutes);
+    await fastify.register(rentalVehicleRoutes);
+    await fastify.register(rentalCompanyRoutes);
+    await fastify.register(rentalMatrixRoutes);
+    await fastify.register(rentalPublicRoutes);
 
-    // Static files
-    fastify.get('/uploads/:folder/:file', async (request, reply) => {
-        const { folder, file } = request.params as { folder: string; file: string };
-
-        if (folder !== 'logos') {
-            return reply.code(404).send({ error: 'Not found' });
-        }
-
-        const filePath = path.join(uploadsRoot, folder, file);
+    // Static files — helper
+    const serveStaticFile = async (filePath: string, reply: any) => {
         try {
             await fs.access(filePath);
             const ext = path.extname(filePath).toLowerCase();
@@ -236,10 +239,25 @@ export async function buildApp(): Promise<FastifyInstance> {
                         : ext === '.webp' ? 'image/webp'
                             : 'application/octet-stream';
             reply.header('Content-Type', mime);
+            reply.header('Cache-Control', 'public, max-age=31536000');
             return reply.send(createReadStream(filePath));
         } catch {
             return reply.code(404).send({ error: 'Not found' });
         }
+    };
+
+    // Static files — logos
+    fastify.get('/uploads/logos/:file', async (request, reply) => {
+        const { file } = request.params as { file: string };
+        const filePath = path.join(uploadsRoot, 'logos', file);
+        return serveStaticFile(filePath, reply);
+    });
+
+    // Static files — rental vehicle images
+    fastify.get('/uploads/rental-images/:vehicleId/:file', async (request, reply) => {
+        const { vehicleId, file } = request.params as { vehicleId: string; file: string };
+        const filePath = path.join(uploadsRoot, 'rental-images', vehicleId, file);
+        return serveStaticFile(filePath, reply);
     });
 
     // Cleanup hook
