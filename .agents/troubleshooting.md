@@ -177,22 +177,58 @@ docker exec <frontend_container> wget -qO- http://<backend_ip>:3000/api/settings
 **Objawy**:
 - Serwis przestaje odpowiadać (DOWN) i wraca po ~1h
 - Wzorzec: DOWN 23:01 → UP 00:00, DOWN 01:01 → UP 02:01
-- Healthcheck co 5 min potwierdza cykl
+- Healthcheck (Izzy) co 5 min potwierdza cykl
 
-**Podejrzane przyczyny** (do dalszej diagnozy):
-- Agresywny crawl botów (YandexBot co 2-5 min, Artemis CERT PL ~100+ req/s z SQL injection payloads)
-- `/storage/media/` paths serwowane jako SPA (562B index.html) zamiast 404 — boty crawlują nieistniejące zasoby
-- Brak `Crawl-delay` w robots.txt — boty nie są ograniczane
+**Pełna diagnostyka (2026-03-24)**:
+
+| Element | Status | Wynik |
+|---------|--------|-------|
+| Backend healthcheck | ✅ | `/health` odpowiada 200 cały czas (~1-2ms), zero requestów API od zewnątrz |
+| Kontenery | ✅ | Żaden nie restartował się w czasie outage |
+| CPU/RAM | ✅ | Frontend ~5MB, Backend ~50MB z 7.5GB — zero pressure |
+| Cron jobs | ✅ | Brak |
+| iptables/firewall | ✅ | INPUT ACCEPT, bez zmian |
+| OOM/dmesg | ✅ | Brak wpisów |
+| journalctl warnings | ✅ | "No entries" |
+| Coolify scheduled jobs | ✅ | Normalne, zero deploymentów |
+| Traefik logi | ⚠️ | **Puste** w czasie outage — requesty nie docierały do Traefik |
+| SSL cert | ✅ | Ważny do 2026-06-09 |
+| Bezpośredni curl | ✅ | `curl -I -H "Host: carsalon.pl" http://localhost` → 307 (Traefik działa) |
+
+**Diagnoza z Cloudflare GraphQL API (2026-03-24)**:
+
+| Godzina (UTC) | Total | 200 | 499 | 504 | 503 | 521 | Opis |
+|---|---|---|---|---|---|---|---|
+| 22:00 | 108 | 89 | - | - | 7 | - | ✅ Normal |
+| **23:00** | **86** | **5** | **73** | **5** | - | - | 🔴 DOWN #1 — origin nie odpowiada |
+| 00:00 | 74 | 68 | - | - | 1 | - | ✅ Recovery |
+| **01:00** | **119** | **7** | **103** | **6** | - | - | 🔴 DOWN #2 — origin nie odpowiada |
+| 02:00 | 83 | 73 | - | - | 1 | - | ✅ Recovery |
+| 03:00 | 108 | 100 | - | - | 1 | - | ✅ Normal |
+| **04:00** | **1063** | 310 | 1 | - | 122 | **271** | 🔴 DOWN #3 — serwer odmawia połączeń |
+| **05:00** | **398** | 79 | - | - | - | **301** | 🔴 DOWN #4 — serwer odmawia połączeń |
+
+**Kluczowe kody błędów**:
+- **499** = Cloudflare połączył się z origin, ale origin **nie odpowiedział** → klient timeout
+- **504** = Gateway Timeout — origin nie zwrócił odpowiedzi w czasie
+- **521** = Web Server Is Down — origin **odmawia połączeń** (Traefik/Docker down)
+
+**Root cause (DOWN #1 i #2)**: Analiza per-request pokazuje, że **YandexBot** crawluje agresywnie deep paths (3-5 requestów co ~5 sekund na ten sam URL z różnych IP). W trakcie tego origin przestaje odpowiadać → **499 dla wszystkich klientów** w tym Izzy (`service-monitor/1.0`, IP `2a01:4f9:c012:82f::1`).
+
+**Root cause (DOWN #3 i #4, 04:00-05:00)**: `521 Web Server Is Down` = Traefik/Docker **kompletnie niedostępny**. To może być restart/redeploy serwisów lub problem sieciowy na Hetzner.
+
+**Usunięto** osierocony kontener `frontend-bgsk44088o808oscs8k0sgog` (z 17.03, 6 dni UP, bez labelek Traefik).
 
 **Wdrożone środki zaradcze** (2026-03-24):
-1. **nginx.conf**: Dodano blokowanie Artemis scanner (UA), `/storage/` → 404, `/wordpress/`+`/backup/`+`/wp/`+`/old/`+`/new/` → 444, `autoindex off` dla `/assets/`
-2. **robots.txt**: Dodano `Disallow` dla `/login`, `/api/`, `/nowy/podglad/`, `/storage/`; `Crawl-delay: 10` dla YandexBot i SemrushBot
-3. Dodano `Sitemap: https://carsalon.pl/sitemap.xml`
+1. **nginx.conf**: Blokowanie Artemis scanner, `/storage/` → 404, CMS probe paths → 444
+2. **robots.txt**: `Disallow` wrażliwych ścieżek; `Crawl-delay: 10` dla YandexBot/SemrushBot
+3. Usunięto osierocony kontener frontend
 
-**Pliki dotknięte**: `nginx.conf`, `public/robots.txt`
-
-> [!WARNING]
-> Jeśli cykliczne DOWN/UP się powtórzy po wdrożeniu, sprawdź logi backendu pod kątem memory leak lub connection pool exhaustion (Prisma/Redis).
+> [!IMPORTANT]
+> **Krytyczne następne kroki**:
+> 1. **Zablokuj YandexBot** na poziomie Cloudflare WAF (reguła Security Rule) — to główna przyczyna DOWN #1/#2
+> 2. **Zbadaj przyczynę 521** o 04:00-05:00 UTC — `docker ps -a` pokaże czy kontenery się restartowały
+> 3. Zmień SSL mode z Full na **Full (Strict)** — masz ważny cert LE
 
 ---
 
