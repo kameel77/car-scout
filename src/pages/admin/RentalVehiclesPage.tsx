@@ -1,0 +1,608 @@
+import React, { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { rentalVehiclesApi, rentalCompaniesApi } from '@/services/rental-api';
+import type { RentalVehicle, RentalCompany } from '@/services/rental-api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import {
+    Plus, Search, Edit, Archive, RotateCcw, Trash2, X,
+    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2
+} from 'lucide-react';
+
+// ─── Vehicle Form ────────────────────────────────────────────────
+
+interface VehicleFormProps {
+    vehicle?: RentalVehicle;
+    dealers: Array<{ id: string; name: string; city?: string }>;
+    onSave: (data: any) => void;
+    onCancel: () => void;
+    isSaving: boolean;
+}
+
+function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFormProps) {
+    const [form, setForm] = useState({
+        make: vehicle?.make || '',
+        model: vehicle?.model || '',
+        version: vehicle?.version || '',
+        bodyType: vehicle?.bodyType || '',
+        fuelType: vehicle?.fuelType || '',
+        transmission: vehicle?.transmission || '',
+        enginePowerHp: vehicle?.enginePowerHp?.toString() || '',
+        engineCapacityCm3: vehicle?.engineCapacityCm3?.toString() || '',
+        productionYear: vehicle?.productionYear?.toString() || new Date().getFullYear().toString(),
+        color: vehicle?.color || '',
+        paintType: vehicle?.paintType || '',
+        doors: vehicle?.doors?.toString() || '',
+        seats: vehicle?.seats?.toString() || '',
+        drive: vehicle?.drive || '',
+        catalogPrice: vehicle?.catalogPrice?.toString() || '',
+        sellingPrice: vehicle?.sellingPrice?.toString() || '',
+        dealerId: vehicle?.dealerId || (dealers.length > 0 ? dealers[0].id : ''),
+        additionalInfoHeader: vehicle?.additionalInfoHeader || '',
+        additionalInfoContent: vehicle?.additionalInfoContent || '',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({
+            ...form,
+            enginePowerHp: form.enginePowerHp ? parseInt(form.enginePowerHp) : null,
+            engineCapacityCm3: form.engineCapacityCm3 ? parseInt(form.engineCapacityCm3) : null,
+            productionYear: parseInt(form.productionYear),
+            doors: form.doors ? parseInt(form.doors) : null,
+            seats: form.seats ? parseInt(form.seats) : null,
+            catalogPrice: parseInt(form.catalogPrice),
+            sellingPrice: parseInt(form.sellingPrice),
+        });
+    };
+
+    const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+        setForm(prev => ({ ...prev, [field]: e.target.value }));
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Basic Info */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Marka *</label>
+                    <Input value={form.make} onChange={set('make')} required placeholder="np. BMW" />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Model *</label>
+                    <Input value={form.model} onChange={set('model')} required placeholder="np. X3" />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Wersja</label>
+                    <Input value={form.version} onChange={set('version')} placeholder="np. xDrive20d" />
+                </div>
+
+                {/* Technical */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Typ nadwozia</label>
+                    <select value={form.bodyType} onChange={set('bodyType')} className="w-full h-10 px-3 rounded-md border text-sm">
+                        <option value="">Wybierz</option>
+                        {['SUV', 'Sedan', 'Kombi', 'Hatchback', 'Coupe', 'Kabriolet', 'Van', 'Pickup'].map(t => (
+                            <option key={t} value={t}>{t}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Paliwo</label>
+                    <select value={form.fuelType} onChange={set('fuelType')} className="w-full h-10 px-3 rounded-md border text-sm">
+                        <option value="">Wybierz</option>
+                        {['Benzyna', 'Diesel', 'Hybryda', 'Plug-in Hybrid', 'Elektryczny', 'LPG'].map(t => (
+                            <option key={t} value={t}>{t}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Skrzynia biegów</label>
+                    <select value={form.transmission} onChange={set('transmission')} className="w-full h-10 px-3 rounded-md border text-sm">
+                        <option value="">Wybierz</option>
+                        <option value="Automatyczna">Automatyczna</option>
+                        <option value="Manualna">Manualna</option>
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Moc (KM)</label>
+                    <Input type="number" value={form.enginePowerHp} onChange={set('enginePowerHp')} placeholder="np. 190" />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Pojemność (cm³)</label>
+                    <Input type="number" value={form.engineCapacityCm3} onChange={set('engineCapacityCm3')} placeholder="np. 1998" />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Rok produkcji *</label>
+                    <Input type="number" value={form.productionYear} onChange={set('productionYear')} required />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Kolor</label>
+                    <Input value={form.color} onChange={set('color')} placeholder="np. Czarny" />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Napęd</label>
+                    <select value={form.drive} onChange={set('drive')} className="w-full h-10 px-3 rounded-md border text-sm">
+                        <option value="">Wybierz</option>
+                        <option value="Przedni">Przedni</option>
+                        <option value="Tylny">Tylny</option>
+                        <option value="4x4">4x4</option>
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Drzwi</label>
+                    <Input type="number" value={form.doors} onChange={set('doors')} />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Miejsca</label>
+                    <Input type="number" value={form.seats} onChange={set('seats')} />
+                </div>
+
+                {/* Pricing */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Cena katalogowa (PLN) *</label>
+                    <Input type="number" value={form.catalogPrice} onChange={set('catalogPrice')} required />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Cena sprzedaży (PLN) *</label>
+                    <Input type="number" value={form.sellingPrice} onChange={set('sellingPrice')} required />
+                </div>
+
+                {/* Dealer */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Dealer *</label>
+                    <select value={form.dealerId} onChange={set('dealerId')} className="w-full h-10 px-3 rounded-md border text-sm" required>
+                        {dealers.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}{d.city ? ` (${d.city})` : ''}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Additional info */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Dodatkowy nagłówek</label>
+                <Input value={form.additionalInfoHeader} onChange={set('additionalInfoHeader')} />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Dodatkowy opis</label>
+                <textarea
+                    value={form.additionalInfoContent}
+                    onChange={set('additionalInfoContent')}
+                    className="w-full min-h-[80px] px-3 py-2 rounded-md border text-sm"
+                />
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t">
+                <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
+                    {isSaving ? 'Zapisywanie...' : vehicle ? 'Zapisz zmiany' : 'Dodaj pojazd'}
+                </Button>
+                <Button type="button" variant="outline" onClick={onCancel}>Anuluj</Button>
+            </div>
+        </form>
+    );
+}
+
+// ─── Assignment Dialog ────────────────────────────────────────────
+
+interface AssignmentSectionProps {
+    vehicleId: string;
+    assignments: any[];
+    companies: RentalCompany[];
+}
+
+function AssignmentSection({ vehicleId, assignments, companies }: AssignmentSectionProps) {
+    const { token } = useAuth();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const [showAdd, setShowAdd] = useState(false);
+    const [newAssignment, setNewAssignment] = useState({ rentalCompanyId: '', externalVehicleId: '', calculationId: '' });
+
+    const assignedCompanyIds = new Set(assignments.map((a: any) => a.rentalCompanyId));
+    const availableCompanies = companies.filter(c => !assignedCompanyIds.has(c.id));
+
+    const createMutation = useMutation({
+        mutationFn: () => rentalVehiclesApi.createAssignment(vehicleId, newAssignment, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            setShowAdd(false);
+            setNewAssignment({ rentalCompanyId: '', externalVehicleId: '', calculationId: '' });
+            toast({ title: 'Przypisano firmę' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (assignmentId: string) => rentalVehiclesApi.deleteAssignment(vehicleId, assignmentId, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({ title: 'Usunięto przypisanie' });
+        }
+    });
+
+    return (
+        <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+                    <Building2 className="w-4 h-4" /> Firmy najmowe ({assignments.length})
+                </h4>
+                {availableCompanies.length > 0 && (
+                    <Button size="sm" variant="outline" onClick={() => setShowAdd(!showAdd)}>
+                        <Plus className="w-3 h-3 mr-1" /> Przypisz
+                    </Button>
+                )}
+            </div>
+
+            {assignments.map((a: any) => (
+                <div key={a.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
+                    <div>
+                        <span className="font-medium">{a.rentalCompany?.name}</span>
+                        {a.calculationId && <span className="ml-2 text-gray-500">ID: {a.calculationId}</span>}
+                        {a._count?.matrixEntries > 0 && (
+                            <span className="ml-2 text-xs text-green-600">✓ {a._count.matrixEntries} wpisów matrycy</span>
+                        )}
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(a.id)} className="text-red-500 hover:text-red-700">
+                        <X className="w-3 h-3" />
+                    </Button>
+                </div>
+            ))}
+
+            {showAdd && (
+                <div className="p-3 bg-white rounded border space-y-2">
+                    <select
+                        value={newAssignment.rentalCompanyId}
+                        onChange={e => setNewAssignment(p => ({ ...p, rentalCompanyId: e.target.value }))}
+                        className="w-full h-9 px-3 rounded border text-sm"
+                    >
+                        <option value="">Wybierz firmę...</option>
+                        {availableCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <Input
+                        placeholder="External Vehicle ID (opcjonalnie)"
+                        value={newAssignment.externalVehicleId}
+                        onChange={e => setNewAssignment(p => ({ ...p, externalVehicleId: e.target.value }))}
+                        className="h-9 text-sm"
+                    />
+                    <Input
+                        placeholder="Calculation ID (opcjonalnie)"
+                        value={newAssignment.calculationId}
+                        onChange={e => setNewAssignment(p => ({ ...p, calculationId: e.target.value }))}
+                        className="h-9 text-sm"
+                    />
+                    <div className="flex gap-2">
+                        <Button size="sm" onClick={() => createMutation.mutate()} disabled={!newAssignment.rentalCompanyId || createMutation.isPending}>
+                            Przypisz
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>Anuluj</Button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Image Upload ────────────────────────────────────────────────
+
+function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
+    const { token } = useAuth();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    const uploadMutation = useMutation({
+        mutationFn: (files: File[]) => rentalVehiclesApi.uploadImages(vehicle.id, files, !vehicle.primaryImageUrl, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({ title: 'Zdjęcia załadowane' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    return (
+        <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" /> Zdjęcia ({vehicle.imageUrls?.length || 0})
+            </h4>
+
+            {vehicle.imageUrls?.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                    {vehicle.imageUrls.map((url, i) => (
+                        <div key={i} className={`relative w-20 h-20 rounded overflow-hidden border-2 ${url === vehicle.primaryImageUrl ? 'border-blue-500' : 'border-gray-200'}`}>
+                            <img src={url} alt={`Zdjęcie ${i + 1}`} className="w-full h-full object-cover" />
+                            {url === vehicle.primaryImageUrl && (
+                                <span className="absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-[10px] text-center">Główne</span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={e => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length > 0) uploadMutation.mutate(files);
+                }}
+                className="text-sm"
+            />
+        </div>
+    );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────
+
+export default function RentalVehiclesPage() {
+    const { token } = useAuth();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const [view, setView] = useState<'list' | 'add' | 'edit'>('list');
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+
+    const vehiclesQuery = useQuery({
+        queryKey: ['rental-vehicles', page, search],
+        queryFn: () => rentalVehiclesApi.list({ page: String(page), limit: '20', search: search || undefined }, token!),
+        enabled: !!token
+    });
+
+    const companiesQuery = useQuery({
+        queryKey: ['rental-companies'],
+        queryFn: () => rentalCompaniesApi.list(token!),
+        enabled: !!token
+    });
+
+    // For dealer list, use a simple fetch
+    const dealersQuery = useQuery({
+        queryKey: ['dealers-simple'],
+        queryFn: async () => {
+            const res = await fetch(`/api/rental-vehicles?limit=1`, { headers: { Authorization: `Bearer ${token}` } });
+            // Fallback: fetch dealers from existing listings endpoint
+            const listingsRes = await fetch(`/api/listings?perPage=1`, {});
+            const data = await listingsRes.json();
+            // Extract unique dealers
+            const dealerMap = new Map<string, any>();
+            if (data?.listings) {
+                data.listings.forEach((l: any) => {
+                    if (l.dealer) dealerMap.set(l.dealer.id, l.dealer);
+                });
+            }
+            return Array.from(dealerMap.values());
+        },
+        enabled: !!token
+    });
+
+    const vehicleDetailQuery = useQuery({
+        queryKey: ['rental-vehicle', editingId],
+        queryFn: () => rentalVehiclesApi.get(editingId!, token!),
+        enabled: !!editingId && !!token
+    });
+
+    const createMutation = useMutation({
+        mutationFn: (data: any) => rentalVehiclesApi.create(data, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            setView('list');
+            toast({ title: 'Pojazd dodany' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => rentalVehiclesApi.update(id, data, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle'] });
+            setView('list');
+            setEditingId(null);
+            toast({ title: 'Pojazd zaktualizowany' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    const archiveMutation = useMutation({
+        mutationFn: (id: string) => rentalVehiclesApi.archive(id, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({ title: 'Pojazd zarchiwizowany' });
+        }
+    });
+
+    const restoreMutation = useMutation({
+        mutationFn: (id: string) => rentalVehiclesApi.restore(id, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({ title: 'Pojazd przywrócony' });
+        }
+    });
+
+    const vehicles = vehiclesQuery.data?.vehicles || [];
+    const pagination = vehiclesQuery.data?.pagination;
+    const companies = companiesQuery.data?.companies || [];
+    const dealers = dealersQuery.data || [];
+
+    if (view === 'add') {
+        return (
+            <div className="p-6 max-w-5xl">
+                <h2 className="text-2xl font-bold mb-6">Dodaj pojazd najmu</h2>
+                <VehicleForm
+                    dealers={dealers}
+                    onSave={data => createMutation.mutate(data)}
+                    onCancel={() => setView('list')}
+                    isSaving={createMutation.isPending}
+                />
+            </div>
+        );
+    }
+
+    if (view === 'edit' && editingId && vehicleDetailQuery.data) {
+        return (
+            <div className="p-6 max-w-5xl">
+                <h2 className="text-2xl font-bold mb-6">Edytuj pojazd najmu</h2>
+                <VehicleForm
+                    vehicle={vehicleDetailQuery.data.vehicle}
+                    dealers={dealers}
+                    onSave={data => updateMutation.mutate({ id: editingId, data })}
+                    onCancel={() => { setView('list'); setEditingId(null); }}
+                    isSaving={updateMutation.isPending}
+                />
+                <ImageSection vehicle={vehicleDetailQuery.data.vehicle} />
+                <AssignmentSection
+                    vehicleId={editingId}
+                    assignments={vehicleDetailQuery.data.vehicle.rentalAssignments || []}
+                    companies={companies}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Pojazdy najmu</h2>
+                <Button onClick={() => setView('add')} className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="w-4 h-4 mr-2" /> Dodaj pojazd
+                </Button>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-4 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                    value={search}
+                    onChange={e => { setSearch(e.target.value); setPage(1); }}
+                    placeholder="Szukaj: marka, model, wersja..."
+                    className="pl-10"
+                />
+            </div>
+
+            {/* Table */}
+            <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                        <tr>
+                            <th className="text-left p-3 font-medium text-gray-600">Pojazd</th>
+                            <th className="text-left p-3 font-medium text-gray-600">Rok</th>
+                            <th className="text-left p-3 font-medium text-gray-600">Dealer</th>
+                            <th className="text-right p-3 font-medium text-gray-600">Cena kat.</th>
+                            <th className="text-center p-3 font-medium text-gray-600">Firmy</th>
+                            <th className="text-center p-3 font-medium text-gray-600">Status</th>
+                            <th className="text-right p-3 font-medium text-gray-600">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {vehicles.map((v: any) => (
+                            <React.Fragment key={v.id}>
+                                <tr
+                                    className="border-b hover:bg-gray-50 cursor-pointer"
+                                    onClick={() => setExpandedId(expandedId === v.id ? null : v.id)}
+                                >
+                                    <td className="p-3">
+                                        <div className="flex items-center gap-3">
+                                            {v.primaryImageUrl ? (
+                                                <img src={v.primaryImageUrl} className="w-12 h-10 rounded object-cover" alt="" />
+                                            ) : (
+                                                <div className="w-12 h-10 rounded bg-gray-100 flex items-center justify-center">
+                                                    <ImageIcon className="w-4 h-4 text-gray-400" />
+                                                </div>
+                                            )}
+                                            <div>
+                                                <span className="font-medium">{v.make} {v.model}</span>
+                                                {v.version && <span className="text-gray-500 ml-1">{v.version}</span>}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="p-3">{v.productionYear}</td>
+                                    <td className="p-3 text-gray-600">{v.dealer?.name}</td>
+                                    <td className="p-3 text-right">{v.catalogPrice?.toLocaleString('pl-PL')} zł</td>
+                                    <td className="p-3 text-center">
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700">
+                                            <Link2 className="w-3 h-3" /> {v.rentalAssignments?.length || 0}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                        <span className={`px-2 py-1 rounded-full text-xs ${v.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                            {v.isActive ? 'Aktywny' : 'Archiwalny'}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 text-right">
+                                        <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                            <Button size="sm" variant="ghost" onClick={() => { setEditingId(v.id); setView('edit'); }}>
+                                                <Edit className="w-4 h-4" />
+                                            </Button>
+                                            {v.isActive ? (
+                                                <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate(v.id)}>
+                                                    <Archive className="w-4 h-4 text-orange-500" />
+                                                </Button>
+                                            ) : (
+                                                <Button size="sm" variant="ghost" onClick={() => restoreMutation.mutate(v.id)}>
+                                                    <RotateCcw className="w-4 h-4 text-green-500" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {expandedId === v.id && (
+                                    <tr>
+                                        <td colSpan={7} className="p-0 border-b bg-gray-50/50">
+                                            <div className="p-4">
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-600">
+                                                    {v.fuelType && <div><span className="font-medium">Paliwo:</span> {v.fuelType}</div>}
+                                                    {v.transmission && <div><span className="font-medium">Skrzynia:</span> {v.transmission}</div>}
+                                                    {v.enginePowerHp && <div><span className="font-medium">Moc:</span> {v.enginePowerHp} KM</div>}
+                                                    {v.drive && <div><span className="font-medium">Napęd:</span> {v.drive}</div>}
+                                                    {v.color && <div><span className="font-medium">Kolor:</span> {v.color}</div>}
+                                                    <div><span className="font-medium">Cena sprz.:</span> {v.sellingPrice?.toLocaleString('pl-PL')} zł</div>
+                                                </div>
+                                                {v.rentalAssignments?.length > 0 && (
+                                                    <div className="mt-3 space-y-1">
+                                                        {v.rentalAssignments.map((a: any) => (
+                                                            <div key={a.id} className="text-xs flex items-center gap-2">
+                                                                <Building2 className="w-3 h-3 text-gray-400" />
+                                                                <span className="font-medium">{a.rentalCompany?.name}</span>
+                                                                {a._count?.matrixEntries > 0 && (
+                                                                    <span className="text-green-600">({a._count.matrixEntries} wpisów)</span>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
+                        ))}
+                        {vehicles.length === 0 && (
+                            <tr>
+                                <td colSpan={7} className="p-8 text-center text-gray-500">
+                                    {vehiclesQuery.isLoading ? 'Ładowanie...' : 'Brak pojazdów najmu'}
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+                    <span>Strona {pagination.page} z {pagination.totalPages} ({pagination.total} pojazdów)</span>
+                    <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                            <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>
+                            <ChevronRight className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

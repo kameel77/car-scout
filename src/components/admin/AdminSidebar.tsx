@@ -15,7 +15,10 @@ import {
     Upload,
     BarChart3,
     Car,
-    Handshake
+    Handshake,
+    ClipboardList,
+    Building2,
+    FileSpreadsheet
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -57,6 +60,9 @@ export function AdminSidebar() {
         { href: '/admin/seo', label: 'SEO', icon: Search, roles: ['admin', 'manager'] },
         { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, roles: ['admin', 'manager'] },
         { href: '/admin/partners', label: 'Partnerzy', icon: Handshake, roles: ['admin', 'manager'] },
+        { href: '/admin/rental-vehicles', label: 'Pojazdy najmu', icon: ClipboardList, roles: ['admin', 'manager'] },
+        { href: '/admin/rental-companies', label: 'Firmy najmowe', icon: Building2, roles: ['admin', 'manager'] },
+        { href: '/admin/rental-matrix', label: 'Matryca najmu', icon: FileSpreadsheet, roles: ['admin', 'manager'] },
         { href: '/admin/users', label: 'Users', icon: Users, roles: ['admin'] },
     ] as const;
 

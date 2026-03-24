@@ -36,7 +36,12 @@ import { SeoManager } from '@/components/seo/SeoManager';
 import SeoPage from "./pages/admin/SeoPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminPartnersPage from "./pages/admin/PartnersPage";
+import RentalVehiclesPage from "./pages/admin/RentalVehiclesPage";
+import RentalCompaniesPage from "./pages/admin/RentalCompaniesPage";
+import RentalMatrixPage from "./pages/admin/RentalMatrixPage";
 import PersonalOfferPage from "./pages/PersonalOfferPage";
+import RentalSearchPage from "./pages/RentalSearchPage";
+import RentalDetailPage from "./pages/RentalDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +70,8 @@ const App = () => (
                       <Route path="/oferta/:slug" element={<ListingDetailPage />} />
                       <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
+                      <Route path="/najem" element={<RentalSearchPage />} />
+                      <Route path="/najem/:slug" element={<RentalDetailPage />} />
                       {/* Legacy routes - kept for backward compatibility during transition */}
                       <Route path="/listing/:id" element={<ListingDetailPage />} />
                       <Route path="/listing/:id/lead" element={<LeadFormPage />} />
@@ -152,6 +159,30 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin']}>
                               <UsersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/rental-vehicles"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <RentalVehiclesPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/rental-companies"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <RentalCompaniesPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/rental-matrix"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <RentalMatrixPage />
                             </ProtectedRoute>
                           }
                         />
