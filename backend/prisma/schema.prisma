@@ -72,32 +72,44 @@ model Listing {
 }
 
 model Lead {
-  id                   String            @id @default(cuid())
-  listingId            String?           @map("listing_id")
-  name                 String
-  email                String
-  phone                String?
-  preferredContact     String            @default("email") @map("preferred_contact")
-  message              String
-  status               String            @default("new")
-  referenceNumber      String            @unique @map("reference_number")
-  consentMarketingAt   DateTime?         @map("consent_marketing_at")
-  consentPrivacyAt     DateTime?         @map("consent_privacy_at")
-  createdAt            DateTime          @default(now()) @map("created_at")
-  updatedAt            DateTime          @updatedAt @map("updated_at")
-  externalId           String?           @map("external_id")
-  externalStatus       String?           @map("external_status")
-  financingAmount      Float?            @map("financing_amount")
-  financingDownPayment Float?            @map("financing_down_payment")
-  financingInstallment Float?            @map("financing_installment")
-  financingFinalPayment Float?           @map("financing_final_payment")
-  financingPeriod      Int?              @map("financing_period")
-  financingProductId   String?           @map("financing_product_id")
-  financingProduct     FinancingProduct? @relation(fields: [financingProductId], references: [id])
-  listing              Listing?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  id                        String            @id @default(cuid())
+  leadType                  String            @default("sale") @map("lead_type") // sale | rental | quick_contact
+  listingId                 String?           @map("listing_id")
+  rentalVehicleId           String?           @map("rental_vehicle_id")
+  name                      String
+  email                     String
+  phone                     String?
+  preferredContact          String            @default("email") @map("preferred_contact")
+  message                   String
+  status                    String            @default("new")
+  referenceNumber           String            @unique @map("reference_number")
+  consentMarketingAt        DateTime?         @map("consent_marketing_at")
+  consentPrivacyAt          DateTime?         @map("consent_privacy_at")
+  createdAt                 DateTime          @default(now()) @map("created_at")
+  updatedAt                 DateTime          @updatedAt @map("updated_at")
+  externalId                String?           @map("external_id")
+  externalStatus            String?           @map("external_status")
+  financingAmount           Float?            @map("financing_amount")
+  financingDownPayment      Float?            @map("financing_down_payment")
+  financingInstallment      Float?            @map("financing_installment")
+  financingFinalPayment     Float?            @map("financing_final_payment")
+  financingPeriod           Int?              @map("financing_period")
+  financingProductId        String?           @map("financing_product_id")
+  // Rental-specific fields
+  rentalCompanyName         String?           @map("rental_company_name")
+  rentalAnnualMileageKm     Int?              @map("rental_annual_mileage_km")
+  rentalContractMonths      Int?              @map("rental_contract_months")
+  rentalInitialPaymentPct   Float?            @map("rental_initial_payment_pct")
+  rentalMonthlyRate         Float?            @map("rental_monthly_rate")
+
+  financingProduct          FinancingProduct? @relation(fields: [financingProductId], references: [id])
+  listing                   Listing?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  rentalVehicle             RentalVehicle?    @relation(fields: [rentalVehicleId], references: [id], onDelete: SetNull)
 
   @@index([listingId])
   @@index([financingProductId])
+  @@index([rentalVehicleId])
+  @@index([leadType])
   @@map("leads")
 }
 
@@ -427,6 +439,7 @@ model RentalVehicle {
 
   dealer                   Dealer                    @relation(fields: [dealerId], references: [id])
   rentalAssignments        VehicleRentalAssignment[]
+  leads                    Lead[]
 
   @@index([dealerId])
   @@index([make, model])

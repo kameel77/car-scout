@@ -292,5 +292,34 @@ export const rentalPublicApi = {
         const response = await fetch(`${API_BASE_URL}/api/rental/vehicles/${slug}/calculate?${queryParams}`);
         if (!response.ok) throw new Error('Calculation failed');
         return response.json();
+    },
+
+    submitLead: async (data: {
+        rentalVehicleId: string;
+        name: string;
+        email: string;
+        phone?: string;
+        preferredContact?: 'email' | 'phone';
+        message: string;
+        consentMarketing?: boolean;
+        consentPrivacy?: boolean;
+        rentalCompanyName?: string;
+        rentalAnnualMileageKm?: number;
+        rentalContractMonths?: number;
+        rentalInitialPaymentPct?: number;
+        rentalMonthlyRate?: number;
+    }) => {
+        const response = await fetch(`${API_BASE_URL}/api/leads/rental`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to submit rental lead');
+        }
+
+        return response.json();
     }
 };
