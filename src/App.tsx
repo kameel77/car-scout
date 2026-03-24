@@ -40,6 +40,8 @@ import RentalVehiclesPage from "./pages/admin/RentalVehiclesPage";
 import RentalCompaniesPage from "./pages/admin/RentalCompaniesPage";
 import RentalMatrixPage from "./pages/admin/RentalMatrixPage";
 import PersonalOfferPage from "./pages/PersonalOfferPage";
+import RentalSearchPage from "./pages/RentalSearchPage";
+import RentalDetailPage from "./pages/RentalDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +70,8 @@ const App = () => (
                       <Route path="/oferta/:slug" element={<ListingDetailPage />} />
                       <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
+                      <Route path="/najem" element={<RentalSearchPage />} />
+                      <Route path="/najem/:slug" element={<RentalDetailPage />} />
                       {/* Legacy routes - kept for backward compatibility during transition */}
                       <Route path="/listing/:id" element={<ListingDetailPage />} />
                       <Route path="/listing/:id/lead" element={<LeadFormPage />} />
