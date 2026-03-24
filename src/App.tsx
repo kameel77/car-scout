@@ -36,6 +36,9 @@ import { SeoManager } from '@/components/seo/SeoManager';
 import SeoPage from "./pages/admin/SeoPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminPartnersPage from "./pages/admin/PartnersPage";
+import RentalVehiclesPage from "./pages/admin/RentalVehiclesPage";
+import RentalCompaniesPage from "./pages/admin/RentalCompaniesPage";
+import RentalMatrixPage from "./pages/admin/RentalMatrixPage";
 import PersonalOfferPage from "./pages/PersonalOfferPage";
 
 const queryClient = new QueryClient();
@@ -152,6 +155,30 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin']}>
                               <UsersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/rental-vehicles"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <RentalVehiclesPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/rental-companies"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <RentalCompaniesPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/rental-matrix"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <RentalMatrixPage />
                             </ProtectedRoute>
                           }
                         />
