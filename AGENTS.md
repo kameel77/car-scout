@@ -18,7 +18,10 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 - **Loga**: Loga (header/footer) są przechowywane w formacie Base64 w tabeli `AppSettings`.
 
 ## 3. Środowisko i Konfiguracja (Deployment / Coolify)
-- **Separacja Środowisk**: Każde środowisko (np. staging, production) na Coolify jest w pełni izolowane.
+
+> **OBOWIĄZKOWA LEKTURA**: Przed jakimikolwiek zmianami w Docker Compose, Nginx, sieci lub ENV przeczytaj [DEPLOYMENT_ARCHITECTURE.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/.agents/DEPLOYMENT_ARCHITECTURE.md).
+
+- **Separacja Środowisk**: Każde środowisko (prod, staging, dev) na Coolify jest w pełni izolowane. Rozróżnia je `COMPOSE_PROJECT_NAME` (`carscout-prod`, `carscout-staging`, `carscout-dev`).
 - **Bazy danych**: Usługi **Postgres** oraz **Redis** są zainstalowane jako osobne serwisy w ramach danego środowiska na Coolify. Nie są częścią głównego `docker-compose`.
 - **Wymagana zgoda**: Agent nie może wprowadzać zmian w konfiguracji `docker-compose`, backendzie ani API, które wpływałyby na separację środowisk lub wymagałyby zmian w zmiennych środowiskowych (ENV) bez wyraźnej zgody użytkownika.
 - **Zmienne ENV**:
@@ -26,6 +29,17 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
     - Backend CORS whitelist: `FRONTEND_URL`, `VITE_FRONTEND_URL`, `CORS_ORIGINS`, `ALLOWED_ORIGINS`.
 - **CORS**: Reguły w `backend/src/server.ts`. Nie hardkoduj domen produkcyjnych – używaj list w ENV.
 - **Proxy**: Odwrócone proxy zawsze dostarcza ścieżkę `/api`. Klient zawsze woła `/api/...`.
+
+### Sieć Docker i DNS (KRYTYCZNE)
+- **Każde środowisko** ma izolowaną sieć `carscout-private` ORAZ dostęp do współdzielonej sieci `coolify`.
+- **`BACKEND_URL=http://backend:3000`** — hostname `backend` jest bezpieczny tylko na sieci prywatnej. Na sieci `coolify` może wystąpić **kolizja DNS** z innymi aplikacjami.
+- **Jeśli Nginx nie trafia do backendu** (404/504 mimo healthy backendu) → sprawdź `nslookup backend` z wnętrza kontenera frontend. Jeśli IP nie zgadza się z backendem → zmień `BACKEND_URL` na `http://${APP_UUID}-backend:3000`.
+- **Nigdy nie usuwaj backendu z sieci `coolify`** — straci łączność z bazami danych.
+
+### Traefik (coolify-proxy)
+- Traefik traci routing po wielokrotnych restartach/redeployach → `docker restart coolify-proxy`.
+- **Po KAŻDYM restarcie/redeployu** sprawdź WSZYSTKIE środowiska (prod + staging + dev).
+- W razie problemów z routingiem: patrz [troubleshooting.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/.agents/troubleshooting.md) — incydenty #3 i #4.
 
 ## 4. Narzędzia i Bezpieczeństwo Danych
 - Używaj `rg` (ripgrep) do przeszukiwania kodu.

@@ -1,0 +1,396 @@
+import { FastifyInstance } from 'fastify';
+
+function generateSlug(make: string, model: string, version: string | null, productionYear: number, bodyType: string | null, fuelType: string | null, id: string): string {
+    const translitMap: Record<string, string> = {
+        'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n',
+        'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
+        'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss'
+    };
+
+    const transliterate = (str: string) =>
+        str.toLowerCase().replace(/[^\x00-\x7F]/g, char => translitMap[char] || char);
+
+    const parts = [make, model, version, String(productionYear), bodyType, fuelType, id]
+        .filter(Boolean)
+        .map(p => transliterate(p!))
+        .map(p => p.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+
+    return parts.join('-').replace(/-{2,}/g, '-');
+}
+
+export async function rentalVehicleRoutes(fastify: FastifyInstance) {
+    // List rental vehicles (admin)
+    fastify.get('/api/rental-vehicles', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const {
+            page = '1',
+            limit = '20',
+            dealerId,
+            make,
+            model,
+            isActive,
+            search
+        } = request.query as Record<string, string | undefined>;
+
+        const pageNum = Math.max(1, parseInt(page || '1'));
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit || '20')));
+        const skip = (pageNum - 1) * limitNum;
+
+        const where: any = {};
+
+        if (dealerId) where.dealerId = dealerId;
+        if (make) where.make = { contains: make, mode: 'insensitive' };
+        if (model) where.model = { contains: model, mode: 'insensitive' };
+        if (isActive !== undefined) where.isActive = isActive === 'true';
+
+        if (search) {
+            where.OR = [
+                { make: { contains: search, mode: 'insensitive' } },
+                { model: { contains: search, mode: 'insensitive' } },
+                { version: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+
+        const [vehicles, total] = await Promise.all([
+            fastify.prisma.rentalVehicle.findMany({
+                where,
+                skip,
+                take: limitNum,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    dealer: {
+                        select: { id: true, name: true, addressLine1: true, city: true }
+                    },
+                    rentalAssignments: {
+                        include: {
+                            rentalCompany: {
+                                select: { id: true, name: true, slug: true }
+                            },
+                            _count: { select: { matrixEntries: true } }
+                        }
+                    }
+                }
+            }),
+            fastify.prisma.rentalVehicle.count({ where })
+        ]);
+
+        return {
+            vehicles,
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total,
+                totalPages: Math.ceil(total / limitNum)
+            }
+        };
+    });
+
+    // Get single rental vehicle (admin)
+    fastify.get('/api/rental-vehicles/:id', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({
+            where: { id },
+            include: {
+                dealer: true,
+                rentalAssignments: {
+                    include: {
+                        rentalCompany: true,
+                        matrixEntries: {
+                            orderBy: [
+                                { annualMileageKm: 'asc' },
+                                { contractMonths: 'asc' },
+                                { initialPaymentPct: 'asc' }
+                            ]
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        return { vehicle };
+    });
+
+    // Create rental vehicle
+    fastify.post('/api/rental-vehicles', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const body = request.body as any;
+
+        // Validate required fields
+        if (!body.make || !body.model || !body.productionYear || !body.catalogPrice || !body.sellingPrice || !body.dealerId) {
+            return reply.code(400).send({
+                error: 'Missing required fields: make, model, productionYear, catalogPrice, sellingPrice, dealerId'
+            });
+        }
+
+        // Verify dealer exists
+        const dealer = await fastify.prisma.dealer.findUnique({
+            where: { id: body.dealerId }
+        });
+
+        if (!dealer) {
+            return reply.code(400).send({ error: 'Dealer not found' });
+        }
+
+        const vehicle = await fastify.prisma.rentalVehicle.create({
+            data: {
+                dealerId: body.dealerId,
+                make: body.make,
+                model: body.model,
+                version: body.version || null,
+                bodyType: body.bodyType || null,
+                fuelType: body.fuelType || null,
+                transmission: body.transmission || null,
+                enginePowerHp: body.enginePowerHp ? parseInt(body.enginePowerHp) : null,
+                engineCapacityCm3: body.engineCapacityCm3 ? parseInt(body.engineCapacityCm3) : null,
+                productionYear: parseInt(body.productionYear),
+                color: body.color || null,
+                paintType: body.paintType || null,
+                doors: body.doors ? parseInt(body.doors) : null,
+                seats: body.seats ? parseInt(body.seats) : null,
+                drive: body.drive || null,
+                catalogPrice: parseInt(body.catalogPrice),
+                sellingPrice: parseInt(body.sellingPrice),
+                primaryImageUrl: body.primaryImageUrl || null,
+                imageUrls: body.imageUrls || [],
+                equipmentAudioMultimedia: body.equipmentAudioMultimedia || [],
+                equipmentSafety: body.equipmentSafety || [],
+                equipmentComfortExtras: body.equipmentComfortExtras || [],
+                equipmentOther: body.equipmentOther || [],
+                additionalInfoHeader: body.additionalInfoHeader || null,
+                additionalInfoContent: body.additionalInfoContent || null,
+                specsJson: body.specsJson || null
+            }
+        });
+
+        // Generate and set slug
+        const slug = generateSlug(
+            vehicle.make,
+            vehicle.model,
+            vehicle.version,
+            vehicle.productionYear,
+            vehicle.bodyType,
+            vehicle.fuelType,
+            vehicle.id
+        );
+
+        const updatedVehicle = await fastify.prisma.rentalVehicle.update({
+            where: { id: vehicle.id },
+            data: { slug }
+        });
+
+        return reply.code(201).send({ vehicle: updatedVehicle });
+    });
+
+    // Update rental vehicle
+    fastify.patch('/api/rental-vehicles/:id', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const body = request.body as any;
+
+        const existing = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        if (!existing) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        // Build update data — only include provided fields
+        const updateData: any = {};
+        const stringFields = ['make', 'model', 'version', 'bodyType', 'fuelType', 'transmission',
+            'color', 'paintType', 'drive', 'primaryImageUrl', 'additionalInfoHeader', 'additionalInfoContent'];
+        const intFields = ['enginePowerHp', 'engineCapacityCm3', 'productionYear', 'catalogPrice',
+            'sellingPrice', 'doors', 'seats'];
+        const arrayFields = ['imageUrls', 'equipmentAudioMultimedia', 'equipmentSafety',
+            'equipmentComfortExtras', 'equipmentOther'];
+
+        for (const field of stringFields) {
+            if (body[field] !== undefined) updateData[field] = body[field];
+        }
+        for (const field of intFields) {
+            if (body[field] !== undefined) updateData[field] = body[field] !== null ? parseInt(body[field]) : null;
+        }
+        for (const field of arrayFields) {
+            if (body[field] !== undefined) updateData[field] = body[field];
+        }
+        if (body.specsJson !== undefined) updateData.specsJson = body.specsJson;
+        if (body.isActive !== undefined) updateData.isActive = body.isActive;
+        if (body.dealerId !== undefined) updateData.dealerId = body.dealerId;
+
+        // Regenerate slug if make/model/version changed
+        const needSlugUpdate = body.make || body.model || body.version || body.productionYear || body.bodyType || body.fuelType;
+        if (needSlugUpdate) {
+            const merged = { ...existing, ...updateData };
+            updateData.slug = generateSlug(
+                merged.make, merged.model, merged.version,
+                merged.productionYear, merged.bodyType, merged.fuelType, id
+            );
+        }
+
+        const vehicle = await fastify.prisma.rentalVehicle.update({
+            where: { id },
+            data: updateData
+        });
+
+        return { vehicle };
+    });
+
+    // Archive (soft delete) rental vehicle
+    fastify.post('/api/rental-vehicles/:id/archive', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        await fastify.prisma.rentalVehicle.update({
+            where: { id },
+            data: { isActive: false }
+        });
+
+        return { success: true };
+    });
+
+    // Restore rental vehicle
+    fastify.post('/api/rental-vehicles/:id/restore', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        await fastify.prisma.rentalVehicle.update({
+            where: { id },
+            data: { isActive: true }
+        });
+
+        return { success: true };
+    });
+
+    // Delete rental vehicle permanently
+    fastify.delete('/api/rental-vehicles/:id', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        await fastify.prisma.rentalVehicle.delete({ where: { id } });
+
+        return { success: true };
+    });
+
+    // Assign rental company to vehicle
+    fastify.post('/api/rental-vehicles/:id/assignments', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { rentalCompanyId, externalVehicleId, calculationId } = request.body as {
+            rentalCompanyId: string;
+            externalVehicleId?: string;
+            calculationId?: string;
+        };
+
+        if (!rentalCompanyId) {
+            return reply.code(400).send({ error: 'rentalCompanyId is required' });
+        }
+
+        // Verify both exist
+        const [vehicle, company] = await Promise.all([
+            fastify.prisma.rentalVehicle.findUnique({ where: { id } }),
+            fastify.prisma.rentalCompany.findUnique({ where: { id: rentalCompanyId } })
+        ]);
+
+        if (!vehicle) return reply.code(404).send({ error: 'Rental vehicle not found' });
+        if (!company) return reply.code(404).send({ error: 'Rental company not found' });
+
+        // Check if assignment already exists
+        const existing = await fastify.prisma.vehicleRentalAssignment.findUnique({
+            where: { vehicleId_rentalCompanyId: { vehicleId: id, rentalCompanyId } }
+        });
+
+        if (existing) {
+            return reply.code(409).send({ error: 'Assignment already exists' });
+        }
+
+        const assignment = await fastify.prisma.vehicleRentalAssignment.create({
+            data: {
+                vehicleId: id,
+                rentalCompanyId,
+                externalVehicleId: externalVehicleId || null,
+                calculationId: calculationId || null
+            },
+            include: {
+                rentalCompany: { select: { id: true, name: true } }
+            }
+        });
+
+        return reply.code(201).send({ assignment });
+    });
+
+    // Update assignment
+    fastify.patch('/api/rental-vehicles/:id/assignments/:assignmentId', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { assignmentId } = request.params as { id: string; assignmentId: string };
+        const body = request.body as {
+            externalVehicleId?: string;
+            calculationId?: string;
+            isActive?: boolean;
+        };
+
+        const assignment = await fastify.prisma.vehicleRentalAssignment.findUnique({
+            where: { id: assignmentId }
+        });
+
+        if (!assignment) {
+            return reply.code(404).send({ error: 'Assignment not found' });
+        }
+
+        const updated = await fastify.prisma.vehicleRentalAssignment.update({
+            where: { id: assignmentId },
+            data: {
+                ...(body.externalVehicleId !== undefined && { externalVehicleId: body.externalVehicleId }),
+                ...(body.calculationId !== undefined && { calculationId: body.calculationId }),
+                ...(body.isActive !== undefined && { isActive: body.isActive })
+            },
+            include: {
+                rentalCompany: { select: { id: true, name: true } }
+            }
+        });
+
+        return { assignment: updated };
+    });
+
+    // Delete assignment
+    fastify.delete('/api/rental-vehicles/:id/assignments/:assignmentId', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { assignmentId } = request.params as { id: string; assignmentId: string };
+
+        const assignment = await fastify.prisma.vehicleRentalAssignment.findUnique({
+            where: { id: assignmentId }
+        });
+
+        if (!assignment) {
+            return reply.code(404).send({ error: 'Assignment not found' });
+        }
+
+        await fastify.prisma.vehicleRentalAssignment.delete({
+            where: { id: assignmentId }
+        });
+
+        return { success: true };
+    });
+}
