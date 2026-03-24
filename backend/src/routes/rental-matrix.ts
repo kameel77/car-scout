@@ -78,33 +78,47 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
         // Group by vehicleId to find/create assignments
         const vehicleIds = [...new Set(records.map(r => r.vehicle_id?.trim()).filter(Boolean))];
 
-        // Verify all vehicles exist
-        const existingVehicles = await fastify.prisma.rentalVehicle.findMany({
-            where: { id: { in: vehicleIds } },
-            select: { id: true }
+        // For each vehicle_id in CSV, find matching assignment:
+        // 1. First try: match by externalVehicleId in existing assignments for this company
+        // 2. Fallback: match by internal vehicle ID (CUID)
+        const assignmentMap = new Map<string, string>(); // csvVehicleId → assignmentId
+
+        // Get all existing assignments for this company
+        const existingAssignments = await fastify.prisma.vehicleRentalAssignment.findMany({
+            where: { rentalCompanyId },
+            select: { id: true, vehicleId: true, externalVehicleId: true }
         });
-        const existingVehicleIds = new Set(existingVehicles.map(v => v.id));
 
-        // Find or create assignments for each vehicle
-        const assignmentMap = new Map<string, string>(); // vehicleId → assignmentId
-
-        for (const vehicleId of vehicleIds) {
-            if (!existingVehicleIds.has(vehicleId)) {
-                result.errors.push({ row: 0, error: `Vehicle ${vehicleId} not found` });
+        for (const csvVehicleId of vehicleIds) {
+            // Try matching by externalVehicleId first
+            const byExternal = existingAssignments.find(a => a.externalVehicleId === csvVehicleId);
+            if (byExternal) {
+                assignmentMap.set(csvVehicleId, byExternal.id);
                 continue;
             }
 
-            let assignment = await fastify.prisma.vehicleRentalAssignment.findUnique({
-                where: { vehicleId_rentalCompanyId: { vehicleId, rentalCompanyId } }
-            });
-
-            if (!assignment) {
-                assignment = await fastify.prisma.vehicleRentalAssignment.create({
-                    data: { vehicleId, rentalCompanyId }
-                });
+            // Fallback: try matching by internal vehicle ID (CUID)
+            const byInternal = existingAssignments.find(a => a.vehicleId === csvVehicleId);
+            if (byInternal) {
+                assignmentMap.set(csvVehicleId, byInternal.id);
+                continue;
             }
 
-            assignmentMap.set(vehicleId, assignment.id);
+            // Last attempt: check if vehicle exists by internal ID and create assignment
+            const vehicleExists = await fastify.prisma.rentalVehicle.findUnique({
+                where: { id: csvVehicleId },
+                select: { id: true }
+            });
+
+            if (vehicleExists) {
+                const newAssignment = await fastify.prisma.vehicleRentalAssignment.create({
+                    data: { vehicleId: csvVehicleId, rentalCompanyId }
+                });
+                assignmentMap.set(csvVehicleId, newAssignment.id);
+                continue;
+            }
+
+            result.errors.push({ row: 0, error: `Vehicle ${csvVehicleId} not found. Set this value as External Vehicle ID in the assignment, or use the internal vehicle CUID.` });
         }
 
         // Process each row

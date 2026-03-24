@@ -8,8 +8,41 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
     Plus, Search, Edit, Archive, RotateCcw, Trash2, X,
-    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2
+    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil
 } from 'lucide-react';
+
+// Helper: parse comma-separated text to array
+function textToArray(text: string): string[] {
+    return text.split('\n').map(s => s.trim()).filter(Boolean);
+}
+function arrayToText(arr: string[] | undefined | null): string {
+    return (arr || []).join('\n');
+}
+
+// ─── Copyable ID ─────────────────────────────────────────────────
+
+function CopyableId({ id }: { id: string }) {
+    const [copied, setCopied] = useState(false);
+    const short = id.length > 10 ? `${id.slice(0, 4)}…${id.slice(-4)}` : id;
+
+    const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(id);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+        <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 text-xs font-mono text-gray-500 hover:text-blue-600 transition-colors"
+            title={`Click to copy: ${id}`}
+        >
+            {short}
+            {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+        </button>
+    );
+}
 
 // ─── Vehicle Form ────────────────────────────────────────────────
 
@@ -42,6 +75,10 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
         dealerId: vehicle?.dealerId || (dealers.length > 0 ? dealers[0].id : ''),
         additionalInfoHeader: vehicle?.additionalInfoHeader || '',
         additionalInfoContent: vehicle?.additionalInfoContent || '',
+        equipmentAudioMultimedia: arrayToText(vehicle?.equipmentAudioMultimedia),
+        equipmentSafety: arrayToText(vehicle?.equipmentSafety),
+        equipmentComfortExtras: arrayToText(vehicle?.equipmentComfortExtras),
+        equipmentOther: arrayToText(vehicle?.equipmentOther),
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -55,6 +92,10 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
             seats: form.seats ? parseInt(form.seats) : null,
             catalogPrice: parseInt(form.catalogPrice),
             sellingPrice: parseInt(form.sellingPrice),
+            equipmentAudioMultimedia: textToArray(form.equipmentAudioMultimedia),
+            equipmentSafety: textToArray(form.equipmentSafety),
+            equipmentComfortExtras: textToArray(form.equipmentComfortExtras),
+            equipmentOther: textToArray(form.equipmentOther),
         });
     };
 
@@ -160,6 +201,50 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
                 </div>
             </div>
 
+            {/* Equipment Categories */}
+            <div className="col-span-full">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3 mt-2 border-b pb-2">Wyposażenie</h3>
+                <p className="text-xs text-gray-500 mb-3">Wprowadź każdy element wyposażenia w nowej linii.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">🎵 Audio i Multimedia</label>
+                        <textarea
+                            value={form.equipmentAudioMultimedia}
+                            onChange={set('equipmentAudioMultimedia')}
+                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
+                            placeholder={`np.\nSystem nawigacji\nApple CarPlay\nBluetooth`}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">🛡️ Bezpieczeństwo</label>
+                        <textarea
+                            value={form.equipmentSafety}
+                            onChange={set('equipmentSafety')}
+                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
+                            placeholder={`np.\nABS\nESP\nAsystent pasa ruchu`}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">🛋️ Komfort i Dodatki</label>
+                        <textarea
+                            value={form.equipmentComfortExtras}
+                            onChange={set('equipmentComfortExtras')}
+                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
+                            placeholder={`np.\nKlimatyzacja automatyczna\nPodgrzewane fotele\nKamera cofania`}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">📦 Inne</label>
+                        <textarea
+                            value={form.equipmentOther}
+                            onChange={set('equipmentOther')}
+                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
+                            placeholder={`np.\nFelgi aluminiowe 19"\nHak holowniczy\nRelingi dachowe`}
+                        />
+                    </div>
+                </div>
+            </div>
+
             {/* Additional info */}
             <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Dodatkowy nagłówek</label>
@@ -235,18 +320,7 @@ function AssignmentSection({ vehicleId, assignments, companies }: AssignmentSect
             </div>
 
             {assignments.map((a: any) => (
-                <div key={a.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
-                    <div>
-                        <span className="font-medium">{a.rentalCompany?.name}</span>
-                        {a.calculationId && <span className="ml-2 text-gray-500">ID: {a.calculationId}</span>}
-                        {a._count?.matrixEntries > 0 && (
-                            <span className="ml-2 text-xs text-green-600">✓ {a._count.matrixEntries} wpisów matrycy</span>
-                        )}
-                    </div>
-                    <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(a.id)} className="text-red-500 hover:text-red-700">
-                        <X className="w-3 h-3" />
-                    </Button>
-                </div>
+                <AssignmentRow key={a.id} assignment={a} vehicleId={vehicleId} onDelete={() => deleteMutation.mutate(a.id)} />
             ))}
 
             {showAdd && (
@@ -279,6 +353,74 @@ function AssignmentSection({ vehicleId, assignments, companies }: AssignmentSect
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// ─── Editable Assignment Row ─────────────────────────────────────
+
+function AssignmentRow({ assignment: a, vehicleId, onDelete }: { assignment: any; vehicleId: string; onDelete: () => void }) {
+    const { token } = useAuth();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const [editing, setEditing] = useState(false);
+    const [extId, setExtId] = useState(a.externalVehicleId || '');
+    const [calcId, setCalcId] = useState(a.calculationId || '');
+
+    const updateMutation = useMutation({
+        mutationFn: () => rentalVehiclesApi.updateAssignment(vehicleId, a.id, {
+            externalVehicleId: extId || null,
+            calculationId: calcId || null
+        }, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle'] });
+            setEditing(false);
+            toast({ title: 'Przypisanie zaktualizowane' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    if (editing) {
+        return (
+            <div className="p-3 bg-white rounded border space-y-2">
+                <div className="font-medium text-sm">{a.rentalCompany?.name}</div>
+                <div className="grid grid-cols-2 gap-2">
+                    <div>
+                        <label className="text-xs text-gray-500">External Vehicle ID</label>
+                        <Input value={extId} onChange={e => setExtId(e.target.value)} className="h-8 text-sm" placeholder="np. 100001" />
+                    </div>
+                    <div>
+                        <label className="text-xs text-gray-500">Calculation ID</label>
+                        <Input value={calcId} onChange={e => setCalcId(e.target.value)} className="h-8 text-sm" placeholder="np. CALC-001" />
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <Button size="sm" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>Zapisz</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Anuluj</Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center justify-between p-2 bg-white rounded border text-sm">
+            <div className="flex-1">
+                <span className="font-medium">{a.rentalCompany?.name}</span>
+                {a.externalVehicleId && <span className="ml-2 text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">ExtID: {a.externalVehicleId}</span>}
+                {a.calculationId && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">Calc: {a.calculationId}</span>}
+                {a._count?.matrixEntries > 0 && (
+                    <span className="ml-2 text-xs text-green-600">✓ {a._count.matrixEntries} wpisów matrycy</span>
+                )}
+            </div>
+            <div className="flex gap-1">
+                <Button size="sm" variant="ghost" onClick={() => setEditing(true)} title="Edytuj">
+                    <Pencil className="w-3 h-3" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={onDelete} className="text-red-500 hover:text-red-700">
+                    <X className="w-3 h-3" />
+                </Button>
+            </div>
         </div>
     );
 }
@@ -486,6 +628,7 @@ export default function RentalVehiclesPage() {
                 <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                         <tr>
+                            <th className="text-left p-3 font-medium text-gray-600">ID</th>
                             <th className="text-left p-3 font-medium text-gray-600">Pojazd</th>
                             <th className="text-left p-3 font-medium text-gray-600">Rok</th>
                             <th className="text-left p-3 font-medium text-gray-600">Dealer</th>
@@ -502,6 +645,9 @@ export default function RentalVehiclesPage() {
                                     className="border-b hover:bg-gray-50 cursor-pointer"
                                     onClick={() => setExpandedId(expandedId === v.id ? null : v.id)}
                                 >
+                                    <td className="p-3">
+                                        <CopyableId id={v.id} />
+                                    </td>
                                     <td className="p-3">
                                         <div className="flex items-center gap-3">
                                             {v.primaryImageUrl ? (
@@ -549,7 +695,7 @@ export default function RentalVehiclesPage() {
                                 </tr>
                                 {expandedId === v.id && (
                                     <tr>
-                                        <td colSpan={7} className="p-0 border-b bg-gray-50/50">
+                                        <td colSpan={8} className="p-0 border-b bg-gray-50/50">
                                             <div className="p-4">
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-600">
                                                     {v.fuelType && <div><span className="font-medium">Paliwo:</span> {v.fuelType}</div>}
@@ -580,7 +726,7 @@ export default function RentalVehiclesPage() {
                         ))}
                         {vehicles.length === 0 && (
                             <tr>
-                                <td colSpan={7} className="p-8 text-center text-gray-500">
+                                <td colSpan={8} className="p-8 text-center text-gray-500">
                                     {vehiclesQuery.isLoading ? 'Ładowanie...' : 'Brak pojazdów najmu'}
                                 </td>
                             </tr>
