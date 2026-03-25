@@ -139,7 +139,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         };
     });
 
-    // Public: Get vehicle details with full matrix
+    // Public: Get vehicle details with dynamic options from the matrix
     fastify.get('/api/rental/vehicles/:slug', async (request, reply) => {
         const { slug } = request.params as { slug: string };
 
@@ -160,14 +160,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     include: {
                         rentalCompany: {
                             select: { id: true, name: true, slug: true, logoUrl: true, contactEmail: true, contactPhone: true }
-                        },
-                        matrixEntries: {
-                            orderBy: [
-                                { annualMileageKm: 'asc' },
-                                { contractMonths: 'asc' },
-                                { initialPaymentPct: 'asc' }
-                            ]
                         }
+                        // Explicitly NOT including all matrixEntries here to avoid JSON bloat and OOM
                     }
                 }
             }
@@ -177,12 +171,19 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Rental vehicle not found' });
         }
 
-        // Aggregate dynamic options from matrix
-        const allEntries = vehicle.rentalAssignments.flatMap(a => a.matrixEntries);
+        const assignmentIds = vehicle.rentalAssignments.map((a: any) => a.id);
+        
+        // Fetch explicit distinct options from the DB rather than mapping thousands of entries in memory
+        const assignmentOptions = await fastify.prisma.rentalMatrixEntry.findMany({
+            where: { assignmentId: { in: assignmentIds } },
+            select: { annualMileageKm: true, contractMonths: true, initialPaymentPct: true },
+            distinct: ['annualMileageKm', 'contractMonths', 'initialPaymentPct']
+        });
+
         const options = {
-            annualMileageOptions: [...new Set(allEntries.map(e => e.annualMileageKm))].sort((a, b) => a - b),
-            contractMonthOptions: [...new Set(allEntries.map(e => e.contractMonths))].sort((a, b) => a - b),
-            initialPaymentOptions: [...new Set(allEntries.map(e => e.initialPaymentPct))].sort((a, b) => a - b)
+            annualMileageOptions: [...new Set(assignmentOptions.map(e => e.annualMileageKm))].sort((a, b) => a - b),
+            contractMonthOptions: [...new Set(assignmentOptions.map(e => e.contractMonths))].sort((a, b) => a - b),
+            initialPaymentOptions: [...new Set(assignmentOptions.map(e => e.initialPaymentPct))].sort((a, b) => a - b)
         };
 
         return { vehicle, options };
@@ -261,23 +262,37 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 }
 
 async function getFilterOptions(fastify: FastifyInstance) {
-    const vehicles = await fastify.prisma.rentalVehicle.findMany({
-        where: {
-            isActive: true,
-            rentalAssignments: {
-                some: { isActive: true, matrixEntries: { some: {} } }
-            }
-        },
-        select: {
-            make: true,
-            bodyType: true,
-            fuelType: true
-        }
-    });
+    const cacheKey = 'api:rental:filter-options';
+    const cached = await fastify.redis.get(cacheKey);
+    if (cached) {
+        return JSON.parse(cached);
+    }
 
-    return {
-        makes: [...new Set(vehicles.map(v => v.make))].sort(),
-        bodyTypes: [...new Set(vehicles.map(v => v.bodyType).filter(Boolean))].sort(),
-        fuelTypes: [...new Set(vehicles.map(v => v.fuelType).filter(Boolean))].sort()
+    const [makes, bodyTypes, fuelTypes] = await Promise.all([
+        fastify.prisma.rentalVehicle.findMany({
+            where: { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } },
+            select: { make: true },
+            distinct: ['make']
+        }),
+        fastify.prisma.rentalVehicle.findMany({
+            where: { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } }, bodyType: { not: null } },
+            select: { bodyType: true },
+            distinct: ['bodyType']
+        }),
+        fastify.prisma.rentalVehicle.findMany({
+            where: { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } }, fuelType: { not: null } },
+            select: { fuelType: true },
+            distinct: ['fuelType']
+        })
+    ]);
+
+    const options = {
+        makes: makes.map(v => v.make).sort(),
+        bodyTypes: bodyTypes.map(v => v.bodyType as string).sort(),
+        fuelTypes: fuelTypes.map(v => v.fuelType as string).sort()
     };
+
+    // Cache for 10 minutes
+    await fastify.redis.set(cacheKey, JSON.stringify(options), 'EX', 600);
+    return options;
 }

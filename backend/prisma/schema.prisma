@@ -72,39 +72,39 @@ model Listing {
 }
 
 model Lead {
-  id                        String            @id @default(cuid())
-  leadType                  String            @default("sale") @map("lead_type") // sale | rental | quick_contact
-  listingId                 String?           @map("listing_id")
-  rentalVehicleId           String?           @map("rental_vehicle_id")
-  name                      String
-  email                     String
-  phone                     String?
-  preferredContact          String            @default("email") @map("preferred_contact")
-  message                   String
-  status                    String            @default("new")
-  referenceNumber           String            @unique @map("reference_number")
-  consentMarketingAt        DateTime?         @map("consent_marketing_at")
-  consentPrivacyAt          DateTime?         @map("consent_privacy_at")
-  createdAt                 DateTime          @default(now()) @map("created_at")
-  updatedAt                 DateTime          @updatedAt @map("updated_at")
-  externalId                String?           @map("external_id")
-  externalStatus            String?           @map("external_status")
-  financingAmount           Float?            @map("financing_amount")
-  financingDownPayment      Float?            @map("financing_down_payment")
-  financingInstallment      Float?            @map("financing_installment")
-  financingFinalPayment     Float?            @map("financing_final_payment")
-  financingPeriod           Int?              @map("financing_period")
-  financingProductId        String?           @map("financing_product_id")
+  id                      String    @id @default(cuid())
+  leadType                String    @default("sale") @map("lead_type") // sale | rental | quick_contact
+  listingId               String?   @map("listing_id")
+  rentalVehicleId         String?   @map("rental_vehicle_id")
+  name                    String
+  email                   String
+  phone                   String?
+  preferredContact        String    @default("email") @map("preferred_contact")
+  message                 String
+  status                  String    @default("new")
+  referenceNumber         String    @unique @map("reference_number")
+  consentMarketingAt      DateTime? @map("consent_marketing_at")
+  consentPrivacyAt        DateTime? @map("consent_privacy_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  externalId              String?   @map("external_id")
+  externalStatus          String?   @map("external_status")
+  financingAmount         Float?    @map("financing_amount")
+  financingDownPayment    Float?    @map("financing_down_payment")
+  financingInstallment    Float?    @map("financing_installment")
+  financingFinalPayment   Float?    @map("financing_final_payment")
+  financingPeriod         Int?      @map("financing_period")
+  financingProductId      String?   @map("financing_product_id")
   // Rental-specific fields
-  rentalCompanyName         String?           @map("rental_company_name")
-  rentalAnnualMileageKm     Int?              @map("rental_annual_mileage_km")
-  rentalContractMonths      Int?              @map("rental_contract_months")
-  rentalInitialPaymentPct   Float?            @map("rental_initial_payment_pct")
-  rentalMonthlyRate         Float?            @map("rental_monthly_rate")
+  rentalCompanyName       String?   @map("rental_company_name")
+  rentalAnnualMileageKm   Int?      @map("rental_annual_mileage_km")
+  rentalContractMonths    Int?      @map("rental_contract_months")
+  rentalInitialPaymentPct Float?    @map("rental_initial_payment_pct")
+  rentalMonthlyRate       Float?    @map("rental_monthly_rate")
 
-  financingProduct          FinancingProduct? @relation(fields: [financingProductId], references: [id])
-  listing                   Listing?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  rentalVehicle             RentalVehicle?    @relation(fields: [rentalVehicleId], references: [id], onDelete: SetNull)
+  financingProduct FinancingProduct? @relation(fields: [financingProductId], references: [id])
+  listing          Listing?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  rentalVehicle    RentalVehicle?    @relation(fields: [rentalVehicleId], references: [id], onDelete: SetNull)
 
   @@index([listingId])
   @@index([financingProductId])
@@ -114,18 +114,18 @@ model Lead {
 }
 
 model Dealer {
-  id                String    @id @default(cuid())
+  id                String          @id @default(cuid())
   name              String
-  addressLine1      String    @map("address_line1")
-  addressLine2      String?   @map("address_line2")
-  addressLine3      String?   @map("address_line3")
+  addressLine1      String          @map("address_line1")
+  addressLine2      String?         @map("address_line2")
+  addressLine3      String?         @map("address_line3")
   city              String?
-  contactPhone      String?   @map("contact_phone")
-  googleRating      Float?    @map("google_rating")
-  googleReviewCount Int?      @map("google_review_count")
-  googleLink        String?   @map("google_link")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  contactPhone      String?         @map("contact_phone")
+  googleRating      Float?          @map("google_rating")
+  googleReviewCount Int?            @map("google_review_count")
+  googleLink        String?         @map("google_link")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
   listings          Listing[]
   rentalVehicles    RentalVehicle[]
 
@@ -388,16 +388,16 @@ enum FaqPage {
 }
 
 model Partner {
-  id              String   @id @default(cuid())
-  name            String
-  apiKey          String   @unique @map("api_key")
-  nip             String?
-  contactPerson   String?  @map("contact_person")
-  contactEmail    String?  @map("contact_email")
-  contactPhone    String?  @map("contact_phone")
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  name          String
+  apiKey        String   @unique @map("api_key")
+  nip           String?
+  contactPerson String?  @map("contact_person")
+  contactEmail  String?  @map("contact_email")
+  contactPhone  String?  @map("contact_phone")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@index([apiKey])
   @@index([isActive])
@@ -405,41 +405,41 @@ model Partner {
 }
 
 model RentalVehicle {
-  id                       String                    @id @default(cuid())
-  dealerId                 String                    @map("dealer_id")
+  id                       String   @id @default(cuid())
+  dealerId                 String   @map("dealer_id")
   make                     String
   model                    String
   version                  String?
-  bodyType                 String?                   @map("body_type")
-  fuelType                 String?                   @map("fuel_type")
+  bodyType                 String?  @map("body_type")
+  fuelType                 String?  @map("fuel_type")
   transmission             String?
-  enginePowerHp            Int?                      @map("engine_power_hp")
-  engineCapacityCm3        Int?                      @map("engine_capacity_cm3")
-  productionYear           Int                       @map("production_year")
+  enginePowerHp            Int?     @map("engine_power_hp")
+  engineCapacityCm3        Int?     @map("engine_capacity_cm3")
+  productionYear           Int      @map("production_year")
   color                    String?
-  paintType                String?                   @map("paint_type")
+  paintType                String?  @map("paint_type")
   doors                    Int?
   seats                    Int?
   drive                    String?
-  catalogPrice             Int                       @map("catalog_price")
-  sellingPrice             Int                       @map("selling_price")
-  primaryImageUrl          String?                   @map("primary_image_url")
-  imageUrls                String[]                  @map("image_urls")
-  equipmentAudioMultimedia String[]                  @map("equipment_audio_multimedia")
-  equipmentSafety          String[]                  @map("equipment_safety")
-  equipmentComfortExtras   String[]                  @map("equipment_comfort_extras")
-  equipmentOther           String[]                  @map("equipment_other")
-  additionalInfoHeader     String?                   @map("additional_info_header")
-  additionalInfoContent    String?                   @map("additional_info_content")
-  specsJson                Json?                     @map("specs_json")
-  slug                     String?                   @unique
-  isActive                 Boolean                   @default(true) @map("is_active")
-  createdAt                DateTime                  @default(now()) @map("created_at")
-  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  catalogPrice             Int      @map("catalog_price")
+  sellingPrice             Int      @map("selling_price")
+  primaryImageUrl          String?  @map("primary_image_url")
+  imageUrls                String[] @map("image_urls")
+  equipmentAudioMultimedia String[] @map("equipment_audio_multimedia")
+  equipmentSafety          String[] @map("equipment_safety")
+  equipmentComfortExtras   String[] @map("equipment_comfort_extras")
+  equipmentOther           String[] @map("equipment_other")
+  additionalInfoHeader     String?  @map("additional_info_header")
+  additionalInfoContent    String?  @map("additional_info_content")
+  specsJson                Json?    @map("specs_json")
+  slug                     String?  @unique
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
-  dealer                   Dealer                    @relation(fields: [dealerId], references: [id])
-  rentalAssignments        VehicleRentalAssignment[]
-  leads                    Lead[]
+  dealer            Dealer                    @relation(fields: [dealerId], references: [id])
+  rentalAssignments VehicleRentalAssignment[]
+  leads             Lead[]
 
   @@index([dealerId])
   @@index([make, model])
@@ -449,15 +449,15 @@ model RentalVehicle {
 }
 
 model RentalCompany {
-  id                 String                    @id @default(cuid())
-  name               String                    @unique
-  slug               String?                   @unique
-  logoUrl            String?                   @map("logo_url")
-  contactEmail       String?                   @map("contact_email")
-  contactPhone       String?                   @map("contact_phone")
-  isActive           Boolean                   @default(true) @map("is_active")
-  createdAt          DateTime                  @default(now()) @map("created_at")
-  updatedAt          DateTime                  @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String?  @unique
+  logoUrl      String?  @map("logo_url")
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   vehicleAssignments VehicleRentalAssignment[]
 
@@ -465,18 +465,18 @@ model RentalCompany {
 }
 
 model VehicleRentalAssignment {
-  id                String              @id @default(cuid())
-  vehicleId         String              @map("vehicle_id")
-  rentalCompanyId   String              @map("rental_company_id")
-  externalVehicleId String?             @map("external_vehicle_id")
-  calculationId     String?             @map("calculation_id")
-  isActive          Boolean             @default(true) @map("is_active")
-  createdAt         DateTime            @default(now()) @map("created_at")
-  updatedAt         DateTime            @updatedAt @map("updated_at")
+  id                String   @id @default(cuid())
+  vehicleId         String   @map("vehicle_id")
+  rentalCompanyId   String   @map("rental_company_id")
+  externalVehicleId String?  @map("external_vehicle_id")
+  calculationId     String?  @map("calculation_id")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  vehicle           RentalVehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  rentalCompany     RentalCompany       @relation(fields: [rentalCompanyId], references: [id])
-  matrixEntries     RentalMatrixEntry[]
+  vehicle       RentalVehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  rentalCompany RentalCompany       @relation(fields: [rentalCompanyId], references: [id])
+  matrixEntries RentalMatrixEntry[]
 
   @@unique([vehicleId, rentalCompanyId])
   @@index([vehicleId])
@@ -485,19 +485,21 @@ model VehicleRentalAssignment {
 }
 
 model RentalMatrixEntry {
-  id                String                  @id @default(cuid())
-  assignmentId      String                  @map("assignment_id")
-  annualMileageKm   Int                     @map("annual_mileage_km")
-  contractMonths    Int                     @map("contract_months")
-  initialPaymentPct Float                   @map("initial_payment_pct")
-  monthlyRateNet    Float                   @map("monthly_rate_net")
-  monthlyRateGross  Float                   @map("monthly_rate_gross")
-  servicesIncluded  String[]                @map("services_included")
-  createdAt         DateTime                @default(now()) @map("created_at")
+  id                String   @id @default(cuid())
+  assignmentId      String   @map("assignment_id")
+  annualMileageKm   Int      @map("annual_mileage_km")
+  contractMonths    Int      @map("contract_months")
+  initialPaymentPct Float    @map("initial_payment_pct")
+  monthlyRateNet    Float    @map("monthly_rate_net")
+  monthlyRateGross  Float    @map("monthly_rate_gross")
+  servicesIncluded  String[] @map("services_included")
+  createdAt         DateTime @default(now()) @map("created_at")
 
-  assignment        VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignment VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct])
   @@index([assignmentId])
+  @@index([monthlyRateGross])
+  @@index([assignmentId, monthlyRateGross])
   @@map("rental_matrix_entries")
 }
