@@ -17,6 +17,12 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 - **Ceny**: Ceny są automatycznie przeliczane przy każdej zmianie ustawień globalnych (marże, kursy walut) w `backend/src/routes/settings.ts`.
 - **Loga**: Loga (header/footer) są przechowywane w formacie Base64 w tabeli `AppSettings`.
 
+### Wydajność Bazy Danych i Caching (KRYTYCZNE)
+1. **Event Loop Blocking**: W Node.js, operacje CPU-heavy takie jak parsowanie map dla 10 000 wpisów (np. `[...new Set(data.map())]`) całkowicie blokują aplikację, prowadząc do błędów 504/521 gdy ruch jest wysoki (boty, np. YandexBot). 
+2. **Agregacja w Postgresie**: Zawsze deleguj filtrowanie, unikalne wartości i sortowanie do bazy używając native tools (np. Prisma `distinct`, `groupBy`), aby odciążyć RAM instancji.
+3. **Indeksy**: Jeśli zagnieżdżasz zapytania Prisma (np. `take: 1`, `orderBy` w joinach relacji), pamiętaj, że Postgres wykonuje operacje `LATERAL JOIN`. **Musisz** posiadać zaaplikowane indexy na sortowanych kolumnach!
+4. **Redis Cache**: Głównie używany w aplikacji Fastify obiekt `fastify.redis.set`. Trasy publiczne o małej zmienności wyników winny obficie stosować Redis do buforowania odpowiedzi JSON-owych np. dla list rozwijanych (10-30 min TTL).
+
 ## 3. Środowisko i Konfiguracja (Deployment / Coolify)
 
 > **OBOWIĄZKOWA LEKTURA**: Przed jakimikolwiek zmianami w Docker Compose, Nginx, sieci lub ENV przeczytaj [DEPLOYMENT_ARCHITECTURE.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/.agents/DEPLOYMENT_ARCHITECTURE.md).
