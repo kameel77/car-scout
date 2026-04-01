@@ -10,11 +10,9 @@ const CSFLOW_API_URL = process.env.CSFLOW_API_URL || 'https://webapi.demo.csflow
 export async function getCSFlowCars(): Promise<any[]> {
     const url = new URL(`${CSFLOW_API_URL}/cars`);
     // Limit można skonfigurować przez CSFLOW_LIMIT w ENV.
-    // Brak zmiennej = brak parametru limit (API zwraca wszystkie pojazdy).
-    const limit = process.env.CSFLOW_LIMIT;
-    if (limit) {
-        url.searchParams.append('limit', limit);
-    }
+    // Domyślnie 9999 — bez limitu CSFlow API zwraca tylko 10 rekordów.
+    const limit = process.env.CSFLOW_LIMIT || '9999';
+    url.searchParams.append('limit', limit);
 
     try {
         const response = await fetch(url.toString(), {
