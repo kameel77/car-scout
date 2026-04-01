@@ -140,26 +140,31 @@ export async function importRoutes(fastify: FastifyInstance) {
     fastify.get('/api/import/history', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
-        const scope = await resolveScope(fastify, request);
+        try {
+            const scope = await resolveScope(fastify, request);
 
-        const where: any = {};
-        // Non-platform users only see their own imports
-        if (!scope.isPlatform) {
-            where.userId = request.user!.userId;
-        }
-
-        const logs = await fastify.prisma.importLog.findMany({
-            where,
-            take: 50,
-            orderBy: { importedAt: 'desc' },
-            include: {
-                user: {
-                    select: { email: true, name: true }
-                }
+            const where: any = {};
+            // Non-platform users only see their own imports
+            if (!scope.isPlatform) {
+                where.importedBy = (request.user as any)?.userId;
             }
-        });
 
-        return { logs };
+            const logs = await fastify.prisma.importLog.findMany({
+                where,
+                take: 50,
+                orderBy: { importedAt: 'desc' },
+                include: {
+                    user: {
+                        select: { email: true, name: true }
+                    }
+                }
+            });
+
+            return { logs };
+        } catch (error) {
+            fastify.log.error(error, 'Failed to load import history');
+            return reply.code(500).send({ error: 'Failed to load import history' });
+        }
     });
 
     // Get import details

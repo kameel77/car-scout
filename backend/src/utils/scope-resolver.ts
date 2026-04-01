@@ -3,6 +3,8 @@
  * 
  * Extracts the user's active context from the JWT token and resolves
  * the appropriate Prisma where-clause filter for data isolation.
+ * 
+ * Backward-compatible with legacy JWTs that don't contain memberships.
  */
 
 import { FastifyInstance, FastifyRequest } from 'fastify';
@@ -28,6 +30,7 @@ export interface ResolvedScope {
 /**
  * Resolve scope info from request's JWT user.
  * Automatically fetches dealer IDs for group contexts.
+ * Falls back to legacy role-based resolution when memberships are absent.
  */
 export async function resolveScope(
     fastify: FastifyInstance,
@@ -35,13 +38,36 @@ export async function resolveScope(
 ): Promise<ResolvedScope> {
     const user = request.user as any;
 
-    const memberships: MembershipInfo[] = (user.memberships || []).map((m: any) => ({
+    let memberships: MembershipInfo[] = (user.memberships || []).map((m: any) => ({
         id: m.id,
         scopeType: m.scopeType as ScopeType,
         scopeId: m.scopeId,
         role: m.role as MemberRole,
         isDefaultContext: m.isDefaultContext,
     }));
+
+    // ── Legacy backward-compat ──
+    // If no memberships in JWT (pre-multitenant token), infer from legacy role
+    if (memberships.length === 0 && user.role) {
+        const legacyRole = user.role as string;
+        if (legacyRole === 'admin' || legacyRole === 'superadmin') {
+            memberships = [{
+                id: 'legacy',
+                scopeType: ScopeType.PLATFORM,
+                scopeId: 'PLATFORM',
+                role: MemberRole.SUPERADMIN_PLATFORM,
+                isDefaultContext: true,
+            }];
+        } else if (legacyRole === 'manager') {
+            memberships = [{
+                id: 'legacy',
+                scopeType: ScopeType.PLATFORM,
+                scopeId: 'PLATFORM',
+                role: MemberRole.PLATFORM_MANAGER,
+                isDefaultContext: true,
+            }];
+        }
+    }
 
     const activeContext: ActiveContext = user.activeContext
         ? { scopeType: user.activeContext.scopeType as ScopeType, scopeId: user.activeContext.scopeId }
