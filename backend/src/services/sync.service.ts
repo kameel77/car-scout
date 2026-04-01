@@ -8,13 +8,20 @@ export async function syncListingsFromCSV(
     csvData: CSVRow[],
     userId: string,
     source?: string,
-    importMode: ImportMode = 'replace'
+    importMode: ImportMode = 'replace',
+    contextDealerId?: string   // multi-tenant: assign to this dealer if no dealer info in CSV
 ): Promise<SyncResult> {
     const startTime = Date.now();
 
     return await prisma.$transaction(async (tx) => {
-        // 1. Get existing listings
+        // 1. Get existing listings (scoped to context dealer if applicable)
+        const existingWhere: any = {};
+        if (contextDealerId) {
+            existingWhere.dealerId = contextDealerId;
+        }
+
         const existingListings = await tx.listing.findMany({
+            where: existingWhere,
             select: {
                 id: true,
                 vin: true,
@@ -131,6 +138,11 @@ export async function syncListingsFromCSV(
                     }
                 });
                 dealerId = dealer.id;
+            }
+
+            // Fallback to context dealer if no dealer resolved from CSV
+            if (!dealerId && contextDealerId) {
+                dealerId = contextDealerId;
             }
 
             const listing = await tx.listing.create({

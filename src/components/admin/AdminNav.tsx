@@ -6,21 +6,25 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function AdminNav() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
 
   const navItems = [
     { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager'] },
     { href: '/admin/translations', label: 'Translations', icon: Languages, roles: ['admin', 'manager'] },
-    { href: '/admin/financing', label: 'Finansowanie', icon: Users, roles: ['admin', 'manager'] },
     { href: '/admin/seo', label: 'SEO', icon: Search, roles: ['admin', 'manager'] },
     { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, roles: ['admin', 'manager'] },
     { href: '/admin/users', label: 'Users', icon: Users, roles: ['admin'] },
   ] as const;
 
+  // Map effectiveRole to legacy role for filtering
+  const legacyRole = effectiveRole === 'SUPERADMIN_PLATFORM' ? 'admin'
+    : effectiveRole === 'PLATFORM_MANAGER' ? 'manager'
+      : user?.role || '';
+
   return (
     <div className="flex items-center gap-2">
       {navItems
-        .filter((item) => !user || (item.roles as readonly string[]).includes(user.role))
+        .filter((item) => (item.roles as readonly string[]).includes(legacyRole))
         .map((item) => {
           const isActive = location.pathname === item.href;
           const Icon = item.icon;

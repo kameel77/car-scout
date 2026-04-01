@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { resolveScope } from '../utils/scope-resolver.js';
 
 function generateSlug(make: string, model: string, version: string | null, productionYear: number, bodyType: string | null, fuelType: string | null, id: string): string {
     const translitMap: Record<string, string> = {
@@ -37,9 +38,15 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         const limitNum = Math.min(100, Math.max(1, parseInt(limit || '20')));
         const skip = (pageNum - 1) * limitNum;
 
-        const where: any = {};
+        // Resolve scope for data isolation
+        const scope = await resolveScope(fastify, request);
 
-        if (dealerId) where.dealerId = dealerId;
+        const where: any = {
+            ...scope.dealerFilter  // Apply scope filter
+        };
+
+        // Additional filters from query params
+        if (dealerId && scope.isPlatform) where.dealerId = dealerId; // only platform can override dealer filter
         if (make) where.make = { contains: make, mode: 'insensitive' };
         if (model) where.model = { contains: model, mode: 'insensitive' };
         if (isActive !== undefined) where.isActive = isActive === 'true';
@@ -125,24 +132,43 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
 
         // Validate required fields
-        if (!body.make || !body.model || !body.productionYear || !body.catalogPrice || !body.sellingPrice || !body.dealerId) {
+        if (!body.make || !body.model || !body.productionYear || !body.catalogPrice || !body.sellingPrice) {
             return reply.code(400).send({
-                error: 'Missing required fields: make, model, productionYear, catalogPrice, sellingPrice, dealerId'
+                error: 'Missing required fields: make, model, productionYear, catalogPrice, sellingPrice'
             });
         }
 
-        // Verify dealer exists
+        // Resolve scope for dealer assignment
+        const scope = await resolveScope(fastify, request);
+
+        // Determine dealerId: from body, or from context
+        let dealerId = body.dealerId;
+        if (!dealerId && scope.activeContext.scopeType === 'DEALER') {
+            dealerId = scope.activeContext.scopeId;
+        }
+        if (!dealerId) {
+            return reply.code(400).send({ error: 'dealerId is required (or switch to a dealer context)' });
+        }
+
+        // Verify dealer exists and user has access
         const dealer = await fastify.prisma.dealer.findUnique({
-            where: { id: body.dealerId }
+            where: { id: dealerId }
         });
 
         if (!dealer) {
             return reply.code(400).send({ error: 'Dealer not found' });
         }
 
+        // Non-platform users can only create for their own dealers
+        if (!scope.isPlatform) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
+
         const vehicle = await fastify.prisma.rentalVehicle.create({
             data: {
-                dealerId: body.dealerId,
+                dealerId,
                 make: body.make,
                 model: body.model,
                 version: body.version || null,

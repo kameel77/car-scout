@@ -194,3 +194,27 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Wykorzystuje istniejące endpointy `POST /api/listings/:id/archive` i `POST /api/listings/:id/restore`.
   - Wywołania wykonywane równolegle dla wszystkich zaznaczonych ofert.
   - **Usuwanie**: `DELETE /api/listings/:id` - trwałe usunięcie oferty wraz z powiązanymi danymi (leady, historia cen) przez `onDelete: Cascade` w schemacie Prisma.
+
+## 11. Model multi-tenant (platforma / grupa dealerska / dealer) — propozycja wdrożenia
+- **Cel**: zapewnienie bezpiecznej izolacji danych i uprawnień między dealerami oraz grupami dealerskimi, przy zachowaniu możliwości pracy cross-tenant dla ról platformowych.
+- **Zakres ról biznesowych**:
+  - `superadmin_platform`: pełny dostęp do wszystkich kontekstów i ustawień.
+  - `platform_manager`: zarządzanie stockiem, grupami dealerskimi i dealerami w całej platformie.
+  - `dealer_group_admin`: zarządzanie dealerami oraz użytkownikami w obrębie swojej grupy dealerskiej.
+  - `dealer_admin`: zarządzanie stockiem i użytkownikami własnego dealera.
+  - `dealer_employee`: zarządzanie stockiem własnego dealera.
+- **Model danych (docelowo)**:
+  - Nowa encja `DealerGroup` (grupy dealerskie).
+  - Nowa encja `Membership` (użytkownik + rola + scope: platforma/grupa/dealer).
+  - `Dealer` rozszerzony o relację do `DealerGroup`.
+  - `Listing` rozszerzony o opcjonalnego właściciela/opiekuna (`ownerUserId`) i tryb kontaktu.
+- **Zachowanie ofert**:
+  - Każdy pojazd ma przypisanego dealera (owner biznesowy).
+  - Dane kontaktowe mogą pochodzić z:
+    - kontaktu generycznego dealera (istniejące pola firmy/dealera), albo
+    - konkretnego pracownika dealera (opiekun pojazdu).
+  - Role platformowe mogą wprowadzać i edytować pojazdy w dowolnym kontekście po wyborze aktywnego scope.
+- **Panel administracyjny**:
+  - Dodanie przełącznika kontekstu (platforma/grupa/dealer) dla ról platformowych.
+  - Dodanie widoków do zarządzania grupami dealerskimi, dealerami i użytkownikami per scope.
+- **Status**: analiza i projekt architektury przygotowane; implementacja etapowa (schema -> migracja danych -> permission engine -> UI).

@@ -42,6 +42,8 @@ import RentalMatrixPage from "./pages/admin/RentalMatrixPage";
 import PersonalOfferPage from "./pages/PersonalOfferPage";
 import RentalSearchPage from "./pages/RentalSearchPage";
 import RentalDetailPage from "./pages/RentalDetailPage";
+import DealerGroupsPage from "./pages/admin/DealerGroupsPage";
+import DealersPage from "./pages/admin/DealersPage";
 
 const queryClient = new QueryClient();
 
@@ -183,6 +185,22 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <RentalMatrixPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/dealer-groups"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <DealerGroupsPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/dealers"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <DealersPage />
                             </ProtectedRoute>
                           }
                         />

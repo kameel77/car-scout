@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { refreshListingImages } from '../services/image-refresh.service.js';
 import { generateListingSlug, extractListingIdFromSlug } from '../utils/url-utils.js';
+import { resolveScope } from '../utils/scope-resolver.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
     // Get filter options (makes and models) - only active listings
@@ -28,7 +29,21 @@ export async function listingRoutes(fastify: FastifyInstance) {
     });
 
     // Get all listings (with filters)
+    // If an authenticated user with a scoped context calls this, results are filtered.
     fastify.get('/api/listings', async (request, reply) => {
+        // Optionally resolve scope if user is authenticated
+        let scopeDealerFilter: Record<string, any> = {};
+        const authHeader = request.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                await request.jwtVerify();
+                const scope = await resolveScope(fastify, request);
+                scopeDealerFilter = scope.dealerFilter;
+            } catch {
+                // Not authenticated or invalid token — ignore, serve public
+            }
+        }
+
         const {
             q, // Search query
             make, model,
@@ -137,6 +152,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
             transmission: transmissions ? { in: transmissions, mode: 'insensitive' as const } : undefined,
             bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' as const } : undefined,
             isArchived: includeArchived === 'true' ? undefined : false,
+            // Apply scope-based dealerId filter (if authenticated with scoped context)
+            ...scopeDealerFilter,
         };
 
         const [listings, totalCount] = await Promise.all([
@@ -253,12 +270,23 @@ export async function listingRoutes(fastify: FastifyInstance) {
         return { listing };
     });
 
-    // Archive listing (admin only)
+    // Archive listing (admin only, scope-aware)
     fastify.post('/api/listings/:id/archive', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { reason } = request.body as { reason?: string };
+        const scope = await resolveScope(fastify, request);
+
+        // Verify ownership — non-platform users can only archive their own listings
+        if (!scope.isPlatform) {
+            const existing = await fastify.prisma.listing.findUnique({ where: { id }, select: { dealerId: true } });
+            const allowedDealerIds = scope.dealerFilter.dealerId;
+            const dealerId = existing?.dealerId;
+            if (!dealerId) return reply.code(403).send({ error: 'Listing has no dealer' });
+            if (typeof allowedDealerIds === 'string' && dealerId !== allowedDealerIds) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowedDealerIds === 'object' && 'in' in allowedDealerIds && !allowedDealerIds.in.includes(dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
 
         const listing = await fastify.prisma.listing.update({
             where: { id },
@@ -272,11 +300,21 @@ export async function listingRoutes(fastify: FastifyInstance) {
         return { listing };
     });
 
-    // Restore from archive (admin only)
+    // Restore from archive (admin only, scope-aware)
     fastify.post('/api/listings/:id/restore', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
+        const scope = await resolveScope(fastify, request);
+
+        if (!scope.isPlatform) {
+            const existing = await fastify.prisma.listing.findUnique({ where: { id }, select: { dealerId: true } });
+            const allowedDealerIds = scope.dealerFilter.dealerId;
+            const dealerId = existing?.dealerId;
+            if (!dealerId) return reply.code(403).send({ error: 'Listing has no dealer' });
+            if (typeof allowedDealerIds === 'string' && dealerId !== allowedDealerIds) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowedDealerIds === 'object' && 'in' in allowedDealerIds && !allowedDealerIds.in.includes(dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
 
         const listing = await fastify.prisma.listing.update({
             where: { id },
@@ -290,11 +328,21 @@ export async function listingRoutes(fastify: FastifyInstance) {
         return { listing };
     });
 
-    // Delete listing permanently (admin only)
+    // Delete listing permanently (admin only, scope-aware)
     fastify.delete('/api/listings/:id', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
+        const scope = await resolveScope(fastify, request);
+
+        if (!scope.isPlatform) {
+            const existing = await fastify.prisma.listing.findUnique({ where: { id }, select: { dealerId: true } });
+            const allowedDealerIds = scope.dealerFilter.dealerId;
+            const dealerId = existing?.dealerId;
+            if (!dealerId) return reply.code(403).send({ error: 'Listing has no dealer' });
+            if (typeof allowedDealerIds === 'string' && dealerId !== allowedDealerIds) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowedDealerIds === 'object' && 'in' in allowedDealerIds && !allowedDealerIds.in.includes(dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
 
         try {
             // Due to onDelete: Cascade in schema, related records (leads, priceHistory) will be deleted automatically
