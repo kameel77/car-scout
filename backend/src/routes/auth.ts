@@ -1,5 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
+import { ScopeType, MemberRole } from '@prisma/client';
+import type { ActiveContext, MembershipInfo } from '../middleware/permissions.js';
 
 export async function authRoutes(fastify: FastifyInstance) {
     // Login
@@ -17,7 +19,10 @@ export async function authRoutes(fastify: FastifyInstance) {
             }
 
             const user = await fastify.prisma.user.findUnique({
-                where: { email }
+                where: { email },
+                include: {
+                    memberships: true,
+                },
             });
 
             if (!user || !user.isActive) {
@@ -39,12 +44,29 @@ export async function authRoutes(fastify: FastifyInstance) {
                 data: { lastLogin: new Date() }
             });
 
-            // Generate JWT
+            // Determine active context from memberships
+            const memberships: MembershipInfo[] = user.memberships.map(m => ({
+                id: m.id,
+                scopeType: m.scopeType,
+                scopeId: m.scopeId,
+                role: m.role,
+                isDefaultContext: m.isDefaultContext,
+            }));
+
+            // Find default context or fallback to first membership
+            const defaultMembership = memberships.find(m => m.isDefaultContext) || memberships[0];
+            const activeContext: ActiveContext = defaultMembership
+                ? { scopeType: defaultMembership.scopeType, scopeId: defaultMembership.scopeId }
+                : { scopeType: ScopeType.PLATFORM, scopeId: 'PLATFORM' };
+
+            // Generate JWT v2 with memberships + active context
             const token = fastify.jwt.sign(
                 {
                     userId: user.id,
                     email: user.email,
-                    role: user.role
+                    role: user.role, // legacy compat
+                    memberships,
+                    activeContext,
                 },
                 { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
             );
@@ -55,8 +77,11 @@ export async function authRoutes(fastify: FastifyInstance) {
                     id: user.id,
                     email: user.email,
                     name: user.name,
-                    role: user.role
-                }
+                    phone: user.phone,
+                    role: user.role, // legacy compat
+                    memberships,
+                    activeContext,
+                },
             };
         } catch (error) {
             fastify.log.error(error, 'Login error details');
@@ -77,8 +102,10 @@ export async function authRoutes(fastify: FastifyInstance) {
                 id: true,
                 email: true,
                 name: true,
+                phone: true,
                 role: true,
-                lastLogin: true
+                lastLogin: true,
+                memberships: true,
             }
         });
 
@@ -86,7 +113,121 @@ export async function authRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'User not found' });
         }
 
-        return { user };
+        const memberships: MembershipInfo[] = user.memberships.map(m => ({
+            id: m.id,
+            scopeType: m.scopeType,
+            scopeId: m.scopeId,
+            role: m.role,
+            isDefaultContext: m.isDefaultContext,
+        }));
+
+        // Active context from JWT (or default)
+        const jwtContext = (request.user as any)?.activeContext;
+        const activeContext: ActiveContext = jwtContext || {
+            scopeType: ScopeType.PLATFORM,
+            scopeId: 'PLATFORM',
+        };
+
+        return {
+            user: {
+                ...user,
+                memberships,
+                activeContext,
+            },
+        };
+    });
+
+    // Switch active context
+    fastify.post('/api/auth/context', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { scopeType, scopeId } = request.body as {
+            scopeType: ScopeType;
+            scopeId: string;
+        };
+
+        if (!scopeType || !scopeId) {
+            return reply.code(400).send({ error: 'scopeType and scopeId are required' });
+        }
+
+        const user = await fastify.prisma.user.findUnique({
+            where: { id: request.user!.userId },
+            include: { memberships: true },
+        });
+
+        if (!user) {
+            return reply.code(404).send({ error: 'User not found' });
+        }
+
+        const memberships: MembershipInfo[] = user.memberships.map(m => ({
+            id: m.id,
+            scopeType: m.scopeType,
+            scopeId: m.scopeId,
+            role: m.role,
+            isDefaultContext: m.isDefaultContext,
+        }));
+
+        // Platform roles can switch to any context
+        const isPlatformUser = memberships.some(m =>
+            m.scopeType === ScopeType.PLATFORM &&
+            (m.role === MemberRole.SUPERADMIN_PLATFORM || m.role === MemberRole.PLATFORM_MANAGER)
+        );
+
+        if (!isPlatformUser) {
+            // Non-platform users: verify they have a membership in the requested context
+            const hasAccess = memberships.some(m =>
+                m.scopeType === scopeType && m.scopeId === scopeId
+            );
+
+            // Also check if they have group-level access for a dealer context
+            if (!hasAccess && scopeType === ScopeType.DEALER) {
+                const dealer = await fastify.prisma.dealer.findUnique({
+                    where: { id: scopeId },
+                    select: { dealerGroupId: true },
+                });
+                if (dealer?.dealerGroupId) {
+                    const hasGroupAccess = memberships.some(m =>
+                        m.scopeType === ScopeType.DEALER_GROUP && m.scopeId === dealer.dealerGroupId
+                    );
+                    if (!hasGroupAccess) {
+                        return reply.code(403).send({ error: 'No access to this context' });
+                    }
+                } else {
+                    return reply.code(403).send({ error: 'No access to this context' });
+                }
+            } else if (!hasAccess) {
+                return reply.code(403).send({ error: 'No access to this context' });
+            }
+        }
+
+        // Validate the scope target exists
+        if (scopeType === ScopeType.DEALER_GROUP) {
+            const group = await fastify.prisma.dealerGroup.findUnique({ where: { id: scopeId } });
+            if (!group) {
+                return reply.code(404).send({ error: 'Dealer group not found' });
+            }
+        } else if (scopeType === ScopeType.DEALER) {
+            const dealer = await fastify.prisma.dealer.findUnique({ where: { id: scopeId } });
+            if (!dealer) {
+                return reply.code(404).send({ error: 'Dealer not found' });
+            }
+        }
+
+        const activeContext: ActiveContext = { scopeType, scopeId };
+
+        // Issue a new JWT with updated context
+        const token = fastify.jwt.sign(
+            {
+                userId: user.id,
+                email: user.email,
+                role: user.role,
+                memberships,
+                activeContext,
+            },
+            { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        );
+
+        return { token, activeContext };
     });
 
     // Logout (optional - for future token blacklist)

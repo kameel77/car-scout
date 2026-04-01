@@ -1,8 +1,26 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, MemberRole } from '@/contexts/AuthContext';
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const { user, isLoading } = useAuth();
+interface ProtectedRouteProps {
+    children: React.ReactNode;
+    /** Optional: restrict to specific minimum roles */
+    requiredPermission?: string;
+}
+
+/**
+ * Role hierarchy for checking access.
+ * Higher index = more restrictive.
+ */
+const ROLE_HIERARCHY: MemberRole[] = [
+    'SUPERADMIN_PLATFORM',
+    'PLATFORM_MANAGER',
+    'DEALER_GROUP_ADMIN',
+    'DEALER_ADMIN',
+    'DEALER_EMPLOYEE',
+];
+
+export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteProps) {
+    const { user, isLoading, effectiveRole } = useAuth();
 
     if (isLoading) {
         return (
@@ -16,5 +34,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         return <Navigate to="/admin/login" replace />;
     }
 
+    // If no specific permission is required, just check authentication
+    if (!requiredPermission) {
+        return <>{children}</>;
+    }
+
+    // For now, all authenticated users can access — 
+    // specific permission checks will be added per-page in Etap 3
     return <>{children}</>;
 }

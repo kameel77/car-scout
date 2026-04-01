@@ -30,6 +30,8 @@ import { rentalVehicleRoutes } from './routes/rental-vehicles.js';
 import { rentalCompanyRoutes } from './routes/rental-companies.js';
 import { rentalMatrixRoutes } from './routes/rental-matrix.js';
 import { rentalPublicRoutes } from './routes/rental-public.js';
+import { dealerGroupRoutes } from './routes/dealer-groups.js';
+import { dealerAdminRoutes } from './routes/dealers-admin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,11 +55,33 @@ declare module '@fastify/jwt' {
             userId: string;
             email: string;
             role: string;
+            memberships?: Array<{
+                id: string;
+                scopeType: string;
+                scopeId: string;
+                role: string;
+                isDefaultContext: boolean;
+            }>;
+            activeContext?: {
+                scopeType: string;
+                scopeId: string;
+            };
         };
         user: {
             userId: string;
             email: string;
             role: string;
+            memberships?: Array<{
+                id: string;
+                scopeType: string;
+                scopeId: string;
+                role: string;
+                isDefaultContext: boolean;
+            }>;
+            activeContext?: {
+                scopeType: string;
+                scopeId: string;
+            };
         };
     }
 }
@@ -227,6 +251,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(rentalCompanyRoutes);
     await fastify.register(rentalMatrixRoutes);
     await fastify.register(rentalPublicRoutes);
+    await fastify.register(dealerGroupRoutes);
+    await fastify.register(dealerAdminRoutes);
 
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {
