@@ -9,9 +9,12 @@ const CSFLOW_API_URL = process.env.CSFLOW_API_URL || 'https://webapi.demo.csflow
  */
 export async function getCSFlowCars(): Promise<any[]> {
     const url = new URL(`${CSFLOW_API_URL}/cars`);
-    // W środowisku produkcyjnym można użyć paginacji, jeśli endpoint ją wspiera,
-    // domyślnie dodajemy wysoki limit
-    url.searchParams.append('limit', '500');
+    // Limit można skonfigurować przez CSFLOW_LIMIT w ENV.
+    // Brak zmiennej = brak parametru limit (API zwraca wszystkie pojazdy).
+    const limit = process.env.CSFLOW_LIMIT;
+    if (limit) {
+        url.searchParams.append('limit', limit);
+    }
 
     try {
         const response = await fetch(url.toString(), {
