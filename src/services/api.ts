@@ -203,6 +203,20 @@ export const importApi = {
         });
 
         return response.json();
+    },
+
+    syncCSFlow: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/csflow/sync`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'CSFlow Sync failed');
+        }
+
+        return response.json();
     }
 };
 
