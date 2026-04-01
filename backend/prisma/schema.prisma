@@ -115,12 +115,16 @@ model Lead {
 
 model Dealer {
   id                String          @id @default(cuid())
+  csflowDealerId    Int?            @unique @map("csflow_dealer_id")
   name              String
   addressLine1      String          @map("address_line1")
   addressLine2      String?         @map("address_line2")
   addressLine3      String?         @map("address_line3")
   city              String?
+  postalCode        String?         @map("postal_code")
   contactPhone      String?         @map("contact_phone")
+  contactEmail      String?         @map("contact_email")
+  contactEmailService String?       @map("contact_email_service")
   googleRating      Float?          @map("google_rating")
   googleReviewCount Int?            @map("google_review_count")
   googleLink        String?         @map("google_link")
