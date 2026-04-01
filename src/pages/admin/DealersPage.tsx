@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Store, Plus, Edit2, Trash2, Network, AlertTriangle, UserCheck, X, Save, Loader2, Car } from 'lucide-react';
+import { Store, Plus, Edit2, Trash2, Network, AlertTriangle, UserCheck, X, Save, Loader2, Car, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/api\/?$/, '');
@@ -37,6 +37,119 @@ interface DealerGroup {
     name: string;
 }
 
+/* ─── Inline Edit Form ─── */
+function InlineEditForm({
+    dealer,
+    groups,
+    onSave,
+    onCancel,
+    isPending,
+}: {
+    dealer: Dealer;
+    groups: DealerGroup[];
+    onSave: (data: any) => void;
+    onCancel: () => void;
+    isPending: boolean;
+}) {
+    const [form, setForm] = useState({
+        name: dealer.name,
+        addressLine1: dealer.addressLine1,
+        city: dealer.city || '',
+        contactPhone: dealer.contactPhone || '',
+        contactEmail: dealer.contactEmail || '',
+        contactName: dealer.contactName || '',
+        dealerGroupId: dealer.dealerGroupId || '',
+    });
+
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        // Scroll into view smoothly when expanded
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, []);
+
+    return (
+        <div
+            ref={containerRef}
+            className="overflow-hidden transition-all duration-300 ease-in-out"
+            style={{ animation: 'slideDown 0.25s ease-out' }}
+        >
+            <div className="px-4 pb-4 pt-2 border-t border-blue-100 bg-gradient-to-b from-blue-50/60 to-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+                    <Input
+                        placeholder="Nazwa firmy *"
+                        value={form.name}
+                        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                        className="bg-white"
+                    />
+                    <Input
+                        placeholder="Adres *"
+                        value={form.addressLine1}
+                        onChange={e => setForm(f => ({ ...f, addressLine1: e.target.value }))}
+                        className="bg-white"
+                    />
+                    <Input
+                        placeholder="Miasto"
+                        value={form.city}
+                        onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                        className="bg-white"
+                    />
+                    <Input
+                        placeholder="Osoba kontaktowa"
+                        value={form.contactName}
+                        onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
+                        className="bg-white"
+                    />
+                    <Input
+                        placeholder="Email"
+                        value={form.contactEmail}
+                        onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))}
+                        className="bg-white"
+                    />
+                    <Input
+                        placeholder="Telefon"
+                        value={form.contactPhone}
+                        onChange={e => setForm(f => ({ ...f, contactPhone: e.target.value }))}
+                        className="bg-white"
+                    />
+                    <Select
+                        value={form.dealerGroupId || 'none'}
+                        onValueChange={v => setForm(f => ({ ...f, dealerGroupId: v === 'none' ? '' : v }))}
+                    >
+                        <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Grupa dealerska" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">Brak grupy</SelectItem>
+                            {groups.map(g => (
+                                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        size="sm"
+                        onClick={() => onSave(form)}
+                        disabled={!form.name || !form.addressLine1 || isPending}
+                        className="gap-1.5"
+                    >
+                        {isPending ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <Save className="w-3.5 h-3.5" />
+                        )}
+                        Zapisz
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={onCancel} className="gap-1">
+                        <X className="w-3.5 h-3.5" /> Anuluj
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function DealersPage() {
     const { token } = useAuth();
     const { toast } = useToast();
@@ -46,7 +159,7 @@ export default function DealersPage() {
     const [filter, setFilter] = useState<'all' | 'unassigned'>('all');
     const [groupFilter, setGroupFilter] = useState<string>('all');
 
-    const [form, setForm] = useState({
+    const [createForm, setCreateForm] = useState({
         name: '', addressLine1: '', city: '', contactPhone: '',
         contactEmail: '', contactName: '', dealerGroupId: '',
     });
@@ -82,7 +195,7 @@ export default function DealersPage() {
     });
 
     const createMutation = useMutation({
-        mutationFn: async (data: typeof form) => {
+        mutationFn: async (data: typeof createForm) => {
             const res = await fetch(`${API_BASE_URL}/api/admin/dealers`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -101,7 +214,7 @@ export default function DealersPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-dealers'] });
             toast({ title: 'Dealer utworzony' });
             setShowCreate(false);
-            resetForm();
+            setCreateForm({ name: '', addressLine1: '', city: '', contactPhone: '', contactEmail: '', contactName: '', dealerGroupId: '' });
         },
         onError: (err: Error) => {
             toast({ title: 'Błąd', description: err.message, variant: 'destructive' });
@@ -109,7 +222,7 @@ export default function DealersPage() {
     });
 
     const updateMutation = useMutation({
-        mutationFn: async ({ id, data }: { id: string; data: typeof form }) => {
+        mutationFn: async ({ id, data }: { id: string; data: any }) => {
             const res = await fetch(`${API_BASE_URL}/api/admin/dealers/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -154,30 +267,19 @@ export default function DealersPage() {
         },
     });
 
-    const resetForm = () => setForm({
-        name: '', addressLine1: '', city: '', contactPhone: '',
-        contactEmail: '', contactName: '', dealerGroupId: '',
-    });
-
-    const startEdit = (dealer: Dealer) => {
-        setForm({
-            name: dealer.name,
-            addressLine1: dealer.addressLine1,
-            city: dealer.city || '',
-            contactPhone: dealer.contactPhone || '',
-            contactEmail: dealer.contactEmail || '',
-            contactName: dealer.contactName || '',
-            dealerGroupId: dealer.dealerGroupId || '',
-        });
-        setEditingId(dealer.id);
-        setShowCreate(false);
-    };
-
     const dealers = dealersData?.dealers || [];
     const groups = groupsData?.groups || [];
 
     return (
         <div className="space-y-6">
+            {/* CSS for slide animation */}
+            <style>{`
+                @keyframes slideDown {
+                    from { max-height: 0; opacity: 0; }
+                    to   { max-height: 400px; opacity: 1; }
+                }
+            `}</style>
+
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Dealerzy</h1>
@@ -190,8 +292,9 @@ export default function DealersPage() {
                         )}
                     </p>
                 </div>
-                <Button onClick={() => { setShowCreate(true); setEditingId(null); resetForm(); }} className="gap-2">
-                    <Plus className="w-4 h-4" /> Nowy dealer
+                <Button onClick={() => { setShowCreate(s => !s); setEditingId(null); }} className="gap-2">
+                    {showCreate ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    {showCreate ? 'Zamknij' : 'Nowy dealer'}
                 </Button>
             </div>
 
@@ -222,81 +325,38 @@ export default function DealersPage() {
                 )}
             </div>
 
-            {/* Create / Edit Form */}
-            {(showCreate || editingId) && (
+            {/* Create Form */}
+            {showCreate && (
                 <Card className="border-blue-200 bg-blue-50/30">
                     <CardHeader className="pb-4">
-                        <CardTitle className="text-lg">
-                            {editingId ? 'Edytuj dealera' : 'Nowy dealer'}
-                        </CardTitle>
+                        <CardTitle className="text-lg">Nowy dealer</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <Input
-                                placeholder="Nazwa firmy *"
-                                value={form.name}
-                                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                            />
-                            <Input
-                                placeholder="Adres *"
-                                value={form.addressLine1}
-                                onChange={e => setForm(f => ({ ...f, addressLine1: e.target.value }))}
-                            />
-                            <Input
-                                placeholder="Miasto"
-                                value={form.city}
-                                onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
-                            />
-                            <Input
-                                placeholder="Osoba kontaktowa"
-                                value={form.contactName}
-                                onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
-                            />
-                            <Input
-                                placeholder="Email"
-                                value={form.contactEmail}
-                                onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))}
-                            />
-                            <Input
-                                placeholder="Telefon"
-                                value={form.contactPhone}
-                                onChange={e => setForm(f => ({ ...f, contactPhone: e.target.value }))}
-                            />
-                            <Select
-                                value={form.dealerGroupId || 'none'}
-                                onValueChange={v => setForm(f => ({ ...f, dealerGroupId: v === 'none' ? '' : v }))}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Grupa dealerska" />
-                                </SelectTrigger>
+                            <Input placeholder="Nazwa firmy *" value={createForm.name} onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))} />
+                            <Input placeholder="Adres *" value={createForm.addressLine1} onChange={e => setCreateForm(f => ({ ...f, addressLine1: e.target.value }))} />
+                            <Input placeholder="Miasto" value={createForm.city} onChange={e => setCreateForm(f => ({ ...f, city: e.target.value }))} />
+                            <Input placeholder="Osoba kontaktowa" value={createForm.contactName} onChange={e => setCreateForm(f => ({ ...f, contactName: e.target.value }))} />
+                            <Input placeholder="Email" value={createForm.contactEmail} onChange={e => setCreateForm(f => ({ ...f, contactEmail: e.target.value }))} />
+                            <Input placeholder="Telefon" value={createForm.contactPhone} onChange={e => setCreateForm(f => ({ ...f, contactPhone: e.target.value }))} />
+                            <Select value={createForm.dealerGroupId || 'none'} onValueChange={v => setCreateForm(f => ({ ...f, dealerGroupId: v === 'none' ? '' : v }))}>
+                                <SelectTrigger><SelectValue placeholder="Grupa dealerska" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">Brak grupy</SelectItem>
-                                    {groups.map(g => (
-                                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                    ))}
+                                    {groups.map(g => (<SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>))}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="flex gap-2 mt-4">
                             <Button
-                                onClick={() => {
-                                    if (editingId) {
-                                        updateMutation.mutate({ id: editingId, data: form });
-                                    } else {
-                                        createMutation.mutate(form);
-                                    }
-                                }}
-                                disabled={!form.name || !form.addressLine1 || createMutation.isPending || updateMutation.isPending}
+                                onClick={() => createMutation.mutate(createForm)}
+                                disabled={!createForm.name || !createForm.addressLine1 || createMutation.isPending}
                                 className="gap-2"
                             >
-                                {(createMutation.isPending || updateMutation.isPending) ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Save className="w-4 h-4" />
-                                )}
-                                {editingId ? 'Zapisz' : 'Utwórz'}
+                                {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Utwórz
                             </Button>
-                            <Button variant="outline" onClick={() => { setShowCreate(false); setEditingId(null); resetForm(); }}>
+                            <Button variant="outline" onClick={() => setShowCreate(false)}>
                                 <X className="w-4 h-4 mr-1" /> Anuluj
                             </Button>
                         </div>
@@ -319,11 +379,18 @@ export default function DealersPage() {
             ) : (
                 <div className="grid gap-3">
                     {dealers.map(dealer => (
-                        <Card key={dealer.id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
+                        <Card
+                            key={dealer.id}
+                            className={`transition-all duration-200 ${editingId === dealer.id
+                                ? 'ring-2 ring-blue-300 shadow-lg border-blue-200'
+                                : 'hover:shadow-md'
+                            }`}
+                        >
+                            <CardContent className="p-0">
+                                {/* Dealer row header */}
+                                <div className="flex items-center justify-between p-4">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0">
                                             <Store className="w-5 h-5" />
                                         </div>
                                         <div>
@@ -365,8 +432,23 @@ export default function DealersPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <Button variant="outline" size="sm" onClick={() => startEdit(dealer)} className="gap-1">
-                                            <Edit2 className="w-3.5 h-3.5" /> Edytuj
+                                        <Button
+                                            variant={editingId === dealer.id ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setEditingId(editingId === dealer.id ? null : dealer.id)}
+                                            className="gap-1"
+                                        >
+                                            {editingId === dealer.id ? (
+                                                <>
+                                                    <ChevronDown className="w-3.5 h-3.5 rotate-180 transition-transform" />
+                                                    Zwiń
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                    Edytuj
+                                                </>
+                                            )}
                                         </Button>
                                         <Button
                                             variant="outline"
@@ -384,6 +466,17 @@ export default function DealersPage() {
                                         </Button>
                                     </div>
                                 </div>
+
+                                {/* Inline edit form — accordion */}
+                                {editingId === dealer.id && (
+                                    <InlineEditForm
+                                        dealer={dealer}
+                                        groups={groups}
+                                        onSave={(data) => updateMutation.mutate({ id: dealer.id, data })}
+                                        onCancel={() => setEditingId(null)}
+                                        isPending={updateMutation.isPending}
+                                    />
+                                )}
                             </CardContent>
                         </Card>
                     ))}
