@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { parse } from 'csv-parse/sync';
 import { syncListingsFromCSV } from '../services/sync.service.js';
 import type { CSVRow, ImportMode } from '../types/csv.types.js';
+import { resolveScope } from '../utils/scope-resolver.js';
 
 const parseImportMode = (mode?: string): ImportMode =>
     mode === 'merge' ? 'merge' : 'replace';
@@ -15,6 +16,12 @@ export async function importRoutes(fastify: FastifyInstance) {
             const data = await request.file();
             const { mode } = request.query as { mode?: string };
             const importMode = parseImportMode(mode);
+
+            // Resolve active context for dealer assignment
+            const scope = await resolveScope(fastify, request);
+            const contextDealerId = scope.activeContext.scopeType === 'DEALER'
+                ? scope.activeContext.scopeId
+                : undefined;
 
             if (!data) {
                 return reply.code(400).send({ error: 'No file uploaded' });
@@ -41,7 +48,8 @@ export async function importRoutes(fastify: FastifyInstance) {
                 records,
                 request.user!.userId,
                 data.filename,
-                importMode
+                importMode,
+                contextDealerId   // scope: assign dealer if in dealer context
             );
 
             fastify.log.info({
@@ -90,6 +98,12 @@ export async function importRoutes(fastify: FastifyInstance) {
             };
             const importMode = parseImportMode(mode);
 
+            // Resolve active context for dealer assignment
+            const scope = await resolveScope(fastify, request);
+            const contextDealerId = scope.activeContext.scopeType === 'DEALER'
+                ? scope.activeContext.scopeId
+                : undefined;
+
             if (!data || data.length === 0) {
                 return reply.code(400).send({ error: 'Data array is empty' });
             }
@@ -100,7 +114,8 @@ export async function importRoutes(fastify: FastifyInstance) {
                 data,
                 request.user!.userId,
                 source || 'api-json-upload',
-                importMode
+                importMode,
+                contextDealerId   // scope: assign dealer if in dealer context
             );
 
             fastify.log.info({
@@ -121,11 +136,20 @@ export async function importRoutes(fastify: FastifyInstance) {
         }
     });
 
-    // Get import history
+    // Get import history (scope-aware)
     fastify.get('/api/import/history', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
+        const scope = await resolveScope(fastify, request);
+
+        const where: any = {};
+        // Non-platform users only see their own imports
+        if (!scope.isPlatform) {
+            where.userId = request.user!.userId;
+        }
+
         const logs = await fastify.prisma.importLog.findMany({
+            where,
             take: 50,
             orderBy: { importedAt: 'desc' },
             include: {

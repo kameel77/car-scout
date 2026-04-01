@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { sendLeadEmail } from '../services/email.js';
+import { resolveScope } from '../utils/scope-resolver.js';
 
 type PreferredContact = 'email' | 'phone';
 
@@ -181,14 +182,25 @@ export async function leadRoutes(fastify: FastifyInstance) {
         return { success: true, lead };
     });
 
-    // Get leads for backoffice (requires auth)
+    // Get leads for backoffice (requires auth, scope-aware)
     fastify.get('/api/leads', {
         preHandler: [fastify.authenticate]
     }, async (request) => {
         const { leadType } = request.query as { leadType?: string };
+        const scope = await resolveScope(fastify, request);
 
         const where: any = {};
         if (leadType) where.leadType = leadType;
+
+        // Apply scope filtering via related listing/rentalVehicle dealerId
+        if (!scope.isPlatform && scope.dealerFilter.dealerId) {
+            const df = scope.dealerFilter.dealerId;
+            where.OR = [
+                { listing: { dealerId: df } },
+                { rentalVehicle: { dealerId: df } },
+                // quick_contact leads have no listing/rentalVehicle — only platform sees these
+            ];
+        }
 
         const leads = await fastify.prisma.lead.findMany({
             where,
