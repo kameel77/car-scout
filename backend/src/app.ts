@@ -30,6 +30,7 @@ import { rentalVehicleRoutes } from './routes/rental-vehicles.js';
 import { rentalCompanyRoutes } from './routes/rental-companies.js';
 import { rentalMatrixRoutes } from './routes/rental-matrix.js';
 import { rentalPublicRoutes } from './routes/rental-public.js';
+import { csflowRoutes } from './routes/csflow.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -227,6 +228,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(rentalCompanyRoutes);
     await fastify.register(rentalMatrixRoutes);
     await fastify.register(rentalPublicRoutes);
+    await fastify.register(csflowRoutes);
 
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {

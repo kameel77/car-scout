@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { buildApp } from './app.js';
+import { initCSFlowCron } from './services/csflow.service.js';
 
 dotenv.config();
 
@@ -32,6 +33,8 @@ const start = async () => {
         const port = parseInt(process.env.PORT || '3000');
         await app.listen({ port, host: process.env.HOST || '0.0.0.0' });
         console.log(`🚀 Server listening on port ${port}`);
+
+        initCSFlowCron(app.prisma);
 
         // Graceful shutdown
         const signals = ['SIGINT', 'SIGTERM'];
