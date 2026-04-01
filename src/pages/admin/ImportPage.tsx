@@ -1,4 +1,5 @@
 import { CSVUploader } from '@/components/admin/CSVUploader';
+import { CSFlowImporter } from '@/components/admin/CSFlowImporter';
 import { ImportHistory } from '@/components/admin/ImportHistory';
 import { useAuth } from '@/contexts/AuthContext';
 import { Upload, History } from 'lucide-react';
@@ -17,14 +18,16 @@ export default function ImportPage() {
                 </p>
             </div>
 
-            {/* CSV Upload Section (Admin only) */}
             {user?.role === 'admin' && (
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <Upload className="w-5 h-5 text-blue-600" />
-                        <h2 className="text-xl font-semibold">CSV Import</h2>
+                        <h2 className="text-xl font-semibold">Dane Pojazdów</h2>
                     </div>
-                    <CSVUploader />
+                    <div>
+                        <CSFlowImporter />
+                        <CSVUploader />
+                    </div>
                 </section>
             )}
 

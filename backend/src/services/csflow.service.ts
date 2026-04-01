@@ -236,10 +236,30 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
         }
 
         const duration = Date.now() - startTime;
-        
-        // Zapis do logów importu, o ile użytkownik został przekazany jako konkretne ID, chociaż dla crona można założyć np. id: "system" ale nasza tabela wymaga user Relation "importedBy". 
-        // W bazie car-scout "User" relation zakłada poprawne ObjectId/uuid z tabeli użytkowników. 
-        // Więc jeżeli mamy przekazany id z endpointu 'manualnego' to ok. Jeżeli odpalamy z crona - można po prostu nie raportować tego w 'importLog' albo dodać specjalne id usera systemowego.
+
+        let actualUserId = userId;
+        if (userId === 'system-cron') {
+            const defaultAdmin = await prisma.user.findFirst({ where: { role: 'admin', isActive: true } });
+            if (defaultAdmin) {
+                actualUserId = defaultAdmin.id;
+            }
+        }
+
+        if (actualUserId !== 'system-cron') {
+            await prisma.importLog.create({
+                data: {
+                    importedBy: actualUserId,
+                    fileName: 'Zewnętrzne API (CSFlow)',
+                    totalRows: carsData.length,
+                    inserted: result.inserted,
+                    updated: result.updated,
+                    archived: result.archived,
+                    failed: result.failed,
+                    status: result.failed === 0 ? 'success' : (result.inserted + result.updated > 0 ? 'partial' : 'failed'),
+                    duration: duration
+                }
+            });
+        }
 
         console.log(`[CSFlow] Synchronizacja zakończona w ${duration}ms. Wstawiono: ${result.inserted}, Aktualiz: ${result.updated}, Zarch: ${result.archived}, Błędy: ${result.failed}`);
         
