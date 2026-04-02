@@ -71,3 +71,4 @@ networks:
   coolify:
     name: coolify
     external: true
+# force deploy
