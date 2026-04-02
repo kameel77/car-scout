@@ -20,3 +20,5 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 - [x] **Nowa struktura URL dla ofert**: Zmiana URL-i z `/listing/:id` na format SEO-friendly: `/oferta/marka-model-trim-rocznik-typ-paliwo-id_ogloszenia`. Wdrożone w branchu `new-url` (2025-01-30).
 - [ ] **Multi-tenant RBAC i kontekst organizacyjny**: wdrożenie hierarchii `platforma -> grupa dealerska -> dealer`, nowych ról (`superadmin_platform`, `platform_manager`, `dealer_group_admin`, `dealer_admin`, `dealer_employee`), tabel `DealerGroup` i `Membership`, oraz filtrowania danych po scope.
 - [ ] **Owner pojazdu i tryb kontaktu**: przypisanie oferty do dealera oraz opcjonalnego opiekuna (pracownika dealera), z przełączaniem kontaktu `dealer generyczny` vs `pracownik` przy publikacji i imporcie CSV.
+
+- 2026-04-01: Rozbudować panel admina o dedykowany widok/filtry dla leadów typu `price_negotiation` (priorytety, SLA, statusy negocjacji i szablony odpowiedzi).

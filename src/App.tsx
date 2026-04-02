@@ -71,12 +71,14 @@ const App = () => (
                       <Route path="/faq" element={<PublicFaqPage />} />
                       <Route path="/oferta/:slug" element={<ListingDetailPage />} />
                       <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
+                      <Route path="/oferta/:slug/negotiate" element={<LeadFormPage />} />
                       <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
                       <Route path="/najem" element={<RentalSearchPage />} />
                       <Route path="/najem/:slug" element={<RentalDetailPage />} />
                       {/* Legacy routes - kept for backward compatibility during transition */}
                       <Route path="/listing/:id" element={<ListingDetailPage />} />
                       <Route path="/listing/:id/lead" element={<LeadFormPage />} />
+                      <Route path="/listing/:id/negotiate" element={<LeadFormPage />} />
 
                       {/* Admin routes */}
                       <Route path="/admin/login" element={<LoginPage />} />

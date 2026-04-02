@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote } from 'lucide-react';
+import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
@@ -594,6 +594,20 @@ export default function ListingDetailPage() {
                       {t('detail.askAbout')}
                     </Link>
                   </Button>
+                  <Button asChild variant="secondary" className="w-full" size="lg">
+                    <Link to={`${getListingUrlPath({
+                      id: listing.listing_id,
+                      make: listing.make,
+                      model: listing.model,
+                      version: listing.version,
+                      productionYear: listing.production_year,
+                      bodyType: listing.body_type,
+                      fuelType: listing.fuel_type
+                    })}/negotiate`}>
+                      <HandCoins className="h-5 w-5" />
+                      {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
+                    </Link>
+                  </Button>
                   <Button
                     variant="outline"
                     className="w-full"
@@ -717,6 +731,19 @@ export default function ListingDetailPage() {
               fuelType: listing.fuel_type
             })}/lead`}>
               {t('detail.sendInquiry')}
+            </Link>
+          </Button>
+          <Button asChild variant="secondary" size="lg" className="flex-1">
+            <Link to={`${getListingUrlPath({
+              id: listing.listing_id,
+              make: listing.make,
+              model: listing.model,
+              version: listing.version,
+              productionYear: listing.production_year,
+              bodyType: listing.body_type,
+              fuelType: listing.fuel_type
+            })}/negotiate`}>
+              {t('detail.negotiateShort', 'Negocjuj cenę')}
             </Link>
           </Button>
         </div>

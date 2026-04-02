@@ -218,3 +218,5 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Dodanie przełącznika kontekstu (platforma/grupa/dealer) dla ról platformowych.
   - Dodanie widoków do zarządzania grupami dealerskimi, dealerami i użytkownikami per scope.
 - **Status**: analiza i projekt architektury przygotowane; implementacja etapowa (schema -> migracja danych -> permission engine -> UI).
+
+- 2026-04-01: Dodano proces negocjacji ceny na stronie oferty: osobny CTA, osobny flow formularza i backendowy typ leada `price_negotiation` z automatyczną klasyfikacją odpowiedzi (great_match/review_zone/too_low).

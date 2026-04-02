@@ -145,6 +145,8 @@ export const translations = {
       // Listing detail
       detail: {
         askAbout: "Zapytaj o ofertę",
+        negotiatePrice: "Zaproponuj swoją cenę",
+        negotiateShort: "Negocjuj cenę",
         call: "Zadzwoń",
         sendInquiry: "Wyślij zapytanie",
         keyParameters: "Kluczowe parametry",
@@ -242,6 +244,22 @@ export const translations = {
             financing: "Interesuje mnie oferta leasingu lub najmu długoterminowego dla tego auta. Proszę o przygotowanie symulacji.",
             history: "Poproszę o przesłanie numeru VIN oraz raportu historii pojazdu dla tego modelu.",
             expert: "Chciałbym skonsultować specyfikację i warunki zakupu tego pojazdu z Państwa doradcą.",
+          }
+        },
+        negotiation: {
+          title: "Negocjuj cenę tego pojazdu",
+          subtitle: "Podaj swoją propozycję – jeśli mieści się w możliwym zakresie, od razu damy znać, że jest duża szansa na pozytywną decyzję.",
+          proposedPrice: "Twoja propozycja ceny (PLN)",
+          proposedPricePlaceholder: "np. 134900",
+          submit: "Wyślij propozycję ceny",
+          successTitle: "Propozycja ceny wysłana!",
+          successMessage: "Dziękujemy – analizujemy Twoją propozycję i wrócimy z decyzją handlową.",
+          messageDefault: "Dzień dobry, składam propozycję ceny {{proposedPrice}} PLN dla {{make}} {{model}} {{version}} ({{listingId}}). Proszę o kontakt z decyzją.",
+          autoReplyTitle: "Automatyczna odpowiedź systemu",
+          autoReply: {
+            great_match: "Twoja propozycja wygląda bardzo dobrze. Priorytetowo przekazaliśmy ją do doradcy.",
+            review_zone: "Twoja propozycja jest blisko zakresu negocjacyjnego. Doradca zweryfikuje dostępne opcje i wróci do Ciebie.",
+            too_low: "Dziękujemy za propozycję. Jest poniżej standardowego zakresu, ale nadal możemy zaproponować alternatywny wariant finansowania lub rabatu."
           }
         }
       },
@@ -473,6 +491,8 @@ export const translations = {
       // Listing detail
       detail: {
         askAbout: "Ask about this offer",
+        negotiatePrice: "Propose your price",
+        negotiateShort: "Negotiate",
         call: "Call",
         sendInquiry: "Send inquiry",
         keyParameters: "Key parameters",
@@ -570,6 +590,22 @@ export const translations = {
             financing: "I am interested in leasing or long-term rental options for this car. Please prepare a quote.",
             history: "Could you please send me the VIN and history report for this car?",
             expert: "I would like to discuss the specification and purchase conditions for this car with your advisor.",
+          }
+        },
+        negotiation: {
+          title: "Negotiate this vehicle price",
+          subtitle: "Share your target price – if it is within a realistic range, we will immediately prioritize your case.",
+          proposedPrice: "Your proposed price (PLN)",
+          proposedPricePlaceholder: "e.g. 134900",
+          submit: "Send price proposal",
+          successTitle: "Price proposal sent!",
+          successMessage: "Thank you — we are reviewing your offer and will get back with a commercial decision.",
+          messageDefault: "Hello, I would like to propose {{proposedPrice}} PLN for {{make}} {{model}} {{version}} ({{listingId}}). Please contact me with your decision.",
+          autoReplyTitle: "Automatic system response",
+          autoReply: {
+            great_match: "Your offer looks very strong. We have prioritized it for advisor review.",
+            review_zone: "Your offer is close to the negotiation range. Our advisor will review available options and contact you.",
+            too_low: "Thank you for your offer. It is below the usual range, but we can still prepare an alternative financing or discount scenario."
           }
         }
       },
@@ -799,6 +835,8 @@ export const translations = {
       // Listing detail
       detail: {
         askAbout: "Anfrage senden",
+        negotiatePrice: "Preis vorschlagen",
+        negotiateShort: "Preis verhandeln",
         call: "Anrufen",
         sendInquiry: "Anfrage senden",
         keyParameters: "Wichtige Parameter",
@@ -896,6 +934,22 @@ export const translations = {
             financing: "Ich interessiere mich für Leasing- oder Langzeitmietoptionen für dieses Auto. Bitte erstellen Sie ein Angebot.",
             history: "Könnten Sie mir bitte die Fahrgestellnummer (VIN) und den Historienbericht für dieses Auto zusenden?",
             expert: "Ich möchte die Spezifikation und Kaufbedingungen für dieses Fahrzeug mit Ihrem Berater besprechen.",
+          }
+        },
+        negotiation: {
+          title: "Preis für dieses Fahrzeug verhandeln",
+          subtitle: "Nennen Sie Ihren Zielpreis – liegt er im realistischen Rahmen, priorisieren wir Ihre Anfrage sofort.",
+          proposedPrice: "Ihr Preisvorschlag (PLN)",
+          proposedPricePlaceholder: "z. B. 134900",
+          submit: "Preisvorschlag senden",
+          successTitle: "Preisvorschlag gesendet!",
+          successMessage: "Vielen Dank — wir prüfen Ihr Angebot und melden uns mit einer Entscheidung.",
+          messageDefault: "Guten Tag, ich möchte {{proposedPrice}} PLN für {{make}} {{model}} {{version}} ({{listingId}}) anbieten. Bitte kontaktieren Sie mich mit Ihrer Entscheidung.",
+          autoReplyTitle: "Automatische Systemantwort",
+          autoReply: {
+            great_match: "Ihr Angebot sieht sehr gut aus. Wir haben es priorisiert an einen Berater weitergeleitet.",
+            review_zone: "Ihr Angebot liegt nahe am Verhandlungsbereich. Ein Berater prüft die Optionen und meldet sich bei Ihnen.",
+            too_low: "Vielen Dank für Ihr Angebot. Es liegt unter dem üblichen Bereich, aber wir können eine alternative Finanzierungs- oder Rabattoption vorbereiten."
           }
         }
       },

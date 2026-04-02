@@ -36,6 +36,7 @@ const leadSchema = z.object({
   }),
   preferredContact: z.enum(['email', 'phone']),
   message: z.string().min(10, 'validation.required').max(1000),
+  proposedPrice: z.coerce.number().optional(),
   consentMarketing: z.boolean().refine((v) => v === true, 'validation.required'),
   consentPrivacy: z.boolean().refine((v) => v === true, 'validation.required'),
 });
@@ -50,6 +51,7 @@ export default function LeadFormPage() {
   const listingIdentifier = slug || id;
   const navigate = useNavigate();
   const location = useLocation();
+  const isNegotiationFlow = location.pathname.includes('/negotiate');
   const financingData = location.state?.financing as {
     productId: string;
     amount: number;
@@ -61,6 +63,7 @@ export default function LeadFormPage() {
 
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [referenceNumber, setReferenceNumber] = React.useState('');
+  const [negotiationAutoReply, setNegotiationAutoReply] = React.useState<string | null>(null);
 
   const { data, isLoading: isListingLoading } = useListing(listingIdentifier);
   const { data: settingsData } = useAppSettings();
@@ -114,23 +117,32 @@ export default function LeadFormPage() {
     defaultValues: {
       preferredContact: 'email',
       message: '',
+      proposedPrice: undefined,
       consentMarketing: false,
       consentPrivacy: false,
     },
   });
 
   const messageValue = watch('message');
+  const proposedPriceValue = watch('proposedPrice');
 
   React.useEffect(() => {
     if (listing && !messageValue) {
-      setValue('message', t('lead.messageDefault', {
+      const defaultMessage = isNegotiationFlow ? t('lead.negotiation.messageDefault', {
         make: listing.make,
         model: listing.model,
         version: listing.version,
         listingId: listing.listing_id,
-      }));
+        proposedPrice: proposedPriceValue ? formatNumber(proposedPriceValue) : '...'
+      }) : t('lead.messageDefault', {
+        make: listing.make,
+        model: listing.model,
+        version: listing.version,
+        listingId: listing.listing_id,
+      });
+      setValue('message', defaultMessage);
     }
-  }, [listing, setValue, t, messageValue]);
+  }, [listing, setValue, t, messageValue, isNegotiationFlow, proposedPriceValue]);
 
   const onSubmit = async (formData: LeadFormData) => {
     setStatus('loading');
@@ -138,26 +150,43 @@ export default function LeadFormPage() {
       if (!listing?.listing_id) {
         throw new Error('Brak ogłoszenia do przypisania');
       }
+      if (isNegotiationFlow && (!formData.proposedPrice || Number(formData.proposedPrice) <= 0)) {
+        throw new Error('Brak poprawnej kwoty propozycji');
+      }
 
-      const { lead } = await leadsApi.submitLead({
-        listingId: listing.listing_id,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        preferredContact: formData.preferredContact,
-        message: formData.message,
-        consentMarketing: formData.consentMarketing,
-        consentPrivacy: formData.consentPrivacy,
-        // Passing financing data
-        financingProductId: financingData?.productId,
-        financingAmount: financingData?.amount,
-        financingPeriod: financingData?.period,
-        financingDownPayment: financingData?.downPayment,
-        financingInstallment: financingData?.installment,
-        financingFinalPayment: financingData?.finalPayment,
-      });
+      const response = isNegotiationFlow
+        ? await leadsApi.submitNegotiationLead({
+          listingId: listing.listing_id,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          preferredContact: formData.preferredContact,
+          message: formData.message,
+          proposedPrice: Number(formData.proposedPrice),
+          consentMarketing: formData.consentMarketing,
+          consentPrivacy: formData.consentPrivacy,
+        })
+        : await leadsApi.submitLead({
+          listingId: listing.listing_id,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          preferredContact: formData.preferredContact,
+          message: formData.message,
+          consentMarketing: formData.consentMarketing,
+          consentPrivacy: formData.consentPrivacy,
+          // Passing financing data
+          financingProductId: financingData?.productId,
+          financingAmount: financingData?.amount,
+          financingPeriod: financingData?.period,
+          financingDownPayment: financingData?.downPayment,
+          financingInstallment: financingData?.installment,
+          financingFinalPayment: financingData?.finalPayment,
+        });
 
+      const { lead } = response;
       setReferenceNumber(lead?.referenceNumber || lead?.id || '');
+      setNegotiationAutoReply(response?.negotiation?.autoReply || null);
       setStatus('success');
     } catch (e) {
       setStatus('error');
@@ -208,9 +237,15 @@ export default function LeadFormPage() {
               <CheckCircle className="h-10 w-10 text-success" />
             </div>
             <div className="space-y-2">
-              <h1 className="font-heading text-3xl font-bold">{t('lead.successTitle', 'Zgłoszenie wysłane!')}</h1>
-              <p className="text-muted-foreground">{t('lead.successMessage', 'Dziękujemy za zainteresowanie. Nasz doradca skontaktuje się z Tobą wkrótce.')}</p>
+              <h1 className="font-heading text-3xl font-bold">{t(isNegotiationFlow ? 'lead.negotiation.successTitle' : 'lead.successTitle')}</h1>
+              <p className="text-muted-foreground">{t(isNegotiationFlow ? 'lead.negotiation.successMessage' : 'lead.successMessage')}</p>
             </div>
+            {isNegotiationFlow && negotiationAutoReply && (
+              <div className="bg-primary/5 rounded-xl p-4 text-sm border border-primary/10 text-left">
+                <p className="font-semibold mb-1">{t('lead.negotiation.autoReplyTitle')}</p>
+                <p className="text-muted-foreground">{t(`lead.negotiation.autoReply.${negotiationAutoReply}`)}</p>
+              </div>
+            )}
             <div className="bg-secondary/30 rounded-xl p-6 border border-dashed border-primary/20">
               <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1 font-semibold">{t('lead.referenceNumber', 'Numer zgłoszenia')}</p>
               <p className="font-heading text-2xl font-black text-primary tracking-tighter">{referenceNumber}</p>
@@ -348,9 +383,9 @@ export default function LeadFormPage() {
               <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                   <MessageCircle className="h-6 w-6 text-primary" />
-                  <h1 className="font-heading text-2xl font-bold tracking-tight">{t('lead.title', 'Napisz do sprzedawcy')}</h1>
+                  <h1 className="font-heading text-2xl font-bold tracking-tight">{t(isNegotiationFlow ? 'lead.negotiation.title' : 'lead.title')}</h1>
                 </div>
-                <p className="text-muted-foreground">{t('lead.subtitle', 'Zadaj pytanie, umów się na spotkanie lub poproś o ofertę finansowania.')}</p>
+                <p className="text-muted-foreground">{t(isNegotiationFlow ? 'lead.negotiation.subtitle' : 'lead.subtitle')}</p>
               </div>
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -416,13 +451,33 @@ export default function LeadFormPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t">
+                {isNegotiationFlow && (
+                  <div className="space-y-2">
+                    <Label htmlFor="proposedPrice" className="text-xs font-bold uppercase tracking-wider">{t('lead.negotiation.proposedPrice')} *</Label>
+                    <Input
+                      id="proposedPrice"
+                      type="number"
+                      min={1}
+                      step={100}
+                      {...register('proposedPrice')}
+                      placeholder={t('lead.negotiation.proposedPricePlaceholder')}
+                      className="bg-stone-50 border-stone-200 focus:bg-white transition-colors"
+                    />
+                    {errors.proposedPrice && (
+                      <p className="text-xs text-destructive mt-1 font-medium">{t(errors.proposedPrice.message || '')}</p>
+                    )}
+                  </div>
+                )}
+
+                {!isNegotiationFlow && (
+                  <div className="space-y-3 pt-4 border-t">
                   <Label className="text-xs font-bold uppercase tracking-wider">{t('lead.fastQuestions', 'Szybkie pytania')}</Label>
                   <InquiryChips
                     carName={`${listing.make} ${listing.model}`}
                     onSelect={(msg) => setValue('message', msg, { shouldDirty: true, shouldValidate: true })}
                   />
                 </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">{t('lead.message', 'Twoja wiadomość')} *</Label>
@@ -488,7 +543,7 @@ export default function LeadFormPage() {
                       {t('lead.sending', 'Wysyłanie...')}
                     </>
                   ) : (
-                    t('lead.submit', 'Wyślij zapytanie')
+                    t(isNegotiationFlow ? 'lead.negotiation.submit' : 'lead.submit')
                   )}
                 </Button>
 

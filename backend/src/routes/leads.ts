@@ -22,6 +22,18 @@ interface LeadPayload {
     financingFinalPayment?: number;
 }
 
+interface NegotiationLeadPayload {
+    listingId: string;
+    name: string;
+    email: string;
+    phone?: string;
+    preferredContact?: PreferredContact;
+    message?: string;
+    proposedPrice: number;
+    consentMarketing?: boolean;
+    consentPrivacy?: boolean;
+}
+
 interface RentalLeadPayload {
     rentalVehicleId: string;
     name: string;
@@ -97,6 +109,86 @@ export async function leadRoutes(fastify: FastifyInstance) {
         });
 
         return { lead };
+    });
+
+    // Create new negotiation lead from listing page
+    fastify.post('/api/leads/negotiation', async (request, reply) => {
+        const data = request.body as NegotiationLeadPayload;
+
+        if (!data.listingId || !data.name || !data.email || !data.proposedPrice) {
+            return reply.code(400).send({ error: 'listingId, name, email and proposedPrice are required' });
+        }
+
+        const listing = await fastify.prisma.listing.findUnique({
+            where: { id: data.listingId },
+            include: { dealer: true }
+        });
+
+        if (!listing) {
+            return reply.code(404).send({ error: 'Listing not found' });
+        }
+
+        const listedPrice = listing.brokerPricePln || listing.pricePln || 0;
+        const partnerGrossPrice = listing.dealerPriceNetPln
+            ? Math.round(listing.dealerPriceNetPln * 1.23)
+            : listedPrice;
+        const negotiationRoom = Math.max(0, listedPrice - partnerGrossPrice);
+        const minSuggestedPrice = Math.round(listedPrice - (negotiationRoom * 0.8));
+        const stretchPrice = Math.round(listedPrice - (negotiationRoom * 0.45));
+
+        const proposedPrice = Math.round(data.proposedPrice);
+        const normalizedMessage = (data.message || '').trim() || `Negocjacja ceny: ${proposedPrice} PLN`;
+        const negotiationSummary = [
+            `PROCES:NEGOCJACJA_CENY`,
+            `CENA_OFERTOWA:${listedPrice}`,
+            `CENA_PARTNER:${partnerGrossPrice}`,
+            `CENA_ZAPROPONOWANA:${proposedPrice}`,
+            `MARGINES_NEGOCJACJI:${negotiationRoom}`,
+            normalizedMessage
+        ].join('\n');
+
+        const lead = await fastify.prisma.lead.create({
+            data: {
+                leadType: 'price_negotiation',
+                listingId: data.listingId,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                preferredContact: data.preferredContact || 'email',
+                message: negotiationSummary,
+                status: 'negotiation_pending',
+                referenceNumber: generateReference(),
+                consentMarketingAt: data.consentMarketing ? new Date() : null,
+                consentPrivacyAt: data.consentPrivacy ? new Date() : null,
+            },
+            include: {
+                listing: {
+                    include: { dealer: true }
+                }
+            }
+        });
+
+        sendLeadEmail(fastify, lead as any).catch((err: any) => {
+            fastify.log.error(err, 'Error sending negotiation lead notification email');
+        });
+
+        const autoReply = proposedPrice >= stretchPrice
+            ? 'great_match'
+            : proposedPrice >= minSuggestedPrice
+                ? 'review_zone'
+                : 'too_low';
+
+        return {
+            lead,
+            negotiation: {
+                listedPrice,
+                partnerGrossPrice,
+                proposedPrice,
+                minSuggestedPrice,
+                stretchPrice,
+                autoReply
+            }
+        };
     });
 
     // Create new rental lead from calculator page

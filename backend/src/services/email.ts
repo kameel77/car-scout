@@ -31,11 +31,14 @@ export const sendLeadEmail = async (
         debug: true
     });
 
-    const isQuickContact = !lead.listingId;
+    const isPriceNegotiation = lead.leadType === 'price_negotiation';
+    const isQuickContact = !lead.listingId && !isPriceNegotiation;
     const isFinancingLead = !!lead.financingProductId;
 
     let subjectTitle = 'Nowy szybki kontakt';
-    if (!isQuickContact) {
+    if (isPriceNegotiation) {
+        subjectTitle = 'Negocjacja ceny pojazdu';
+    } else if (!isQuickContact) {
         subjectTitle = isFinancingLead ? 'Zgłoszenie finansowania auta' : 'Nowe zapytanie o auto';
     }
 
@@ -83,7 +86,7 @@ export const sendLeadEmail = async (
 
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h2>Nowe zapytanie od klienta: ${lead.name}</h2>
+            <h2>${isPriceNegotiation ? 'Nowa propozycja negocjacji ceny' : 'Nowe zapytanie od klienta'}: ${lead.name}</h2>
             
             <h3>Dane kontaktowe</h3>
             <ul>
