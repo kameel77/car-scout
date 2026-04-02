@@ -126,8 +126,10 @@ export default function LeadFormPage() {
   const messageValue = watch('message');
   const proposedPriceValue = watch('proposedPrice');
 
+  const [lastDefaultMessage, setLastDefaultMessage] = React.useState('');
+
   React.useEffect(() => {
-    if (listing && !messageValue) {
+    if (listing) {
       const defaultMessage = isNegotiationFlow ? t('lead.negotiation.messageDefault', {
         make: listing.make,
         model: listing.model,
@@ -140,9 +142,13 @@ export default function LeadFormPage() {
         version: listing.version,
         listingId: listing.listing_id,
       });
-      setValue('message', defaultMessage);
+
+      if (!messageValue || messageValue === lastDefaultMessage) {
+        setValue('message', defaultMessage);
+        setLastDefaultMessage(defaultMessage);
+      }
     }
-  }, [listing, setValue, t, messageValue, isNegotiationFlow, proposedPriceValue]);
+  }, [listing, setValue, t, messageValue, isNegotiationFlow, proposedPriceValue, lastDefaultMessage]);
 
   const onSubmit = async (formData: LeadFormData) => {
     setStatus('loading');

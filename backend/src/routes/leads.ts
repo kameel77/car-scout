@@ -129,9 +129,20 @@ export async function leadRoutes(fastify: FastifyInstance) {
         }
 
         const listedPrice = listing.brokerPricePln || listing.pricePln || 0;
-        const partnerGrossPrice = listing.dealerPriceNetPln
-            ? Math.round(listing.dealerPriceNetPln * 1.23)
-            : listedPrice;
+        
+        let partnerGrossPrice = listedPrice; // Fallback, brak obu
+
+        if (listing.pricePln && listing.dealerPriceNetPln) {
+            // Dynamiczne wyliczenie VAT (w tym obsługa VAT Marża gdzie stosunek to ~1)
+            const vatMultiplier = listing.pricePln / listing.dealerPriceNetPln;
+            partnerGrossPrice = Math.round(listing.dealerPriceNetPln * vatMultiplier);
+        } else if (listing.dealerPriceNetPln) {
+            // Fallback: mamy tylko netto, zakładamy standardowe 23%
+            partnerGrossPrice = Math.round(listing.dealerPriceNetPln * 1.23);
+        } else if (listing.pricePln) {
+            // Fallback: mamy tylko brutto dealera
+            partnerGrossPrice = listing.pricePln;
+        }
         const negotiationRoom = Math.max(0, listedPrice - partnerGrossPrice);
         const minSuggestedPrice = Math.round(listedPrice - (negotiationRoom * 0.8));
         const stretchPrice = Math.round(listedPrice - (negotiationRoom * 0.45));
