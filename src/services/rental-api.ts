@@ -8,7 +8,8 @@ if (API_BASE_URL.endsWith('/api/')) API_BASE_URL = API_BASE_URL.slice(0, -5);
 
 export interface RentalVehicle {
     id: string;
-    dealerId: string;
+    dealerId: string | null;
+    ownerRentalCompanyId: string | null;
     make: string;
     model: string;
     version: string | null;
@@ -27,6 +28,7 @@ export interface RentalVehicle {
     sellingPrice: number;
     primaryImageUrl: string | null;
     imageUrls: string[];
+    specificationUrl: string | null;
     equipmentAudioMultimedia: string[];
     equipmentSafety: string[];
     equipmentComfortExtras: string[];
@@ -38,7 +40,8 @@ export interface RentalVehicle {
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
-    dealer?: { id: string; name: string; addressLine1?: string; city?: string };
+    dealer?: { id: string; name: string; addressLine1?: string; city?: string } | null;
+    ownerRentalCompany?: { id: string; name: string; slug?: string | null } | null;
     rentalAssignments?: VehicleRentalAssignment[];
 }
 
@@ -176,6 +179,16 @@ export const rentalVehiclesApi = {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ imageUrl })
+        });
+    },
+
+    uploadSpecification: async (id: string, file: File, token: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-vehicles/${id}/specs`, token, {
+            method: 'POST',
+            body: formData
         });
     },
 

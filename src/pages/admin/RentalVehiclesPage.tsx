@@ -49,12 +49,19 @@ function CopyableId({ id }: { id: string }) {
 interface VehicleFormProps {
     vehicle?: RentalVehicle;
     dealers: Array<{ id: string; name: string; city?: string }>;
+    companies: RentalCompany[];
     onSave: (data: any) => void;
     onCancel: () => void;
     isSaving: boolean;
 }
 
-function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFormProps) {
+function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }: VehicleFormProps) {
+    const defaultProvider = vehicle?.dealerId 
+        ? `dealer_${vehicle.dealerId}` 
+        : vehicle?.ownerRentalCompanyId 
+            ? `company_${vehicle.ownerRentalCompanyId}` 
+            : '';
+
     const [form, setForm] = useState({
         make: vehicle?.make || '',
         model: vehicle?.model || '',
@@ -72,7 +79,8 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
         drive: vehicle?.drive || '',
         catalogPrice: vehicle?.catalogPrice?.toString() || '',
         sellingPrice: vehicle?.sellingPrice?.toString() || '',
-        dealerId: vehicle?.dealerId || (dealers.length > 0 ? dealers[0].id : ''),
+        providerId: defaultProvider,
+        specificationUrl: vehicle?.specificationUrl || '',
         additionalInfoHeader: vehicle?.additionalInfoHeader || '',
         additionalInfoContent: vehicle?.additionalInfoContent || '',
         equipmentAudioMultimedia: arrayToText(vehicle?.equipmentAudioMultimedia),
@@ -83,8 +91,20 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Parse providerId
+        let dealerId = null;
+        let ownerRentalCompanyId = null;
+        if (form.providerId.startsWith('dealer_')) {
+            dealerId = form.providerId.replace('dealer_', '');
+        } else if (form.providerId.startsWith('company_')) {
+            ownerRentalCompanyId = form.providerId.replace('company_', '');
+        }
+
         onSave({
             ...form,
+            dealerId,
+            ownerRentalCompanyId,
             enginePowerHp: form.enginePowerHp ? parseInt(form.enginePowerHp) : null,
             engineCapacityCm3: form.engineCapacityCm3 ? parseInt(form.engineCapacityCm3) : null,
             productionYear: parseInt(form.productionYear),
@@ -190,14 +210,30 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
                     <Input type="number" value={form.sellingPrice} onChange={set('sellingPrice')} required />
                 </div>
 
-                {/* Dealer */}
+                {/* Provider (Dealer / Firm) */}
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Dealer *</label>
-                    <select value={form.dealerId} onChange={set('dealerId')} className="w-full h-10 px-3 rounded-md border text-sm" required>
-                        {dealers.map(d => (
-                            <option key={d.id} value={d.id}>{d.name}{d.city ? ` (${d.city})` : ''}</option>
-                        ))}
+                    <label className="text-sm font-medium text-gray-700">Dostawca *</label>
+                    <select value={form.providerId} onChange={set('providerId')} className="w-full h-10 px-3 rounded-md border text-sm" required>
+                        <option value="">Wybierz dostawcę...</option>
+                        <optgroup label="Firmy Najmujące">
+                            {companies.map(c => (
+                                <option key={c.id} value={`company_${c.id}`}>{c.name}</option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="Dealerzy">
+                            {dealers.map(d => (
+                                <option key={d.id} value={`dealer_${d.id}`}>{d.name}{d.city ? ` (${d.city})` : ''}</option>
+                            ))}
+                        </optgroup>
                     </select>
+                </div>
+                
+                {/* Specyfikacja URL Optional */}
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-2">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Link2 className="w-4 h-4" /> Link do specyfikacji (URL) (lub wgraj plik PDF po zapisaniu)
+                    </label>
+                    <Input value={form.specificationUrl} onChange={set('specificationUrl')} placeholder="https://..." />
                 </div>
             </div>
 
@@ -425,6 +461,53 @@ function AssignmentRow({ assignment: a, vehicleId, onDelete }: { assignment: any
     );
 }
 
+// ─── Specification Upload ───────────────────────────────────────
+
+function SpecificationSection({ vehicle }: { vehicle: RentalVehicle }) {
+    const { token } = useAuth();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    const uploadMutation = useMutation({
+        mutationFn: (file: File) => rentalVehiclesApi.uploadSpecification(vehicle.id, file, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle'] });
+            toast({ title: 'Specyfikacja załadowana' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    return (
+        <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+                <Link2 className="w-4 h-4" /> Aktualna specyfikacja
+            </h4>
+
+            {vehicle.specificationUrl && (
+                <div className="text-sm">
+                    <a href={vehicle.specificationUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                        Pobierz / Zobacz aktulną specyfikację PDF
+                    </a>
+                </div>
+            )}
+
+            <div className="mt-2">
+                <label className="text-xs text-gray-500 block mb-1">Wgraj nowy plik PDF (max 10MB):</label>
+                <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadMutation.mutate(file);
+                    }}
+                    className="text-sm"
+                />
+            </div>
+        </div>
+    );
+}
+
 // ─── Image Upload ────────────────────────────────────────────────
 
 function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
@@ -573,6 +656,7 @@ export default function RentalVehiclesPage() {
                 <h2 className="text-2xl font-bold mb-6">Dodaj pojazd najmu</h2>
                 <VehicleForm
                     dealers={dealers}
+                    companies={companies}
                     onSave={data => createMutation.mutate(data)}
                     onCancel={() => setView('list')}
                     isSaving={createMutation.isPending}
@@ -588,10 +672,12 @@ export default function RentalVehiclesPage() {
                 <VehicleForm
                     vehicle={vehicleDetailQuery.data.vehicle}
                     dealers={dealers}
+                    companies={companies}
                     onSave={data => updateMutation.mutate({ id: editingId, data })}
                     onCancel={() => { setView('list'); setEditingId(null); }}
                     isSaving={updateMutation.isPending}
                 />
+                <SpecificationSection vehicle={vehicleDetailQuery.data.vehicle} />
                 <ImageSection vehicle={vehicleDetailQuery.data.vehicle} />
                 <AssignmentSection
                     vehicleId={editingId}

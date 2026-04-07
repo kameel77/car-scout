@@ -69,6 +69,9 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                     dealer: {
                         select: { id: true, name: true, addressLine1: true, city: true }
                     },
+                    ownerRentalCompany: {
+                        select: { id: true, name: true }
+                    },
                     rentalAssignments: {
                         include: {
                             rentalCompany: {
@@ -103,6 +106,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             where: { id },
             include: {
                 dealer: true,
+                ownerRentalCompany: true,
                 rentalAssignments: {
                     include: {
                         rentalCompany: true,
@@ -146,21 +150,34 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         if (!dealerId && scope.activeContext.scopeType === 'DEALER') {
             dealerId = scope.activeContext.scopeId;
         }
-        if (!dealerId) {
-            return reply.code(400).send({ error: 'dealerId is required (or switch to a dealer context)' });
+        
+        let ownerRentalCompanyId = body.ownerRentalCompanyId;
+        
+        if (!dealerId && !ownerRentalCompanyId) {
+            return reply.code(400).send({ error: 'dealerId or ownerRentalCompanyId is required' });
         }
 
-        // Verify dealer exists and user has access
-        const dealer = await fastify.prisma.dealer.findUnique({
-            where: { id: dealerId }
-        });
+        // Verify dealer/company exists
+        if (dealerId) {
+            const dealer = await fastify.prisma.dealer.findUnique({
+                where: { id: dealerId }
+            });
+            if (!dealer) {
+                return reply.code(400).send({ error: 'Dealer not found' });
+            }
+        }
 
-        if (!dealer) {
-            return reply.code(400).send({ error: 'Dealer not found' });
+        if (ownerRentalCompanyId) {
+            const company = await fastify.prisma.rentalCompany.findUnique({
+                where: { id: ownerRentalCompanyId }
+            });
+            if (!company) {
+                return reply.code(400).send({ error: 'Rental company not found' });
+            }
         }
 
         // Non-platform users can only create for their own dealers
-        if (!scope.isPlatform) {
+        if (!scope.isPlatform && dealerId) {
             const allowed = scope.dealerFilter.dealerId;
             if (typeof allowed === 'string' && dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
             if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(dealerId)) return reply.code(403).send({ error: 'Forbidden' });
@@ -168,7 +185,8 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
         const vehicle = await fastify.prisma.rentalVehicle.create({
             data: {
-                dealerId,
+                dealerId: dealerId || null,
+                ownerRentalCompanyId: ownerRentalCompanyId || null,
                 make: body.make,
                 model: body.model,
                 version: body.version || null,
@@ -193,7 +211,8 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                 equipmentOther: body.equipmentOther || [],
                 additionalInfoHeader: body.additionalInfoHeader || null,
                 additionalInfoContent: body.additionalInfoContent || null,
-                specsJson: body.specsJson || null
+                specsJson: body.specsJson || null,
+                specificationUrl: body.specificationUrl || null
             }
         });
 
@@ -231,7 +250,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         // Build update data — only include provided fields
         const updateData: any = {};
         const stringFields = ['make', 'model', 'version', 'bodyType', 'fuelType', 'transmission',
-            'color', 'paintType', 'drive', 'primaryImageUrl', 'additionalInfoHeader', 'additionalInfoContent'];
+            'color', 'paintType', 'drive', 'primaryImageUrl', 'additionalInfoHeader', 'additionalInfoContent', 'specificationUrl'];
         const intFields = ['enginePowerHp', 'engineCapacityCm3', 'productionYear', 'catalogPrice',
             'sellingPrice', 'doors', 'seats'];
         const arrayFields = ['imageUrls', 'equipmentAudioMultimedia', 'equipmentSafety',
@@ -249,6 +268,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         if (body.specsJson !== undefined) updateData.specsJson = body.specsJson;
         if (body.isActive !== undefined) updateData.isActive = body.isActive;
         if (body.dealerId !== undefined) updateData.dealerId = body.dealerId;
+        if (body.ownerRentalCompanyId !== undefined) updateData.ownerRentalCompanyId = body.ownerRentalCompanyId;
 
         // Regenerate slug if make/model/version changed
         const needSlugUpdate = body.make || body.model || body.version || body.productionYear || body.bodyType || body.fuelType;

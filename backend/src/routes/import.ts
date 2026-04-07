@@ -3,12 +3,196 @@ import { parse } from 'csv-parse/sync';
 import { syncListingsFromCSV } from '../services/sync.service.js';
 import type { CSVRow, ImportMode } from '../types/csv.types.js';
 import { resolveScope } from '../utils/scope-resolver.js';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
 
 const parseImportMode = (mode?: string): ImportMode =>
     mode === 'merge' ? 'merge' : 'replace';
 
+
+// In-memory tracker for chunk uploads (uploadId -> metadata)
+const activeUploads = new Map<string, {
+    totalChunks: number;
+    receivedChunks: Set<number>;
+    dir: string;
+    filename: string;
+    createdAt: number;
+}>();
+
+// Cleanup stale uploads older than 30 minutes
+function cleanupStaleUploads() {
+    const now = Date.now();
+    for (const [uploadId, meta] of activeUploads) {
+        if (now - meta.createdAt > 30 * 60 * 1000) {
+            fs.rm(meta.dir, { recursive: true, force: true }).catch(() => {});
+            activeUploads.delete(uploadId);
+        }
+    }
+}
+
 export async function importRoutes(fastify: FastifyInstance) {
-    // OPCJA A: Upload pliku CSV
+    // Periodic cleanup every 5 minutes
+    const cleanupInterval = setInterval(cleanupStaleUploads, 5 * 60 * 1000);
+    fastify.addHook('onClose', () => clearInterval(cleanupInterval));
+
+
+    // ─── CHUNK UPLOAD: receive individual chunk ───
+    fastify.post('/api/import/csv-chunk', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        try {
+            const uploadId = request.headers['x-upload-id'] as string;
+            const chunkIndex = parseInt(request.headers['x-chunk-index'] as string);
+            const totalChunks = parseInt(request.headers['x-total-chunks'] as string);
+            const originalFilename = request.headers['x-original-filename'] as string || 'upload.csv';
+
+            if (!uploadId || isNaN(chunkIndex) || isNaN(totalChunks)) {
+                return reply.code(400).send({
+                    error: 'Missing required headers: X-Upload-ID, X-Chunk-Index, X-Total-Chunks'
+                });
+            }
+
+            // Create upload directory on first chunk
+            if (!activeUploads.has(uploadId)) {
+                const dir = path.join(os.tmpdir(), `csv-upload-${uploadId}`);
+                await fs.mkdir(dir, { recursive: true });
+                activeUploads.set(uploadId, {
+                    totalChunks,
+                    receivedChunks: new Set(),
+                    dir,
+                    filename: originalFilename,
+                    createdAt: Date.now()
+                });
+            }
+
+            const upload = activeUploads.get(uploadId)!;
+
+            // Read chunk from multipart
+            const data = await request.file();
+            if (!data) {
+                return reply.code(400).send({ error: 'No file data in chunk' });
+            }
+
+            const buffer = await data.toBuffer();
+            const chunkPath = path.join(upload.dir, `chunk-${String(chunkIndex).padStart(5, '0')}`);
+            await fs.writeFile(chunkPath, buffer);
+
+            upload.receivedChunks.add(chunkIndex);
+
+            fastify.log.info({
+                uploadId,
+                chunkIndex,
+                totalChunks,
+                receivedCount: upload.receivedChunks.size,
+                chunkSize: buffer.length
+            }, 'Chunk received');
+
+            return {
+                status: 'chunk_received',
+                chunkIndex,
+                receivedChunks: upload.receivedChunks.size,
+                totalChunks,
+                complete: upload.receivedChunks.size === totalChunks
+            };
+        } catch (error) {
+            fastify.log.error(error, 'Chunk upload failed');
+            return reply.code(500).send({
+                error: 'Chunk upload failed',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    });
+
+    // ─── FINALIZE: reassemble chunks and run import ───
+    fastify.post('/api/import/csv-finalize', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        try {
+            const { uploadId, mode } = request.query as { uploadId: string; mode?: string };
+            const importMode = parseImportMode(mode);
+
+            // Resolve active context for dealer assignment
+            const scope = await resolveScope(fastify, request);
+            const contextDealerId = scope.activeContext.scopeType === 'DEALER'
+                ? scope.activeContext.scopeId
+                : undefined;
+
+            if (!uploadId || !activeUploads.has(uploadId)) {
+                return reply.code(400).send({ error: 'Invalid or expired upload ID' });
+            }
+
+            const upload = activeUploads.get(uploadId)!;
+
+            // Verify all chunks received
+            if (upload.receivedChunks.size !== upload.totalChunks) {
+                return reply.code(400).send({
+                    error: `Missing chunks: received ${upload.receivedChunks.size}/${upload.totalChunks}`
+                });
+            }
+
+            // Reassemble file from chunks in order
+            const chunks: Buffer[] = [];
+            for (let i = 0; i < upload.totalChunks; i++) {
+                const chunkPath = path.join(upload.dir, `chunk-${String(i).padStart(5, '0')}`);
+                chunks.push(await fs.readFile(chunkPath));
+            }
+
+            const fullBuffer = Buffer.concat(chunks);
+            const csvContent = fullBuffer.toString('utf-8');
+
+            fastify.log.info({
+                uploadId,
+                totalSize: fullBuffer.length,
+                filename: upload.filename
+            }, 'Chunks reassembled, starting CSV parse');
+
+            // Cleanup temp files
+            await fs.rm(upload.dir, { recursive: true, force: true }).catch(() => {});
+            activeUploads.delete(uploadId);
+
+            // Parse CSV
+            const records = parse(csvContent, {
+                columns: true,
+                skip_empty_lines: true,
+                delimiter: ',',
+                relax_column_count: true
+            }) as CSVRow[];
+
+            if (records.length === 0) {
+                return reply.code(400).send({ error: 'CSV file is empty' });
+            }
+
+            // Start import process
+            const result = await syncListingsFromCSV(
+                fastify.prisma,
+                records,
+                request.user!.userId,
+                upload.filename,
+                importMode,
+                contextDealerId   // scope: assign dealer if in dealer context
+            );
+
+            fastify.log.info({
+                importLogId: result.importLogId,
+                totalRows: result.totalRows,
+                inserted: result.inserted,
+                updated: result.updated,
+                archived: result.archived
+            }, 'Chunked CSV import completed');
+
+            return result;
+        } catch (error) {
+            console.error('CRITICAL IMPORT ERROR (chunked):', error);
+            fastify.log.error(error, 'Chunked CSV import failed');
+            return reply.code(500).send({
+                error: 'Import failed',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    });
+
+    // ─── OPCJA A: Upload pliku CSV (single request — for files <90MB) ───
     fastify.post('/api/import/csv', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {

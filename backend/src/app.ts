@@ -111,6 +111,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
 
     const fastify = Fastify({
+        bodyLimit: 500 * 1024 * 1024,
         logger: {
             level: process.env.NODE_ENV === 'production' ? 'info' : 'debug'
         }
@@ -164,7 +165,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
     await fastify.register(multipart, {
         limits: {
-            fileSize: 100 * 1024 * 1024,
+            fileSize: 500 * 1024 * 1024,
             files: 20
         }
     });

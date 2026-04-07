@@ -24,21 +24,36 @@ export function CSVUploader() {
     const [isUploading, setIsUploading] = useState(false);
     const [result, setResult] = useState<UploadResult | null>(null);
     const [importMode, setImportMode] = useState<ImportMode>('replace');
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadPhase, setUploadPhase] = useState<'uploading' | 'processing'>('uploading');
     const { token } = useAuth();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setFile(e.target.files[0]);
             setResult(null);
+            setUploadProgress(0);
         }
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
     const handleUpload = async () => {
         if (!file || !token) return;
 
         setIsUploading(true);
+        setUploadProgress(0);
+        setUploadPhase('uploading');
+
         try {
-            const uploadResult = await importApi.uploadCSV(file, token, importMode);
+            const uploadResult = await importApi.uploadCSV(file, token, importMode, (phase, percent) => {
+                setUploadPhase(phase);
+                setUploadProgress(percent);
+            });
             setResult(uploadResult);
             toast.success(`Import successful! ${uploadResult.inserted} inserted, ${uploadResult.updated} updated`);
         } catch (error) {
@@ -47,6 +62,8 @@ export function CSVUploader() {
             setIsUploading(false);
         }
     };
+
+    const isChunked = file && file.size > 90 * 1024 * 1024;
 
     return (
         <Card>
@@ -107,9 +124,17 @@ export function CSVUploader() {
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors"
                     >
                         <FileText className="w-6 h-6 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                            {file ? file.name : 'Click to select CSV file'}
-                        </span>
+                        <div className="text-center">
+                            <span className="text-sm text-gray-600 block">
+                                {file ? file.name : 'Click to select CSV file'}
+                            </span>
+                            {file && (
+                                <span className="text-xs text-gray-400 mt-1 block">
+                                    {formatFileSize(file.size)}
+                                    {isChunked && ' — chunked upload'}
+                                </span>
+                            )}
+                        </div>
                         <input
                             id="csv-upload"
                             type="file"
@@ -131,7 +156,7 @@ export function CSVUploader() {
                         {isUploading ? (
                             <>
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                                Uploading...
+                                {uploadPhase === 'uploading' ? 'Wysyłanie...' : 'Przetwarzanie importu...'}
                             </>
                         ) : (
                             <>
@@ -145,9 +170,11 @@ export function CSVUploader() {
                 {/* Upload Progress */}
                 {isUploading && (
                     <div className="space-y-2">
-                        <Progress value={50} className="w-full" />
+                        <Progress value={uploadProgress} className="w-full" />
                         <p className="text-sm text-gray-600 text-center">
-                            Processing CSV file...
+                            {uploadPhase === 'uploading'
+                                ? `Wysyłanie pliku... ${uploadProgress}%`
+                                : `Przetwarzanie importu... ${uploadProgress}%`}
                         </p>
                     </div>
                 )}
@@ -199,6 +226,7 @@ export function CSVUploader() {
                             <li>Tab-separated values (TSV)</li>
                             <li>First row must contain column headers</li>
                             <li>Required fields: make, model, price_pln, production_year, mileage_km</li>
+                            <li>Duże pliki (&gt;90 MB) są automatycznie dzielone na części</li>
                         </ul>
                     </div>
                 </div>

@@ -526,7 +526,8 @@ model Partner {
 
 model RentalVehicle {
   id                       String   @id @default(cuid())
-  dealerId                 String   @map("dealer_id")
+  dealerId                 String?  @map("dealer_id")
+  ownerRentalCompanyId     String?  @map("owner_rental_company_id")
   make                     String
   model                    String
   version                  String?
@@ -552,16 +553,19 @@ model RentalVehicle {
   additionalInfoHeader     String?  @map("additional_info_header")
   additionalInfoContent    String?  @map("additional_info_content")
   specsJson                Json?    @map("specs_json")
+  specificationUrl         String?  @map("specification_url")
   slug                     String?  @unique
   isActive                 Boolean  @default(true) @map("is_active")
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
 
-  dealer            Dealer                    @relation(fields: [dealerId], references: [id])
-  rentalAssignments VehicleRentalAssignment[]
-  leads             Lead[]
+  dealer             Dealer?                   @relation(fields: [dealerId], references: [id])
+  ownerRentalCompany RentalCompany?            @relation("VehicleOwnerCompany", fields: [ownerRentalCompanyId], references: [id])
+  rentalAssignments  VehicleRentalAssignment[]
+  leads              Lead[]
 
   @@index([dealerId])
+  @@index([ownerRentalCompanyId])
   @@index([make, model])
   @@index([isActive])
   @@index([slug])
@@ -580,6 +584,7 @@ model RentalCompany {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   vehicleAssignments VehicleRentalAssignment[]
+  ownedVehicles      RentalVehicle[]           @relation("VehicleOwnerCompany")
 
   @@map("rental_companies")
 }
