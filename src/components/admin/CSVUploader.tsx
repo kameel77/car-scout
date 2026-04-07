@@ -63,7 +63,7 @@ export function CSVUploader() {
         }
     };
 
-    const isChunked = file && file.size > 90 * 1024 * 1024;
+    const isChunked = file && file.size > 25 * 1024 * 1024;
 
     return (
         <Card>
@@ -226,7 +226,7 @@ export function CSVUploader() {
                             <li>Tab-separated values (TSV)</li>
                             <li>First row must contain column headers</li>
                             <li>Required fields: make, model, price_pln, production_year, mileage_km</li>
-                            <li>Duże pliki (&gt;90 MB) są automatycznie dzielone na części</li>
+                            <li>Duże pliki (&gt;25 MB) są automatycznie dzielone na części</li>
                         </ul>
                     </div>
                 </div>

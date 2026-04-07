@@ -159,7 +159,7 @@ export const importApi = {
         mode: ImportMode = 'replace',
         onProgress?: (phase: 'uploading' | 'processing', percent: number) => void
     ) => {
-        const CHUNK_THRESHOLD = 90 * 1024 * 1024; // 90MB — below Cloudflare's 100MB limit
+        const CHUNK_THRESHOLD = 25 * 1024 * 1024; // 25MB — always chunk if over chunk size
         const CHUNK_SIZE = 25 * 1024 * 1024;       // 25MB per chunk
 
         // ── Small file: single request (original path) ──
