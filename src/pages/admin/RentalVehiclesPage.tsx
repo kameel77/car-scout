@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
-    Plus, Search, Edit, Archive, RotateCcw, Trash2, X,
+    Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star,
     ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil
 } from 'lucide-react';
 
@@ -87,6 +87,8 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
         equipmentSafety: arrayToText(vehicle?.equipmentSafety),
         equipmentComfortExtras: arrayToText(vehicle?.equipmentComfortExtras),
         equipmentOther: arrayToText(vehicle?.equipmentOther),
+        primaryImageUrl: vehicle?.primaryImageUrl || '',
+        imageUrls: arrayToText(vehicle?.imageUrls),
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -116,6 +118,8 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
             equipmentSafety: textToArray(form.equipmentSafety),
             equipmentComfortExtras: textToArray(form.equipmentComfortExtras),
             equipmentOther: textToArray(form.equipmentOther),
+            primaryImageUrl: form.primaryImageUrl || null,
+            imageUrls: textToArray(form.imageUrls),
         });
     };
 
@@ -229,11 +233,30 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
                 </div>
                 
                 {/* Specyfikacja URL Optional */}
-                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-2">
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-2 pt-2 border-t">
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <Link2 className="w-4 h-4" /> Link do specyfikacji (URL) (lub wgraj plik PDF po zapisaniu)
                     </label>
                     <Input value={form.specificationUrl} onChange={set('specificationUrl')} placeholder="https://..." />
+                </div>
+
+                {/* Zdjęcia URL Optional */}
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-4 pt-2 border-t">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" /> Główne zdjęcie pojazdu (URL) (lub wgraj z dysku po zapisaniu)
+                        </label>
+                        <Input value={form.primaryImageUrl} onChange={set('primaryImageUrl')} placeholder="Główne zdjęcie np. https://..." />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Dodatkowe zdjęcia pojazdu (URL - po jednym w nowej linii)</label>
+                        <textarea
+                            value={form.imageUrls}
+                            onChange={set('imageUrls')}
+                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
+                            placeholder={`np.\nhttps://zdjecie1.jpg\nhttps://zdjecie2.jpg`}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -519,10 +542,60 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
         mutationFn: (files: File[]) => rentalVehiclesApi.uploadImages(vehicle.id, files, !vehicle.primaryImageUrl, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
             toast({ title: 'Zdjęcia załadowane' });
         },
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
     });
+
+    const setPrimaryMutation = useMutation({
+        mutationFn: (url: string) => rentalVehiclesApi.update(vehicle.id, { primaryImageUrl: url }, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
+            toast({ title: 'Zmieniono zdjęcie główne' });
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (url: string) => rentalVehiclesApi.update(vehicle.id, {
+            imageUrls: (vehicle.imageUrls || []).filter(u => u !== url),
+            ...(vehicle.primaryImageUrl === url ? { primaryImageUrl: null } : {})
+        }, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
+            toast({ title: 'Zdjęcie usunięte' });
+        }
+    });
+
+    const reorderMutation = useMutation({
+        mutationFn: (newUrls: string[]) => rentalVehiclesApi.update(vehicle.id, { imageUrls: newUrls }, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
+            toast({ title: 'Kolejność zmieniona' });
+        }
+    });
+
+    const handleMoveLeft = (index: number) => {
+        if (index === 0) return;
+        const newUrls = [...(vehicle.imageUrls || [])];
+        const temp = newUrls[index - 1];
+        newUrls[index - 1] = newUrls[index];
+        newUrls[index] = temp;
+        reorderMutation.mutate(newUrls);
+    };
+
+    const handleMoveRight = (index: number) => {
+        const urls = vehicle.imageUrls || [];
+        if (index === urls.length - 1) return;
+        const newUrls = [...urls];
+        const temp = newUrls[index + 1];
+        newUrls[index + 1] = newUrls[index];
+        newUrls[index] = temp;
+        reorderMutation.mutate(newUrls);
+    };
 
     return (
         <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-lg">
@@ -531,28 +604,76 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
             </h4>
 
             {vehicle.imageUrls?.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-4 flex-wrap">
                     {vehicle.imageUrls.map((url, i) => (
-                        <div key={i} className={`relative w-20 h-20 rounded overflow-hidden border-2 ${url === vehicle.primaryImageUrl ? 'border-blue-500' : 'border-gray-200'}`}>
+                        <div key={i} className={`group relative w-32 h-32 rounded-lg overflow-hidden border-2 ${url === vehicle.primaryImageUrl ? 'border-blue-500 shadow-md' : 'border-gray-200'}`}>
                             <img src={url} alt={`Zdjęcie ${i + 1}`} className="w-full h-full object-cover" />
                             {url === vehicle.primaryImageUrl && (
-                                <span className="absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-[10px] text-center">Główne</span>
+                                <span className="absolute top-0 left-0 right-0 bg-blue-500/80 text-white text-[10px] font-bold py-0.5 text-center uppercase tracking-wider backdrop-blur-sm">Główne</span>
                             )}
+                            
+                            {/* Hover ActionsOverlay */}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-1">
+                                <div className="flex justify-between items-center bg-white/10 rounded backdrop-blur p-1">
+                                    <div className="flex gap-1">
+                                        <button 
+                                            onClick={() => handleMoveLeft(i)} 
+                                            disabled={i === 0 || reorderMutation.isPending}
+                                            className="p-1 hover:bg-black/30 rounded text-white disabled:opacity-30 transition-colors"
+                                            title="Przesuń w lewo"
+                                        >
+                                            <ChevronLeft className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleMoveRight(i)} 
+                                            disabled={i === (vehicle.imageUrls?.length || 0) - 1 || reorderMutation.isPending}
+                                            className="p-1 hover:bg-black/30 rounded text-white disabled:opacity-30 transition-colors"
+                                            title="Przesuń w prawo"
+                                        >
+                                            <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        {url !== vehicle.primaryImageUrl && (
+                                            <button 
+                                                onClick={() => setPrimaryMutation.mutate(url)}
+                                                disabled={setPrimaryMutation.isPending}
+                                                className="p-1 hover:bg-blue-500/50 rounded text-blue-200 transition-colors"
+                                                title="Ustaw jako główne"
+                                            >
+                                                <Star className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={() => {
+                                                if(confirm('Pewnie że usunąć zdjęcie?')) deleteMutation.mutate(url);
+                                            }}
+                                            disabled={deleteMutation.isPending}
+                                            className="p-1 hover:bg-red-500/50 rounded text-red-200 transition-colors"
+                                            title="Usuń zdjęcie"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={e => {
-                    const files = Array.from(e.target.files || []);
-                    if (files.length > 0) uploadMutation.mutate(files);
-                }}
-                className="text-sm"
-            />
+            <div className="mt-2 text-sm text-gray-500">
+                <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={e => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) uploadMutation.mutate(files);
+                    }}
+                    className="text-sm border p-2 rounded w-full bg-white cursor-pointer"
+                />
+            </div>
         </div>
     );
 }
