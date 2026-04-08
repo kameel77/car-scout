@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,9 +25,25 @@ export function CSVUploader() {
     const [result, setResult] = useState<UploadResult | null>(null);
     const [importMode, setImportMode] = useState<ImportMode>('replace');
     const [importSource, setImportSource] = useState<string>('');
+    const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadPhase, setUploadPhase] = useState<'uploading' | 'processing'>('uploading');
     const { token } = useAuth();
+
+    useEffect(() => {
+        const fetchSources = async () => {
+            if (!token) return;
+            try {
+                const response = await importApi.getSources(token);
+                if (response.success) {
+                    setAvailableSources(response.sources || []);
+                }
+            } catch (error) {
+                console.error('Failed to fetch sources:', error);
+            }
+        };
+        fetchSources();
+    }, [token]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -88,12 +104,18 @@ export function CSVUploader() {
                     <p className="text-sm font-semibold text-gray-800">Źródło danych (Data Source)</p>
                     <input
                         type="text"
+                        list="import-sources"
                         placeholder="Np. getcars, otomoto, manual..."
                         value={importSource}
                         onChange={(e) => setImportSource(e.target.value)}
                         className="w-full sm:max-w-md rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         disabled={isUploading}
                     />
+                    <datalist id="import-sources">
+                        {availableSources.map((source) => (
+                            <option key={source} value={source} />
+                        ))}
+                    </datalist>
                 </div>
 
                 {/* Import Mode */}

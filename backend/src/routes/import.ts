@@ -36,7 +36,24 @@ export async function importRoutes(fastify: FastifyInstance) {
     const cleanupInterval = setInterval(cleanupStaleUploads, 5 * 60 * 1000);
     fastify.addHook('onClose', () => clearInterval(cleanupInterval));
 
-
+    // Get list of existing unique import sources
+    fastify.get('/api/import/sources', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        try {
+            const sourcesRaw = await fastify.prisma.listing.findMany({
+                select: { importSource: true },
+                distinct: ['importSource'],
+                where: { importSource: { not: null } }
+            });
+            const sources = sourcesRaw.map(s => s.importSource).filter(Boolean).sort();
+            return { success: true, sources };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.code(500).send({ error: 'Failed to fetch import sources' });
+        }
+    });
+    
     // ─── CHUNK UPLOAD: receive individual chunk ───
     fastify.post('/api/import/csv-chunk', {
         preHandler: [fastify.authenticate]

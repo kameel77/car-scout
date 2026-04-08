@@ -153,6 +153,16 @@ export const faqApi = {
 
 // Import API
 export const importApi = {
+    getSources: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/import/sources`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch import sources');
+        }
+        return response.json();
+    },
+
     uploadCSV: async (
         file: File,
         token: string,
