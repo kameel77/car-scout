@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { resolveScope } from '../utils/scope-resolver.js';
 
 function generateSlug(make: string, model: string, version: string | null, productionYear: number, bodyType: string | null, fuelType: string | null, id: string): string {
     const translitMap: Record<string, string> = {
@@ -37,9 +38,15 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         const limitNum = Math.min(100, Math.max(1, parseInt(limit || '20')));
         const skip = (pageNum - 1) * limitNum;
 
-        const where: any = {};
+        // Resolve scope for data isolation
+        const scope = await resolveScope(fastify, request);
 
-        if (dealerId) where.dealerId = dealerId;
+        const where: any = {
+            ...scope.dealerFilter  // Apply scope filter
+        };
+
+        // Additional filters from query params
+        if (dealerId && scope.isPlatform) where.dealerId = dealerId; // only platform can override dealer filter
         if (make) where.make = { contains: make, mode: 'insensitive' };
         if (model) where.model = { contains: model, mode: 'insensitive' };
         if (isActive !== undefined) where.isActive = isActive === 'true';
@@ -61,6 +68,9 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                 include: {
                     dealer: {
                         select: { id: true, name: true, addressLine1: true, city: true }
+                    },
+                    ownerRentalCompany: {
+                        select: { id: true, name: true }
                     },
                     rentalAssignments: {
                         include: {
@@ -96,6 +106,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             where: { id },
             include: {
                 dealer: true,
+                ownerRentalCompany: true,
                 rentalAssignments: {
                     include: {
                         rentalCompany: true,
@@ -125,24 +136,57 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
 
         // Validate required fields
-        if (!body.make || !body.model || !body.productionYear || !body.catalogPrice || !body.sellingPrice || !body.dealerId) {
+        if (!body.make || !body.model || !body.productionYear || !body.catalogPrice || !body.sellingPrice) {
             return reply.code(400).send({
-                error: 'Missing required fields: make, model, productionYear, catalogPrice, sellingPrice, dealerId'
+                error: 'Missing required fields: make, model, productionYear, catalogPrice, sellingPrice'
             });
         }
 
-        // Verify dealer exists
-        const dealer = await fastify.prisma.dealer.findUnique({
-            where: { id: body.dealerId }
-        });
+        // Resolve scope for dealer assignment
+        const scope = await resolveScope(fastify, request);
 
-        if (!dealer) {
-            return reply.code(400).send({ error: 'Dealer not found' });
+        // Determine dealerId: from body, or from context
+        let dealerId = body.dealerId;
+        if (!dealerId && scope.activeContext.scopeType === 'DEALER') {
+            dealerId = scope.activeContext.scopeId;
+        }
+        
+        let ownerRentalCompanyId = body.ownerRentalCompanyId;
+        
+        if (!dealerId && !ownerRentalCompanyId) {
+            return reply.code(400).send({ error: 'dealerId or ownerRentalCompanyId is required' });
+        }
+
+        // Verify dealer/company exists
+        if (dealerId) {
+            const dealer = await fastify.prisma.dealer.findUnique({
+                where: { id: dealerId }
+            });
+            if (!dealer) {
+                return reply.code(400).send({ error: 'Dealer not found' });
+            }
+        }
+
+        if (ownerRentalCompanyId) {
+            const company = await fastify.prisma.rentalCompany.findUnique({
+                where: { id: ownerRentalCompanyId }
+            });
+            if (!company) {
+                return reply.code(400).send({ error: 'Rental company not found' });
+            }
+        }
+
+        // Non-platform users can only create for their own dealers
+        if (!scope.isPlatform && dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(dealerId)) return reply.code(403).send({ error: 'Forbidden' });
         }
 
         const vehicle = await fastify.prisma.rentalVehicle.create({
             data: {
-                dealerId: body.dealerId,
+                dealerId: dealerId || null,
+                ownerRentalCompanyId: ownerRentalCompanyId || null,
                 make: body.make,
                 model: body.model,
                 version: body.version || null,
@@ -167,7 +211,8 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                 equipmentOther: body.equipmentOther || [],
                 additionalInfoHeader: body.additionalInfoHeader || null,
                 additionalInfoContent: body.additionalInfoContent || null,
-                specsJson: body.specsJson || null
+                specsJson: body.specsJson || null,
+                specificationUrl: body.specificationUrl || null
             }
         });
 
@@ -205,7 +250,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         // Build update data — only include provided fields
         const updateData: any = {};
         const stringFields = ['make', 'model', 'version', 'bodyType', 'fuelType', 'transmission',
-            'color', 'paintType', 'drive', 'primaryImageUrl', 'additionalInfoHeader', 'additionalInfoContent'];
+            'color', 'paintType', 'drive', 'primaryImageUrl', 'additionalInfoHeader', 'additionalInfoContent', 'specificationUrl'];
         const intFields = ['enginePowerHp', 'engineCapacityCm3', 'productionYear', 'catalogPrice',
             'sellingPrice', 'doors', 'seats'];
         const arrayFields = ['imageUrls', 'equipmentAudioMultimedia', 'equipmentSafety',
@@ -223,6 +268,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         if (body.specsJson !== undefined) updateData.specsJson = body.specsJson;
         if (body.isActive !== undefined) updateData.isActive = body.isActive;
         if (body.dealerId !== undefined) updateData.dealerId = body.dealerId;
+        if (body.ownerRentalCompanyId !== undefined) updateData.ownerRentalCompanyId = body.ownerRentalCompanyId;
 
         // Regenerate slug if make/model/version changed
         const needSlugUpdate = body.make || body.model || body.version || body.productionYear || body.bodyType || body.fuelType;

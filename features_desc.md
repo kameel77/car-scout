@@ -194,3 +194,37 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Wykorzystuje istniejące endpointy `POST /api/listings/:id/archive` i `POST /api/listings/:id/restore`.
   - Wywołania wykonywane równolegle dla wszystkich zaznaczonych ofert.
   - **Usuwanie**: `DELETE /api/listings/:id` - trwałe usunięcie oferty wraz z powiązanymi danymi (leady, historia cen) przez `onDelete: Cascade` w schemacie Prisma.
+
+## 11. Model multi-tenant (platforma / grupa dealerska / dealer) — propozycja wdrożenia
+- **Cel**: zapewnienie bezpiecznej izolacji danych i uprawnień między dealerami oraz grupami dealerskimi, przy zachowaniu możliwości pracy cross-tenant dla ról platformowych.
+- **Zakres ról biznesowych**:
+  - `superadmin_platform`: pełny dostęp do wszystkich kontekstów i ustawień.
+  - `platform_manager`: zarządzanie stockiem, grupami dealerskimi i dealerami w całej platformie.
+  - `dealer_group_admin`: zarządzanie dealerami oraz użytkownikami w obrębie swojej grupy dealerskiej.
+  - `dealer_admin`: zarządzanie stockiem i użytkownikami własnego dealera.
+  - `dealer_employee`: zarządzanie stockiem własnego dealera.
+- **Model danych (docelowo)**:
+  - Nowa encja `DealerGroup` (grupy dealerskie).
+  - Nowa encja `Membership` (użytkownik + rola + scope: platforma/grupa/dealer).
+  - `Dealer` rozszerzony o relację do `DealerGroup`.
+  - `Listing` rozszerzony o opcjonalnego właściciela/opiekuna (`ownerUserId`) i tryb kontaktu.
+- **Zachowanie ofert**:
+  - Każdy pojazd ma przypisanego dealera (owner biznesowy).
+  - Dane kontaktowe mogą pochodzić z:
+    - kontaktu generycznego dealera (istniejące pola firmy/dealera), albo
+    - konkretnego pracownika dealera (opiekun pojazdu).
+  - Role platformowe mogą wprowadzać i edytować pojazdy w dowolnym kontekście po wyborze aktywnego scope.
+- **Panel administracyjny**:
+  - Dodanie przełącznika kontekstu (platforma/grupa/dealer) dla ról platformowych.
+  - Dodanie widoków do zarządzania grupami dealerskimi, dealerami i użytkownikami per scope.
+- **Status**: analiza i projekt architektury przygotowane; implementacja etapowa (schema -> migracja danych -> permission engine -> UI).
+
+- 2026-04-01: Dodano proces negocjacji ceny na stronie oferty: osobny CTA, osobny flow formularza i backendowy typ leada `price_negotiation` z automatyczną klasyfikacją odpowiedzi (great_match/review_zone/too_low).
+
+## 12. Izolacja źródeł danych podczas importu pojazdów
+- **Cel**: zapobieganie sytuacjom, w których import z jednego źródła (np. plik CSV z Otomoto) przypadkowo nadpisze lub usunie pojazdy zaimportowane z innego źródła (np. plik CSV od innego dealera lub API).
+- **Zachowanie**:
+  - Na ekranie importu ("Import") użytkownik każdorazowo podaje nazwę źródła (Data Source) przed wgraniem pliku CSV (np. `otomoto`, `getcars`, `manual`).
+  - System przechowuje informację o źródle w polu `importSource` dla każdego pojazdu w bazie.
+  - Zastępowanie trybem aktualizacji (Replace): System wyszukuje istniejące oferty do zarchiwizowania tylko w ramach aktualnie wybranego źródła (chroniąc pojazdy innych źródeł przed zniknięciem).
+  - Weryfikacja duplikatów: Kod zapobiega nadpisywaniu się ofert, gdy system rozpoznaje ten sam `vin` należący do innego `importSource`. W takiej sytuacji ignoruje dany pojazd, chroniąc integralność bazy danych. Taki odrzucony rekord będzie zaliczony jako pominięty (Pominięte błędy/duplikaty) w wynikach importu.

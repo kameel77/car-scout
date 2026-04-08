@@ -51,6 +51,7 @@ export interface SyncResult {
     inserted: number;
     updated: number;
     archived: number;
+    failed: number;
     priceChanges: number;
     duration: number;
     importLogId: string;

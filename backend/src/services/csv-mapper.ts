@@ -2,11 +2,12 @@ import { Prisma } from '@prisma/client';
 import type { CSVRow } from '../types/csv.types.js';
 import { getMarketplaceFromUrl } from '../utils/url-utils.js';
 
-export function mapCSVToListing(row: CSVRow, dealerId?: string): Prisma.ListingCreateInput {
+export function mapCSVToListing(row: CSVRow, dealerId?: string, importSource?: string): Prisma.ListingCreateInput {
     return {
         listingId: row.listing_id || undefined,
         listingUrl: row.listing_url || undefined,
         marketplace: getMarketplaceFromUrl(row.listing_url),
+        importSource: importSource || undefined,
         scrapedAt: row.scraped_at ? new Date(row.scraped_at) : undefined,
 
         make: row.make,
@@ -69,8 +70,8 @@ function safeInt(value: string | undefined | null): number | undefined {
     return isNaN(parsed) ? undefined : parsed;
 }
 
-export function mapCSVToListingUpdate(row: CSVRow): Prisma.ListingUpdateInput {
-    const data = mapCSVToListing(row) as any;
+export function mapCSVToListingUpdate(row: CSVRow, importSource?: string): Prisma.ListingUpdateInput {
+    const data = mapCSVToListing(row, undefined, importSource) as any;
     delete data.dealer; // Don't update dealer relationship
     return data;
 }

@@ -79,28 +79,48 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                 const car = await getCSFlowCarDetails(basicCar.id);
                 if (!car) continue;
 
-                // 1. Zapis Dealera
+                // 1. Zapis Dealera — używamy CSFlow dealer.id jako stabilnego klucza
                 let currentDealerId: string | undefined;
                 if (car.dealer) {
                     const d = car.dealer;
-                    const dealer = await prisma.dealer.upsert({
-                        where: {
-                            name_addressLine1: {
-                                name: d.name || 'Brak Nazwy Dealera',
-                                addressLine1: d.address || 'Brak Ulicy'
-                            }
-                        },
-                        create: {
-                            name: d.name || 'Brak Nazwy Dealera',
-                            addressLine1: d.address || 'Brak Ulicy',
-                            city: d.city,
-                            contactPhone: d.phone_used || d.phone_number,
-                            googleLink: d.url
-                        },
-                        update: {
-                            contactPhone: d.phone_used || d.phone_number
-                        }
-                    });
+                    const dealerData = {
+                        name: d.name || `Dealer #${d.id}`,
+                        addressLine1: d.address || '',
+                        city: d.city || null,
+                        postalCode: d.postal_code || null,
+                        contactPhone: d.phone_used || d.phone_number || null,
+                        contactEmail: d.email || null,
+                        contactEmailService: d.email_service || null,
+                        googleLink: d.url || null,
+                    };
+
+                    let dealer;
+                    if (d.id) {
+                        // Upsert po stabilnym CSFlow dealer.id
+                        dealer = await prisma.dealer.upsert({
+                            where: { csflowDealerId: d.id },
+                            create: {
+                                csflowDealerId: d.id,
+                                ...dealerData,
+                            },
+                            update: dealerData, // Aktualizujemy wszystkie pola przy kolejnych synchrach
+                        });
+                    } else {
+                        // Fallback gdy brak d.id (nie powinno się zdarzać)
+                        dealer = await prisma.dealer.upsert({
+                            where: {
+                                name_addressLine1: {
+                                    name: dealerData.name,
+                                    addressLine1: dealerData.addressLine1 || 'Brak Ulicy',
+                                }
+                            },
+                            create: {
+                                ...dealerData,
+                                addressLine1: dealerData.addressLine1 || 'Brak Ulicy',
+                            },
+                            update: dealerData,
+                        });
+                    }
                     currentDealerId = dealer.id;
                 }
 

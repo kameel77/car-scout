@@ -1,6 +1,17 @@
 import fetch from 'node-fetch';
 
 const CSFLOW_API_URL = process.env.CSFLOW_API_URL || 'https://webapi.demo.csflow.pl';
+const FETCH_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(url: string, options: any = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal as any });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
 
 /**
  * Zwraca listę pojazdów z CSFlow.
@@ -15,7 +26,7 @@ export async function getCSFlowCars(): Promise<any[]> {
     url.searchParams.append('limit', limit);
 
     try {
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithTimeout(url.toString(), {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -44,7 +55,7 @@ export async function getCSFlowCarDetails(id: string | number): Promise<any> {
     url.searchParams.append('id', id.toString());
 
     try {
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithTimeout(url.toString(), {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',

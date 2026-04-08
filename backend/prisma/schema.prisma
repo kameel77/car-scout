@@ -7,6 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// Multi-tenant enums
+// ==========================================
+
+enum ScopeType {
+  PLATFORM
+  DEALER_GROUP
+  DEALER
+}
+
+enum MemberRole {
+  SUPERADMIN_PLATFORM
+  PLATFORM_MANAGER
+  DEALER_GROUP_ADMIN
+  DEALER_ADMIN
+  DEALER_EMPLOYEE
+}
+
+enum ContactMode {
+  DEALER_GENERIC
+  DEALER_EMPLOYEE
+}
+
+
 model Listing {
   id                       String         @id @default(cuid())
   listingId                String?        @unique @map("listing_id")
@@ -38,6 +62,11 @@ model Listing {
   imageCount               Int?           @map("image_count")
   imageUrls                String[]       @map("image_urls")
   dealerId                 String?        @map("dealer_id")
+  ownerUserId              String?        @map("owner_user_id")
+  contactMode              ContactMode    @default(DEALER_GENERIC) @map("contact_mode")
+  contactName              String?        @map("contact_name")
+  contactPhoneSnapshot     String?        @map("contact_phone_snapshot")
+  contactEmail             String?        @map("contact_email")
   equipmentAudioMultimedia String[]       @map("equipment_audio_multimedia")
   equipmentSafety          String[]       @map("equipment_safety")
   equipmentComfortExtras   String[]       @map("equipment_comfort_extras")
@@ -55,9 +84,11 @@ model Listing {
   dealerPriceNetEur        Float?         @map("dealer_price_net_eur")
   dealerPriceNetPln        Float?         @map("dealer_price_net_pln")
   marketplace              String?        @map("marketplace")
+  importSource             String?        @map("import_source")
   slug                     String?        @unique @map("slug")
   leads                    Lead[]
   dealer                   Dealer?        @relation(fields: [dealerId], references: [id])
+  ownerUser                User?          @relation("ListingOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   priceHistory             PriceHistory[]
 
   @@index([make, model])
@@ -68,6 +99,8 @@ model Listing {
   @@index([listingId])
   @@index([marketplace])
   @@index([slug])
+  @@index([ownerUserId])
+  @@index([dealerId, isArchived, createdAt])
   @@map("listings")
 }
 
@@ -115,21 +148,30 @@ model Lead {
 
 model Dealer {
   id                String          @id @default(cuid())
+  csflowDealerId    Int?            @unique @map("csflow_dealer_id")
   name              String
   addressLine1      String          @map("address_line1")
   addressLine2      String?         @map("address_line2")
   addressLine3      String?         @map("address_line3")
   city              String?
+  postalCode        String?         @map("postal_code")
   contactPhone      String?         @map("contact_phone")
+  contactEmail      String?         @map("contact_email")
+  contactEmailService String?       @map("contact_email_service")
+  contactName       String?         @map("contact_name")
+  dealerGroupId     String?         @map("dealer_group_id")
   googleRating      Float?          @map("google_rating")
   googleReviewCount Int?            @map("google_review_count")
   googleLink        String?         @map("google_link")
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
+  dealerGroup       DealerGroup?    @relation(fields: [dealerGroupId], references: [id])
   listings          Listing[]
   rentalVehicles    RentalVehicle[]
+  settings          DealerSettings?
 
   @@unique([name, addressLine1])
+  @@index([dealerGroupId])
   @@map("dealers")
 }
 
@@ -165,18 +207,21 @@ model ImportLog {
 }
 
 model User {
-  id                   String      @id @default(cuid())
-  email                String      @unique
+  id                   String       @id @default(cuid())
+  email                String       @unique
   password             String
   name                 String?
-  role                 String      @default("admin")
-  isActive             Boolean     @default(true) @map("is_active")
-  lastLogin            DateTime?   @map("last_login")
-  createdAt            DateTime    @default(now()) @map("created_at")
-  updatedAt            DateTime    @updatedAt @map("updated_at")
-  resetPasswordExpires DateTime?   @map("reset_password_expires")
-  resetPasswordToken   String?     @map("reset_password_token")
+  phone                String?
+  role                 String       @default("admin") // legacy — fallback until Etap 5
+  isActive             Boolean      @default(true) @map("is_active")
+  lastLogin            DateTime?    @map("last_login")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+  resetPasswordExpires DateTime?    @map("reset_password_expires")
+  resetPasswordToken   String?      @map("reset_password_token")
   importLogs           ImportLog[]
+  memberships          Membership[]
+  ownedListings        Listing[]    @relation("ListingOwner")
 
   @@map("users")
 }
@@ -380,6 +425,82 @@ model PartnerAd {
   @@map("partner_ads")
 }
 
+// ==========================================
+// Multi-tenant: DealerGroup + Membership + Settings
+// ==========================================
+
+model DealerGroup {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String   @unique
+  contactName  String?  @map("contact_name")
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  addressLine1 String?  @map("address_line1")
+  city         String?
+  nip          String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  dealers  Dealer[]
+  settings DealerGroupSettings?
+
+  @@map("dealer_groups")
+}
+
+model Membership {
+  id               String     @id @default(cuid())
+  userId           String     @map("user_id")
+  scopeType        ScopeType  @map("scope_type")
+  scopeId          String     @map("scope_id")
+  role             MemberRole
+  isDefaultContext Boolean    @default(false) @map("is_default_context")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scopeType, scopeId, role])
+  @@index([userId, scopeType, scopeId])
+  @@index([scopeType, scopeId])
+  @@map("memberships")
+}
+
+model DealerGroupSettings {
+  id               String  @id @default(cuid())
+  dealerGroupId    String  @unique @map("dealer_group_id")
+  headerLogoUrl    String? @map("header_logo_url")
+  footerLogoUrl    String? @map("footer_logo_url")
+  smtpHost         String? @map("smtp_host")
+  smtpPort         Int?    @map("smtp_port")
+  smtpUser         String? @map("smtp_user")
+  smtpPassword     String? @map("smtp_password")
+  smtpFromEmail    String? @map("smtp_from_email")
+  smtpRecipientEmail String? @map("smtp_recipient_email")
+
+  dealerGroup DealerGroup @relation(fields: [dealerGroupId], references: [id], onDelete: Cascade)
+
+  @@map("dealer_group_settings")
+}
+
+model DealerSettings {
+  id               String  @id @default(cuid())
+  dealerId         String  @unique @map("dealer_id")
+  headerLogoUrl    String? @map("header_logo_url")
+  footerLogoUrl    String? @map("footer_logo_url")
+  smtpHost         String? @map("smtp_host")
+  smtpPort         Int?    @map("smtp_port")
+  smtpUser         String? @map("smtp_user")
+  smtpPassword     String? @map("smtp_password")
+  smtpFromEmail    String? @map("smtp_from_email")
+  smtpRecipientEmail String? @map("smtp_recipient_email")
+
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@map("dealer_settings")
+}
+
 enum FaqPage {
   home
   offers
@@ -406,7 +527,8 @@ model Partner {
 
 model RentalVehicle {
   id                       String   @id @default(cuid())
-  dealerId                 String   @map("dealer_id")
+  dealerId                 String?  @map("dealer_id")
+  ownerRentalCompanyId     String?  @map("owner_rental_company_id")
   make                     String
   model                    String
   version                  String?
@@ -432,16 +554,19 @@ model RentalVehicle {
   additionalInfoHeader     String?  @map("additional_info_header")
   additionalInfoContent    String?  @map("additional_info_content")
   specsJson                Json?    @map("specs_json")
+  specificationUrl         String?  @map("specification_url")
   slug                     String?  @unique
   isActive                 Boolean  @default(true) @map("is_active")
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
 
-  dealer            Dealer                    @relation(fields: [dealerId], references: [id])
-  rentalAssignments VehicleRentalAssignment[]
-  leads             Lead[]
+  dealer             Dealer?                   @relation(fields: [dealerId], references: [id])
+  ownerRentalCompany RentalCompany?            @relation("VehicleOwnerCompany", fields: [ownerRentalCompanyId], references: [id])
+  rentalAssignments  VehicleRentalAssignment[]
+  leads              Lead[]
 
   @@index([dealerId])
+  @@index([ownerRentalCompanyId])
   @@index([make, model])
   @@index([isActive])
   @@index([slug])
@@ -460,6 +585,7 @@ model RentalCompany {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   vehicleAssignments VehicleRentalAssignment[]
+  ownedVehicles      RentalVehicle[]           @relation("VehicleOwnerCompany")
 
   @@map("rental_companies")
 }

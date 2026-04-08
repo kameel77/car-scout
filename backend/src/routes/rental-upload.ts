@@ -182,4 +182,73 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
 
         return { success: true, primaryImageUrl: imageUrl };
     });
+
+    // Upload specification for a rental vehicle
+    fastify.post('/api/rental-vehicles/:id/specs', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({
+            where: { id }
+        });
+
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        const parts = request.parts();
+        let uploadedUrl: string | null = null;
+
+        const vehicleDir = path.join(uploadsRoot, 'rental-specs', id);
+        await fs.mkdir(vehicleDir, { recursive: true });
+
+        for await (const part of parts) {
+            if (part.type !== 'file') continue;
+
+            const ALLOWED_SPEC_TYPES = ['application/pdf'];
+            if (!ALLOWED_SPEC_TYPES.includes(part.mimetype)) {
+                return reply.code(400).send({
+                    error: `Invalid file type: ${part.mimetype}. Allowed: PDF`
+                });
+            }
+
+            const filename = generateFilename(part.filename);
+            const filePath = path.join(vehicleDir, filename);
+
+            await pipeline(part.file, createWriteStream(filePath));
+
+            if (part.file.truncated) {
+                await fs.unlink(filePath);
+                return reply.code(400).send({
+                    error: `File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
+                });
+            }
+
+            uploadedUrl = `/uploads/rental-specs/${id}/${filename}`;
+            break; // only process the first file
+        }
+
+        if (!uploadedUrl) {
+            return reply.code(400).send({ error: 'No specification file uploaded' });
+        }
+
+        // Delete old spec file if exists and is local
+        if (vehicle.specificationUrl && vehicle.specificationUrl.startsWith('/uploads/')) {
+            try {
+                const relativePath = vehicle.specificationUrl.replace('/uploads/', '');
+                const filePath = path.join(uploadsRoot, relativePath);
+                await fs.unlink(filePath);
+            } catch {
+                // Ignore
+            }
+        }
+
+        await fastify.prisma.rentalVehicle.update({
+            where: { id },
+            data: { specificationUrl: uploadedUrl }
+        });
+
+        return { success: true, specificationUrl: uploadedUrl };
+    });
 }
