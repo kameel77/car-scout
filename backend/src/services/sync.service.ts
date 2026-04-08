@@ -8,25 +8,31 @@ export async function syncListingsFromCSV(
     csvData: CSVRow[],
     userId: string,
     source?: string,
-    importMode: ImportMode = 'replace'
+    importMode: ImportMode = 'replace',
+    contextDealerId?: string   // multi-tenant: assign to this dealer if no dealer info in CSV
 ): Promise<SyncResult> {
     const startTime = Date.now();
 
     return await prisma.$transaction(async (tx) => {
-        // 1. Get existing listings
-        const existingListings = await tx.listing.findMany({
+        // 1. Get existing listings for archiving logic scoped to this source
+        const archiveWhere: any = {};
+        if (contextDealerId) {
+            archiveWhere.dealerId = contextDealerId;
+        }
+        if (source) {
+            archiveWhere.importSource = source;
+        }
+
+        const listingsFromThisSource = await tx.listing.findMany({
+            where: archiveWhere,
             select: {
                 id: true,
                 vin: true,
                 listingId: true,
-                pricePln: true,
                 isArchived: true
             }
         });
 
-        const vinMap = new Map(
-            existingListings.map(l => [l.vin || l.listingId, l])
-        );
         // 1.5 Deduplicate CSV rows locally
         // Sometimes CSV contains duplicate VINs/IDs. We take the first one encountered.
         const uniqueCsvRows: CSVRow[] = [];
@@ -44,24 +50,53 @@ export async function syncListingsFromCSV(
 
         const csvVINSet = new Set(seenKeysInCsv);
 
+        // Fetch ALL existing listings that match the keys in the CSV to prevent global unique constraints and catch duplicates
+        const existingListingsForKeys = await tx.listing.findMany({
+            where: {
+                OR: [
+                    { vin: { in: Array.from(seenKeysInCsv) } },
+                    { listingId: { in: Array.from(seenKeysInCsv) } }
+                ]
+            },
+            select: {
+                id: true,
+                vin: true,
+                listingId: true,
+                pricePln: true,
+                isArchived: true,
+                importSource: true,
+                dealerId: true
+            }
+        });
+
+        const vinMap = new Map(
+            existingListingsForKeys.map(l => [l.vin || l.listingId, l])
+        );
+
         // 2. Categorize operations
         const toUpdate: Array<{ csvRow: CSVRow; existing: any }> = [];
         const toInsert: CSVRow[] = [];
         const toArchive: any[] = [];
+        let failedCount = 0;
 
         for (const row of uniqueCsvRows) {
             const key = row.vin || row.listing_id;
             const existing = vinMap.get(key);
 
             if (existing) {
-                toUpdate.push({ csvRow: row, existing });
+                // If the item exists but from a different source, we reject it as a duplicate for now.
+                if (existing.importSource && source && existing.importSource !== source) {
+                    failedCount++;
+                } else {
+                    toUpdate.push({ csvRow: row, existing });
+                }
             } else {
                 toInsert.push(row);
             }
         }
 
         if (importMode === 'replace') {
-            for (const listing of existingListings) {
+            for (const listing of listingsFromThisSource) {
                 const key = listing.vin || listing.listingId;
                 // Archive only active listings that disappeared from CSV
                 if (!listing.isArchived && key && !csvVINSet.has(key)) {
@@ -80,7 +115,7 @@ export async function syncListingsFromCSV(
             await tx.listing.update({
                 where: { id: existing.id },
                 data: {
-                    ...mapCSVToListingUpdate(csvRow),
+                    ...mapCSVToListingUpdate(csvRow, source),
                     isArchived: false,
                     archivedAt: null,
                     archivedReason: null
@@ -133,8 +168,13 @@ export async function syncListingsFromCSV(
                 dealerId = dealer.id;
             }
 
+            // Fallback to context dealer if no dealer resolved from CSV
+            if (!dealerId && contextDealerId) {
+                dealerId = contextDealerId;
+            }
+
             const listing = await tx.listing.create({
-                data: mapCSVToListing(row, dealerId)
+                data: mapCSVToListing(row, dealerId, source)
             });
             newListings.push(listing);
         }
@@ -193,7 +233,7 @@ export async function syncListingsFromCSV(
                 inserted: toInsert.length,
                 updated: toUpdate.length,
                 archived: toArchive.length,
-                failed: 0,
+                failed: failedCount,
                 status: 'success',
                 duration
             }
@@ -204,6 +244,7 @@ export async function syncListingsFromCSV(
             inserted: toInsert.length,
             updated: toUpdate.length,
             archived: toArchive.length,
+            failed: failedCount,
             priceChanges: priceHistoryEntries.length,
             duration,
             importLogId: importLog.id

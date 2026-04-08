@@ -34,6 +34,33 @@ const start = async () => {
         await app.listen({ port, host: process.env.HOST || '0.0.0.0' });
         console.log(`🚀 Server listening on port ${port}`);
 
+        // Data Migration to fix importSource and accidental archives
+        try {
+            console.log('[Migration] Checking for listings with null importSource...');
+            const nullSourcesCount = await app.prisma.listing.count({ where: { importSource: null } });
+            if (nullSourcesCount > 0) {
+                console.log(`[Migration] Found ${nullSourcesCount} listings to migrate.`);
+                
+                // Set 'csflow' as source and unarchive for CSFlow vehicles
+                const csflowUpdated = await app.prisma.listing.updateMany({
+                    where: { importSource: null, listingId: { startsWith: 'csflow-' } },
+                    data: { importSource: 'csflow', isArchived: false, archivedAt: null, archivedReason: null }
+                });
+                console.log(`[Migration] Migrated ${csflowUpdated.count} CSFlow listings.`);
+
+                // Set 'Otomoto' as source and unarchive for remaining imported vehicles
+                const othersUpdated = await app.prisma.listing.updateMany({
+                    where: { importSource: null },
+                    data: { importSource: 'Otomoto', isArchived: false, archivedAt: null, archivedReason: null }
+                });
+                console.log(`[Migration] Migrated ${othersUpdated.count} Otomoto/Other listings.`);
+                
+                console.log('[Migration] Data migration completed successfully.');
+            }
+        } catch (error) {
+            console.error('[Migration] Failed to run data migration:', error);
+        }
+
         initCSFlowCron(app.prisma);
 
         // Graceful shutdown

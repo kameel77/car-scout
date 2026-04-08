@@ -153,22 +153,104 @@ export const faqApi = {
 
 // Import API
 export const importApi = {
-    uploadCSV: async (file: File, token: string, mode: ImportMode = 'replace') => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch(`${API_BASE_URL}/api/import/csv?mode=${mode}`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
+    getSources: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/import/sources`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Upload failed');
+            throw new Error('Failed to fetch import sources');
+        }
+        return response.json();
+    },
+
+    uploadCSV: async (
+        file: File,
+        token: string,
+        source: string,
+        mode: ImportMode = 'replace',
+        onProgress?: (phase: 'uploading' | 'processing', percent: number) => void
+    ) => {
+        const CHUNK_THRESHOLD = 25 * 1024 * 1024; // 25MB — always chunk if over chunk size
+        const CHUNK_SIZE = 25 * 1024 * 1024;       // 25MB per chunk
+
+        // ── Small file: single request (original path) ──
+        if (file.size <= CHUNK_THRESHOLD) {
+            onProgress?.('uploading', 0);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${API_BASE_URL}/api/import/csv?mode=${mode}&source=${encodeURIComponent(source)}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error || 'Upload failed');
+            }
+
+            onProgress?.('processing', 100);
+            return response.json();
         }
 
-        return response.json();
+        // ── Large file: chunked upload ──
+        const uploadId = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+        // Phase 1: Upload all chunks
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            const formData = new FormData();
+            formData.append('file', chunk, file.name);
+
+            const response = await fetch(`${API_BASE_URL}/api/import/csv-chunk`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-Upload-ID': uploadId,
+                    'X-Chunk-Index': i.toString(),
+                    'X-Total-Chunks': totalChunks.toString(),
+                    'X-Original-Filename': file.name
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error || `Chunk ${i + 1}/${totalChunks} upload failed`);
+            }
+
+            // Upload progress: 0-80%
+            const uploadPercent = Math.round(((i + 1) / totalChunks) * 80);
+            onProgress?.('uploading', uploadPercent);
+        }
+
+        // Phase 2: Finalize — reassemble + import
+        onProgress?.('processing', 85);
+
+        const finalizeResponse = await fetch(
+            `${API_BASE_URL}/api/import/csv-finalize?uploadId=${uploadId}&mode=${mode}&source=${encodeURIComponent(source)}`,
+            {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+
+        if (!finalizeResponse.ok) {
+            const error = await finalizeResponse.json().catch(() => ({}));
+            throw new Error(error.error || 'Import finalization failed');
+        }
+
+        onProgress?.('processing', 100);
+        return finalizeResponse.json();
     },
 
     uploadJSON: async (data: any[], token: string, source?: string, mode: ImportMode = 'replace') => {
@@ -584,6 +666,30 @@ export const leadsApi = {
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.error || 'Failed to submit lead');
+        }
+
+        return response.json();
+    },
+    submitNegotiationLead: async (data: {
+        listingId: string;
+        name: string;
+        email: string;
+        phone?: string;
+        preferredContact: 'email' | 'phone';
+        message?: string;
+        proposedPrice: number;
+        consentMarketing: boolean;
+        consentPrivacy: boolean;
+    }) => {
+        const response = await fetch(`${API_BASE_URL}/api/leads/negotiation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to submit negotiation lead');
         }
 
         return response.json();

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
-    Plus, Search, Edit, Archive, RotateCcw, Trash2, X,
+    Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star,
     ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil
 } from 'lucide-react';
 
@@ -49,12 +49,19 @@ function CopyableId({ id }: { id: string }) {
 interface VehicleFormProps {
     vehicle?: RentalVehicle;
     dealers: Array<{ id: string; name: string; city?: string }>;
+    companies: RentalCompany[];
     onSave: (data: any) => void;
     onCancel: () => void;
     isSaving: boolean;
 }
 
-function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFormProps) {
+function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }: VehicleFormProps) {
+    const defaultProvider = vehicle?.dealerId 
+        ? `dealer_${vehicle.dealerId}` 
+        : vehicle?.ownerRentalCompanyId 
+            ? `company_${vehicle.ownerRentalCompanyId}` 
+            : '';
+
     const [form, setForm] = useState({
         make: vehicle?.make || '',
         model: vehicle?.model || '',
@@ -72,19 +79,34 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
         drive: vehicle?.drive || '',
         catalogPrice: vehicle?.catalogPrice?.toString() || '',
         sellingPrice: vehicle?.sellingPrice?.toString() || '',
-        dealerId: vehicle?.dealerId || (dealers.length > 0 ? dealers[0].id : ''),
+        providerId: defaultProvider,
+        specificationUrl: vehicle?.specificationUrl || '',
         additionalInfoHeader: vehicle?.additionalInfoHeader || '',
         additionalInfoContent: vehicle?.additionalInfoContent || '',
         equipmentAudioMultimedia: arrayToText(vehicle?.equipmentAudioMultimedia),
         equipmentSafety: arrayToText(vehicle?.equipmentSafety),
         equipmentComfortExtras: arrayToText(vehicle?.equipmentComfortExtras),
         equipmentOther: arrayToText(vehicle?.equipmentOther),
+        primaryImageUrl: vehicle?.primaryImageUrl || '',
+        imageUrls: arrayToText(vehicle?.imageUrls),
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Parse providerId
+        let dealerId = null;
+        let ownerRentalCompanyId = null;
+        if (form.providerId.startsWith('dealer_')) {
+            dealerId = form.providerId.replace('dealer_', '');
+        } else if (form.providerId.startsWith('company_')) {
+            ownerRentalCompanyId = form.providerId.replace('company_', '');
+        }
+
         onSave({
             ...form,
+            dealerId,
+            ownerRentalCompanyId,
             enginePowerHp: form.enginePowerHp ? parseInt(form.enginePowerHp) : null,
             engineCapacityCm3: form.engineCapacityCm3 ? parseInt(form.engineCapacityCm3) : null,
             productionYear: parseInt(form.productionYear),
@@ -96,6 +118,8 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
             equipmentSafety: textToArray(form.equipmentSafety),
             equipmentComfortExtras: textToArray(form.equipmentComfortExtras),
             equipmentOther: textToArray(form.equipmentOther),
+            primaryImageUrl: form.primaryImageUrl || null,
+            imageUrls: textToArray(form.imageUrls),
         });
     };
 
@@ -190,14 +214,49 @@ function VehicleForm({ vehicle, dealers, onSave, onCancel, isSaving }: VehicleFo
                     <Input type="number" value={form.sellingPrice} onChange={set('sellingPrice')} required />
                 </div>
 
-                {/* Dealer */}
+                {/* Provider (Dealer / Firm) */}
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Dealer *</label>
-                    <select value={form.dealerId} onChange={set('dealerId')} className="w-full h-10 px-3 rounded-md border text-sm" required>
-                        {dealers.map(d => (
-                            <option key={d.id} value={d.id}>{d.name}{d.city ? ` (${d.city})` : ''}</option>
-                        ))}
+                    <label className="text-sm font-medium text-gray-700">Dostawca *</label>
+                    <select value={form.providerId} onChange={set('providerId')} className="w-full h-10 px-3 rounded-md border text-sm" required>
+                        <option value="">Wybierz dostawcę...</option>
+                        <optgroup label="Firmy Najmujące">
+                            {companies.map(c => (
+                                <option key={c.id} value={`company_${c.id}`}>{c.name}</option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="Dealerzy">
+                            {dealers.map(d => (
+                                <option key={d.id} value={`dealer_${d.id}`}>{d.name}{d.city ? ` (${d.city})` : ''}</option>
+                            ))}
+                        </optgroup>
                     </select>
+                </div>
+                
+                {/* Specyfikacja URL Optional */}
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-2 pt-2 border-t">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Link2 className="w-4 h-4" /> Link do specyfikacji (URL) (lub wgraj plik PDF po zapisaniu)
+                    </label>
+                    <Input value={form.specificationUrl} onChange={set('specificationUrl')} placeholder="https://..." />
+                </div>
+
+                {/* Zdjęcia URL Optional */}
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-4 pt-2 border-t">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" /> Główne zdjęcie pojazdu (URL) (lub wgraj z dysku po zapisaniu)
+                        </label>
+                        <Input value={form.primaryImageUrl} onChange={set('primaryImageUrl')} placeholder="Główne zdjęcie np. https://..." />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Dodatkowe zdjęcia pojazdu (URL - po jednym w nowej linii)</label>
+                        <textarea
+                            value={form.imageUrls}
+                            onChange={set('imageUrls')}
+                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
+                            placeholder={`np.\nhttps://zdjecie1.jpg\nhttps://zdjecie2.jpg`}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -425,6 +484,53 @@ function AssignmentRow({ assignment: a, vehicleId, onDelete }: { assignment: any
     );
 }
 
+// ─── Specification Upload ───────────────────────────────────────
+
+function SpecificationSection({ vehicle }: { vehicle: RentalVehicle }) {
+    const { token } = useAuth();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    const uploadMutation = useMutation({
+        mutationFn: (file: File) => rentalVehiclesApi.uploadSpecification(vehicle.id, file, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle'] });
+            toast({ title: 'Specyfikacja załadowana' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    return (
+        <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+                <Link2 className="w-4 h-4" /> Aktualna specyfikacja
+            </h4>
+
+            {vehicle.specificationUrl && (
+                <div className="text-sm">
+                    <a href={vehicle.specificationUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                        Pobierz / Zobacz aktulną specyfikację PDF
+                    </a>
+                </div>
+            )}
+
+            <div className="mt-2">
+                <label className="text-xs text-gray-500 block mb-1">Wgraj nowy plik PDF (max 10MB):</label>
+                <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadMutation.mutate(file);
+                    }}
+                    className="text-sm"
+                />
+            </div>
+        </div>
+    );
+}
+
 // ─── Image Upload ────────────────────────────────────────────────
 
 function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
@@ -436,10 +542,60 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
         mutationFn: (files: File[]) => rentalVehiclesApi.uploadImages(vehicle.id, files, !vehicle.primaryImageUrl, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
             toast({ title: 'Zdjęcia załadowane' });
         },
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
     });
+
+    const setPrimaryMutation = useMutation({
+        mutationFn: (url: string) => rentalVehiclesApi.update(vehicle.id, { primaryImageUrl: url }, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
+            toast({ title: 'Zmieniono zdjęcie główne' });
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (url: string) => rentalVehiclesApi.update(vehicle.id, {
+            imageUrls: (vehicle.imageUrls || []).filter(u => u !== url),
+            ...(vehicle.primaryImageUrl === url ? { primaryImageUrl: null } : {})
+        }, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
+            toast({ title: 'Zdjęcie usunięte' });
+        }
+    });
+
+    const reorderMutation = useMutation({
+        mutationFn: (newUrls: string[]) => rentalVehiclesApi.update(vehicle.id, { imageUrls: newUrls }, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
+            toast({ title: 'Kolejność zmieniona' });
+        }
+    });
+
+    const handleMoveLeft = (index: number) => {
+        if (index === 0) return;
+        const newUrls = [...(vehicle.imageUrls || [])];
+        const temp = newUrls[index - 1];
+        newUrls[index - 1] = newUrls[index];
+        newUrls[index] = temp;
+        reorderMutation.mutate(newUrls);
+    };
+
+    const handleMoveRight = (index: number) => {
+        const urls = vehicle.imageUrls || [];
+        if (index === urls.length - 1) return;
+        const newUrls = [...urls];
+        const temp = newUrls[index + 1];
+        newUrls[index + 1] = newUrls[index];
+        newUrls[index] = temp;
+        reorderMutation.mutate(newUrls);
+    };
 
     return (
         <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-lg">
@@ -448,28 +604,76 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
             </h4>
 
             {vehicle.imageUrls?.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-4 flex-wrap">
                     {vehicle.imageUrls.map((url, i) => (
-                        <div key={i} className={`relative w-20 h-20 rounded overflow-hidden border-2 ${url === vehicle.primaryImageUrl ? 'border-blue-500' : 'border-gray-200'}`}>
+                        <div key={i} className={`group relative w-32 h-32 rounded-lg overflow-hidden border-2 ${url === vehicle.primaryImageUrl ? 'border-blue-500 shadow-md' : 'border-gray-200'}`}>
                             <img src={url} alt={`Zdjęcie ${i + 1}`} className="w-full h-full object-cover" />
                             {url === vehicle.primaryImageUrl && (
-                                <span className="absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-[10px] text-center">Główne</span>
+                                <span className="absolute top-0 left-0 right-0 bg-blue-500/80 text-white text-[10px] font-bold py-0.5 text-center uppercase tracking-wider backdrop-blur-sm">Główne</span>
                             )}
+                            
+                            {/* Hover ActionsOverlay */}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-1">
+                                <div className="flex justify-between items-center bg-white/10 rounded backdrop-blur p-1">
+                                    <div className="flex gap-1">
+                                        <button 
+                                            onClick={() => handleMoveLeft(i)} 
+                                            disabled={i === 0 || reorderMutation.isPending}
+                                            className="p-1 hover:bg-black/30 rounded text-white disabled:opacity-30 transition-colors"
+                                            title="Przesuń w lewo"
+                                        >
+                                            <ChevronLeft className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleMoveRight(i)} 
+                                            disabled={i === (vehicle.imageUrls?.length || 0) - 1 || reorderMutation.isPending}
+                                            className="p-1 hover:bg-black/30 rounded text-white disabled:opacity-30 transition-colors"
+                                            title="Przesuń w prawo"
+                                        >
+                                            <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        {url !== vehicle.primaryImageUrl && (
+                                            <button 
+                                                onClick={() => setPrimaryMutation.mutate(url)}
+                                                disabled={setPrimaryMutation.isPending}
+                                                className="p-1 hover:bg-blue-500/50 rounded text-blue-200 transition-colors"
+                                                title="Ustaw jako główne"
+                                            >
+                                                <Star className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={() => {
+                                                if(confirm('Pewnie że usunąć zdjęcie?')) deleteMutation.mutate(url);
+                                            }}
+                                            disabled={deleteMutation.isPending}
+                                            className="p-1 hover:bg-red-500/50 rounded text-red-200 transition-colors"
+                                            title="Usuń zdjęcie"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={e => {
-                    const files = Array.from(e.target.files || []);
-                    if (files.length > 0) uploadMutation.mutate(files);
-                }}
-                className="text-sm"
-            />
+            <div className="mt-2 text-sm text-gray-500">
+                <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={e => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) uploadMutation.mutate(files);
+                    }}
+                    className="text-sm border p-2 rounded w-full bg-white cursor-pointer"
+                />
+            </div>
         </div>
     );
 }
@@ -573,6 +777,7 @@ export default function RentalVehiclesPage() {
                 <h2 className="text-2xl font-bold mb-6">Dodaj pojazd najmu</h2>
                 <VehicleForm
                     dealers={dealers}
+                    companies={companies}
                     onSave={data => createMutation.mutate(data)}
                     onCancel={() => setView('list')}
                     isSaving={createMutation.isPending}
@@ -588,10 +793,12 @@ export default function RentalVehiclesPage() {
                 <VehicleForm
                     vehicle={vehicleDetailQuery.data.vehicle}
                     dealers={dealers}
+                    companies={companies}
                     onSave={data => updateMutation.mutate({ id: editingId, data })}
                     onCancel={() => { setView('list'); setEditingId(null); }}
                     isSaving={updateMutation.isPending}
                 />
+                <SpecificationSection vehicle={vehicleDetailQuery.data.vehicle} />
                 <ImageSection vehicle={vehicleDetailQuery.data.vehicle} />
                 <AssignmentSection
                     vehicleId={editingId}

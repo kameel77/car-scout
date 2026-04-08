@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { sendLeadEmail } from '../services/email.js';
+import { resolveScope } from '../utils/scope-resolver.js';
 
 type PreferredContact = 'email' | 'phone';
 
@@ -19,6 +20,18 @@ interface LeadPayload {
     financingDownPayment?: number;
     financingInstallment?: number;
     financingFinalPayment?: number;
+}
+
+interface NegotiationLeadPayload {
+    listingId: string;
+    name: string;
+    email: string;
+    phone?: string;
+    preferredContact?: PreferredContact;
+    message?: string;
+    proposedPrice: number;
+    consentMarketing?: boolean;
+    consentPrivacy?: boolean;
 }
 
 interface RentalLeadPayload {
@@ -96,6 +109,97 @@ export async function leadRoutes(fastify: FastifyInstance) {
         });
 
         return { lead };
+    });
+
+    // Create new negotiation lead from listing page
+    fastify.post('/api/leads/negotiation', async (request, reply) => {
+        const data = request.body as NegotiationLeadPayload;
+
+        if (!data.listingId || !data.name || !data.email || !data.proposedPrice) {
+            return reply.code(400).send({ error: 'listingId, name, email and proposedPrice are required' });
+        }
+
+        const listing = await fastify.prisma.listing.findUnique({
+            where: { id: data.listingId },
+            include: { dealer: true }
+        });
+
+        if (!listing) {
+            return reply.code(404).send({ error: 'Listing not found' });
+        }
+
+        const listedPrice = listing.brokerPricePln || listing.pricePln || 0;
+        
+        let partnerGrossPrice = listedPrice; // Fallback, brak obu
+
+        if (listing.pricePln && listing.dealerPriceNetPln) {
+            // Dynamiczne wyliczenie VAT (w tym obsługa VAT Marża gdzie stosunek to ~1)
+            const vatMultiplier = listing.pricePln / listing.dealerPriceNetPln;
+            partnerGrossPrice = Math.round(listing.dealerPriceNetPln * vatMultiplier);
+        } else if (listing.dealerPriceNetPln) {
+            // Fallback: mamy tylko netto, zakładamy standardowe 23%
+            partnerGrossPrice = Math.round(listing.dealerPriceNetPln * 1.23);
+        } else if (listing.pricePln) {
+            // Fallback: mamy tylko brutto dealera
+            partnerGrossPrice = listing.pricePln;
+        }
+        const negotiationRoom = Math.max(0, listedPrice - partnerGrossPrice);
+        const minSuggestedPrice = Math.round(listedPrice - (negotiationRoom * 0.8));
+        const stretchPrice = Math.round(listedPrice - (negotiationRoom * 0.45));
+
+        const proposedPrice = Math.round(data.proposedPrice);
+        const normalizedMessage = (data.message || '').trim() || `Negocjacja ceny: ${proposedPrice} PLN`;
+        const negotiationSummary = [
+            `PROCES:NEGOCJACJA_CENY`,
+            `CENA_OFERTOWA:${listedPrice}`,
+            `CENA_PARTNER:${partnerGrossPrice}`,
+            `CENA_ZAPROPONOWANA:${proposedPrice}`,
+            `MARGINES_NEGOCJACJI:${negotiationRoom}`,
+            normalizedMessage
+        ].join('\n');
+
+        const lead = await fastify.prisma.lead.create({
+            data: {
+                leadType: 'price_negotiation',
+                listingId: data.listingId,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                preferredContact: data.preferredContact || 'email',
+                message: negotiationSummary,
+                status: 'negotiation_pending',
+                referenceNumber: generateReference(),
+                consentMarketingAt: data.consentMarketing ? new Date() : null,
+                consentPrivacyAt: data.consentPrivacy ? new Date() : null,
+            },
+            include: {
+                listing: {
+                    include: { dealer: true }
+                }
+            }
+        });
+
+        sendLeadEmail(fastify, lead as any).catch((err: any) => {
+            fastify.log.error(err, 'Error sending negotiation lead notification email');
+        });
+
+        const autoReply = proposedPrice >= stretchPrice
+            ? 'great_match'
+            : proposedPrice >= minSuggestedPrice
+                ? 'review_zone'
+                : 'too_low';
+
+        return {
+            lead,
+            negotiation: {
+                listedPrice,
+                partnerGrossPrice,
+                proposedPrice,
+                minSuggestedPrice,
+                stretchPrice,
+                autoReply
+            }
+        };
     });
 
     // Create new rental lead from calculator page
@@ -181,14 +285,25 @@ export async function leadRoutes(fastify: FastifyInstance) {
         return { success: true, lead };
     });
 
-    // Get leads for backoffice (requires auth)
+    // Get leads for backoffice (requires auth, scope-aware)
     fastify.get('/api/leads', {
         preHandler: [fastify.authenticate]
     }, async (request) => {
         const { leadType } = request.query as { leadType?: string };
+        const scope = await resolveScope(fastify, request);
 
         const where: any = {};
         if (leadType) where.leadType = leadType;
+
+        // Apply scope filtering via related listing/rentalVehicle dealerId
+        if (!scope.isPlatform && scope.dealerFilter.dealerId) {
+            const df = scope.dealerFilter.dealerId;
+            where.OR = [
+                { listing: { dealerId: df } },
+                { rentalVehicle: { dealerId: df } },
+                // quick_contact leads have no listing/rentalVehicle — only platform sees these
+            ];
+        }
 
         const leads = await fastify.prisma.lead.findMany({
             where,
