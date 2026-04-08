@@ -156,6 +156,7 @@ export const importApi = {
     uploadCSV: async (
         file: File,
         token: string,
+        source: string,
         mode: ImportMode = 'replace',
         onProgress?: (phase: 'uploading' | 'processing', percent: number) => void
     ) => {
@@ -169,7 +170,7 @@ export const importApi = {
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch(`${API_BASE_URL}/api/import/csv?mode=${mode}`, {
+            const response = await fetch(`${API_BASE_URL}/api/import/csv?mode=${mode}&source=${encodeURIComponent(source)}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
@@ -226,7 +227,7 @@ export const importApi = {
         onProgress?.('processing', 85);
 
         const finalizeResponse = await fetch(
-            `${API_BASE_URL}/api/import/csv-finalize?uploadId=${uploadId}&mode=${mode}`,
+            `${API_BASE_URL}/api/import/csv-finalize?uploadId=${uploadId}&mode=${mode}&source=${encodeURIComponent(source)}`,
             {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }

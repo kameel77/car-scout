@@ -24,6 +24,7 @@ export function CSVUploader() {
     const [isUploading, setIsUploading] = useState(false);
     const [result, setResult] = useState<UploadResult | null>(null);
     const [importMode, setImportMode] = useState<ImportMode>('replace');
+    const [importSource, setImportSource] = useState<string>('');
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadPhase, setUploadPhase] = useState<'uploading' | 'processing'>('uploading');
     const { token } = useAuth();
@@ -43,14 +44,19 @@ export function CSVUploader() {
     };
 
     const handleUpload = async () => {
-        if (!file || !token) return;
+        if (!file || !token || !importSource) {
+            if (!importSource) {
+                toast.error('Wybierz źródło danych (Data Source) przed wgraniem pliku.');
+            }
+            return;
+        }
 
         setIsUploading(true);
         setUploadProgress(0);
         setUploadPhase('uploading');
 
         try {
-            const uploadResult = await importApi.uploadCSV(file, token, importMode, (phase, percent) => {
+            const uploadResult = await importApi.uploadCSV(file, token, importSource, importMode, (phase, percent) => {
                 setUploadPhase(phase);
                 setUploadProgress(percent);
             });
@@ -77,6 +83,19 @@ export function CSVUploader() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                {/* Data Source */}
+                <div className="space-y-2">
+                    <p className="text-sm font-semibold text-gray-800">Źródło danych (Data Source)</p>
+                    <input
+                        type="text"
+                        placeholder="Np. getcars, otomoto, manual..."
+                        value={importSource}
+                        onChange={(e) => setImportSource(e.target.value)}
+                        className="w-full sm:max-w-md rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        disabled={isUploading}
+                    />
+                </div>
+
                 {/* Import Mode */}
                 <div className="space-y-2">
                     <p className="text-sm font-semibold text-gray-800">Tryb importu</p>
@@ -85,7 +104,7 @@ export function CSVUploader() {
                             {
                                 value: 'replace',
                                 title: 'Aktualizacja wszystkich',
-                                description: 'Zastępuje obecną listę, archiwizuje brakujące wpisy (obecne zachowanie).'
+                                description: 'Zastępuje obecną listę, archiwizuje brakujące wpisy z tego źródła (obecne zachowanie).'
                             },
                             {
                                 value: 'merge',
@@ -150,7 +169,7 @@ export function CSVUploader() {
                 {file && (
                     <Button
                         onClick={handleUpload}
-                        disabled={isUploading}
+                        disabled={isUploading || !importSource}
                         className="w-full"
                     >
                         {isUploading ? (

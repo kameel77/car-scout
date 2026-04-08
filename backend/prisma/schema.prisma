@@ -84,6 +84,7 @@ model Listing {
   dealerPriceNetEur        Float?         @map("dealer_price_net_eur")
   dealerPriceNetPln        Float?         @map("dealer_price_net_pln")
   marketplace              String?        @map("marketplace")
+  importSource             String?        @map("import_source")
   slug                     String?        @unique @map("slug")
   leads                    Lead[]
   dealer                   Dealer?        @relation(fields: [dealerId], references: [id])

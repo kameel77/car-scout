@@ -109,7 +109,7 @@ export async function importRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
         try {
-            const { uploadId, mode } = request.query as { uploadId: string; mode?: string };
+            const { uploadId, mode, source } = request.query as { uploadId: string; mode?: string; source?: string };
             const importMode = parseImportMode(mode);
 
             // Resolve active context for dealer assignment
@@ -168,7 +168,7 @@ export async function importRoutes(fastify: FastifyInstance) {
                 fastify.prisma,
                 records,
                 request.user!.userId,
-                upload.filename,
+                source || upload.filename,
                 importMode,
                 contextDealerId   // scope: assign dealer if in dealer context
             );
@@ -198,7 +198,7 @@ export async function importRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const data = await request.file();
-            const { mode } = request.query as { mode?: string };
+            const { mode, source } = request.query as { mode?: string; source?: string };
             const importMode = parseImportMode(mode);
 
             // Resolve active context for dealer assignment
@@ -231,7 +231,7 @@ export async function importRoutes(fastify: FastifyInstance) {
                 fastify.prisma,
                 records,
                 request.user!.userId,
-                data.filename,
+                source || data.filename,
                 importMode,
                 contextDealerId   // scope: assign dealer if in dealer context
             );

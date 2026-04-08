@@ -220,3 +220,11 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Status**: analiza i projekt architektury przygotowane; implementacja etapowa (schema -> migracja danych -> permission engine -> UI).
 
 - 2026-04-01: Dodano proces negocjacji ceny na stronie oferty: osobny CTA, osobny flow formularza i backendowy typ leada `price_negotiation` z automatyczną klasyfikacją odpowiedzi (great_match/review_zone/too_low).
+
+## 12. Izolacja źródeł danych podczas importu pojazdów
+- **Cel**: zapobieganie sytuacjom, w których import z jednego źródła (np. plik CSV z Otomoto) przypadkowo nadpisze lub usunie pojazdy zaimportowane z innego źródła (np. plik CSV od innego dealera lub API).
+- **Zachowanie**:
+  - Na ekranie importu ("Import") użytkownik każdorazowo podaje nazwę źródła (Data Source) przed wgraniem pliku CSV (np. `otomoto`, `getcars`, `manual`).
+  - System przechowuje informację o źródle w polu `importSource` dla każdego pojazdu w bazie.
+  - Zastępowanie trybem aktualizacji (Replace): System wyszukuje istniejące oferty do zarchiwizowania tylko w ramach aktualnie wybranego źródła (chroniąc pojazdy innych źródeł przed zniknięciem).
+  - Weryfikacja duplikatów: Kod zapobiega nadpisywaniu się ofert, gdy system rozpoznaje ten sam `vin` należący do innego `importSource`. W takiej sytuacji ignoruje dany pojazd, chroniąc integralność bazy danych. Taki odrzucony rekord będzie zaliczony jako pominięty (Pominięte błędy/duplikaty) w wynikach importu.
