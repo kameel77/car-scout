@@ -263,3 +263,20 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 
 ### Widoczność nazwy firmy
 - Nazwa firmy rental w wynikach kalkulatora jest widoczna **wyłącznie dla zalogowanych użytkowników** (admin, manager). Visitor widzi anonimowe "Firma #N".
+
+### Galeria pełnoekranowa (Lightbox)
+- Po kliknięciu w główne zdjęcie pojazdu na stronie `/najem/:slug` otwiera się pełnoekranowa galeria.
+- Nawigacja: strzałki ← → (klawiatura), przyciski na ekranie, kliknięcie w miniaturę na pasku dolnym.
+- Zamknięcie: Escape / kliknięcie w tło / przycisk X.
+- Automatycznie blokuje scroll body gdy galeria jest otwarta.
+- Hover na główne zdjęcie wyświetla ikonę powiększenia i licznik zdjęć (np. „3/12").
+
+### Formularz zapytania o najem (Zapytaj o ofertę)
+- Nowa strona `/najem/:slug/zapytanie` — formularz leadowy dedykowany dla najmu.
+- Wzorowany na `LeadFormPage` (kredyt/leasing) z zachowaniem spójnego UX.
+- Dane z kalkulatora (firma, rata, przebieg, okres, wpłata) przekazywane przez `location.state` i automatycznie wstępnie wypełniają treść wiadomości.
+- Sidebar z podsumowaniem oferty (zdjęcie, specyfikacja, konfiguracja kalkulatora).
+- Walidacja: zod schema, zgody RODO wymagane.
+- Backend: `POST /api/leads/rental` (istniejący endpoint) — tworzy lead typu `rental` z powiązanym pojazdem.
+- Frontend API client: `leadsApi.submitRentalLead(...)`.
+- Po wysłaniu: ekran sukcesu z numerem referencyjnym.

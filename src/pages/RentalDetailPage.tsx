@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -9,13 +9,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
-    Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package
+    Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
+    X, ChevronLeft, ChevronRight, Maximize2
 } from 'lucide-react';
 
 type OfferType = 'business' | 'consumer';
 
 export default function RentalDetailPage() {
     const { slug } = useParams<{ slug: string }>();
+    const navigate = useNavigate();
     const { token } = useAuth();
     const isLoggedIn = !!token;
 
@@ -85,6 +87,54 @@ export default function RentalDetailPage() {
     const images = vehicle?.imageUrls || [];
     const currentImage = images[mainImage] || vehicle?.primaryImageUrl;
 
+    // Lightbox state
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+
+    const openLightbox = useCallback((index: number) => {
+        setLightboxIndex(index);
+        setLightboxOpen(true);
+    }, []);
+
+    const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+
+    const goLightboxPrev = useCallback(() => {
+        setLightboxIndex(prev => (prev - 1 + images.length) % images.length);
+    }, [images.length]);
+
+    const goLightboxNext = useCallback(() => {
+        setLightboxIndex(prev => (prev + 1) % images.length);
+    }, [images.length]);
+
+    // Keyboard navigation for lightbox
+    useEffect(() => {
+        if (!lightboxOpen) return;
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeLightbox();
+            else if (e.key === 'ArrowLeft') goLightboxPrev();
+            else if (e.key === 'ArrowRight') goLightboxNext();
+        };
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handler);
+        return () => {
+            document.body.style.overflow = '';
+            window.removeEventListener('keydown', handler);
+        };
+    }, [lightboxOpen, closeLightbox, goLightboxPrev, goLightboxNext]);
+
+    // Build rental state for lead form
+    const buildRentalState = useCallback((offer: any) => ({
+        rental: {
+            companyName: isLoggedIn ? offer.company?.name : undefined,
+            companyId: offer.company?.id,
+            monthlyRate: offer.monthlyRateGross,
+            annualMileageKm: selectedMileage ?? undefined,
+            contractMonths: selectedMonths ?? undefined,
+            initialPaymentPct: selectedPayment ?? undefined,
+            offerType: selectedOfferType,
+        }
+    }), [isLoggedIn, selectedMileage, selectedMonths, selectedPayment, selectedOfferType]);
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50">
@@ -148,16 +198,31 @@ export default function RentalDetailPage() {
                     <div className="lg:col-span-3 space-y-6">
                         {/* Gallery */}
                         <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                            <div className="relative h-[300px] md:h-[400px] bg-gray-100">
+                            <div
+                                className="relative h-[300px] md:h-[400px] bg-gray-100 cursor-pointer group"
+                                onClick={() => images.length > 0 && openLightbox(mainImage)}
+                            >
                                 {currentImage ? (
                                     <img
                                         src={currentImage}
                                         alt={`${vehicle.make} ${vehicle.model}`}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                                     />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center">
                                         <Car className="w-24 h-24 text-gray-300" />
+                                    </div>
+                                )}
+                                {images.length > 0 && (
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                        <div className="bg-white/90 backdrop-blur rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                                            <Maximize2 className="w-5 h-5 text-gray-700" />
+                                        </div>
+                                    </div>
+                                )}
+                                {images.length > 1 && (
+                                    <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur">
+                                        {mainImage + 1}/{images.length}
                                     </div>
                                 )}
                             </div>
@@ -399,11 +464,9 @@ export default function RentalDetailPage() {
 
                                             <Button
                                                 className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                                                asChild
+                                                onClick={() => navigate(`/najem/${slug}/zapytanie`, { state: buildRentalState(offer) })}
                                             >
-                                                <Link to={`/kontakt?rental=${vehicle.id}&company=${offer.company.id}&rate=${offer.monthlyRateGross}`}>
-                                                    <FileText className="w-4 h-4 mr-2" /> Zapytaj o ofertę
-                                                </Link>
+                                                <FileText className="w-4 h-4 mr-2" /> Zapytaj o ofertę
                                             </Button>
                                         </div>
                                     ))}
@@ -419,6 +482,78 @@ export default function RentalDetailPage() {
                     </div>
                 </div>
             </main>
+
+            {/* Fullscreen Lightbox */}
+            {lightboxOpen && images.length > 0 && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+                    onClick={closeLightbox}
+                >
+                    {/* Close button */}
+                    <button
+                        onClick={closeLightbox}
+                        className="absolute top-4 right-4 z-50 bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-colors backdrop-blur"
+                        aria-label="Zamknij galerię"
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+
+                    {/* Counter */}
+                    <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+                        {lightboxIndex + 1} / {images.length}
+                    </div>
+
+                    {/* Prev button */}
+                    {images.length > 1 && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); goLightboxPrev(); }}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/25 text-white rounded-full p-3 transition-colors backdrop-blur"
+                            aria-label="Poprzednie zdjęcie"
+                        >
+                            <ChevronLeft className="w-7 h-7" />
+                        </button>
+                    )}
+
+                    {/* Image */}
+                    <img
+                        src={images[lightboxIndex]}
+                        alt={`${vehicle.make} ${vehicle.model} — ${lightboxIndex + 1}`}
+                        className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+                        onClick={(e) => e.stopPropagation()}
+                        draggable={false}
+                    />
+
+                    {/* Next button */}
+                    {images.length > 1 && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); goLightboxNext(); }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/25 text-white rounded-full p-3 transition-colors backdrop-blur"
+                            aria-label="Następne zdjęcie"
+                        >
+                            <ChevronRight className="w-7 h-7" />
+                        </button>
+                    )}
+
+                    {/* Thumbnail strip */}
+                    {images.length > 1 && (
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 max-w-[80vw] overflow-x-auto px-4 py-2 bg-black/40 rounded-xl backdrop-blur">
+                            {images.map((url: string, i: number) => (
+                                <button
+                                    key={i}
+                                    onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
+                                    className={`w-14 h-10 rounded overflow-hidden border-2 flex-shrink-0 transition-all ${
+                                        i === lightboxIndex
+                                            ? 'border-white scale-110 shadow-lg'
+                                            : 'border-transparent opacity-50 hover:opacity-80'
+                                    }`}
+                                >
+                                    <img src={url} alt="" className="w-full h-full object-cover" />
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <ScrollToTopButton />
             <Footer />

@@ -42,6 +42,7 @@ import RentalMatrixPage from "./pages/admin/RentalMatrixPage";
 import PersonalOfferPage from "./pages/PersonalOfferPage";
 import RentalSearchPage from "./pages/RentalSearchPage";
 import RentalDetailPage from "./pages/RentalDetailPage";
+import RentalLeadFormPage from "./pages/RentalLeadFormPage";
 import DealerGroupsPage from "./pages/admin/DealerGroupsPage";
 import DealersPage from "./pages/admin/DealersPage";
 
@@ -75,6 +76,7 @@ const App = () => (
                       <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
                       <Route path="/najem" element={<RentalSearchPage />} />
                       <Route path="/najem/:slug" element={<RentalDetailPage />} />
+                      <Route path="/najem/:slug/zapytanie" element={<RentalLeadFormPage />} />
                       {/* Legacy routes - kept for backward compatibility during transition */}
                       <Route path="/listing/:id" element={<ListingDetailPage />} />
                       <Route path="/listing/:id/lead" element={<LeadFormPage />} />
