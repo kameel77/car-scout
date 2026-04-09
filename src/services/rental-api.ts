@@ -295,12 +295,13 @@ export const rentalPublicApi = {
         return response.json();
     },
 
-    calculate: async (slug: string, params: { annualMileageKm: number; contractMonths: number; initialPaymentPct: number }) => {
+    calculate: async (slug: string, params: { annualMileageKm: number; contractMonths: number; initialPaymentPct: number; offerType?: string }) => {
         const queryParams = new URLSearchParams({
             annualMileageKm: params.annualMileageKm.toString(),
             contractMonths: params.contractMonths.toString(),
             initialPaymentPct: params.initialPaymentPct.toString()
         });
+        if (params.offerType) queryParams.set('offerType', params.offerType);
 
         const response = await fetch(`${API_BASE_URL}/api/rental/vehicles/${slug}/calculate?${queryParams}`);
         if (!response.ok) throw new Error('Calculation failed');

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { rentalVehiclesApi, rentalCompaniesApi } from '@/services/rental-api';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
     Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star,
-    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil
+    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil, Upload
 } from 'lucide-react';
 
 // Helper: parse comma-separated text to array
@@ -53,9 +53,12 @@ interface VehicleFormProps {
     onSave: (data: any) => void;
     onCancel: () => void;
     isSaving: boolean;
+    /** When true, buttons are rendered outside via formId pattern */
+    externalButtons?: boolean;
+    formId?: string;
 }
 
-function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }: VehicleFormProps) {
+function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving, externalButtons, formId }: VehicleFormProps) {
     const defaultProvider = vehicle?.dealerId 
         ? `dealer_${vehicle.dealerId}` 
         : vehicle?.ownerRentalCompanyId 
@@ -125,7 +128,7 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
         setForm(prev => ({ ...prev, [field]: e.target.value }));
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form id={formId} onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Basic Info */}
                 <div className="space-y-2">
@@ -299,12 +302,14 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
                 />
             </div>
 
-            <div className="flex gap-3 pt-4 border-t">
-                <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
-                    {isSaving ? 'Zapisywanie...' : vehicle ? 'Zapisz zmiany' : 'Dodaj pojazd'}
-                </Button>
-                <Button type="button" variant="outline" onClick={onCancel}>Anuluj</Button>
-            </div>
+            {!externalButtons && (
+                <div className="flex gap-3 pt-4 border-t">
+                    <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
+                        {isSaving ? 'Zapisywanie...' : vehicle ? 'Zapisz zmiany' : 'Dodaj pojazd'}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={onCancel}>Anuluj</Button>
+                </div>
+            )}
         </form>
     );
 }
@@ -472,6 +477,7 @@ function SpecificationSection({ vehicle }: { vehicle: RentalVehicle }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const [specUrl, setSpecUrl] = useState('');
+    const specFileRef = useRef<HTMLInputElement>(null);
 
     const uploadMutation = useMutation({
         mutationFn: (file: File) => rentalVehiclesApi.uploadSpecification(vehicle.id, file, token!),
@@ -530,14 +536,26 @@ function SpecificationSection({ vehicle }: { vehicle: RentalVehicle }) {
             <div>
                 <label className="text-xs text-gray-500 block mb-1">Lub wgraj plik PDF (max 10MB):</label>
                 <input
+                    ref={specFileRef}
                     type="file"
                     accept="application/pdf"
                     onChange={e => {
                         const file = e.target.files?.[0];
                         if (file) uploadMutation.mutate(file);
                     }}
-                    className="text-sm"
+                    className="hidden"
                 />
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => specFileRef.current?.click()}
+                    disabled={uploadMutation.isPending}
+                    className="gap-2"
+                >
+                    <Upload className="w-4 h-4" />
+                    {uploadMutation.isPending ? 'Wgrywanie...' : 'Dodaj plik'}
+                </Button>
             </div>
         </div>
     );
@@ -550,6 +568,7 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const [imageUrl, setImageUrl] = useState('');
+    const imageFileRef = useRef<HTMLInputElement>(null);
 
     const uploadMutation = useMutation({
         mutationFn: (files: File[]) => rentalVehiclesApi.uploadImages(vehicle.id, files, !vehicle.primaryImageUrl, token!),
@@ -713,6 +732,7 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
             <div>
                 <label className="text-xs text-gray-500 block mb-1">Lub wgraj z dysku:</label>
                 <input
+                    ref={imageFileRef}
                     type="file"
                     multiple
                     accept="image/*"
@@ -720,8 +740,19 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
                         const files = Array.from(e.target.files || []);
                         if (files.length > 0) uploadMutation.mutate(files);
                     }}
-                    className="text-sm border p-2 rounded w-full bg-white cursor-pointer"
+                    className="hidden"
                 />
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => imageFileRef.current?.click()}
+                    disabled={uploadMutation.isPending}
+                    className="gap-2"
+                >
+                    <Upload className="w-4 h-4" />
+                    {uploadMutation.isPending ? 'Wgrywanie...' : 'Dodaj zdjęcia'}
+                </Button>
             </div>
         </div>
     );
@@ -846,6 +877,8 @@ export default function RentalVehiclesPage() {
                     onSave={data => updateMutation.mutate({ id: editingId, data })}
                     onCancel={() => { setView('list'); setEditingId(null); }}
                     isSaving={updateMutation.isPending}
+                    externalButtons
+                    formId="edit-vehicle-form"
                 />
                 <SpecificationSection vehicle={vehicleDetailQuery.data.vehicle} />
                 <ImageSection vehicle={vehicleDetailQuery.data.vehicle} />
@@ -854,6 +887,14 @@ export default function RentalVehiclesPage() {
                     assignments={vehicleDetailQuery.data.vehicle.rentalAssignments || []}
                     companies={companies}
                 />
+
+                {/* Save / Cancel at the bottom of the page */}
+                <div className="flex gap-3 pt-6 mt-6 border-t">
+                    <Button type="submit" form="edit-vehicle-form" disabled={updateMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
+                        {updateMutation.isPending ? 'Zapisywanie...' : 'Zapisz zmiany'}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => { setView('list'); setEditingId(null); }}>Anuluj</Button>
+                </div>
             </div>
         );
     }

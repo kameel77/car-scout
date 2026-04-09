@@ -5,14 +5,19 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { rentalPublicApi } from '@/services/rental-api';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
-    Shield, ChevronDown, Building2, Car, FileText
+    Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package
 } from 'lucide-react';
+
+type OfferType = 'business' | 'consumer';
 
 export default function RentalDetailPage() {
     const { slug } = useParams<{ slug: string }>();
+    const { token } = useAuth();
+    const isLoggedIn = !!token;
 
     const { data, isLoading } = useQuery({
         queryKey: ['rental-vehicle-public', slug],
@@ -27,6 +32,7 @@ export default function RentalDetailPage() {
     const [selectedMileage, setSelectedMileage] = useState<number | null>(null);
     const [selectedMonths, setSelectedMonths] = useState<number | null>(null);
     const [selectedPayment, setSelectedPayment] = useState<number | null>(null);
+    const [selectedOfferType, setSelectedOfferType] = useState<OfferType>('business');
     const [showAllSpecs, setShowAllSpecs] = useState(false);
 
     // Initialize defaults when data loads
@@ -40,13 +46,34 @@ export default function RentalDetailPage() {
         setSelectedPayment(options.initialPaymentOptions[0]);
     }
 
+    // Determine available offer types from the options data
+    const availableOfferTypes = useMemo<Set<string>>(() => {
+        const types = options?.offerTypeOptions;
+        if (!types || types.length === 0) return new Set(['business', 'consumer']);
+        const s = new Set<string>();
+        for (const t of types) {
+            if (t === 'all') { s.add('business'); s.add('consumer'); }
+            else s.add(t);
+        }
+        return s;
+    }, [options?.offerTypeOptions]);
+
+    // If current selection is unavailable, switch
+    if (!availableOfferTypes.has(selectedOfferType)) {
+        const first = availableOfferTypes.values().next().value;
+        if (first && first !== selectedOfferType) {
+            setSelectedOfferType(first as OfferType);
+        }
+    }
+
     // Calculation query
     const calcQuery = useQuery({
-        queryKey: ['rental-calc', slug, selectedMileage, selectedMonths, selectedPayment],
+        queryKey: ['rental-calc', slug, selectedMileage, selectedMonths, selectedPayment, selectedOfferType],
         queryFn: () => rentalPublicApi.calculate(slug!, {
             annualMileageKm: selectedMileage!,
             contractMonths: selectedMonths!,
-            initialPaymentPct: selectedPayment!
+            initialPaymentPct: selectedPayment!,
+            offerType: selectedOfferType
         }),
         enabled: !!slug && selectedMileage !== null && selectedMonths !== null && selectedPayment !== null
     });
@@ -97,6 +124,14 @@ export default function RentalDetailPage() {
         { label: 'Miejsca', value: vehicle.seats },
         { label: 'Lakier', value: vehicle.paintType },
     ].filter(s => s.value);
+
+    // Equipment categories
+    const equipmentCategories = [
+        { label: 'Audio i Multimedia', icon: Music, items: vehicle.equipmentAudioMultimedia },
+        { label: 'Bezpieczeństwo', icon: ShieldCheck, items: vehicle.equipmentSafety },
+        { label: 'Komfort i Dodatki', icon: Sofa, items: vehicle.equipmentComfortExtras },
+        { label: 'Inne', icon: Package, items: vehicle.equipmentOther },
+    ].filter(cat => cat.items?.length > 0);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -189,18 +224,28 @@ export default function RentalDetailPage() {
                                 </div>
                             </div>
 
-                            {/* Equipment */}
-                            {vehicle.equipmentComfortExtras?.length > 0 && (
-                                <div className="mt-6 pt-6 border-t">
-                                    <h3 className="font-semibold text-gray-900 mb-3">Wyposażenie</h3>
-                                    <div className="grid grid-cols-2 gap-1 text-sm text-gray-600">
-                                        {vehicle.equipmentComfortExtras.map((e: string, i: number) => (
-                                            <div key={i} className="flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                {e}
+                            {/* Equipment — all 4 categories */}
+                            {equipmentCategories.length > 0 && (
+                                <div className="mt-6 pt-6 border-t space-y-5">
+                                    <h3 className="font-semibold text-gray-900">Wyposażenie</h3>
+                                    {equipmentCategories.map(cat => {
+                                        const Icon = cat.icon;
+                                        return (
+                                            <div key={cat.label}>
+                                                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1.5 mb-2">
+                                                    <Icon className="w-4 h-4 text-blue-500" /> {cat.label}
+                                                </h4>
+                                                <div className="grid grid-cols-2 gap-1 text-sm text-gray-600">
+                                                    {cat.items.map((e: string, i: number) => (
+                                                        <div key={i} className="flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                                                            {e}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -208,8 +253,41 @@ export default function RentalDetailPage() {
 
                     {/* Right: Calculator */}
                     <div className="lg:col-span-2">
-                        <div className="bg-white rounded-2xl shadow-sm border p-6 sticky top-4">
+                        <div className="bg-white rounded-2xl shadow-sm border p-6 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
                             <h2 className="text-lg font-bold text-gray-900 mb-5">Kalkulator najmu</h2>
+
+                            {/* Offer type toggle: Business / Private */}
+                            <div className="space-y-2 mb-5">
+                                <label className="text-sm font-medium text-gray-700">Typ oferty</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setSelectedOfferType('business')}
+                                        disabled={!availableOfferTypes.has('business')}
+                                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                            selectedOfferType === 'business'
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : !availableOfferTypes.has('business')
+                                                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        🏢 Na firmę
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedOfferType('consumer')}
+                                        disabled={!availableOfferTypes.has('consumer')}
+                                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                            selectedOfferType === 'consumer'
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : !availableOfferTypes.has('consumer')
+                                                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        👤 Prywatnie
+                                    </button>
+                                </div>
+                            </div>
 
                             {/* Mileage */}
                             <div className="space-y-2 mb-5">
@@ -291,7 +369,11 @@ export default function RentalDetailPage() {
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2">
                                                     <Building2 className="w-4 h-4 text-gray-500" />
-                                                    <span className="font-medium text-sm">{offer.company.name}</span>
+                                                    {isLoggedIn ? (
+                                                        <span className="font-medium text-sm">{offer.company.name}</span>
+                                                    ) : (
+                                                        <span className="font-medium text-sm text-gray-400">Firma #{i + 1}</span>
+                                                    )}
                                                 </div>
                                                 {i === 0 && (
                                                     <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">Najlepsza</span>

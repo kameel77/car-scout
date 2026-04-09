@@ -149,11 +149,12 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             try {
                 await fastify.prisma.rentalMatrixEntry.upsert({
                     where: {
-                        assignmentId_annualMileageKm_contractMonths_initialPaymentPct: {
+                        assignmentId_annualMileageKm_contractMonths_initialPaymentPct_offerType: {
                             assignmentId,
                             annualMileageKm: rowData.annualMileageKm,
                             contractMonths: rowData.contractMonths,
-                            initialPaymentPct: rowData.initialPaymentPct
+                            initialPaymentPct: rowData.initialPaymentPct,
+                            offerType: rowData.offerType
                         }
                     },
                     create: {
@@ -161,6 +162,7 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
                         annualMileageKm: rowData.annualMileageKm,
                         contractMonths: rowData.contractMonths,
                         initialPaymentPct: rowData.initialPaymentPct,
+                        offerType: rowData.offerType,
                         monthlyRateNet: rowData.monthlyRateNet,
                         monthlyRateGross: rowData.monthlyRateGross,
                         servicesIncluded: rowData.servicesIncluded

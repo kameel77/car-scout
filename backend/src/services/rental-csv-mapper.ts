@@ -7,6 +7,7 @@ export interface RentalMatrixCSVRow {
     monthly_rate_net: string;
     monthly_rate_gross: string;
     services_included?: string;
+    offer_type?: string; // "business" | "consumer" | "all" — defaults to "all"
 }
 
 export interface RentalMatrixImportResult {
@@ -53,6 +54,7 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
         annualMileageKm: number;
         contractMonths: number;
         initialPaymentPct: number;
+        offerType: string;
         monthlyRateNet: number;
         monthlyRateGross: number;
         servicesIncluded: string[];
@@ -93,6 +95,11 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
         ? row.services_included.split(',').map(s => s.trim()).filter(Boolean)
         : [];
 
+    // Offer type: optional, defaults to 'all'
+    const rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    const validOfferTypes = ['business', 'consumer', 'all'];
+    const offerType = validOfferTypes.includes(rawOfferType) ? rawOfferType : 'all';
+
     return {
         data: {
             vehicleId,
@@ -100,6 +107,7 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
             annualMileageKm,
             contractMonths,
             initialPaymentPct,
+            offerType,
             monthlyRateNet,
             monthlyRateGross,
             servicesIncluded

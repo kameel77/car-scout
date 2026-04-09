@@ -616,6 +616,7 @@ model RentalMatrixEntry {
   annualMileageKm   Int      @map("annual_mileage_km")
   contractMonths    Int      @map("contract_months")
   initialPaymentPct Float    @map("initial_payment_pct")
+  offerType         String   @default("all") @map("offer_type") // "business" | "consumer" | "all"
   monthlyRateNet    Float    @map("monthly_rate_net")
   monthlyRateGross  Float    @map("monthly_rate_gross")
   servicesIncluded  String[] @map("services_included")
@@ -623,7 +624,7 @@ model RentalMatrixEntry {
 
   assignment VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
-  @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct])
+  @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct, offerType])
   @@index([assignmentId])
   @@index([monthlyRateGross])
   @@index([assignmentId, monthlyRateGross])
