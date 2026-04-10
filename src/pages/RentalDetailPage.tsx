@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
-    X, ChevronLeft, ChevronRight, Maximize2
+    X, ChevronLeft, ChevronRight, Maximize2, User
 } from 'lucide-react';
 
 type OfferType = 'business' | 'consumer';
@@ -34,7 +34,13 @@ export default function RentalDetailPage() {
     const [selectedMileage, setSelectedMileage] = useState<number | null>(null);
     const [selectedMonths, setSelectedMonths] = useState<number | null>(null);
     const [selectedPayment, setSelectedPayment] = useState<number | null>(null);
-    const [selectedOfferType, setSelectedOfferType] = useState<OfferType>('business');
+    const [selectedOfferType, setSelectedOfferType] = useState<OfferType>(() => {
+        try {
+            const stored = localStorage.getItem('rentalClientType');
+            if (stored === 'business' || stored === 'consumer') return stored;
+        } catch {}
+        return 'business';
+    });
     const [showAllSpecs, setShowAllSpecs] = useState(false);
 
     // Initialize defaults when data loads
@@ -326,9 +332,9 @@ export default function RentalDetailPage() {
                                 <label className="text-sm font-medium text-gray-700">Typ oferty</label>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setSelectedOfferType('business')}
+                                        onClick={() => { setSelectedOfferType('business'); try { localStorage.setItem('rentalClientType', 'business'); } catch {} }}
                                         disabled={!availableOfferTypes.has('business')}
-                                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                             selectedOfferType === 'business'
                                                 ? 'bg-blue-600 text-white shadow-md'
                                                 : !availableOfferTypes.has('business')
@@ -336,12 +342,12 @@ export default function RentalDetailPage() {
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
-                                        🏢 Na firmę
+                                        <Building2 className="w-4 h-4" /> Na firmę
                                     </button>
                                     <button
-                                        onClick={() => setSelectedOfferType('consumer')}
+                                        onClick={() => { setSelectedOfferType('consumer'); try { localStorage.setItem('rentalClientType', 'consumer'); } catch {} }}
                                         disabled={!availableOfferTypes.has('consumer')}
-                                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                             selectedOfferType === 'consumer'
                                                 ? 'bg-blue-600 text-white shadow-md'
                                                 : !availableOfferTypes.has('consumer')
@@ -349,7 +355,7 @@ export default function RentalDetailPage() {
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
-                                        👤 Prywatnie
+                                        <User className="w-4 h-4" /> Prywatnie
                                     </button>
                                 </div>
                             </div>
@@ -445,11 +451,19 @@ export default function RentalDetailPage() {
                                                 )}
                                             </div>
                                             <div className="text-3xl font-bold text-gray-900">
-                                                {offer.monthlyRateGross.toLocaleString('pl-PL')} zł
-                                                <span className="text-sm font-normal text-gray-500"> / mies. brutto</span>
+                                                {selectedOfferType === 'business'
+                                                    ? `${Math.ceil(offer.monthlyRateNet).toLocaleString('pl-PL')} zł`
+                                                    : `${Math.ceil(offer.monthlyRateGross).toLocaleString('pl-PL')} zł`
+                                                }
+                                                <span className="text-sm font-normal text-gray-500">
+                                                    {selectedOfferType === 'business' ? ' netto / mies.' : ' brutto / mies.'}
+                                                </span>
                                             </div>
                                             <div className="text-sm text-gray-500 mt-1">
-                                                {offer.monthlyRateNet.toLocaleString('pl-PL')} zł netto
+                                                {selectedOfferType === 'business'
+                                                    ? `${Math.ceil(offer.monthlyRateGross).toLocaleString('pl-PL')} zł brutto`
+                                                    : `${Math.ceil(offer.monthlyRateNet).toLocaleString('pl-PL')} zł netto`
+                                                }
                                             </div>
 
                                             {offer.servicesIncluded?.length > 0 && (

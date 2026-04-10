@@ -111,8 +111,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
             return {
                 ...v,
-                minMonthlyRateGross: minRate?.monthlyRateGross || null,
-                minMonthlyRateNet: minRate?.monthlyRateNet || null,
+                minMonthlyRateGross: minRate ? Math.ceil(minRate.monthlyRateGross) : null,
+                minMonthlyRateNet: minRate ? Math.ceil(minRate.monthlyRateNet) : null,
                 minRateCompany: minRate?.companyName || null,
                 minRateConfig: minRate ? {
                     contractMonths: minRate.contractMonths,
@@ -246,8 +246,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             .filter(a => a.matrixEntries.length > 0)
             .map(a => ({
                 company: a.rentalCompany,
-                monthlyRateNet: a.matrixEntries[0].monthlyRateNet,
-                monthlyRateGross: a.matrixEntries[0].monthlyRateGross,
+                monthlyRateNet: Math.ceil(a.matrixEntries[0].monthlyRateNet),
+                monthlyRateGross: Math.ceil(a.matrixEntries[0].monthlyRateGross),
                 servicesIncluded: a.matrixEntries[0].servicesIncluded,
                 initialPaymentAmount: (vehicle.sellingPrice || 0) * (parseFloat(initialPaymentPct) / 100)
             }))
