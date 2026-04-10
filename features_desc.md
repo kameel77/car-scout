@@ -280,3 +280,32 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - Backend: `POST /api/leads/rental` (istniejący endpoint) — tworzy lead typu `rental` z powiązanym pojazdem.
 - Frontend API client: `leadsApi.submitRentalLead(...)`.
 - Po wysłaniu: ekran sukcesu z numerem referencyjnym.
+
+### Zaokrąglanie rat do pełnych złotych
+- Wszystkie raty miesięczne (netto i brutto) wyświetlane na listingu `/najem` oraz w kalkulatorze są zaokrąglane **w górę** do pełnych złotych (`Math.ceil`).
+- Zaokrąglanie odbywa się po stronie backendu (`rental-public.ts`) — zarówno na listingu (`minRate`) jak i w kalkulatorze (`/calculate`).
+
+### Globalny wybór typu klienta (firma / prywatnie)
+- Na listingu `/najem` w pasku filtrów dostępny jest toggle „Na firmę / Prywatnie".
+- Wybór jest zapisywany w `localStorage('rentalClientType')` — persystuje między stronami.
+- **Na firmę** → cena główna **netto**, pod spodem brutto (mniejsza czcionka).
+- **Prywatnie** → cena główna **brutto**, pod spodem netto (mniejsza czcionka).
+- Strona detalu `/najem/:slug` wczytuje `rentalClientType` z localStorage jako domyślny tryb kalkulatora.
+- Zmiana trybu na kalkulatorze synchronizuje się zwrotnie do `localStorage`.
+- Ikony: `Building2` (firma) i `User` (prywatnie) z lucide-react — spójne ze stylem reszty serwisu.
+
+### Polskie etykiety usług w kalkulatorze
+- Usługi wyświetlane na kartach ofert kalkulatora mają polskie nazwy: `insurance` → Ubezpieczenie, `tires` → Opony, `service` → Przeglądy techniczne, `other` → Assistance 24h.
+
+### Cena katalogowa w nagłówku
+- Cena katalogowa (przekreślona) i cena sprzedaży zostały przeniesione do nagłówka obok tytułu pojazdu (po prawej stronie), zamiast osobnej sekcji pod specyfikacjami.
+
+### Wyposażenie — zwijane sekcje (collapsible)
+- Kategorie wyposażenia na stronie `/najem/:slug` są teraz wyświetlane jako elementy `<details>` (rozwijane/zwijane).
+- Każda kategoria pokazuje liczbę elementów w nawiasie, np. „Audio i Multimedia (12)".
+- Domyślnie złożone — użytkownik rozwija je kliknięciem. Eliminuje to problem zbyt długich list (np. 20+ pozycji) które przytłaczały stronę.
+- Elementy wyposażenia wyświetlane w kolumnie (zamiast 2-kolumnowej siatki) z lepszym paddingiem i wyrównaniem.
+
+### Stabilizacja kalkulatora (placeholderData)
+- Zmiana parametrów w kalkulatorze (przebieg, okres, wpłata) nie powoduje przeładowania całego kontenera oferty.
+- TanStack Query używa `placeholderData: (prev) => prev` — stare wyniki pozostają widoczne podczas ładowania nowych, aktualizowane są jedynie wartości rat i zakres usług.
