@@ -74,7 +74,7 @@ export default function RentalDetailPage() {
         }
     }
 
-    // Calculation query
+    // Calculation query — keepPreviousData prevents offer card flashing on param change
     const calcQuery = useQuery({
         queryKey: ['rental-calc', slug, selectedMileage, selectedMonths, selectedPayment, selectedOfferType],
         queryFn: () => rentalPublicApi.calculate(slug!, {
@@ -83,7 +83,8 @@ export default function RentalDetailPage() {
             initialPaymentPct: selectedPayment!,
             offerType: selectedOfferType
         }),
-        enabled: !!slug && selectedMileage !== null && selectedMonths !== null && selectedPayment !== null
+        enabled: !!slug && selectedMileage !== null && selectedMonths !== null && selectedPayment !== null,
+        placeholderData: (prev) => prev
     });
 
     const offers = calcQuery.data?.offers || [];
@@ -251,17 +252,36 @@ export default function RentalDetailPage() {
 
                         {/* Vehicle title + specs */}
                         <div className="bg-white rounded-2xl shadow-sm border p-6">
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                                {vehicle.make} {vehicle.model}
-                            </h1>
-                            {vehicle.version && (
-                                <p className="text-lg text-gray-500 mt-1">{vehicle.version}</p>
-                            )}
-                            {vehicle.dealer && (
-                                <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" /> {vehicle.dealer.name}, {vehicle.dealer.city}
-                                </p>
-                            )}
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                                        {vehicle.make} {vehicle.model}
+                                    </h1>
+                                    {vehicle.version && (
+                                        <p className="text-lg text-gray-500 mt-1">{vehicle.version}</p>
+                                    )}
+                                    {vehicle.dealer && (
+                                        <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" /> {vehicle.dealer.name}, {vehicle.dealer.city}
+                                        </p>
+                                    )}
+                                </div>
+                                {(vehicle.catalogPrice || vehicle.sellingPrice) && (
+                                    <div className="text-right flex-shrink-0">
+                                        {vehicle.catalogPrice && (
+                                            <div className="text-sm text-gray-400 line-through">
+                                                {vehicle.catalogPrice.toLocaleString('pl-PL')} zł
+                                            </div>
+                                        )}
+                                        {vehicle.sellingPrice && (
+                                            <div className="text-xl font-bold text-gray-900">
+                                                {vehicle.sellingPrice.toLocaleString('pl-PL')} zł
+                                            </div>
+                                        )}
+                                        <div className="text-xs text-gray-400">cena katalogowa</div>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Quick specs */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
@@ -283,38 +303,29 @@ export default function RentalDetailPage() {
                                 </button>
                             )}
 
-                            {/* Price info */}
-                            <div className="mt-6 pt-6 border-t flex items-center gap-6">
-                                <div>
-                                    <span className="text-xs text-gray-500">Cena katalogowa</span>
-                                    <div className="font-semibold text-gray-500 line-through">{vehicle.catalogPrice?.toLocaleString('pl-PL')} zł</div>
-                                </div>
-                                <div>
-                                    <span className="text-xs text-gray-500">Cena sprzedaży</span>
-                                    <div className="font-bold text-xl text-gray-900">{vehicle.sellingPrice?.toLocaleString('pl-PL')} zł</div>
-                                </div>
-                            </div>
-
                             {/* Equipment — all 4 categories */}
                             {equipmentCategories.length > 0 && (
-                                <div className="mt-6 pt-6 border-t space-y-5">
+                                <div className="mt-6 pt-6 border-t space-y-4">
                                     <h3 className="font-semibold text-gray-900">Wyposażenie</h3>
                                     {equipmentCategories.map(cat => {
                                         const Icon = cat.icon;
                                         return (
-                                            <div key={cat.label}>
-                                                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1.5 mb-2">
-                                                    <Icon className="w-4 h-4 text-blue-500" /> {cat.label}
-                                                </h4>
-                                                <div className="grid grid-cols-2 gap-1 text-sm text-gray-600">
+                                            <details key={cat.label} className="group">
+                                                <summary className="flex items-center gap-1.5 cursor-pointer text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors py-1">
+                                                    <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
+                                                    <Icon className="w-4 h-4 text-blue-500" />
+                                                    {cat.label}
+                                                    <span className="text-xs text-gray-400 ml-1">({cat.items.length})</span>
+                                                </summary>
+                                                <div className="pl-7 pt-1 pb-2 space-y-1">
                                                     {cat.items.map((e: string, i: number) => (
-                                                        <div key={i} className="flex items-center gap-1">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                                                        <div key={i} className="flex items-start gap-2 text-sm text-gray-600 leading-snug">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0 mt-1.5" />
                                                             {e}
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </div>
+                                            </details>
                                         );
                                     })}
                                 </div>
@@ -468,11 +479,19 @@ export default function RentalDetailPage() {
 
                                             {offer.servicesIncluded?.length > 0 && (
                                                 <div className="mt-3 flex flex-wrap gap-1">
-                                                    {offer.servicesIncluded.map((s: string, j: number) => (
-                                                        <span key={j} className="inline-flex items-center gap-0.5 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">
-                                                            <Shield className="w-3 h-3" /> {s}
-                                                        </span>
-                                                    ))}
+                                                    {offer.servicesIncluded.map((s: string, j: number) => {
+                                                        const labelMap: Record<string, string> = {
+                                                            insurance: 'Ubezpieczenie',
+                                                            tires: 'Opony',
+                                                            service: 'Przeglądy techniczne',
+                                                            other: 'Assistance 24h'
+                                                        };
+                                                        return (
+                                                            <span key={j} className="inline-flex items-center gap-0.5 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">
+                                                                <Shield className="w-3 h-3" /> {labelMap[s] || s}
+                                                            </span>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
 
