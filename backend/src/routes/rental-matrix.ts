@@ -36,7 +36,20 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
         }
 
         const buffer = await data.toBuffer();
-        const csvContent = buffer.toString('utf-8');
+        // Strip UTF-8 BOM and normalize line endings (\r\r\n → \n, \r\n → \n)
+        let csvContent = buffer.toString('utf-8');
+        if (csvContent.charCodeAt(0) === 0xFEFF) csvContent = csvContent.slice(1);
+        csvContent = csvContent.replace(/\r\r\n/g, '\n').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+        // Auto-detect delimiter from the header line (pick the one with most occurrences)
+        const headerLine = csvContent.split('\n')[0] || '';
+        const commaCount = (headerLine.match(/,/g) || []).length;
+        const semiCount = (headerLine.match(/;/g) || []).length;
+        const tabCount = (headerLine.match(/\t/g) || []).length;
+        const detectedDelimiter = tabCount >= commaCount && tabCount >= semiCount ? '\t'
+            : semiCount > commaCount ? ';' : ',';
+
+        fastify.log.info(`CSV delimiter detected: "${detectedDelimiter === '\t' ? 'TAB' : detectedDelimiter}" (comma=${commaCount}, semi=${semiCount}, tab=${tabCount})`);
 
         // Parse CSV
         let records: Record<string, string>[];
@@ -44,9 +57,10 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             records = parse(csvContent, {
                 columns: true,
                 skip_empty_lines: true,
-                delimiter: [',', ';', '\t'],
+                delimiter: detectedDelimiter,
                 relax_column_count: true,
-                trim: true
+                trim: true,
+                bom: true
             }) as Record<string, string>[];
         } catch (err) {
             return reply.code(400).send({
@@ -72,6 +86,10 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
         }
 
         fastify.log.info(`CSV format detected: ${formatDetection.format} (${records.length} rows)`);
+        fastify.log.info(`CSV headers: ${JSON.stringify(headers)}`);
+        if (records.length > 0) {
+            fastify.log.info(`CSV first row: ${JSON.stringify(records[0])}`);
+        }
 
         // Process rows based on format
         const result: RentalMatrixImportResult = {

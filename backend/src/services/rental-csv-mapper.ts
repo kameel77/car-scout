@@ -108,13 +108,13 @@ function safeInt(value: string | undefined | null): number | null {
     return isNaN(parsed) ? null : parsed;
 }
 
-/** Parse car_id field — may contain multiple IDs separated by ";" */
+/** Parse car_id field — may contain multiple IDs separated by ";" or "," */
 function parseCarIds(raw: string): string[] {
     if (!raw) return [];
     // Remove surrounding quotes and trim
     const cleaned = raw.replace(/^"|"$/g, '').trim();
-    // Split by semicolons (recommended separator for multi-vehicle IDs)
-    return cleaned.split(';').map(id => id.trim()).filter(Boolean);
+    // Split by semicolons or commas (both are valid multi-ID separators)
+    return cleaned.split(/[;,]/).map(id => id.trim()).filter(Boolean);
 }
 
 function parseServiceFlags(row: ProviderCSVRow): string[] {
