@@ -537,14 +537,14 @@ model RentalVehicle {
   transmission             String?
   enginePowerHp            Int?     @map("engine_power_hp")
   engineCapacityCm3        Int?     @map("engine_capacity_cm3")
-  productionYear           Int      @map("production_year")
+  productionYear           Int?     @map("production_year")
   color                    String?
   paintType                String?  @map("paint_type")
   doors                    Int?
   seats                    Int?
   drive                    String?
-  catalogPrice             Int      @map("catalog_price")
-  sellingPrice             Int      @map("selling_price")
+  catalogPrice             Int?     @map("catalog_price")
+  sellingPrice             Int?     @map("selling_price")
   primaryImageUrl          String?  @map("primary_image_url")
   imageUrls                String[] @map("image_urls")
   equipmentAudioMultimedia String[] @map("equipment_audio_multimedia")
@@ -555,6 +555,8 @@ model RentalVehicle {
   additionalInfoContent    String?  @map("additional_info_content")
   specsJson                Json?    @map("specs_json")
   specificationUrl         String?  @map("specification_url")
+  carClass                 String?  @map("car_class")
+  modelCode                String?  @map("model_code")
   slug                     String?  @unique
   isActive                 Boolean  @default(true) @map("is_active")
   createdAt                DateTime @default(now()) @map("created_at")
@@ -620,6 +622,10 @@ model RentalMatrixEntry {
   monthlyRateNet    Float    @map("monthly_rate_net")
   monthlyRateGross  Float    @map("monthly_rate_gross")
   servicesIncluded  String[] @map("services_included")
+  overMileageCost   Float?   @map("over_mileage_cost")
+  insuranceExcess500 Float?  @map("insurance_excess_500")
+  insuranceNoLimit  Float?   @map("insurance_no_limit")
+  tiresNoLimit      Float?   @map("tires_no_limit")
   createdAt         DateTime @default(now()) @map("created_at")
 
   assignment VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)

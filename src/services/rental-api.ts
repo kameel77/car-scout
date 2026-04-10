@@ -18,14 +18,14 @@ export interface RentalVehicle {
     transmission: string | null;
     enginePowerHp: number | null;
     engineCapacityCm3: number | null;
-    productionYear: number;
+    productionYear: number | null;
     color: string | null;
     paintType: string | null;
     doors: number | null;
     seats: number | null;
     drive: string | null;
-    catalogPrice: number;
-    sellingPrice: number;
+    catalogPrice: number | null;
+    sellingPrice: number | null;
     primaryImageUrl: string | null;
     imageUrls: string[];
     specificationUrl: string | null;
@@ -77,6 +77,11 @@ export interface RentalMatrixEntry {
     monthlyRateNet: number;
     monthlyRateGross: number;
     servicesIncluded: string[];
+    overMileageCost: number | null;
+    insuranceExcess500: number | null;
+    insuranceNoLimit: number | null;
+    tiresNoLimit: number | null;
+    offerType?: string;
 }
 
 export interface MatrixImportResult {
@@ -87,6 +92,7 @@ export interface MatrixImportResult {
     errors: Array<{ row: number; error: string }>;
     rentalCompany: string;
     vehiclesProcessed: number;
+    format?: 'internal' | 'provider';
 }
 
 export interface MatrixOptions {

@@ -249,7 +249,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 monthlyRateNet: a.matrixEntries[0].monthlyRateNet,
                 monthlyRateGross: a.matrixEntries[0].monthlyRateGross,
                 servicesIncluded: a.matrixEntries[0].servicesIncluded,
-                initialPaymentAmount: vehicle.sellingPrice * (parseFloat(initialPaymentPct) / 100)
+                initialPaymentAmount: (vehicle.sellingPrice || 0) * (parseFloat(initialPaymentPct) / 100)
             }))
             .sort((a, b) => a.monthlyRateGross - b.monthlyRateGross);
 

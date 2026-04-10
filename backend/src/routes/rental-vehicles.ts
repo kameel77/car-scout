@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { resolveScope } from '../utils/scope-resolver.js';
 
-function generateSlug(make: string, model: string, version: string | null, productionYear: number, bodyType: string | null, fuelType: string | null, id: string): string {
+function generateSlug(make: string, model: string, version: string | null, productionYear: number | null | undefined, bodyType: string | null, fuelType: string | null, id: string): string {
     const translitMap: Record<string, string> = {
         'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n',
         'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
@@ -11,7 +11,7 @@ function generateSlug(make: string, model: string, version: string | null, produ
     const transliterate = (str: string) =>
         str.toLowerCase().replace(/[^\x00-\x7F]/g, char => translitMap[char] || char);
 
-    const parts = [make, model, version, String(productionYear), bodyType, fuelType, id]
+    const parts = [make, model, version, productionYear != null ? String(productionYear) : null, bodyType, fuelType, id]
         .filter(Boolean)
         .map(p => transliterate(p!))
         .map(p => p.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
@@ -136,9 +136,9 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
 
         // Validate required fields
-        if (!body.make || !body.model || !body.productionYear || !body.catalogPrice || !body.sellingPrice) {
+        if (!body.make || !body.model) {
             return reply.code(400).send({
-                error: 'Missing required fields: make, model, productionYear, catalogPrice, sellingPrice'
+                error: 'Missing required fields: make, model'
             });
         }
 
@@ -195,14 +195,14 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                 transmission: body.transmission || null,
                 enginePowerHp: body.enginePowerHp ? parseInt(body.enginePowerHp) : null,
                 engineCapacityCm3: body.engineCapacityCm3 ? parseInt(body.engineCapacityCm3) : null,
-                productionYear: parseInt(body.productionYear),
+                productionYear: body.productionYear ? parseInt(body.productionYear) : null,
                 color: body.color || null,
                 paintType: body.paintType || null,
                 doors: body.doors ? parseInt(body.doors) : null,
                 seats: body.seats ? parseInt(body.seats) : null,
                 drive: body.drive || null,
-                catalogPrice: parseInt(body.catalogPrice),
-                sellingPrice: parseInt(body.sellingPrice),
+                catalogPrice: body.catalogPrice ? parseInt(body.catalogPrice) : null,
+                sellingPrice: body.sellingPrice ? parseInt(body.sellingPrice) : null,
                 primaryImageUrl: body.primaryImageUrl || null,
                 imageUrls: body.imageUrls || [],
                 equipmentAudioMultimedia: body.equipmentAudioMultimedia || [],
