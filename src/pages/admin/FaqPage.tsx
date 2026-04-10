@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { faqApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { FaqEntry, FaqPage as FaqPageType, FaqPayload } from '@/types/faq';
+import type { FaqEntry, FaqPage as FaqPageType, FaqPayload, FaqPageContext } from '@/types/faq';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,10 +22,18 @@ const PAGE_OPTIONS: { value: FaqPageType; label: string }[] = [
   { value: 'offers', label: 'Strona oferty' },
   { value: 'contact', label: 'Strona kontaktowa' },
   { value: 'faq', label: 'Strona FAQ' },
+  { value: 'rental', label: 'Strona najmu' },
+];
+
+const PAGE_CONTEXT_OPTIONS: { value: FaqPageContext; label: string }[] = [
+  { value: 'all', label: 'Wszystkie' },
+  { value: 'offers', label: 'Oferty (Sprzedaż)' },
+  { value: 'rental', label: 'Najem' },
 ];
 
 const EMPTY_FORM: FaqPayload = {
   page: 'home',
+  pageContext: 'all',
   sortOrder: 0,
   questionPl: '',
   answerPl: '',
@@ -119,6 +127,7 @@ export default function FaqPage() {
     setEditingId(entry.id);
     setFormState({
       page: entry.page,
+      pageContext: entry.pageContext || 'all',
       sortOrder: entry.sortOrder,
       questionPl: entry.questionPl,
       answerPl: entry.answerPl,
@@ -197,7 +206,7 @@ export default function FaqPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>Strona</Label>
                   <Select
@@ -211,6 +220,26 @@ export default function FaqPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {PAGE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Kontekst stron</Label>
+                  <Select
+                    value={formState.pageContext || 'all'}
+                    onValueChange={(value) =>
+                      setFormState((prev) => ({ ...prev, pageContext: value as FaqPageContext }))
+                    }
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Kontekst" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_CONTEXT_OPTIONS.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
                         </SelectItem>
@@ -379,6 +408,7 @@ export default function FaqPage() {
                 <TableHeader className="bg-slate-50">
                   <TableRow>
                     <TableHead className="w-28">Strona</TableHead>
+                    <TableHead className="w-24">Kontekst</TableHead>
                     <TableHead>Pytanie (PL)</TableHead>
                     <TableHead>Pytanie (EN)</TableHead>
                     <TableHead>Pytanie (DE)</TableHead>
@@ -389,7 +419,7 @@ export default function FaqPage() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6">
+                      <TableCell colSpan={7} className="text-center py-6">
                         <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
                           <RefreshCw className="w-4 h-4 animate-spin" />
                           Ładowanie FAQ...
@@ -398,7 +428,7 @@ export default function FaqPage() {
                     </TableRow>
                   ) : entries.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6 text-slate-500">
+                      <TableCell colSpan={7} className="text-center py-6 text-slate-500">
                         Brak wpisów FAQ dla wybranej strony.
                       </TableCell>
                     </TableRow>
@@ -414,6 +444,15 @@ export default function FaqPage() {
                       >
                         <TableCell>
                           <Badge variant="outline">{getPageLabel(entry.page)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn(
+                            entry.pageContext === 'offers' && 'bg-blue-50 text-blue-700 border-blue-200',
+                            entry.pageContext === 'rental' && 'bg-green-50 text-green-700 border-green-200',
+                            entry.pageContext === 'all' && 'bg-gray-50 text-gray-600'
+                          )}>
+                            {PAGE_CONTEXT_OPTIONS.find(o => o.value === entry.pageContext)?.label || 'Wszystkie'}
+                          </Badge>
                         </TableCell>
                         <TableCell className="max-w-[160px] truncate font-medium">
                           {entry.questionPl}

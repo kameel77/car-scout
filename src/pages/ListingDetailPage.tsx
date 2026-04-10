@@ -60,8 +60,10 @@ export default function ListingDetailPage() {
   // Use slug if available (new URL format), otherwise fall back to id (legacy format)
   const listingIdentifier = slug || id;
   const { data, isLoading } = useListing(listingIdentifier);
-  const { data: adsData } = usePartnerAds('DETAIL_SIDEBAR');
+  const { data: adsData } = usePartnerAds('DETAIL_SIDEBAR', 'offers');
   const sidebarAds = adsData?.ads || [];
+  const { data: belowEquipmentAdsData } = usePartnerAds('DETAIL_BELOW_EQUIPMENT', 'offers');
+  const belowEquipmentAds = belowEquipmentAdsData?.ads || [];
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
@@ -91,7 +93,7 @@ export default function ListingDetailPage() {
 
   const { data: faqData } = useQuery({
     queryKey: ['faq', 'offers'],
-    queryFn: () => faqApi.list({ page: 'offers' }),
+    queryFn: () => faqApi.list({ page: 'offers', pageContext: 'offers' }),
     staleTime: 5 * 60 * 1000
   });
 
@@ -423,6 +425,27 @@ export default function ListingDetailPage() {
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.equipment')}</h2>
               <EquipmentDisplay equipment={listing.equipment} />
             </section>
+
+            {/* Below Equipment Ads */}
+            {belowEquipmentAds.filter(a => a.isActive).length > 0 && (
+              <div className="mt-4">
+                {belowEquipmentAds.filter(a => a.isActive).map(ad => (
+                  <PartnerSidebarAd
+                    key={ad.id}
+                    title={(ad as any)[`title${suffix}`] || ad.title}
+                    description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                    ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
+                    url={ad.url}
+                    brandName={ad.brandName}
+                    imageUrl={ad.imageUrl}
+                    features={ad.features}
+                    overlayOpacity={ad.overlayOpacity}
+                    hideUiElements={ad.hideUiElements}
+                    className="my-4"
+                  />
+                ))}
+              </div>
+            )}
 
             <Separator />
 

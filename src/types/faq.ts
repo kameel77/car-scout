@@ -1,8 +1,10 @@
-export type FaqPage = 'home' | 'offers' | 'contact' | 'faq';
+export type FaqPage = 'home' | 'offers' | 'contact' | 'faq' | 'rental';
+export type FaqPageContext = 'offers' | 'rental' | 'all';
 
 export interface FaqEntry {
   id: string;
   page: FaqPage;
+  pageContext: FaqPageContext;
   sortOrder: number;
   questionPl: string;
   answerPl: string;

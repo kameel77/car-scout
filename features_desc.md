@@ -309,3 +309,22 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 ### Stabilizacja kalkulatora (placeholderData)
 - Zmiana parametrów w kalkulatorze (przebieg, okres, wpłata) nie powoduje przeładowania całego kontenera oferty.
 - TanStack Query używa `placeholderData: (prev) => prev` — stare wyniki pozostają widoczne podczas ładowania nowych, aktualizowane są jedynie wartości rat i zakres usług.
+
+## 25. FAQ i reklamy — placementy i kontekst stron
+
+### FAQ placement „Strona najmu"
+- W admin panelu FAQ dodano nową opcję strony: **Strona najmu** (`rental`).
+- Wpisy FAQ przypisane do strony „Strona najmu" są wyświetlane wyłącznie na stronach ofert najmu (`/najem/:slug`).
+- Na stronie oferty najmu FAQ renderowane jest jako Accordion pod główną treścią.
+
+### Reklamy — placement „Pod wyposażeniem" (DETAIL_BELOW_EQUIPMENT)
+- Nowy placement reklam wyświetlany w sekcji głównej oferty, bezpośrednio pod wyposażeniem.
+- Dostępny zarówno na stronach ofert (ListingDetailPage), jak i na stronach najmu (RentalDetailPage).
+- Wykorzystuje komponent `PartnerSidebarAd` z pełnym wsparciem i18n.
+
+### Kontekst stron (pageContext)
+- Nowe pole `pageContext` na obu modelach: **FaqEntry** i **PartnerAd**.
+- Dostępne wartości: `offers` (sprzedaż — samochody nowe/używane), `rental` (najem), `all` (wszystkie).
+- Domyślna wartość: `all` — istniejące wpisy bez zmian, wyświetlają się na wszystkich typach ofert.
+- Admin UI: dodano select „Kontekst stron" w formularzach FAQ i Reklam z kolorowymi badge'ami na liście.
+- Filtrowanie: backend filtruje `WHERE pageContext IN ('all', <requested>)`, frontend wysyła odpowiedni kontekst (`offers` / `rental`).

@@ -286,6 +286,7 @@ model Translation {
 model FaqEntry {
   id          String   @id @default(cuid())
   page        FaqPage
+  pageContext String   @default("all") @map("page_context")
   sortOrder   Int      @default(0) @map("sort_order")
   questionPl  String   @map("question_pl")
   answerPl    String   @map("answer_pl")
@@ -396,6 +397,7 @@ model SeoConfig {
 model PartnerAd {
   id             String   @id @default(cuid())
   placement      String
+  pageContext    String   @default("all") @map("page_context")
   title          String?
   description    String?
   subtitle       String?
@@ -506,6 +508,7 @@ enum FaqPage {
   offers
   contact
   faq
+  rental
 }
 
 model Partner {

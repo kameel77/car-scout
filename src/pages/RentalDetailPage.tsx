@@ -1,12 +1,22 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { faqApi } from '@/services/api';
+import type { FaqEntry } from '@/types/faq';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { rentalPublicApi } from '@/services/rental-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from '@/components/ui/accordion';
+import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
+import { usePartnerAds } from '@/hooks/usePartnerAds';
 import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
@@ -26,6 +36,18 @@ export default function RentalDetailPage() {
         queryFn: () => rentalPublicApi.getVehicle(slug!),
         enabled: !!slug
     });
+
+    // FAQ for rental pages
+    const { data: faqData } = useQuery({
+        queryKey: ['faq', 'rental'],
+        queryFn: () => faqApi.list({ page: 'rental', pageContext: 'rental' }),
+        staleTime: 5 * 60 * 1000
+    });
+    const faqEntries = faqData?.entries || [];
+
+    // Below-equipment ads
+    const { data: belowEquipmentAdsData } = usePartnerAds('DETAIL_BELOW_EQUIPMENT', 'rental');
+    const belowEquipmentAds = belowEquipmentAdsData?.ads || [];
 
     const vehicle = data?.vehicle;
     const options = data?.options;
@@ -330,6 +352,27 @@ export default function RentalDetailPage() {
                                     })}
                                 </div>
                             )}
+
+                            {/* Below Equipment Ads */}
+                            {belowEquipmentAds.filter(a => a.isActive).length > 0 && (
+                                <div className="mt-6 pt-6 border-t">
+                                    {belowEquipmentAds.filter(a => a.isActive).map(ad => (
+                                        <PartnerSidebarAd
+                                            key={ad.id}
+                                            title={ad.title}
+                                            description={ad.description || ''}
+                                            ctaText={ad.ctaText}
+                                            url={ad.url}
+                                            brandName={ad.brandName}
+                                            imageUrl={ad.imageUrl}
+                                            features={ad.features}
+                                            overlayOpacity={ad.overlayOpacity}
+                                            hideUiElements={ad.hideUiElements}
+                                            className="my-4"
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -515,6 +558,29 @@ export default function RentalDetailPage() {
                     </div>
                 </div>
             </main>
+
+            {/* FAQ Section for Rental */}
+            {faqEntries.length > 0 && (
+                <section className="max-w-5xl mx-auto px-4 py-10">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Najczęściej zadawane pytania</h2>
+                    <Accordion type="single" collapsible className="space-y-3">
+                        {faqEntries.filter((e: FaqEntry) => e.isPublished).map((entry: FaqEntry) => (
+                            <AccordionItem
+                                key={entry.id}
+                                value={entry.id}
+                                className="bg-white border rounded-xl px-5"
+                            >
+                                <AccordionTrigger className="text-left font-medium text-gray-900 hover:text-blue-600">
+                                    {entry.questionPl}
+                                </AccordionTrigger>
+                                <AccordionContent className="text-gray-600 text-sm leading-relaxed">
+                                    {entry.answerPl}
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
+                </section>
+            )}
 
             {/* Fullscreen Lightbox */}
             {lightboxOpen && images.length > 0 && (

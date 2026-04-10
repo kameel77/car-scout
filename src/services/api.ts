@@ -106,9 +106,10 @@ export const crmTrackingApi = {
 
 // FAQ API
 export const faqApi = {
-    list: async (params: { page?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {
+    list: async (params: { page?: string; pageContext?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {
         const queryParams = new URLSearchParams();
         if (params.page) queryParams.append('page', params.page);
+        if (params.pageContext) queryParams.append('pageContext', params.pageContext);
 
         const response = await fetch(`${API_BASE_URL}/api/faq?${queryParams.toString()}`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
@@ -978,9 +979,10 @@ export const seoApi = {
 
 // Partner Ads API
 export const partnerAdsApi = {
-    list: async (placement?: string): Promise<{ ads: PartnerAd[] }> => {
+    list: async (placement?: string, pageContext?: string): Promise<{ ads: PartnerAd[] }> => {
         const params = new URLSearchParams();
         if (placement) params.append('placement', placement);
+        if (pageContext) params.append('pageContext', pageContext);
 
         const response = await fetch(`${API_BASE_URL}/api/partner-ads?${params}`);
         if (!response.ok) {
