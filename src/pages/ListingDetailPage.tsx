@@ -54,6 +54,7 @@ export default function ListingDetailPage() {
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user, token } = useAuth();
   const canManage = user?.role === 'admin' || user?.role === 'manager';
@@ -281,7 +282,6 @@ export default function ListingDetailPage() {
   const formattedPrice = formatPrice(discountedListingPrice, settings?.displayCurrency || 'PLN');
 
   // Financing type detection from URL
-  const location = useLocation();
   const financingType = getFinancingTypeFromPath(location.pathname);
   const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
   const financingSeoLabel = getFinancingSeoLabel(financingType, i18n.language);   // full: "Kredyt samochodowy"
@@ -298,7 +298,7 @@ export default function ListingDetailPage() {
   });
 
   // Handle financing type switch from calculator tabs — updates URL without page reload
-  const handleFinancingTypeChange = React.useCallback((newType: FinancingType) => {
+  const handleFinancingTypeChange = (newType: FinancingType) => {
     const newPath = getListingUrlPath({
       id: listing.listing_id,
       make: listing.make,
@@ -312,7 +312,7 @@ export default function ListingDetailPage() {
     if (newPath !== location.pathname) {
       navigate(newPath, { replace: true });
     }
-  }, [listing, location.pathname, navigate]);
+  };
 
   const lang = i18n.language;
   const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
