@@ -34,7 +34,7 @@ const FINANCING_URL_PREFIX: Record<FinancingType, string> = {
     wynajem: '/wynajem-dlugoterminowy',
 };
 
-const DEFAULT_FINANCING_TYPE: FinancingType = 'gotowka';
+const DEFAULT_FINANCING_TYPE: FinancingType = 'kredyt';
 
 /**
  * Determines the financing type from a URL pathname.

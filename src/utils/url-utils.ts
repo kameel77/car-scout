@@ -11,7 +11,36 @@ const FINANCING_URL_PREFIX: Record<FinancingType, string> = {
   wynajem: '/wynajem-dlugoterminowy',
 };
 
-const DEFAULT_FINANCING_TYPE: FinancingType = 'gotowka';
+const DEFAULT_FINANCING_TYPE: FinancingType = 'kredyt';
+
+const FINANCING_PREFERENCE_KEY = 'financing_preference';
+
+/**
+ * Returns the user's preferred financing type from localStorage, or the default.
+ * Googlebot (no localStorage) always gets the default ('kredyt').
+ */
+export function getPreferredFinancingType(): FinancingType {
+  try {
+    const stored = localStorage.getItem(FINANCING_PREFERENCE_KEY);
+    if (stored && ['leasing', 'kredyt', 'gotowka', 'wynajem'].includes(stored)) {
+      return stored as FinancingType;
+    }
+  } catch {
+    // SSR or localStorage unavailable
+  }
+  return DEFAULT_FINANCING_TYPE;
+}
+
+/**
+ * Saves the user's financing preference to localStorage.
+ */
+export function setPreferredFinancingType(type: FinancingType): void {
+  try {
+    localStorage.setItem(FINANCING_PREFERENCE_KEY, type);
+  } catch {
+    // SSR or localStorage unavailable
+  }
+}
 
 /**
  * Polish to ASCII transliteration map

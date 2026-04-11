@@ -12,6 +12,7 @@ import { Calculator, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { FinancingType } from '@/utils/url-utils';
+import { setPreferredFinancingType } from '@/utils/url-utils';
 
 
 interface FinancingCalculatorProps {
@@ -260,14 +261,16 @@ export function FinancingCalculator({
                 <Tabs value={activeCategory} onValueChange={(v) => {
                     const cat = v as FinancingProduct['category'];
                     setActiveCategory(cat);
-                    // Notify parent about financing type change for URL update
+                    // Map category to financing type and persist preference
+                    const typeMap: Record<string, FinancingType> = {
+                        'LEASING': 'leasing',
+                        'CREDIT': 'kredyt',
+                        'RENTAL': 'wynajem',
+                    };
+                    const newType = typeMap[cat] || 'kredyt';
+                    setPreferredFinancingType(newType);
                     if (onFinancingTypeChange) {
-                        const typeMap: Record<string, FinancingType> = {
-                            'LEASING': 'leasing',
-                            'CREDIT': 'kredyt',
-                            'RENTAL': 'wynajem',
-                        };
-                        onFinancingTypeChange(typeMap[cat] || 'gotowka');
+                        onFinancingTypeChange(newType);
                     }
                 }} className="w-full">
                     <TabsList className="w-full justify-start grid grid-cols-3 h-9">

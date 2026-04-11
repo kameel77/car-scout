@@ -286,7 +286,8 @@ export default function ListingDetailPage() {
   const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
   const financingSeoLabel = getFinancingSeoLabel(financingType, i18n.language);   // full: "Kredyt samochodowy"
 
-  // Canonical URL always points to default /oferta/ path to prevent duplicate content
+  // Self-canonical: each financing variant (/kredyt/, /leasing/, /oferta/) is its own canonical
+  // All 3 variants are in the sitemap — Google should index each as a distinct page
   const canonicalPath = getListingUrlPath({
     id: listing.listing_id,
     make: listing.make,
@@ -295,7 +296,7 @@ export default function ListingDetailPage() {
     productionYear: listing.production_year,
     bodyType: listing.body_type,
     fuelType: listing.fuel_type
-  });
+  }, financingType);
 
   // Handle financing type switch from calculator tabs — updates URL without page reload
   const handleFinancingTypeChange = (newType: FinancingType) => {
