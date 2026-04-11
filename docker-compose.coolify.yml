@@ -53,6 +53,12 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    labels:
+      # Explicit Traefik service labels — defense-in-depth.
+      # Without these, Traefik auto-detects the port and network,
+      # which can fail when containers are on multiple networks.
+      # Domain routing is handled by Coolify (SERVICE_FQDN_* env vars).
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME}-frontend.loadbalancer.server.port=80"
     depends_on:
       carscout-api:
         condition: service_healthy

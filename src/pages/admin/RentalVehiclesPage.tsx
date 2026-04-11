@@ -113,7 +113,7 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving, 
             doors: form.doors ? parseInt(form.doors) : null,
             seats: form.seats ? parseInt(form.seats) : null,
             catalogPrice: parseInt(form.catalogPrice),
-            sellingPrice: parseInt(form.sellingPrice),
+            sellingPrice: form.sellingPrice ? parseInt(form.sellingPrice) : null,
             equipmentAudioMultimedia: textToArray(form.equipmentAudioMultimedia),
             equipmentSafety: textToArray(form.equipmentSafety),
             equipmentComfortExtras: textToArray(form.equipmentComfortExtras),
@@ -211,8 +211,8 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving, 
                     <Input type="number" value={form.catalogPrice} onChange={set('catalogPrice')} required />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Cena sprzedaży (PLN) *</label>
-                    <Input type="number" value={form.sellingPrice} onChange={set('sellingPrice')} required />
+                    <label className="text-sm font-medium text-gray-700">Cena sprzedaży (PLN)</label>
+                    <Input type="number" value={form.sellingPrice} onChange={set('sellingPrice')} />
                 </div>
 
                 {/* Provider (Dealer / Firm) */}

@@ -74,9 +74,9 @@ const App = () => (
                       <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/oferta/:slug/negotiate" element={<LeadFormPage />} />
                       <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
-                      <Route path="/najem" element={<RentalSearchPage />} />
-                      <Route path="/najem/:slug" element={<RentalDetailPage />} />
-                      <Route path="/najem/:slug/zapytanie" element={<RentalLeadFormPage />} />
+                      <Route path="/wynajem-dlugoterminowy" element={<RentalSearchPage />} />
+                      <Route path="/wynajem-dlugoterminowy/:slug" element={<RentalDetailPage />} />
+                      <Route path="/wynajem-dlugoterminowy/:slug/zapytanie" element={<RentalLeadFormPage />} />
                       {/* Legacy routes - kept for backward compatibility during transition */}
                       <Route path="/listing/:id" element={<ListingDetailPage />} />
                       <Route path="/listing/:id/lead" element={<LeadFormPage />} />

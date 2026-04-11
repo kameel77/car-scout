@@ -154,7 +154,7 @@ export default function RentalSearchPage() {
                         {vehicles.map((v: any) => (
                             <Link
                                 key={v.id}
-                                to={`/najem/${v.slug || v.id}`}
+                                to={`/wynajem-dlugoterminowy/${v.slug || v.id}`}
                                 className="group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                             >
                                 {/* Image */}

@@ -43,9 +43,15 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 - **Nigdy nie usuwaj backendu z sieci `coolify`** — straci łączność z bazami danych.
 
 ### Traefik (coolify-proxy)
+- **OBOWIĄZKOWY parametr**: `--providers.docker.network=coolify` w `/data/coolify/proxy/docker-compose.yml`. Bez niego Traefik losowo wybiera IP z wielu sieci Docker → 502/504. Jeśli Coolify zregeneruje compose proxy → dodaj ponownie!
 - Traefik traci routing po wielokrotnych restartach/redeployach → `docker restart coolify-proxy`.
 - **Po KAŻDYM restarcie/redeployu** sprawdź WSZYSTKIE środowiska (prod + staging + dev).
-- W razie problemów z routingiem: patrz [troubleshooting.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/.agents/troubleshooting.md) — incydenty #3 i #4.
+- W razie problemów z routingiem: patrz [troubleshooting.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/.agents/troubleshooting.md) — incydenty #3, #4 i #6.
+
+### Debugowanie na serwerze (WAŻNE)
+- **Nginx blokuje `curl/7` i `curl/8`** z `return 444` (silent drop). Testowe requesty curl z serwera mogą zwrócić **fałszywe 502**.
+- Używaj `wget` lub dodaj `-H "User-Agent: Mozilla/5.0"` do curl.
+- Pełny playbook diagnostyczny: [troubleshooting.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/.agents/troubleshooting.md) → sekcja "Playbook: Diagnostyka 504/502".
 
 ## 4. Narzędzia i Bezpieczeństwo Danych
 - Używaj `rg` (ripgrep) do przeszukiwania kodu.
@@ -57,3 +63,11 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 - **Backend dev**: `npm run dev` w katalogu `backend/`.
 - **Frontend dev**: `npm run dev` w głównym katalogu repozytorium.
 - Uruchamiaj testy (jeśli istnieją) przed zakończeniem zadania.
+
+## 6. Checklist pre-deployment (infrastruktura)
+Przed każdym deploymentem lub zmianą w Docker/Traefik/Nginx:
+- [ ] Czy `--providers.docker.network=coolify` jest w compose proxy?
+- [ ] Czy nowe kontenery mają explicite Traefik service labels (port + service name)?
+- [ ] Po deployu: test HTTPS z browser UA (`curl -H "User-Agent: Mozilla/5.0" https://DOMAIN/`)
+- [ ] Zweryfikuj **WSZYSTKIE** środowiska (prod + staging + dev), nie tylko zmieniane
+- [ ] Sprawdź logi proxy: `docker logs coolify-proxy --since 60s 2>&1 | grep -i error`

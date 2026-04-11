@@ -29,6 +29,7 @@ interface HeaderProps {
 
 const navLinks = [
   { label: 'Samochody', to: '/samochody' },
+  { label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
   { label: 'FAQ', to: '/faq' },
   { label: 'Kontakt', to: '/kontakt' },
 ];

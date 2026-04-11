@@ -191,11 +191,11 @@
   }
 
   .spec-label {
-    @apply text-xs text-muted-foreground uppercase tracking-wider;
+    @apply text-xs text-muted-foreground tracking-wide;
   }
 
   .spec-value {
-    @apply text-sm font-semibold text-foreground;
+    @apply text-base font-semibold text-foreground;
   }
 
   .equipment-section {

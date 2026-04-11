@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { faqApi } from '@/services/api';
@@ -6,6 +6,7 @@ import type { FaqEntry } from '@/types/faq';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
+import { ImageGallery } from '@/components/ImageGallery';
 import { rentalPublicApi } from '@/services/rental-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { usePartnerAds } from '@/hooks/usePartnerAds';
 import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
-    X, ChevronLeft, ChevronRight, Maximize2, User
+    User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog
 } from 'lucide-react';
 
 type OfferType = 'business' | 'consumer';
@@ -111,45 +112,9 @@ export default function RentalDetailPage() {
 
     const offers = calcQuery.data?.offers || [];
 
-    // Main image state
-    const [mainImage, setMainImage] = useState(0);
+    // Images for gallery
     const images = vehicle?.imageUrls || [];
-    const currentImage = images[mainImage] || vehicle?.primaryImageUrl;
-
-    // Lightbox state
-    const [lightboxOpen, setLightboxOpen] = useState(false);
-    const [lightboxIndex, setLightboxIndex] = useState(0);
-
-    const openLightbox = useCallback((index: number) => {
-        setLightboxIndex(index);
-        setLightboxOpen(true);
-    }, []);
-
-    const closeLightbox = useCallback(() => setLightboxOpen(false), []);
-
-    const goLightboxPrev = useCallback(() => {
-        setLightboxIndex(prev => (prev - 1 + images.length) % images.length);
-    }, [images.length]);
-
-    const goLightboxNext = useCallback(() => {
-        setLightboxIndex(prev => (prev + 1) % images.length);
-    }, [images.length]);
-
-    // Keyboard navigation for lightbox
-    useEffect(() => {
-        if (!lightboxOpen) return;
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') closeLightbox();
-            else if (e.key === 'ArrowLeft') goLightboxPrev();
-            else if (e.key === 'ArrowRight') goLightboxNext();
-        };
-        document.body.style.overflow = 'hidden';
-        window.addEventListener('keydown', handler);
-        return () => {
-            document.body.style.overflow = '';
-            window.removeEventListener('keydown', handler);
-        };
-    }, [lightboxOpen, closeLightbox, goLightboxPrev, goLightboxNext]);
+    const galleryImages = images.length > 0 ? images : (vehicle?.primaryImageUrl ? [vehicle.primaryImageUrl] : []);
 
     // Build rental state for lead form
     const buildRentalState = useCallback((offer: any) => ({
@@ -182,7 +147,7 @@ export default function RentalDetailPage() {
                 <div className="container py-20 text-center">
                     <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h2 className="text-xl font-semibold">Pojazd nie został znaleziony</h2>
-                    <Link to="/najem" className="text-blue-600 hover:underline mt-4 inline-block">
+                    <Link to="/wynajem-dlugoterminowy" className="text-blue-600 hover:underline mt-4 inline-block">
                         Wróć do listy
                     </Link>
                 </div>
@@ -191,17 +156,17 @@ export default function RentalDetailPage() {
     }
 
     const specs = [
-        { label: 'Rok', value: vehicle.productionYear, icon: Calendar },
+        { label: 'Rok produkcji', value: vehicle.productionYear, icon: Calendar },
         { label: 'Moc', value: vehicle.enginePowerHp ? `${vehicle.enginePowerHp} KM` : null, icon: Gauge },
         { label: 'Paliwo', value: vehicle.fuelType, icon: Fuel },
-        { label: 'Skrzynia', value: vehicle.transmission, icon: Settings2 },
-        { label: 'Napęd', value: vehicle.drive },
-        { label: 'Pojemność', value: vehicle.engineCapacityCm3 ? `${vehicle.engineCapacityCm3} cm³` : null },
-        { label: 'Nadwozie', value: vehicle.bodyType },
-        { label: 'Kolor', value: vehicle.color },
-        { label: 'Drzwi', value: vehicle.doors },
-        { label: 'Miejsca', value: vehicle.seats },
-        { label: 'Lakier', value: vehicle.paintType },
+        { label: 'Skrzynia biegów', value: vehicle.transmission, icon: Settings2 },
+        { label: 'Napęd', value: vehicle.drive, icon: Cog },
+        { label: 'Pojemność', value: vehicle.engineCapacityCm3 ? `${vehicle.engineCapacityCm3} cm³` : null, icon: Hash },
+        { label: 'Nadwozie', value: vehicle.bodyType, icon: Car },
+        { label: 'Kolor', value: vehicle.color, icon: Palette },
+        { label: 'Drzwi', value: vehicle.doors, icon: DoorOpen },
+        { label: 'Miejsca', value: vehicle.seats, icon: Armchair },
+        { label: 'Lakier', value: vehicle.paintType, icon: Paintbrush },
     ].filter(s => s.value);
 
     // Equipment categories
@@ -218,104 +183,60 @@ export default function RentalDetailPage() {
 
             <main className="container pb-10 pt-4">
                 {/* Breadcrumb */}
-                <Link to="/najem" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4">
+                <Link to="/wynajem-dlugoterminowy" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4">
                     <ArrowLeft className="w-4 h-4" /> Wróć do listy
                 </Link>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left: Gallery + Specs */}
-                    <div className="lg:col-span-3 space-y-6">
-                        {/* Gallery */}
-                        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                            <div
-                                className="relative h-[300px] md:h-[400px] bg-gray-100 cursor-pointer group"
-                                onClick={() => images.length > 0 && openLightbox(mainImage)}
-                            >
-                                {currentImage ? (
-                                    <img
-                                        src={currentImage}
-                                        alt={`${vehicle.make} ${vehicle.model}`}
-                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <Car className="w-24 h-24 text-gray-300" />
-                                    </div>
-                                )}
-                                {images.length > 0 && (
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                        <div className="bg-white/90 backdrop-blur rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                                            <Maximize2 className="w-5 h-5 text-gray-700" />
-                                        </div>
-                                    </div>
-                                )}
-                                {images.length > 1 && (
-                                    <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur">
-                                        {mainImage + 1}/{images.length}
-                                    </div>
-                                )}
-                            </div>
-                            {images.length > 1 && (
-                                <div className="flex gap-2 p-3 overflow-x-auto">
-                                    {images.map((url: string, i: number) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setMainImage(i)}
-                                            className={`w-16 h-12 rounded overflow-hidden border-2 flex-shrink-0 transition-all ${
-                                                i === mainImage ? 'border-blue-500 scale-105' : 'border-gray-200 opacity-70 hover:opacity-100'
-                                            }`}
-                                        >
-                                            <img src={url} alt="" className="w-full h-full object-cover" />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Gallery — shared component */}
+                        <ImageGallery images={galleryImages} title={`${vehicle.make} ${vehicle.model}`} />
 
                         {/* Vehicle title + specs */}
                         <div className="bg-white rounded-2xl shadow-sm border p-6">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1">
-                                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                                    <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground">
                                         {vehicle.make} {vehicle.model}
                                     </h1>
                                     {vehicle.version && (
-                                        <p className="text-lg text-gray-500 mt-1">{vehicle.version}</p>
+                                        <p className="text-lg text-muted-foreground mt-1">{vehicle.version}</p>
                                     )}
                                     {vehicle.dealer && (
-                                        <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
+                                        <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
                                             <MapPin className="w-3 h-3" /> {vehicle.dealer.name}, {vehicle.dealer.city}
                                         </p>
                                     )}
                                 </div>
-                                {(vehicle.catalogPrice || vehicle.sellingPrice) && (
+                                {vehicle.catalogPrice && (
                                     <div className="text-right flex-shrink-0">
-                                        {vehicle.catalogPrice && (
-                                            <div className="text-sm text-gray-400 line-through">
-                                                {vehicle.catalogPrice.toLocaleString('pl-PL')} zł
-                                            </div>
-                                        )}
-                                        {vehicle.sellingPrice && (
-                                            <div className="text-xl font-bold text-gray-900">
-                                                {vehicle.sellingPrice.toLocaleString('pl-PL')} zł
-                                            </div>
-                                        )}
-                                        <div className="text-xs text-gray-400">cena katalogowa</div>
+                                        <div className="text-xl font-bold text-foreground">
+                                            {vehicle.catalogPrice.toLocaleString('pl-PL')} zł
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">cena katalogowa</div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Quick specs */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-                                {specs.slice(0, showAllSpecs ? specs.length : 4).map(s => (
-                                    <div key={s.label} className="p-3 bg-gray-50 rounded-xl text-center">
-                                        <div className="text-xs text-gray-500">{s.label}</div>
-                                        <div className="font-semibold text-gray-900 mt-1">{s.value}</div>
-                                    </div>
-                                ))}
+                            {/* Key Parameters — using design-system spec classes */}
+                            <h2 className="font-heading text-xl font-semibold mt-6 mb-4">Kluczowe parametry</h2>
+                            <div className="spec-grid">
+                                {specs.slice(0, showAllSpecs ? specs.length : 8).map(s => {
+                                    const Icon = s.icon;
+                                    return (
+                                        <div key={s.label} className="spec-item">
+                                            <div className="flex items-center gap-2">
+                                                <Icon className="h-4 w-4 text-primary" />
+                                                <span className="spec-label">{s.label}</span>
+                                            </div>
+                                            <span className="spec-value capitalize">{s.value}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
-                            {specs.length > 4 && (
+                            {specs.length > 8 && (
                                 <button
                                     onClick={() => setShowAllSpecs(!showAllSpecs)}
                                     className="text-sm text-blue-600 hover:text-blue-700 mt-3 flex items-center gap-1"
@@ -377,7 +298,7 @@ export default function RentalDetailPage() {
                     </div>
 
                     {/* Right: Calculator */}
-                    <div className="lg:col-span-2">
+                    <div>
                         <div className="bg-white rounded-2xl shadow-sm border p-6 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
                             <h2 className="text-lg font-bold text-gray-900 mb-5">Kalkulator najmu</h2>
 
@@ -540,7 +461,7 @@ export default function RentalDetailPage() {
 
                                             <Button
                                                 className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                                                onClick={() => navigate(`/najem/${slug}/zapytanie`, { state: buildRentalState(offer) })}
+                                                onClick={() => navigate(`/wynajem-dlugoterminowy/${slug}/zapytanie`, { state: buildRentalState(offer) })}
                                             >
                                                 <FileText className="w-4 h-4 mr-2" /> Zapytaj o ofertę
                                             </Button>
@@ -582,77 +503,7 @@ export default function RentalDetailPage() {
                 </section>
             )}
 
-            {/* Fullscreen Lightbox */}
-            {lightboxOpen && images.length > 0 && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
-                    onClick={closeLightbox}
-                >
-                    {/* Close button */}
-                    <button
-                        onClick={closeLightbox}
-                        className="absolute top-4 right-4 z-50 bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-colors backdrop-blur"
-                        aria-label="Zamknij galerię"
-                    >
-                        <X className="w-6 h-6" />
-                    </button>
-
-                    {/* Counter */}
-                    <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
-                        {lightboxIndex + 1} / {images.length}
-                    </div>
-
-                    {/* Prev button */}
-                    {images.length > 1 && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); goLightboxPrev(); }}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/25 text-white rounded-full p-3 transition-colors backdrop-blur"
-                            aria-label="Poprzednie zdjęcie"
-                        >
-                            <ChevronLeft className="w-7 h-7" />
-                        </button>
-                    )}
-
-                    {/* Image */}
-                    <img
-                        src={images[lightboxIndex]}
-                        alt={`${vehicle.make} ${vehicle.model} — ${lightboxIndex + 1}`}
-                        className="max-h-[90vh] max-w-[90vw] object-contain select-none"
-                        onClick={(e) => e.stopPropagation()}
-                        draggable={false}
-                    />
-
-                    {/* Next button */}
-                    {images.length > 1 && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); goLightboxNext(); }}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/25 text-white rounded-full p-3 transition-colors backdrop-blur"
-                            aria-label="Następne zdjęcie"
-                        >
-                            <ChevronRight className="w-7 h-7" />
-                        </button>
-                    )}
-
-                    {/* Thumbnail strip */}
-                    {images.length > 1 && (
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 max-w-[80vw] overflow-x-auto px-4 py-2 bg-black/40 rounded-xl backdrop-blur">
-                            {images.map((url: string, i: number) => (
-                                <button
-                                    key={i}
-                                    onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
-                                    className={`w-14 h-10 rounded overflow-hidden border-2 flex-shrink-0 transition-all ${
-                                        i === lightboxIndex
-                                            ? 'border-white scale-110 shadow-lg'
-                                            : 'border-transparent opacity-50 hover:opacity-80'
-                                    }`}
-                                >
-                                    <img src={url} alt="" className="w-full h-full object-cover" />
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
+            {/* Lightbox is handled by ImageGallery component */}
 
             <ScrollToTopButton />
             <Footer />

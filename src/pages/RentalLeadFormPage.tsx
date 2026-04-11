@@ -179,10 +179,10 @@ export default function RentalLeadFormPage() {
                         </div>
                         <div className="flex flex-col gap-4">
                             <Button asChild className="bg-blue-600 hover:bg-blue-700 h-12 text-md font-bold shadow-lg">
-                                <Link to="/najem">Wróć do listy pojazdów</Link>
+                                <Link to="/wynajem-dlugoterminowy">Wróć do listy pojazdów</Link>
                             </Button>
                             <Button asChild variant="ghost">
-                                <Link to={`/najem/${slug}`}>Wróć do oferty</Link>
+                                <Link to={`/wynajem-dlugoterminowy/${slug}`}>Wróć do oferty</Link>
                             </Button>
                         </div>
                     </motion.div>
