@@ -22,8 +22,18 @@ interface FinancingCalculatorProps {
     manufacturingYear?: number;
     mileageKm?: number;
     offerInitialPayment?: number;
+    /** Current financing type from URL — drives which tab is active */
+    financingType?: FinancingType;
     onFinancingTypeChange?: (type: FinancingType) => void;
 }
+
+/** Maps URL financing type to product category */
+const FINANCING_TO_CATEGORY: Record<string, FinancingProduct['category']> = {
+    'kredyt': 'CREDIT',
+    'leasing': 'LEASING',
+    'wynajem': 'RENTAL',
+    'gotowka': 'CREDIT', // /oferta/ defaults to credit tab
+};
 
 export function FinancingCalculator({
     listingId,
@@ -32,6 +42,7 @@ export function FinancingCalculator({
     manufacturingYear,
     mileageKm,
     offerInitialPayment,
+    financingType,
     onFinancingTypeChange
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
@@ -51,8 +62,10 @@ export function FinancingCalculator({
         [products]
     );
 
+    // Derive initial category from URL financing type, falling back to first available
+    const urlCategory = financingType ? FINANCING_TO_CATEGORY[financingType] : undefined;
     const [activeCategory, setActiveCategory] = React.useState<FinancingProduct['category']>(
-        (categories[0] as FinancingProduct['category']) || 'LEASING'
+        urlCategory || (categories[0] as FinancingProduct['category']) || 'CREDIT'
     );
     const [selectedProduct, setSelectedProduct] = React.useState<FinancingProduct | null>(null);
     const [failedProducts, setFailedProducts] = React.useState<Set<string>>(new Set());
@@ -68,7 +81,17 @@ export function FinancingCalculator({
         return Math.round((offerInitialPayment / price) * 100);
     }, [offerInitialPayment, price]);
 
-    // Update selected product when category changes
+    // Sync calculator tab with URL financing type (URL is source of truth)
+    React.useEffect(() => {
+        if (financingType) {
+            const targetCategory = FINANCING_TO_CATEGORY[financingType];
+            if (targetCategory && targetCategory !== activeCategory && categories.includes(targetCategory)) {
+                setActiveCategory(targetCategory);
+            }
+        }
+    }, [financingType, categories]);
+
+    // Fallback: if active category is not in available categories, pick first available
     React.useEffect(() => {
         if (categories.length > 0 && !categories.includes(activeCategory)) {
             setActiveCategory(categories[0] as FinancingProduct['category']);

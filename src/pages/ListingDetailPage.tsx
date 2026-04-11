@@ -559,6 +559,7 @@ export default function ListingDetailPage() {
                   manufacturingYear={listing.production_year}
                   mileageKm={listing.mileage_km}
                   offerInitialPayment={initialPayment ?? undefined}
+                  financingType={financingType}
                   onFinancingTypeChange={handleFinancingTypeChange}
                 />
               </section>
@@ -773,6 +774,7 @@ export default function ListingDetailPage() {
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}
                     offerInitialPayment={initialPayment ?? undefined}
+                  financingType={financingType}
                   onFinancingTypeChange={handleFinancingTypeChange}
                   />
                 </motion.div>
