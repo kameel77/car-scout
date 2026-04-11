@@ -211,12 +211,12 @@
   }
 
   .equipment-item {
-    @apply flex items-center gap-2 text-sm text-muted-foreground;
+    @apply flex items-center gap-2 text-base text-muted-foreground;
   }
 
   .equipment-item::before {
-    content: "";
-    @apply w-1.5 h-1.5 rounded-full bg-success flex-shrink-0;
+    content: "✓";
+    @apply text-success font-bold text-sm flex-shrink-0;
   }
 
   .sticky-cta {

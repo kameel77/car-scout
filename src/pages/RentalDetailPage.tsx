@@ -262,8 +262,8 @@ export default function RentalDetailPage() {
                                                 </summary>
                                                 <div className="pl-7 pt-1 pb-2 space-y-1">
                                                     {cat.items.map((e: string, i: number) => (
-                                                        <div key={i} className="flex items-start gap-2 text-sm text-gray-600 leading-snug">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0 mt-1.5" />
+                                                        <div key={i} className="flex items-start gap-2 text-base text-gray-600 leading-snug">
+                                                            <span className="text-green-600 font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
                                                             {e}
                                                         </div>
                                                     ))}
