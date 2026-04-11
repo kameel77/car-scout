@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins } from 'lucide-react';
@@ -31,7 +31,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
-import { getListingUrlPath } from '@/utils/url-utils';
+import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
 import {
   Dialog,
@@ -47,6 +47,7 @@ import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 
 import { MetaHead } from '@/components/seo/MetaHead';
+import { Helmet } from 'react-helmet-async';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 
 export default function ListingDetailPage() {
@@ -277,6 +278,24 @@ export default function ListingDetailPage() {
 
   const title = `${listing.make} ${listing.model} ${listing.version}`;
   const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
+  const formattedPrice = formatPrice(discountedListingPrice, settings?.displayCurrency || 'PLN');
+
+  // Financing type detection from URL
+  const location = useLocation();
+  const financingType = getFinancingTypeFromPath(location.pathname);
+  const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
+  const financingSeoLabel = getFinancingSeoLabel(financingType, i18n.language);   // full: "Kredyt samochodowy"
+
+  // Canonical URL always points to default /oferta/ path to prevent duplicate content
+  const canonicalPath = getListingUrlPath({
+    id: listing.listing_id,
+    make: listing.make,
+    model: listing.model,
+    version: listing.version,
+    productionYear: listing.production_year,
+    bodyType: listing.body_type,
+    fuelType: listing.fuel_type
+  });
 
   const lang = i18n.language;
   const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
@@ -285,25 +304,40 @@ export default function ListingDetailPage() {
   const listingTitleTemplate = (seoConfig ? (seoConfig as any)[`listingTitle${suffix}`] : undefined) || seoConfig?.listingTitle;
   const listingDescriptionTemplate = (seoConfig ? (seoConfig as any)[`listingDescription${suffix}`] : undefined) || seoConfig?.listingDescription;
 
-  const metaTitle = listing && listingTitleTemplate
+  // Default meta title from SEO config template (for gotowka / no financing context)
+  const defaultMetaTitle = listing && listingTitleTemplate
     ? listingTitleTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
-      .replace('{{price}}', formatPrice(discountedListingPrice, 'PLN'))
+      .replace('{{price}}', formattedPrice)
       .replace('{{fuel}}', listing.fuel_type || '')
     : title;
 
-  const metaDesc = listing && listingDescriptionTemplate
+  // Use keyword-rich financing-specific title or fall back to default
+  const financingMetaTitle = getFinancingMetaTitle(
+    financingType, listing.make, listing.model, listing.version, listing.production_year, lang
+  );
+  const metaTitle = financingMetaTitle || defaultMetaTitle;
+
+  // Default meta description from SEO config template
+  const defaultMetaDesc = listing && listingDescriptionTemplate
     ? listingDescriptionTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
-      .replace('{{price}}', formatPrice(discountedListingPrice, 'PLN'))
+      .replace('{{price}}', formattedPrice)
       .replace('{{fuel}}', listing.fuel_type || '')
     : '';
 
-  // Prepare Schema.org
+  // Use keyword-rich financing-specific description or fall back to default
+  const financingMetaDesc = getFinancingMetaDescription(
+    financingType, listing.make, listing.model, listing.production_year, formattedPrice, lang
+  );
+  const metaDesc = financingMetaDesc || defaultMetaDesc;
+
+  // Prepare Schema.org Car
+  const siteUrl = window.location.origin;
   const schema = listing ? {
     "@context": "https://schema.org/",
     "@type": "Car",
@@ -327,12 +361,49 @@ export default function ListingDetailPage() {
     },
     "offers": {
       "@type": "Offer",
-      "url": window.location.href,
+      "url": `${siteUrl}${canonicalPath}`,
       "priceCurrency": "PLN",
       "price": discountedListingPrice,
       "itemCondition": "https://schema.org/UsedCondition",
       "availability": "https://schema.org/InStock"
     }
+  } : undefined;
+
+  // BreadcrumbList JSON-LD — uses FULL SEO labels for bots (not the short UI form)
+  const breadcrumbSchema = listing ? {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": lang === 'pl' ? 'Strona główna' : lang === 'en' ? 'Home' : 'Startseite',
+        "item": siteUrl
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": financingType !== 'gotowka' ? financingSeoLabel : (lang === 'pl' ? 'Samochody' : lang === 'en' ? 'Cars' : 'Autos'),
+        "item": `${siteUrl}/samochody`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": listing.make,
+        "item": `${siteUrl}/samochody?make=${encodeURIComponent(listing.make)}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 4,
+        "name": `${listing.make} ${listing.model}`,
+        "item": `${siteUrl}/samochody?make=${encodeURIComponent(listing.make)}&model=${encodeURIComponent(listing.model)}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 5,
+        "name": title
+      }
+    ]
   } : undefined;
 
   return (
@@ -342,8 +413,16 @@ export default function ListingDetailPage() {
           title={metaTitle}
           description={metaDesc}
           image={listing.primary_image_url || listing.image_urls?.[0]}
+          canonical={canonicalPath}
           schema={schema}
         />
+      )}
+      {breadcrumbSchema && (
+        <Helmet>
+          <script type="application/ld+json">
+            {JSON.stringify(breadcrumbSchema)}
+          </script>
+        </Helmet>
       )}
       <Header />
 
@@ -351,7 +430,7 @@ export default function ListingDetailPage() {
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link to="/samochody" className="hover:text-foreground transition-colors">
-            {t('nav.search')}
+            {financingType !== 'gotowka' ? financingLabel : t('nav.search')}
           </Link>
           <ChevronRight className="h-4 w-4" />
           <span>{listing.make}</span>
@@ -612,7 +691,7 @@ export default function ListingDetailPage() {
                       productionYear: listing.production_year,
                       bodyType: listing.body_type,
                       fuelType: listing.fuel_type
-                    })}/lead`}>
+                    }, financingType)}/lead`}>
                       <MessageSquare className="h-5 w-5" />
                       {t('detail.askAbout')}
                     </Link>
@@ -626,7 +705,7 @@ export default function ListingDetailPage() {
                       productionYear: listing.production_year,
                       bodyType: listing.body_type,
                       fuelType: listing.fuel_type
-                    })}/negotiate`}>
+                    }, financingType)}/negotiate`}>
                       <HandCoins className="h-5 w-5" />
                       {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
                     </Link>
@@ -752,7 +831,7 @@ export default function ListingDetailPage() {
               productionYear: listing.production_year,
               bodyType: listing.body_type,
               fuelType: listing.fuel_type
-            })}/lead`}>
+            }, financingType)}/lead`}>
               {t('detail.sendInquiry')}
             </Link>
           </Button>
@@ -765,7 +844,7 @@ export default function ListingDetailPage() {
               productionYear: listing.production_year,
               bodyType: listing.body_type,
               fuelType: listing.fuel_type
-            })}/negotiate`}>
+            }, financingType)}/negotiate`}>
               {t('detail.negotiateShort', 'Negocjuj cenę')}
             </Link>
           </Button>

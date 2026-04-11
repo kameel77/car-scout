@@ -70,6 +70,16 @@ const App = () => (
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/kontakt" element={<ContactPage />} />
                       <Route path="/faq" element={<PublicFaqPage />} />
+
+                      {/* SEO financing-type routes */}
+                      <Route path="/leasing/:slug" element={<ListingDetailPage />} />
+                      <Route path="/leasing/:slug/lead" element={<LeadFormPage />} />
+                      <Route path="/leasing/:slug/negotiate" element={<LeadFormPage />} />
+                      <Route path="/kredyt/:slug" element={<ListingDetailPage />} />
+                      <Route path="/kredyt/:slug/lead" element={<LeadFormPage />} />
+                      <Route path="/kredyt/:slug/negotiate" element={<LeadFormPage />} />
+
+                      {/* Default financing routes (gotówka / backward compatible) */}
                       <Route path="/oferta/:slug" element={<ListingDetailPage />} />
                       <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/oferta/:slug/negotiate" element={<LeadFormPage />} />

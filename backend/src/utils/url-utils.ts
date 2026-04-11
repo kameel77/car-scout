@@ -22,6 +22,51 @@ export function getMarketplaceFromUrl(url: string | null | undefined): string | 
 }
 
 /**
+ * Financing type definitions for SEO URL architecture.
+ * Kept in sync with frontend src/utils/url-utils.ts.
+ */
+export type FinancingType = 'leasing' | 'kredyt' | 'gotowka' | 'wynajem';
+
+const FINANCING_URL_PREFIX: Record<FinancingType, string> = {
+    leasing: '/leasing',
+    kredyt: '/kredyt',
+    gotowka: '/oferta',
+    wynajem: '/wynajem-dlugoterminowy',
+};
+
+const DEFAULT_FINANCING_TYPE: FinancingType = 'gotowka';
+
+/**
+ * Determines the financing type from a URL pathname.
+ */
+export function getFinancingTypeFromPath(path: string): FinancingType {
+    if (path.startsWith('/leasing/')) return 'leasing';
+    if (path.startsWith('/kredyt/')) return 'kredyt';
+    if (path.startsWith('/wynajem-dlugoterminowy/')) return 'wynajem';
+    return 'gotowka';
+}
+
+/**
+ * Returns a human-readable label for a financing type.
+ */
+export function getFinancingLabel(type: FinancingType, lang: string = 'pl'): string {
+    const labels: Record<FinancingType, Record<string, string>> = {
+        leasing: { pl: 'Leasing', en: 'Leasing', de: 'Leasing' },
+        kredyt: { pl: 'Kredyt samochodowy', en: 'Car loan', de: 'Autokredit' },
+        gotowka: { pl: 'Oferta', en: 'Offer', de: 'Angebot' },
+        wynajem: { pl: 'Wynajem długoterminowy', en: 'Long-term rental', de: 'Langzeitmiete' },
+    };
+    return labels[type]?.[lang] || labels[type]?.pl || type;
+}
+
+/**
+ * Returns the URL prefix for a given financing type.
+ */
+export function getFinancingUrlPrefix(type: FinancingType): string {
+    return FINANCING_URL_PREFIX[type] || FINANCING_URL_PREFIX[DEFAULT_FINANCING_TYPE];
+}
+
+/**
  * Polish to ASCII transliteration map
  */
 const POLISH_CHARS: Record<string, string> = {
