@@ -297,6 +297,23 @@ export default function ListingDetailPage() {
     fuelType: listing.fuel_type
   });
 
+  // Handle financing type switch from calculator tabs — updates URL without page reload
+  const handleFinancingTypeChange = React.useCallback((newType: FinancingType) => {
+    const newPath = getListingUrlPath({
+      id: listing.listing_id,
+      make: listing.make,
+      model: listing.model,
+      version: listing.version,
+      productionYear: listing.production_year,
+      bodyType: listing.body_type,
+      fuelType: listing.fuel_type
+    }, newType);
+    // Only navigate if URL actually changes
+    if (newPath !== location.pathname) {
+      navigate(newPath, { replace: true });
+    }
+  }, [listing, location.pathname, navigate]);
+
   const lang = i18n.language;
   const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
 
@@ -541,6 +558,7 @@ export default function ListingDetailPage() {
                   manufacturingYear={listing.production_year}
                   mileageKm={listing.mileage_km}
                   offerInitialPayment={initialPayment ?? undefined}
+                  onFinancingTypeChange={handleFinancingTypeChange}
                 />
               </section>
             )}
@@ -754,6 +772,7 @@ export default function ListingDetailPage() {
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}
                     offerInitialPayment={initialPayment ?? undefined}
+                  onFinancingTypeChange={handleFinancingTypeChange}
                   />
                 </motion.div>
               )}

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Calculator, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import type { FinancingType } from '@/utils/url-utils';
 
 
 interface FinancingCalculatorProps {
@@ -20,6 +21,7 @@ interface FinancingCalculatorProps {
     manufacturingYear?: number;
     mileageKm?: number;
     offerInitialPayment?: number;
+    onFinancingTypeChange?: (type: FinancingType) => void;
 }
 
 export function FinancingCalculator({
@@ -28,7 +30,8 @@ export function FinancingCalculator({
     currency = 'PLN',
     manufacturingYear,
     mileageKm,
-    offerInitialPayment
+    offerInitialPayment,
+    onFinancingTypeChange
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
 
@@ -254,7 +257,19 @@ export function FinancingCalculator({
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 pt-0">
-                <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as FinancingProduct['category'])} className="w-full">
+                <Tabs value={activeCategory} onValueChange={(v) => {
+                    const cat = v as FinancingProduct['category'];
+                    setActiveCategory(cat);
+                    // Notify parent about financing type change for URL update
+                    if (onFinancingTypeChange) {
+                        const typeMap: Record<string, FinancingType> = {
+                            'LEASING': 'leasing',
+                            'CREDIT': 'kredyt',
+                            'RENTAL': 'wynajem',
+                        };
+                        onFinancingTypeChange(typeMap[cat] || 'gotowka');
+                    }
+                }} className="w-full">
                     <TabsList className="w-full justify-start grid grid-cols-3 h-9">
                         {categories.map(cat => (
                             <TabsTrigger key={cat} value={cat} className="text-xs py-1">
