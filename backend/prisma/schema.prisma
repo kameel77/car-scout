@@ -284,18 +284,20 @@ model Translation {
 }
 
 model FaqEntry {
-  id          String   @id @default(cuid())
-  page        FaqPage
-  sortOrder   Int      @default(0) @map("sort_order")
-  questionPl  String   @map("question_pl")
-  answerPl    String   @map("answer_pl")
-  questionEn  String   @map("question_en")
-  answerEn    String   @map("answer_en")
-  questionDe  String   @map("question_de")
-  answerDe    String   @map("answer_de")
-  isPublished Boolean  @default(true) @map("is_published")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  page           FaqPage
+  pageContext    String   @default("all") @map("page_context")
+  financingType  String?  @map("financing_type")
+  sortOrder      Int      @default(0) @map("sort_order")
+  questionPl     String   @map("question_pl")
+  answerPl       String   @map("answer_pl")
+  questionEn     String   @map("question_en")
+  answerEn       String   @map("answer_en")
+  questionDe     String   @map("question_de")
+  answerDe       String   @map("answer_de")
+  isPublished    Boolean  @default(true) @map("is_published")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@index([page, sortOrder])
   @@map("faq_entries")
@@ -396,6 +398,7 @@ model SeoConfig {
 model PartnerAd {
   id             String   @id @default(cuid())
   placement      String
+  pageContext    String   @default("all") @map("page_context")
   title          String?
   description    String?
   subtitle       String?
@@ -506,6 +509,7 @@ enum FaqPage {
   offers
   contact
   faq
+  rental
 }
 
 model Partner {
@@ -537,14 +541,14 @@ model RentalVehicle {
   transmission             String?
   enginePowerHp            Int?     @map("engine_power_hp")
   engineCapacityCm3        Int?     @map("engine_capacity_cm3")
-  productionYear           Int      @map("production_year")
+  productionYear           Int?     @map("production_year")
   color                    String?
   paintType                String?  @map("paint_type")
   doors                    Int?
   seats                    Int?
   drive                    String?
-  catalogPrice             Int      @map("catalog_price")
-  sellingPrice             Int      @map("selling_price")
+  catalogPrice             Int?     @map("catalog_price")
+  sellingPrice             Int?     @map("selling_price")
   primaryImageUrl          String?  @map("primary_image_url")
   imageUrls                String[] @map("image_urls")
   equipmentAudioMultimedia String[] @map("equipment_audio_multimedia")
@@ -555,6 +559,8 @@ model RentalVehicle {
   additionalInfoContent    String?  @map("additional_info_content")
   specsJson                Json?    @map("specs_json")
   specificationUrl         String?  @map("specification_url")
+  carClass                 String?  @map("car_class")
+  modelCode                String?  @map("model_code")
   slug                     String?  @unique
   isActive                 Boolean  @default(true) @map("is_active")
   createdAt                DateTime @default(now()) @map("created_at")
@@ -616,14 +622,19 @@ model RentalMatrixEntry {
   annualMileageKm   Int      @map("annual_mileage_km")
   contractMonths    Int      @map("contract_months")
   initialPaymentPct Float    @map("initial_payment_pct")
+  offerType         String   @default("all") @map("offer_type") // "business" | "consumer" | "all"
   monthlyRateNet    Float    @map("monthly_rate_net")
   monthlyRateGross  Float    @map("monthly_rate_gross")
   servicesIncluded  String[] @map("services_included")
+  overMileageCost   Float?   @map("over_mileage_cost")
+  insuranceExcess500 Float?  @map("insurance_excess_500")
+  insuranceNoLimit  Float?   @map("insurance_no_limit")
+  tiresNoLimit      Float?   @map("tires_no_limit")
   createdAt         DateTime @default(now()) @map("created_at")
 
   assignment VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
-  @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct])
+  @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct, offerType])
   @@index([assignmentId])
   @@index([monthlyRateGross])
   @@index([assignmentId, monthlyRateGross])

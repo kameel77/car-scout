@@ -6,6 +6,7 @@ interface MetaHeadProps {
     description?: string;
     image?: string;
     url?: string;
+    canonical?: string;
     type?: string;
     schema?: object; // JSON-LD
 }
@@ -15,23 +16,28 @@ export function MetaHead({
     description,
     image,
     url,
+    canonical,
     type = 'website',
     schema
 }: MetaHeadProps) {
     const siteUrl = window.location.origin;
     const fullUrl = url ? (url.startsWith('http') ? url : `${siteUrl}${url}`) : window.location.href;
     const fullImage = image ? (image.startsWith('http') ? image : `${siteUrl}${image}`) : undefined;
+    const canonicalUrl = canonical ? (canonical.startsWith('http') ? canonical : `${siteUrl}${canonical}`) : undefined;
 
     return (
         <Helmet>
             {title && <title>{title}</title>}
             {description && <meta name="description" content={description} />}
 
+            {/* Canonical URL */}
+            {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+
             {/* OG Tags */}
             {title && <meta property="og:title" content={title} />}
             {description && <meta property="og:description" content={description} />}
             {fullImage && <meta property="og:image" content={fullImage} />}
-            <meta property="og:url" content={fullUrl} />
+            <meta property="og:url" content={canonicalUrl || fullUrl} />
             <meta property="og:type" content={type} />
 
             {/* Twitter Cards */}

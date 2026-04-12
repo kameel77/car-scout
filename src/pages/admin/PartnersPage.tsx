@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { partnerAdsApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { PartnerAd, AdPlacement } from '@/types/partnerAds';
+import { PartnerAd, AdPlacement, AdPageContext } from '@/types/partnerAds';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,7 +20,8 @@ import {
     Layout,
     Sidebar,
     ArrowBigUpDash,
-    Info
+    Info,
+    Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -96,6 +98,7 @@ export default function AdminPartnersPage() {
 
         const adData = {
             placement: formData.get('placement') as AdPlacement,
+            pageContext: (formData.get('pageContext') as AdPageContext) || 'all',
             title: formData.get('title') as string,
             titleEn: formData.get('titleEn') as string,
             titleDe: formData.get('titleDe') as string,
@@ -148,16 +151,24 @@ export default function AdminPartnersPage() {
 
     const ads = data?.ads || [];
 
-    const placementIcons = {
+    const placementIcons: Record<AdPlacement, React.ReactNode> = {
         'SEARCH_GRID': <Layout className="h-4 w-4" />,
         'SEARCH_TOP': <Megaphone className="h-4 w-4" />,
-        'DETAIL_SIDEBAR': <Sidebar className="h-4 w-4" />
+        'DETAIL_SIDEBAR': <Sidebar className="h-4 w-4" />,
+        'DETAIL_BELOW_EQUIPMENT': <Layers className="h-4 w-4" />
     };
 
-    const placementLabels = {
+    const placementLabels: Record<AdPlacement, string> = {
         'SEARCH_GRID': 'Lista (In-Feed)',
         'SEARCH_TOP': 'Baner Górny',
-        'DETAIL_SIDEBAR': 'Sidebar Szczegółów'
+        'DETAIL_SIDEBAR': 'Sidebar Szczegółów',
+        'DETAIL_BELOW_EQUIPMENT': 'Pod wyposażeniem'
+    };
+
+    const pageContextLabels: Record<AdPageContext, string> = {
+        'all': 'Wszystkie',
+        'offers': 'Oferty (Sprzedaż)',
+        'rental': 'Najem'
     };
 
     return (
@@ -183,7 +194,7 @@ export default function AdminPartnersPage() {
             )}
 
             <div className="grid gap-6">
-                {(['SEARCH_TOP', 'SEARCH_GRID', 'DETAIL_SIDEBAR'] as AdPlacement[]).map(placement => {
+                {(['SEARCH_TOP', 'SEARCH_GRID', 'DETAIL_SIDEBAR', 'DETAIL_BELOW_EQUIPMENT'] as AdPlacement[]).map(placement => {
                     const filteredAds = ads.filter(a => a.placement === placement);
                     if (filteredAds.length === 0 && placement !== 'SEARCH_TOP') return null;
 
@@ -225,6 +236,16 @@ export default function AdminPartnersPage() {
                                                     <ArrowBigUpDash className="h-3 w-3" />
                                                     Priorytet: {ad.priority}
                                                 </div>
+                                                <Badge variant="outline" className={cn(
+                                                    'text-[10px]',
+                                                    ad.pageContext === 'offers' && 'bg-blue-50 text-blue-700 border-blue-200',
+                                                    ad.pageContext === 'rental' && 'bg-green-50 text-green-700 border-green-200',
+                                                )}
+                                                >
+                                                    {pageContextLabels[ad.pageContext] || 'Wszystkie'}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex items-center justify-end text-xs text-muted-foreground">
                                                 <a href={ad.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-accent">
                                                     Link <ExternalLink className="h-3 w-3" />
                                                 </a>
@@ -265,6 +286,7 @@ export default function AdminPartnersPage() {
                                             <SelectItem value="SEARCH_TOP">Baner Górny (Wyszukiwarka)</SelectItem>
                                             <SelectItem value="SEARCH_GRID">Lista wyników (In-Feed)</SelectItem>
                                             <SelectItem value="DETAIL_SIDEBAR">Sidebar (Szczegóły)</SelectItem>
+                                            <SelectItem value="DETAIL_BELOW_EQUIPMENT">Pod wyposażeniem (Szczegóły)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -272,6 +294,21 @@ export default function AdminPartnersPage() {
                                     <Label htmlFor="brandName">Nazwa partnera/marki</Label>
                                     <Input id="brandName" name="brandName" defaultValue={editingAd?.brandName} placeholder="np. Masterlease" />
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="pageContext">Kontekst stron</Label>
+                                <Select name="pageContext" defaultValue={editingAd?.pageContext || 'all'}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Wszystkie oferty</SelectItem>
+                                        <SelectItem value="offers">Oferty (Sprzedaż)</SelectItem>
+                                        <SelectItem value="rental">Najem</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-[10px] text-muted-foreground">Określa na jakim typie ofert reklama jest widoczna</p>
                             </div>
 
                             <Tabs defaultValue="pl" className="w-full">

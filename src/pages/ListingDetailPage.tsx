@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins } from 'lucide-react';
@@ -26,12 +26,13 @@ import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import { FinancingCalculator } from '@/components/FinancingCalculator';
+import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
-import { getListingUrlPath } from '@/utils/url-utils';
+import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
 import {
   Dialog,
@@ -47,21 +48,28 @@ import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 
 import { MetaHead } from '@/components/seo/MetaHead';
+import { Helmet } from 'react-helmet-async';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 
 export default function ListingDetailPage() {
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user, token } = useAuth();
   const canManage = user?.role === 'admin' || user?.role === 'manager';
 
+  const financingType = getFinancingTypeFromPath(location.pathname);
+
   // Use slug if available (new URL format), otherwise fall back to id (legacy format)
   const listingIdentifier = slug || id;
+
   const { data, isLoading } = useListing(listingIdentifier);
-  const { data: adsData } = usePartnerAds('DETAIL_SIDEBAR');
+  const { data: adsData } = usePartnerAds('DETAIL_SIDEBAR', 'offers');
   const sidebarAds = adsData?.ads || [];
+  const { data: belowEquipmentAdsData } = usePartnerAds('DETAIL_BELOW_EQUIPMENT', 'offers');
+  const belowEquipmentAds = belowEquipmentAdsData?.ads || [];
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const { priceType } = usePriceSettings();
@@ -90,8 +98,12 @@ export default function ListingDetailPage() {
   const autoRefreshTriggered = React.useRef(false);
 
   const { data: faqData } = useQuery({
-    queryKey: ['faq', 'offers'],
-    queryFn: () => faqApi.list({ page: 'offers' }),
+    queryKey: ['faq', 'offers', financingType],
+    queryFn: () => faqApi.list({ 
+      page: 'offers', 
+      pageContext: 'offers', 
+      financingType: financingType !== 'gotowka' ? financingType : undefined 
+    }),
     staleTime: 5 * 60 * 1000
   });
 
@@ -273,8 +285,43 @@ export default function ListingDetailPage() {
     );
   }
 
-  const title = `${listing.make} ${listing.model} ${listing.version}`;
+  const baseTitle = `${listing.make} ${listing.model} ${listing.version}`;
+  const financingSeoLabel = getFinancingSeoLabel(financingType, i18n.language);   // full: "Kredyt samochodowy"
+  const title = financingType !== 'gotowka' && financingSeoLabel ? `${financingSeoLabel}: ${baseTitle}` : baseTitle;
   const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
+  const formattedPrice = formatPrice(discountedListingPrice, settings?.displayCurrency || 'PLN');
+
+  // Financing type detection from URL
+  const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
+
+  // Self-canonical: each financing variant (/kredyt/, /leasing/, /oferta/) is its own canonical
+  // All 3 variants are in the sitemap — Google should index each as a distinct page
+  const canonicalPath = getListingUrlPath({
+    id: listing.listing_id,
+    make: listing.make,
+    model: listing.model,
+    version: listing.version,
+    productionYear: listing.production_year,
+    bodyType: listing.body_type,
+    fuelType: listing.fuel_type
+  }, financingType);
+
+  // Handle financing type switch from calculator tabs — updates URL without page reload
+  const handleFinancingTypeChange = (newType: FinancingType) => {
+    const newPath = getListingUrlPath({
+      id: listing.listing_id,
+      make: listing.make,
+      model: listing.model,
+      version: listing.version,
+      productionYear: listing.production_year,
+      bodyType: listing.body_type,
+      fuelType: listing.fuel_type
+    }, newType);
+    // Only navigate if URL actually changes
+    if (newPath !== location.pathname) {
+      navigate(newPath, { replace: true });
+    }
+  };
 
   const lang = i18n.language;
   const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
@@ -283,27 +330,43 @@ export default function ListingDetailPage() {
   const listingTitleTemplate = (seoConfig ? (seoConfig as any)[`listingTitle${suffix}`] : undefined) || seoConfig?.listingTitle;
   const listingDescriptionTemplate = (seoConfig ? (seoConfig as any)[`listingDescription${suffix}`] : undefined) || seoConfig?.listingDescription;
 
-  const metaTitle = listing && listingTitleTemplate
+  // Default meta title from SEO config template (for gotowka / no financing context)
+  const defaultMetaTitle = listing && listingTitleTemplate
     ? listingTitleTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
-      .replace('{{price}}', formatPrice(discountedListingPrice, 'PLN'))
+      .replace('{{price}}', formattedPrice)
       .replace('{{fuel}}', listing.fuel_type || '')
     : title;
 
-  const metaDesc = listing && listingDescriptionTemplate
+  // Use keyword-rich financing-specific title or fall back to default
+  const financingMetaTitle = getFinancingMetaTitle(
+    financingType, listing.make, listing.model, listing.version, listing.production_year, lang
+  );
+  const metaTitle = financingMetaTitle || defaultMetaTitle;
+
+  // Default meta description from SEO config template
+  const defaultMetaDesc = listing && listingDescriptionTemplate
     ? listingDescriptionTemplate
       .replace('{{make}}', listing.make)
       .replace('{{model}}', listing.model)
       .replace('{{year}}', listing.production_year.toString())
-      .replace('{{price}}', formatPrice(discountedListingPrice, 'PLN'))
+      .replace('{{price}}', formattedPrice)
       .replace('{{fuel}}', listing.fuel_type || '')
     : '';
 
-  // Prepare Schema.org
-  const schema = listing ? {
-    "@context": "https://schema.org/",
+  // Use keyword-rich financing-specific description or fall back to default
+  const financingMetaDesc = getFinancingMetaDescription(
+    financingType, listing.make, listing.model, listing.production_year, formattedPrice, lang
+  );
+  const metaDesc = financingMetaDesc || defaultMetaDesc;
+
+  // Prepare Schema.org JSON-LD
+  const siteUrl = window.location.origin;
+  const canonicalFullUrl = `${siteUrl}${canonicalPath}`;
+
+  const baseProductSchema = listing ? {
     "@type": "Car",
     "name": title,
     "image": listing.primary_image_url || listing.image_urls?.[0],
@@ -325,12 +388,89 @@ export default function ListingDetailPage() {
     },
     "offers": {
       "@type": "Offer",
-      "url": window.location.href,
+      "url": canonicalFullUrl,
       "priceCurrency": "PLN",
       "price": discountedListingPrice,
       "itemCondition": "https://schema.org/UsedCondition",
       "availability": "https://schema.org/InStock"
     }
+  } : undefined;
+
+  let schema: any = undefined;
+  if (baseProductSchema) {
+    const graph: any[] = [baseProductSchema];
+    
+    if (financingType !== 'gotowka') {
+      const financialProduct = {
+        "@type": "FinancialProduct",
+        "@id": `${canonicalFullUrl}#financing`,
+        "name": financingSeoLabel ? `${financingSeoLabel} na ${listing.make} ${listing.model}` : title,
+        "description": metaDesc,
+        "feesAndCommissionsSpecification": "Wpłata własna od 0%", 
+        "url": canonicalFullUrl
+      };
+      graph.push(financialProduct);
+    }
+    
+    if (faqs.length > 0) {
+      const faqSchema = {
+        "@type": "FAQPage",
+        "@id": `${canonicalFullUrl}#faq`,
+        "mainEntity": faqs.map(faq => {
+          const { question, answer } = getLocalizedQA(faq);
+          return {
+            "@type": "Question",
+            "name": question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": answer // In production, we might need to strip markdown tags if strict plain-text is required, but markdown strings are generally acceptable
+            }
+          };
+        })
+      };
+      graph.push(faqSchema);
+    }
+
+    schema = {
+      "@context": "https://schema.org/",
+      "@graph": graph
+    };
+  }
+  // BreadcrumbList JSON-LD — uses FULL SEO labels for bots (not the short UI form)
+  const breadcrumbSchema = listing ? {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": lang === 'pl' ? 'Strona główna' : lang === 'en' ? 'Home' : 'Startseite',
+        "item": siteUrl
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": financingType !== 'gotowka' ? financingSeoLabel : (lang === 'pl' ? 'Samochody' : lang === 'en' ? 'Cars' : 'Autos'),
+        "item": `${siteUrl}/samochody`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": listing.make,
+        "item": `${siteUrl}/samochody?make=${encodeURIComponent(listing.make)}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 4,
+        "name": `${listing.make} ${listing.model}`,
+        "item": `${siteUrl}/samochody?make=${encodeURIComponent(listing.make)}&model=${encodeURIComponent(listing.model)}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 5,
+        "name": title
+      }
+    ]
   } : undefined;
 
   return (
@@ -340,16 +480,25 @@ export default function ListingDetailPage() {
           title={metaTitle}
           description={metaDesc}
           image={listing.primary_image_url || listing.image_urls?.[0]}
+          canonical={canonicalPath}
           schema={schema}
         />
       )}
+      {breadcrumbSchema && (
+        <Helmet>
+          <script type="application/ld+json">
+            {JSON.stringify(breadcrumbSchema)}
+          </script>
+        </Helmet>
+      )}
       <Header />
 
-      <main className="container py-6">
+      <main className="container py-6 relative">
+        <h1 className="sr-only">{baseTitle}</h1>
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link to="/samochody" className="hover:text-foreground transition-colors">
-            {t('nav.search')}
+            {financingType !== 'gotowka' ? financingLabel : t('nav.search')}
           </Link>
           <ChevronRight className="h-4 w-4" />
           <span>{listing.make}</span>
@@ -367,7 +516,7 @@ export default function ListingDetailPage() {
 
             {/* Title & Price - Mobile */}
             <div className="lg:hidden">
-              <h1 className="font-heading text-2xl font-bold text-foreground">{title}</h1>
+              <div role="heading" aria-level={2} className="font-heading text-2xl font-bold text-foreground">{baseTitle}</div>
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex flex-col md:flex-row md:items-baseline md:gap-3 mt-2">
                   <span className="font-heading text-3xl font-bold text-accent">
@@ -424,6 +573,27 @@ export default function ListingDetailPage() {
               <EquipmentDisplay equipment={listing.equipment} />
             </section>
 
+            {/* Below Equipment Ads */}
+            {belowEquipmentAds.filter(a => a.isActive).length > 0 && (
+              <div className="mt-4">
+                {belowEquipmentAds.filter(a => a.isActive).map(ad => (
+                  <PartnerSidebarAd
+                    key={ad.id}
+                    title={(ad as any)[`title${suffix}`] || ad.title}
+                    description={(ad as any)[`description${suffix}`] || ad.description || ''}
+                    ctaText={(ad as any)[`ctaText${suffix}`] || ad.ctaText}
+                    url={ad.url}
+                    brandName={ad.brandName}
+                    imageUrl={ad.imageUrl}
+                    features={ad.features}
+                    overlayOpacity={ad.overlayOpacity}
+                    hideUiElements={ad.hideUiElements}
+                    className="my-4"
+                  />
+                ))}
+              </div>
+            )}
+
             <Separator />
 
             {/* Financing Calculator - Main Content area (Always visible on mobile, conditional on desktop) */}
@@ -439,6 +609,8 @@ export default function ListingDetailPage() {
                   manufacturingYear={listing.production_year}
                   mileageKm={listing.mileage_km}
                   offerInitialPayment={initialPayment ?? undefined}
+                  financingType={financingType}
+                  onFinancingTypeChange={handleFinancingTypeChange}
                 />
               </section>
             )}
@@ -461,8 +633,6 @@ export default function ListingDetailPage() {
                 />
               ))}
             </div>
-
-            <Separator />
 
             {/* Why Us */}
             <section className="rounded-2xl border border-border bg-card/60 p-6 shadow-card space-y-4">
@@ -517,7 +687,16 @@ export default function ListingDetailPage() {
             {/* FAQ */}
             {faqs.length > 0 && (
               <section className="space-y-3">
-                <h2 className="font-heading text-xl font-semibold">{t('nav.faq', 'FAQ')}</h2>
+                <h2 className="font-heading text-xl font-semibold">
+                  {lang === 'pl' ? (
+                    financingType === 'leasing' ? `FAQ: ${listing.make} ${listing.model} w leasingu na ${window.location.hostname.replace('www.', '')}` :
+                    financingType === 'kredyt' ? `FAQ: ${listing.make} ${listing.model} w kredycie na ${window.location.hostname.replace('www.', '')}` :
+                    financingType === 'wynajem-dlugoterminowy' ? `FAQ: ${listing.make} ${listing.model} w wynajmie długoterminowym na ${window.location.hostname.replace('www.', '')}` :
+                    `FAQ: ${listing.make} ${listing.model} na ${window.location.hostname.replace('www.', '')}`
+                  ) : (
+                    t('nav.faq', 'FAQ')
+                  )}
+                </h2>
                 <div className="space-y-3">
                   <Accordion type="multiple" className="w-full space-y-3">
                     {faqs.map((faq) => {
@@ -541,6 +720,21 @@ export default function ListingDetailPage() {
                 </div>
               </section>
             )}
+
+            <Separator />
+            <DynamicFinancingContent
+              financingType={financingType}
+              listing={{
+                listing_id: listing.listing_id,
+                make: listing.make,
+                model: listing.model,
+                production_year: listing.production_year,
+                body_type: listing.body_type,
+                fuel_type: listing.fuel_type,
+                transmission: listing.transmission,
+                engine_power_hp: listing.engine_power_hp
+              }}
+            />
           </div>
 
           {/* Sidebar */}
@@ -552,7 +746,7 @@ export default function ListingDetailPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-card rounded-xl shadow-card p-6 space-y-4"
               >
-                <h1 className="font-heading text-xl font-bold text-foreground">{title}</h1>
+                <div role="heading" aria-level={2} className="font-heading text-xl font-bold text-foreground">{baseTitle}</div>
                 <div className="flex flex-col gap-1 items-start">
                   <div className="flex items-center gap-2">
                     <span className="font-heading text-3xl font-bold text-accent">
@@ -589,7 +783,7 @@ export default function ListingDetailPage() {
                       productionYear: listing.production_year,
                       bodyType: listing.body_type,
                       fuelType: listing.fuel_type
-                    })}/lead`}>
+                    }, financingType)}/lead`}>
                       <MessageSquare className="h-5 w-5" />
                       {t('detail.askAbout')}
                     </Link>
@@ -603,7 +797,7 @@ export default function ListingDetailPage() {
                       productionYear: listing.production_year,
                       bodyType: listing.body_type,
                       fuelType: listing.fuel_type
-                    })}/negotiate`}>
+                    }, financingType)}/negotiate`}>
                       <HandCoins className="h-5 w-5" />
                       {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
                     </Link>
@@ -652,6 +846,9 @@ export default function ListingDetailPage() {
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}
                     offerInitialPayment={initialPayment ?? undefined}
+                    financingType={financingType}
+                    onFinancingTypeChange={handleFinancingTypeChange}
+                    isDuplicateHeading={true}
                   />
                 </motion.div>
               )}
@@ -669,6 +866,7 @@ export default function ListingDetailPage() {
                   features={ad.features}
                   overlayOpacity={ad.overlayOpacity}
                   hideUiElements={ad.hideUiElements}
+                  isDuplicateHeading={true}
                 />
               ))}
 
@@ -729,7 +927,7 @@ export default function ListingDetailPage() {
               productionYear: listing.production_year,
               bodyType: listing.body_type,
               fuelType: listing.fuel_type
-            })}/lead`}>
+            }, financingType)}/lead`}>
               {t('detail.sendInquiry')}
             </Link>
           </Button>
@@ -742,7 +940,7 @@ export default function ListingDetailPage() {
               productionYear: listing.production_year,
               bodyType: listing.body_type,
               fuelType: listing.fuel_type
-            })}/negotiate`}>
+            }, financingType)}/negotiate`}>
               {t('detail.negotiateShort', 'Negocjuj cenę')}
             </Link>
           </Button>

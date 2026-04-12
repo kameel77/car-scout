@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { rentalVehiclesApi, rentalCompaniesApi } from '@/services/rental-api';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
     Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star,
-    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil
+    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil, Upload
 } from 'lucide-react';
 
 // Helper: parse comma-separated text to array
@@ -53,9 +53,12 @@ interface VehicleFormProps {
     onSave: (data: any) => void;
     onCancel: () => void;
     isSaving: boolean;
+    /** When true, buttons are rendered outside via formId pattern */
+    externalButtons?: boolean;
+    formId?: string;
 }
 
-function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }: VehicleFormProps) {
+function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving, externalButtons, formId }: VehicleFormProps) {
     const defaultProvider = vehicle?.dealerId 
         ? `dealer_${vehicle.dealerId}` 
         : vehicle?.ownerRentalCompanyId 
@@ -80,15 +83,12 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
         catalogPrice: vehicle?.catalogPrice?.toString() || '',
         sellingPrice: vehicle?.sellingPrice?.toString() || '',
         providerId: defaultProvider,
-        specificationUrl: vehicle?.specificationUrl || '',
         additionalInfoHeader: vehicle?.additionalInfoHeader || '',
         additionalInfoContent: vehicle?.additionalInfoContent || '',
         equipmentAudioMultimedia: arrayToText(vehicle?.equipmentAudioMultimedia),
         equipmentSafety: arrayToText(vehicle?.equipmentSafety),
         equipmentComfortExtras: arrayToText(vehicle?.equipmentComfortExtras),
         equipmentOther: arrayToText(vehicle?.equipmentOther),
-        primaryImageUrl: vehicle?.primaryImageUrl || '',
-        imageUrls: arrayToText(vehicle?.imageUrls),
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -113,13 +113,14 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
             doors: form.doors ? parseInt(form.doors) : null,
             seats: form.seats ? parseInt(form.seats) : null,
             catalogPrice: parseInt(form.catalogPrice),
-            sellingPrice: parseInt(form.sellingPrice),
+            sellingPrice: form.sellingPrice ? parseInt(form.sellingPrice) : null,
             equipmentAudioMultimedia: textToArray(form.equipmentAudioMultimedia),
             equipmentSafety: textToArray(form.equipmentSafety),
             equipmentComfortExtras: textToArray(form.equipmentComfortExtras),
             equipmentOther: textToArray(form.equipmentOther),
-            primaryImageUrl: form.primaryImageUrl || null,
-            imageUrls: textToArray(form.imageUrls),
+            // Note: primaryImageUrl, imageUrls, specificationUrl are NOT sent here.
+            // They are managed by dedicated ImageSection and SpecificationSection components
+            // to avoid stale form values overwriting fresh uploads.
         });
     };
 
@@ -127,7 +128,7 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
         setForm(prev => ({ ...prev, [field]: e.target.value }));
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form id={formId} onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Basic Info */}
                 <div className="space-y-2">
@@ -210,8 +211,8 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
                     <Input type="number" value={form.catalogPrice} onChange={set('catalogPrice')} required />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Cena sprzedaży (PLN) *</label>
-                    <Input type="number" value={form.sellingPrice} onChange={set('sellingPrice')} required />
+                    <label className="text-sm font-medium text-gray-700">Cena sprzedaży (PLN)</label>
+                    <Input type="number" value={form.sellingPrice} onChange={set('sellingPrice')} />
                 </div>
 
                 {/* Provider (Dealer / Firm) */}
@@ -232,32 +233,15 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
                     </select>
                 </div>
                 
-                {/* Specyfikacja URL Optional */}
-                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-2 pt-2 border-t">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Link2 className="w-4 h-4" /> Link do specyfikacji (URL) (lub wgraj plik PDF po zapisaniu)
-                    </label>
-                    <Input value={form.specificationUrl} onChange={set('specificationUrl')} placeholder="https://..." />
-                </div>
-
-                {/* Zdjęcia URL Optional */}
-                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-4 pt-2 border-t">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4" /> Główne zdjęcie pojazdu (URL) (lub wgraj z dysku po zapisaniu)
-                        </label>
-                        <Input value={form.primaryImageUrl} onChange={set('primaryImageUrl')} placeholder="Główne zdjęcie np. https://..." />
+                {/* Info: Zdjęcia i specyfikacja zarządzane po zapisaniu w dedykowanych sekcjach */}
+                {!vehicle && (
+                    <div className="col-span-1 md:col-span-2 lg:col-span-3 pt-2 border-t">
+                        <p className="text-sm text-gray-500 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            Zdjęcia i specyfikację PDF dodasz po zapisaniu pojazdu.
+                        </p>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Dodatkowe zdjęcia pojazdu (URL - po jednym w nowej linii)</label>
-                        <textarea
-                            value={form.imageUrls}
-                            onChange={set('imageUrls')}
-                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
-                            placeholder={`np.\nhttps://zdjecie1.jpg\nhttps://zdjecie2.jpg`}
-                        />
-                    </div>
-                </div>
+                )}
             </div>
 
             {/* Equipment Categories */}
@@ -318,12 +302,14 @@ function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving }
                 />
             </div>
 
-            <div className="flex gap-3 pt-4 border-t">
-                <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
-                    {isSaving ? 'Zapisywanie...' : vehicle ? 'Zapisz zmiany' : 'Dodaj pojazd'}
-                </Button>
-                <Button type="button" variant="outline" onClick={onCancel}>Anuluj</Button>
-            </div>
+            {!externalButtons && (
+                <div className="flex gap-3 pt-4 border-t">
+                    <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
+                        {isSaving ? 'Zapisywanie...' : vehicle ? 'Zapisz zmiany' : 'Dodaj pojazd'}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={onCancel}>Anuluj</Button>
+                </div>
+            )}
         </form>
     );
 }
@@ -490,6 +476,8 @@ function SpecificationSection({ vehicle }: { vehicle: RentalVehicle }) {
     const { token } = useAuth();
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const [specUrl, setSpecUrl] = useState('');
+    const specFileRef = useRef<HTMLInputElement>(null);
 
     const uploadMutation = useMutation({
         mutationFn: (file: File) => rentalVehiclesApi.uploadSpecification(vehicle.id, file, token!),
@@ -501,31 +489,73 @@ function SpecificationSection({ vehicle }: { vehicle: RentalVehicle }) {
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
     });
 
+    const setUrlMutation = useMutation({
+        mutationFn: (url: string) => rentalVehiclesApi.update(vehicle.id, { specificationUrl: url || null }, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
+            setSpecUrl('');
+            toast({ title: 'Link do specyfikacji zapisany' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
     return (
         <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-lg">
             <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
-                <Link2 className="w-4 h-4" /> Aktualna specyfikacja
+                <Link2 className="w-4 h-4" /> Specyfikacja
             </h4>
 
             {vehicle.specificationUrl && (
-                <div className="text-sm">
-                    <a href={vehicle.specificationUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                        Pobierz / Zobacz aktulną specyfikację PDF
+                <div className="flex items-center gap-2 text-sm">
+                    <a href={vehicle.specificationUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate max-w-xs">
+                        {vehicle.specificationUrl.startsWith('/uploads/') ? 'Wgrany plik PDF' : vehicle.specificationUrl}
                     </a>
+                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                        onClick={() => { if (confirm('Usunąć link do specyfikacji?')) setUrlMutation.mutate(''); }}>
+                        <X className="w-3 h-3" />
+                    </Button>
                 </div>
             )}
 
-            <div className="mt-2">
-                <label className="text-xs text-gray-500 block mb-1">Wgraj nowy plik PDF (max 10MB):</label>
+            <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                    <label className="text-xs text-gray-500 block mb-1">Dodaj link URL do specyfikacji:</label>
+                    <Input
+                        value={specUrl}
+                        onChange={e => setSpecUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="h-8 text-sm"
+                    />
+                </div>
+                <Button size="sm" onClick={() => setUrlMutation.mutate(specUrl)} disabled={!specUrl || setUrlMutation.isPending} className="h-8">
+                    Zapisz
+                </Button>
+            </div>
+
+            <div>
+                <label className="text-xs text-gray-500 block mb-1">Lub wgraj plik PDF (max 10MB):</label>
                 <input
+                    ref={specFileRef}
                     type="file"
                     accept="application/pdf"
                     onChange={e => {
                         const file = e.target.files?.[0];
                         if (file) uploadMutation.mutate(file);
                     }}
-                    className="text-sm"
+                    className="hidden"
                 />
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => specFileRef.current?.click()}
+                    disabled={uploadMutation.isPending}
+                    className="gap-2"
+                >
+                    <Upload className="w-4 h-4" />
+                    {uploadMutation.isPending ? 'Wgrywanie...' : 'Dodaj plik'}
+                </Button>
             </div>
         </div>
     );
@@ -537,6 +567,8 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
     const { token } = useAuth();
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const [imageUrl, setImageUrl] = useState('');
+    const imageFileRef = useRef<HTMLInputElement>(null);
 
     const uploadMutation = useMutation({
         mutationFn: (files: File[]) => rentalVehiclesApi.uploadImages(vehicle.id, files, !vehicle.primaryImageUrl, token!),
@@ -544,6 +576,23 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
             queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
             queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
             toast({ title: 'Zdjęcia załadowane' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    const addUrlMutation = useMutation({
+        mutationFn: (url: string) => {
+            const existingUrls = vehicle.imageUrls || [];
+            const newUrls = [...existingUrls, url];
+            const updateData: any = { imageUrls: newUrls };
+            if (!vehicle.primaryImageUrl) updateData.primaryImageUrl = url;
+            return rentalVehiclesApi.update(vehicle.id, updateData, token!);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicle', vehicle.id] });
+            setImageUrl('');
+            toast({ title: 'Zdjęcie dodane' });
         },
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
     });
@@ -662,8 +711,28 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
                 </div>
             )}
 
-            <div className="mt-2 text-sm text-gray-500">
+            {/* Add by URL */}
+            <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                    <label className="text-xs text-gray-500 block mb-1">Dodaj zdjęcie po URL:</label>
+                    <Input
+                        value={imageUrl}
+                        onChange={e => setImageUrl(e.target.value)}
+                        placeholder="https://example.com/photo.jpg"
+                        className="h-8 text-sm"
+                        onKeyDown={e => { if (e.key === 'Enter' && imageUrl) { e.preventDefault(); addUrlMutation.mutate(imageUrl); } }}
+                    />
+                </div>
+                <Button size="sm" onClick={() => addUrlMutation.mutate(imageUrl)} disabled={!imageUrl || addUrlMutation.isPending} className="h-8">
+                    Dodaj
+                </Button>
+            </div>
+
+            {/* Upload from disk */}
+            <div>
+                <label className="text-xs text-gray-500 block mb-1">Lub wgraj z dysku:</label>
                 <input
+                    ref={imageFileRef}
                     type="file"
                     multiple
                     accept="image/*"
@@ -671,8 +740,19 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
                         const files = Array.from(e.target.files || []);
                         if (files.length > 0) uploadMutation.mutate(files);
                     }}
-                    className="text-sm border p-2 rounded w-full bg-white cursor-pointer"
+                    className="hidden"
                 />
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => imageFileRef.current?.click()}
+                    disabled={uploadMutation.isPending}
+                    className="gap-2"
+                >
+                    <Upload className="w-4 h-4" />
+                    {uploadMutation.isPending ? 'Wgrywanie...' : 'Dodaj zdjęcia'}
+                </Button>
             </div>
         </div>
     );
@@ -797,6 +877,8 @@ export default function RentalVehiclesPage() {
                     onSave={data => updateMutation.mutate({ id: editingId, data })}
                     onCancel={() => { setView('list'); setEditingId(null); }}
                     isSaving={updateMutation.isPending}
+                    externalButtons
+                    formId="edit-vehicle-form"
                 />
                 <SpecificationSection vehicle={vehicleDetailQuery.data.vehicle} />
                 <ImageSection vehicle={vehicleDetailQuery.data.vehicle} />
@@ -805,6 +887,14 @@ export default function RentalVehiclesPage() {
                     assignments={vehicleDetailQuery.data.vehicle.rentalAssignments || []}
                     companies={companies}
                 />
+
+                {/* Save / Cancel at the bottom of the page */}
+                <div className="flex gap-3 pt-6 mt-6 border-t">
+                    <Button type="submit" form="edit-vehicle-form" disabled={updateMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
+                        {updateMutation.isPending ? 'Zapisywanie...' : 'Zapisz zmiany'}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => { setView('list'); setEditingId(null); }}>Anuluj</Button>
+                </div>
             </div>
         );
     }

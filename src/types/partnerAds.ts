@@ -1,8 +1,10 @@
-export type AdPlacement = 'SEARCH_GRID' | 'SEARCH_TOP' | 'DETAIL_SIDEBAR';
+export type AdPlacement = 'SEARCH_GRID' | 'SEARCH_TOP' | 'DETAIL_SIDEBAR' | 'DETAIL_BELOW_EQUIPMENT';
+export type AdPageContext = 'offers' | 'rental' | 'all';
 
 export interface PartnerAd {
     id: string;
     placement: AdPlacement;
+    pageContext: AdPageContext;
     title?: string;
     titleEn?: string;
     titleDe?: string;
@@ -30,6 +32,7 @@ export interface PartnerAd {
 
 export interface PartnerAdPayload {
     placement: AdPlacement;
+    pageContext?: AdPageContext;
     title?: string;
     titleEn?: string;
     titleDe?: string;

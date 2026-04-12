@@ -241,3 +241,74 @@ docker exec <frontend_container> wget -qO- http://<backend_ip>:3000/api/settings
 | 2026-03-18 | 504 Gateway Timeout — DNS collision | Zmieniono `BACKEND_URL` na `${APP_UUID}-backend:3000` | n/a (Coolify ENV) |
 | 2026-03-18 | Traefik stracił routing po restartach | `docker restart coolify-proxy` | n/a (serwer) |
 | 2026-03-24 | Cykliczne DOWN/UP + agresywne boty | Hardening nginx + robots.txt | dev |
+| 2026-04-11 | 504/502 — Traefik Docker provider wrong network | Dodano `--providers.docker.network=coolify` do compose proxy + stop privacy4cars container | n/a (serwer) |
+
+---
+
+### #6: Traefik Docker Provider — Wrong Network IP (2026-04-11)
+
+**Objawy**:
+- `carsalon.pl`, `staging.carsalon.pl`, `askauto.de` → 504 (via Cloudflare) / 502 (direct)
+- `crm.carsalon.pl`, `admin.izzylease.com`, `uploader.izzylease.com` → działają normalnie
+- Backend i frontend healthcheck OK, kontenery healthy
+
+**Przyczyna**: Traefik Docker provider bez `--providers.docker.network` losowo wybierał IP z jednej z wielu sieci Docker. Frontendowe kontenery są na 3 sieciach (`compose-default`, `carscout-private`, `coolify`). Traefik ma dostęp tylko do `coolify` → gdy wybrał IP z `carscout-private` → timeout → 502/504.
+
+Dodatkowy czynnik: kontener `privacy4cars` z niezresolwanymi labelkami Traefik (`${SERVICE_FQDN_WEB}`) zatruwał logi ACME.
+
+**Dlaczego CRM działał**: CRM miał explicite service labels (`traefik.http.services.*.loadbalancer.server.port`), frontendowe kontenery polegały na auto-detection.
+
+**FIX**:
+1. Dodano `--providers.docker.network=coolify` do `/data/coolify/proxy/docker-compose.yml`
+2. `cd /data/coolify/proxy && docker compose up -d --force-recreate`
+3. `docker stop web-eko0go8oo8gg0cks8gsc4koc-185112351318` (privacy4cars)
+
+**Pułapka debugowania**: Nginx blokuje `curl/7` i `curl/8` UA z `return 444` (silent drop). Wszystkie testowe `curl` z serwera zwracały fałszywe 502, choć strona działała dla przeglądarek. **Zawsze używaj `wget` lub dodaj `-H "User-Agent: Mozilla/5.0"` do curl.**
+
+> [!CAUTION]
+> **`--providers.docker.network=coolify` jest OBOWIĄZKOWY** w każdym środowisku Coolify z kontenerami na wielu sieciach Docker. Jeśli Coolify zregeneruje `docker-compose.yml` proxy → trzeba go ponownie dodać!
+
+**Pliki dotknięte**: Brak zmian w kodzie — tylko konfiguracja Traefik proxy na serwerze.
+
+> [!IMPORTANT]
+> Patrz [DEPLOYMENT_ARCHITECTURE.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/.agents/DEPLOYMENT_ARCHITECTURE.md) Sekcja 11 po pełną analizę.
+
+---
+
+## 🚨 Playbook: Diagnostyka 504/502
+
+Uniwersalny szablon do uruchomienia **w tej kolejności** przy każdym incydencie 504/502:
+
+```bash
+# 1. Skąd problem? Cloudflare czy origin?
+# Użyj cfapi lub sprawdź analytics z Cloudflare Dashboard
+# 504 = origin timeout, 521 = origin down, 503 = Traefik catchall
+
+# 2. Czy Traefik widzi serwisy i na jakim IP?
+ssh izzy-apps 'docker exec coolify-proxy wget -qO- http://localhost:80/api/http/services 2>/dev/null' | \
+  python3 -c "import sys,json; [print(f'{s[\"name\"]}: {s.get(\"loadBalancer\",{}).get(\"servers\",[{}])[0].get(\"url\",\"?\")} ({s.get(\"serverStatus\",{})})') for s in json.load(sys.stdin) if s.get('provider')=='docker']"
+# → Wszystkie powinny być na 10.0.1.x (coolify). Jeśli na 10.0.7.x/10.0.11.x → wrong network!
+
+# 3. Bezpośredni test z serwera (UWAGA: curl jest blokowany!)
+ssh izzy-apps 'wget -qO- --timeout=5 http://10.0.1.X:80/ | head -1'
+# LUB z browser UA:
+ssh izzy-apps 'curl -sk --resolve "carsalon.pl:443:127.0.0.1" -o /dev/null -w "%{http_code}" \
+  -H "User-Agent: Mozilla/5.0" https://carsalon.pl/'
+
+# 4. Sprawdź sieci kontenerów
+ssh izzy-apps 'docker inspect <container> --format "{{range \$k,\$v := .NetworkSettings.Networks}}{{\$k}}: {{\$v.IPAddress}}{{\"\\n\"}}{{end}}"'
+
+# 5. Czy --providers.docker.network jest ustawiony?
+ssh izzy-apps 'docker inspect coolify-proxy --format "{{.Args}}" | grep -o "providers.docker.network=[^ ]*"'
+# Jeśli brak → dodaj i recreate proxy!
+
+# 6. Logi Traefik (szukaj error/502/EOF)
+ssh izzy-apps 'docker logs coolify-proxy --since 60s 2>&1 | grep -i "error\|502\|eof\|dial\|refused" | tail -10'
+
+# 7. Po naprawie: zweryfikuj WSZYSTKIE środowiska
+for domain in carsalon.pl staging.carsalon.pl askauto.de staging.askauto.de crm.carsalon.pl; do
+  echo -n "$domain: "
+  curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Mozilla/5.0" "https://$domain/"
+  echo
+done
+```

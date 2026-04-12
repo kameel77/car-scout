@@ -111,8 +111,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
             return {
                 ...v,
-                minMonthlyRateGross: minRate?.monthlyRateGross || null,
-                minMonthlyRateNet: minRate?.monthlyRateNet || null,
+                minMonthlyRateGross: minRate ? Math.ceil(minRate.monthlyRateGross) : null,
+                minMonthlyRateNet: minRate ? Math.ceil(minRate.monthlyRateNet) : null,
                 minRateCompany: minRate?.companyName || null,
                 minRateConfig: minRate ? {
                     contractMonths: minRate.contractMonths,
@@ -176,14 +176,15 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         // Fetch explicit distinct options from the DB rather than mapping thousands of entries in memory
         const assignmentOptions = await fastify.prisma.rentalMatrixEntry.findMany({
             where: { assignmentId: { in: assignmentIds } },
-            select: { annualMileageKm: true, contractMonths: true, initialPaymentPct: true },
-            distinct: ['annualMileageKm', 'contractMonths', 'initialPaymentPct']
+            select: { annualMileageKm: true, contractMonths: true, initialPaymentPct: true, offerType: true },
+            distinct: ['annualMileageKm', 'contractMonths', 'initialPaymentPct', 'offerType']
         });
 
         const options = {
             annualMileageOptions: [...new Set(assignmentOptions.map(e => e.annualMileageKm))].sort((a, b) => a - b),
             contractMonthOptions: [...new Set(assignmentOptions.map(e => e.contractMonths))].sort((a, b) => a - b),
-            initialPaymentOptions: [...new Set(assignmentOptions.map(e => e.initialPaymentPct))].sort((a, b) => a - b)
+            initialPaymentOptions: [...new Set(assignmentOptions.map(e => e.initialPaymentPct))].sort((a, b) => a - b),
+            offerTypeOptions: [...new Set(assignmentOptions.map(e => e.offerType))].sort()
         };
 
         return { vehicle, options };
@@ -192,10 +193,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
     // Public: Calculate rate lookup
     fastify.get('/api/rental/vehicles/:slug/calculate', async (request, reply) => {
         const { slug } = request.params as { slug: string };
-        const { annualMileageKm, contractMonths, initialPaymentPct } = request.query as {
+        const { annualMileageKm, contractMonths, initialPaymentPct, offerType } = request.query as {
             annualMileageKm: string;
             contractMonths: string;
             initialPaymentPct: string;
+            offerType?: string;
         };
 
         if (!annualMileageKm || !contractMonths || !initialPaymentPct) {
@@ -224,7 +226,10 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                             where: {
                                 annualMileageKm: parseInt(annualMileageKm),
                                 contractMonths: parseInt(contractMonths),
-                                initialPaymentPct: parseFloat(initialPaymentPct)
+                                initialPaymentPct: parseFloat(initialPaymentPct),
+                                ...(offerType && offerType !== 'all'
+                                    ? { offerType: { in: [offerType, 'all'] } }
+                                    : {})
                             }
                         }
                     }
@@ -241,10 +246,10 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             .filter(a => a.matrixEntries.length > 0)
             .map(a => ({
                 company: a.rentalCompany,
-                monthlyRateNet: a.matrixEntries[0].monthlyRateNet,
-                monthlyRateGross: a.matrixEntries[0].monthlyRateGross,
+                monthlyRateNet: Math.ceil(a.matrixEntries[0].monthlyRateNet),
+                monthlyRateGross: Math.ceil(a.matrixEntries[0].monthlyRateGross),
                 servicesIncluded: a.matrixEntries[0].servicesIncluded,
-                initialPaymentAmount: vehicle.sellingPrice * (parseFloat(initialPaymentPct) / 100)
+                initialPaymentAmount: (vehicle.sellingPrice || 0) * (parseFloat(initialPaymentPct) / 100)
             }))
             .sort((a, b) => a.monthlyRateGross - b.monthlyRateGross);
 

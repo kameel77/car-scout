@@ -132,10 +132,10 @@ export default function RentalMatrixPage() {
                 </div>
 
                 <div className="text-xs text-gray-500 space-y-1">
-                    <p><strong>Wymagane kolumny:</strong> vehicle_id, annual_mileage_km, contract_months, initial_payment_pct, monthly_rate_net, monthly_rate_gross</p>
-                    <p><strong>Opcjonalne:</strong> calculation_id, services_included (rozdzielane przecinkiem)</p>
-                    <p><strong>vehicle_id:</strong> odpowiada External Vehicle ID ustawionemu w przypisaniu pojazdu do firmy (edycja w <em>Pojazdy najmu → Edytuj → Firmy najmowe</em>)</p>
-                    <p><strong>Separatory:</strong> przecinek, średnik lub tab</p>
+                    <p><strong>Format 1 (wewnętrzny):</strong> vehicle_id, annual_mileage_km, contract_months, initial_payment_pct, monthly_rate_net, monthly_rate_gross</p>
+                    <p><strong>Format 2 (dostawca):</strong> car_id, term_months, mileage_yearly, monthly_cost_net (brutto = netto × 1.23)</p>
+                    <p><strong>car_id / vehicle_id:</strong> odpowiada External Vehicle ID w przypisaniu pojazdu do firmy (<em>Pojazdy najmu → Edytuj → Firmy najmowe</em>)</p>
+                    <p><strong>Separatory:</strong> przecinek, średnik lub tab (auto-detekcja)</p>
                 </div>
 
                 {importMutation.isPending && (
