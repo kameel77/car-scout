@@ -25,6 +25,7 @@ interface FinancingCalculatorProps {
     /** Current financing type from URL — drives which tab is active */
     financingType?: FinancingType;
     onFinancingTypeChange?: (type: FinancingType) => void;
+    isDuplicateHeading?: boolean;
 }
 
 /** Maps URL financing type to product category */
@@ -43,7 +44,8 @@ export function FinancingCalculator({
     mileageKm,
     offerInitialPayment,
     financingType,
-    onFinancingTypeChange
+    onFinancingTypeChange,
+    isDuplicateHeading
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
 
@@ -297,10 +299,17 @@ export function FinancingCalculator({
     return (
         <Card className="border-slate-200 shadow-none">
             <CardHeader className="pb-3 pt-4">
-                <CardTitle className="flex items-center gap-2 text-lg font-heading">
-                    <Calculator className="w-5 h-5 text-primary" />
-                    Kalkulator finansowania
-                </CardTitle>
+                {isDuplicateHeading ? (
+                    <div className="flex items-center gap-2 text-lg font-heading font-semibold leading-none tracking-tight text-foreground">
+                        <Calculator className="w-5 h-5 text-primary" />
+                        Kalkulator finansowania
+                    </div>
+                ) : (
+                    <h2 className="flex items-center gap-2 text-lg font-heading font-semibold leading-none tracking-tight text-foreground">
+                        <Calculator className="w-5 h-5 text-primary" />
+                        Kalkulator finansowania
+                    </h2>
+                )}
             </CardHeader>
             <CardContent className="space-y-4 pt-0">
                 <Tabs value={activeCategory} onValueChange={(v) => {

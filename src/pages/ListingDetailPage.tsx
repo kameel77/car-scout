@@ -493,7 +493,8 @@ export default function ListingDetailPage() {
       )}
       <Header />
 
-      <main className="container py-6">
+      <main className="container py-6 relative">
+        <h1 className="sr-only">{baseTitle}</h1>
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link to="/samochody" className="hover:text-foreground transition-colors">
@@ -515,7 +516,7 @@ export default function ListingDetailPage() {
 
             {/* Title & Price - Mobile */}
             <div className="lg:hidden">
-              <h1 className="font-heading text-2xl font-bold text-foreground">{title}</h1>
+              <div role="heading" aria-level={2} className="font-heading text-2xl font-bold text-foreground">{baseTitle}</div>
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex flex-col md:flex-row md:items-baseline md:gap-3 mt-2">
                   <span className="font-heading text-3xl font-bold text-accent">
@@ -633,22 +634,6 @@ export default function ListingDetailPage() {
               ))}
             </div>
 
-            <Separator />
-
-            <DynamicFinancingContent
-              financingType={financingType}
-              listing={{
-                listing_id: listing.listing_id,
-                make: listing.make,
-                model: listing.model,
-                production_year: listing.production_year,
-                body_type: listing.body_type,
-                fuel_type: listing.fuel_type,
-                transmission: listing.transmission,
-                engine_power_hp: listing.engine_power_hp
-              }}
-            />
-
             {/* Why Us */}
             <section className="rounded-2xl border border-border bg-card/60 p-6 shadow-card space-y-4">
               <div>
@@ -704,10 +689,10 @@ export default function ListingDetailPage() {
               <section className="space-y-3">
                 <h2 className="font-heading text-xl font-semibold">
                   {lang === 'pl' ? (
-                    financingType === 'leasing' ? `FAQ: ${listing.make} ${listing.model} w leasingu na motolia.pl` :
-                    financingType === 'kredyt' ? `FAQ: ${listing.make} ${listing.model} w kredycie na motolia.pl` :
-                    financingType === 'wynajem-dlugoterminowy' ? `FAQ: ${listing.make} ${listing.model} w wynajmie długoterminowym na motolia.pl` :
-                    `FAQ: ${listing.make} ${listing.model} na motolia.pl`
+                    financingType === 'leasing' ? `FAQ: ${listing.make} ${listing.model} w leasingu na ${window.location.hostname.replace('www.', '')}` :
+                    financingType === 'kredyt' ? `FAQ: ${listing.make} ${listing.model} w kredycie na ${window.location.hostname.replace('www.', '')}` :
+                    financingType === 'wynajem-dlugoterminowy' ? `FAQ: ${listing.make} ${listing.model} w wynajmie długoterminowym na ${window.location.hostname.replace('www.', '')}` :
+                    `FAQ: ${listing.make} ${listing.model} na ${window.location.hostname.replace('www.', '')}`
                   ) : (
                     t('nav.faq', 'FAQ')
                   )}
@@ -735,6 +720,21 @@ export default function ListingDetailPage() {
                 </div>
               </section>
             )}
+
+            <Separator />
+            <DynamicFinancingContent
+              financingType={financingType}
+              listing={{
+                listing_id: listing.listing_id,
+                make: listing.make,
+                model: listing.model,
+                production_year: listing.production_year,
+                body_type: listing.body_type,
+                fuel_type: listing.fuel_type,
+                transmission: listing.transmission,
+                engine_power_hp: listing.engine_power_hp
+              }}
+            />
           </div>
 
           {/* Sidebar */}
@@ -746,7 +746,7 @@ export default function ListingDetailPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-card rounded-xl shadow-card p-6 space-y-4"
               >
-                <h1 className="font-heading text-xl font-bold text-foreground">{title}</h1>
+                <div role="heading" aria-level={2} className="font-heading text-xl font-bold text-foreground">{baseTitle}</div>
                 <div className="flex flex-col gap-1 items-start">
                   <div className="flex items-center gap-2">
                     <span className="font-heading text-3xl font-bold text-accent">
@@ -846,8 +846,9 @@ export default function ListingDetailPage() {
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}
                     offerInitialPayment={initialPayment ?? undefined}
-                  financingType={financingType}
-                  onFinancingTypeChange={handleFinancingTypeChange}
+                    financingType={financingType}
+                    onFinancingTypeChange={handleFinancingTypeChange}
+                    isDuplicateHeading={true}
                   />
                 </motion.div>
               )}
@@ -865,6 +866,7 @@ export default function ListingDetailPage() {
                   features={ad.features}
                   overlayOpacity={ad.overlayOpacity}
                   hideUiElements={ad.hideUiElements}
+                  isDuplicateHeading={true}
                 />
               ))}
 
