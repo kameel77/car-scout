@@ -226,11 +226,34 @@ export function FinancingCalculator({
         );
     }, [offerInitialPaymentPct, selectedProduct]);
 
-    if (isLoading || products.length === 0) {
+    if (isLoading) {
+        return (
+            <Card className="border-slate-200 shadow-none min-h-[500px] flex items-center justify-center bg-card/40">
+                <div className="animate-pulse flex flex-col items-center gap-4">
+                    <Calculator className="w-8 h-8 text-muted-foreground/30" />
+                    <div className="h-4 w-40 bg-muted rounded"></div>
+                    <div className="h-3 w-24 bg-muted/50 rounded mt-2"></div>
+                </div>
+            </Card>
+        );
+    }
+
+    if (products.length === 0) {
         return null;
     }
 
-    if (!selectedProduct) return null;
+    if (!selectedProduct) {
+        // Show skeleton during the render cycle where selectedProduct is catching up to candidateProduct
+        return (
+            <Card className="border-slate-200 shadow-none min-h-[500px] flex items-center justify-center bg-card/40">
+                <div className="animate-pulse flex flex-col items-center gap-4">
+                    <Calculator className="w-8 h-8 text-muted-foreground/30" />
+                    <div className="h-4 w-40 bg-muted rounded"></div>
+                    <div className="h-3 w-24 bg-muted/50 rounded mt-2"></div>
+                </div>
+            </Card>
+        );
+    }
 
     // Calculation Logic (Simplified Leasing/Credit approximation)
     // Monthly Installment = (Capital + TotalInterest) / Months

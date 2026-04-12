@@ -60,8 +60,11 @@ export default function ListingDetailPage() {
   const { user, token } = useAuth();
   const canManage = user?.role === 'admin' || user?.role === 'manager';
 
+  const financingType = getFinancingTypeFromPath(location.pathname);
+
   // Use slug if available (new URL format), otherwise fall back to id (legacy format)
   const listingIdentifier = slug || id;
+
   const { data, isLoading } = useListing(listingIdentifier);
   const { data: adsData } = usePartnerAds('DETAIL_SIDEBAR', 'offers');
   const sidebarAds = adsData?.ads || [];
@@ -95,8 +98,12 @@ export default function ListingDetailPage() {
   const autoRefreshTriggered = React.useRef(false);
 
   const { data: faqData } = useQuery({
-    queryKey: ['faq', 'offers'],
-    queryFn: () => faqApi.list({ page: 'offers', pageContext: 'offers' }),
+    queryKey: ['faq', 'offers', financingType],
+    queryFn: () => faqApi.list({ 
+      page: 'offers', 
+      pageContext: 'offers', 
+      financingType: financingType !== 'gotowka' ? financingType : undefined 
+    }),
     staleTime: 5 * 60 * 1000
   });
 
@@ -278,14 +285,14 @@ export default function ListingDetailPage() {
     );
   }
 
-  const title = `${listing.make} ${listing.model} ${listing.version}`;
+  const baseTitle = `${listing.make} ${listing.model} ${listing.version}`;
+  const financingSeoLabel = getFinancingSeoLabel(financingType, i18n.language);   // full: "Kredyt samochodowy"
+  const title = financingType !== 'gotowka' && financingSeoLabel ? `${financingSeoLabel}: ${baseTitle}` : baseTitle;
   const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
   const formattedPrice = formatPrice(discountedListingPrice, settings?.displayCurrency || 'PLN');
 
   // Financing type detection from URL
-  const financingType = getFinancingTypeFromPath(location.pathname);
   const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
-  const financingSeoLabel = getFinancingSeoLabel(financingType, i18n.language);   // full: "Kredyt samochodowy"
 
   // Self-canonical: each financing variant (/kredyt/, /leasing/, /oferta/) is its own canonical
   // All 3 variants are in the sitemap — Google should index each as a distinct page
@@ -355,10 +362,11 @@ export default function ListingDetailPage() {
   );
   const metaDesc = financingMetaDesc || defaultMetaDesc;
 
-  // Prepare Schema.org Car
+  // Prepare Schema.org JSON-LD
   const siteUrl = window.location.origin;
-  const schema = listing ? {
-    "@context": "https://schema.org/",
+  const canonicalFullUrl = `${siteUrl}${canonicalPath}`;
+
+  const baseProductSchema = listing ? {
     "@type": "Car",
     "name": title,
     "image": listing.primary_image_url || listing.image_urls?.[0],
@@ -380,13 +388,36 @@ export default function ListingDetailPage() {
     },
     "offers": {
       "@type": "Offer",
-      "url": `${siteUrl}${canonicalPath}`,
+      "url": canonicalFullUrl,
       "priceCurrency": "PLN",
       "price": discountedListingPrice,
       "itemCondition": "https://schema.org/UsedCondition",
       "availability": "https://schema.org/InStock"
     }
   } : undefined;
+
+  let schema: any = undefined;
+  if (baseProductSchema) {
+    if (financingType !== 'gotowka') {
+      const financialProduct = {
+        "@type": "FinancialProduct",
+        "@id": `${canonicalFullUrl}#financing`,
+        "name": financingSeoLabel ? `${financingSeoLabel} na ${listing.make} ${listing.model}` : title,
+        "description": metaDesc,
+        "feesAndCommissionsSpecification": "Wpłata własna od 0%", 
+        "url": canonicalFullUrl
+      };
+      schema = {
+        "@context": "https://schema.org/",
+        "@graph": [baseProductSchema, financialProduct]
+      };
+    } else {
+      schema = {
+        "@context": "https://schema.org/",
+        ...baseProductSchema
+      };
+    }
+  }
 
   // BreadcrumbList JSON-LD — uses FULL SEO labels for bots (not the short UI form)
   const breadcrumbSchema = listing ? {
@@ -590,6 +621,7 @@ export default function ListingDetailPage() {
             <DynamicFinancingContent
               financingType={financingType}
               listing={{
+                listing_id: listing.listing_id,
                 make: listing.make,
                 model: listing.model,
                 production_year: listing.production_year,

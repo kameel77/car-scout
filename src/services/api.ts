@@ -106,10 +106,11 @@ export const crmTrackingApi = {
 
 // FAQ API
 export const faqApi = {
-    list: async (params: { page?: string; pageContext?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {
+    list: async (params: { page?: string; pageContext?: string; financingType?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {
         const queryParams = new URLSearchParams();
         if (params.page) queryParams.append('page', params.page);
         if (params.pageContext) queryParams.append('pageContext', params.pageContext);
+        if (params.financingType) queryParams.append('financingType', params.financingType);
 
         const response = await fetch(`${API_BASE_URL}/api/faq?${queryParams.toString()}`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : undefined

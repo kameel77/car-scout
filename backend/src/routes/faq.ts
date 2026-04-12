@@ -8,6 +8,7 @@ type FaqPayload = {
     id?: string;
     page: (typeof PAGE_OPTIONS)[number];
     pageContext?: (typeof PAGE_CONTEXT_OPTIONS)[number];
+    financingType?: string;
     sortOrder?: number;
     questionPl?: string;
     answerPl?: string;
@@ -40,6 +41,17 @@ export async function faqRoutes(fastify: FastifyInstance) {
         if (pageContext && PAGE_CONTEXT_OPTIONS.includes(pageContext as any)) {
             where.pageContext = { in: ['all', pageContext] };
         }
+
+        // Filter by financingType if provided
+        const { financingType } = request.query as { financingType?: string };
+        if (financingType) {
+            where.OR = [
+                { financingType },
+                { financingType: null },
+                { financingType: 'all' }
+            ];
+        }
+
         // Only admins/managers can see unpublished entries
         if (role !== 'admin' && role !== 'manager') {
             where.isPublished = true;
@@ -87,6 +99,7 @@ export async function faqRoutes(fastify: FastifyInstance) {
         const data = {
             page: payload.page,
             pageContext: PAGE_CONTEXT_OPTIONS.includes(payload.pageContext as any) ? payload.pageContext! : 'all',
+            financingType: payload.financingType || null,
             sortOrder: payload.sortOrder ?? 0,
             questionPl: payload.questionPl?.trim() || '',
             answerPl: payload.answerPl?.trim() || '',

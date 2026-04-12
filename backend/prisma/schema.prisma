@@ -284,19 +284,20 @@ model Translation {
 }
 
 model FaqEntry {
-  id          String   @id @default(cuid())
-  page        FaqPage
-  pageContext String   @default("all") @map("page_context")
-  sortOrder   Int      @default(0) @map("sort_order")
-  questionPl  String   @map("question_pl")
-  answerPl    String   @map("answer_pl")
-  questionEn  String   @map("question_en")
-  answerEn    String   @map("answer_en")
-  questionDe  String   @map("question_de")
-  answerDe    String   @map("answer_de")
-  isPublished Boolean  @default(true) @map("is_published")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  page           FaqPage
+  pageContext    String   @default("all") @map("page_context")
+  financingType  String?  @map("financing_type")
+  sortOrder      Int      @default(0) @map("sort_order")
+  questionPl     String   @map("question_pl")
+  answerPl       String   @map("answer_pl")
+  questionEn     String   @map("question_en")
+  answerEn       String   @map("answer_en")
+  questionDe     String   @map("question_de")
+  answerDe       String   @map("answer_de")
+  isPublished    Boolean  @default(true) @map("is_published")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@index([page, sortOrder])
   @@map("faq_entries")

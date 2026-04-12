@@ -1,11 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Building2, PiggyBank, Wrench, ShieldCheck, Car, Calculator, User, Key, Banknote, Calendar, ClipboardCheck, TrendingUp, Shield } from 'lucide-react';
-import type { FinancingType } from '@/utils/url-utils';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { type FinancingType, getListingUrlPath } from '@/utils/url-utils';
 
 export interface DynamicFinancingContentProps {
   financingType: FinancingType;
   listing: {
+    listing_id: string;
     make: string;
     model: string;
     production_year: number;
@@ -156,6 +159,21 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           </div>
         </div>
       </div>
+      </div>
+
+      <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex-1">
+          <h4 className="font-semibold text-primary">{t('financing.leasing.crosslink.title', 'Szukasz pojazdu na własność?')}</h4>
+          <p className="text-sm text-foreground/80 mt-1">
+            {t('financing.leasing.crosslink.desc', 'Jeśli wolisz, aby auto było wpisane do dowodu jako Twoja własność od pierwszego dnia i nie zależy Ci na optymalizacji VAT, sprawdź ofertę kredytu.')}
+          </p>
+        </div>
+        <Button asChild variant="outline" className="shrink-0 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground">
+          <Link to={getListingUrlPath({ ...listing, id: listing.listing_id, version: '' } as any, 'kredyt')}>
+            {t('financing.leasing.crosslink.button', 'Zobacz ten model w kredycie')}
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 
@@ -269,6 +287,21 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             </p>
           </div>
         </div>
+      </div>
+      </div>
+
+      <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex-1">
+          <h4 className="font-semibold text-primary">{t('financing.kredyt.crosslink.title', 'Zoptymalizuj koszty w firmie')}</h4>
+          <p className="text-sm text-foreground/80 mt-1">
+            {t('financing.kredyt.crosslink.desc', 'Jeśli zależy Ci jednak na optymalizacji kosztów VAT dla Twojej firmy i wpisaniu raty w 100% w koszty uzyskania przychodu, lepszym wariantem na to auto będzie leasing.')}
+          </p>
+        </div>
+        <Button asChild variant="outline" className="shrink-0 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground">
+          <Link to={getListingUrlPath({ ...listing, id: listing.listing_id, version: '' } as any, 'leasing')}>
+            {t('financing.kredyt.crosslink.button', 'Sprawdź ten model w leasingu')}
+          </Link>
+        </Button>
       </div>
     </div>
   );
@@ -386,6 +419,21 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             </p>
           </div>
         </div>
+      </div>
+      </div>
+
+      <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex-1">
+          <h4 className="font-semibold text-primary">{t('financing.wynajem.crosslink.title', 'Wolisz spłacać na własność?')}</h4>
+          <p className="text-sm text-foreground/80 mt-1">
+            {t('financing.wynajem.crosslink.desc', 'Jeśli zamiast modelu stałej "opłaty abonamentowej" wolisz sukcesywnie spłacać wartość kapitałową tego modelu by w przyszłości przejąć go na własność, najlepszym wariantem będzie standardowy leasing.')}
+          </p>
+        </div>
+        <Button asChild variant="outline" className="shrink-0 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground">
+          <Link to={getListingUrlPath({ ...listing, id: listing.listing_id, version: '' } as any, 'leasing')}>
+            {t('financing.wynajem.crosslink.button', 'Poznaj leasing tego pojazdu')}
+          </Link>
+        </Button>
       </div>
     </div>
   );
