@@ -398,6 +398,8 @@ export default function ListingDetailPage() {
 
   let schema: any = undefined;
   if (baseProductSchema) {
+    const graph: any[] = [baseProductSchema];
+    
     if (financingType !== 'gotowka') {
       const financialProduct = {
         "@type": "FinancialProduct",
@@ -407,18 +409,33 @@ export default function ListingDetailPage() {
         "feesAndCommissionsSpecification": "Wpłata własna od 0%", 
         "url": canonicalFullUrl
       };
-      schema = {
-        "@context": "https://schema.org/",
-        "@graph": [baseProductSchema, financialProduct]
-      };
-    } else {
-      schema = {
-        "@context": "https://schema.org/",
-        ...baseProductSchema
-      };
+      graph.push(financialProduct);
     }
-  }
+    
+    if (faqs.length > 0) {
+      const faqSchema = {
+        "@type": "FAQPage",
+        "@id": `${canonicalFullUrl}#faq`,
+        "mainEntity": faqs.map(faq => {
+          const { question, answer } = getLocalizedQA(faq);
+          return {
+            "@type": "Question",
+            "name": question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": answer // In production, we might need to strip markdown tags if strict plain-text is required, but markdown strings are generally acceptable
+            }
+          };
+        })
+      };
+      graph.push(faqSchema);
+    }
 
+    schema = {
+      "@context": "https://schema.org/",
+      "@graph": graph
+    };
+  }
   // BreadcrumbList JSON-LD — uses FULL SEO labels for bots (not the short UI form)
   const breadcrumbSchema = listing ? {
     "@context": "https://schema.org",
@@ -685,7 +702,16 @@ export default function ListingDetailPage() {
             {/* FAQ */}
             {faqs.length > 0 && (
               <section className="space-y-3">
-                <h2 className="font-heading text-xl font-semibold">{t('nav.faq', 'FAQ')}</h2>
+                <h2 className="font-heading text-xl font-semibold">
+                  {lang === 'pl' ? (
+                    financingType === 'leasing' ? `FAQ: ${listing.make} ${listing.model} w leasingu na motolia.pl` :
+                    financingType === 'kredyt' ? `FAQ: ${listing.make} ${listing.model} w kredycie na motolia.pl` :
+                    financingType === 'wynajem-dlugoterminowy' ? `FAQ: ${listing.make} ${listing.model} w wynajmie długoterminowym na motolia.pl` :
+                    `FAQ: ${listing.make} ${listing.model} na motolia.pl`
+                  ) : (
+                    t('nav.faq', 'FAQ')
+                  )}
+                </h2>
                 <div className="space-y-3">
                   <Accordion type="multiple" className="w-full space-y-3">
                     {faqs.map((faq) => {
