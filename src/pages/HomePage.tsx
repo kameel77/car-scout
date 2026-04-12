@@ -19,11 +19,13 @@ import { useQuery } from '@tanstack/react-query';
 import { faqApi } from '@/services/api';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
+import { useBrand } from '@/contexts/BrandContext';
 import './home-page.css';
 
 
 
 export default function HomePage() {
+  const { config } = useBrand();
   const [openFaq, setOpenFaq] = React.useState<number | null>(0);
   const { i18n } = useTranslation();
 
@@ -91,30 +93,29 @@ export default function HomePage() {
       <section className="home-hero">
         <div className="home-hero__inner">
           <div>
-            <div className="home-hero__badge">Nowy sposób na zakup auta</div>
-            <h1>Twoje nowe auto<br />jest <span>bliżej</span> niż myślisz</h1>
+            <div className="home-hero__badge">{config.homePage.hero.badge}</div>
+            <h1 dangerouslySetInnerHTML={{ __html: config.homePage.hero.title }} />
             <p className="home-hero__sub">
-              Samochody nowe i używane od sprawdzonych dealerów. Pomożemy Ci wybrać,
-              sfinansować i kupić auto — bez zbędnych formalności.
+              {config.homePage.hero.subtitle}
             </p>
             <div className="home-hero__actions">
-              <Link to="/samochody" className="home-btn-primary">Znajdź auto</Link>
+              <Link to="/samochody" className="home-btn-primary">{config.homePage.hero.ctaLabel}</Link>
             </div>
             <div className="home-hero__trust">
-              <span><CheckCircle2 size={16} /> Bez ukrytych kosztów</span>
-              <span><CheckCircle2 size={16} /> Gwarancja na każde auto</span>
-              <span><CheckCircle2 size={16} /> Oddzwonimy w 15 min</span>
+              {config.homePage.hero.trustBadges.map((badge, idx) => (
+                <span key={idx}><CheckCircle2 size={16} /> {badge}</span>
+              ))}
             </div>
           </div>
           <div className="home-hero__visual">
-            <img src="https://krqwvegfxnlwdhgjuflh.supabase.co/storage/v1/object/public/public-img/car-salon-hero.jpg" alt="CarSalon - auta" />
+            <img src={config.homePage.hero.image} alt={`${config.name} - auta`} />
             <div className="home-hero__stat home-hero__stat--left">
-              <strong>500+</strong>
-              <small>aut w ofercie</small>
+              <strong>{config.homePage.hero.stats[0].value}</strong>
+              <small>{config.homePage.hero.stats[0].label}</small>
             </div>
             <div className="home-hero__stat home-hero__stat--right">
-              <strong>98%</strong>
-              <small>zadowolonych klientów</small>
+              <strong>{config.homePage.hero.stats[1].value}</strong>
+              <small>{config.homePage.hero.stats[1].label}</small>
             </div>
           </div>
         </div>
@@ -122,32 +123,34 @@ export default function HomePage() {
 
       <section className="home-trust-bar home-reveal">
         <div className="home-trust-bar__inner">
-          <div><span className="icon-box"><Shield size={20} /></span>Sprawdzeni dealerzy</div>
-          <div><span className="icon-box"><CreditCard size={20} /></span>Elastyczne finansowanie</div>
-          <div><span className="icon-box"><FileText size={20} /></span>Gwarancja na każde auto</div>
-          <div><span className="icon-box"><Phone size={20} /></span>Osobisty konsultant</div>
+          {config.homePage.trustBar.map((item, idx) => (
+            <div key={idx}>
+              <span className="icon-box">
+                {item.icon === 'Shield' && <Shield size={20} />}
+                {item.icon === 'CreditCard' && <CreditCard size={20} />}
+                {item.icon === 'FileText' && <FileText size={20} />}
+                {item.icon === 'Phone' && <Phone size={20} />}
+              </span>
+              {item.label}
+            </div>
+          ))}
         </div>
       </section>
 
       <section className="home-section" id="jak-to-dziala">
         <div className="home-section__header home-reveal">
-          <span className="home-section__tag">Prosty proces</span>
-          <h2>Jak <span>kupić auto</span> z CarSalon?</h2>
-          <p>Cały proces zakupu trwa kilka dni. Ty wybierasz - my załatwiamy formalności.</p>
+          <span className="home-section__tag">{config.homePage.steps.tag}</span>
+          <h2 dangerouslySetInnerHTML={{ __html: config.homePage.steps.title }} />
+          <p>{config.homePage.steps.subtitle}</p>
         </div>
         <div className="home-steps-grid">
-          {[
-            ['1', 'Zostaw kontakt', 'Podaj numer telefonu, a konsultant oddzwoni i pozna Twoje potrzeby.'],
-            ['2', 'Dopasujemy ofertę', 'Wybierzemy auta od sprawdzonych dealerów dopasowane do Ciebie.'],
-            ['3', 'Dobierzemy finansowanie', 'Leasing, kredyt lub wynajem - dobierzemy najlepszą opcję.'],
-            ['4', 'Odbierz kluczyki', 'Formalności ogarniamy za Ciebie, Ty odbierasz gotowe auto.'],
-          ].map(([step, title, desc]) => (
-            <article key={step} className="home-step-card home-reveal">
+          {config.homePage.steps.items.map((item, index) => (
+            <article key={index} className="home-step-card home-reveal">
               <div className="home-step-card__header">
-                <div className="home-step-card__number">{step}</div>
-                <h3>{title}</h3>
+                <div className="home-step-card__number">{index + 1}</div>
+                <h3>{item.title}</h3>
               </div>
-              <p>{desc}</p>
+              <p>{item.description}</p>
             </article>
           ))}
         </div>

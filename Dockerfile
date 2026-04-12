@@ -12,7 +12,9 @@ COPY . .
 
 # Build arguments for frontend env vars
 ARG VITE_API_URL
+ARG VITE_BRAND=carsalon
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_BRAND=$VITE_BRAND
 
 # Build application
 RUN npm run build

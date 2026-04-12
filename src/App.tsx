@@ -9,6 +9,7 @@ import { SpecialOfferProvider } from "@/contexts/SpecialOfferContext";
 import { CrmTrackingProvider } from "@/contexts/CrmTrackingContext";
 import { PersonalOfferProvider } from "@/contexts/PersonalOfferContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { BrandProvider } from "@/contexts/BrandContext";
 import SearchPage from "./pages/SearchPage";
 import ListingDetailPage from "./pages/ListingDetailPage";
 import LeadFormPage from "./pages/LeadFormPage";
@@ -54,14 +55,15 @@ const App = () => (
       <AuthProvider>
         <PriceSettingsProvider>
           <TooltipProvider>
-            <SeoManager />
-            <DynamicTranslationsLoader />
-            <LanguageSync />
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <SpecialOfferProvider>
-                <CrmTrackingProvider>
+            <BrandProvider>
+              <SeoManager />
+              <DynamicTranslationsLoader />
+              <LanguageSync />
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <SpecialOfferProvider>
+                  <CrmTrackingProvider>
                   <PersonalOfferProvider>
                     <Routes>
                       {/* Public routes */}
@@ -226,8 +228,9 @@ const App = () => (
                 </CrmTrackingProvider>
               </SpecialOfferProvider>
             </BrowserRouter>
-          </TooltipProvider>
-        </PriceSettingsProvider>
+          </BrandProvider>
+        </TooltipProvider>
+      </PriceSettingsProvider>
       </AuthProvider>
     </QueryClientProvider>
   </HelmetProvider>
