@@ -5,6 +5,7 @@ export interface FaqEntry {
   id: string;
   page: FaqPage;
   pageContext: FaqPageContext;
+  financingType?: string | null;
   sortOrder: number;
   questionPl: string;
   answerPl: string;
@@ -19,6 +20,7 @@ export interface FaqEntry {
 
 export type FaqPayload = Partial<FaqEntry> & {
   page: FaqPage;
+  financingType?: string | null;
   questionPl: string;
   answerPl: string;
   questionEn: string;

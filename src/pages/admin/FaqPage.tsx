@@ -31,9 +31,18 @@ const PAGE_CONTEXT_OPTIONS: { value: FaqPageContext; label: string }[] = [
   { value: 'rental', label: 'Najem' },
 ];
 
+const FINANCING_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all', label: 'Wszystkie' },
+  { value: 'kredyt', label: 'Kredyt' },
+  { value: 'leasing', label: 'Leasing' },
+  { value: 'wynajem', label: 'Wynajem' },
+  { value: 'gotowka', label: 'Gotówka' }
+];
+
 const EMPTY_FORM: FaqPayload = {
   page: 'home',
   pageContext: 'all',
+  financingType: 'all',
   sortOrder: 0,
   questionPl: '',
   answerPl: '',
@@ -128,6 +137,7 @@ export default function FaqPage() {
     setFormState({
       page: entry.page,
       pageContext: entry.pageContext || 'all',
+      financingType: entry.financingType || 'all',
       sortOrder: entry.sortOrder,
       questionPl: entry.questionPl,
       answerPl: entry.answerPl,
@@ -206,7 +216,7 @@ export default function FaqPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-2">
                   <Label>Strona</Label>
                   <Select
@@ -240,6 +250,26 @@ export default function FaqPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {PAGE_CONTEXT_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Finansowanie</Label>
+                  <Select
+                    value={formState.financingType || 'all'}
+                    onValueChange={(value) =>
+                      setFormState((prev) => ({ ...prev, financingType: value }))
+                    }
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Finansowanie" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FINANCING_TYPE_OPTIONS.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
                         </SelectItem>
@@ -409,6 +439,7 @@ export default function FaqPage() {
                   <TableRow>
                     <TableHead className="w-28">Strona</TableHead>
                     <TableHead className="w-24">Kontekst</TableHead>
+                    <TableHead className="w-32">Finansowanie</TableHead>
                     <TableHead>Pytanie (PL)</TableHead>
                     <TableHead>Pytanie (EN)</TableHead>
                     <TableHead>Pytanie (DE)</TableHead>
@@ -419,7 +450,7 @@ export default function FaqPage() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6">
+                      <TableCell colSpan={8} className="text-center py-6">
                         <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
                           <RefreshCw className="w-4 h-4 animate-spin" />
                           Ładowanie FAQ...
@@ -428,7 +459,7 @@ export default function FaqPage() {
                     </TableRow>
                   ) : entries.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6 text-slate-500">
+                      <TableCell colSpan={8} className="text-center py-6 text-slate-500">
                         Brak wpisów FAQ dla wybranej strony.
                       </TableCell>
                     </TableRow>
@@ -452,6 +483,17 @@ export default function FaqPage() {
                             entry.pageContext === 'all' && 'bg-gray-50 text-gray-600'
                           )}>
                             {PAGE_CONTEXT_OPTIONS.find(o => o.value === entry.pageContext)?.label || 'Wszystkie'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn(
+                            entry.financingType === 'kredyt' && 'bg-purple-50 text-purple-700 border-purple-200',
+                            entry.financingType === 'leasing' && 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                            entry.financingType === 'wynajem' && 'bg-pink-50 text-pink-700 border-pink-200',
+                            entry.financingType === 'gotowka' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                            (!entry.financingType || entry.financingType === 'all') && 'bg-gray-50 text-gray-600'
+                          )}>
+                            {FINANCING_TYPE_OPTIONS.find(o => o.value === entry.financingType)?.label || 'Wszystkie'}
                           </Badge>
                         </TableCell>
                         <TableCell className="max-w-[160px] truncate font-medium">
