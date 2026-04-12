@@ -228,3 +228,103 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - System przechowuje informację o źródle w polu `importSource` dla każdego pojazdu w bazie.
   - Zastępowanie trybem aktualizacji (Replace): System wyszukuje istniejące oferty do zarchiwizowania tylko w ramach aktualnie wybranego źródła (chroniąc pojazdy innych źródeł przed zniknięciem).
   - Weryfikacja duplikatów: Kod zapobiega nadpisywaniu się ofert, gdy system rozpoznaje ten sam `vin` należący do innego `importSource`. W takiej sytuacji ignoruje dany pojazd, chroniąc integralność bazy danych. Taki odrzucony rekord będzie zaliczony jako pominięty (Pominięte błędy/duplikaty) w wynikach importu.
+
+## 13. Zarządzanie zdjęciami i specyfikacją pojazdów najmu (refaktor)
+- **Cel**: naprawienie błędu, w którym zdjęcia/specyfikacja dodane do pojazdu najmu nie były zapisywane po kliknięciu „Zapisz" i odświeżeniu strony.
+- **Przyczyna**: formularz edycji pojazdu przechowywał `primaryImageUrl`, `imageUrls` i `specificationUrl` w lokalnym stanie formularza. Przy zapisie te stale (nieaktualne) wartości nadpisywały świeżo wgrane dane z dedykowanych sekcji upload.
+- **Rozwiązanie**:
+  - Zdjęcia i specyfikacja są teraz zarządzane **wyłącznie** przez dedykowane sekcje (`ImageSection`, `SpecificationSection`), które pojawiają się po zapisaniu pojazdu.
+  - Formularz edycji **nie wysyła** pól `primaryImageUrl`, `imageUrls` ani `specificationUrl` — eliminuje to wyścig danych (race condition).
+  - Każda zmiana (upload pliku, dodanie URL, usunięcie, zmiana kolejności) jest natychmiast zapisywana do bazy (bez konieczności klikania „Zapisz" w formularzu).
+- **Nowe możliwości**:
+  - **Dodawanie zdjęć po URL**: w sekcji zdjęć dostępne jest pole do wklejenia URL zewnętrznego zdjęcia (natychmiastowy zapis).
+  - **Dodawanie specyfikacji po URL**: w sekcji specyfikacji dostępne jest pole do wklejenia URL (natychmiastowy zapis) lub upload PDF.
+  - **Usuwanie specyfikacji**: przycisk X przy aktualnym linku specyfikacji.
+  - Przy tworzeniu nowego pojazdu wyświetlany jest komunikat, że zdjęcia i specyfikację można dodać po zapisaniu pojazdu.
+
+### Refaktor UI edycji pojazdu (v2)
+- **Buttony Zapisz / Anuluj**: przeniesione na sam dół strony edycyjnej (po sekcjach zdjęć, specyfikacji i przypisań). Formularz używa wzorca `formId` — buttony mają `form="edit-vehicle-form"`.
+- **Styled upload buttons**: natywne `<input type="file">` zastąpione ukrytym inputem + przyciskiem `<Button>` z ikoną Upload. Etykiety: "Dodaj plik" (specyfikacja PDF), "Dodaj zdjęcia" (galeria).
+
+### Wyposażenie — pełna ekspozycja
+- Strona publiczna `/najem/:slug` wyświetla **4 kategorie** wyposażenia z ikonami: Audio i Multimedia (🎵), Bezpieczeństwo (🛡️), Komfort i Dodatki (🛋️), Inne (📦).
+
+### Kalkulator najmu — lepsze pozycjonowanie
+- Kalkulator jest teraz `sticky` z `top-20` (wyrównanie pod navbar) i `max-h + overflow-y-auto` aby nie wychodził poza viewport.
+
+### Typ oferty — firma / prywatnie
+- Nowe pole `offerType` w modelu `RentalMatrixEntry` (wartości: `"business"`, `"consumer"`, `"all"`; domyślnie `"all"`).
+- CSV import obsługuje opcjonalną kolumnę `offer_type` — jeśli pusta, przyjmuje `"all"`.
+- Kalkulator publiczny zawiera toggle „Na firmę / Prywatnie":
+  - Jeśli pojazd ma only `"business"` → przycisk „Prywatnie" wyszarzony.
+  - Jeśli only `"consumer"` → przycisk „Na firmę" wyszarzony.
+  - Jeśli `"all"` → oba aktywne.
+- Backend filtruje wyniki kalkulatora po `offerType` (pasują zarówno dokładne trafienia, jak i `"all"`).
+
+### Widoczność nazwy firmy
+- Nazwa firmy rental w wynikach kalkulatora jest widoczna **wyłącznie dla zalogowanych użytkowników** (admin, manager). Visitor widzi anonimowe "Firma #N".
+
+### Galeria pełnoekranowa (Lightbox)
+- Po kliknięciu w główne zdjęcie pojazdu na stronie `/najem/:slug` otwiera się pełnoekranowa galeria.
+- Nawigacja: strzałki ← → (klawiatura), przyciski na ekranie, kliknięcie w miniaturę na pasku dolnym.
+- Zamknięcie: Escape / kliknięcie w tło / przycisk X.
+- Automatycznie blokuje scroll body gdy galeria jest otwarta.
+- Hover na główne zdjęcie wyświetla ikonę powiększenia i licznik zdjęć (np. „3/12").
+
+### Formularz zapytania o najem (Zapytaj o ofertę)
+- Nowa strona `/najem/:slug/zapytanie` — formularz leadowy dedykowany dla najmu.
+- Wzorowany na `LeadFormPage` (kredyt/leasing) z zachowaniem spójnego UX.
+- Dane z kalkulatora (firma, rata, przebieg, okres, wpłata) przekazywane przez `location.state` i automatycznie wstępnie wypełniają treść wiadomości.
+- Sidebar z podsumowaniem oferty (zdjęcie, specyfikacja, konfiguracja kalkulatora).
+- Walidacja: zod schema, zgody RODO wymagane.
+- Backend: `POST /api/leads/rental` (istniejący endpoint) — tworzy lead typu `rental` z powiązanym pojazdem.
+- Frontend API client: `leadsApi.submitRentalLead(...)`.
+- Po wysłaniu: ekran sukcesu z numerem referencyjnym.
+
+### Zaokrąglanie rat do pełnych złotych
+- Wszystkie raty miesięczne (netto i brutto) wyświetlane na listingu `/najem` oraz w kalkulatorze są zaokrąglane **w górę** do pełnych złotych (`Math.ceil`).
+- Zaokrąglanie odbywa się po stronie backendu (`rental-public.ts`) — zarówno na listingu (`minRate`) jak i w kalkulatorze (`/calculate`).
+
+### Globalny wybór typu klienta (firma / prywatnie)
+- Na listingu `/najem` w pasku filtrów dostępny jest toggle „Na firmę / Prywatnie".
+- Wybór jest zapisywany w `localStorage('rentalClientType')` — persystuje między stronami.
+- **Na firmę** → cena główna **netto**, pod spodem brutto (mniejsza czcionka).
+- **Prywatnie** → cena główna **brutto**, pod spodem netto (mniejsza czcionka).
+- Strona detalu `/najem/:slug` wczytuje `rentalClientType` z localStorage jako domyślny tryb kalkulatora.
+- Zmiana trybu na kalkulatorze synchronizuje się zwrotnie do `localStorage`.
+- Ikony: `Building2` (firma) i `User` (prywatnie) z lucide-react — spójne ze stylem reszty serwisu.
+
+### Polskie etykiety usług w kalkulatorze
+- Usługi wyświetlane na kartach ofert kalkulatora mają polskie nazwy: `insurance` → Ubezpieczenie, `tires` → Opony, `service` → Przeglądy techniczne, `other` → Assistance 24h.
+
+### Cena katalogowa w nagłówku
+- Cena katalogowa (przekreślona) i cena sprzedaży zostały przeniesione do nagłówka obok tytułu pojazdu (po prawej stronie), zamiast osobnej sekcji pod specyfikacjami.
+
+### Wyposażenie — zwijane sekcje (collapsible)
+- Kategorie wyposażenia na stronie `/najem/:slug` są teraz wyświetlane jako elementy `<details>` (rozwijane/zwijane).
+- Każda kategoria pokazuje liczbę elementów w nawiasie, np. „Audio i Multimedia (12)".
+- Domyślnie złożone — użytkownik rozwija je kliknięciem. Eliminuje to problem zbyt długich list (np. 20+ pozycji) które przytłaczały stronę.
+- Elementy wyposażenia wyświetlane w kolumnie (zamiast 2-kolumnowej siatki) z lepszym paddingiem i wyrównaniem.
+
+### Stabilizacja kalkulatora (placeholderData)
+- Zmiana parametrów w kalkulatorze (przebieg, okres, wpłata) nie powoduje przeładowania całego kontenera oferty.
+- TanStack Query używa `placeholderData: (prev) => prev` — stare wyniki pozostają widoczne podczas ładowania nowych, aktualizowane są jedynie wartości rat i zakres usług.
+
+## 25. FAQ i reklamy — placementy i kontekst stron
+
+### FAQ placement „Strona najmu"
+- W admin panelu FAQ dodano nową opcję strony: **Strona najmu** (`rental`).
+- Wpisy FAQ przypisane do strony „Strona najmu" są wyświetlane wyłącznie na stronach ofert najmu (`/najem/:slug`).
+- Na stronie oferty najmu FAQ renderowane jest jako Accordion pod główną treścią.
+
+### Reklamy — placement „Pod wyposażeniem" (DETAIL_BELOW_EQUIPMENT)
+- Nowy placement reklam wyświetlany w sekcji głównej oferty, bezpośrednio pod wyposażeniem.
+- Dostępny zarówno na stronach ofert (ListingDetailPage), jak i na stronach najmu (RentalDetailPage).
+- Wykorzystuje komponent `PartnerSidebarAd` z pełnym wsparciem i18n.
+
+### Kontekst stron (pageContext)
+- Nowe pole `pageContext` na obu modelach: **FaqEntry** i **PartnerAd**.
+- Dostępne wartości: `offers` (sprzedaż — samochody nowe/używane), `rental` (najem), `all` (wszystkie).
+- Domyślna wartość: `all` — istniejące wpisy bez zmian, wyświetlają się na wszystkich typach ofert.
+- Admin UI: dodano select „Kontekst stron" w formularzach FAQ i Reklam z kolorowymi badge'ami na liście.
+- Filtrowanie: backend filtruje `WHERE pageContext IN ('all', <requested>)`, frontend wysyła odpowiedni kontekst (`offers` / `rental`).

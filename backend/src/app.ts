@@ -112,6 +112,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
     const fastify = Fastify({
         bodyLimit: 500 * 1024 * 1024,
+        maxParamLength: 500,
         logger: {
             level: process.env.NODE_ENV === 'production' ? 'info' : 'debug'
         }

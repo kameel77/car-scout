@@ -106,9 +106,11 @@ export const crmTrackingApi = {
 
 // FAQ API
 export const faqApi = {
-    list: async (params: { page?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {
+    list: async (params: { page?: string; pageContext?: string; financingType?: string }, token?: string): Promise<{ entries: FaqEntry[] }> => {
         const queryParams = new URLSearchParams();
         if (params.page) queryParams.append('page', params.page);
+        if (params.pageContext) queryParams.append('pageContext', params.pageContext);
+        if (params.financingType) queryParams.append('financingType', params.financingType);
 
         const response = await fetch(`${API_BASE_URL}/api/faq?${queryParams.toString()}`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
@@ -734,6 +736,35 @@ export const leadsApi = {
         }
 
         return response.json();
+    },
+
+    submitRentalLead: async (data: {
+        rentalVehicleId: string;
+        name: string;
+        email: string;
+        phone?: string;
+        preferredContact: 'email' | 'phone';
+        message: string;
+        consentMarketing: boolean;
+        consentPrivacy: boolean;
+        rentalCompanyName?: string;
+        rentalAnnualMileageKm?: number;
+        rentalContractMonths?: number;
+        rentalInitialPaymentPct?: number;
+        rentalMonthlyRate?: number;
+    }) => {
+        const response = await fetch(`${API_BASE_URL}/api/leads/rental`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to submit rental lead');
+        }
+
+        return response.json();
     }
 };
 
@@ -949,9 +980,10 @@ export const seoApi = {
 
 // Partner Ads API
 export const partnerAdsApi = {
-    list: async (placement?: string): Promise<{ ads: PartnerAd[] }> => {
+    list: async (placement?: string, pageContext?: string): Promise<{ ads: PartnerAd[] }> => {
         const params = new URLSearchParams();
         if (placement) params.append('placement', placement);
+        if (pageContext) params.append('pageContext', pageContext);
 
         const response = await fetch(`${API_BASE_URL}/api/partner-ads?${params}`);
         if (!response.ok) {

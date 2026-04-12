@@ -16,6 +16,7 @@ interface PartnerSidebarAdProps {
     hideUiElements?: boolean;
     overlayOpacity?: number;
     className?: string;
+    isDuplicateHeading?: boolean;
 }
 
 export function PartnerSidebarAd({
@@ -28,7 +29,8 @@ export function PartnerSidebarAd({
     brandName,
     hideUiElements = false,
     overlayOpacity = 0.9,
-    className
+    className,
+    isDuplicateHeading
 }: PartnerSidebarAdProps) {
     const { t } = useTranslation();
     return (
@@ -72,9 +74,15 @@ export function PartnerSidebarAd({
                 <div className="p-5 space-y-4 text-left">
                     <div className="space-y-2">
                         {title && (
-                            <h3 className="font-heading text-xl font-bold text-foreground leading-tight">
-                                {title}
-                            </h3>
+                            isDuplicateHeading ? (
+                                <div className="font-heading text-xl font-bold text-foreground leading-tight">
+                                    {title}
+                                </div>
+                            ) : (
+                                <h2 className="font-heading text-xl font-bold text-foreground leading-tight">
+                                    {title}
+                                </h2>
+                            )
                         )}
                         {description && (
                             <p className="text-sm text-muted-foreground leading-relaxed">

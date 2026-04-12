@@ -7,7 +7,17 @@ import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { rentalPublicApi } from '@/services/rental-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car } from 'lucide-react';
+import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car, Building2, User } from 'lucide-react';
+
+type ClientType = 'business' | 'consumer';
+
+function getStoredClientType(): ClientType {
+    try {
+        const stored = localStorage.getItem('rentalClientType');
+        if (stored === 'business' || stored === 'consumer') return stored;
+    } catch {}
+    return 'business';
+}
 
 export default function RentalSearchPage() {
     const [search, setSearch] = useState('');
@@ -17,6 +27,12 @@ export default function RentalSearchPage() {
     const [page, setPage] = useState(1);
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState('desc');
+    const [clientType, setClientType] = useState<ClientType>(getStoredClientType);
+
+    const handleClientTypeChange = (type: ClientType) => {
+        setClientType(type);
+        try { localStorage.setItem('rentalClientType', type); } catch {}
+    };
 
     const { data, isLoading } = useQuery({
         queryKey: ['rental-public', page, search, make, fuelType, bodyType, sortBy, sortOrder],
@@ -36,6 +52,8 @@ export default function RentalSearchPage() {
     const pagination = data?.pagination;
     const filters = data?.filters;
 
+    const isBusiness = clientType === 'business';
+
     return (
         <div className="min-h-screen bg-gray-50">
             <Header onClearFilters={() => {}} hasActiveFilters={false} />
@@ -53,7 +71,7 @@ export default function RentalSearchPage() {
 
                 {/* Filters bar */}
                 <div className="bg-white rounded-2xl shadow-sm border p-4 mb-8">
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                         <div className="relative md:col-span-2">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <Input
@@ -88,6 +106,33 @@ export default function RentalSearchPage() {
                             {filters?.bodyTypes?.map((b: string) => <option key={b} value={b}>{b}</option>)}
                         </select>
                     </div>
+
+                    {/* Client type toggle — second row */}
+                    <div className="flex items-center gap-3 mt-3 pt-3 border-t">
+                        <span className="text-sm font-medium text-gray-600">Oferta dla:</span>
+                        <div className="flex bg-gray-100 rounded-lg p-0.5">
+                            <button
+                                onClick={() => handleClientTypeChange('business')}
+                                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                    isBusiness
+                                        ? 'bg-white text-blue-700 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                <Building2 className="w-3.5 h-3.5" /> Na firmę
+                            </button>
+                            <button
+                                onClick={() => handleClientTypeChange('consumer')}
+                                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                    !isBusiness
+                                        ? 'bg-white text-blue-700 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                <User className="w-3.5 h-3.5" /> Prywatnie
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Results */}
@@ -109,7 +154,7 @@ export default function RentalSearchPage() {
                         {vehicles.map((v: any) => (
                             <Link
                                 key={v.id}
-                                to={`/najem/${v.slug || v.id}`}
+                                to={`/wynajem-dlugoterminowy/${v.slug || v.id}`}
                                 className="group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                             >
                                 {/* Image */}
@@ -164,14 +209,25 @@ export default function RentalSearchPage() {
                                         )}
                                     </div>
 
-                                    {/* Price */}
+                                    {/* Price — primary depends on client type */}
                                     <div className="mt-4 pt-4 border-t">
                                         {v.minMonthlyRateGross ? (
                                             <div>
                                                 <span className="text-xs text-gray-500">Rata od</span>
                                                 <div className="text-2xl font-bold text-blue-600">
-                                                    {v.minMonthlyRateGross.toLocaleString('pl-PL')} zł
-                                                    <span className="text-sm font-normal text-gray-500"> / mies.</span>
+                                                    {isBusiness
+                                                        ? `${Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')} zł`
+                                                        : `${Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')} zł`
+                                                    }
+                                                    <span className="text-sm font-normal text-gray-500">
+                                                        {isBusiness ? ' netto / mies.' : ' brutto / mies.'}
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-gray-400 mt-0.5">
+                                                    {isBusiness
+                                                        ? `${Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')} zł brutto`
+                                                        : `${Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')} zł netto`
+                                                    }
                                                 </div>
                                                 {v.minRateConfig && (
                                                     <span className="text-xs text-gray-400">

@@ -22,7 +22,7 @@ import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
-import { getListingUrlPath } from '@/utils/url-utils';
+import { getListingUrlPath, getFinancingTypeFromPath } from '@/utils/url-utils';
 import { Footer } from '@/components/Footer';
 import { leadsApi } from '@/services/api';
 
@@ -52,6 +52,7 @@ export default function LeadFormPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isNegotiationFlow = location.pathname.includes('/negotiate');
+  const financingType = getFinancingTypeFromPath(location.pathname);
   const financingData = location.state?.financing as {
     productId: string;
     amount: number;
@@ -269,7 +270,7 @@ export default function LeadFormPage() {
                   productionYear: listing.production_year,
                   bodyType: listing.body_type,
                   fuelType: listing.fuel_type
-                })}>{t('lead.backToOffer', 'Wróć do ogłoszenia')}</Link>
+                }, financingType)}>{t('lead.backToOffer', 'Wróć do ogłoszenia')}</Link>
               </Button>
             </div>
           </motion.div>

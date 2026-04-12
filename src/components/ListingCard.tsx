@@ -13,18 +13,22 @@ import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { translateTechnicalValue } from '@/utils/i18n-utils';
-import { getListingUrlPath } from '@/utils/url-utils';
+import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
 
 interface ListingCardProps {
   listing: Listing;
   index?: number;
+  financingType?: FinancingType;
 }
 
-export function ListingCard({ listing, index = 0 }: ListingCardProps) {
+export function ListingCard({ listing, index = 0, financingType }: ListingCardProps) {
   const { t } = useTranslation();
   const { data: settings } = useAppSettings();
   const { priceType } = usePriceSettings();
   const { discount, hasSpecialOffer } = useSpecialOffer();
+
+  // Use explicit prop, or read user's cached preference (defaults to 'kredyt')
+  const effectiveFinancingType = financingType || getPreferredFinancingType();
 
   const priceInfo = React.useMemo(() => {
     const currency = settings?.displayCurrency || 'PLN';
@@ -85,7 +89,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
         productionYear: listing.production_year,
         bodyType: listing.body_type,
         fuelType: listing.fuel_type
-      })} onClick={handleListingClick} className="block">
+      }, effectiveFinancingType)} onClick={handleListingClick} className="block">
         {/* Image */}
         <div className="relative aspect-[16/10] overflow-hidden">
           <img
@@ -176,7 +180,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             productionYear: listing.production_year,
             bodyType: listing.body_type,
             fuelType: listing.fuel_type
-          })}>
+          }, effectiveFinancingType)}>
             {t('listing.viewOffer')}
             <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
           </Link>

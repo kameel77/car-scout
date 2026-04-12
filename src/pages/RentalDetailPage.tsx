@@ -1,24 +1,54 @@
-import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useCallback } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { faqApi } from '@/services/api';
+import type { FaqEntry } from '@/types/faq';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
+import { ImageGallery } from '@/components/ImageGallery';
 import { rentalPublicApi } from '@/services/rental-api';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from '@/components/ui/accordion';
+import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
+import { usePartnerAds } from '@/hooks/usePartnerAds';
+import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
-    Shield, ChevronDown, Building2, Car, FileText
+    Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
+    User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog
 } from 'lucide-react';
+
+type OfferType = 'business' | 'consumer';
 
 export default function RentalDetailPage() {
     const { slug } = useParams<{ slug: string }>();
+    const navigate = useNavigate();
+    const { token } = useAuth();
+    const isLoggedIn = !!token;
 
     const { data, isLoading } = useQuery({
         queryKey: ['rental-vehicle-public', slug],
         queryFn: () => rentalPublicApi.getVehicle(slug!),
         enabled: !!slug
     });
+
+    // FAQ for rental pages
+    const { data: faqData } = useQuery({
+        queryKey: ['faq', 'rental'],
+        queryFn: () => faqApi.list({ page: 'rental', pageContext: 'rental' }),
+        staleTime: 5 * 60 * 1000
+    });
+    const faqEntries = faqData?.entries || [];
+
+    // Below-equipment ads
+    const { data: belowEquipmentAdsData } = usePartnerAds('DETAIL_BELOW_EQUIPMENT', 'rental');
+    const belowEquipmentAds = belowEquipmentAdsData?.ads || [];
 
     const vehicle = data?.vehicle;
     const options = data?.options;
@@ -27,6 +57,13 @@ export default function RentalDetailPage() {
     const [selectedMileage, setSelectedMileage] = useState<number | null>(null);
     const [selectedMonths, setSelectedMonths] = useState<number | null>(null);
     const [selectedPayment, setSelectedPayment] = useState<number | null>(null);
+    const [selectedOfferType, setSelectedOfferType] = useState<OfferType>(() => {
+        try {
+            const stored = localStorage.getItem('rentalClientType');
+            if (stored === 'business' || stored === 'consumer') return stored;
+        } catch {}
+        return 'business';
+    });
     const [showAllSpecs, setShowAllSpecs] = useState(false);
 
     // Initialize defaults when data loads
@@ -40,23 +77,57 @@ export default function RentalDetailPage() {
         setSelectedPayment(options.initialPaymentOptions[0]);
     }
 
-    // Calculation query
+    // Determine available offer types from the options data
+    const availableOfferTypes = useMemo<Set<string>>(() => {
+        const types = options?.offerTypeOptions;
+        if (!types || types.length === 0) return new Set(['business', 'consumer']);
+        const s = new Set<string>();
+        for (const t of types) {
+            if (t === 'all') { s.add('business'); s.add('consumer'); }
+            else s.add(t);
+        }
+        return s;
+    }, [options?.offerTypeOptions]);
+
+    // If current selection is unavailable, switch
+    if (!availableOfferTypes.has(selectedOfferType)) {
+        const first = availableOfferTypes.values().next().value;
+        if (first && first !== selectedOfferType) {
+            setSelectedOfferType(first as OfferType);
+        }
+    }
+
+    // Calculation query — keepPreviousData prevents offer card flashing on param change
     const calcQuery = useQuery({
-        queryKey: ['rental-calc', slug, selectedMileage, selectedMonths, selectedPayment],
+        queryKey: ['rental-calc', slug, selectedMileage, selectedMonths, selectedPayment, selectedOfferType],
         queryFn: () => rentalPublicApi.calculate(slug!, {
             annualMileageKm: selectedMileage!,
             contractMonths: selectedMonths!,
-            initialPaymentPct: selectedPayment!
+            initialPaymentPct: selectedPayment!,
+            offerType: selectedOfferType
         }),
-        enabled: !!slug && selectedMileage !== null && selectedMonths !== null && selectedPayment !== null
+        enabled: !!slug && selectedMileage !== null && selectedMonths !== null && selectedPayment !== null,
+        placeholderData: (prev) => prev
     });
 
     const offers = calcQuery.data?.offers || [];
 
-    // Main image state
-    const [mainImage, setMainImage] = useState(0);
+    // Images for gallery
     const images = vehicle?.imageUrls || [];
-    const currentImage = images[mainImage] || vehicle?.primaryImageUrl;
+    const galleryImages = images.length > 0 ? images : (vehicle?.primaryImageUrl ? [vehicle.primaryImageUrl] : []);
+
+    // Build rental state for lead form
+    const buildRentalState = useCallback((offer: any) => ({
+        rental: {
+            companyName: isLoggedIn ? offer.company?.name : undefined,
+            companyId: offer.company?.id,
+            monthlyRate: offer.monthlyRateGross,
+            annualMileageKm: selectedMileage ?? undefined,
+            contractMonths: selectedMonths ?? undefined,
+            initialPaymentPct: selectedPayment ?? undefined,
+            offerType: selectedOfferType,
+        }
+    }), [isLoggedIn, selectedMileage, selectedMonths, selectedPayment, selectedOfferType]);
 
     if (isLoading) {
         return (
@@ -76,7 +147,7 @@ export default function RentalDetailPage() {
                 <div className="container py-20 text-center">
                     <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h2 className="text-xl font-semibold">Pojazd nie został znaleziony</h2>
-                    <Link to="/najem" className="text-blue-600 hover:underline mt-4 inline-block">
+                    <Link to="/wynajem-dlugoterminowy" className="text-blue-600 hover:underline mt-4 inline-block">
                         Wróć do listy
                     </Link>
                 </div>
@@ -85,18 +156,26 @@ export default function RentalDetailPage() {
     }
 
     const specs = [
-        { label: 'Rok', value: vehicle.productionYear, icon: Calendar },
+        { label: 'Rok produkcji', value: vehicle.productionYear, icon: Calendar },
         { label: 'Moc', value: vehicle.enginePowerHp ? `${vehicle.enginePowerHp} KM` : null, icon: Gauge },
         { label: 'Paliwo', value: vehicle.fuelType, icon: Fuel },
-        { label: 'Skrzynia', value: vehicle.transmission, icon: Settings2 },
-        { label: 'Napęd', value: vehicle.drive },
-        { label: 'Pojemność', value: vehicle.engineCapacityCm3 ? `${vehicle.engineCapacityCm3} cm³` : null },
-        { label: 'Nadwozie', value: vehicle.bodyType },
-        { label: 'Kolor', value: vehicle.color },
-        { label: 'Drzwi', value: vehicle.doors },
-        { label: 'Miejsca', value: vehicle.seats },
-        { label: 'Lakier', value: vehicle.paintType },
+        { label: 'Skrzynia biegów', value: vehicle.transmission, icon: Settings2 },
+        { label: 'Napęd', value: vehicle.drive, icon: Cog },
+        { label: 'Pojemność', value: vehicle.engineCapacityCm3 ? `${vehicle.engineCapacityCm3} cm³` : null, icon: Hash },
+        { label: 'Nadwozie', value: vehicle.bodyType, icon: Car },
+        { label: 'Kolor', value: vehicle.color, icon: Palette },
+        { label: 'Drzwi', value: vehicle.doors, icon: DoorOpen },
+        { label: 'Miejsca', value: vehicle.seats, icon: Armchair },
+        { label: 'Lakier', value: vehicle.paintType, icon: Paintbrush },
     ].filter(s => s.value);
+
+    // Equipment categories
+    const equipmentCategories = [
+        { label: 'Audio i Multimedia', icon: Music, items: vehicle.equipmentAudioMultimedia },
+        { label: 'Bezpieczeństwo', icon: ShieldCheck, items: vehicle.equipmentSafety },
+        { label: 'Komfort i Dodatki', icon: Sofa, items: vehicle.equipmentComfortExtras },
+        { label: 'Inne', icon: Package, items: vehicle.equipmentOther },
+    ].filter(cat => cat.items?.length > 0);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -104,70 +183,60 @@ export default function RentalDetailPage() {
 
             <main className="container pb-10 pt-4">
                 {/* Breadcrumb */}
-                <Link to="/najem" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4">
+                <Link to="/wynajem-dlugoterminowy" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4">
                     <ArrowLeft className="w-4 h-4" /> Wróć do listy
                 </Link>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left: Gallery + Specs */}
-                    <div className="lg:col-span-3 space-y-6">
-                        {/* Gallery */}
-                        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                            <div className="relative h-[300px] md:h-[400px] bg-gray-100">
-                                {currentImage ? (
-                                    <img
-                                        src={currentImage}
-                                        alt={`${vehicle.make} ${vehicle.model}`}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <Car className="w-24 h-24 text-gray-300" />
-                                    </div>
-                                )}
-                            </div>
-                            {images.length > 1 && (
-                                <div className="flex gap-2 p-3 overflow-x-auto">
-                                    {images.map((url: string, i: number) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setMainImage(i)}
-                                            className={`w-16 h-12 rounded overflow-hidden border-2 flex-shrink-0 transition-all ${
-                                                i === mainImage ? 'border-blue-500 scale-105' : 'border-gray-200 opacity-70 hover:opacity-100'
-                                            }`}
-                                        >
-                                            <img src={url} alt="" className="w-full h-full object-cover" />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Gallery — shared component */}
+                        <ImageGallery images={galleryImages} title={`${vehicle.make} ${vehicle.model}`} />
 
                         {/* Vehicle title + specs */}
                         <div className="bg-white rounded-2xl shadow-sm border p-6">
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                                {vehicle.make} {vehicle.model}
-                            </h1>
-                            {vehicle.version && (
-                                <p className="text-lg text-gray-500 mt-1">{vehicle.version}</p>
-                            )}
-                            {vehicle.dealer && (
-                                <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" /> {vehicle.dealer.name}, {vehicle.dealer.city}
-                                </p>
-                            )}
-
-                            {/* Quick specs */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-                                {specs.slice(0, showAllSpecs ? specs.length : 4).map(s => (
-                                    <div key={s.label} className="p-3 bg-gray-50 rounded-xl text-center">
-                                        <div className="text-xs text-gray-500">{s.label}</div>
-                                        <div className="font-semibold text-gray-900 mt-1">{s.value}</div>
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                    <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground">
+                                        {vehicle.make} {vehicle.model}
+                                    </h1>
+                                    {vehicle.version && (
+                                        <p className="text-lg text-muted-foreground mt-1">{vehicle.version}</p>
+                                    )}
+                                    {vehicle.dealer && (
+                                        <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" /> {vehicle.dealer.name}, {vehicle.dealer.city}
+                                        </p>
+                                    )}
+                                </div>
+                                {vehicle.catalogPrice && (
+                                    <div className="text-right flex-shrink-0">
+                                        <div className="text-xl font-bold text-foreground">
+                                            {vehicle.catalogPrice.toLocaleString('pl-PL')} zł
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">cena katalogowa</div>
                                     </div>
-                                ))}
+                                )}
                             </div>
 
-                            {specs.length > 4 && (
+                            {/* Key Parameters — using design-system spec classes */}
+                            <h2 className="font-heading text-xl font-semibold mt-6 mb-4">Kluczowe parametry</h2>
+                            <div className="spec-grid">
+                                {specs.slice(0, showAllSpecs ? specs.length : 8).map(s => {
+                                    const Icon = s.icon;
+                                    return (
+                                        <div key={s.label} className="spec-item">
+                                            <div className="flex items-center gap-2">
+                                                <Icon className="h-4 w-4 text-primary" />
+                                                <span className="spec-label">{s.label}</span>
+                                            </div>
+                                            <span className="spec-value capitalize">{s.value}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {specs.length > 8 && (
                                 <button
                                     onClick={() => setShowAllSpecs(!showAllSpecs)}
                                     className="text-sm text-blue-600 hover:text-blue-700 mt-3 flex items-center gap-1"
@@ -177,39 +246,94 @@ export default function RentalDetailPage() {
                                 </button>
                             )}
 
-                            {/* Price info */}
-                            <div className="mt-6 pt-6 border-t flex items-center gap-6">
-                                <div>
-                                    <span className="text-xs text-gray-500">Cena katalogowa</span>
-                                    <div className="font-semibold text-gray-500 line-through">{vehicle.catalogPrice?.toLocaleString('pl-PL')} zł</div>
+                            {/* Equipment — all 4 categories */}
+                            {equipmentCategories.length > 0 && (
+                                <div className="mt-6 pt-6 border-t space-y-4">
+                                    <h3 className="font-semibold text-gray-900">Wyposażenie</h3>
+                                    {equipmentCategories.map(cat => {
+                                        const Icon = cat.icon;
+                                        return (
+                                            <details key={cat.label} className="group">
+                                                <summary className="flex items-center gap-1.5 cursor-pointer text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors py-1">
+                                                    <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
+                                                    <Icon className="w-4 h-4 text-blue-500" />
+                                                    {cat.label}
+                                                    <span className="text-xs text-gray-400 ml-1">({cat.items.length})</span>
+                                                </summary>
+                                                <div className="pl-7 pt-1 pb-2 space-y-1">
+                                                    {cat.items.map((e: string, i: number) => (
+                                                        <div key={i} className="flex items-start gap-2 text-base text-gray-600 leading-snug">
+                                                            <span className="text-green-600 font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
+                                                            {e}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </details>
+                                        );
+                                    })}
                                 </div>
-                                <div>
-                                    <span className="text-xs text-gray-500">Cena sprzedaży</span>
-                                    <div className="font-bold text-xl text-gray-900">{vehicle.sellingPrice?.toLocaleString('pl-PL')} zł</div>
-                                </div>
-                            </div>
+                            )}
 
-                            {/* Equipment */}
-                            {vehicle.equipmentComfortExtras?.length > 0 && (
+                            {/* Below Equipment Ads */}
+                            {belowEquipmentAds.filter(a => a.isActive).length > 0 && (
                                 <div className="mt-6 pt-6 border-t">
-                                    <h3 className="font-semibold text-gray-900 mb-3">Wyposażenie</h3>
-                                    <div className="grid grid-cols-2 gap-1 text-sm text-gray-600">
-                                        {vehicle.equipmentComfortExtras.map((e: string, i: number) => (
-                                            <div key={i} className="flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                {e}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    {belowEquipmentAds.filter(a => a.isActive).map(ad => (
+                                        <PartnerSidebarAd
+                                            key={ad.id}
+                                            title={ad.title}
+                                            description={ad.description || ''}
+                                            ctaText={ad.ctaText}
+                                            url={ad.url}
+                                            brandName={ad.brandName}
+                                            imageUrl={ad.imageUrl}
+                                            features={ad.features}
+                                            overlayOpacity={ad.overlayOpacity}
+                                            hideUiElements={ad.hideUiElements}
+                                            className="my-4"
+                                        />
+                                    ))}
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Right: Calculator */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white rounded-2xl shadow-sm border p-6 sticky top-4">
+                    <div>
+                        <div className="bg-white rounded-2xl shadow-sm border p-6 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
                             <h2 className="text-lg font-bold text-gray-900 mb-5">Kalkulator najmu</h2>
+
+                            {/* Offer type toggle: Business / Private */}
+                            <div className="space-y-2 mb-5">
+                                <label className="text-sm font-medium text-gray-700">Typ oferty</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => { setSelectedOfferType('business'); try { localStorage.setItem('rentalClientType', 'business'); } catch {} }}
+                                        disabled={!availableOfferTypes.has('business')}
+                                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                            selectedOfferType === 'business'
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : !availableOfferTypes.has('business')
+                                                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <Building2 className="w-4 h-4" /> Na firmę
+                                    </button>
+                                    <button
+                                        onClick={() => { setSelectedOfferType('consumer'); try { localStorage.setItem('rentalClientType', 'consumer'); } catch {} }}
+                                        disabled={!availableOfferTypes.has('consumer')}
+                                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                            selectedOfferType === 'consumer'
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : !availableOfferTypes.has('consumer')
+                                                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <User className="w-4 h-4" /> Prywatnie
+                                    </button>
+                                </div>
+                            </div>
 
                             {/* Mileage */}
                             <div className="space-y-2 mb-5">
@@ -291,37 +415,55 @@ export default function RentalDetailPage() {
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2">
                                                     <Building2 className="w-4 h-4 text-gray-500" />
-                                                    <span className="font-medium text-sm">{offer.company.name}</span>
+                                                    {isLoggedIn ? (
+                                                        <span className="font-medium text-sm">{offer.company.name}</span>
+                                                    ) : (
+                                                        <span className="font-medium text-sm text-gray-400">Firma #{i + 1}</span>
+                                                    )}
                                                 </div>
                                                 {i === 0 && (
                                                     <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">Najlepsza</span>
                                                 )}
                                             </div>
                                             <div className="text-3xl font-bold text-gray-900">
-                                                {offer.monthlyRateGross.toLocaleString('pl-PL')} zł
-                                                <span className="text-sm font-normal text-gray-500"> / mies. brutto</span>
+                                                {selectedOfferType === 'business'
+                                                    ? `${Math.ceil(offer.monthlyRateNet).toLocaleString('pl-PL')} zł`
+                                                    : `${Math.ceil(offer.monthlyRateGross).toLocaleString('pl-PL')} zł`
+                                                }
+                                                <span className="text-sm font-normal text-gray-500">
+                                                    {selectedOfferType === 'business' ? ' netto / mies.' : ' brutto / mies.'}
+                                                </span>
                                             </div>
                                             <div className="text-sm text-gray-500 mt-1">
-                                                {offer.monthlyRateNet.toLocaleString('pl-PL')} zł netto
+                                                {selectedOfferType === 'business'
+                                                    ? `${Math.ceil(offer.monthlyRateGross).toLocaleString('pl-PL')} zł brutto`
+                                                    : `${Math.ceil(offer.monthlyRateNet).toLocaleString('pl-PL')} zł netto`
+                                                }
                                             </div>
 
                                             {offer.servicesIncluded?.length > 0 && (
                                                 <div className="mt-3 flex flex-wrap gap-1">
-                                                    {offer.servicesIncluded.map((s: string, j: number) => (
-                                                        <span key={j} className="inline-flex items-center gap-0.5 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">
-                                                            <Shield className="w-3 h-3" /> {s}
-                                                        </span>
-                                                    ))}
+                                                    {offer.servicesIncluded.map((s: string, j: number) => {
+                                                        const labelMap: Record<string, string> = {
+                                                            insurance: 'Ubezpieczenie',
+                                                            tires: 'Opony',
+                                                            service: 'Przeglądy techniczne',
+                                                            other: 'Assistance 24h'
+                                                        };
+                                                        return (
+                                                            <span key={j} className="inline-flex items-center gap-0.5 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">
+                                                                <Shield className="w-3 h-3" /> {labelMap[s] || s}
+                                                            </span>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
 
                                             <Button
                                                 className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                                                asChild
+                                                onClick={() => navigate(`/wynajem-dlugoterminowy/${slug}/zapytanie`, { state: buildRentalState(offer) })}
                                             >
-                                                <Link to={`/kontakt?rental=${vehicle.id}&company=${offer.company.id}&rate=${offer.monthlyRateGross}`}>
-                                                    <FileText className="w-4 h-4 mr-2" /> Zapytaj o ofertę
-                                                </Link>
+                                                <FileText className="w-4 h-4 mr-2" /> Zapytaj o ofertę
                                             </Button>
                                         </div>
                                     ))}
@@ -337,6 +479,31 @@ export default function RentalDetailPage() {
                     </div>
                 </div>
             </main>
+
+            {/* FAQ Section for Rental */}
+            {faqEntries.length > 0 && (
+                <section className="max-w-5xl mx-auto px-4 py-10">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Najczęściej zadawane pytania</h2>
+                    <Accordion type="single" collapsible className="space-y-3">
+                        {faqEntries.filter((e: FaqEntry) => e.isPublished).map((entry: FaqEntry) => (
+                            <AccordionItem
+                                key={entry.id}
+                                value={entry.id}
+                                className="bg-white border rounded-xl px-5"
+                            >
+                                <AccordionTrigger className="text-left font-medium text-gray-900 hover:text-blue-600">
+                                    {entry.questionPl}
+                                </AccordionTrigger>
+                                <AccordionContent className="text-gray-600 text-sm leading-relaxed">
+                                    {entry.answerPl}
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
+                </section>
+            )}
+
+            {/* Lightbox is handled by ImageGallery component */}
 
             <ScrollToTopButton />
             <Footer />

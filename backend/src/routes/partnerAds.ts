@@ -4,7 +4,7 @@ import { z } from 'zod';
 export async function partnerAdsRoutes(fastify: FastifyInstance) {
     // Schema for Ad validation
     const adSchema = z.object({
-        placement: z.enum(['SEARCH_GRID', 'SEARCH_TOP', 'DETAIL_SIDEBAR']),
+        placement: z.enum(['SEARCH_GRID', 'SEARCH_TOP', 'DETAIL_SIDEBAR', 'DETAIL_BELOW_EQUIPMENT']),
         title: z.string().nullable().optional(),
         titleEn: z.string().nullable().optional(),
         titleDe: z.string().nullable().optional(),
@@ -25,18 +25,22 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
         features: z.array(z.string()).optional(),
         priority: z.preprocess((val) => (typeof val === 'string' ? parseInt(val, 10) : val), z.number().int()).optional(),
         isActive: z.boolean().optional(),
-        overlayOpacity: z.preprocess((val) => (typeof val === 'string' ? parseFloat(val) : val), z.number().min(0).max(1)).optional()
+        overlayOpacity: z.preprocess((val) => (typeof val === 'string' ? parseFloat(val) : val), z.number().min(0).max(1)).optional(),
+        pageContext: z.enum(['offers', 'rental', 'all']).optional()
     });
 
     // Public: List active ads by placement
     fastify.get('/api/partner-ads', async (request, reply) => {
-        const { placement } = request.query as { placement?: string };
+        const { placement, pageContext } = request.query as { placement?: string; pageContext?: string };
+
+        const where: any = { isActive: true };
+        if (placement) where.placement = placement;
+        if (pageContext && ['offers', 'rental', 'all'].includes(pageContext)) {
+            where.pageContext = { in: ['all', pageContext] };
+        }
 
         const ads = await fastify.prisma.partnerAd.findMany({
-            where: {
-                isActive: true,
-                ...(placement ? { placement } : {})
-            },
+            where,
             orderBy: {
                 priority: 'desc'
             }

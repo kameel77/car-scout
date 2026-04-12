@@ -30,3 +30,4 @@ dist/
 node_modules/
 .env*
 .agent*
+docs_other/
