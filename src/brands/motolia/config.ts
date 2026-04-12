@@ -12,6 +12,16 @@ export const motoliaConfig: BrandConfig = {
     accent: '160 70% 35%',
     accentHover: '160 70% 30%',
   },
+  contactInfo: {
+    phone: '+48 987 654 321',
+    email: 'kontakt@motolia.pl',
+  },
+  contactPage: {
+    title: 'Skonsultujmy Twoje <span>wymarzone auto</span>',
+    subtitle: 'Nasi doradcy Motolia pomogą Ci dopiąć finansowanie na wybrane auto. Zostaw nam wiadomość, a my zajmiemy się resztą.',
+    ctaTitle: 'Szukasz <span>innego modelu</span>?',
+    ctaSubtitle: 'Przewertuj naszą bazę dostępnych modeli i zgłoś zapotrzebowanie na to, co widoczne w katalogu.',
+  },
   homePage: {
     hero: {
       badge: 'Twój samochód, Twoje zasady',

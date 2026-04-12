@@ -32,14 +32,28 @@ export interface StepsSection {
   items: StepConfig[];
 }
 
+export interface ContactPageConfig {
+  title: string;
+  subtitle: string;
+  ctaTitle: string;
+  ctaSubtitle: string;
+}
+
+export interface ContactInfo {
+  phone: string;
+  email: string;
+}
+
 export interface BrandConfig {
   id: string;
   name: string;
   domain: string;
   colors: BrandColors;
+  contactInfo: ContactInfo;
   homePage: {
     hero: HeroConfig;
     trustBar: TrustBarItem[];
     steps: StepsSection;
   };
+  contactPage: ContactPageConfig;
 }

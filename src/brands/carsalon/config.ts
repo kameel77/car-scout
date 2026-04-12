@@ -10,6 +10,16 @@ export const carsalonConfig: BrandConfig = {
     accent: '24 95% 53%',
     accentHover: '28 95% 48%',
   },
+  contactInfo: {
+    phone: '+48 123 456 789',
+    email: 'kontakt@carsalon.pl',
+  },
+  contactPage: {
+    title: 'Porozmawiajmy o <span>Twoim nowym aucie</span>',
+    subtitle: 'Zostaw kontakt, a doradca CarSalon oddzwoni i przeprowadzi Cię przez cały proces: wybór auta, finansowanie i formalności.',
+    ctaTitle: 'Gotowy na <span>kolejny krok</span>?',
+    ctaSubtitle: 'Przejdź do listy ofert i wybierz auto, które chcesz omówić z konsultantem.',
+  },
   homePage: {
     hero: {
       badge: 'Nowy sposób na zakup auta',
