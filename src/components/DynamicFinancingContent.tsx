@@ -159,7 +159,6 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           </div>
         </div>
       </div>
-      </div>
 
       <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center gap-4">
         <div className="flex-1">
@@ -287,7 +286,6 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             </p>
           </div>
         </div>
-      </div>
       </div>
 
       <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center gap-4">
@@ -419,7 +417,6 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             </p>
           </div>
         </div>
-      </div>
       </div>
 
       <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center gap-4">
