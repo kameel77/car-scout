@@ -9,6 +9,7 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 4. **Dokumentacja funkcjonalności**: Każda nowa funkcjonalność lub zmiana zachowania istniejącej musi zostać opisana w pliku `features_desc.md`.
 5. **Bezpieczeństwo**: Nigdy nie usuwaj istniejących mechanizmów autoryzacji ani walidacji bez wyraźnego polecenia.
 6. **Weryfikacja**: Proponuj i przeprowadzaj weryfikację zmian (testy, przeglądarka).
+7. **Formatowanie treści**: Kiedy tworzysz lub edytujesz treści tekstowe, używaj zwykłych myślników ( - ) zamiast podwójnych/długich ( — ).
 
 ## 2. Technologie i Architektura
 - **Backend**: Fastify, Prisma, PostgreSQL.

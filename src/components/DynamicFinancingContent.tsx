@@ -49,9 +49,9 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
   const renderLeasing = () => (
     <div className="space-y-6">
       <div className="bg-muted/50 rounded-xl p-6 border border-border">
-        <h3 className="font-heading text-xl font-bold mb-3">{t('financing.leasing.title', `Co obejmuje leasing operacyjny — ${carName} ${year}`)}</h3>
+        <h2 className="font-heading text-xl font-bold mb-3">{t('financing.leasing.title', `Co obejmuje leasing operacyjny - ${carName} ${year}`)}</h2>
         <p className="text-muted-foreground leading-relaxed">
-          {renderTextWithHtml(t('financing.leasing.lead', `Leasing operacyjny to najpopularniejsza forma finansowania samochodów wśród polskich przedsiębiorców. Miesięczna rata jest kosztem uzyskania przychodu, a VAT można odliczać na bieżąco — bez angażowania firmowej gotówki w zakup pojazdu. Poniżej znajdziesz szczegóły oferty leasingu na pojazd: **${carDetails}**.`))}
+          {renderTextWithHtml(t('financing.leasing.lead', `Leasing operacyjny to najpopularniejsza forma finansowania samochodów wśród polskich przedsiębiorców. Miesięczna rata jest kosztem uzyskania przychodu, a VAT można odliczać na bieżąco - bez angażowania firmowej gotówki w zakup pojazdu. Poniżej znajdziesz szczegóły oferty leasingu na pojazd: **${carDetails}**.`))}
         </p>
       </div>
 
@@ -63,7 +63,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.leasing.who.title', 'Dla kogo jest leasing operacyjny?')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.leasing.who.desc', 'Leasing operacyjny jest przeznaczony dla firm i jednoosobowych działalności gospodarczych rozliczających VAT. Jeśli szukasz sposobu na optymalizację kosztów podatkowych i chcesz korzystać z nowego pojazdu bez angażowania kapitału — to rozwiązanie stworzone dla Ciebie. Osoby prywatne mogą skorzystać z leasingu konsumenckiego na analogicznych zasadach.')}
+              {t('financing.leasing.who.desc', 'Leasing operacyjny jest przeznaczony dla firm i jednoosobowych działalności gospodarczych rozliczających VAT. Jeśli szukasz sposobu na optymalizację kosztów podatkowych i chcesz korzystać z nowego pojazdu bez angażowania kapitału - to rozwiązanie stworzone dla Ciebie. Osoby prywatne mogą skorzystać z leasingu konsumenckiego na analogicznych zasadach.')}
             </p>
           </div>
         </div>
@@ -75,7 +75,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.leasing.tax.title', 'Korzyści podatkowe')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.leasing.tax.desc', 'Rata leasingowa w całości stanowi koszt uzyskania przychodu i obniża podstawę opodatkowania. Czynni podatnicy VAT odliczają 50% lub 100% podatku od rat i wydatków eksploatacyjnych — zależnie od sposobu użytkowania pojazdu.')}
+              {t('financing.leasing.tax.desc', 'Rata leasingowa w całości stanowi koszt uzyskania przychodu i obniża podstawę opodatkowania. Czynni podatnicy VAT odliczają 50% lub 100% podatku od rat i wydatków eksploatacyjnych - zależnie od sposobu użytkowania pojazdu.')}
             </p>
             {isElectric && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
@@ -84,7 +84,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             )}
             {isPHEV && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.leasing.tax.phev', `Hybrydę plug-in: ${carName} można leasingować z odliczeniem VAT na preferencyjnych warunkach — sprawdź aktualne limity z doradcą.`)}
+                {t('financing.leasing.tax.phev', `Hybrydę plug-in: ${carName} można leasingować z odliczeniem VAT na preferencyjnych warunkach - sprawdź aktualne limity z doradcą.`)}
               </p>
             )}
           </div>
@@ -101,12 +101,12 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             </p>
             {isSUV && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.leasing.service.suv', 'SUV-y są intensywnie eksploatowane w terenie i na długich trasach — pakiet serwisowy gwarantuje pełną sprawność techniczną niezależnie od warunków użytkowania.')}
+                {t('financing.leasing.service.suv', 'SUV-y są intensywnie eksploatowane w terenie i na długich trasach - pakiet serwisowy gwarantuje pełną sprawność techniczną niezależnie od warunków użytkowania.')}
               </p>
             )}
             {isVan && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.leasing.service.van', 'Vany i samochody dostawcze wymagają częstszych przeglądów — pakiet serwisowy eliminuje ryzyko kosztownych przestojów w działalności.')}
+                {t('financing.leasing.service.van', 'Vany i samochody dostawcze wymagają częstszych przeglądów - pakiet serwisowy eliminuje ryzyko kosztownych przestojów w działalności.')}
               </p>
             )}
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
@@ -122,7 +122,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.leasing.insurance.title', 'Ubezpieczenie')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.leasing.insurance.desc', `Do leasingu pojazdu: ${carName} możesz dołączyć ubezpieczenie OC/AC/GAP w stawkach wynegocjowanych przez firmę leasingową dla całej floty. Ubezpieczenie GAP zabezpiecza różnicę między wartością rynkową a kwotą pozostałą do rozliczenia w przypadku kradzieży lub szkody całkowitej. Składka wliczona w ratę stanowi koszt podatkowy — bez dodatkowych formalności.`)}
+              {t('financing.leasing.insurance.desc', `Do leasingu pojazdu: ${carName} możesz dołączyć ubezpieczenie OC/AC/GAP w stawkach wynegocjowanych przez firmę leasingową dla całej floty. Ubezpieczenie GAP zabezpiecza różnicę między wartością rynkową a kwotą pozostałą do rozliczenia w przypadku kradzieży lub szkody całkowitej. Składka wliczona w ratę stanowi koszt podatkowy - bez dodatkowych formalności.`)}
             </p>
           </div>
         </div>
@@ -134,7 +134,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.leasing.replacement.title', 'Auto zastępcze')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.leasing.replacement.desc', `W trakcie serwisu lub naprawy pojazdu: ${carName} przysługuje Ci auto zastępcze bez dodatkowych kosztów. Assistance działa całą dobę przez 7 dni w tygodniu — w Polsce i w całej Europie.`)}
+              {t('financing.leasing.replacement.desc', `W trakcie serwisu lub naprawy pojazdu: ${carName} przysługuje Ci auto zastępcze bez dodatkowych kosztów. Assistance działa całą dobę przez 7 dni w tygodniu - w Polsce i w całej Europie.`)}
             </p>
             {isSUV && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
@@ -154,7 +154,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.leasing.transparency.title', 'Przejrzystość kosztów')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.leasing.transparency.desc', `Stała miesięczna rata leasingowa na pojazd: ${carName} jest niezmienna przez cały okres umowy — bez wahań kursu, ukrytych opłat i niespodzianek. Po zakończeniu umowy możesz wykupić pojazd za z góry ustaloną wartość rezydualną, przedłużyć leasing lub wymienić go na nowy model. Pełna kontrola nad budżetem firmowym od pierwszego do ostatniego dnia umowy.`)}
+              {t('financing.leasing.transparency.desc', `Stała miesięczna rata leasingowa na pojazd: ${carName} jest niezmienna przez cały okres umowy - bez wahań kursu, ukrytych opłat i niespodzianek. Po zakończeniu umowy możesz wykupić pojazd za z góry ustaloną wartość rezydualną, przedłużyć leasing lub wymienić go na nowy model. Pełna kontrola nad budżetem firmowym od pierwszego do ostatniego dnia umowy.`)}
             </p>
           </div>
         </div>
@@ -179,9 +179,9 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
   const renderKredyt = () => (
     <div className="space-y-6">
       <div className="bg-muted/50 rounded-xl p-6 border border-border">
-        <h3 className="font-heading text-xl font-bold mb-3">{t('financing.kredyt.title', `Kredyt samochodowy — ${carName} ${year} Twoja własność od pierwszego dnia`)}</h3>
+        <h2 className="font-heading text-xl font-bold mb-3">{t('financing.kredyt.title', `Kredyt samochodowy - ${carName} ${year} Twoja własność od pierwszego dnia`)}</h2>
         <p className="text-muted-foreground leading-relaxed">
-          {renderTextWithHtml(t('financing.kredyt.lead', `Kredyt samochodowy to rozwiązanie dla tych, którym zależy na pełnej własności pojazdu. Po podpisaniu umowy pojazd: **${carName}, ${year}, ${body_type || ''}** jest wpisany na Ciebie do dowodu rejestracyjnego — możesz nim dysponować bez żadnych ograniczeń. Kredyt jest dostępny zarówno dla osób prywatnych, jak i dla firm.`))}
+          {renderTextWithHtml(t('financing.kredyt.lead', `Kredyt samochodowy to rozwiązanie dla tych, którym zależy na pełnej własności pojazdu. Po podpisaniu umowy pojazd: **${carName}, ${year}, ${body_type || ''}** jest wpisany na Ciebie do dowodu rejestracyjnego - możesz nim dysponować bez żadnych ograniczeń. Kredyt jest dostępny zarówno dla osób prywatnych, jak i dla firm.`))}
         </p>
       </div>
 
@@ -205,16 +205,16 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.kredyt.ownership.title', 'Własność i swoboda użytkowania')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.kredyt.ownership.desc', `Pojazd: ${carName} jest Twój od chwili zakupu — brak limitów kilometrów, brak opłat za użytkowanie ponad normę i brak konieczności zwrotu auta po zakończeniu umowy.`)}
+              {t('financing.kredyt.ownership.desc', `Pojazd: ${carName} jest Twój od chwili zakupu - brak limitów kilometrów, brak opłat za użytkowanie ponad normę i brak konieczności zwrotu auta po zakończeniu umowy.`)}
             </p>
             {isSUV && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.kredyt.ownership.suv', 'SUV-y często służą do intensywnej eksploatacji, jazdy w terenie lub holowania przyczep — kredyt daje pełną swobodę bez ryzyka kar za zużycie.')}
+                {t('financing.kredyt.ownership.suv', 'SUV-y często służą do intensywnej eksploatacji, jazdy w terenie lub holowania przyczep - kredyt daje pełną swobodę bez ryzyka kar za zużycie.')}
               </p>
             )}
             {isKombi && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.kredyt.ownership.kombi', 'Kombi użytkowane jako auto rodzinne lub firmowe bywa bardzo intensywnie eksploatowane — przy kredycie nie ma żadnych ograniczeń w tym zakresie.')}
+                {t('financing.kredyt.ownership.kombi', 'Kombi użytkowane jako auto rodzinne lub firmowe bywa bardzo intensywnie eksploatowane - przy kredycie nie ma żadnych ograniczeń w tym zakresie.')}
               </p>
             )}
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
@@ -230,7 +230,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.kredyt.deposit.title', 'Wkład własny i dostępność')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.kredyt.deposit.desc', `Kredyt na pojazd: ${carName} jest dostępny z wkładem własnym lub bez — już od 0% wartości pojazdu. Wniesienie wkładu własnego obniża miesięczną ratę i łączny koszt finansowania. Decyzja kredytowa zapada zazwyczaj w ciągu jednego dnia roboczego — szybko i bez zbędnych formalności.`)}
+              {t('financing.kredyt.deposit.desc', `Kredyt na pojazd: ${carName} jest dostępny z wkładem własnym lub bez - już od 0% wartości pojazdu. Wniesienie wkładu własnego obniża miesięczną ratę i łączny koszt finansowania. Decyzja kredytowa zapada zazwyczaj w ciągu jednego dnia roboczego - szybko i bez zbędnych formalności.`)}
             </p>
           </div>
         </div>
@@ -242,15 +242,15 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.kredyt.period.title', 'Elastyczny okres spłaty')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.kredyt.period.desc', 'Sam decydujesz, jak długo chcesz spłacać kredyt — okresy kredytowania wynoszą zazwyczaj od 12 do 96 miesięcy. Krótszy okres oznacza wyższe raty, ale niższy łączny koszt odsetek; dłuższy obniża miesięczne zobowiązanie i poprawia płynność budżetu.')}
+              {t('financing.kredyt.period.desc', 'Sam decydujesz, jak długo chcesz spłacać kredyt - okresy kredytowania wynoszą zazwyczaj od 12 do 96 miesięcy. Krótszy okres oznacza wyższe raty, ale niższy łączny koszt odsetek; dłuższy obniża miesięczne zobowiązanie i poprawia płynność budżetu.')}
             </p>
             {isHighPower && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.kredyt.period.highpower', `Pojazdy o mocy powyżej 200 KM (w tym ${carName}) mogą podlegać wyższym wymaganiom banku co do wkładu własnego — warto zapytać doradcę.`)}
+                {t('financing.kredyt.period.highpower', `Pojazdy o mocy powyżej 200 KM (w tym ${carName}) mogą podlegać wyższym wymaganiom banku co do wkładu własnego - warto zapytać doradcę.`)}
               </p>
             )}
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-              {t('financing.kredyt.period.summary', 'Wcześniejsza spłata jest możliwa w każdym momencie — często bez prowizji lub z minimalną opłatą.')}
+              {t('financing.kredyt.period.summary', 'Wcześniejsza spłata jest możliwa w każdym momencie - często bez prowizji lub z minimalną opłatą.')}
             </p>
           </div>
         </div>
@@ -262,11 +262,11 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground">{t('financing.kredyt.insurance.title', 'Ubezpieczenie i ochrona kredytu')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.kredyt.insurance.desc', `Bank może wymagać polisy AC przez cały okres kredytowania oraz cesji praw z ubezpieczenia na rzecz kredytodawcy. Ubezpieczenie GAP jest opcjonalne, ale szczególnie polecane przy nowych pojazdach — chroni przed stratą finansową w przypadku szkody całkowitej lub kradzieży pojazdu: ${carName}.`)}
+              {t('financing.kredyt.insurance.desc', `Bank może wymagać polisy AC przez cały okres kredytowania oraz cesji praw z ubezpieczenia na rzecz kredytodawcy. Ubezpieczenie GAP jest opcjonalne, ale szczególnie polecane przy nowych pojazdach - chroni przed stratą finansową w przypadku szkody całkowitej lub kradzieży pojazdu: ${carName}.`)}
             </p>
             {isElectric && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.kredyt.insurance.electric', `Elektryczny ${carName} ma wysoką wartość — GAP jest tu szczególnie ważny ze względu na dynamiczne zmiany wartości rynkowej aut elektrycznych.`)}
+                {t('financing.kredyt.insurance.electric', `Elektryczny ${carName} ma wysoką wartość - GAP jest tu szczególnie ważny ze względu na dynamiczne zmiany wartości rynkowej aut elektrycznych.`)}
               </p>
             )}
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
@@ -307,9 +307,9 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
   const renderWynajem = () => (
     <div className="space-y-6">
       <div className="bg-muted/50 rounded-xl p-6 border border-border">
-        <h3 className="font-heading text-xl font-bold mb-3">{t('financing.wynajem.title', `Wynajem długoterminowy — ${carName} ${year} w jednej miesięcznej racie`)}</h3>
+        <h2 className="font-heading text-xl font-bold mb-3">{t('financing.wynajem.title', `Wynajem długoterminowy - ${carName} ${year} w jednej miesięcznej racie`)}</h2>
         <p className="text-muted-foreground leading-relaxed">
-          {renderTextWithHtml(t('financing.wynajem.lead', `Wynajem długoterminowy (najem długoterminowy, abonament samochodowy) to najprostszy sposób na korzystanie z nowego samochodu — bez wkładu własnego, bez martwienia się o serwis, ubezpieczenie i przeglądy. Płacisz jedną stałą ratę i po prostu jeździsz. Pojazd: **${carDetails}** czeka na Ciebie gotowy do drogi od pierwszego dnia.`))}
+          {renderTextWithHtml(t('financing.wynajem.lead', `Wynajem długoterminowy (najem długoterminowy, abonament samochodowy) to najprostszy sposób na korzystanie z nowego samochodu - bez wkładu własnego, bez martwienia się o serwis, ubezpieczenie i przeglądy. Płacisz jedną stałą ratę i po prostu jeździsz. Pojazd: **${carDetails}** czeka na Ciebie gotowy do drogi od pierwszego dnia.`))}
         </p>
       </div>
 
@@ -325,11 +325,11 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             </p>
             {isVan && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.wynajem.who.van', 'Dla firm potrzebujących pojazdów dostawczych wynajem długoterminowy eliminuje ryzyko przestojów i kosztów serwisowych — wszystko jest wliczone w ratę.')}
+                {t('financing.wynajem.who.van', 'Dla firm potrzebujących pojazdów dostawczych wynajem długoterminowy eliminuje ryzyko przestojów i kosztów serwisowych - wszystko jest wliczone w ratę.')}
               </p>
             )}
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-              {t('financing.wynajem.who.summary', 'Minimalne okresy wynajmu zaczynają się zazwyczaj od 12 miesięcy — z opcją przedłużenia lub wymiany na nowy model.')}
+              {t('financing.wynajem.who.summary', 'Minimalne okresy wynajmu zaczynają się zazwyczaj od 12 miesięcy - z opcją przedłużenia lub wymiany na nowy model.')}
             </p>
           </div>
         </div>
@@ -345,11 +345,11 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             </p>
             {isElectric && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.wynajem.whatsincluded.electric', `Wynajem elektryczny ${carName} może obejmować dodatkowo dostęp do sieci ładowania lub instalację wallboxa — zapytaj doradcę o szczegóły.`)}
+                {t('financing.wynajem.whatsincluded.electric', `Wynajem elektryczny ${carName} może obejmować dodatkowo dostęp do sieci ładowania lub instalację wallboxa - zapytaj doradcę o szczegóły.`)}
               </p>
             )}
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-              {t('financing.wynajem.whatsincluded.summary', 'Jeden przelew miesięcznie — i nie musisz myśleć o niczym innym.')}
+              {t('financing.wynajem.whatsincluded.summary', 'Jeden przelew miesięcznie - i nie musisz myśleć o niczym innym.')}
             </p>
           </div>
         </div>
@@ -359,17 +359,17 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             <Wrench className="w-5 h-5" />
           </div>
           <div className="space-y-2">
-            <h4 className="font-semibold text-foreground">{t('financing.wynajem.service.title', 'Serwis i przeglądy — zero dopłat')}</h4>
+            <h4 className="font-semibold text-foreground">{t('financing.wynajem.service.title', 'Serwis i przeglądy - zero dopłat')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.wynajem.service.desc', `Wszystkie przeglądy okresowe, wymiana płynów i filtrów oraz naprawy wynikające z normalnej eksploatacji pojazdu: ${carName} są objęte umową wynajmu — bez dodatkowych faktur. Korzystasz z autoryzowanej sieci serwisowej, co gwarantuje oryginalne części i pełną historię serwisową pojazdu.`)}
+              {t('financing.wynajem.service.desc', `Wszystkie przeglądy okresowe, wymiana płynów i filtrów oraz naprawy wynikające z normalnej eksploatacji pojazdu: ${carName} są objęte umową wynajmu - bez dodatkowych faktur. Korzystasz z autoryzowanej sieci serwisowej, co gwarantuje oryginalne części i pełną historię serwisową pojazdu.`)}
             </p>
             {isAuto && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
-                {t('financing.wynajem.service.auto', 'Automatyczna skrzynia biegów wymaga specjalistycznych przeglądów — w wynajmie długoterminowym są one w pełni pokryte umową serwisową.')}
+                {t('financing.wynajem.service.auto', 'Automatyczna skrzynia biegów wymaga specjalistycznych przeglądów - w wynajmie długoterminowym są one w pełni pokryte umową serwisową.')}
               </p>
             )}
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-              {t('financing.wynajem.service.summary', 'System powiadamia Cię z wyprzedzeniem o zbliżającym się terminie przeglądu — koniec z zapominaniem.')}
+              {t('financing.wynajem.service.summary', 'System powiadamia Cię z wyprzedzeniem o zbliżającym się terminie przeglądu - koniec z zapominaniem.')}
             </p>
           </div>
         </div>
@@ -379,9 +379,9 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div className="space-y-2">
-            <h4 className="font-semibold text-foreground">{t('financing.wynajem.insurance.title', 'Ubezpieczenie w cenie — OC, AC i GAP')}</h4>
+            <h4 className="font-semibold text-foreground">{t('financing.wynajem.insurance.title', 'Ubezpieczenie w cenie - OC, AC i GAP')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.wynajem.insurance.desc', `Pełne ubezpieczenie pojazdu: ${carName} jest standardową częścią raty wynajmu — nie szukasz ubezpieczyciela, nie porównujesz ofert i nie płacisz polisy z góry. Firma wynajmująca negocjuje stawki dla całej floty, dzięki czemu korzystasz z warunków niedostępnych dla klientów indywidualnych. W razie szkody całą procedurę obsługuje wynajmujący — od pierwszego telefonu do zamknięcia sprawy.`)}
+              {t('financing.wynajem.insurance.desc', `Pełne ubezpieczenie pojazdu: ${carName} jest standardową częścią raty wynajmu - nie szukasz ubezpieczyciela, nie porównujesz ofert i nie płacisz polisy z góry. Firma wynajmująca negocjuje stawki dla całej floty, dzięki czemu korzystasz z warunków niedostępnych dla klientów indywidualnych. W razie szkody całą procedurę obsługuje wynajmujący - od pierwszego telefonu do zamknięcia sprawy.`)}
             </p>
           </div>
         </div>
@@ -391,9 +391,9 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             <Car className="w-5 h-5" />
           </div>
           <div className="space-y-2">
-            <h4 className="font-semibold text-foreground">{t('financing.wynajem.replacement.title', 'Auto zastępcze — zawsze i bez opłat')}</h4>
+            <h4 className="font-semibold text-foreground">{t('financing.wynajem.replacement.title', 'Auto zastępcze - zawsze i bez opłat')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.wynajem.replacement.desc', `Podczas serwisu, naprawy lub wypadku pojazdu: ${carName} przysługuje Ci auto zastępcze bez dodatkowych kosztów i bez biurokracji. Assistance działa 24 godziny na dobę, 7 dni w tygodniu — na terenie całej Polski i Europy.`)}
+              {t('financing.wynajem.replacement.desc', `Podczas serwisu, naprawy lub wypadku pojazdu: ${carName} przysługuje Ci auto zastępcze bez dodatkowych kosztów i bez biurokracji. Assistance działa 24 godziny na dobę, 7 dni w tygodniu - na terenie całej Polski i Europy.`)}
             </p>
             {isSUV && (
               <p className="text-sm font-medium mt-2 text-foreground/90">
@@ -401,7 +401,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
               </p>
             )}
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-              {t('financing.wynajem.replacement.summary', 'Nigdy nie zostajesz bez pojazdu — nawet przy poważniejszej awarii lub kolizji.')}
+              {t('financing.wynajem.replacement.summary', 'Nigdy nie zostajesz bez pojazdu - nawet przy poważniejszej awarii lub kolizji.')}
             </p>
           </div>
         </div>
@@ -411,9 +411,9 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
             <TrendingUp className="w-5 h-5" />
           </div>
           <div className="space-y-2">
-            <h4 className="font-semibold text-foreground">{t('financing.wynajem.transparency.title', 'Stała rata — pełna przewidywalność kosztów')}</h4>
+            <h4 className="font-semibold text-foreground">{t('financing.wynajem.transparency.title', 'Stała rata - pełna przewidywalność kosztów')}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('financing.wynajem.transparency.desc', `Rata wynajmu długoterminowego pojazdu: ${carName} jest ustalona z góry i nie zmienia się przez cały okres umowy — niezależnie od wahań cen ubezpieczeń, części i usług. Po zakończeniu umowy oddajesz auto i możesz od razu wziąć nowy model — bez straty na wartości, bez szukania kupca i bez żadnych formalności. To jedyny produkt finansowy, który daje Ci pełną i długoterminową przewidywalność kosztów mobilności.`)}
+              {t('financing.wynajem.transparency.desc', `Rata wynajmu długoterminowego pojazdu: ${carName} jest ustalona z góry i nie zmienia się przez cały okres umowy - niezależnie od wahań cen ubezpieczeń, części i usług. Po zakończeniu umowy oddajesz auto i możesz od razu wziąć nowy model - bez straty na wartości, bez szukania kupca i bez żadnych formalności. To jedyny produkt finansowy, który daje Ci pełną i długoterminową przewidywalność kosztów mobilności.`)}
             </p>
           </div>
         </div>
