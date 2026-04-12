@@ -26,6 +26,7 @@ import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import { FinancingCalculator } from '@/components/FinancingCalculator';
+import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -585,6 +586,19 @@ export default function ListingDetailPage() {
             </div>
 
             <Separator />
+
+            <DynamicFinancingContent
+              financingType={financingType}
+              listing={{
+                make: listing.make,
+                model: listing.model,
+                production_year: listing.production_year,
+                body_type: listing.body_type,
+                fuel_type: listing.fuel_type,
+                transmission: listing.transmission,
+                engine_power_hp: listing.engine_power_hp
+              }}
+            />
 
             {/* Why Us */}
             <section className="rounded-2xl border border-border bg-card/60 p-6 shadow-card space-y-4">
