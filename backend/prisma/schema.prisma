@@ -211,7 +211,6 @@ model User {
   email                String       @unique
   password             String
   name                 String?
-  phone                String?
   role                 String       @default("admin") // legacy — fallback until Etap 5
   isActive             Boolean      @default(true) @map("is_active")
   lastLogin            DateTime?    @map("last_login")
