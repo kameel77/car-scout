@@ -44,7 +44,7 @@ export const motoliaConfig: BrandConfig = {
       { icon: 'Shield', label: 'Zaufani dealerzy w całej Polsce' },
       { icon: 'CreditCard', label: 'Leasing, kredyt i wynajem' },
       { icon: 'FileText', label: 'Przejrzyste warunki w każdej ofercie' },
-      { icon: 'Phone', label: 'Decyzja od 1 do 24 godzin' },
+      { icon: 'Phone', label: 'Decyzja nawet w 60 minut' },
     ],
     steps: {
       tag: 'Krok po kroku',

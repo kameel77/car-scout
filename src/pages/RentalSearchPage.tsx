@@ -162,7 +162,7 @@ export default function RentalSearchPage() {
                                 className="group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-gray-300"
                             >
                                 {/* Image */}
-                                <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                                <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
                                     {v.primaryImageUrl ? (
                                         <img
                                             src={v.primaryImageUrl}

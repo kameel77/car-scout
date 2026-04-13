@@ -100,14 +100,14 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
 
   return (
     <header id="landing-nav" className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
-      <div className="container flex h-[72px] items-center justify-between gap-4">
+      <div className="container flex h-[72px] items-center justify-between gap-2">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0">
           {settings?.headerLogoUrl ? (
             <img
               src={buildAssetUrl(settings.headerLogoUrl)}
               alt={siteName}
-              className="h-[2.5rem] w-auto max-w-[200px] object-contain"
+              className="h-12 w-auto max-w-[220px] object-contain"
               loading="lazy"
             />
           ) : (
@@ -118,7 +118,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           )}
           {headerLogoText && (
             <span
-              className="text-[10px] text-muted-foreground leading-tight border-l pl-3 border-border hidden sm:block max-w-[120px]"
+              className="text-[11px] text-muted-foreground leading-tight border-l pl-2 border-border hidden sm:block max-w-[120px]"
               dangerouslySetInnerHTML={{ __html: headerLogoText }}
             />
           )}

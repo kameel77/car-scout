@@ -171,7 +171,7 @@ export default function MotoliaHomePage() {
       <Header />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-28 pb-20 lg:pt-40 lg:pb-28 overflow-hidden bg-[#FAFAF8]">
+      <section className="relative pt-14 pb-16 lg:pt-40 lg:pb-28 overflow-hidden bg-[#FAFAF8]">
         {/* Subtle yellow glow */}
         <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none"
           style={{ background: `radial-gradient(circle, ${YELLOW}18 0%, transparent 70%)` }} />
@@ -299,7 +299,7 @@ export default function MotoliaHomePage() {
                   {item.icon === 'FileText'   && <FileText    size={26} style={{ color: YELLOW_DARK }} />}
                   {item.icon === 'Phone'      && <Clock       size={26} style={{ color: YELLOW_DARK }} />}
                 </div>
-                <h3 className="text-gray-700 font-semibold text-sm">{item.label}</h3>
+                <h3 className="text-gray-800 font-bold text-base leading-snug">{item.label}</h3>
               </FadeIn>
             ))}
           </div>

@@ -634,6 +634,21 @@ export default function ListingDetailPage() {
               ))}
             </div>
 
+            <Separator />
+            <DynamicFinancingContent
+              financingType={financingType}
+              listing={{
+                listing_id: listing.listing_id,
+                make: listing.make,
+                model: listing.model,
+                production_year: listing.production_year,
+                body_type: listing.body_type,
+                fuel_type: listing.fuel_type,
+                transmission: listing.transmission,
+                engine_power_hp: listing.engine_power_hp
+              }}
+            />
+
             {/* Why Us */}
             <section className="rounded-2xl border border-border bg-card/60 p-6 shadow-card space-y-4">
               <div>
@@ -721,20 +736,6 @@ export default function ListingDetailPage() {
               </section>
             )}
 
-            <Separator />
-            <DynamicFinancingContent
-              financingType={financingType}
-              listing={{
-                listing_id: listing.listing_id,
-                make: listing.make,
-                model: listing.model,
-                production_year: listing.production_year,
-                body_type: listing.body_type,
-                fuel_type: listing.fuel_type,
-                transmission: listing.transmission,
-                engine_power_hp: listing.engine_power_hp
-              }}
-            />
           </div>
 
           {/* Sidebar */}

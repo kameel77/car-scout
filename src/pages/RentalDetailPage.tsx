@@ -21,8 +21,9 @@ import { usePartnerAds } from '@/hooks/usePartnerAds';
 import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
-    User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog
+    User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone
 } from 'lucide-react';
+import { useBrand } from '@/contexts/BrandContext';
 
 type OfferType = 'business' | 'consumer';
 
@@ -31,6 +32,7 @@ export default function RentalDetailPage() {
     const navigate = useNavigate();
     const { token } = useAuth();
     const isLoggedIn = !!token;
+    const { config } = useBrand();
 
     const { data, isLoading } = useQuery({
         queryKey: ['rental-vehicle-public', slug],
@@ -178,7 +180,7 @@ export default function RentalDetailPage() {
     ].filter(cat => cat.items?.length > 0);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 pb-24 md:pb-0">
             <Header onClearFilters={() => {}} hasActiveFilters={false} />
 
             <main className="container pb-10 pt-4">
@@ -506,6 +508,35 @@ export default function RentalDetailPage() {
             {/* Lightbox is handled by ImageGallery component */}
 
             <ScrollToTopButton />
+
+            {/* Mobile Sticky CTA */}
+            <div className="sticky-cta md:hidden">
+                <div className="flex gap-3">
+                    {config.contactInfo.phone && (
+                        <button
+                            className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm"
+                            onClick={() => window.open(`tel:${config.contactInfo.phone}`)}
+                        >
+                            <Phone className="h-4 w-4" />
+                            Zadzwoń
+                        </button>
+                    )}
+                    <button
+                        className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-accent text-accent-foreground font-semibold text-sm"
+                        onClick={() => {
+                            if (offers.length > 0) {
+                                navigate(`/wynajem-dlugoterminowy/${slug}/zapytanie`, { state: buildRentalState(offers[0]) });
+                            } else {
+                                navigate(`/wynajem-dlugoterminowy/${slug}/zapytanie`);
+                            }
+                        }}
+                    >
+                        <FileText className="h-4 w-4" />
+                        Wyślij zapytanie
+                    </button>
+                </div>
+            </div>
+
             <Footer />
         </div>
     );
