@@ -23,8 +23,8 @@ function getStoredClientType(): ClientType {
 export default function RentalSearchPage() {
     const { config } = useBrand();
     const isMotolia = config.id === 'motolia';
-    const accent = isMotolia ? '#D4A90A' : '#2563EB';       // yellow-dark : blue-600
-    const accentText = isMotolia ? '#1A1A1A' : '#fff';       // text on accent bg
+    const accent = 'hsl(var(--accent))';
+    const accentText = 'hsl(var(--accent-foreground))';
 
     const [search, setSearch] = useState('');
     const [make, setMake] = useState('');
@@ -175,7 +175,7 @@ export default function RentalSearchPage() {
                                         </div>
                                     )}
                                     {v.rentalCompanyCount > 1 && (
-                                        <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-full">
+                                        <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs font-medium px-2 py-1 rounded-full">
                                             {v.rentalCompanyCount} oferty
                                         </div>
                                     )}

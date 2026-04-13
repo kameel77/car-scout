@@ -147,7 +147,7 @@ export default function RentalDetailPage() {
                 <div className="container py-20 text-center">
                     <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h2 className="text-xl font-semibold">Pojazd nie został znaleziony</h2>
-                    <Link to="/wynajem-dlugoterminowy" className="text-blue-600 hover:underline mt-4 inline-block">
+                    <Link to="/wynajem-dlugoterminowy" className="text-accent hover:underline mt-4 inline-block">
                         Wróć do listy
                     </Link>
                 </div>
@@ -183,7 +183,7 @@ export default function RentalDetailPage() {
 
             <main className="container pb-10 pt-4">
                 {/* Breadcrumb */}
-                <Link to="/wynajem-dlugoterminowy" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4">
+                <Link to="/wynajem-dlugoterminowy" className="inline-flex items-center gap-1 text-sm text-accent hover:opacity-80 mb-4">
                     <ArrowLeft className="w-4 h-4" /> Wróć do listy
                 </Link>
 
@@ -239,7 +239,7 @@ export default function RentalDetailPage() {
                             {specs.length > 8 && (
                                 <button
                                     onClick={() => setShowAllSpecs(!showAllSpecs)}
-                                    className="text-sm text-blue-600 hover:text-blue-700 mt-3 flex items-center gap-1"
+                                    className="text-sm text-accent hover:opacity-80 mt-3 flex items-center gap-1"
                                 >
                                     <ChevronDown className={`w-4 h-4 transition-transform ${showAllSpecs ? 'rotate-180' : ''}`} />
                                     {showAllSpecs ? 'Zwiń specyfikację' : 'Pełna specyfikacja'}
@@ -254,9 +254,9 @@ export default function RentalDetailPage() {
                                         const Icon = cat.icon;
                                         return (
                                             <details key={cat.label} className="group">
-                                                <summary className="flex items-center gap-1.5 cursor-pointer text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors py-1">
+                                                <summary className="flex items-center gap-1.5 cursor-pointer text-base font-medium text-gray-700 hover:text-accent transition-colors py-1">
                                                     <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
-                                                    <Icon className="w-4 h-4 text-blue-500" />
+                                                    <Icon className="w-4 h-4 text-accent" />
                                                     {cat.label}
                                                     <span className="text-xs text-gray-400 ml-1">({cat.items.length})</span>
                                                 </summary>
@@ -311,7 +311,7 @@ export default function RentalDetailPage() {
                                         disabled={!availableOfferTypes.has('business')}
                                         className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                             selectedOfferType === 'business'
-                                                ? 'bg-blue-600 text-white shadow-md'
+                                                ? 'bg-accent text-accent-foreground shadow-md'
                                                 : !availableOfferTypes.has('business')
                                                     ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -324,7 +324,7 @@ export default function RentalDetailPage() {
                                         disabled={!availableOfferTypes.has('consumer')}
                                         className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                             selectedOfferType === 'consumer'
-                                                ? 'bg-blue-600 text-white shadow-md'
+                                                ? 'bg-accent text-accent-foreground shadow-md'
                                                 : !availableOfferTypes.has('consumer')
                                                     ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -345,7 +345,7 @@ export default function RentalDetailPage() {
                                             onClick={() => setSelectedMileage(km)}
                                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                                 selectedMileage === km
-                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                    ? 'bg-accent text-accent-foreground shadow-md'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                         >
@@ -365,7 +365,7 @@ export default function RentalDetailPage() {
                                             onClick={() => setSelectedMonths(m)}
                                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                                 selectedMonths === m
-                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                    ? 'bg-accent text-accent-foreground shadow-md'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                         >
@@ -385,7 +385,7 @@ export default function RentalDetailPage() {
                                             onClick={() => setSelectedPayment(pct)}
                                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                                 selectedPayment === pct
-                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                    ? 'bg-accent text-accent-foreground shadow-md'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                         >
@@ -409,7 +409,7 @@ export default function RentalDetailPage() {
                                         <div
                                             key={i}
                                             className={`p-4 rounded-xl border-2 transition-all ${
-                                                i === 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+                                                i === 0 ? 'border-accent bg-accent/5' : 'border-gray-200 bg-white'
                                             }`}
                                         >
                                             <div className="flex items-center justify-between mb-2">
@@ -422,7 +422,7 @@ export default function RentalDetailPage() {
                                                     )}
                                                 </div>
                                                 {i === 0 && (
-                                                    <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">Najlepsza</span>
+                                                    <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full font-medium">Najlepsza</span>
                                                 )}
                                             </div>
                                             <div className="text-3xl font-bold text-gray-900">
@@ -460,7 +460,7 @@ export default function RentalDetailPage() {
                                             )}
 
                                             <Button
-                                                className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                                                className="w-full mt-4 bg-accent text-accent-foreground hover:opacity-90"
                                                 onClick={() => navigate(`/wynajem-dlugoterminowy/${slug}/zapytanie`, { state: buildRentalState(offer) })}
                                             >
                                                 <FileText className="w-4 h-4 mr-2" /> Zapytaj o ofertę
@@ -491,7 +491,7 @@ export default function RentalDetailPage() {
                                 value={entry.id}
                                 className="bg-white border rounded-xl px-5"
                             >
-                                <AccordionTrigger className="text-left font-medium text-gray-900 hover:text-blue-600">
+                                <AccordionTrigger className="text-left font-medium text-gray-900 hover:text-accent">
                                     {entry.questionPl}
                                 </AccordionTrigger>
                                 <AccordionContent className="text-gray-600 text-sm leading-relaxed">

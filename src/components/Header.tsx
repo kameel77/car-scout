@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
 import { usePersonalOffer } from '@/contexts/PersonalOfferContext';
+import { useBrand } from '@/contexts/BrandContext';
 
 const ALL_LANGUAGES = [
   { code: 'pl', label: 'Polski', flag: '🇵🇱' },
@@ -41,6 +42,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
   const { hasPersonalOffer } = usePersonalOffer();
+  const { config } = useBrand();
 
   const enabledLanguages = React.useMemo(() => {
     const codes = settings?.enabledLanguages || ['pl'];
@@ -130,8 +132,8 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  "text-base font-semibold transition-all hover:text-[#F97316]",
-                  location.pathname === link.to ? "text-[#F97316]" : "text-[#4A4E69]"
+                  "text-base font-semibold transition-all hover:text-accent",
+                  location.pathname === link.to ? "text-accent" : "text-[#4A4E69]"
                 )}
               >
                 {link.label}
@@ -185,7 +187,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
             {/* CTA Button */}
             <Link
               to="/samochody"
-              className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-[#F97316] px-6 text-sm font-semibold text-white transition-all hover:bg-[#EA580C] hover:shadow-lg hover:shadow-orange-200 active:scale-95"
+              className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-accent px-6 text-sm font-semibold text-accent-foreground transition-all hover:opacity-90 hover:shadow-lg active:scale-95"
             >
               Znajdź auto
             </Link>
@@ -196,7 +198,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
         <div className="flex items-center gap-2 lg:hidden">
           <Link
             to="/samochody"
-            className="flex sm:hidden h-9 items-center justify-center rounded-full bg-[#F97316] px-4 text-xs font-semibold text-white"
+            className="flex sm:hidden h-9 items-center justify-center rounded-full bg-accent px-4 text-xs font-semibold text-accent-foreground"
           >
             Znajdź auto
           </Link>
@@ -231,7 +233,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                       onClick={() => setIsOpen(false)}
                       className={cn(
                         "block text-lg font-medium transition-colors p-2 rounded-lg",
-                        location.pathname === link.to ? "bg-orange-50 text-[#F97316]" : "text-[#4A4E69] hover:bg-slate-50"
+                        location.pathname === link.to ? "bg-accent/10 text-accent" : "text-[#4A4E69] hover:bg-slate-50"
                       )}
                     >
                       {link.label}
@@ -255,7 +257,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                   <Link
                     to="/samochody"
                     onClick={() => setIsOpen(false)}
-                    className="block w-full text-center mt-6 h-12 flex items-center justify-center rounded-xl bg-[#F97316] text-white font-semibold"
+                    className="block w-full text-center mt-6 h-12 flex items-center justify-center rounded-xl bg-accent text-accent-foreground font-semibold"
                   >
                     Znajdź auto
                   </Link>
