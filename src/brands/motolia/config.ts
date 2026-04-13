@@ -29,12 +29,11 @@ export const motoliaConfig: BrandConfig = {
       image: 'https://images.unsplash.com/photo-1617469767053-d3b523a0b982?q=80&w=2662&auto=format&fit=crop',
       trustBadges: [
         'Rata all-in – wiesz za co płacisz',
-        'Decyzja nawet w 1 godzinę',
-        'Zawsze odbiór osobisty',
+        'Oddzwonimy w 15 minut',
       ],
       stats: [
         { value: '1000+', label: 'zrealizowanych umów' },
-        { value: '5', label: 'partnerów finansowych' },
+        { value: '98%', label: 'zadowolonych klientów' },
       ],
     },
     trustBar: [

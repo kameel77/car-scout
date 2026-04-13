@@ -5,7 +5,6 @@ import {
   Car,
   CreditCard,
   ArrowRight,
-  Star,
   ChevronDown,
   CheckCircle2,
   Zap,
@@ -24,18 +23,13 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-const GridPattern = () => (
-  <svg className="absolute inset-0 w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
-        <path d="M0 40L40 0H20L0 20M40 40V20L20 40" stroke="currentColor" strokeWidth="1" fill="none" />
-      </pattern>
-    </defs>
-    <rect width="100%" height="100%" fill="url(#grid-pattern)" />
-  </svg>
-);
+const YELLOW = '#F5C518';
+const YELLOW_DARK = '#D4A90A';
+const BLACK = '#1A1A1A';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const FadeIn = ({
   children,
@@ -47,17 +41,17 @@ const FadeIn = ({
   className?: string;
 }) => (
   <motion.div
-    initial={{ opacity: 0, y: 30 }}
+    initial={{ opacity: 0, y: 28 }}
     whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: '-100px' }}
-    transition={{ duration: 0.7, delay, ease: [0.21, 0.47, 0.32, 0.98] }}
+    viewport={{ once: true, margin: '-80px' }}
+    transition={{ duration: 0.6, delay, ease: [0.21, 0.47, 0.32, 0.98] }}
     className={className}
   >
     {children}
   </motion.div>
 );
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Data ─────────────────────────────────────────────────────────────────────
 
 const PRODUCTS = [
   {
@@ -173,14 +167,16 @@ export default function MotoliaHomePage() {
   }, [faqData, i18n.language]);
 
   return (
-    <div className="bg-[#0f172a] min-h-screen text-slate-100 font-inter selection:bg-emerald-500/30">
+    <div className="bg-white min-h-screen text-[#1A1A1A] font-inter selection:bg-yellow-200">
       <Header />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-[120px] -translate-y-1/2 pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-[30rem] h-[30rem] bg-teal-600/10 rounded-full blur-[120px] translate-y-1/2 pointer-events-none" />
-        <GridPattern />
+      <section className="relative pt-28 pb-20 lg:pt-40 lg:pb-28 overflow-hidden bg-[#FAFAF8]">
+        {/* Subtle yellow glow */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${YELLOW}18 0%, transparent 70%)` }} />
+        <div className="absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${YELLOW}10 0%, transparent 70%)` }} />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -188,26 +184,27 @@ export default function MotoliaHomePage() {
             {/* Left col */}
             <div className="max-w-2xl">
               <FadeIn>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium mb-8 backdrop-blur-md">
-                  <Star size={14} className="fill-emerald-500/50" />
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8"
+                  style={{ background: `${YELLOW}20`, borderColor: `${YELLOW}60`, color: BLACK }}>
+                  <span style={{ color: YELLOW_DARK }}>◆</span>
                   {config.homePage.hero.badge}
                 </div>
               </FadeIn>
 
               <FadeIn delay={0.1}>
                 <h1
-                  className="text-5xl lg:text-7xl font-outfit font-bold tracking-tight text-white mb-6 leading-[1.1]"
+                  className="text-5xl lg:text-7xl font-outfit font-bold tracking-tight mb-6 leading-[1.08] text-[#1A1A1A]"
                   dangerouslySetInnerHTML={{
                     __html: config.homePage.hero.title.replace(
                       '<span>',
-                      '<span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">',
+                      `<span style="color:${YELLOW_DARK}">`,
                     ),
                   }}
                 />
               </FadeIn>
 
               <FadeIn delay={0.2}>
-                <p className="text-xl text-slate-400 mb-10 leading-relaxed font-light">
+                <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light">
                   {config.homePage.hero.subtitle}
                 </p>
               </FadeIn>
@@ -215,23 +212,30 @@ export default function MotoliaHomePage() {
               <FadeIn delay={0.3} className="flex flex-col sm:flex-row gap-4 mb-12">
                 <Link
                   to="/samochody"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold text-lg transition-all duration-300 shadow-[0_0_40px_rgba(16,185,129,0.3)] hover:shadow-[0_0_60px_rgba(16,185,129,0.5)] hover:-translate-y-1"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                  style={{
+                    background: YELLOW,
+                    color: BLACK,
+                    boxShadow: `0 4px 24px ${YELLOW}60`,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
+                  onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
                 >
                   {config.homePage.hero.ctaLabel}
                   <ArrowRight size={20} />
                 </Link>
                 <a
                   href="#jak-to-dziala"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-medium text-lg border border-white/10 transition-all duration-300 backdrop-blur-sm"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-gray-200 text-gray-700 hover:border-gray-400 hover:text-gray-900 transition-all duration-200"
                 >
                   Jak to działa?
                 </a>
               </FadeIn>
 
-              <FadeIn delay={0.4} className="flex flex-wrap gap-x-8 gap-y-4">
+              <FadeIn delay={0.4} className="flex flex-wrap gap-x-8 gap-y-3">
                 {config.homePage.hero.trustBadges.map((badge, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-slate-300 text-sm font-medium">
-                    <CheckCircle2 size={18} className="text-emerald-400" />
+                  <div key={idx} className="flex items-center gap-2 text-gray-600 text-sm font-medium">
+                    <CheckCircle2 size={17} style={{ color: YELLOW_DARK }} />
                     {badge}
                   </div>
                 ))}
@@ -239,34 +243,40 @@ export default function MotoliaHomePage() {
             </div>
 
             {/* Right col — image + floating stats */}
-            <FadeIn delay={0.5} className="relative hidden lg:block">
-              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-transparent rounded-[2.5rem] blur-2xl transform rotate-3" />
+            <FadeIn delay={0.4} className="relative hidden lg:block">
+              <div className="absolute inset-0 rounded-[2.5rem] rotate-2"
+                style={{ background: `linear-gradient(135deg, ${YELLOW}30, transparent)`, filter: 'blur(20px)' }} />
               <img
                 src="https://images.unsplash.com/photo-1617469767053-d3b523a0b982?q=80&w=2662&auto=format&fit=crop"
                 alt="Motolia – szeroki wybór aut"
-                className="relative z-10 rounded-[2.5rem] w-full object-cover aspect-[4/3] shadow-2xl border border-white/10"
+                className="relative z-10 rounded-[2.5rem] w-full object-cover aspect-[4/3] shadow-2xl border border-gray-100"
               />
+
+              {/* Stat card 1 */}
               <motion.div
-                animate={{ y: [0, -10, 0] }}
+                animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -bottom-8 -left-8 z-20 bg-slate-900/90 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl"
+                className="absolute -bottom-6 -left-8 z-20 bg-white border border-gray-100 p-5 rounded-3xl shadow-xl"
               >
-                <div className="text-4xl font-outfit font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 mb-1">
+                <div className="text-3xl font-outfit font-bold mb-0.5" style={{ color: YELLOW_DARK }}>
                   {config.homePage.hero.stats[0].value}
                 </div>
-                <div className="text-slate-400 text-sm font-medium uppercase tracking-wider">
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wider">
                   {config.homePage.hero.stats[0].label}
                 </div>
               </motion.div>
+
+              {/* Stat card 2 */}
               <motion.div
-                animate={{ y: [0, 10, 0] }}
+                animate={{ y: [0, 8, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -top-8 -right-8 z-20 bg-emerald-500 p-6 rounded-3xl shadow-2xl shadow-emerald-500/20"
+                className="absolute -top-6 -right-8 z-20 p-5 rounded-3xl shadow-xl text-white"
+                style={{ background: BLACK }}
               >
-                <div className="text-4xl font-outfit font-bold text-white mb-1">
+                <div className="text-3xl font-outfit font-bold mb-0.5" style={{ color: YELLOW }}>
                   {config.homePage.hero.stats[1].value}
                 </div>
-                <div className="text-emerald-100 text-sm font-medium uppercase tracking-wider">
+                <div className="text-gray-400 text-xs font-medium uppercase tracking-wider">
                   {config.homePage.hero.stats[1].label}
                 </div>
               </motion.div>
@@ -277,18 +287,19 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── TRUST BAR ────────────────────────────────────────────────────── */}
-      <section className="border-y border-white/5 bg-slate-900/50 backdrop-blur-md relative z-20">
-        <div className="max-w-7xl mx-auto px-6 py-12">
+      <section className="border-y border-gray-100 bg-white">
+        <div className="max-w-7xl mx-auto px-6 py-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {config.homePage.trustBar.map((item, idx) => (
-              <FadeIn key={idx} delay={idx * 0.1} className="flex flex-col items-center text-center group">
-                <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-emerald-500/10 group-hover:scale-110 transition-all duration-300 border border-white/5 group-hover:border-emerald-500/30">
-                  {item.icon === 'Shield'     && <ShieldCheck size={28} className="text-emerald-400" />}
-                  {item.icon === 'CreditCard' && <CreditCard  size={28} className="text-emerald-400" />}
-                  {item.icon === 'FileText'   && <FileText    size={28} className="text-emerald-400" />}
-                  {item.icon === 'Phone'      && <Clock       size={28} className="text-emerald-400" />}
+              <FadeIn key={idx} delay={idx * 0.08} className="flex flex-col items-center text-center group">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
+                  style={{ background: `${YELLOW}18`, border: `1.5px solid ${YELLOW}40` }}>
+                  {item.icon === 'Shield'     && <ShieldCheck size={26} style={{ color: YELLOW_DARK }} />}
+                  {item.icon === 'CreditCard' && <CreditCard  size={26} style={{ color: YELLOW_DARK }} />}
+                  {item.icon === 'FileText'   && <FileText    size={26} style={{ color: YELLOW_DARK }} />}
+                  {item.icon === 'Phone'      && <Clock       size={26} style={{ color: YELLOW_DARK }} />}
                 </div>
-                <h3 className="text-slate-300 font-medium">{item.label}</h3>
+                <h3 className="text-gray-700 font-semibold text-sm">{item.label}</h3>
               </FadeIn>
             ))}
           </div>
@@ -296,61 +307,63 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── PRODUKTY ─────────────────────────────────────────────────────── */}
-      <section className="py-32 relative" id="produkty">
+      <section className="py-28 bg-[#FAFAF8]" id="produkty">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-14">
             <FadeIn>
-              <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: YELLOW_DARK }}>
                 Co oferujemy
-              </div>
-              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6">
+              </p>
+              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-5 text-[#1A1A1A]">
                 Jeden serwis,{' '}
-                <span className="text-emerald-400">cztery produkty</span>
+                <span style={{ color: YELLOW_DARK }}>cztery produkty</span>
               </h2>
-              <p className="text-xl text-slate-400 font-light">
+              <p className="text-lg text-gray-500">
                 Obsługujemy zarówno osoby prywatne, jak i firmy – każdy znajdzie tu coś dla siebie.
               </p>
             </FadeIn>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {PRODUCTS.map((product, idx) => {
               const Icon = product.icon;
               const AudienceIcon = product.audienceIcon;
               return (
-                <FadeIn key={idx} delay={idx * 0.1}>
-                  <div className="relative bg-slate-900/40 border border-white/5 rounded-3xl p-8 h-full flex flex-col hover:border-emerald-500/30 hover:bg-slate-800/50 transition-all duration-300 group">
+                <FadeIn key={idx} delay={idx * 0.08}>
+                  <div className="relative bg-white border border-gray-100 rounded-3xl p-7 h-full flex flex-col hover:shadow-lg hover:border-gray-200 transition-all duration-300 group">
                     {product.popular && (
-                      <div className="absolute -top-3 left-6 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                      <div className="absolute -top-3 left-6 px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wide text-[#1A1A1A]"
+                        style={{ background: YELLOW }}>
                         Popularne
                       </div>
                     )}
 
-                    {/* Audience tag */}
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-6">
-                      <AudienceIcon size={12} />
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 mb-5">
+                      <AudienceIcon size={11} />
                       {product.audience}
                     </div>
 
-                    {/* Icon */}
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                      <Icon size={26} className="text-emerald-400" />
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform"
+                      style={{ background: `${YELLOW}20`, border: `1.5px solid ${YELLOW}50` }}>
+                      <Icon size={24} style={{ color: YELLOW_DARK }} />
                     </div>
 
-                    <h3 className="text-xl font-semibold text-white mb-3">{product.title}</h3>
-                    <p className="text-slate-400 leading-relaxed text-sm flex-1">{product.desc}</p>
+                    <h3 className="text-lg font-bold text-[#1A1A1A] mb-2">{product.title}</h3>
+                    <p className="text-gray-500 leading-relaxed text-sm flex-1">{product.desc}</p>
 
-                    {/* Time badge */}
-                    <div className="flex items-center gap-2 mt-6 text-xs text-emerald-400/80 font-medium">
-                      <Clock size={13} />
+                    <div className="flex items-center gap-2 mt-5 text-xs font-semibold text-gray-400">
+                      <Clock size={12} />
                       {product.time}
                     </div>
 
                     <Link
                       to={product.href}
-                      className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold transition-colors"
+                      style={{ color: YELLOW_DARK }}
+                      onMouseEnter={e => (e.currentTarget.style.color = BLACK)}
+                      onMouseLeave={e => (e.currentTarget.style.color = YELLOW_DARK)}
                     >
-                      Sprawdź ofertę <ArrowRight size={15} />
+                      Sprawdź ofertę <ArrowRight size={14} />
                     </Link>
                   </div>
                 </FadeIn>
@@ -360,41 +373,40 @@ export default function MotoliaHomePage() {
         </div>
       </section>
 
-      {/* ── JAK TO DZIAŁA (3 kroki) ───────────────────────────────────────── */}
-      <section className="py-32 relative bg-slate-900/30" id="jak-to-dziala">
+      {/* ── JAK TO DZIAŁA ────────────────────────────────────────────────── */}
+      <section className="py-28 bg-white" id="jak-to-dziala">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-20">
+          <div className="text-center max-w-3xl mx-auto mb-16">
             <FadeIn>
-              <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: YELLOW_DARK }}>
                 {config.homePage.steps.tag}
-              </div>
+              </p>
               <h2
-                className="text-4xl md:text-5xl font-outfit font-bold mb-6"
+                className="text-4xl md:text-5xl font-outfit font-bold mb-5 text-[#1A1A1A]"
                 dangerouslySetInnerHTML={{
                   __html: config.homePage.steps.title.replace(
                     '<span>',
-                    '<span class="text-emerald-400">',
+                    `<span style="color:${YELLOW_DARK}">`,
                   ),
                 }}
               />
-              <p className="text-xl text-slate-400 font-light">
-                {config.homePage.steps.subtitle}
-              </p>
+              <p className="text-lg text-gray-500">{config.homePage.steps.subtitle}</p>
             </FadeIn>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-6 relative">
             {config.homePage.steps.items.map((item, index) => (
-              <FadeIn key={index} delay={index * 0.15} className="relative">
-                <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-8 h-full hover:bg-slate-800/50 transition-colors backdrop-blur-sm">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-2xl font-outfit font-bold text-emerald-400 mb-6 border border-emerald-500/20">
+              <FadeIn key={index} delay={index * 0.12} className="relative">
+                <div className="bg-[#FAFAF8] border border-gray-100 rounded-3xl p-8 h-full hover:shadow-md transition-all duration-300">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-outfit font-bold mb-6 text-[#1A1A1A]"
+                    style={{ background: YELLOW }}>
                     {index + 1}
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-white">{item.title}</h3>
-                  <p className="text-slate-400 leading-relaxed">{item.description}</p>
+                  <h3 className="text-xl font-bold mb-3 text-[#1A1A1A]">{item.title}</h3>
+                  <p className="text-gray-500 leading-relaxed">{item.description}</p>
                 </div>
                 {index < config.homePage.steps.items.length - 1 && (
-                  <div className="hidden md:block absolute top-14 -right-3 w-6 border-t border-dashed border-slate-700" />
+                  <div className="hidden md:block absolute top-12 -right-3 w-6 border-t-2 border-dashed border-gray-200" />
                 )}
               </FadeIn>
             ))}
@@ -403,75 +415,64 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── MARKI I PARTNERZY ─────────────────────────────────────────────── */}
-      <section className="py-24 border-y border-white/5 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-emerald-950/20 to-slate-900 pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="text-center mb-16">
+      <section className="py-24 bg-[#FAFAF8] border-y border-gray-100">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-14">
             <FadeIn>
-              <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: YELLOW_DARK }}>
                 Oferta
-              </div>
-              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-4">
+              </p>
+              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-4 text-[#1A1A1A]">
                 Praktycznie{' '}
-                <span className="text-emerald-400">każda marka</span>
+                <span style={{ color: YELLOW_DARK }}>każda marka</span>
               </h2>
-              <p className="text-lg text-slate-400 font-light max-w-2xl mx-auto">
+              <p className="text-lg text-gray-500 max-w-2xl mx-auto">
                 Współpracujemy z dealerami wszystkich liczących się producentów –
                 od europejskich klasyków po najlepsze marki chińskie.
               </p>
             </FadeIn>
           </div>
 
-          {/* Car brands — EU & JP */}
+          {/* EU & JP brands */}
           <FadeIn delay={0.1}>
-            <div className="mb-4">
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-4 text-center">
-                Marki europejskie i japońskie
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                {CAR_BRANDS_EU.map((brand) => (
-                  <span
-                    key={brand}
-                    className="px-4 py-2 rounded-xl bg-slate-800/60 border border-white/5 text-slate-300 text-sm font-medium hover:border-emerald-500/30 hover:text-white transition-all"
-                  >
-                    {brand}
-                  </span>
-                ))}
-              </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 text-center mb-4">
+              Marki europejskie i japońskie
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              {CAR_BRANDS_EU.map((brand) => (
+                <span key={brand}
+                  className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-medium hover:border-gray-400 hover:text-[#1A1A1A] transition-all cursor-default">
+                  {brand}
+                </span>
+              ))}
             </div>
           </FadeIn>
 
-          {/* Car brands — Chinese */}
-          <FadeIn delay={0.2}>
-            <div className="mb-16">
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-4 text-center mt-6">
-                Topowe marki chińskie
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                {CAR_BRANDS_CN.map((brand) => (
-                  <span
-                    key={brand}
-                    className="px-4 py-2 rounded-xl bg-slate-800/60 border border-white/5 text-slate-300 text-sm font-medium hover:border-emerald-500/30 hover:text-white transition-all"
-                  >
-                    {brand}
-                  </span>
-                ))}
-              </div>
+          {/* Chinese brands */}
+          <FadeIn delay={0.15}>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 text-center mb-4">
+              Topowe marki chińskie
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 mb-14">
+              {CAR_BRANDS_CN.map((brand) => (
+                <span key={brand}
+                  className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-medium hover:border-gray-400 hover:text-[#1A1A1A] transition-all cursor-default">
+                  {brand}
+                </span>
+              ))}
             </div>
           </FadeIn>
 
           {/* Financial partners */}
-          <FadeIn delay={0.3}>
-            <div className="border-t border-white/5 pt-12">
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-6 text-center">
+          <FadeIn delay={0.2}>
+            <div className="border-t border-gray-200 pt-10">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 text-center mb-6">
                 Partnerzy finansowi
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 {FINANCIAL_PARTNERS.map((partner) => (
-                  <div
-                    key={partner}
-                    className="px-6 py-3 rounded-2xl bg-slate-800/40 border border-white/10 text-slate-200 font-semibold text-sm hover:border-emerald-500/40 hover:bg-slate-700/40 transition-all"
-                  >
+                  <div key={partner}
+                    className="px-6 py-3 rounded-2xl bg-white border-2 border-gray-200 text-[#1A1A1A] font-bold text-sm hover:border-gray-400 transition-all cursor-default">
                     {partner}
                   </div>
                 ))}
@@ -481,43 +482,53 @@ export default function MotoliaHomePage() {
         </div>
       </section>
 
-      {/* ── DLACZEGO MOTOLIA ──────────────────────────────────────────────── */}
-      <section className="py-32 bg-slate-900 relative border-y border-white/5 overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-900/20 blur-[150px] rounded-full pointer-events-none" />
+      {/* ── DLACZEGO MOTOLIA — dark section ──────────────────────────────── */}
+      <section className="py-28 relative overflow-hidden" style={{ background: BLACK }}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${YELLOW}0a 0%, transparent 70%)` }} />
+
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex flex-col lg:flex-row gap-16 items-center">
 
             <div className="lg:w-1/3">
               <FadeIn>
-                <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">
+                <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: YELLOW }}>
                   Nowy standard
-                </div>
+                </p>
                 <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6 text-white">
                   Dlaczego <br />
-                  <span className="text-emerald-400">Motolia?</span>
+                  <span style={{ color: YELLOW }}>Motolia?</span>
                 </h2>
-                <p className="text-lg text-slate-400 mb-8 leading-relaxed">
+                <p className="text-lg text-gray-400 mb-8 leading-relaxed">
                   Finansowanie auta powinno być proste. Bez zbędnej biurokracji,
                   bez ukrytych kosztów. Jeden doradca, wiele możliwości.
                 </p>
                 <Link
                   to="/samochody"
-                  className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
+                  className="inline-flex items-center gap-2 font-bold transition-colors text-white hover:opacity-80"
+                  style={{ color: YELLOW }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                 >
-                  Przeglądaj ofertę <ArrowRight size={20} />
+                  Przeglądaj ofertę <ArrowRight size={18} />
                 </Link>
               </FadeIn>
             </div>
 
-            <div className="lg:w-2/3 grid sm:grid-cols-2 gap-6">
+            <div className="lg:w-2/3 grid sm:grid-cols-2 gap-5">
               {WHY_US.map((feature, idx) => (
-                <FadeIn key={idx} delay={idx * 0.1}>
-                  <div className="bg-slate-800/40 border border-white/5 p-8 rounded-3xl hover:border-emerald-500/30 transition-all duration-300 group">
-                    <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                      <feature.icon className="text-emerald-400" size={24} />
+                <FadeIn key={idx} delay={idx * 0.08}>
+                  <div className="p-7 rounded-3xl border transition-all duration-300 group hover:border-opacity-60"
+                    style={{ background: '#262626', borderColor: '#333' }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = `${YELLOW}60`)}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = '#333')}
+                  >
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform"
+                      style={{ background: `${YELLOW}20` }}>
+                      <feature.icon style={{ color: YELLOW }} size={22} />
                     </div>
-                    <h3 className="text-xl font-semibold mb-3 text-white">{feature.title}</h3>
-                    <p className="text-slate-400">{feature.desc}</p>
+                    <h3 className="text-lg font-bold mb-2 text-white">{feature.title}</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">{feature.desc}</p>
                   </div>
                 </FadeIn>
               ))}
@@ -529,35 +540,36 @@ export default function MotoliaHomePage() {
 
       {/* ── FAQ ───────────────────────────────────────────────────────────── */}
       {dynamicFaqs.length > 0 && (
-        <section className="py-32 relative" id="faq">
+        <section className="py-28 bg-white" id="faq">
           <div className="max-w-4xl mx-auto px-6">
-            <FadeIn className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6 text-white">
+            <FadeIn className="text-center mb-14">
+              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-5 text-[#1A1A1A]">
                 Najczęściej zadawane{' '}
-                <span className="text-emerald-400">pytania</span>
+                <span style={{ color: YELLOW_DARK }}>pytania</span>
               </h2>
-              <p className="text-xl text-slate-400">
+              <p className="text-lg text-gray-500">
                 Odpowiadamy na najczęstsze pytania dotyczące finansowania aut.
               </p>
             </FadeIn>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {dynamicFaqs.map((item, idx) => (
-                <FadeIn key={item.id} delay={idx * 0.05}>
-                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl overflow-hidden transition-all hover:border-white/10">
+                <FadeIn key={item.id} delay={idx * 0.04}>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden hover:border-gray-200 transition-all bg-white">
                     <button
                       onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                       className="w-full flex items-center justify-between p-6 text-left"
                     >
-                      <h3 className="text-lg font-medium text-slate-200 pr-8">{item.q}</h3>
-                      <div
-                        className={`flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center transition-transform duration-300 ${
-                          openFaq === idx
-                            ? 'rotate-180 bg-emerald-500 text-white'
-                            : 'text-slate-400'
-                        }`}
+                      <h3 className="text-base font-semibold text-[#1A1A1A] pr-6">{item.q}</h3>
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        openFaq === idx ? 'rotate-180' : ''
+                      }`}
+                        style={{
+                          background: openFaq === idx ? YELLOW : '#F3F4F6',
+                          color: openFaq === idx ? BLACK : '#6B7280',
+                        }}
                       >
-                        <ChevronDown size={18} />
+                        <ChevronDown size={16} />
                       </div>
                     </button>
                     <AnimatePresence>
@@ -566,9 +578,9 @@ export default function MotoliaHomePage() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3 }}
+                          transition={{ duration: 0.25 }}
                         >
-                          <div className="px-6 pb-6 pt-4 text-slate-400 leading-relaxed border-t border-white/5">
+                          <div className="px-6 pb-6 text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
                             {item.a}
                           </div>
                         </motion.div>
@@ -583,27 +595,31 @@ export default function MotoliaHomePage() {
       )}
 
       {/* ── CTA ───────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 relative z-10" id="kontakt">
+      <section className="py-24 px-6" id="kontakt" style={{ background: '#FAFAF8' }}>
         <div className="max-w-5xl mx-auto">
-          <div className="relative bg-gradient-to-br from-emerald-900 to-slate-900 rounded-[3rem] p-12 text-center overflow-hidden border border-emerald-500/20 shadow-2xl">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 blur-[80px]" />
+          <div className="relative rounded-[3rem] p-12 text-center overflow-hidden border"
+            style={{ background: BLACK, borderColor: '#2A2A2A' }}>
+            {/* Yellow glow top-right */}
+            <div className="absolute top-0 right-0 w-72 h-72 rounded-full pointer-events-none"
+              style={{ background: `radial-gradient(circle, ${YELLOW}18 0%, transparent 70%)` }} />
 
             <div className="relative z-10 max-w-2xl mx-auto">
               <FadeIn>
-                <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-8 backdrop-blur-xl border border-white/20">
-                  <Car size={32} className="text-emerald-400" />
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8"
+                  style={{ background: `${YELLOW}20`, border: `1.5px solid ${YELLOW}40` }}>
+                  <Car size={28} style={{ color: YELLOW }} />
                 </div>
-                <h2 className="text-4xl md:text-5xl font-outfit font-bold text-white mb-6">
+
+                <h2 className="text-4xl md:text-5xl font-outfit font-bold text-white mb-5">
                   Znajdź auto i dobierz{' '}
-                  <span className="text-emerald-400">finansowanie</span>
+                  <span style={{ color: YELLOW }}>finansowanie</span>
                 </h2>
-                <p className="text-xl text-emerald-100/80 mb-10 font-light">
+                <p className="text-lg text-gray-400 mb-10 font-light">
                   Zostaw numer – doradca oddzwoni i w kilka minut przedstawi oferty z kredytu, leasingu lub wynajmu.
                 </p>
 
                 <form
-                  className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto"
+                  className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto"
                   onSubmit={async (e) => {
                     e.preventDefault();
                     const form = e.target as HTMLFormElement;
@@ -617,12 +633,10 @@ export default function MotoliaHomePage() {
                       button.innerHTML = 'Wysyłanie...';
                       await leadsApi.submitQuickLead({ phone });
                       button.innerHTML = 'Otrzymano!';
-                      button.style.background = '#10b981';
                       phoneInput.value = '';
                       setTimeout(() => {
                         button.disabled = false;
                         button.innerHTML = originalText;
-                        button.style.background = '';
                       }, 4000);
                     } catch {
                       button.innerHTML = 'Błąd, spróbuj ponownie';
@@ -637,18 +651,27 @@ export default function MotoliaHomePage() {
                     type="tel"
                     placeholder="Wpisz swój numer telefonu"
                     required
-                    className="flex-1 bg-white/10 border-2 border-white/20 focus:border-emerald-400 rounded-2xl px-6 py-4 text-white placeholder:text-emerald-200/50 outline-none transition-colors text-lg backdrop-blur-md"
+                    className="flex-1 rounded-2xl px-6 py-4 text-white text-lg outline-none transition-all"
+                    style={{
+                      background: '#262626',
+                      border: '2px solid #333',
+                    }}
+                    onFocus={e => (e.currentTarget.style.borderColor = YELLOW)}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#333')}
                   />
                   <button
                     type="submit"
-                    className="bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 whitespace-nowrap"
+                    className="font-bold px-8 py-4 rounded-2xl transition-all duration-200 whitespace-nowrap text-[#1A1A1A] hover:-translate-y-0.5 active:translate-y-0"
+                    style={{ background: YELLOW }}
+                    onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
+                    onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
                   >
                     Zadzwoń do mnie
                   </button>
                 </form>
 
-                <div className="mt-6 flex items-center justify-center gap-2 text-emerald-200/60 text-sm">
-                  <ShieldCheck size={16} /> Twoje dane są bezpieczne
+                <div className="mt-6 flex items-center justify-center gap-2 text-gray-500 text-sm">
+                  <ShieldCheck size={15} /> Twoje dane są bezpieczne
                 </div>
               </FadeIn>
             </div>
