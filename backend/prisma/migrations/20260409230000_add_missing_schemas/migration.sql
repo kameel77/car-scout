@@ -167,7 +167,7 @@ CREATE INDEX IF NOT EXISTS "crm_tracking_visits_session_id_visited_at_idx" ON "c
 CREATE INDEX IF NOT EXISTS "partner_ads_placement_idx" ON "partner_ads"("placement");
 CREATE INDEX IF NOT EXISTS "partner_ads_is_active_idx" ON "partner_ads"("is_active");
 CREATE UNIQUE INDEX IF NOT EXISTS "dealer_groups_name_key" ON "dealer_groups"("name");
-CREATE UNIQUE INDEX "dealer_groups_slug_key" ON "dealer_groups"("slug");
+CREATE UNIQUE INDEX IF NOT EXISTS "dealer_groups_slug_key" ON "dealer_groups"("slug");
 CREATE INDEX IF NOT EXISTS "memberships_user_id_scope_type_scope_id_idx" ON "memberships"("user_id", "scope_type", "scope_id");
 CREATE INDEX IF NOT EXISTS "memberships_scope_type_scope_id_idx" ON "memberships"("scope_type", "scope_id");
 CREATE UNIQUE INDEX IF NOT EXISTS "memberships_user_id_scope_type_scope_id_role_key" ON "memberships"("user_id", "scope_type", "scope_id", "role");
