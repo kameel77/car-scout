@@ -158,7 +158,6 @@ model Dealer {
   contactPhone      String?         @map("contact_phone")
   contactEmail      String?         @map("contact_email")
   contactEmailService String?       @map("contact_email_service")
-  contactName       String?         @map("contact_name")
   dealerGroupId     String?         @map("dealer_group_id")
   googleRating      Float?          @map("google_rating")
   googleReviewCount Int?            @map("google_review_count")
