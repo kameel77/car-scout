@@ -5,10 +5,14 @@ export const motoliaConfig: BrandConfig = {
   name: 'Motolia',
   domain: 'motolia.pl',
   colors: {
-    primary: '160 60% 15%',
-    primaryHover: '160 60% 20%',
-    accent: '160 70% 35%',
-    accentHover: '160 70% 30%',
+    // Black — primary surfaces, borders, text
+    primary: '0 0% 10%',
+    primaryHover: '0 0% 16%',
+    primaryForeground: '0 0% 100%',       // white text on black bg
+    // Golden yellow (#F5C518) — all CTAs, highlights, accents
+    accent: '47 92% 53%',
+    accentHover: '47 91% 44%',
+    accentForeground: '0 0% 10%',         // black text on yellow bg
   },
   contactInfo: {
     phone: '+48 519 188 087',

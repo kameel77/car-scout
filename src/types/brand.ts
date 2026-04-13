@@ -1,8 +1,10 @@
 export interface BrandColors {
   primary: string;
   primaryHover?: string;
+  primaryForeground?: string;  // text on primary bg (defaults to white)
   accent: string;
   accentHover?: string;
+  accentForeground?: string;   // text on accent bg (defaults to white)
 }
 
 export interface HeroConfig {

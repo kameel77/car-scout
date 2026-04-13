@@ -24,16 +24,26 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     // Inject brand specific CSS tokens to :root
     const root = document.documentElement;
+
     root.style.setProperty('--primary', config.colors.primary);
     root.style.setProperty('--accent', config.colors.accent);
-    
+
+    // Foreground colors (text on top of primary/accent backgrounds)
+    // Default: white (0 0% 100%) — override per brand as needed
+    root.style.setProperty(
+      '--primary-foreground',
+      config.colors.primaryForeground ?? '0 0% 100%'
+    );
+    root.style.setProperty(
+      '--accent-foreground',
+      config.colors.accentForeground ?? '0 0% 100%'
+    );
+
     if (config.colors.primaryHover) {
-      // Create a gradient override for primary
       root.style.setProperty('--gradient-primary', `linear-gradient(135deg, hsl(${config.colors.primary}) 0%, hsl(${config.colors.primaryHover}) 100%)`);
     }
 
     if (config.colors.accentHover) {
-      // Create a gradient override for accent
       root.style.setProperty('--gradient-accent', `linear-gradient(135deg, hsl(${config.colors.accent}) 0%, hsl(${config.colors.accentHover}) 100%)`);
     }
   }, [config]);
