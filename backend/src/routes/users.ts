@@ -81,7 +81,6 @@ export async function userRoutes(fastify: FastifyInstance) {
                 id: true,
                 email: true,
                 name: true,
-                phone: true,
                 role: true,
                 isActive: true,
                 lastLogin: true,
@@ -106,7 +105,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     fastify.post('/api/users', {
         preHandler: [fastify.authenticate, requirePermission('users:write')]
     }, async (request, reply) => {
-        const { email, name, phone, password, membershipScopeType, membershipScopeId, membershipRole } =
+        const { email, name, password, membershipScopeType, membershipScopeId, membershipRole } =
             request.body as any;
 
         if (!email || !password) {
@@ -145,7 +144,6 @@ export async function userRoutes(fastify: FastifyInstance) {
                 data: {
                     email,
                     name,
-                    phone,
                     password: hashedPassword,
                     role: legacyRole,
                     memberships: {
@@ -161,7 +159,6 @@ export async function userRoutes(fastify: FastifyInstance) {
                     id: true,
                     email: true,
                     name: true,
-                    phone: true,
                     role: true,
                     isActive: true,
                     createdAt: true,
@@ -251,12 +248,11 @@ export async function userRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, requirePermission('users:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
-        const { email, name, phone, password, isActive } = request.body as any;
+        const { email, name, password, isActive } = request.body as any;
 
         const updateData: any = {};
         if (email !== undefined) updateData.email = email;
         if (name !== undefined) updateData.name = name;
-        if (phone !== undefined) updateData.phone = phone;
         if (isActive !== undefined) updateData.isActive = isActive;
 
         if (password) {
@@ -271,7 +267,6 @@ export async function userRoutes(fastify: FastifyInstance) {
                     id: true,
                     email: true,
                     name: true,
-                    phone: true,
                     role: true,
                     isActive: true,
                     updatedAt: true,

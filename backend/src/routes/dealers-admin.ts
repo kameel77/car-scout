@@ -105,7 +105,7 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
             },
             include: {
                 user: {
-                    select: { id: true, email: true, name: true, phone: true, isActive: true },
+                    select: { id: true, email: true, name: true, isActive: true },
                 },
             },
         });
