@@ -54,4 +54,4 @@ EXPOSE 3000
 # Start command (with migrations)
 # Using ; instead of && to ensure server starts even if migrations have conflicts,
 # allowing terminal access for manual resolution (e.g. npx prisma migrate resolve).
-CMD ["sh", "-c", "npx prisma migrate deploy; node dist/server.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss; node dist/server.js"]
