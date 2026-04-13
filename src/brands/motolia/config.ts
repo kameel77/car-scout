@@ -5,56 +5,62 @@ export const motoliaConfig: BrandConfig = {
   name: 'Motolia',
   domain: 'motolia.pl',
   colors: {
-    // Elegant deep bottle green as primary
     primary: '160 60% 15%',
     primaryHover: '160 60% 20%',
-    // Accent vibrant green/emerald
     accent: '160 70% 35%',
     accentHover: '160 70% 30%',
   },
   contactInfo: {
-    phone: '+48 987 654 321',
+    phone: '+48 519 188 087',
     email: 'kontakt@motolia.pl',
   },
   contactPage: {
-    title: 'Skonsultujmy Twoje <span>wymarzone auto</span>',
-    subtitle: 'Nasi doradcy Motolia pomogą Ci dopiąć finansowanie na wybrane auto. Zostaw nam wiadomość, a my zajmiemy się resztą.',
-    ctaTitle: 'Szukasz <span>innego modelu</span>?',
-    ctaSubtitle: 'Przewertuj naszą bazę dostępnych modeli i zgłoś zapotrzebowanie na to, co widoczne w katalogu.',
+    title: 'Znajdź swoje <span>wymarzone auto</span>',
+    subtitle: 'Nasi doradcy dobiorą dla Ciebie najlepsze finansowanie – kredyt, leasing lub wynajem. Zostaw kontakt, odezwiemy się w ciągu 24h.',
+    ctaTitle: 'Szukasz <span>konkretnego modelu</span>?',
+    ctaSubtitle: 'Przewertuj naszą bazę dostępnych aut i zgłoś zapotrzebowanie na wybrany pojazd.',
   },
   homePage: {
     hero: {
-      badge: 'Twój samochód, Twoje zasady',
-      title: 'Finansowanie auta<br /><span>bez stresu</span>',
-      subtitle: 'Znajdź nowoczesne sposoby na sfinansowanie Twojego kolejnego pojazdu. My zajmiemy się resztą.',
-      ctaLabel: 'Odkryj samochody',
-      image: 'https://krqwvegfxnlwdhgjuflh.supabase.co/storage/v1/object/public/public-img/car-salon-hero.jpg', // Placeholder, should be updated for motolia
+      badge: 'Leasing · Kredyt · Wynajem · Pożyczka',
+      title: 'Szeroki wybór aut.<br /><span>Proste finansowanie.</span>',
+      subtitle: 'Niezależnie czy jesteś osobą prywatną czy firmą – dobierzemy finansowanie do Twojej sytuacji. Jedna rozmowa, wiele ofert.',
+      ctaLabel: 'Sprawdź dostępne auta',
+      image: 'https://images.unsplash.com/photo-1617469767053-d3b523a0b982?q=80&w=2662&auto=format&fit=crop',
       trustBadges: [
-        'Przejrzyste warunki',
-        'Zaufani partnerzy',
-        'Szybka decyzja',
+        'Rata all-in – wiesz za co płacisz',
+        'Decyzja nawet w 1 godzinę',
+        'Zawsze odbiór osobisty',
       ],
       stats: [
         { value: '1000+', label: 'zrealizowanych umów' },
-        { value: '24h', label: 'średni czas decyzji' },
+        { value: '5', label: 'partnerów finansowych' },
       ],
     },
     trustBar: [
-      { icon: 'Shield', label: 'Eksperckie doradztwo' },
-      { icon: 'CreditCard', label: 'Leasing i Kredyt' },
-      { icon: 'FileText', label: 'Przejrzyste umowy' },
-      { icon: 'Phone', label: 'Wsparcie 24/7' },
+      { icon: 'Shield', label: 'Zaufani dealerzy w całej Polsce' },
+      { icon: 'CreditCard', label: 'Leasing, kredyt i wynajem' },
+      { icon: 'FileText', label: 'Przejrzyste warunki w każdej ofercie' },
+      { icon: 'Phone', label: 'Decyzja od 1 do 24 godzin' },
     ],
     steps: {
       tag: 'Krok po kroku',
       title: 'Z nami <span>zrealizujesz</span> marzenie o aucie',
-      subtitle: 'Przygotowaliśmy proces tak, abyś mógł cieszyć się nowym samochodem bez zbędnego stresu.',
+      subtitle: 'Przygotowaliśmy prosty, trzyetapowy proces – od wyboru auta do odbioru kluczyków.',
       items: [
-        { title: 'Zostaw zapytanie', description: 'Podaj nam szczegóły auta, którego szukasz.' },
-        { title: 'Konsultacja konfiguracji', description: 'Nasz ekspert przeanalizuje Twój przypadek i doradzi najlepsze rozwiązanie finansowe.' },
-        { title: 'Wybór opcji', description: 'Przedstawimy najkorzystniejsze oferty z banków i firm leasingowych.' },
-        { title: 'Odbiór pojazdu', description: 'Sfinalizujemy umowy, a Ty po prostu odbierasz kluczyki do wymarzonego samochodu.' },
-      ]
-    }
-  }
+        {
+          title: 'Wybierz markę i model',
+          description: 'Powiedz nam jakiego auta szukasz i jaką formę finansowania preferujesz. Pomożemy dopasować produkt do Twojej sytuacji.',
+        },
+        {
+          title: 'Podpisz umowę online',
+          description: 'Nasz doradca przygotuje oferty od partnerów finansowych i omówi warunki. Całość zazwyczaj bez wychodzenia z domu.',
+        },
+        {
+          title: 'Odbierz samochód',
+          description: 'Wskazujemy konkretny salon dealerski w Twoim mieście – odbiór osobisty w umówionym terminie.',
+        },
+      ],
+    },
+  },
 };

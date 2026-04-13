@@ -1,17 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ShieldCheck, 
-  Car, 
-  CreditCard, 
-  ArrowRight, 
-  Star, 
-  ChevronDown, 
-  CheckCircle2, 
-  PlayCircle,
-  Gem,
+import {
+  ShieldCheck,
+  Car,
+  CreditCard,
+  ArrowRight,
+  Star,
+  ChevronDown,
+  CheckCircle2,
+  Zap,
+  Building2,
   Headset,
-  FileText
+  FileText,
+  Clock,
+  Users,
+  Briefcase,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +24,8 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 
-// Background patterns
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 const GridPattern = () => (
   <svg className="absolute inset-0 w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -33,17 +37,105 @@ const GridPattern = () => (
   </svg>
 );
 
-const FadeIn = ({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) => (
+const FadeIn = ({
+  children,
+  delay = 0,
+  className = '',
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) => (
   <motion.div
     initial={{ opacity: 0, y: 30 }}
     whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: "-100px" }}
+    viewport={{ once: true, margin: '-100px' }}
     transition={{ duration: 0.7, delay, ease: [0.21, 0.47, 0.32, 0.98] }}
     className={className}
   >
     {children}
   </motion.div>
 );
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+
+const PRODUCTS = [
+  {
+    audience: 'Dla Ciebie',
+    audienceIcon: Users,
+    popular: true,
+    icon: CreditCard,
+    title: 'Kredyt samochodowy',
+    desc: 'Kup auto na własność. Niskie raty, długi okres spłaty, decyzja nawet w 1 godzinę.',
+    time: 'Decyzja do 1h',
+    href: '/samochody?finansowanie=kredyt',
+  },
+  {
+    audience: 'Dla Ciebie',
+    audienceIcon: Users,
+    popular: true,
+    icon: FileText,
+    title: 'Pożyczka na samochód',
+    desc: 'Szybkie finansowanie bez zastawu. Elastyczne warunki dopasowane do Twojego budżetu.',
+    time: 'Decyzja do 1h',
+    href: '/samochody?finansowanie=pozyczka',
+  },
+  {
+    audience: 'Dla Ciebie i firm',
+    audienceIcon: Users,
+    popular: false,
+    icon: Car,
+    title: 'Wynajem długoterminowy',
+    desc: 'Miesięczna rata obejmuje ubezpieczenie i serwis. Bez angażowania kapitału, od 12 miesięcy.',
+    time: 'Decyzja do 24h',
+    href: '/wynajem-dlugoterminowy',
+  },
+  {
+    audience: 'Dla firm',
+    audienceIcon: Briefcase,
+    popular: false,
+    icon: Briefcase,
+    title: 'Leasing samochodu',
+    desc: 'Optymalizacja kosztów podatkowych dla przedsiębiorców. Szeroki wybór marek i modeli.',
+    time: 'Decyzja 2–3h',
+    href: '/samochody?finansowanie=leasing',
+  },
+];
+
+const WHY_US = [
+  {
+    icon: ShieldCheck,
+    title: 'Przejrzyste raty all-in',
+    desc: 'Zawsze wiesz co wchodzi w zakres oferty. Żadnych niespodzianek po podpisaniu umowy.',
+  },
+  {
+    icon: Zap,
+    title: 'Szybka decyzja',
+    desc: 'Kredyt nawet w 1 godzinę. Leasing w 2–3h. Wynajem do 24h. Bez zbędnej biurokracji.',
+  },
+  {
+    icon: Building2,
+    title: 'Sieć dealerów w Polsce',
+    desc: 'Dostęp do salonu w Twoim mieście – wskazujemy lokalizację i umawiamy wizytę.',
+  },
+  {
+    icon: Headset,
+    title: 'Dedykowany doradca',
+    desc: 'Jeden opiekun prowadzi Cię od wyboru auta do odbioru kluczyków.',
+  },
+];
+
+const FINANCIAL_PARTNERS = ['Inbank', 'Santander', 'Vehis', 'PKO Leasing', 'Masterlease'];
+
+const CAR_BRANDS_EU = [
+  'Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Toyota', 'Kia',
+  'Hyundai', 'Škoda', 'Ford', 'Volvo', 'Renault', 'Peugeot',
+  'Seat', 'Opel', 'Nissan',
+];
+
+const CAR_BRANDS_CN = ['BYD', 'Chery', 'MG', 'Geely', 'Omoda', 'Jaecoo', 'Leapmotor'];
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function MotoliaHomePage() {
   const { config } = useBrand();
@@ -57,7 +149,7 @@ export default function MotoliaHomePage() {
       return (response.entries || [])
         .filter((e: any) => e.isPublished)
         .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    }
+    },
   });
 
   const getLocalized = (item: any, field: string) => {
@@ -68,11 +160,15 @@ export default function MotoliaHomePage() {
 
   const dynamicFaqs = React.useMemo(() => {
     if (!faqData) return [];
-    return faqData.filter((item: any) => getLocalized(item, 'question')?.trim() && getLocalized(item, 'answer')?.trim())
+    return faqData
+      .filter(
+        (item: any) =>
+          getLocalized(item, 'question')?.trim() && getLocalized(item, 'answer')?.trim(),
+      )
       .map((item: any) => ({
         id: item.id,
         q: getLocalized(item, 'question'),
-        a: getLocalized(item, 'answer')
+        a: getLocalized(item, 'answer'),
       }));
   }, [faqData, i18n.language]);
 
@@ -80,17 +176,16 @@ export default function MotoliaHomePage() {
     <div className="bg-[#0f172a] min-h-screen text-slate-100 font-inter selection:bg-emerald-500/30">
       <Header />
 
-      {/* HERO SECTION */}
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        {/* Abstract glowing orbs */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-[120px] -translate-y-1/2 pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-[30rem] h-[30rem] bg-teal-600/10 rounded-full blur-[120px] translate-y-1/2 pointer-events-none" />
-        
         <GridPattern />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
-            
+
+            {/* Left col */}
             <div className="max-w-2xl">
               <FadeIn>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium mb-8 backdrop-blur-md">
@@ -98,33 +193,38 @@ export default function MotoliaHomePage() {
                   {config.homePage.hero.badge}
                 </div>
               </FadeIn>
-              
+
               <FadeIn delay={0.1}>
-                <h1 
+                <h1
                   className="text-5xl lg:text-7xl font-outfit font-bold tracking-tight text-white mb-6 leading-[1.1]"
-                  dangerouslySetInnerHTML={{ __html: config.homePage.hero.title.replace('<span>', '<span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">') }} 
+                  dangerouslySetInnerHTML={{
+                    __html: config.homePage.hero.title.replace(
+                      '<span>',
+                      '<span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">',
+                    ),
+                  }}
                 />
               </FadeIn>
-              
+
               <FadeIn delay={0.2}>
                 <p className="text-xl text-slate-400 mb-10 leading-relaxed font-light">
                   {config.homePage.hero.subtitle}
                 </p>
               </FadeIn>
-              
+
               <FadeIn delay={0.3} className="flex flex-col sm:flex-row gap-4 mb-12">
-                <Link 
-                  to="/samochody" 
+                <Link
+                  to="/samochody"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold text-lg transition-all duration-300 shadow-[0_0_40px_rgba(16,185,129,0.3)] hover:shadow-[0_0_60px_rgba(16,185,129,0.5)] hover:-translate-y-1"
                 >
                   {config.homePage.hero.ctaLabel}
                   <ArrowRight size={20} />
                 </Link>
-                <a 
-                  href="#faq"
+                <a
+                  href="#jak-to-dziala"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-medium text-lg border border-white/10 transition-all duration-300 backdrop-blur-sm"
                 >
-                  Działanie platformy
+                  Jak to działa?
                 </a>
               </FadeIn>
 
@@ -138,17 +238,17 @@ export default function MotoliaHomePage() {
               </FadeIn>
             </div>
 
+            {/* Right col — image + floating stats */}
             <FadeIn delay={0.5} className="relative hidden lg:block">
               <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-transparent rounded-[2.5rem] blur-2xl transform rotate-3" />
-              <img 
-                src="https://images.unsplash.com/photo-1617469767053-d3b523a0b982?q=80&w=2662&auto=format&fit=crop" 
-                alt="Motolia Premium Auto" 
+              <img
+                src="https://images.unsplash.com/photo-1617469767053-d3b523a0b982?q=80&w=2662&auto=format&fit=crop"
+                alt="Motolia – szeroki wybór aut"
                 className="relative z-10 rounded-[2.5rem] w-full object-cover aspect-[4/3] shadow-2xl border border-white/10"
               />
-              {/* Floating Stats Card 1 */}
-              <motion.div 
+              <motion.div
                 animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute -bottom-8 -left-8 z-20 bg-slate-900/90 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl"
               >
                 <div className="text-4xl font-outfit font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 mb-1">
@@ -158,11 +258,9 @@ export default function MotoliaHomePage() {
                   {config.homePage.hero.stats[0].label}
                 </div>
               </motion.div>
-
-              {/* Floating Stats Card 2 */}
-              <motion.div 
+              <motion.div
                 animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute -top-8 -right-8 z-20 bg-emerald-500 p-6 rounded-3xl shadow-2xl shadow-emerald-500/20"
               >
                 <div className="text-4xl font-outfit font-bold text-white mb-1">
@@ -178,17 +276,17 @@ export default function MotoliaHomePage() {
         </div>
       </section>
 
-      {/* TRUST BAR */}
+      {/* ── TRUST BAR ────────────────────────────────────────────────────── */}
       <section className="border-y border-white/5 bg-slate-900/50 backdrop-blur-md relative z-20">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {config.homePage.trustBar.map((item, idx) => (
               <FadeIn key={idx} delay={idx * 0.1} className="flex flex-col items-center text-center group">
                 <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-emerald-500/10 group-hover:scale-110 transition-all duration-300 border border-white/5 group-hover:border-emerald-500/30">
-                  {item.icon === 'Shield' && <ShieldCheck size={28} className="text-emerald-400" />}
-                  {item.icon === 'CreditCard' && <CreditCard size={28} className="text-emerald-400" />}
-                  {item.icon === 'FileText' && <FileText size={28} className="text-emerald-400" />}
-                  {item.icon === 'Phone' && <Headset size={28} className="text-emerald-400" />}
+                  {item.icon === 'Shield'     && <ShieldCheck size={28} className="text-emerald-400" />}
+                  {item.icon === 'CreditCard' && <CreditCard  size={28} className="text-emerald-400" />}
+                  {item.icon === 'FileText'   && <FileText    size={28} className="text-emerald-400" />}
+                  {item.icon === 'Phone'      && <Clock       size={28} className="text-emerald-400" />}
                 </div>
                 <h3 className="text-slate-300 font-medium">{item.label}</h3>
               </FadeIn>
@@ -197,17 +295,95 @@ export default function MotoliaHomePage() {
         </div>
       </section>
 
-      {/* STEPS SECTION */}
-      <section className="py-32 relative">
+      {/* ── PRODUKTY ─────────────────────────────────────────────────────── */}
+      <section className="py-32 relative" id="produkty">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-20">
+          <div className="text-center max-w-3xl mx-auto mb-16">
             <FadeIn>
-              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6" dangerouslySetInnerHTML={{ __html: config.homePage.steps.title.replace('<span>', '<span class="text-emerald-400">') }} />
-              <p className="text-xl text-slate-400 font-light">{config.homePage.steps.subtitle}</p>
+              <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">
+                Co oferujemy
+              </div>
+              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6">
+                Jeden serwis,{' '}
+                <span className="text-emerald-400">cztery produkty</span>
+              </h2>
+              <p className="text-xl text-slate-400 font-light">
+                Obsługujemy zarówno osoby prywatne, jak i firmy – każdy znajdzie tu coś dla siebie.
+              </p>
             </FadeIn>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {PRODUCTS.map((product, idx) => {
+              const Icon = product.icon;
+              const AudienceIcon = product.audienceIcon;
+              return (
+                <FadeIn key={idx} delay={idx * 0.1}>
+                  <div className="relative bg-slate-900/40 border border-white/5 rounded-3xl p-8 h-full flex flex-col hover:border-emerald-500/30 hover:bg-slate-800/50 transition-all duration-300 group">
+                    {product.popular && (
+                      <div className="absolute -top-3 left-6 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                        Popularne
+                      </div>
+                    )}
+
+                    {/* Audience tag */}
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-6">
+                      <AudienceIcon size={12} />
+                      {product.audience}
+                    </div>
+
+                    {/* Icon */}
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                      <Icon size={26} className="text-emerald-400" />
+                    </div>
+
+                    <h3 className="text-xl font-semibold text-white mb-3">{product.title}</h3>
+                    <p className="text-slate-400 leading-relaxed text-sm flex-1">{product.desc}</p>
+
+                    {/* Time badge */}
+                    <div className="flex items-center gap-2 mt-6 text-xs text-emerald-400/80 font-medium">
+                      <Clock size={13} />
+                      {product.time}
+                    </div>
+
+                    <Link
+                      to={product.href}
+                      className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+                    >
+                      Sprawdź ofertę <ArrowRight size={15} />
+                    </Link>
+                  </div>
+                </FadeIn>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── JAK TO DZIAŁA (3 kroki) ───────────────────────────────────────── */}
+      <section className="py-32 relative bg-slate-900/30" id="jak-to-dziala">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <FadeIn>
+              <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">
+                {config.homePage.steps.tag}
+              </div>
+              <h2
+                className="text-4xl md:text-5xl font-outfit font-bold mb-6"
+                dangerouslySetInnerHTML={{
+                  __html: config.homePage.steps.title.replace(
+                    '<span>',
+                    '<span class="text-emerald-400">',
+                  ),
+                }}
+              />
+              <p className="text-xl text-slate-400 font-light">
+                {config.homePage.steps.subtitle}
+              </p>
+            </FadeIn>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
             {config.homePage.steps.items.map((item, index) => (
               <FadeIn key={index} delay={index * 0.15} className="relative">
                 <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-8 h-full hover:bg-slate-800/50 transition-colors backdrop-blur-sm">
@@ -217,7 +393,7 @@ export default function MotoliaHomePage() {
                   <h3 className="text-xl font-semibold mb-3 text-white">{item.title}</h3>
                   <p className="text-slate-400 leading-relaxed">{item.description}</p>
                 </div>
-                {index < 3 && (
+                {index < config.homePage.steps.items.length - 1 && (
                   <div className="hidden md:block absolute top-14 -right-3 w-6 border-t border-dashed border-slate-700" />
                 )}
               </FadeIn>
@@ -226,32 +402,115 @@ export default function MotoliaHomePage() {
         </div>
       </section>
 
-      {/* WHY US - Premium Cards */}
+      {/* ── MARKI I PARTNERZY ─────────────────────────────────────────────── */}
+      <section className="py-24 border-y border-white/5 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-emerald-950/20 to-slate-900 pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-16">
+            <FadeIn>
+              <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">
+                Oferta
+              </div>
+              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-4">
+                Praktycznie{' '}
+                <span className="text-emerald-400">każda marka</span>
+              </h2>
+              <p className="text-lg text-slate-400 font-light max-w-2xl mx-auto">
+                Współpracujemy z dealerami wszystkich liczących się producentów –
+                od europejskich klasyków po najlepsze marki chińskie.
+              </p>
+            </FadeIn>
+          </div>
+
+          {/* Car brands — EU & JP */}
+          <FadeIn delay={0.1}>
+            <div className="mb-4">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-4 text-center">
+                Marki europejskie i japońskie
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                {CAR_BRANDS_EU.map((brand) => (
+                  <span
+                    key={brand}
+                    className="px-4 py-2 rounded-xl bg-slate-800/60 border border-white/5 text-slate-300 text-sm font-medium hover:border-emerald-500/30 hover:text-white transition-all"
+                  >
+                    {brand}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* Car brands — Chinese */}
+          <FadeIn delay={0.2}>
+            <div className="mb-16">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-4 text-center mt-6">
+                Topowe marki chińskie
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                {CAR_BRANDS_CN.map((brand) => (
+                  <span
+                    key={brand}
+                    className="px-4 py-2 rounded-xl bg-slate-800/60 border border-white/5 text-slate-300 text-sm font-medium hover:border-emerald-500/30 hover:text-white transition-all"
+                  >
+                    {brand}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* Financial partners */}
+          <FadeIn delay={0.3}>
+            <div className="border-t border-white/5 pt-12">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-6 text-center">
+                Partnerzy finansowi
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                {FINANCIAL_PARTNERS.map((partner) => (
+                  <div
+                    key={partner}
+                    className="px-6 py-3 rounded-2xl bg-slate-800/40 border border-white/10 text-slate-200 font-semibold text-sm hover:border-emerald-500/40 hover:bg-slate-700/40 transition-all"
+                  >
+                    {partner}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ── DLACZEGO MOTOLIA ──────────────────────────────────────────────── */}
       <section className="py-32 bg-slate-900 relative border-y border-white/5 overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-900/20 blur-[150px] rounded-full pointer-events-none" />
-        
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex flex-col lg:flex-row gap-16 items-center">
+
             <div className="lg:w-1/3">
               <FadeIn>
-                <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">Nowy standard</div>
-                <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6 text-white">Dlaczego <br/><span className="text-emerald-400">Motolia?</span></h2>
+                <div className="text-emerald-400 font-semibold tracking-wider uppercase mb-4 text-sm">
+                  Nowy standard
+                </div>
+                <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6 text-white">
+                  Dlaczego <br />
+                  <span className="text-emerald-400">Motolia?</span>
+                </h2>
                 <p className="text-lg text-slate-400 mb-8 leading-relaxed">
-                  Zrywamy z tradycyjnymi, uciążliwymi procesami zakupowymi. U nas proces jest digitalowy, transparentny i szyty na miarę.
+                  Finansowanie auta powinno być proste. Bez zbędnej biurokracji,
+                  bez ukrytych kosztów. Jeden doradca, wiele możliwości.
                 </p>
-                <Link to="/samochody" className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors">
+                <Link
+                  to="/samochody"
+                  className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
+                >
                   Przeglądaj ofertę <ArrowRight size={20} />
                 </Link>
               </FadeIn>
             </div>
-            
+
             <div className="lg:w-2/3 grid sm:grid-cols-2 gap-6">
-              {[
-                { icon: ShieldCheck, title: 'Weryfikacja 360°', desc: 'Każde auto przechodzi rygorystyczne testy przed wystawieniem.' },
-                { icon: Gem, title: 'Oferty Premium', desc: 'Wyselekcjonowane pakiety wyposażenia i ekskluzywne modele.' },
-                { icon: Headset, title: 'Dedykowany Doradca', desc: 'Twój osobisty przewodnik w świecie finansowania aut.' },
-                { icon: Car, title: 'Dostawa Home-to-Home', desc: 'Podpisujesz umowę online, my dostarczamy auto pod Twoje drzwi.' },
-              ].map((feature, idx) => (
+              {WHY_US.map((feature, idx) => (
                 <FadeIn key={idx} delay={idx * 0.1}>
                   <div className="bg-slate-800/40 border border-white/5 p-8 rounded-3xl hover:border-emerald-500/30 transition-all duration-300 group">
                     <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -263,17 +522,23 @@ export default function MotoliaHomePage() {
                 </FadeIn>
               ))}
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* FAQ SECTION */}
+      {/* ── FAQ ───────────────────────────────────────────────────────────── */}
       {dynamicFaqs.length > 0 && (
         <section className="py-32 relative" id="faq">
           <div className="max-w-4xl mx-auto px-6">
             <FadeIn className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6 text-white">Najczęściej zadawane <span className="text-emerald-400">pytania</span></h2>
-              <p className="text-xl text-slate-400">Rozwiewamy wszelkie wątpliwości przed zakupem.</p>
+              <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-6 text-white">
+                Najczęściej zadawane{' '}
+                <span className="text-emerald-400">pytania</span>
+              </h2>
+              <p className="text-xl text-slate-400">
+                Odpowiadamy na najczęstsze pytania dotyczące finansowania aut.
+              </p>
             </FadeIn>
 
             <div className="space-y-4">
@@ -285,7 +550,13 @@ export default function MotoliaHomePage() {
                       className="w-full flex items-center justify-between p-6 text-left"
                     >
                       <h3 className="text-lg font-medium text-slate-200 pr-8">{item.q}</h3>
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center transition-transform duration-300 ${openFaq === idx ? 'rotate-180 bg-emerald-500 text-white' : 'text-slate-400'}`}>
+                      <div
+                        className={`flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center transition-transform duration-300 ${
+                          openFaq === idx
+                            ? 'rotate-180 bg-emerald-500 text-white'
+                            : 'text-slate-400'
+                        }`}
+                      >
                         <ChevronDown size={18} />
                       </div>
                     </button>
@@ -297,7 +568,7 @@ export default function MotoliaHomePage() {
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.3 }}
                         >
-                          <div className="px-6 pb-6 pt-0 text-slate-400 leading-relaxed border-t border-white/5 mt-2 pt-4">
+                          <div className="px-6 pb-6 pt-4 text-slate-400 leading-relaxed border-t border-white/5">
                             {item.a}
                           </div>
                         </motion.div>
@@ -311,21 +582,26 @@ export default function MotoliaHomePage() {
         </section>
       )}
 
-      {/* CTA SECTION */}
+      {/* ── CTA ───────────────────────────────────────────────────────────── */}
       <section className="py-24 px-6 relative z-10" id="kontakt">
         <div className="max-w-5xl mx-auto">
           <div className="relative bg-gradient-to-br from-emerald-900 to-slate-900 rounded-[3rem] p-12 text-center overflow-hidden border border-emerald-500/20 shadow-2xl">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 blur-[80px]" />
-            
+
             <div className="relative z-10 max-w-2xl mx-auto">
               <FadeIn>
                 <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-8 backdrop-blur-xl border border-white/20">
                   <Car size={32} className="text-emerald-400" />
                 </div>
-                <h2 className="text-4xl md:text-5xl font-outfit font-bold text-white mb-6">Rozpocznij drogę po <span className="text-emerald-400">nowe auto</span></h2>
-                <p className="text-xl text-emerald-100/80 mb-10 font-light">Zostaw numer telefonu — nasz ekspert oddzwoni bezzwłocznie i zaprezentuje opcje dedykowane dla Ciebie.</p>
-                
+                <h2 className="text-4xl md:text-5xl font-outfit font-bold text-white mb-6">
+                  Znajdź auto i dobierz{' '}
+                  <span className="text-emerald-400">finansowanie</span>
+                </h2>
+                <p className="text-xl text-emerald-100/80 mb-10 font-light">
+                  Zostaw numer – doradca oddzwoni i w kilka minut przedstawi oferty z kredytu, leasingu lub wynajmu.
+                </p>
+
                 <form
                   className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto"
                   onSubmit={async (e) => {
@@ -334,26 +610,21 @@ export default function MotoliaHomePage() {
                     const phoneInput = form.querySelector('input[type="tel"]') as HTMLInputElement;
                     const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
                     const phone = phoneInput.value;
-
                     if (!phone) return;
-
                     try {
                       button.disabled = true;
                       const originalText = button.innerHTML;
                       button.innerHTML = 'Wysyłanie...';
-
                       await leadsApi.submitQuickLead({ phone });
-
-                      button.innerHTML = 'Otrzymano pomyślnie!';
+                      button.innerHTML = 'Otrzymano!';
                       button.style.background = '#10b981';
                       phoneInput.value = '';
-
                       setTimeout(() => {
                         button.disabled = false;
                         button.innerHTML = originalText;
                         button.style.background = '';
                       }, 4000);
-                    } catch (error) {
+                    } catch {
                       button.innerHTML = 'Błąd, spróbuj ponownie';
                       setTimeout(() => {
                         button.disabled = false;
@@ -362,19 +633,20 @@ export default function MotoliaHomePage() {
                     }
                   }}
                 >
-                  <input 
-                    type="tel" 
-                    placeholder="Wpisz swój numer telefonu" 
-                    required 
+                  <input
+                    type="tel"
+                    placeholder="Wpisz swój numer telefonu"
+                    required
                     className="flex-1 bg-white/10 border-2 border-white/20 focus:border-emerald-400 rounded-2xl px-6 py-4 text-white placeholder:text-emerald-200/50 outline-none transition-colors text-lg backdrop-blur-md"
                   />
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 whitespace-nowrap"
                   >
-                    Oddzwońcie
+                    Zadzwoń do mnie
                   </button>
                 </form>
+
                 <div className="mt-6 flex items-center justify-center gap-2 text-emerald-200/60 text-sm">
                   <ShieldCheck size={16} /> Twoje dane są bezpieczne
                 </div>
