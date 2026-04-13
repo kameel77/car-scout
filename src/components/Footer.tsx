@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Mail, Phone, Shield, FileText, ExternalLink } from 'lucide-react';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
+import { useBrand } from '@/contexts/BrandContext';
 
 type LegalDocKey = 'imprint' | 'privacyPolicy' | 'terms' | 'cookies';
 
@@ -18,6 +19,9 @@ const normalizeLang = (code?: string) => (code || 'pl').slice(0, 2).toLowerCase(
 export function Footer() {
   const { data: settings } = useAppSettings();
   const { t, i18n } = useTranslation();
+  const { config } = useBrand();
+  const isMotolia = config.id === 'motolia';
+  const accentColor = isMotolia ? '#F5C518' : undefined;
   const lang = normalizeLang(i18n.language);
   const legalDocs = settings?.legalDocuments as Record<string, Record<string, string>> | undefined;
 
@@ -80,7 +84,8 @@ export function Footer() {
   }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
 
   return (
-    <footer className="mt-12 border-t bg-slate-950 text-slate-100">
+    <footer className="mt-12 border-t bg-slate-950 text-slate-100"
+      style={isMotolia ? { borderTopColor: '#F5C51830' } : {}}>
       <div className="container py-10 grid gap-10 lg:grid-cols-3">
         <div className="space-y-4">
           {logo ? (
@@ -91,7 +96,7 @@ export function Footer() {
               loading="lazy"
             />
           ) : (
-            <span className="text-xl font-black text-white">
+            <span className="text-xl font-black" style={isMotolia ? { color: '#F5C518' } : { color: '#fff' }}>
               {siteName}
             </span>
           )}
@@ -148,7 +153,8 @@ export function Footer() {
               {settings?.legalContactEmail && (
                 <a
                   href={`mailto:${settings.legalContactEmail}`}
-                  className="flex items-center gap-2 hover:text-white transition-colors"
+                  className="flex items-center gap-2 transition-colors hover:text-white"
+                  style={isMotolia ? { color: '#F5C518' } : {}}
                 >
                   <Mail className="h-4 w-4 text-slate-400" />
                   <span>{settings.legalContactEmail}</span>
@@ -157,7 +163,8 @@ export function Footer() {
               {settings?.legalContactPhone && (
                 <a
                   href={`tel:${settings.legalContactPhone}`}
-                  className="flex items-center gap-2 hover:text-white transition-colors"
+                  className="flex items-center gap-2 transition-colors hover:text-white"
+                  style={isMotolia ? { color: '#F5C518' } : {}}
                 >
                   <Phone className="h-4 w-4 text-slate-400" />
                   <span>{settings.legalContactPhone}</span>
