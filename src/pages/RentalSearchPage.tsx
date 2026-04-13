@@ -162,7 +162,7 @@ export default function RentalSearchPage() {
                                 className="group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-gray-300"
                             >
                                 {/* Image */}
-                                <div className="relative h-48 overflow-hidden bg-gray-100">
+                                <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
                                     {v.primaryImageUrl ? (
                                         <img
                                             src={v.primaryImageUrl}
@@ -218,16 +218,22 @@ export default function RentalSearchPage() {
                                         {v.minMonthlyRateGross ? (
                                             <div>
                                                 <span className="text-xs text-gray-500">Rata od</span>
-                                                <div className="text-2xl font-bold" style={{ color: accent }}>
-                                                    {isBusiness
-                                                        ? `${Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')} zł`
-                                                        : `${Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')} zł`
-                                                    }
-                                                    <span className="text-sm font-normal text-gray-500">
-                                                        {isBusiness ? ' netto / mies.' : ' brutto / mies.'}
+                                                <div className="flex items-baseline gap-2 mt-1">
+                                                    <span
+                                                        className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-bold text-2xl"
+                                                        style={{ background: accent, color: accentText }}
+                                                    >
+                                                        {isBusiness
+                                                            ? Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')
+                                                            : Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')
+                                                        }
+                                                        <span className="text-base font-semibold">zł</span>
+                                                    </span>
+                                                    <span className="text-sm text-gray-500 font-normal">
+                                                        {isBusiness ? 'netto / mies.' : 'brutto / mies.'}
                                                     </span>
                                                 </div>
-                                                <div className="text-xs text-gray-400 mt-0.5">
+                                                <div className="text-xs text-gray-400 mt-1">
                                                     {isBusiness
                                                         ? `${Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')} zł brutto`
                                                         : `${Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')} zł netto`
