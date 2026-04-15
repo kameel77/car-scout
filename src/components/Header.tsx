@@ -28,11 +28,11 @@ interface HeaderProps {
   hasActiveFilters?: boolean;
 }
 
-const navLinks = [
-  { label: 'Samochody', to: '/samochody' },
-  { label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
-  { label: 'FAQ', to: '/faq' },
-  { label: 'Kontakt', to: '/kontakt' },
+const ALL_NAV_LINKS = [
+  { key: 'samochody', label: 'Samochody', to: '/samochody' },
+  { key: 'wynajem', label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
+  { key: 'faq', label: 'FAQ', to: '/faq' },
+  { key: 'kontakt', label: 'Kontakt', to: '/kontakt' },
 ];
 
 export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
@@ -43,6 +43,15 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const { hasPersonalOffer } = usePersonalOffer();
   const { config } = useBrand();
+
+  const navItems = React.useMemo(() => {
+    const visibility: string[] = settings?.navItemsVisibility ?? ['samochody', 'wynajem'];
+    return ALL_NAV_LINKS.filter((link) => {
+      // FAQ and Kontakt are always shown
+      if (link.key === 'faq' || link.key === 'kontakt') return true;
+      return visibility.includes(link.key);
+    });
+  }, [settings?.navItemsVisibility]);
 
   const enabledLanguages = React.useMemo(() => {
     const codes = settings?.enabledLanguages || ['pl'];
@@ -127,7 +136,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
         {/* Desktop Navigation & Actions */}
         <div className="hidden md:flex items-center gap-10">
           <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
+            {navItems.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
@@ -226,7 +235,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 </div>
 
                 <nav className="flex-1 p-6 space-y-4">
-                  {navLinks.map((link) => (
+                  {navItems.map((link) => (
                     <Link
                       key={link.to}
                       to={link.to}

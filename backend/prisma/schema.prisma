@@ -263,6 +263,7 @@ model AppSettings {
   smtpPassword                String?  @map("smtp_password")
   smtpFromEmail               String?  @map("smtp_from_email")
   smtpRecipientEmail          String?  @map("smtp_recipient_email")
+  navItemsVisibility          String[] @default(["samochody", "wynajem"]) @map("nav_items_visibility")
 
   @@map("app_settings")
 }
