@@ -4,230 +4,285 @@ import { faqApi } from '@/services/api';
 import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { Search, Loader2, HelpCircle, ChevronRight, MessageSquare, Phone } from 'lucide-react';
+import { useBrand } from '@/contexts/BrandContext';
+import { Search, Loader2, HelpCircle, ChevronDown, MessageSquare, Phone } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import './home-page.css';
 
-interface FaqItemProps {
-    question: string;
-    answer: string;
-    isOpen: boolean;
-    onClick: () => void;
+// ─── Brand accent helper ──────────────────────────────────────────────────────
+
+function useBrandAccent() {
+  const { config } = useBrand();
+  if (config.id === 'motolia') {
+    return { accent: '#D4A90A', accentBg: '#F5C51815', accentShadow: '#F5C51820', isMotolia: true };
+  }
+  return { accent: '#F97316', accentBg: '#FFF7ED', accentShadow: '#FDBA7420', isMotolia: false };
 }
 
-function FaqItem({ question, answer, isOpen, onClick }: FaqItemProps) {
-    return (
-        <div className={cn("home-faq-item", isOpen && "open")} onClick={onClick}>
-            <div className="home-faq-question">
-                <span>{question}</span>
-                <ChevronRight className="w-5 h-5" />
-            </div>
-            <div className="home-faq-answer">
-                <p dangerouslySetInnerHTML={{ __html: answer.replace(/\n/g, '<br/>') }} />
-            </div>
-        </div>
-    );
+// ─── FAQ Item ─────────────────────────────────────────────────────────────────
+
+interface FaqItemProps {
+  question: string;
+  answer: string;
+  isOpen: boolean;
+  onClick: () => void;
+  accent: string;
+  accentBg: string;
+  isMotolia: boolean;
 }
+
+function FaqItem({ question, answer, isOpen, onClick, accent, accentBg, isMotolia }: FaqItemProps) {
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border transition-all duration-200 overflow-hidden',
+        isOpen ? 'border-gray-300 shadow-sm' : 'border-gray-100 hover:border-gray-200',
+        isMotolia ? 'bg-white' : 'bg-white',
+      )}
+      onClick={onClick}
+      style={{ cursor: 'pointer' }}
+    >
+      <div className="flex items-center justify-between p-5 gap-4">
+        <span className={cn('font-semibold text-[#1A1A1A] text-base leading-snug', isOpen && 'text-[#1A1A1A]')}>
+          {question}
+        </span>
+        <div
+          className={cn(
+            'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300',
+            isOpen ? 'rotate-180' : '',
+          )}
+          style={{
+            background: isOpen ? accent : '#F3F4F6',
+            color: isOpen ? '#fff' : '#6B7280',
+          }}
+        >
+          <ChevronDown size={16} />
+        </div>
+      </div>
+      {isOpen && (
+        <div
+          className="px-5 pb-5 text-gray-500 leading-relaxed text-sm border-t border-gray-100 pt-4"
+          dangerouslySetInnerHTML={{ __html: answer.replace(/\n/g, '<br/>') }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PublicFaqPage() {
-    const { i18n, t } = useTranslation();
-    const [searchQuery, setSearchQuery] = React.useState('');
-    const [selectedPage, setSelectedPage] = React.useState<string>('all');
-    const [openId, setOpenId] = React.useState<string | null>(null);
+  const { i18n } = useTranslation();
+  const { accent, accentBg, isMotolia } = useBrandAccent();
+  const { config } = useBrand();
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [selectedPage, setSelectedPage] = React.useState<string>('all');
+  const [openId, setOpenId] = React.useState<string | null>(null);
 
-    const { data, isLoading } = useQuery({
-        queryKey: ['public-faq'],
-        queryFn: async () => {
-            const response = await faqApi.list({});
-            return (response.entries || [])
-                .filter((e: any) => e.isPublished)
-                .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-        }
-    });
+  const { data, isLoading } = useQuery({
+    queryKey: ['public-faq'],
+    queryFn: async () => {
+      const response = await faqApi.list({});
+      return (response.entries || [])
+        .filter((e: any) => e.isPublished)
+        .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    },
+  });
 
-    const getLocalized = (item: any, field: string) => {
-        const langCode = i18n.language.slice(0, 2).toLowerCase();
-        const suffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
-        return item[`${field}${suffix}`] || '';
-    };
+  const getLocalized = (item: any, field: string) => {
+    const langCode = i18n.language.slice(0, 2).toLowerCase();
+    const suffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
+    return item[`${field}${suffix}`] || '';
+  };
 
-    const categories = [
-        { id: 'all', label: 'Wszystkie' },
-        { id: 'faq', label: 'Ogólne' },
-        { id: 'offers', label: 'Proces zakupu' },
-        { id: 'home', label: 'O nas' },
-        { id: 'contact', label: 'Kontakt' },
-    ];
+  const categories = [
+    { id: 'all',     label: 'Wszystkie' },
+    { id: 'faq',     label: 'Ogólne' },
+    { id: 'offers',  label: 'Proces zakupu' },
+    { id: 'home',    label: 'O nas' },
+    { id: 'contact', label: 'Kontakt' },
+  ];
 
-    const filteredFaqs = React.useMemo(() => {
-        if (!data) return [];
-        let filtered = data;
+  const filteredFaqs = React.useMemo(() => {
+    if (!data) return [];
+    let filtered = data;
+    if (selectedPage !== 'all') {
+      filtered = filtered.filter((item: any) => item.page === selectedPage);
+    }
+    const langCode = i18n.language.slice(0, 2).toLowerCase();
+    const suffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
+    filtered = filtered.filter((item: any) => item[`question${suffix}`]?.trim() && item[`answer${suffix}`]?.trim());
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((item: any) => {
+        const question = getLocalized(item, 'question').toLowerCase();
+        const answer = getLocalized(item, 'answer').toLowerCase();
+        return question.includes(query) || answer.includes(query);
+      });
+    }
+    return filtered;
+  }, [data, searchQuery, selectedPage, i18n.language]);
 
-        // Filter by page category if selected
-        if (selectedPage !== 'all') {
-            filtered = filtered.filter(item => item.page === selectedPage);
-        }
+  return (
+    <div className={cn('min-h-screen flex flex-col', isMotolia ? 'bg-white' : 'landing-page-root')}>
+      <Header />
 
-        // Only show items that have both question and answer in the current language
-        const langCode = i18n.language.slice(0, 2).toLowerCase();
-        const suffix = langCode === 'pl' ? 'Pl' : langCode === 'en' ? 'En' : 'De';
+      <main className="flex-1">
+        {/* Hero */}
+        <section
+          className="pt-32 pb-20 px-6"
+          style={{ background: isMotolia ? '#FAFAF8' : 'linear-gradient(to bottom, #fff, #f8fafc)' }}
+        >
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Badge */}
+            <div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-7"
+              style={{ background: `${accent}18`, borderColor: `${accent}50`, color: isMotolia ? '#1A1A1A' : '#2D3142' }}
+            >
+              {isMotolia ? <span style={{ color: accent }}>◆</span> : null}
+              Centrum pomocy
+            </div>
 
-        filtered = filtered.filter(item => {
-            const hasQ = item[`question${suffix}`]?.trim();
-            const hasA = item[`answer${suffix}`]?.trim();
-            return hasQ && hasA;
-        });
+            <h1 className="text-4xl md:text-6xl font-outfit font-extrabold mb-6 text-[#1A1A1A]">
+              Jak możemy Ci{' '}
+              <span style={{ color: accent }}>pomóc?</span>
+            </h1>
+            <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-10">
+              Znajdź odpowiedzi na najczęściej zadawane pytania dotyczące finansowania,
+              procesu zakupu i naszych usług.
+            </p>
 
-        // Filter by search query
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(item => {
-                const question = getLocalized(item, 'question').toLowerCase();
-                const answer = getLocalized(item, 'answer').toLowerCase();
-                return question.includes(query) || answer.includes(query);
-            });
-        }
+            <div className="max-w-xl mx-auto relative">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <Input
+                type="text"
+                placeholder="Szukaj w najczęstszych pytaniach…"
+                className="w-full h-14 pl-12 pr-4 rounded-2xl border-gray-200 shadow-sm text-lg"
+                style={{ '--tw-ring-color': accent } as React.CSSProperties}
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+        </section>
 
-        return filtered;
-    }, [data, searchQuery, selectedPage, i18n.language]);
+        {/* Categories & FAQ Content */}
+        <section className="py-16 px-6 bg-white">
+          <div className="max-w-4xl mx-auto">
+            {/* Category tabs */}
+            <div className="flex flex-wrap justify-center gap-2 mb-12">
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => { setSelectedPage(cat.id); setOpenId(null); }}
+                  className="px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200"
+                  style={
+                    selectedPage === cat.id
+                      ? { background: accent, color: isMotolia ? '#1A1A1A' : '#fff', boxShadow: `0 4px 14px ${accent}35` }
+                      : { background: '#F3F4F6', color: '#4B5563' }
+                  }
+                  onMouseEnter={e => { if (selectedPage !== cat.id) e.currentTarget.style.background = '#E5E7EB'; }}
+                  onMouseLeave={e => { if (selectedPage !== cat.id) e.currentTarget.style.background = '#F3F4F6'; }}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
 
-    // Check if the current context has its own questions, if not and category is not all, maybe show special message
-    // Actually, just standard filtering is fine.
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-400">
+                <Loader2 className="w-10 h-10 animate-spin" style={{ color: accent }} />
+                <p>Ładowanie odpowiedzi…</p>
+              </div>
+            ) : filteredFaqs.length > 0 ? (
+              <div className="space-y-3">
+                {filteredFaqs.map((faq: any) => (
+                  <FaqItem
+                    key={faq.id}
+                    question={getLocalized(faq, 'question')}
+                    answer={getLocalized(faq, 'answer')}
+                    isOpen={openId === faq.id}
+                    onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
+                    accent={accent}
+                    accentBg={accentBg}
+                    isMotolia={isMotolia}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-100">
+                  <HelpCircle className="w-10 h-10 text-gray-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">Nie znaleźliśmy odpowiedzi</h3>
+                <p className="text-gray-500">Spróbuj wpisać inne słowo kluczowe lub skontaktuj się z nami.</p>
+                <button
+                  onClick={() => { setSearchQuery(''); setSelectedPage('all'); }}
+                  className="mt-6 font-semibold hover:underline"
+                  style={{ color: accent }}
+                >
+                  Pokaż wszystkie pytania
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
 
-    return (
-        <div className="landing-page-root min-h-screen flex flex-col">
-            <Header />
+        {/* Contact CTA */}
+        <section className="py-20 px-6" style={{ background: isMotolia ? '#1A1A1A' : '#FAFBFD' }}>
+          <div className="max-w-5xl mx-auto">
+            <div
+              className={cn(
+                'rounded-[2rem] p-8 md:p-14 flex flex-col md:flex-row items-center justify-between gap-10',
+                isMotolia ? 'border' : 'bg-white shadow-xl border border-gray-100',
+              )}
+              style={isMotolia ? { borderColor: '#2A2A2A' } : {}}
+            >
+              <div className="text-center md:text-left">
+                <h2 className={cn('text-3xl font-bold mb-4', isMotolia ? 'text-white' : 'text-[#2D3142]')}>
+                  Wciąż masz pytania?
+                </h2>
+                <p className={cn('text-lg', isMotolia ? 'text-gray-400' : 'text-gray-500')}>
+                  Nasz zespół ekspertów jest gotowy, aby pomóc Ci w wyborze finansowania.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                <a
+                  href={`mailto:${config.contactInfo.email}`}
+                  className={cn(
+                    'flex items-center justify-center gap-2 h-14 px-8 rounded-2xl font-bold transition-all',
+                    isMotolia
+                      ? 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+                      : 'bg-gray-50 text-[#2D3142] hover:bg-gray-100',
+                  )}
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  Napisz do nas
+                </a>
+                <a
+                  href={`tel:${config.contactInfo.phone.replace(/\s+/g, '')}`}
+                  className="flex items-center justify-center gap-2 h-14 px-8 rounded-2xl font-bold transition-all hover:-translate-y-0.5"
+                  style={{
+                    background: accent,
+                    color: isMotolia ? '#1A1A1A' : '#fff',
+                    boxShadow: `0 4px 20px ${accent}40`,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  <Phone className="w-5 h-5" />
+                  Zadzwoń teraz
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
-            <main className="flex-1">
-                {/* Hero Section */}
-                <section className="bg-gradient-to-b from-white to-slate-50 pt-32 pb-20 px-6">
-                    <div className="max-width-1200 mx-auto text-center">
-                        <div className="home-hero__badge mx-auto mb-6">Centrum pomocy</div>
-                        <h1 className="text-4xl md:text-6xl font-extrabold text-[#2D3142] mb-6 decoration-[#F97316]">
-                            Jak możemy Ci <span className="text-[#F97316]">pomóc?</span>
-                        </h1>
-                        <p className="text-[#4A4E69] text-lg max-w-2xl mx-auto mb-10">
-                            Znajdź odpowiedzi na najczęściej zadawane pytania dotyczące procesu zakupu,
-                            finansowania i gwarancji naszych samochodów.
-                        </p>
-
-                        <div className="max-w-xl mx-auto relative group">
-                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-[#8D91A5] group-focus-within:text-[#F97316] transition-colors" />
-                            </div>
-                            <Input
-                                type="text"
-                                placeholder="Szukaj w najczęstszych pytaniach..."
-                                className="w-full h-14 pl-12 pr-4 rounded-2xl border-slate-200 shadow-sm focus:ring-[#F97316] focus:border-[#F97316] text-lg"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                {/* Categories & FAQ Content */}
-                <section className="py-20 px-6 bg-white">
-                    <div className="max-width-1200 mx-auto">
-                        {/* Category Tabs */}
-                        <div className="flex flex-wrap justify-center gap-2 mb-12">
-                            {categories.map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => {
-                                        setSelectedPage(cat.id);
-                                        setOpenId(null);
-                                    }}
-                                    className={cn(
-                                        "px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200",
-                                        selectedPage === cat.id
-                                            ? "bg-[#F97316] text-white shadow-lg shadow-orange-100"
-                                            : "bg-slate-50 text-[#4A4E69] hover:bg-slate-100"
-                                    )}
-                                >
-                                    {cat.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="max-width-900 mx-auto">
-                            {isLoading ? (
-                                <div className="flex flex-col items-center justify-center py-20 gap-4 text-[#8D91A5]">
-                                    <Loader2 className="w-10 h-10 animate-spin text-[#F97316]" />
-                                    <p>Ładowanie odpowiedzi...</p>
-                                </div>
-                            ) : filteredFaqs.length > 0 ? (
-                                <div className="space-y-4">
-                                    {filteredFaqs.map((faq) => (
-                                        <FaqItem
-                                            key={faq.id}
-                                            question={getLocalized(faq, 'question')}
-                                            answer={getLocalized(faq, 'answer')}
-                                            isOpen={openId === faq.id}
-                                            onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-20">
-                                    <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <HelpCircle className="w-10 h-10 text-[#8D91A5]" />
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-[#2D3142] mb-2">Nie znaleźliśmy odpowiedzi</h3>
-                                    <p className="text-[#4A4E69]">Spróbuj wpisać inne słowo kluczowe lub skontaktuj się z nami.</p>
-                                    <button
-                                        onClick={() => {
-                                            setSearchQuery('');
-                                            setSelectedPage('all');
-                                        }}
-                                        className="mt-6 text-[#F97316] font-semibold hover:underline"
-                                    >
-                                        Pokaż wszystkie pytania
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </section>
-
-                {/* Contact CTA */}
-                <section className="py-20 px-6 bg-[#FAFBFD]">
-                    <div className="max-width-1200 mx-auto">
-                        <div className="bg-white rounded-[32px] p-8 md:p-16 shadow-xl border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-10">
-                            <div className="text-center md:text-left">
-                                <h2 className="text-3xl font-bold text-[#2D3142] mb-4">Wciąż masz pytania?</h2>
-                                <p className="text-[#4A4E69] text-lg">
-                                    Nasz zespół ekspertów jest gotowy, aby pomóc Ci w wyborze Twojego wymarzonego auta.
-                                </p>
-                            </div>
-                            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                                <a
-                                    href="mailto:kontakt@carsalon.pl"
-                                    className="flex items-center justify-center gap-2 h-14 px-8 rounded-2xl bg-slate-50 text-[#2D3142] font-bold hover:bg-slate-100 transition-colors"
-                                >
-                                    <MessageSquare className="w-5 h-5" />
-                                    Napisz do nas
-                                </a>
-                                <a
-                                    href="tel:+48123456789"
-                                    className="flex items-center justify-center gap-2 h-14 px-8 rounded-2xl bg-[#F97316] text-white font-bold hover:bg-[#EA580C] shadow-lg shadow-orange-100 transition-all hover:-translate-y-1"
-                                >
-                                    <Phone className="w-5 h-5" />
-                                    Zadzwoń teraz
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </main>
-
-            <Footer />
-
-            <style>{`
-        .max-width-1200 { max-width: 1200px; }
-        .max-width-900 { max-width: 900px; }
-      `}</style>
-        </div>
-    );
+      <Footer />
+    </div>
+  );
 }

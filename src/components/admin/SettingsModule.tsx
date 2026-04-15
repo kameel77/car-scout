@@ -76,7 +76,10 @@ export function SettingsModule() {
         smtpUser: data?.smtpUser || '',
         smtpPassword: data?.smtpPassword || '',
         smtpFromEmail: data?.smtpFromEmail || '',
-        smtpRecipientEmail: data?.smtpRecipientEmail || ''
+        smtpRecipientEmail: data?.smtpRecipientEmail || '',
+        navItemsVisibility: Array.isArray(data?.navItemsVisibility)
+            ? data.navItemsVisibility
+            : ['samochody', 'wynajem']
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -278,6 +281,42 @@ export function SettingsModule() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Nav Items Visibility */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-bold">Widoczność pozycji menu</Label>
+                        <p className="text-xs text-slate-500 -mt-1">
+                            Wybierz, które sekcje oferty mają być widoczne w górnym menu nawigacyjnym.
+                        </p>
+                        <div className="flex flex-wrap gap-4 pt-1">
+                            {[{ key: 'samochody', label: 'Samochody' }, { key: 'wynajem', label: 'Wynajem' }].map(({ key, label }) => (
+                                <div key={key} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`nav-item-${key}`}
+                                        checked={(settings.navItemsVisibility || ['samochody', 'wynajem']).includes(key)}
+                                        onCheckedChange={(checked) => {
+                                            const current: string[] = settings.navItemsVisibility || ['samochody', 'wynajem'];
+                                            const next = checked
+                                                ? [...current, key]
+                                                : current.filter((k: string) => k !== key);
+                                            setSettings({ ...settings, navItemsVisibility: next });
+                                        }}
+                                    />
+                                    <label
+                                        htmlFor={`nav-item-${key}`}
+                                        className="text-sm font-medium leading-none cursor-pointer"
+                                    >
+                                        {label}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                        {(settings.navItemsVisibility || ['samochody', 'wynajem']).length === 0 && (
+                            <p className="text-xs text-amber-600">
+                                Uwaga: brak zaznaczonych pozycji ukryje obie sekcje z menu.
+                            </p>
+                        )}
                     </div>
 
                     {/* Currency */}

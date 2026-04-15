@@ -34,6 +34,7 @@ import { formatPrice } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
+import { CallbackForm } from '@/components/CallbackForm';
 import {
   Dialog,
   DialogContent,
@@ -634,6 +635,21 @@ export default function ListingDetailPage() {
               ))}
             </div>
 
+            <Separator />
+            <DynamicFinancingContent
+              financingType={financingType}
+              listing={{
+                listing_id: listing.listing_id,
+                make: listing.make,
+                model: listing.model,
+                production_year: listing.production_year,
+                body_type: listing.body_type,
+                fuel_type: listing.fuel_type,
+                transmission: listing.transmission,
+                engine_power_hp: listing.engine_power_hp
+              }}
+            />
+
             {/* Why Us */}
             <section className="rounded-2xl border border-border bg-card/60 p-6 shadow-card space-y-4">
               <div>
@@ -721,20 +737,6 @@ export default function ListingDetailPage() {
               </section>
             )}
 
-            <Separator />
-            <DynamicFinancingContent
-              financingType={financingType}
-              listing={{
-                listing_id: listing.listing_id,
-                make: listing.make,
-                model: listing.model,
-                production_year: listing.production_year,
-                body_type: listing.body_type,
-                fuel_type: listing.fuel_type,
-                transmission: listing.transmission,
-                engine_power_hp: listing.engine_power_hp
-              }}
-            />
           </div>
 
           {/* Sidebar */}
@@ -903,6 +905,15 @@ export default function ListingDetailPage() {
           </div>
         </div>
       </main >
+
+      {/* Callback CTA */}
+      <div className="container py-10">
+        <CallbackForm
+          title="Masz dodatkowe pytania?"
+          titleHighlight="Zostaw numer, oddzwonimy"
+          description="Nasz doradca skontaktuje się z Tobą w ciągu 24h i pomoże dobrać najlepsze finansowanie."
+        />
+      </div>
 
       <Footer />
 

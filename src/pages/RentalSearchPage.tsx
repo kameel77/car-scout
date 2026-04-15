@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { rentalPublicApi } from '@/services/rental-api';
+import { useBrand } from '@/contexts/BrandContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car, Building2, User } from 'lucide-react';
@@ -20,6 +21,11 @@ function getStoredClientType(): ClientType {
 }
 
 export default function RentalSearchPage() {
+    const { config } = useBrand();
+    const isMotolia = config.id === 'motolia';
+    const accent = 'hsl(var(--accent))';
+    const accentText = 'hsl(var(--accent-foreground))';
+
     const [search, setSearch] = useState('');
     const [make, setMake] = useState('');
     const [fuelType, setFuelType] = useState('');
@@ -114,20 +120,18 @@ export default function RentalSearchPage() {
                             <button
                                 onClick={() => handleClientTypeChange('business')}
                                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                    isBusiness
-                                        ? 'bg-white text-blue-700 shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                    isBusiness ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                 }`}
+                                style={isBusiness ? { color: accent } : {}}
                             >
                                 <Building2 className="w-3.5 h-3.5" /> Na firmę
                             </button>
                             <button
                                 onClick={() => handleClientTypeChange('consumer')}
                                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                    !isBusiness
-                                        ? 'bg-white text-blue-700 shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                    !isBusiness ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                 }`}
+                                style={!isBusiness ? { color: accent } : {}}
                             >
                                 <User className="w-3.5 h-3.5" /> Prywatnie
                             </button>
@@ -155,10 +159,10 @@ export default function RentalSearchPage() {
                             <Link
                                 key={v.id}
                                 to={`/wynajem-dlugoterminowy/${v.slug || v.id}`}
-                                className="group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                                className="group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-gray-300"
                             >
                                 {/* Image */}
-                                <div className="relative h-48 overflow-hidden bg-gray-100">
+                                <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
                                     {v.primaryImageUrl ? (
                                         <img
                                             src={v.primaryImageUrl}
@@ -171,7 +175,7 @@ export default function RentalSearchPage() {
                                         </div>
                                     )}
                                     {v.rentalCompanyCount > 1 && (
-                                        <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-full">
+                                        <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs font-medium px-2 py-1 rounded-full">
                                             {v.rentalCompanyCount} oferty
                                         </div>
                                     )}
@@ -179,7 +183,7 @@ export default function RentalSearchPage() {
 
                                 {/* Content */}
                                 <div className="p-5">
-                                    <h3 className="font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">
+                                    <h3 className="font-semibold text-lg text-gray-900 transition-colors" style={{ '--hover-color': accent } as React.CSSProperties}>
                                         {v.make} {v.model}
                                     </h3>
                                     {v.version && (
@@ -214,16 +218,22 @@ export default function RentalSearchPage() {
                                         {v.minMonthlyRateGross ? (
                                             <div>
                                                 <span className="text-xs text-gray-500">Rata od</span>
-                                                <div className="text-2xl font-bold text-blue-600">
-                                                    {isBusiness
-                                                        ? `${Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')} zł`
-                                                        : `${Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')} zł`
-                                                    }
-                                                    <span className="text-sm font-normal text-gray-500">
-                                                        {isBusiness ? ' netto / mies.' : ' brutto / mies.'}
+                                                <div className="flex items-baseline gap-2 mt-1">
+                                                    <span
+                                                        className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-bold text-2xl"
+                                                        style={{ background: accent, color: accentText }}
+                                                    >
+                                                        {isBusiness
+                                                            ? Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')
+                                                            : Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')
+                                                        }
+                                                        <span className="text-base font-semibold">zł</span>
+                                                    </span>
+                                                    <span className="text-sm text-gray-500 font-normal">
+                                                        {isBusiness ? 'netto / mies.' : 'brutto / mies.'}
                                                     </span>
                                                 </div>
-                                                <div className="text-xs text-gray-400 mt-0.5">
+                                                <div className="text-xs text-gray-400 mt-1">
                                                     {isBusiness
                                                         ? `${Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')} zł brutto`
                                                         : `${Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')} zł netto`
