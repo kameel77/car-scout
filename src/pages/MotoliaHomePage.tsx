@@ -55,6 +55,16 @@ const FadeIn = ({
 
 const PRODUCTS = [
   {
+    audience: 'Dla Ciebie i firm',
+    audienceIcon: Users,
+    popular: true,
+    icon: Car,
+    title: 'Wynajem długoterminowy',
+    desc: 'Miesięczna rata obejmuje ubezpieczenie i serwis. Bez angażowania kapitału, od 12 miesięcy.',
+    time: 'Decyzja do 24h',
+    href: '/wynajem-dlugoterminowy',
+  },
+  {
     audience: 'Dla Ciebie',
     audienceIcon: Users,
     popular: true,
@@ -65,34 +75,24 @@ const PRODUCTS = [
     href: '/samochody?finansowanie=kredyt',
   },
   {
-    audience: 'Dla Ciebie',
-    audienceIcon: Users,
-    popular: true,
-    icon: FileText,
-    title: 'Pożyczka na samochód',
-    desc: 'Szybkie finansowanie bez zastawu. Elastyczne warunki dopasowane do Twojego budżetu.',
-    time: 'Decyzja do 1h',
-    href: '/samochody?finansowanie=pozyczka',
-  },
-  {
-    audience: 'Dla Ciebie i firm',
-    audienceIcon: Users,
-    popular: false,
-    icon: Car,
-    title: 'Wynajem długoterminowy',
-    desc: 'Miesięczna rata obejmuje ubezpieczenie i serwis. Bez angażowania kapitału, od 12 miesięcy.',
-    time: 'Decyzja do 24h',
-    href: '/wynajem-dlugoterminowy',
-  },
-  {
     audience: 'Dla firm',
     audienceIcon: Briefcase,
-    popular: false,
+    popular: true,
     icon: Briefcase,
     title: 'Leasing samochodu',
     desc: 'Optymalizacja kosztów podatkowych dla przedsiębiorców. Szeroki wybór marek i modeli.',
     time: 'Decyzja 2–3h',
     href: '/samochody?finansowanie=leasing',
+  },
+  {
+    audience: 'Dla Ciebie',
+    audienceIcon: Users,
+    popular: false,
+    icon: FileText,
+    title: 'Pożyczka na samochód',
+    desc: 'Szybkie finansowanie bez zastawu. Elastyczne warunki dopasowane do Twojego budżetu.',
+    time: 'Decyzja do 1h',
+    href: '/samochody?finansowanie=pozyczka',
   },
 ];
 

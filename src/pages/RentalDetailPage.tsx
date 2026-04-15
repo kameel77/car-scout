@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { faqApi } from '@/services/api';
+import { CallbackForm } from '@/components/CallbackForm';
 import type { FaqEntry } from '@/types/faq';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -250,22 +251,22 @@ export default function RentalDetailPage() {
 
                             {/* Equipment — all 4 categories */}
                             {equipmentCategories.length > 0 && (
-                                <div className="mt-6 pt-6 border-t space-y-4">
-                                    <h3 className="font-semibold text-gray-900">Wyposażenie</h3>
+                                <div className="mt-8 pt-6 border-t space-y-4">
+                                    <h3 className="font-heading text-xl font-semibold mb-2">Wyposażenie</h3>
                                     {equipmentCategories.map(cat => {
                                         const Icon = cat.icon;
                                         return (
                                             <details key={cat.label} className="group">
-                                                <summary className="flex items-center gap-1.5 cursor-pointer text-base font-medium text-gray-700 hover:text-accent transition-colors py-1">
-                                                    <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
-                                                    <Icon className="w-4 h-4 text-accent" />
+                                                <summary className="flex items-center gap-2 cursor-pointer text-base font-semibold text-foreground hover:text-accent transition-colors py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md">
+                                                    <ChevronDown className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
+                                                    <Icon className="w-5 h-5 text-primary" />
                                                     {cat.label}
-                                                    <span className="text-xs text-gray-400 ml-1">({cat.items.length})</span>
+                                                    <span className="text-sm font-normal text-muted-foreground ml-1">({cat.items.length})</span>
                                                 </summary>
-                                                <div className="pl-7 pt-1 pb-2 space-y-1">
+                                                <div className="pl-9 pt-1 pb-3 space-y-2">
                                                     {cat.items.map((e: string, i: number) => (
-                                                        <div key={i} className="flex items-start gap-2 text-base text-gray-600 leading-snug">
-                                                            <span className="text-green-600 font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
+                                                        <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-snug">
+                                                            <span className="text-accent font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
                                                             {e}
                                                         </div>
                                                     ))}
@@ -299,7 +300,30 @@ export default function RentalDetailPage() {
                         </div>
                     </div>
 
-                    {/* Right: Calculator */}
+                    {/* FAQ in left column — stays visible while calculator is sticky */}
+                    {faqEntries.filter((e: FaqEntry) => e.isPublished).length > 0 && (
+                        <div className="lg:col-span-2">
+                            <div className="bg-white rounded-2xl shadow-sm border p-6">
+                                <h2 className="font-heading text-xl font-semibold text-foreground mb-4">Najczęściej zadawane pytania</h2>
+                                <Accordion type="multiple" className="w-full space-y-3">
+                                    {faqEntries.filter((e: FaqEntry) => e.isPublished).map((entry: FaqEntry) => (
+                                        <AccordionItem
+                                            key={entry.id}
+                                            value={entry.id}
+                                            className="rounded-lg border border-border bg-card shadow-sm px-4"
+                                        >
+                                            <AccordionTrigger className="text-base font-semibold text-foreground hover:no-underline text-left py-4">
+                                                {entry.questionPl}
+                                            </AccordionTrigger>
+                                            <AccordionContent className="pb-4 text-muted-foreground text-sm leading-relaxed">
+                                                {entry.answerPl}
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    ))}
+                                </Accordion>
+                            </div>
+                        </div>
+                    )}
                     <div>
                         <div className="bg-white rounded-2xl shadow-sm border p-6 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
                             <h2 className="text-lg font-bold text-gray-900 mb-5">Kalkulator najmu</h2>
@@ -415,14 +439,14 @@ export default function RentalDetailPage() {
                                             }`}
                                         >
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <Building2 className="w-4 h-4 text-gray-500" />
-                                                    {isLoggedIn ? (
+                                                {isLoggedIn ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Building2 className="w-4 h-4 text-gray-500" />
                                                         <span className="font-medium text-sm">{offer.company.name}</span>
-                                                    ) : (
-                                                        <span className="font-medium text-sm text-gray-400">Firma #{i + 1}</span>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                ) : (
+                                                    <div></div>
+                                                )}
                                                 {i === 0 && (
                                                     <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full font-medium">Najlepsza</span>
                                                 )}
@@ -482,32 +506,20 @@ export default function RentalDetailPage() {
                 </div>
             </main>
 
-            {/* FAQ Section for Rental */}
-            {faqEntries.length > 0 && (
-                <section className="max-w-5xl mx-auto px-4 py-10">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Najczęściej zadawane pytania</h2>
-                    <Accordion type="single" collapsible className="space-y-3">
-                        {faqEntries.filter((e: FaqEntry) => e.isPublished).map((entry: FaqEntry) => (
-                            <AccordionItem
-                                key={entry.id}
-                                value={entry.id}
-                                className="bg-white border rounded-xl px-5"
-                            >
-                                <AccordionTrigger className="text-left font-medium text-gray-900 hover:text-accent">
-                                    {entry.questionPl}
-                                </AccordionTrigger>
-                                <AccordionContent className="text-gray-600 text-sm leading-relaxed">
-                                    {entry.answerPl}
-                                </AccordionContent>
-                            </AccordionItem>
-                        ))}
-                    </Accordion>
-                </section>
-            )}
+
 
             {/* Lightbox is handled by ImageGallery component */}
 
             <ScrollToTopButton />
+
+            {/* Callback CTA */}
+            <div className="container py-10">
+                <CallbackForm
+                    title="Masz dodatkowe pytania?"
+                    titleHighlight="Zostaw numer, oddzwonimy"
+                    description="Nasz doradca skontaktuje się z Tobą w ciągu 24h i pomoże dobrać najlepszą ofertę wynajmu."
+                />
+            </div>
 
             {/* Mobile Sticky CTA */}
             <div className="sticky-cta md:hidden">

@@ -34,6 +34,7 @@ import { formatPrice } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
+import { CallbackForm } from '@/components/CallbackForm';
 import {
   Dialog,
   DialogContent,
@@ -904,6 +905,15 @@ export default function ListingDetailPage() {
           </div>
         </div>
       </main >
+
+      {/* Callback CTA */}
+      <div className="container py-10">
+        <CallbackForm
+          title="Masz dodatkowe pytania?"
+          titleHighlight="Zostaw numer, oddzwonimy"
+          description="Nasz doradca skontaktuje się z Tobą w ciągu 24h i pomoże dobrać najlepsze finansowanie."
+        />
+      </div>
 
       <Footer />
 

@@ -420,8 +420,9 @@ export default function RentalLeadFormPage() {
 
                                 <Button
                                     type="submit"
-                                    size="lg"
-                                    className="w-full bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-600/20 text-md font-bold h-14"
+                                    variant="hero"
+                                    size="xl"
+                                    className="w-full shadow-xl shadow-accent/20 text-md font-bold h-14"
                                     disabled={status === 'loading'}
                                 >
                                     {status === 'loading' ? (
