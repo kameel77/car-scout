@@ -262,3 +262,19 @@
     display: none;
   }
 }
+@keyframes pulse-orange-shadow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.16), 0 4px 14px rgba(249, 115, 22, 0.10);
+  }
+}
+
+.btn-negotiate {
+  animation: pulse-orange-shadow 2.6s ease-in-out infinite;
+}
+
+.btn-negotiate:hover {
+  animation: none;
+}

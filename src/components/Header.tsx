@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Car, Globe, X, Menu, Gift } from 'lucide-react';
+import { Globe, Menu, Gift, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -164,7 +164,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
             )}
           </nav>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             {/* Language Switcher */}
             {enabledLanguages.length > 1 && (
               <DropdownMenu>
@@ -193,6 +193,17 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
               </DropdownMenu>
             )}
 
+            {/* Phone Button */}
+            {settings?.legalContactPhone && (
+              <a
+                href={`tel:${settings.legalContactPhone}`}
+                aria-label="Zadzwoń do nas"
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 hover:shadow-md hover:shadow-accent/20 active:scale-95"
+              >
+                <Phone className="h-4 w-4" />
+              </a>
+            )}
+
             {/* CTA Button */}
             <Link
               to="/samochody"
@@ -205,6 +216,16 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
 
         {/* Mobile Menu */}
         <div className="flex items-center gap-2 lg:hidden">
+          {/* Phone circle - mobile */}
+          {settings?.legalContactPhone && (
+            <a
+              href={`tel:${settings.legalContactPhone}`}
+              aria-label="Zadzwoń do nas"
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 active:scale-95"
+            >
+              <Phone className="h-4 w-4" />
+            </a>
+          )}
           <Link
             to="/samochody"
             className="flex sm:hidden h-9 items-center justify-center rounded-full bg-accent px-4 text-xs font-semibold text-accent-foreground"
