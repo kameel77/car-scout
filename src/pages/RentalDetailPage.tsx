@@ -195,7 +195,7 @@ export default function RentalDetailPage() {
                 </Link>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left: Gallery + Specs */}
+                    {/* Left: Gallery + Specs + FAQ */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Gallery — shared component */}
                         <ImageGallery images={galleryImages} title={`${vehicle.make} ${vehicle.model}`} />
@@ -301,33 +301,33 @@ export default function RentalDetailPage() {
                                     ))}
                                 </div>
                             )}
-                        </div>
-                    </div>
+                     </div>
 
-                    {/* FAQ in left column — stays visible while calculator is sticky */}
-                    {faqEntries.filter((e: FaqEntry) => e.isPublished).length > 0 && (
-                        <div className="lg:col-span-2">
-                            <div className="bg-white rounded-2xl shadow-sm border p-6">
-                                <h2 className="font-heading text-xl font-semibold text-foreground mb-4">Najczęściej zadawane pytania</h2>
-                                <Accordion type="multiple" className="w-full space-y-3">
-                                    {faqEntries.filter((e: FaqEntry) => e.isPublished).map((entry: FaqEntry) => (
-                                        <AccordionItem
-                                            key={entry.id}
-                                            value={entry.id}
-                                            className="rounded-lg border border-border bg-card shadow-sm px-4"
-                                        >
-                                            <AccordionTrigger className="text-base font-semibold text-foreground hover:no-underline text-left py-4">
-                                                {entry.questionPl}
-                                            </AccordionTrigger>
-                                            <AccordionContent className="pb-4 text-muted-foreground text-sm leading-relaxed">
-                                                {entry.answerPl}
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    ))}
-                                </Accordion>
-                            </div>
-                        </div>
-                    )}
+                     {/* FAQ in left column — stays visible while calculator is sticky on the right */}
+                     {faqEntries.filter((e: FaqEntry) => e.isPublished).length > 0 && (
+                         <div className="bg-white rounded-2xl shadow-sm border p-6">
+                             <h2 className="font-heading text-xl font-semibold text-foreground mb-4">Najczęściej zadawane pytania</h2>
+                             <Accordion type="multiple" className="w-full space-y-3">
+                                 {faqEntries.filter((e: FaqEntry) => e.isPublished).map((entry: FaqEntry) => (
+                                     <AccordionItem
+                                         key={entry.id}
+                                         value={entry.id}
+                                         className="rounded-lg border border-border bg-card shadow-sm px-4"
+                                     >
+                                         <AccordionTrigger className="text-base font-semibold text-foreground hover:no-underline text-left py-4">
+                                             {entry.questionPl}
+                                         </AccordionTrigger>
+                                         <AccordionContent className="pb-4 text-muted-foreground text-sm leading-relaxed">
+                                             {entry.answerPl}
+                                         </AccordionContent>
+                                     </AccordionItem>
+                                 ))}
+                             </Accordion>
+                         </div>
+                     )}
+                    </div>{/* end lg:col-span-2 */}
+
+                    {/* Right: sticky calculator */}
                     <div>
                         <div className="bg-white rounded-2xl shadow-sm border p-6 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
                             <h2 className="text-lg font-bold text-gray-900 mb-5">Kalkulator najmu</h2>
