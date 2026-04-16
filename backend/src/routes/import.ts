@@ -172,7 +172,7 @@ export async function importRoutes(fastify: FastifyInstance) {
             const records = parse(csvContent, {
                 columns: true,
                 skip_empty_lines: true,
-                delimiter: ',',
+                delimiter: [',', '\t', ';'],
                 relax_column_count: true
             }) as CSVRow[];
 
@@ -235,7 +235,7 @@ export async function importRoutes(fastify: FastifyInstance) {
             const records = parse(csvContent, {
                 columns: true,
                 skip_empty_lines: true,
-                delimiter: ',',
+                delimiter: [',', '\t', ';'],
                 relax_column_count: true
             }) as CSVRow[];
 

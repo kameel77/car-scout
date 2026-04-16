@@ -49,6 +49,7 @@ type SettingsPayload = {
     smtpPassword?: string | null;
     smtpFromEmail?: string | null;
     smtpRecipientEmail?: string | null;
+    navItemsVisibility?: string[];
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -220,7 +221,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpUser: data.smtpUser || null,
                     smtpPassword: data.smtpPassword || null,
                     smtpFromEmail: data.smtpFromEmail || null,
-                    smtpRecipientEmail: data.smtpRecipientEmail || null
+                    smtpRecipientEmail: data.smtpRecipientEmail || null,
+                    navItemsVisibility: Array.isArray(data.navItemsVisibility)
+                        ? data.navItemsVisibility
+                        : ['samochody', 'wynajem']
                 },
                 create: {
                     id: 'default',
@@ -263,7 +267,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpUser: data.smtpUser || null,
                     smtpPassword: data.smtpPassword || null,
                     smtpFromEmail: data.smtpFromEmail || null,
-                    smtpRecipientEmail: data.smtpRecipientEmail || null
+                    smtpRecipientEmail: data.smtpRecipientEmail || null,
+                    navItemsVisibility: Array.isArray(data.navItemsVisibility)
+                        ? data.navItemsVisibility
+                        : ['samochody', 'wynajem']
                 }
             });
 

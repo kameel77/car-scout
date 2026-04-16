@@ -45,7 +45,7 @@ services:
 
   # Frontend (Nginx) — pulled from GHCR
   frontend:
-    image: ghcr.io/kameel77/car-scout-frontend:${IMAGE_TAG:-dev}
+    image: ghcr.io/kameel77/car-scout-frontend-${BRAND:-carsalon}:${IMAGE_TAG:-dev}
     pull_policy: always
     container_name: "${COMPOSE_PROJECT_NAME}-frontend"
     environment:
@@ -53,12 +53,11 @@ services:
     restart: unless-stopped
     expose:
       - "80"
-    labels:
-      # Explicit Traefik service labels — defense-in-depth.
-      # Without these, Traefik auto-detects the port and network,
-      # which can fail when containers are on multiple networks.
-      # Domain routing is handled by Coolify (SERVICE_FQDN_* env vars).
-      - "traefik.http.services.${COMPOSE_PROJECT_NAME}-frontend.loadbalancer.server.port=80"
+    # NOTE: Do NOT add custom traefik.http.services.* labels here.
+    # Coolify doesn't expand env vars (like ${COMPOSE_PROJECT_NAME}) in labels,
+    # which causes all environments on the same server to share one Traefik
+    # service pool → requests get routed to the wrong container.
+    # Coolify auto-generates unique router/service names using UUIDs.
     depends_on:
       carscout-api:
         condition: service_healthy

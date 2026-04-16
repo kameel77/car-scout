@@ -105,7 +105,7 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
             },
             include: {
                 user: {
-                    select: { id: true, email: true, name: true, phone: true, isActive: true },
+                    select: { id: true, email: true, name: true, isActive: true },
                 },
             },
         });
@@ -119,7 +119,7 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         const {
             name, addressLine1, addressLine2, addressLine3, city,
-            contactPhone, contactEmail, contactName,
+            contactPhone, contactEmail,
             dealerGroupId,
             googleRating, googleReviewCount, googleLink,
         } = request.body as any;
@@ -148,7 +148,6 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
                     city,
                     contactPhone,
                     contactEmail,
-                    contactName,
                     dealerGroupId: dealerGroupId || null,
                     googleRating: googleRating ? parseFloat(googleRating) : undefined,
                     googleReviewCount: googleReviewCount ? parseInt(googleReviewCount) : undefined,
@@ -193,7 +192,6 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
                     ...(body.city !== undefined && { city: body.city }),
                     ...(body.contactPhone !== undefined && { contactPhone: body.contactPhone }),
                     ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail }),
-                    ...(body.contactName !== undefined && { contactName: body.contactName }),
                     ...(body.dealerGroupId !== undefined && { dealerGroupId: body.dealerGroupId || null }),
                     ...(body.googleRating !== undefined && { googleRating: parseFloat(body.googleRating) }),
                     ...(body.googleReviewCount !== undefined && { googleReviewCount: parseInt(body.googleReviewCount) }),
