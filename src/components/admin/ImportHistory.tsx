@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { History, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { History, FileText, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { importApi } from '@/services/api';
@@ -81,9 +81,11 @@ export function ImportHistory() {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
                                             {log.status === 'success' ? (
-                                                <CheckCircle className="w-4 h-4 text-green-600" />
+                                                <CheckCircle className="w-4 h-4 text-green-600" title="Import zakończony sukcesem" />
+                                            ) : log.status === 'partial' ? (
+                                                <AlertCircle className="w-4 h-4 text-yellow-500" title="Import częściowy - niektóre pozycje pominięte" />
                                             ) : (
-                                                <XCircle className="w-4 h-4 text-red-600" />
+                                                <XCircle className="w-4 h-4 text-red-600" title="Import nieudany" />
                                             )}
                                             <span className="font-semibold">{log.fileName}</span>
                                         </div>

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { getCSFlowCars, getCSFlowCarDetails } from '../utils/csflow-client.js';
 import { generateListingSlug } from '../utils/url-utils.js';
+import { downloadAndCacheImages } from './csflow-image-downloader.js';
 import cron from 'node-cron';
 
 // Pomocnicza funkcja mapowania CSFlow -> Prisma
@@ -140,10 +141,13 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                 // Przygotuj format pliku (mapowanie na pola Listing Prisma)
                 const price = Number(car.price || 0);
                 
-                // Upewnijmy się, że imageUrls i primaryImageUrl poprawnie operują uboższym widokiem z bazy
-                const photos = Array.isArray(car.photos_lg) && car.photos_lg.length > 0
+                // Pobierz zewnętrzne URL-e zdjęć
+                const externalPhotos = Array.isArray(car.photos_lg) && car.photos_lg.length > 0
                     ? car.photos_lg
                     : (Array.isArray(car.photos) ? car.photos : []);
+
+                // Pobierz i zcachuj zdjęcia lokalnie (idempotentne — pomija istniejące pliki)
+                const photos = await downloadAndCacheImages(listingId, externalPhotos);
                     
                 const primaryImage = photos.length > 0 ? photos[0] : null;
 
