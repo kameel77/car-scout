@@ -79,7 +79,10 @@ export function SettingsModule() {
         smtpRecipientEmail: data?.smtpRecipientEmail || '',
         navItemsVisibility: Array.isArray(data?.navItemsVisibility)
             ? data.navItemsVisibility
-            : ['samochody', 'wynajem']
+            : ['samochody', 'wynajem'],
+        negotiatePriceEnabled: data?.negotiatePriceEnabled !== undefined
+            ? Boolean(data.negotiatePriceEnabled)
+            : true,
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -351,6 +354,26 @@ export function SettingsModule() {
                                 </label>
                                 <p className="text-xs text-slate-600">
                                     Przy braku ładujących się zdjęć spróbujemy je automatycznie odświeżyć (wymaga zalogowania).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Negotiate price button */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-bold">Negocjacja ceny</Label>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border bg-slate-50">
+                            <Checkbox
+                                id="negotiate-price-enabled"
+                                checked={Boolean(settings.negotiatePriceEnabled)}
+                                onCheckedChange={(val) => setSettings({ ...settings, negotiatePriceEnabled: Boolean(val) })}
+                            />
+                            <div className="space-y-1">
+                                <label htmlFor="negotiate-price-enabled" className="font-medium cursor-pointer">
+                                    Wyświetlaj przycisk "Zaproponuj swoją cenę"
+                                </label>
+                                <p className="text-xs text-slate-600">
+                                    Gdy wyłączone, przycisk negocjacji zniknie ze wszystkich stron ofert.
                                 </p>
                             </div>
                         </div>
