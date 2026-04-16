@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useBrand } from '@/contexts/BrandContext';
 import { normalizeRentalImageUrl } from '@/lib/utils';
+import { formatNumber } from '@/utils/formatters';
 
 type OfferType = 'business' | 'consumer';
 
@@ -219,7 +220,7 @@ export default function RentalDetailPage() {
                                 {vehicle.catalogPrice && (
                                     <div className="text-right flex-shrink-0">
                                         <div className="text-xl font-bold text-foreground">
-                                            {vehicle.catalogPrice.toLocaleString('pl-PL')} zł
+                                            {formatNumber(vehicle.catalogPrice)} zł
                                         </div>
                                         <div className="text-xs text-muted-foreground">cena katalogowa</div>
                                     </div>
@@ -457,8 +458,8 @@ export default function RentalDetailPage() {
                                             </div>
                                             <div className="text-3xl font-bold text-gray-900">
                                                 {selectedOfferType === 'business'
-                                                    ? `${Math.ceil(offer.monthlyRateNet).toLocaleString('pl-PL')} zł`
-                                                    : `${Math.ceil(offer.monthlyRateGross).toLocaleString('pl-PL')} zł`
+                                                    ? `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł`
+                                                    : `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł`
                                                 }
                                                 <span className="text-sm font-normal text-gray-500">
                                                     {selectedOfferType === 'business' ? ' netto / mies.' : ' brutto / mies.'}
@@ -466,8 +467,8 @@ export default function RentalDetailPage() {
                                             </div>
                                             <div className="text-sm text-gray-500 mt-1">
                                                 {selectedOfferType === 'business'
-                                                    ? `${Math.ceil(offer.monthlyRateGross).toLocaleString('pl-PL')} zł brutto`
-                                                    : `${Math.ceil(offer.monthlyRateNet).toLocaleString('pl-PL')} zł netto`
+                                                    ? `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł brutto`
+                                                    : `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł netto`
                                                 }
                                             </div>
 
