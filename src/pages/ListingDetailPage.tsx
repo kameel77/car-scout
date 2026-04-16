@@ -790,7 +790,7 @@ export default function ListingDetailPage() {
                       {t('detail.askAbout')}
                     </Link>
                   </Button>
-                  <Button asChild variant="secondary" className="w-full" size="lg">
+                  <Button asChild variant="secondary" className="w-full btn-negotiate" size="lg">
                     <Link to={`${getListingUrlPath({
                       id: listing.listing_id,
                       make: listing.make,
@@ -803,15 +803,6 @@ export default function ListingDetailPage() {
                       <HandCoins className="h-5 w-5" />
                       {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
                     </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    size="lg"
-                    onClick={() => window.open(`tel:${listing.contact_phone}`)}
-                  >
-                    <Phone className="h-5 w-5" />
-                    {t('detail.call')}
                   </Button>
                 </div>
 
@@ -883,9 +874,22 @@ export default function ListingDetailPage() {
                   <h3 className="font-heading font-semibold">{t('detail.dealerInfo')}</h3>
                   <div>
                     <p className="font-medium text-foreground">{listing.dealer_name}</p>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{listing.dealer_address_line1}, {listing.dealer_city}</span>
+                    <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>
+                        {(() => {
+                          const parts: string[] = [];
+                          if (listing.dealer_address_line1) parts.push(listing.dealer_address_line1);
+                          if (listing.dealer_address_line2) parts.push(listing.dealer_address_line2);
+                          if (listing.dealer_address_line3) parts.push(listing.dealer_address_line3);
+                          // Dla dealerów CSFlow: city i postalCode są osobnymi polami
+                          if (!listing.dealer_address_line2) {
+                            const postalCity = [listing.dealer_postal_code, listing.dealer_city].filter(Boolean).join(' ');
+                            if (postalCity) parts.push(postalCity);
+                          }
+                          return parts.join(', ') || '—';
+                        })()}
+                      </span>
                     </div>
                   </div>
                   {listing.google_rating && (
@@ -919,16 +923,15 @@ export default function ListingDetailPage() {
 
       {/* Mobile Sticky CTA */}
       <div className="sticky-cta">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1"
-            onClick={() => window.open(`tel:${listing.contact_phone}`)}
+        <div className="flex gap-3 items-center">
+          {/* Phone circle icon */}
+          <a
+            href={`tel:${listing.contact_phone}`}
+            aria-label="Zadzwoń"
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-secondary text-foreground border border-border hover:bg-accent hover:text-white hover:border-accent transition-all duration-200 active:scale-95 flex-shrink-0"
           >
             <Phone className="h-5 w-5" />
-            {t('detail.call')}
-          </Button>
+          </a>
           <Button asChild variant="hero" size="lg" className="flex-1">
             <Link to={`${getListingUrlPath({
               id: listing.listing_id,
@@ -942,7 +945,7 @@ export default function ListingDetailPage() {
               {t('detail.sendInquiry')}
             </Link>
           </Button>
-          <Button asChild variant="secondary" size="lg" className="flex-1">
+          <Button asChild variant="secondary" size="lg" className="flex-1 btn-negotiate">
             <Link to={`${getListingUrlPath({
               id: listing.listing_id,
               make: listing.make,
@@ -955,6 +958,7 @@ export default function ListingDetailPage() {
               {t('detail.negotiateShort', 'Negocjuj cenę')}
             </Link>
           </Button>
+
         </div>
       </div>
 

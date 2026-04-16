@@ -98,37 +98,22 @@ async function recalculateAllPrices(fastify: FastifyInstance) {
 
     if (!settings) return 0;
 
-    const listings = await fastify.prisma.listing.findMany({
-        where: { isArchived: false }
-    });
+    // Single SQL UPDATE for all non-archived listings — O(1) round-trip instead of N queries
+    const result = await fastify.prisma.$executeRaw`
+        UPDATE "Listing"
+        SET
+            "dealer_price_net_pln" = "price_pln" / 1.23,
+            "dealer_price_net_eur" = "price_pln" / 1.23 / ${settings.eurExRate}::float,
+            "broker_price_pln"     = ROUND(
+                ("price_pln" / 1.23 * (1 + ${settings.brokerFeePctPln}::float / 100) * 1.23) / 10
+            ) * 10,
+            "broker_price_eur"     = CEIL(
+                ("price_pln" / 1.23 / ${settings.eurExRate}::float * (1 + ${settings.brokerFeePctEur}::float / 100) * 1.23) / 10
+            ) * 10
+        WHERE "is_archived" = false
+    `;
 
-    const updates = listings.map(listing => {
-        const dealerPriceNetPln = listing.pricePln / 1.23;
-        const dealerPriceNetEur = dealerPriceNetPln / settings.eurExRate;
-
-        // Rounded to full 10s (normal rounding), GROSS
-        const brokerPricePln = Math.round((dealerPriceNetPln * (1 + settings.brokerFeePctPln / 100)) * 1.23 / 10) * 10;
-
-        // Rounded UP to full 10s, GROSS
-        const brokerPriceEur = Math.ceil((dealerPriceNetEur * (1 + settings.brokerFeePctEur / 100)) * 1.23 / 10) * 10;
-
-        return fastify.prisma.listing.update({
-            where: { id: listing.id },
-            data: {
-                dealerPriceNetPln,
-                dealerPriceNetEur,
-                brokerPricePln,
-                brokerPriceEur
-            }
-        });
-    });
-
-    // Run batch updates
-    if (updates.length > 0) {
-        await fastify.prisma.$transaction(updates);
-    }
-
-    return updates.length;
+    return result;
 }
 
 export async function settingsRoutes(fastify: FastifyInstance) {

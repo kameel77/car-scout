@@ -52,6 +52,7 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             dealer_address_line2: backendListing.dealer?.addressLine2,
             dealer_address_line3: backendListing.dealer?.addressLine3,
             dealer_city: backendListing.dealer?.city || '',
+            dealer_postal_code: backendListing.dealer?.postalCode || undefined,
             contact_phone: backendListing.dealer?.contactPhone || '',
             google_rating: backendListing.dealer?.googleRating,
             google_reviews_count: backendListing.dealer?.googleReviewCount,
