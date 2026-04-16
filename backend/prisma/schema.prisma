@@ -264,6 +264,7 @@ model AppSettings {
   smtpFromEmail               String?  @map("smtp_from_email")
   smtpRecipientEmail          String?  @map("smtp_recipient_email")
   navItemsVisibility          String[] @default(["samochody", "wynajem"]) @map("nav_items_visibility")
+  negotiatePriceEnabled       Boolean  @default(true) @map("negotiate_price_enabled")
 
   @@map("app_settings")
 }

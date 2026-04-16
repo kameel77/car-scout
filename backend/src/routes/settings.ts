@@ -50,6 +50,7 @@ type SettingsPayload = {
     smtpFromEmail?: string | null;
     smtpRecipientEmail?: string | null;
     navItemsVisibility?: string[];
+    negotiatePriceEnabled?: boolean;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -209,7 +210,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpRecipientEmail: data.smtpRecipientEmail || null,
                     navItemsVisibility: Array.isArray(data.navItemsVisibility)
                         ? data.navItemsVisibility
-                        : ['samochody', 'wynajem']
+                        : ['samochody', 'wynajem'],
+                    negotiatePriceEnabled: data.negotiatePriceEnabled !== undefined
+                        ? Boolean(data.negotiatePriceEnabled)
+                        : undefined,
                 },
                 create: {
                     id: 'default',
@@ -255,7 +259,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpRecipientEmail: data.smtpRecipientEmail || null,
                     navItemsVisibility: Array.isArray(data.navItemsVisibility)
                         ? data.navItemsVisibility
-                        : ['samochody', 'wynajem']
+                        : ['samochody', 'wynajem'],
+                    negotiatePriceEnabled: data.negotiatePriceEnabled !== undefined
+                        ? Boolean(data.negotiatePriceEnabled)
+                        : true,
                 }
             });
 
