@@ -290,6 +290,13 @@ export async function buildApp(): Promise<FastifyInstance> {
         return serveStaticFile(filePath, reply);
     });
 
+    // Static files — CSFlow cached vehicle images
+    fastify.get('/uploads/csflow-images/:listingId/:file', async (request, reply) => {
+        const { listingId, file } = request.params as { listingId: string; file: string };
+        const filePath = path.join(uploadsRoot, 'csflow-images', listingId, file);
+        return serveStaticFile(filePath, reply);
+    });
+
     // Cleanup hook
     fastify.addHook('onClose', async (instance) => {
         await instance.prisma.$disconnect();

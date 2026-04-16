@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car, Building2, User } from 'lucide-react';
 import { normalizeRentalImageUrl } from '@/lib/utils';
+import { formatNumber } from '@/utils/formatters';
 
 type ClientType = 'business' | 'consumer';
 
@@ -225,8 +226,8 @@ export default function RentalSearchPage() {
                                                         style={{ background: accent, color: accentText }}
                                                     >
                                                         {isBusiness
-                                                            ? Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')
-                                                            : Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')
+                                                            ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))
+                                                            : formatNumber(Math.ceil(v.minMonthlyRateGross))
                                                         }
                                                         <span className="text-base font-semibold">zł</span>
                                                     </span>
@@ -236,8 +237,8 @@ export default function RentalSearchPage() {
                                                 </div>
                                                 <div className="text-xs text-gray-400 mt-1">
                                                     {isBusiness
-                                                        ? `${Math.ceil(v.minMonthlyRateGross).toLocaleString('pl-PL')} zł brutto`
-                                                        : `${Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23).toLocaleString('pl-PL')} zł netto`
+                                                        ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto`
+                                                        : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`
                                                     }
                                                 </div>
                                                 {v.minRateConfig && (
