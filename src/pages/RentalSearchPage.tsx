@@ -9,6 +9,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car, Building2, User } from 'lucide-react';
+import { normalizeRentalImageUrl } from '@/lib/utils';
 
 type ClientType = 'business' | 'consumer';
 
@@ -163,9 +164,9 @@ export default function RentalSearchPage() {
                             >
                                 {/* Image */}
                                 <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
-                                    {v.primaryImageUrl ? (
+                                    {normalizeRentalImageUrl(v.primaryImageUrl, v.id) ? (
                                         <img
-                                            src={v.primaryImageUrl}
+                                            src={normalizeRentalImageUrl(v.primaryImageUrl, v.id)!}
                                             alt={`${v.make} ${v.model}`}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
