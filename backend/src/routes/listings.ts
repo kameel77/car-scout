@@ -360,6 +360,99 @@ export async function listingRoutes(fastify: FastifyInstance) {
         }
     });
 
+    // Get listing counts grouped by importSource (platform admin only)
+    fastify.get('/api/listings/sources', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
+
+        const groups = await fastify.prisma.listing.groupBy({
+            by: ['importSource'],
+            _count: { _all: true },
+            where: { isArchived: false },
+            orderBy: { _count: { importSource: 'desc' } }
+        });
+
+        const archivedGroups = await fastify.prisma.listing.groupBy({
+            by: ['importSource'],
+            _count: { _all: true },
+            where: { isArchived: true },
+            orderBy: { _count: { importSource: 'desc' } }
+        });
+
+        const archivedMap = new Map(archivedGroups.map(g => [g.importSource ?? '__null__', g._count._all]));
+
+        const sources = groups.map(g => ({
+            source: g.importSource ?? null,
+            activeCount: g._count._all,
+            archivedCount: archivedMap.get(g.importSource ?? '__null__') ?? 0,
+        }));
+
+        // Also include sources that only have archived listings
+        for (const ag of archivedGroups) {
+            if (!groups.find(g => g.importSource === ag.importSource)) {
+                sources.push({
+                    source: ag.importSource ?? null,
+                    activeCount: 0,
+                    archivedCount: ag._count._all,
+                });
+            }
+        }
+
+        return { sources };
+    });
+
+    // Bulk archive all listings by importSource (platform admin only)
+    fastify.post('/api/listings/bulk/archive-by-source', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
+
+        const { source } = request.body as { source: string | null };
+
+        const where = source === null || source === '__null__'
+            ? { importSource: null, isArchived: false }
+            : { importSource: source, isArchived: false };
+
+        const result = await fastify.prisma.listing.updateMany({
+            where,
+            data: {
+                isArchived: true,
+                archivedAt: new Date(),
+                archivedReason: `Bulk archive by source: ${source ?? 'manual'}`,
+            }
+        });
+
+        return { success: true, count: result.count };
+    });
+
+    // Bulk delete all listings by importSource (platform admin only)
+    fastify.post('/api/listings/bulk/delete-by-source', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
+
+        const { source, includeArchived } = request.body as { source: string | null; includeArchived?: boolean };
+
+        const where = source === null || source === '__null__'
+            ? { importSource: null, ...(includeArchived ? {} : { isArchived: false }) }
+            : { importSource: source, ...(includeArchived ? {} : { isArchived: false }) };
+
+        try {
+            const result = await fastify.prisma.listing.deleteMany({ where });
+            return { success: true, count: result.count };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.code(500).send({
+                error: 'Bulk delete failed',
+                message: error instanceof Error ? error.message : 'Unknown error',
+            });
+        }
+    });
+
     // Refresh images from source (admin only for manual refresh, public for auto-refresh)
     fastify.post('/api/listings/:id/refresh-images', async (request, reply) => {
         const { id } = request.params as { id: string };

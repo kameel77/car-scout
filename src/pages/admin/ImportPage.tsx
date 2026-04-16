@@ -1,8 +1,9 @@
 import { CSVUploader } from '@/components/admin/CSVUploader';
 import { CSFlowImporter } from '@/components/admin/CSFlowImporter';
 import { ImportHistory } from '@/components/admin/ImportHistory';
+import { BulkSourceManager } from '@/components/admin/BulkSourceManager';
 import { useAuth } from '@/contexts/AuthContext';
-import { Upload, History } from 'lucide-react';
+import { Upload, History, Database } from 'lucide-react';
 
 export default function ImportPage() {
     const { user } = useAuth();
@@ -28,6 +29,17 @@ export default function ImportPage() {
                         <CSFlowImporter />
                         <CSVUploader />
                     </div>
+                </section>
+            )}
+
+            {/* Bulk source management */}
+            {user?.role === 'admin' && (
+                <section>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Database className="w-5 h-5 text-rose-500" />
+                        <h2 className="text-xl font-semibold">Zarządzanie wg źródła</h2>
+                    </div>
+                    <BulkSourceManager />
                 </section>
             )}
 
