@@ -30,6 +30,7 @@ export interface Listing {
   dealer_address_line2?: string;
   dealer_address_line3?: string;
   dealer_city: string;
+  dealer_postal_code?: string;
   contact_phone: string;
   google_rating?: number;
   google_reviews_count?: number;

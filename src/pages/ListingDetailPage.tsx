@@ -883,9 +883,22 @@ export default function ListingDetailPage() {
                   <h3 className="font-heading font-semibold">{t('detail.dealerInfo')}</h3>
                   <div>
                     <p className="font-medium text-foreground">{listing.dealer_name}</p>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{listing.dealer_address_line1}, {listing.dealer_city}</span>
+                    <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>
+                        {(() => {
+                          const parts: string[] = [];
+                          if (listing.dealer_address_line1) parts.push(listing.dealer_address_line1);
+                          if (listing.dealer_address_line2) parts.push(listing.dealer_address_line2);
+                          if (listing.dealer_address_line3) parts.push(listing.dealer_address_line3);
+                          // Dla dealerów CSFlow: city i postalCode są osobnymi polami
+                          if (!listing.dealer_address_line2) {
+                            const postalCity = [listing.dealer_postal_code, listing.dealer_city].filter(Boolean).join(' ');
+                            if (postalCity) parts.push(postalCity);
+                          }
+                          return parts.join(', ') || '—';
+                        })()}
+                      </span>
                     </div>
                   </div>
                   {listing.google_rating && (
