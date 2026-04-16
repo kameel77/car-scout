@@ -90,7 +90,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                 const car = await getCSFlowCarDetails(basicCar.id);
                 if (!car) continue;
 
-                // 1. Zapis Dealera — używamy CSFlow dealer.id jako stabilnego klucza
+                // 1. Zapis Dealera — pre-check zamiast try-catch (brak P2002, brak pisma:error spam)
                 let currentDealerId: string | undefined;
                 if (car.dealer) {
                     const d = car.dealer;
@@ -107,38 +107,46 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
 
                     let dealer;
                     if (d.id) {
-                        // Upsert po stabilnym CSFlow dealer.id
-                        // Jeśli dealer istnieje z tym samym name+address ale bez csflowDealerId
-                        // (np. ręcznie dodany), złap P2002 i połącz go z CSFlow ID
-                        try {
-                            dealer = await prisma.dealer.upsert({
-                                where: { csflowDealerId: d.id },
-                                create: {
-                                    csflowDealerId: d.id,
-                                    ...dealerData,
-                                },
-                                update: dealerData,
+                        // Krok 1: Szukaj po CSFlow ID (najszybsza ścieżka, O(1))
+                        const byId = await prisma.dealer.findUnique({
+                            where: { csflowDealerId: d.id }
+                        });
+
+                        if (byId) {
+                            // Dealer już powiązany — zaktualizuj dane (np. telefon, miasto)
+                            dealer = await prisma.dealer.update({
+                                where: { id: byId.id },
+                                data: dealerData,
                             });
-                        } catch (e: any) {
-                            if (e.code === 'P2002') {
-                                // Dealer istnieje z tym samym name+addressLine1, ale bez csflowDealerId
-                                const found = await prisma.dealer.findFirst({
-                                    where: {
-                                        name: dealerData.name,
-                                        addressLine1: dealerData.addressLine1 || ''
-                                    }
-                                });
-                                if (found) {
+                        } else {
+                            // Krok 2: Sprawdź czy jest dealer z tym samym name+adres (ręcznie dodany
+                            // lub inny CSFlow ID z identyczną nazwą/adresem)
+                            const byNameAddr = await prisma.dealer.findFirst({
+                                where: {
+                                    name: dealerData.name,
+                                    addressLine1: dealerData.addressLine1 || '',
+                                }
+                            });
+
+                            if (byNameAddr) {
+                                if (!byNameAddr.csflowDealerId) {
+                                    // Dealer bez CSFlow ID — połącz go z bieżącym
                                     dealer = await prisma.dealer.update({
-                                        where: { id: found.id },
-                                        data: { ...dealerData, csflowDealerId: d.id }
+                                        where: { id: byNameAddr.id },
+                                        data: { ...dealerData, csflowDealerId: d.id },
                                     });
-                                    console.log(`[CSFlow] Połączono dealera "${dealerData.name}" z CSFlow ID ${d.id}`);
+                                    console.log(`[CSFlow] Połączono dealera "${dealerData.name}" (DB: ${byNameAddr.id}) z CSFlow ID ${d.id}`);
                                 } else {
-                                    throw e; // Inny powód konfliktu — propaguj
+                                    // Dealer już powiązany z INNYM csflowDealerId — użyj go bez nadpisywania
+                                    // (zapobiega ping-pongowi gdy dwa CSFlow-dealerzy mają tę samą nazwę/adres)
+                                    console.log(`[CSFlow] Dealer "${dealerData.name}" już powiązany z CSFlow ID ${byNameAddr.csflowDealerId}, pomijam przypisanie ID ${d.id}`);
+                                    dealer = byNameAddr;
                                 }
                             } else {
-                                throw e;
+                                // Krok 3: Nowy dealer — utwórz
+                                dealer = await prisma.dealer.create({
+                                    data: { csflowDealerId: d.id, ...dealerData },
+                                });
                             }
                         }
                     } else {
