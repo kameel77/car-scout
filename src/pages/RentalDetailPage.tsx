@@ -25,6 +25,7 @@ import {
     User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone
 } from 'lucide-react';
 import { useBrand } from '@/contexts/BrandContext';
+import { normalizeRentalImageUrl } from '@/lib/utils';
 
 type OfferType = 'business' | 'consumer';
 
@@ -115,9 +116,12 @@ export default function RentalDetailPage() {
 
     const offers = calcQuery.data?.offers || [];
 
-    // Images for gallery
-    const images = vehicle?.imageUrls || [];
-    const galleryImages = images.length > 0 ? images : (vehicle?.primaryImageUrl ? [vehicle.primaryImageUrl] : []);
+    // Images for gallery — normalize URLs to handle legacy data (bare filename without path)
+    const vehicleId = vehicle?.id;
+    const images = (vehicle?.imageUrls || []).map((u: string) => normalizeRentalImageUrl(u, vehicleId) ?? u);
+    const galleryImages = images.length > 0 ? images : (
+        vehicle?.primaryImageUrl ? [normalizeRentalImageUrl(vehicle.primaryImageUrl, vehicleId) ?? vehicle.primaryImageUrl] : []
+    );
 
     // Build rental state for lead form
     const buildRentalState = useCallback((offer: any) => ({
