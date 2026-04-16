@@ -480,7 +480,37 @@ export const listingsApi = {
         }
 
         return response.json();
-    }
+    },
+
+    getSources: async (token: string): Promise<{ sources: { source: string | null; activeCount: number; archivedCount: number }[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/sources`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch listing sources');
+        return response.json();
+    },
+
+    archiveBySource: async (source: string | null, token: string): Promise<{ success: boolean; count: number }> => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/bulk/archive-by-source`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ source })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Archive failed');
+        return data;
+    },
+
+    deleteBySource: async (source: string | null, includeArchived: boolean, token: string): Promise<{ success: boolean; count: number }> => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/bulk/delete-by-source`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ source, includeArchived })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Delete failed');
+        return data;
+    },
 };
 
 // Settings API

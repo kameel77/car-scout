@@ -790,20 +790,22 @@ export default function ListingDetailPage() {
                       {t('detail.askAbout')}
                     </Link>
                   </Button>
-                  <Button asChild variant="secondary" className="w-full btn-negotiate" size="lg">
-                    <Link to={`${getListingUrlPath({
-                      id: listing.listing_id,
-                      make: listing.make,
-                      model: listing.model,
-                      version: listing.version,
-                      productionYear: listing.production_year,
-                      bodyType: listing.body_type,
-                      fuelType: listing.fuel_type
-                    }, financingType)}/negotiate`}>
-                      <HandCoins className="h-5 w-5" />
-                      {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
-                    </Link>
-                  </Button>
+                  {settings?.negotiatePriceEnabled !== false && (
+                    <Button asChild variant="secondary" className="w-full btn-negotiate" size="lg">
+                      <Link to={`${getListingUrlPath({
+                        id: listing.listing_id,
+                        make: listing.make,
+                        model: listing.model,
+                        version: listing.version,
+                        productionYear: listing.production_year,
+                        bodyType: listing.body_type,
+                        fuelType: listing.fuel_type
+                      }, financingType)}/negotiate`}>
+                        <HandCoins className="h-5 w-5" />
+                        {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
+                      </Link>
+                    </Button>
+                  )}
                 </div>
 
                 {canManage && (
@@ -945,19 +947,21 @@ export default function ListingDetailPage() {
               {t('detail.sendInquiry')}
             </Link>
           </Button>
-          <Button asChild variant="secondary" size="lg" className="flex-1 btn-negotiate">
-            <Link to={`${getListingUrlPath({
-              id: listing.listing_id,
-              make: listing.make,
-              model: listing.model,
-              version: listing.version,
-              productionYear: listing.production_year,
-              bodyType: listing.body_type,
-              fuelType: listing.fuel_type
-            }, financingType)}/negotiate`}>
-              {t('detail.negotiateShort', 'Negocjuj cenę')}
-            </Link>
-          </Button>
+          {settings?.negotiatePriceEnabled !== false && (
+            <Button asChild variant="secondary" size="lg" className="flex-1 btn-negotiate">
+              <Link to={`${getListingUrlPath({
+                id: listing.listing_id,
+                make: listing.make,
+                model: listing.model,
+                version: listing.version,
+                productionYear: listing.production_year,
+                bodyType: listing.body_type,
+                fuelType: listing.fuel_type
+              }, financingType)}/negotiate`}>
+                {t('detail.negotiateShort', 'Negocjuj cenę')}
+              </Link>
+            </Button>
+          )}
 
         </div>
       </div>
