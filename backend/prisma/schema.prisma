@@ -158,7 +158,6 @@ model Dealer {
   contactPhone      String?         @map("contact_phone")
   contactEmail      String?         @map("contact_email")
   contactEmailService String?       @map("contact_email_service")
-  contactName       String?         @map("contact_name")
   dealerGroupId     String?         @map("dealer_group_id")
   googleRating      Float?          @map("google_rating")
   googleReviewCount Int?            @map("google_review_count")
@@ -211,7 +210,6 @@ model User {
   email                String       @unique
   password             String
   name                 String?
-  phone                String?
   role                 String       @default("admin") // legacy — fallback until Etap 5
   isActive             Boolean      @default(true) @map("is_active")
   lastLogin            DateTime?    @map("last_login")
@@ -265,6 +263,7 @@ model AppSettings {
   smtpPassword                String?  @map("smtp_password")
   smtpFromEmail               String?  @map("smtp_from_email")
   smtpRecipientEmail          String?  @map("smtp_recipient_email")
+  navItemsVisibility          String[] @default(["samochody", "wynajem"]) @map("nav_items_visibility")
 
   @@map("app_settings")
 }

@@ -66,7 +66,6 @@ async function main() {
             city: 'Warszawa',
             contactPhone: '+48 22 123 45 67',
             contactEmail: 'kontakt@toyota-warszawa.pl',
-            contactName: 'Jan Kowalski',
             googleRating: 4.7,
             googleReviewCount: 234
         }

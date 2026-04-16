@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
 import { usePersonalOffer } from '@/contexts/PersonalOfferContext';
+import { useBrand } from '@/contexts/BrandContext';
 
 const ALL_LANGUAGES = [
   { code: 'pl', label: 'Polski', flag: '🇵🇱' },
@@ -27,11 +28,11 @@ interface HeaderProps {
   hasActiveFilters?: boolean;
 }
 
-const navLinks = [
-  { label: 'Samochody', to: '/samochody' },
-  { label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
-  { label: 'FAQ', to: '/faq' },
-  { label: 'Kontakt', to: '/kontakt' },
+const ALL_NAV_LINKS = [
+  { key: 'samochody', label: 'Samochody', to: '/samochody' },
+  { key: 'wynajem', label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
+  { key: 'faq', label: 'FAQ', to: '/faq' },
+  { key: 'kontakt', label: 'Kontakt', to: '/kontakt' },
 ];
 
 export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
@@ -41,6 +42,16 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
   const { hasPersonalOffer } = usePersonalOffer();
+  const { config } = useBrand();
+
+  const navItems = React.useMemo(() => {
+    const visibility: string[] = settings?.navItemsVisibility ?? ['samochody', 'wynajem'];
+    return ALL_NAV_LINKS.filter((link) => {
+      // FAQ and Kontakt are always shown
+      if (link.key === 'faq' || link.key === 'kontakt') return true;
+      return visibility.includes(link.key);
+    });
+  }, [settings?.navItemsVisibility]);
 
   const enabledLanguages = React.useMemo(() => {
     const codes = settings?.enabledLanguages || ['pl'];
@@ -98,14 +109,14 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
 
   return (
     <header id="landing-nav" className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
-      <div className="container flex h-[72px] items-center justify-between gap-4">
+      <div className="container flex h-[72px] items-center justify-between gap-2">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0">
           {settings?.headerLogoUrl ? (
             <img
               src={buildAssetUrl(settings.headerLogoUrl)}
               alt={siteName}
-              className="h-[2.5rem] w-auto max-w-[200px] object-contain"
+              className="h-12 w-auto max-w-[220px] object-contain"
               loading="lazy"
             />
           ) : (
@@ -116,7 +127,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           )}
           {headerLogoText && (
             <span
-              className="text-[10px] text-muted-foreground leading-tight border-l pl-3 border-border hidden sm:block max-w-[120px]"
+              className="text-[11px] text-muted-foreground leading-tight border-l pl-2 border-border hidden sm:block max-w-[120px]"
               dangerouslySetInnerHTML={{ __html: headerLogoText }}
             />
           )}
@@ -125,13 +136,13 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
         {/* Desktop Navigation & Actions */}
         <div className="hidden md:flex items-center gap-10">
           <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
+            {navItems.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  "text-base font-semibold transition-all hover:text-[#F97316]",
-                  location.pathname === link.to ? "text-[#F97316]" : "text-[#4A4E69]"
+                  "text-base font-semibold transition-all hover:text-accent",
+                  location.pathname === link.to ? "text-accent" : "text-[#4A4E69]"
                 )}
               >
                 {link.label}
@@ -185,7 +196,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
             {/* CTA Button */}
             <Link
               to="/samochody"
-              className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-[#F97316] px-6 text-sm font-semibold text-white transition-all hover:bg-[#EA580C] hover:shadow-lg hover:shadow-orange-200 active:scale-95"
+              className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-accent px-6 text-sm font-semibold text-accent-foreground transition-all hover:opacity-90 hover:shadow-lg active:scale-95"
             >
               Znajdź auto
             </Link>
@@ -196,7 +207,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
         <div className="flex items-center gap-2 lg:hidden">
           <Link
             to="/samochody"
-            className="flex sm:hidden h-9 items-center justify-center rounded-full bg-[#F97316] px-4 text-xs font-semibold text-white"
+            className="flex sm:hidden h-9 items-center justify-center rounded-full bg-accent px-4 text-xs font-semibold text-accent-foreground"
           >
             Znajdź auto
           </Link>
@@ -224,14 +235,14 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 </div>
 
                 <nav className="flex-1 p-6 space-y-4">
-                  {navLinks.map((link) => (
+                  {navItems.map((link) => (
                     <Link
                       key={link.to}
                       to={link.to}
                       onClick={() => setIsOpen(false)}
                       className={cn(
                         "block text-lg font-medium transition-colors p-2 rounded-lg",
-                        location.pathname === link.to ? "bg-orange-50 text-[#F97316]" : "text-[#4A4E69] hover:bg-slate-50"
+                        location.pathname === link.to ? "bg-accent/10 text-accent" : "text-[#4A4E69] hover:bg-slate-50"
                       )}
                     >
                       {link.label}
@@ -255,7 +266,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                   <Link
                     to="/samochody"
                     onClick={() => setIsOpen(false)}
-                    className="block w-full text-center mt-6 h-12 flex items-center justify-center rounded-xl bg-[#F97316] text-white font-semibold"
+                    className="block w-full text-center mt-6 h-12 flex items-center justify-center rounded-xl bg-accent text-accent-foreground font-semibold"
                   >
                     Znajdź auto
                   </Link>

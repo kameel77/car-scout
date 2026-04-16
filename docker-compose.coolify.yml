@@ -1,13 +1,16 @@
 version: '3.8'
 
-# Universal Coolify deployment file for all environments.
-# Used by: dev.carsalon.pl (IMAGE_TAG=dev)
-#           staging.carsalon.pl (IMAGE_TAG=staging)
-#           carsalon.pl (IMAGE_TAG=main)
-# Images are built by GitHub Actions on every push to dev/staging/main.
+# Universal Coolify deployment file for ALL environments.
+# Used by: dev.carsalon.pl     (IMAGE_TAG=dev,     BRAND=carsalon,  COMPOSE_PROJECT_NAME=carscout-dev)
+#           dev.motolia.pl      (IMAGE_TAG=dev,     BRAND=motolia,   COMPOSE_PROJECT_NAME=motolia-dev)
+#           staging.carsalon.pl (IMAGE_TAG=staging, BRAND=carsalon,  COMPOSE_PROJECT_NAME=carscout-staging)
+#           carsalon.pl         (IMAGE_TAG=main,    BRAND=carsalon,  COMPOSE_PROJECT_NAME=carscout-prod)
+#           motolia.pl          (IMAGE_TAG=main,    BRAND=motolia,   COMPOSE_PROJECT_NAME=motolia-prod)
+#
+# In Coolify: set "Docker Compose Location" to /docker-compose.coolify.yml
 
 services:
-  # Backend API — pulled from GHCR
+  # Backend API — pulled from GHCR, built by GitHub Actions
   carscout-api:
     image: ghcr.io/kameel77/car-scout-backend:${IMAGE_TAG:-dev}
     pull_policy: always
@@ -28,12 +31,14 @@ services:
       ANALYTICS_CACHE_TTL: ${ANALYTICS_CACHE_TTL:-300}
       CORS_ORIGINS: ${CORS_ORIGINS}
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:${PORT:-3000}/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3000}/health"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 60s
     volumes:
+      # Persist uploaded rental vehicle images across deploys & restarts.
+      # Named using COMPOSE_PROJECT_NAME so each environment has its own isolated volume.
       - rental-uploads:/app/uploads
     networks:
       carscout-private:
@@ -43,9 +48,9 @@ services:
         aliases:
           - "${COMPOSE_PROJECT_NAME}-backend"
 
-  # Frontend (Nginx) — pulled from GHCR
+  # Frontend (Nginx) — image is brand-specific, built by GitHub Actions
   frontend:
-    image: ghcr.io/kameel77/car-scout-frontend:${IMAGE_TAG:-dev}
+    image: ghcr.io/kameel77/car-scout-frontend-${BRAND:-carsalon}:${IMAGE_TAG:-dev}
     pull_policy: always
     container_name: "${COMPOSE_PROJECT_NAME}-frontend"
     environment:
@@ -53,12 +58,10 @@ services:
     restart: unless-stopped
     expose:
       - "80"
-    labels:
-      # Explicit Traefik service labels — defense-in-depth.
-      # Without these, Traefik auto-detects the port and network,
-      # which can fail when containers are on multiple networks.
-      # Domain routing is handled by Coolify (SERVICE_FQDN_* env vars).
-      - "traefik.http.services.${COMPOSE_PROJECT_NAME}-frontend.loadbalancer.server.port=80"
+    # NOTE: Do NOT add custom traefik.http.services.* labels here.
+    # Coolify doesn't expand env vars in labels, which causes all environments
+    # on the same server to share one Traefik service pool → requests get routed
+    # to the wrong container. Coolify auto-generates unique router/service names using UUIDs.
     depends_on:
       carscout-api:
         condition: service_healthy
@@ -68,6 +71,7 @@ services:
 
 volumes:
   rental-uploads:
+    # Isolated per environment via COMPOSE_PROJECT_NAME prefix
     name: "${COMPOSE_PROJECT_NAME}-rental-uploads"
 
 networks:

@@ -23,9 +23,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service:
-          - backend
-          - frontend
+        include:
+          - service: backend
+            context: ./backend
+            file: ./backend/Dockerfile
+            brand: none
+          - service: frontend-carsalon
+            context: .
+            file: ./Dockerfile
+            brand: carsalon
+          - service: frontend-motolia
+            context: .
+            file: ./Dockerfile
+            brand: motolia
 
     steps:
       - name: Checkout repository
@@ -54,11 +64,12 @@ jobs:
       - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.service == 'frontend' && '.' || './backend' }}
-          file: ${{ matrix.service == 'frontend' && './Dockerfile' || './backend/Dockerfile' }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_API_URL=/api
+            VITE_BRAND=${{ matrix.brand }}
 
