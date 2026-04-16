@@ -63,6 +63,16 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                 .map(l => l.listingId as string)
         );
 
+        // Mapa WSZYSTKICH VIN-ów w bazie (nie tylko CSFlow) — zapobiega duplikatom
+        // cross-source (np. VIN ręcznie dodanego auta = VIN z CSFlow)
+        const allVinEntries = await prisma.listing.findMany({
+            select: { vin: true, listingId: true },
+            where: { vin: { not: null } }
+        });
+        const allVinToListingId = new Map<string, string | null>(
+            allVinEntries.map(l => [l.vin as string, l.listingId])
+        );
+
         const currentApiIds = new Set<string>();
 
         // Do śledzenia historii cen z transaction
@@ -98,14 +108,39 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                     let dealer;
                     if (d.id) {
                         // Upsert po stabilnym CSFlow dealer.id
-                        dealer = await prisma.dealer.upsert({
-                            where: { csflowDealerId: d.id },
-                            create: {
-                                csflowDealerId: d.id,
-                                ...dealerData,
-                            },
-                            update: dealerData, // Aktualizujemy wszystkie pola przy kolejnych synchrach
-                        });
+                        // Jeśli dealer istnieje z tym samym name+address ale bez csflowDealerId
+                        // (np. ręcznie dodany), złap P2002 i połącz go z CSFlow ID
+                        try {
+                            dealer = await prisma.dealer.upsert({
+                                where: { csflowDealerId: d.id },
+                                create: {
+                                    csflowDealerId: d.id,
+                                    ...dealerData,
+                                },
+                                update: dealerData,
+                            });
+                        } catch (e: any) {
+                            if (e.code === 'P2002') {
+                                // Dealer istnieje z tym samym name+addressLine1, ale bez csflowDealerId
+                                const found = await prisma.dealer.findFirst({
+                                    where: {
+                                        name: dealerData.name,
+                                        addressLine1: dealerData.addressLine1 || ''
+                                    }
+                                });
+                                if (found) {
+                                    dealer = await prisma.dealer.update({
+                                        where: { id: found.id },
+                                        data: { ...dealerData, csflowDealerId: d.id }
+                                    });
+                                    console.log(`[CSFlow] Połączono dealera "${dealerData.name}" z CSFlow ID ${d.id}`);
+                                } else {
+                                    throw e; // Inny powód konfliktu — propaguj
+                                }
+                            } else {
+                                throw e;
+                            }
+                        }
                     } else {
                         // Fallback gdy brak d.id (nie powinno się zdarzać)
                         dealer = await prisma.dealer.upsert({
@@ -127,13 +162,15 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
 
                 const mappedEq = mapEquipment(car.equipment_groups);
 
-                // Szukamy po CSFlow ID oraz po unikalnym VIN, aby zapobiec Prisma Unique VIN Constrain Error
+                // Szukamy po CSFlow ID oraz po unikalnym VIN
                 const existingByCsflowId = existingListings.find(l => l.listingId === listingId);
-                const existingByVin = existingListings.find(l => l.vin && l.vin === car.vin);
                 
-                // Ustalanie czy w ogóle to auto można wstawić (jeśli VIN już występuje w bazie i nie należy do tego CSFlow ID, będzie skip)
-                if (!existingByCsflowId && existingByVin) {
-                    console.log(`[CSFlow] Zignorowano auto id ${car.id} ponieważ VIN ${car.vin} już istnieje u innej oferty w bazie.`);
+                // Sprawdź VIN w CAŁEJ bazie (nie tylko w CSFlow)
+                const vinConflictListingId = car.vin ? allVinToListingId.get(car.vin) : undefined;
+                const isVinConflict = !existingByCsflowId && car.vin && vinConflictListingId !== undefined;
+
+                if (isVinConflict) {
+                    console.log(`[CSFlow] Pominięto auto id ${car.id} ponieważ VIN ${car.vin} już istnieje (oferta: ${vinConflictListingId || 'brak ID'}).`);
                     result.failed++;
                     continue;
                 }
@@ -224,6 +261,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
 
                     priceHistoryEntries.push({ listingId: savedListing.id, pricePln: price });
                     result.inserted++;
+                    // Dodaj VIN do mapy, żeby duplikaty w tym samym batchu też były wykryte
+                    if (car.vin) allVinToListingId.set(car.vin, listingId);
                 }
             } catch (err: any) {
                 console.error(`[CSFlow] Błąd zapisu ID ${basicCar.id}: ${err.message}`);
