@@ -138,7 +138,7 @@ export default function CarsalonHomePage() {
         </div>
       </section>
 
-      <section className="home-section !pt-4 !pb-4">
+      <section className="home-section">
         <div className="max-w-[1400px] mx-auto px-6 w-full">
           <DynamicWidget placement="HOME" />
         </div>

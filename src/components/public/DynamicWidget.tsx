@@ -37,19 +37,22 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
       {widgets.map((widget) => {
         if (!widget.vehicles || widget.vehicles.length === 0) return null;
         
+        const isRentalOnly = widget.vehicleSources?.includes('RENTAL') && widget.vehicleSources?.length === 1;
+        const viewAllLink = isRentalOnly ? '/wynajem-dlugoterminowy' : '/samochody';
+
         return (
           <div key={widget.id} className="w-full">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                  <Car className="w-8 h-8 text-primary" />
+                  <Car className="w-8 h-8 text-orange-600" />
                   {widget.name}
                 </h2>
-                <div className="h-1 w-24 bg-primary rounded mt-4"></div>
+                <div className="h-1 w-24 bg-orange-600 rounded mt-4"></div>
               </div>
               <Link 
-                to="/samochody" 
-                className="group flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                to={viewAllLink} 
+                className="group flex items-center text-sm font-medium text-orange-600 hover:text-orange-600/80 transition-colors"
                 target={placement === 'EXTERNAL' ? '_parent' : '_self'}
               >
                 Zobacz wszystkie
@@ -85,7 +88,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                     
                     <div className="p-5 flex flex-col flex-grow">
                       <div className="mb-2">
-                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-primary transition-colors line-clamp-1">
+                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
                           {v.title}
                         </h3>
                         <p className="text-gray-500 text-sm">
@@ -98,12 +101,12 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                           {v.installment ? (
                             <>
                               {v.price && (
-                                <span className="text-[10px] text-gray-400 font-medium line-through">
+                                <span className="text-[10px] text-gray-400 font-medium tracking-wide">
                                   Katalogowo: {v.price.toLocaleString('pl-PL')} PLN
                                 </span>
                               )}
                               <div className="flex items-baseline gap-1.5">
-                                <span className="text-lg font-black bg-primary text-white px-2 py-0.5 rounded shadow-sm">
+                                <span className="text-lg font-black bg-orange-600 text-white px-2 py-0.5 rounded shadow-sm">
                                   {Math.round(v.installment).toLocaleString('pl-PL')} zł
                                 </span>
                                 <span className="text-[10px] font-medium text-gray-500">brutto/mc</span>
@@ -118,8 +121,8 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                             </>
                           )}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors shrink-0">
-                          <ChevronRight className="w-4 h-4 text-primary group-hover:text-white" />
+                        <div className="w-8 h-8 rounded-full bg-orange-600/10 flex items-center justify-center group-hover:bg-orange-600 transition-colors shrink-0">
+                          <ChevronRight className="w-4 h-4 text-orange-600 group-hover:text-white" />
                         </div>
                       </div>
                     </div>
