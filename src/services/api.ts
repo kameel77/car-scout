@@ -1100,21 +1100,21 @@ export const partnerAdsApi = {
 export const api = {
     widgets: {
         list: async (token?: string) => {
-            const response = await fetch(`${API_BASE_URL}/api/widgets`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/widgets`, {
                 headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
             });
             if (!response.ok) throw new Error('Failed to fetch widgets');
             return response.json();
         },
         get: async (id: string, token?: string) => {
-            const response = await fetch(`${API_BASE_URL}/api/widgets/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/widgets/${id}`, {
                 headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
             });
             if (!response.ok) throw new Error('Failed to fetch widget');
             return response.json();
         },
         create: async (payload: any, token: string) => {
-            const response = await fetch(`${API_BASE_URL}/api/widgets`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/widgets`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1122,11 +1122,15 @@ export const api = {
                 },
                 body: JSON.stringify(payload)
             });
-            if (!response.ok) throw new Error('Failed to create widget');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error("Failed to create widget, server returned:", errorData);
+                throw new Error(errorData.error || errorData.message || 'Failed to create widget');
+            }
             return response.json();
         },
         update: async (id: string, payload: any, token: string) => {
-            const response = await fetch(`${API_BASE_URL}/api/widgets/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/widgets/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1134,11 +1138,15 @@ export const api = {
                 },
                 body: JSON.stringify(payload)
             });
-            if (!response.ok) throw new Error('Failed to update widget');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error("Failed to update widget, server returned:", errorData);
+                throw new Error(errorData.error || errorData.message || 'Failed to update widget');
+            }
             return response.json();
         },
         delete: async (id: string, token: string) => {
-            const response = await fetch(`${API_BASE_URL}/api/widgets/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/widgets/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
