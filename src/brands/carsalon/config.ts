@@ -11,7 +11,7 @@ export const carsalonConfig: BrandConfig = {
     accentHover: '28 95% 48%',
   },
   contactInfo: {
-    phone: '+48 123 456 789',
+    phone: '+48 22 688 77 57',
     email: 'kontakt@carsalon.pl',
   },
   contactPage: {

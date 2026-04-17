@@ -7,6 +7,7 @@ import {
     MoreVertical,
     Trash2,
     Copy,
+    Star,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -23,13 +24,15 @@ interface AdminListingItemProps {
     listing: Listing;
     isSelected?: boolean;
     onSelect?: (id: string, selected: boolean) => void;
+    onToggleFeatured?: (id: string, isFeatured: boolean) => void;
     onArchive?: (id: string) => void;
     onRestore?: (id: string) => void;
     onDelete?: (id: string) => void;
 }
 
-export function AdminListingItem({ listing, isSelected = false, onSelect, onArchive, onRestore, onDelete }: AdminListingItemProps) {
+export function AdminListingItem({ listing, isSelected = false, onSelect, onToggleFeatured, onArchive, onRestore, onDelete }: AdminListingItemProps) {
     const isArchived = listing.is_archived;
+    const isFeatured = listing.is_featured;
     const { toast } = useToast();
 
     const handleCopyLink = () => {
@@ -139,6 +142,19 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onArch
                 </div>
 
                 {/* Actions Menu */}
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => onToggleFeatured?.(listing.listing_id, !isFeatured)}
+                    className={cn(
+                        "h-8 w-8 rounded-full transition-colors",
+                        isFeatured ? "text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50" : "text-gray-400 hover:text-yellow-500 hover:bg-gray-100"
+                    )}
+                    title={isFeatured ? "Usuń z wyróżnionych" : "Dodaj do wyróżnionych"}
+                >
+                    <Star className="w-4 h-4" fill={isFeatured ? "currentColor" : "none"} />
+                </Button>
+
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:bg-gray-100 rounded-full">

@@ -50,6 +50,7 @@ type SettingsPayload = {
     smtpFromEmail?: string | null;
     smtpRecipientEmail?: string | null;
     navItemsVisibility?: string[];
+    featuredModulesVisibility?: string[];
     negotiatePriceEnabled?: boolean;
 };
 
@@ -211,6 +212,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     navItemsVisibility: Array.isArray(data.navItemsVisibility)
                         ? data.navItemsVisibility
                         : ['samochody', 'wynajem'],
+                    featuredModulesVisibility: Array.isArray(data.featuredModulesVisibility)
+                        ? data.featuredModulesVisibility
+                        : ['nowe', 'uzywane', 'wynajem'],
                     negotiatePriceEnabled: data.negotiatePriceEnabled !== undefined
                         ? Boolean(data.negotiatePriceEnabled)
                         : undefined,
@@ -260,6 +264,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     navItemsVisibility: Array.isArray(data.navItemsVisibility)
                         ? data.navItemsVisibility
                         : ['samochody', 'wynajem'],
+                    featuredModulesVisibility: Array.isArray(data.featuredModulesVisibility)
+                        ? data.featuredModulesVisibility
+                        : ['nowe', 'uzywane', 'wynajem'],
                     negotiatePriceEnabled: data.negotiatePriceEnabled !== undefined
                         ? Boolean(data.negotiatePriceEnabled)
                         : true,

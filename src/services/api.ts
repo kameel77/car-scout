@@ -437,6 +437,24 @@ export const listingsApi = {
         return response.json();
     },
 
+    toggleFeatured: async (id: string, isFeatured: boolean, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/featured`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ isFeatured })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to toggle featured status');
+        }
+
+        return response.json();
+    },
+
     deleteListing: async (id: string, token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/listings/${id}`, {
             method: 'DELETE',
