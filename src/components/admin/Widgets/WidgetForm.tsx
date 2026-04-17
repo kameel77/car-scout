@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function WidgetForm({ widget, onClose }: { widget: any, onClose: () => void }) {
   const { toast } = useToast();
@@ -25,12 +26,14 @@ export function WidgetForm({ widget, onClose }: { widget: any, onClose: () => vo
     filterParams: widget?.filterParams || { bodyType: [], minPrice: '', maxPrice: '' }
   });
 
+  const { token } = useAuth();
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      if (!token) throw new Error("Brak autoryzacji");
       if (isEditing) {
-        return api.put(`/admin/widgets/${widget.id}`, data);
+        return api.widgets.update(widget.id, data, token);
       } else {
-        return api.post('/admin/widgets', data);
+        return api.widgets.create(data, token);
       }
     },
     onSuccess: () => {

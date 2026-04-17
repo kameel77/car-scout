@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { WidgetForm } from '@/components/admin/Widgets/WidgetForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Widget = {
   id: string;
@@ -26,17 +27,22 @@ export default function WidgetsPage() {
   const [isEmbedOpen, setIsEmbedOpen] = useState(false);
   const [selectedWidget, setSelectedWidget] = useState<Widget | null>(null);
 
+  const { token } = useAuth();
+
   const { data: widgets, isLoading } = useQuery<Widget[]>({
     queryKey: ['widgets'],
     queryFn: async () => {
-      const res = await api.get('/admin/widgets');
-      return res.data;
-    }
+      if (!token) throw new Error("Brak autoryzacji");
+      const res = await api.widgets.list(token);
+      return res; // Assuming your api_stub returns response.json() instead of { data: ... }
+    },
+    enabled: !!token
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/admin/widgets/${id}`);
+      if (!token) throw new Error("Brak autoryzacji");
+      await api.widgets.delete(id, token);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['widgets'] });
