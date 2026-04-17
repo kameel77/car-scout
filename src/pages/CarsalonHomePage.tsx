@@ -20,6 +20,7 @@ import { faqApi } from '@/services/api';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
+import { DynamicWidget } from '@/components/public/DynamicWidget';
 import './home-page.css';
 
 
@@ -134,6 +135,12 @@ export default function CarsalonHomePage() {
               {item.label}
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="home-section !pt-4 !pb-4">
+        <div className="max-w-[1400px] mx-auto px-6 w-full">
+          <DynamicWidget placement="HOME" />
         </div>
       </section>
 

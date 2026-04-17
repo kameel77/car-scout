@@ -646,3 +646,35 @@ model RentalMatrixEntry {
   @@index([assignmentId, monthlyRateGross])
   @@map("rental_matrix_entries")
 }
+
+enum WidgetPlacement {
+  HOME
+  OFFER
+  RENTAL
+  STATIC
+  EXTERNAL
+}
+
+enum SelectionMode {
+  FEATURED
+  FILTERED
+}
+
+model Widget {
+  id               String          @id @default(cuid())
+  name             String
+  isActive         Boolean         @default(true) @map("is_active")
+  
+  placement        WidgetPlacement
+  vehicleSources   String[]
+  
+  selectionMode    SelectionMode   @map("selection_mode")
+  filterParams     Json?           @map("filter_params")
+  
+  layoutStyle      String          @default("carousel") @map("layout_style")
+  
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  @@map("widgets")
+}

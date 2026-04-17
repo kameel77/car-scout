@@ -1095,3 +1095,55 @@ export const partnerAdsApi = {
         return response.json();
     }
 };
+
+// Widgets API
+export const api = {
+    widgets: {
+        list: async (token?: string) => {
+            const response = await fetch(`${API_BASE_URL}/api/widgets`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
+            });
+            if (!response.ok) throw new Error('Failed to fetch widgets');
+            return response.json();
+        },
+        get: async (id: string, token?: string) => {
+            const response = await fetch(`${API_BASE_URL}/api/widgets/${id}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
+            });
+            if (!response.ok) throw new Error('Failed to fetch widget');
+            return response.json();
+        },
+        create: async (payload: any, token: string) => {
+            const response = await fetch(`${API_BASE_URL}/api/widgets`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('Failed to create widget');
+            return response.json();
+        },
+        update: async (id: string, payload: any, token: string) => {
+            const response = await fetch(`${API_BASE_URL}/api/widgets/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('Failed to update widget');
+            return response.json();
+        },
+        delete: async (id: string, token: string) => {
+            const response = await fetch(`${API_BASE_URL}/api/widgets/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Failed to delete widget');
+            return response.json();
+        }
+    }
+};
