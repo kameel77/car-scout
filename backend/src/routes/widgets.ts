@@ -115,7 +115,7 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              transmission: l.transmission,
              price: l.pricePln,
              imageUrl: l.imageUrls[0] || '',
-             url: `/samochody/${l.slug ?? l.id}`
+             url: `/oferta/${l.slug ?? l.id}`
           }));
           unifiedVehicles.push(...formatted);
         }
@@ -123,10 +123,24 @@ export async function widgetRoutes(fastify: FastifyInstance) {
         if (queryRental) {
           const rentalVehicles = await fastify.prisma.rentalVehicle.findMany({
              where: { isFeatured: true, isActive: true },
-             take: 12
+             take: 12,
+             include: {
+               rentalAssignments: {
+                 include: { matrixEntries: true }
+               }
+             }
           });
-          const formattedRentals = rentalVehicles.map(r => ({
-             id: r.id,
+          const formattedRentals = rentalVehicles.map(r => {
+             let minInstallment = null;
+             for (const asgmnt of r.rentalAssignments) {
+               for (const entry of asgmnt.matrixEntries) {
+                 if (minInstallment === null || entry.monthlyRateGross < minInstallment) {
+                   minInstallment = entry.monthlyRateGross;
+                 }
+               }
+             }
+             return {
+               id: r.id,
              title: `${r.make} ${r.model}`,
              brand: r.make,
              model: r.model,
@@ -136,9 +150,11 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              fuelType: r.fuelType,
              transmission: r.transmission,
              price: r.catalogPrice,
+             installment: minInstallment,
              imageUrl: r.imageUrls[0] || '',
-             url: `/wynajem/auto/${r.slug ?? r.id}`
-          }));
+             url: `/wynajem-dlugoterminowy/${r.slug ?? r.id}`
+          };
+          });
           unifiedVehicles.push(...formattedRentals);
         }
       } else { // FILTERED mode
@@ -173,7 +189,7 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              transmission: l.transmission,
              price: l.pricePln,
              imageUrl: l.imageUrls[0] || '',
-             url: `/samochody/${l.slug ?? l.id}`
+             url: `/oferta/${l.slug ?? l.id}`
           }));
           unifiedVehicles.push(...formatted);
         }
@@ -187,10 +203,24 @@ export async function widgetRoutes(fastify: FastifyInstance) {
           const rentals = await fastify.prisma.rentalVehicle.findMany({
              where: rentalWhere,
              take: 12,
-             orderBy: { createdAt: 'desc' }
+             orderBy: { createdAt: 'desc' },
+             include: {
+               rentalAssignments: {
+                 include: { matrixEntries: true }
+               }
+             }
           });
-          const formattedRentals = rentals.map(r => ({
-             id: r.id,
+          const formattedRentals = rentals.map(r => {
+             let minInstallment = null;
+             for (const asgmnt of r.rentalAssignments) {
+               for (const entry of asgmnt.matrixEntries) {
+                 if (minInstallment === null || entry.monthlyRateGross < minInstallment) {
+                   minInstallment = entry.monthlyRateGross;
+                 }
+               }
+             }
+             return {
+               id: r.id,
              title: `${r.make} ${r.model}`,
              brand: r.make,
              model: r.model,
@@ -200,9 +230,11 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              fuelType: r.fuelType,
              transmission: r.transmission,
              price: r.catalogPrice,
+             installment: minInstallment,
              imageUrl: r.imageUrls[0] || '',
-             url: `/wynajem/auto/${r.slug ?? r.id}`
-          }));
+             url: `/wynajem-dlugoterminowy/${r.slug ?? r.id}`
+          };
+          });
           unifiedVehicles.push(...formattedRentals);
         }
       }

@@ -42,14 +42,14 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                  <Car className="w-8 h-8 text-blue-600" />
+                  <Car className="w-8 h-8 text-primary" />
                   {widget.name}
                 </h2>
-                <div className="h-1 w-24 bg-blue-600 rounded mt-4"></div>
+                <div className="h-1 w-24 bg-primary rounded mt-4"></div>
               </div>
               <Link 
                 to="/samochody" 
-                className="group flex items-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                className="group flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                 target={placement === 'EXTERNAL' ? '_parent' : '_self'}
               >
                 Zobacz wszystkie
@@ -85,7 +85,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                     
                     <div className="p-5 flex flex-col flex-grow">
                       <div className="mb-2">
-                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-primary transition-colors line-clamp-1">
                           {v.title}
                         </h3>
                         <p className="text-gray-500 text-sm">
@@ -94,14 +94,32 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                       </div>
                       
                       <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-xs text-gray-500 font-medium">Cena / Rata</span>
-                          <span className="text-lg font-bold text-gray-900">
-                            {v.price.toLocaleString('pl-PL')} PLN
-                          </span>
+                        <div className="flex flex-col gap-1">
+                          {v.installment ? (
+                            <>
+                              {v.price && (
+                                <span className="text-[10px] text-gray-400 font-medium line-through">
+                                  Katalogowo: {v.price.toLocaleString('pl-PL')} PLN
+                                </span>
+                              )}
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-lg font-black bg-primary text-white px-2 py-0.5 rounded shadow-sm">
+                                  {Math.round(v.installment).toLocaleString('pl-PL')} zł
+                                </span>
+                                <span className="text-[10px] font-medium text-gray-500">brutto/mc</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Cena pojazdu</span>
+                              <span className="text-lg font-bold text-gray-900">
+                                {v.price.toLocaleString('pl-PL')} PLN
+                              </span>
+                            </>
+                          )}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-600 transition-colors">
-                          <ChevronRight className="w-4 h-4 text-blue-600 group-hover:text-white" />
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors shrink-0">
+                          <ChevronRight className="w-4 h-4 text-primary group-hover:text-white" />
                         </div>
                       </div>
                     </div>
