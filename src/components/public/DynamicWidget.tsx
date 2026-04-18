@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Car, ChevronRight, Loader2 } from 'lucide-react';
+import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
@@ -64,7 +64,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
               {widget.vehicles.map((v: any) => (
                 <Link to={v.url} key={v.id} target={placement === 'EXTERNAL' ? '_parent' : '_self'}>
                   <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col cursor-pointer">
-                    <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+                    <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
                       {v.imageUrl ? (
                         <img 
                           src={v.imageUrl} 
@@ -91,9 +91,23 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                         <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
                           {v.title}
                         </h3>
-                        <p className="text-gray-500 text-sm">
-                          {v.year} • {v.fuelType} • {v.transmission}
-                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {v.year && (
+                              <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                  <Calendar className="w-3 h-3" /> {v.year}
+                              </span>
+                          )}
+                          {v.fuelType && (
+                              <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                  <Fuel className="w-3 h-3" /> {v.fuelType}
+                              </span>
+                          )}
+                          {v.transmission && (
+                              <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                  <Settings2 className="w-3 h-3" /> {v.transmission}
+                              </span>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
@@ -102,21 +116,21 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                             <>
                               {v.price && (
                                 <span className="text-[10px] text-gray-400 font-medium tracking-wide">
-                                  Katalogowo: {v.price.toLocaleString('pl-PL')} PLN
+                                  Cena katalogowa: {v.price.toLocaleString('pl-PL')} PLN
                                 </span>
                               )}
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-lg font-black bg-orange-600 text-white px-2 py-0.5 rounded shadow-sm">
+                              <div className="flex items-baseline gap-2 mt-1">
+                                <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-[#F97015] text-white shadow-sm">
                                   {Math.round(v.installment).toLocaleString('pl-PL')} zł
                                 </span>
-                                <span className="text-[10px] font-medium text-gray-500">brutto/mc</span>
+                                <span className="text-xs font-medium text-gray-500">brutto / mies.</span>
                               </div>
                             </>
                           ) : (
                             <>
                               <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Cena pojazdu</span>
                               <span className="text-lg font-bold text-gray-900">
-                                {v.price.toLocaleString('pl-PL')} PLN
+                                {v.price?.toLocaleString('pl-PL') ?? '-'} PLN
                               </span>
                             </>
                           )}
