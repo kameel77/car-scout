@@ -45,14 +45,14 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                  <Car className="w-8 h-8 text-orange-600" />
+                  <Car className="hidden md:block w-8 h-8 text-accent" />
                   {widget.name}
                 </h2>
-                <div className="h-1 w-24 bg-orange-600 rounded mt-4"></div>
+                <div className="h-1 w-24 bg-accent rounded mt-4"></div>
               </div>
               <Link 
                 to={viewAllLink} 
-                className="hidden md:flex group items-center text-sm font-medium text-orange-600 hover:text-orange-600/80 transition-colors"
+                className="hidden md:flex group items-center text-sm font-medium text-accent hover:text-accent/80 transition-colors"
                 target={placement === 'EXTERNAL' ? '_parent' : '_self'}
               >
                 Zobacz wszystkie
@@ -88,7 +88,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                     
                     <div className="p-5 flex flex-col flex-grow">
                       <div className="mb-2">
-                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
+                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-accent transition-colors line-clamp-1">
                           {v.title}
                         </h3>
                         {v.version && (
@@ -128,7 +128,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                                 </span>
                               )}
                               <div className="flex items-baseline gap-2 mt-1">
-                                <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-[#F97015] text-white shadow-sm">
+                                <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-accent text-white shadow-sm">
                                   {Math.round(v.installment).toLocaleString('pl-PL')} zł
                                 </span>
                                 <span className="text-xs font-medium text-gray-500">brutto / mies.</span>
@@ -143,8 +143,8 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                             </>
                           )}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-orange-600/10 flex items-center justify-center group-hover:bg-orange-600 transition-colors shrink-0">
-                          <ChevronRight className="w-4 h-4 text-orange-600 group-hover:text-white" />
+                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent transition-colors shrink-0">
+                          <ChevronRight className="w-4 h-4 text-accent group-hover:text-white" />
                         </div>
                       </div>
                     </div>
@@ -156,7 +156,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
             <div className="mt-6 md:hidden">
               <Link 
                 to={viewAllLink} 
-                className="flex w-full items-center justify-center bg-orange-600 text-white font-medium py-3 rounded-lg hover:bg-orange-600/90 transition-colors"
+                className="flex w-full items-center justify-center bg-accent text-white font-medium py-3 rounded-lg hover:bg-accent/90 transition-colors"
                 target={placement === 'EXTERNAL' ? '_parent' : '_self'}
               >
                 Zobacz wszystkie oferty

@@ -22,6 +22,7 @@ import { faqApi, leadsApi } from '@/services/api';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
+import { DynamicWidget } from '@/components/public/DynamicWidget';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -303,6 +304,13 @@ export default function MotoliaHomePage() {
               </FadeIn>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── WYBRANE OFERTY (WIDGETY) ─────────────────────────────────────── */}
+      <section className="bg-white hover:bg-gray-50/50 transition-colors py-12 md:py-16">
+        <div className="max-w-7xl mx-auto px-6 w-full">
+          <DynamicWidget placement="HOME" />
         </div>
       </section>
 
