@@ -109,14 +109,14 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
 
   return (
     <header id="landing-nav" className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
-      <div className="container flex h-[72px] items-center justify-between gap-2">
+      <div className="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0">
           {settings?.headerLogoUrl ? (
             <img
               src={buildAssetUrl(settings.headerLogoUrl)}
               alt={siteName}
-              className="h-12 w-auto max-w-[220px] object-contain"
+              className="h-14 md:h-16 w-auto max-w-[240px] object-contain"
               loading="lazy"
             />
           ) : (
@@ -245,7 +245,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                     <img
                       src={buildAssetUrl(settings.headerLogoUrl)}
                       alt={siteName}
-                      className="h-8 w-auto object-contain"
+                      className="h-12 w-auto object-contain"
                     />
                   ) : (
                     <h1 className="text-xl font-bold tracking-tight">

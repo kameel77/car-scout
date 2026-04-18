@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2 } from 'lucide-react';
+import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
@@ -52,7 +52,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
               </div>
               <Link 
                 to={viewAllLink} 
-                className="group flex items-center text-sm font-medium text-orange-600 hover:text-orange-600/80 transition-colors"
+                className="hidden md:flex group items-center text-sm font-medium text-orange-600 hover:text-orange-600/80 transition-colors"
                 target={placement === 'EXTERNAL' ? '_parent' : '_self'}
               >
                 Zobacz wszystkie
@@ -60,7 +60,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {widget.vehicles.map((v: any) => (
                 <Link to={v.url} key={v.id} target={placement === 'EXTERNAL' ? '_parent' : '_self'}>
                   <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col cursor-pointer">
@@ -91,10 +91,18 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                         <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
                           {v.title}
                         </h3>
+                        {v.version && (
+                          <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{v.version}</p>
+                        )}
                         <div className="flex flex-wrap gap-2 mt-3">
                           {v.year && (
                               <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
                                   <Calendar className="w-3 h-3" /> {v.year}
+                              </span>
+                          )}
+                          {v.enginePowerHp && (
+                              <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                  <Gauge className="w-3 h-3" /> {v.enginePowerHp} KM
                               </span>
                           )}
                           {v.fuelType && (
@@ -115,7 +123,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                           {v.installment ? (
                             <>
                               {v.price && (
-                                <span className="text-[10px] text-gray-400 font-medium tracking-wide">
+                                <span className="text-xs text-gray-400 font-medium tracking-wide">
                                   Cena katalogowa: {v.price.toLocaleString('pl-PL')} PLN
                                 </span>
                               )}
@@ -128,7 +136,7 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                             </>
                           ) : (
                             <>
-                              <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Cena pojazdu</span>
+                              <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Cena pojazdu</span>
                               <span className="text-lg font-bold text-gray-900">
                                 {v.price?.toLocaleString('pl-PL') ?? '-'} PLN
                               </span>
@@ -144,7 +152,18 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
                 </Link>
               ))}
             </div>
+
+            <div className="mt-6 md:hidden">
+              <Link 
+                to={viewAllLink} 
+                className="flex w-full items-center justify-center bg-orange-600 text-white font-medium py-3 rounded-lg hover:bg-orange-600/90 transition-colors"
+                target={placement === 'EXTERNAL' ? '_parent' : '_self'}
+              >
+                Zobacz wszystkie oferty
+              </Link>
+            </div>
           </div>
+
         );
       })}
     </div>
