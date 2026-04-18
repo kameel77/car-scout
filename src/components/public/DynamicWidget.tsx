@@ -7,7 +7,17 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 // Normalize URL
 const apiBase = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : (API_BASE_URL.endsWith('/api/') ? API_BASE_URL.slice(0, -5) : API_BASE_URL);
 
-export function DynamicWidget({ placement, widgetId }: { placement?: string, widgetId?: string }) {
+export function DynamicWidget({ 
+  placement, 
+  widgetId,
+  className,
+  innerClassName
+}: { 
+  placement?: string, 
+  widgetId?: string,
+  className?: string,
+  innerClassName?: string
+}) {
   const { data: widgets, isLoading } = useQuery<any[]>({
     queryKey: ['public-widgets', placement, widgetId],
     queryFn: async () => {
@@ -23,16 +33,27 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
   });
 
   if (isLoading) {
-    return (
+    const loader = (
       <div className="w-full flex justify-center items-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     );
+    if (className) {
+      return (
+        <section className={className}>
+          <div className={innerClassName || ''}>
+            {loader}
+          </div>
+        </section>
+      );
+    }
+    return loader;
   }
 
-  if (!widgets || widgets.length === 0) return null;
+  const hasVehicles = widgets?.some((w) => w.vehicles && w.vehicles.length > 0);
+  if (!widgets || widgets.length === 0 || !hasVehicles) return null;
 
-  return (
+  const content = (
     <div className="space-y-16">
       {widgets.map((widget) => {
         if (!widget.vehicles || widget.vehicles.length === 0) return null;
@@ -168,4 +189,16 @@ export function DynamicWidget({ placement, widgetId }: { placement?: string, wid
       })}
     </div>
   );
+
+  if (className) {
+    return (
+      <section className={className}>
+        <div className={innerClassName || ''}>
+          {content}
+        </div>
+      </section>
+    );
+  }
+
+  return content;
 }

@@ -138,11 +138,11 @@ export default function CarsalonHomePage() {
         </div>
       </section>
 
-      <section className="home-section !py-8 md:!py-12">
-        <div className="max-w-[1400px] mx-auto px-6 w-full">
-          <DynamicWidget placement="HOME" />
-        </div>
-      </section>
+      <DynamicWidget 
+        placement="HOME" 
+        className="home-section !py-8 md:!py-12"
+        innerClassName="max-w-[1400px] mx-auto px-6 w-full"
+      />
 
       <section className="home-section" id="jak-to-dziala">
         <div className="home-section__header home-reveal">

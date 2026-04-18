@@ -308,11 +308,11 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── WYBRANE OFERTY (WIDGETY) ─────────────────────────────────────── */}
-      <section className="bg-white hover:bg-gray-50/50 transition-colors py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-6 w-full">
-          <DynamicWidget placement="HOME" />
-        </div>
-      </section>
+      <DynamicWidget 
+        placement="HOME" 
+        className="bg-white hover:bg-gray-50/50 transition-colors py-12 md:py-16"
+        innerClassName="max-w-7xl mx-auto px-6 w-full"
+      />
 
       {/* ── PRODUKTY ─────────────────────────────────────────────────────── */}
       <section className="py-28 bg-[#FAFAF8]" id="produkty">
