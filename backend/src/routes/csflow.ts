@@ -9,6 +9,14 @@ export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
         onRequest: [fastify.authenticate] 
     }, async (request, reply) => {
         try {
+            const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
+            if (settings && settings.csflowEnabled === false) {
+                return reply.status(400).send({
+                    success: false,
+                    error: 'Synchronizacja z CSFlow jest wyłączona w ustawieniach.'
+                });
+            }
+
             const user = request.user as { userId: string };
             const result = await syncCSFlowAPI(fastify.prisma, user.userId);
             return reply.send({ success: true, result });

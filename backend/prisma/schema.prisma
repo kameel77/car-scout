@@ -269,6 +269,7 @@ model AppSettings {
   featuredModulesVisibility   String[] @default(["nowe", "uzywane", "wynajem"]) @map("featured_modules_visibility")
   negotiatePriceEnabled       Boolean  @default(true) @map("negotiate_price_enabled")
   negotiatePricePosition      String   @default("both") @map("negotiate_price_position")
+  csflowEnabled               Boolean  @default(true) @map("csflow_enabled")
 
   @@map("app_settings")
 }

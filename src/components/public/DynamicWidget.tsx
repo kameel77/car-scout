@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatNumber } from '@/utils/formatters';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 // Normalize URL
@@ -145,12 +146,12 @@ export function DynamicWidget({
                             <>
                               {v.price && (
                                 <span className="text-xs text-gray-400 font-medium tracking-wide">
-                                  Cena katalogowa: {v.price.toLocaleString('pl-PL')} PLN
+                                  Cena katalogowa: {formatNumber(v.price)} PLN
                                 </span>
                               )}
                               <div className="flex items-baseline gap-2 mt-1">
                                 <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-accent text-white shadow-sm">
-                                  {Math.round(v.installment).toLocaleString('pl-PL')} zł
+                                  {formatNumber(Math.round(v.installment))} zł
                                 </span>
                                 <span className="text-xs font-medium text-gray-500">brutto / mies.</span>
                               </div>
@@ -159,7 +160,7 @@ export function DynamicWidget({
                             <>
                               <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Cena pojazdu</span>
                               <span className="text-lg font-bold text-gray-900">
-                                {v.price?.toLocaleString('pl-PL') ?? '-'} PLN
+                                {v.price ? formatNumber(v.price) : '-'} PLN
                               </span>
                             </>
                           )}
