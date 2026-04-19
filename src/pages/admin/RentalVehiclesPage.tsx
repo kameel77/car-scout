@@ -846,6 +846,18 @@ export default function RentalVehiclesPage() {
         }
     });
 
+    const toggleFeaturedMutation = useMutation({
+        mutationFn: ({ id, isFeatured }: { id: string, isFeatured: boolean }) => rentalVehiclesApi.toggleFeatured(id, isFeatured, token!),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({ 
+                title: variables.isFeatured ? 'Pojazd wyróżniony' : 'Wyróżnienie usunięte',
+                description: variables.isFeatured ? 'Pojazd będzie promowany w polecanych.' : 'Pojazd usunięty z polecanych.'
+            });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
     const vehicles = vehiclesQuery.data?.vehicles || [];
     const pagination = vehiclesQuery.data?.pagination;
     const companies = companiesQuery.data?.companies || [];
@@ -975,6 +987,15 @@ export default function RentalVehiclesPage() {
                                     </td>
                                     <td className="p-3 text-right">
                                         <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                            <Button 
+                                                size="sm" 
+                                                variant="ghost" 
+                                                onClick={() => toggleFeaturedMutation.mutate({ id: v.id, isFeatured: !v.isFeatured })}
+                                                className={v.isFeatured ? "text-yellow-500 hover:text-yellow-600 bg-yellow-50" : "text-gray-400 hover:text-yellow-500 hover:bg-gray-100"}
+                                                title={v.isFeatured ? "Usuń z wyróżnionych" : "Dodaj do wyróżnionych"}
+                                            >
+                                                <Star className="w-4 h-4" fill={v.isFeatured ? "currentColor" : "none"} />
+                                            </Button>
                                             <Button size="sm" variant="ghost" onClick={() => { setEditingId(v.id); setView('edit'); }}>
                                                 <Edit className="w-4 h-4" />
                                             </Button>

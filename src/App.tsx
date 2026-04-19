@@ -46,6 +46,8 @@ import RentalDetailPage from "./pages/RentalDetailPage";
 import RentalLeadFormPage from "./pages/RentalLeadFormPage";
 import DealerGroupsPage from "./pages/admin/DealerGroupsPage";
 import DealersPage from "./pages/admin/DealersPage";
+import WidgetsPage from "./pages/admin/WidgetsPage";
+import WidgetEmbedPage from "./pages/WidgetEmbedPage";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +91,9 @@ const App = () => (
                       <Route path="/wynajem-dlugoterminowy" element={<RentalSearchPage />} />
                       <Route path="/wynajem-dlugoterminowy/:slug" element={<RentalDetailPage />} />
                       <Route path="/wynajem-dlugoterminowy/:slug/zapytanie" element={<RentalLeadFormPage />} />
+                      
+                      <Route path="/embed/widget/:id" element={<WidgetEmbedPage />} />
+
                       {/* Legacy routes - kept for backward compatibility during transition */}
                       <Route path="/listing/:id" element={<ListingDetailPage />} />
                       <Route path="/listing/:id/lead" element={<LeadFormPage />} />
@@ -217,6 +222,14 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <DealersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/widgets"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <WidgetsPage />
                             </ProtectedRoute>
                           }
                         />

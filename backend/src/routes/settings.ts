@@ -50,7 +50,9 @@ type SettingsPayload = {
     smtpFromEmail?: string | null;
     smtpRecipientEmail?: string | null;
     navItemsVisibility?: string[];
+    featuredModulesVisibility?: string[];
     negotiatePriceEnabled?: boolean;
+    csflowEnabled?: boolean;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -165,6 +167,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             const brokerFeePctPln = toNumberOrFallback(data.brokerFeePctPln, 3.5);
             const brokerFeePctEur = toNumberOrFallback(data.brokerFeePctEur, 3.5);
 
+            const oldSettings = await fastify.prisma.appSettings.findUnique({
+                where: { id: 'default' }
+            });
+
             const settings = await fastify.prisma.appSettings.upsert({
                 where: { id: 'default' },
                 update: {
@@ -211,8 +217,14 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     navItemsVisibility: Array.isArray(data.navItemsVisibility)
                         ? data.navItemsVisibility
                         : ['samochody', 'wynajem'],
+                    featuredModulesVisibility: Array.isArray(data.featuredModulesVisibility)
+                        ? data.featuredModulesVisibility
+                        : ['nowe', 'uzywane', 'wynajem'],
                     negotiatePriceEnabled: data.negotiatePriceEnabled !== undefined
                         ? Boolean(data.negotiatePriceEnabled)
+                        : undefined,
+                    csflowEnabled: data.csflowEnabled !== undefined
+                        ? Boolean(data.csflowEnabled)
                         : undefined,
                 },
                 create: {
@@ -260,11 +272,26 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     navItemsVisibility: Array.isArray(data.navItemsVisibility)
                         ? data.navItemsVisibility
                         : ['samochody', 'wynajem'],
+                    featuredModulesVisibility: Array.isArray(data.featuredModulesVisibility)
+                        ? data.featuredModulesVisibility
+                        : ['nowe', 'uzywane', 'wynajem'],
                     negotiatePriceEnabled: data.negotiatePriceEnabled !== undefined
                         ? Boolean(data.negotiatePriceEnabled)
                         : true,
+                    csflowEnabled: data.csflowEnabled !== undefined
+                        ? Boolean(data.csflowEnabled)
+                        : true,
                 }
             });
+
+            if (oldSettings?.csflowEnabled === true && data.csflowEnabled === false) {
+                fastify.log.info('CSFlow synchronization disabled automatically archiving existing CSFlow vehicles...');
+                const archivedCount = await fastify.prisma.listing.updateMany({
+                    where: { importSource: 'csflow', isArchived: false },
+                    data: { isArchived: true, archivedAt: new Date(), archivedReason: 'csflow_disabled' }
+                });
+                fastify.log.info({ count: archivedCount.count }, 'Archived CSFlow vehicles because integration was disabled');
+            }
 
             // AUTOMATIC RECALCULATION
             const updatedCount = await recalculateAllPrices(fastify);

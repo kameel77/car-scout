@@ -118,6 +118,26 @@ export default function ListingManagementPage() {
         }
     };
 
+    const handleToggleFeatured = async (id: string, isFeatured: boolean) => {
+        if (!token) return;
+        try {
+            await listingsApi.toggleFeatured(id, isFeatured, token);
+            queryClient.invalidateQueries({ queryKey: ['listings'] });
+            toast({
+                title: isFeatured ? "Pojazd wyróżniony" : "Wyróżnienie usunięte",
+                description: isFeatured 
+                    ? "Pojazd będzie wyświetlany w sekcjach pojazdów polecanych." 
+                    : "Pojazd został usunięty z sekcji polecanych.",
+            });
+        } catch (error) {
+            toast({
+                title: "Błąd",
+                description: "Nie udało się zmienić statusu wyróżnienia.",
+                variant: "destructive"
+            });
+        }
+    };
+
     const handleBulkArchive = async () => {
         if (!token || selectedIds.length === 0) return;
         
@@ -300,6 +320,7 @@ export default function ListingManagementPage() {
                 isLoading={isLoading}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
+                onToggleFeatured={handleToggleFeatured}
                 onArchive={handleArchive}
                 onRestore={handleRestore}
                 onDelete={handleDelete}

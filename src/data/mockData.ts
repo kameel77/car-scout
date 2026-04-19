@@ -44,6 +44,7 @@ export interface Listing {
     other: string[];
   };
   is_archived?: boolean;
+  is_featured?: boolean;
 }
 
 export interface Lead {

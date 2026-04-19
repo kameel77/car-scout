@@ -224,11 +224,11 @@
   }
 
   .gallery-thumbnail {
-    @apply w-16 h-16 rounded-lg overflow-hidden cursor-pointer ring-2 ring-transparent transition-all;
+    @apply w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all;
   }
 
   .gallery-thumbnail.active {
-    @apply ring-primary;
+    @apply border-accent;
   }
 
   .skeleton-shimmer {
