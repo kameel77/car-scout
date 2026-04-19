@@ -38,6 +38,7 @@ export interface RentalVehicle {
     specsJson: any;
     slug: string | null;
     isActive: boolean;
+    isFeatured?: boolean;
     createdAt: string;
     updatedAt: string;
     dealer?: { id: string; name: string; addressLine1?: string; city?: string } | null;
@@ -159,6 +160,14 @@ export const rentalVehiclesApi = {
 
     delete: async (id: string, token: string) => {
         return fetchWithAuth(`${API_BASE_URL}/api/rental-vehicles/${id}`, token, { method: 'DELETE' });
+    },
+
+    toggleFeatured: async (id: string, isFeatured: boolean, token: string) => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-vehicles/${id}/featured`, token, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isFeatured })
+        });
     },
 
     uploadImages: async (id: string, files: File[], setPrimary: boolean, token: string) => {

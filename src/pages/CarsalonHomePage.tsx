@@ -20,6 +20,7 @@ import { faqApi } from '@/services/api';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
+import { DynamicWidget } from '@/components/public/DynamicWidget';
 import './home-page.css';
 
 
@@ -136,6 +137,12 @@ export default function CarsalonHomePage() {
           ))}
         </div>
       </section>
+
+      <DynamicWidget 
+        placement="HOME" 
+        className="home-section !py-8 md:!py-12"
+        innerClassName="max-w-[1400px] mx-auto px-6 w-full"
+      />
 
       <section className="home-section" id="jak-to-dziala">
         <div className="home-section__header home-reveal">

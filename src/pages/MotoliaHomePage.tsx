@@ -22,6 +22,7 @@ import { faqApi, leadsApi } from '@/services/api';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
+import { DynamicWidget } from '@/components/public/DynamicWidget';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -305,6 +306,13 @@ export default function MotoliaHomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── WYBRANE OFERTY (WIDGETY) ─────────────────────────────────────── */}
+      <DynamicWidget 
+        placement="HOME" 
+        className="bg-white hover:bg-gray-50/50 transition-colors py-12 md:py-16"
+        innerClassName="max-w-7xl mx-auto px-6 w-full"
+      />
 
       {/* ── PRODUKTY ─────────────────────────────────────────────────────── */}
       <section className="py-28 bg-[#FAFAF8]" id="produkty">

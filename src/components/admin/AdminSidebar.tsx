@@ -23,6 +23,7 @@ import {
     Store,
     Settings,
     Shield,
+    Blocks,
 } from 'lucide-react';
 import { useAuth, MemberRole, ROLE_LABELS } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -81,6 +82,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/admin/seo', label: 'SEO', icon: Search, visibleTo: PLATFORM_ONLY },
     { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, visibleTo: PLATFORM_ONLY },
     { href: '/admin/partners', label: 'Partnerzy', icon: Handshake, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/widgets', label: 'Widgety', icon: Blocks, visibleTo: PLATFORM_ONLY },
 ];
 
 export function AdminSidebar() {
