@@ -25,7 +25,7 @@ function getStoredClientType(): ClientType {
 
 export default function RentalSearchPage() {
     const { config } = useBrand();
-    const { settings } = useAppSettings();
+    const { data: settings } = useAppSettings();
     const isMotolia = config.id === 'motolia';
     const accent = 'hsl(var(--accent))';
     const accentText = 'hsl(var(--accent-foreground))';

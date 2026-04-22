@@ -85,7 +85,7 @@ export default function SearchPage() {
     };
   });
 
-  const { settings } = useAppSettings();
+  const { data: settings } = useAppSettings();
   const defaultSortCars = settings?.defaultSortCars || 'year_desc';
   const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || defaultSortCars);
   
