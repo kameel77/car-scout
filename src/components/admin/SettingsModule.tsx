@@ -83,6 +83,9 @@ export function SettingsModule() {
         negotiatePriceEnabled: data?.negotiatePriceEnabled !== undefined
             ? Boolean(data.negotiatePriceEnabled)
             : true,
+        csflowEnabled: data?.csflowEnabled !== undefined
+            ? Boolean(data.csflowEnabled)
+            : true,
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -376,6 +379,67 @@ export function SettingsModule() {
                                     Gdy wyłączone, przycisk negocjacji zniknie ze wszystkich stron ofert.
                                 </p>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* CSFlow integration */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-bold">Integracja z CSFlow</Label>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border bg-slate-50">
+                            <Checkbox
+                                id="csflow-enabled"
+                                checked={Boolean(settings.csflowEnabled)}
+                                onCheckedChange={(val) => setSettings({ ...settings, csflowEnabled: Boolean(val) })}
+                            />
+                            <div className="space-y-1">
+                                <label htmlFor="csflow-enabled" className="font-medium cursor-pointer">
+                                    Pobieraj i wyświetlaj pojazdy z CSFlow
+                                </label>
+                                <p className="text-xs text-amber-600">
+                                    Odznaczenie tej opcji natychmiastowo zarchiwizuje i ukryje auta z CSFlow.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Default sorting */}
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <div className="space-y-3">
+                            <Label className="text-sm font-bold">Domyślne sortowanie samochodów (Zakup/Leasing)</Label>
+                            <Select
+                                value={settings.defaultSortCars || 'year_desc'}
+                                onValueChange={(val) => setSettings({ ...settings, defaultSortCars: val })}
+                            >
+                                <SelectTrigger className="w-full bg-white">
+                                    <SelectValue placeholder="Wybierz sortowanie" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="year_desc">Rocznik (od najnowszego)</SelectItem>
+                                    <SelectItem value="price_asc">Cena (od najniższej)</SelectItem>
+                                    <SelectItem value="price_desc">Cena (od najwyższej)</SelectItem>
+                                    <SelectItem value="mileage_asc">Przebieg (od najniższego)</SelectItem>
+                                    <SelectItem value="newest">Data dodania (najnowsze)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-3">
+                            <Label className="text-sm font-bold">Domyślne sortowanie pojazdów (Wynajem)</Label>
+                            <Select
+                                value={settings.defaultSortRental || 'createdAt_desc'}
+                                onValueChange={(val) => setSettings({ ...settings, defaultSortRental: val })}
+                            >
+                                <SelectTrigger className="w-full bg-white">
+                                    <SelectValue placeholder="Wybierz sortowanie" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="createdAt_desc">Data dodania (najnowsze)</SelectItem>
+                                    <SelectItem value="sellingPrice_asc">Cena/Rata (od najniższej)</SelectItem>
+                                    <SelectItem value="sellingPrice_desc">Cena/Rata (od najwyższej)</SelectItem>
+                                    <SelectItem value="make_asc">Względnem marki (A-Z)</SelectItem>
+                                    <SelectItem value="productionYear_desc">Rocznik (od najnowszego)</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 

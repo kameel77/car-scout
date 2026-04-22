@@ -27,6 +27,7 @@ import {
 import { useBrand } from '@/contexts/BrandContext';
 import { normalizeRentalImageUrl } from '@/lib/utils';
 import { formatNumber } from '@/utils/formatters';
+import { RentalFinancingContent } from '@/components/RentalFinancingContent';
 
 type OfferType = 'business' | 'consumer';
 
@@ -302,6 +303,11 @@ export default function RentalDetailPage() {
                                     ))}
                                 </div>
                             )}
+                            
+                            {/* SEO/Informational Content block for Long Term Rental */}
+                            <div className="mt-8">
+                                <RentalFinancingContent vehicle={vehicle} />
+                            </div>
                      </div>
 
                      {/* FAQ in left column — stays visible while calculator is sticky on the right */}

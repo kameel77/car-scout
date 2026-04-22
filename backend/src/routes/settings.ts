@@ -53,6 +53,8 @@ type SettingsPayload = {
     featuredModulesVisibility?: string[];
     negotiatePriceEnabled?: boolean;
     csflowEnabled?: boolean;
+    defaultSortCars?: string;
+    defaultSortRental?: string;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -226,6 +228,8 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     csflowEnabled: data.csflowEnabled !== undefined
                         ? Boolean(data.csflowEnabled)
                         : undefined,
+                    defaultSortCars: data.defaultSortCars || 'year_desc',
+                    defaultSortRental: data.defaultSortRental || 'createdAt_desc',
                 },
                 create: {
                     id: 'default',
@@ -281,6 +285,8 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     csflowEnabled: data.csflowEnabled !== undefined
                         ? Boolean(data.csflowEnabled)
                         : true,
+                    defaultSortCars: data.defaultSortCars || 'year_desc',
+                    defaultSortRental: data.defaultSortRental || 'createdAt_desc',
                 }
             });
 
