@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/accordion';
 import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
+import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
@@ -308,6 +309,11 @@ export default function RentalDetailPage() {
                             <div className="mt-8">
                                 <RentalFinancingContent vehicle={vehicle} />
                             </div>
+                     </div>
+
+                     {/* Purchase Process Steps */}
+                     <div className="bg-white rounded-2xl shadow-sm border p-6">
+                         <PurchaseProcessStepper variant="compact" />
                      </div>
 
                      {/* FAQ in left column — stays visible while calculator is sticky on the right */}

@@ -21,6 +21,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 import { DynamicWidget } from '@/components/public/DynamicWidget';
+import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import './home-page.css';
 
 
@@ -144,24 +145,7 @@ export default function CarsalonHomePage() {
         innerClassName="max-w-[1400px] mx-auto px-6 w-full"
       />
 
-      <section className="home-section" id="jak-to-dziala">
-        <div className="home-section__header home-reveal">
-          <span className="home-section__tag">{config.homePage.steps.tag}</span>
-          <h2 dangerouslySetInnerHTML={{ __html: config.homePage.steps.title }} />
-          <p>{config.homePage.steps.subtitle}</p>
-        </div>
-        <div className="home-steps-grid">
-          {config.homePage.steps.items.map((item, index) => (
-            <article key={index} className="home-step-card home-reveal">
-              <div className="home-step-card__header">
-                <div className="home-step-card__number">{index + 1}</div>
-                <h3>{item.title}</h3>
-              </div>
-              <p>{item.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+      <PurchaseProcessStepper variant="full" className="home-section" />
 
       <section className="home-section home-section--white" id="dlaczego-my">
         <div className="home-section__header home-reveal">

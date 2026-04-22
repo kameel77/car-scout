@@ -1,0 +1,424 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PurchaseProcessStepper — Timeline Stepper
+   Horizontal (desktop) → Vertical (mobile)
+   Uses brand CSS variables: --accent, --primary, --foreground
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.purchase-process {
+  padding: 80px 24px;
+  background: #fff;
+}
+
+.purchase-process--compact {
+  padding: 0;
+  background: transparent;
+}
+
+.purchase-process__container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.purchase-process__header {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 56px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.purchase-process__header.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.purchase-process__header--compact {
+  text-align: left;
+  margin: 0 0 24px;
+  max-width: none;
+}
+
+.purchase-process__header--compact h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: hsl(var(--foreground, 215 25% 15%));
+  margin: 0;
+}
+
+.purchase-process__header--compact h3 span {
+  color: hsl(var(--accent, 24 95% 53%));
+}
+
+.purchase-process__tag {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  background: hsl(var(--accent, 24 95% 53%) / 0.1);
+  color: hsl(var(--accent, 24 95% 53%));
+}
+
+.purchase-process__header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 16px;
+  color: hsl(var(--foreground, 215 25% 15%));
+}
+
+.purchase-process__header h2 span {
+  color: hsl(var(--accent, 24 95% 53%));
+}
+
+.purchase-process__header > p {
+  font-size: 17px;
+  color: hsl(var(--muted-foreground, 215 15% 45%));
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Timeline Grid ──────────────────────────────────────────────────────── */
+
+.purchase-process__timeline {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  position: relative;
+}
+
+/* ── Individual Step ────────────────────────────────────────────────────── */
+
+.purchase-process__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 12px;
+
+  /* Animation */
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.purchase-process__step.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Connector Line (horizontal) ────────────────────────────────────────── */
+
+.purchase-process__connector {
+  position: absolute;
+  top: 22px; /* center of the number circle */
+  left: calc(50% + 24px);
+  width: calc(100% - 48px);
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    hsl(var(--accent, 24 95% 53%) / 0.3) 0,
+    hsl(var(--accent, 24 95% 53%) / 0.3) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+/* ── Number Circle ──────────────────────────────────────────────────────── */
+
+.purchase-process__number {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  background: hsl(var(--accent, 24 95% 53%));
+  box-shadow: 0 4px 14px hsl(var(--accent, 24 95% 53%) / 0.3);
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.purchase-process__step:hover .purchase-process__number {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px hsl(var(--accent, 24 95% 53%) / 0.4);
+}
+
+/* ── Icon ───────────────────────────────────────────────────────────────── */
+
+.purchase-process__icon {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  background: hsl(var(--accent, 24 95% 53%) / 0.08);
+  color: hsl(var(--accent, 24 95% 53%));
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.purchase-process__step:hover .purchase-process__icon {
+  background: hsl(var(--accent, 24 95% 53%) / 0.15);
+  transform: scale(1.05);
+}
+
+.purchase-process__icon-secondary {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: hsl(var(--accent, 24 95% 53%));
+  color: #fff;
+  border-radius: 50%;
+  padding: 3px;
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Title & Description ────────────────────────────────────────────────── */
+
+.purchase-process__title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.3;
+  margin: 0 0 6px;
+  color: hsl(var(--foreground, 215 25% 15%));
+}
+
+.purchase-process__desc {
+  font-size: 14px;
+  line-height: 1.55;
+  color: hsl(var(--muted-foreground, 215 15% 45%));
+  margin: 0;
+  max-width: 200px;
+}
+
+/* ── CTA ────────────────────────────────────────────────────────────────── */
+
+.purchase-process__cta {
+  text-align: center;
+  margin-top: 48px;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease 0.7s, transform 0.5s ease 0.7s;
+}
+
+.purchase-process__cta.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.purchase-process__cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 16px;
+  text-decoration: none;
+  color: #fff;
+  background: hsl(var(--accent, 24 95% 53%));
+  box-shadow: 0 4px 16px hsl(var(--accent, 24 95% 53%) / 0.3);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.purchase-process__cta-btn:hover {
+  background: hsl(var(--accent-hover, 28 95% 48%));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px hsl(var(--accent, 24 95% 53%) / 0.4);
+}
+
+.purchase-process__cta-btn:active {
+  transform: translateY(0);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Compact variant overrides
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.purchase-process--compact .purchase-process__timeline {
+  gap: 0;
+}
+
+.purchase-process--compact .purchase-process__number {
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.purchase-process--compact .purchase-process__connector {
+  top: 18px;
+  left: calc(50% + 20px);
+  width: calc(100% - 40px);
+}
+
+.purchase-process--compact .purchase-process__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.purchase-process--compact .purchase-process__title {
+  font-size: 13px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Motolia brand: uses golden-yellow accent on light bg
+   When inside .landing-page-root (carsalon) → orange accent
+   When NOT in .landing-page-root (motolia) → golden accent via inline colors
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE: Mobile → Vertical Timeline
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .purchase-process {
+    padding: 56px 24px;
+  }
+
+  .purchase-process__header {
+    margin-bottom: 36px;
+  }
+
+  .purchase-process__timeline {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-left: 28px;
+    position: relative;
+  }
+
+  /* Vertical connector — single line on the left */
+  .purchase-process__timeline::before {
+    content: '';
+    position: absolute;
+    left: 17px; /* center of 36px number circle */
+    top: 18px;
+    bottom: 18px;
+    width: 2px;
+    background: repeating-linear-gradient(
+      180deg,
+      hsl(var(--accent, 24 95% 53%) / 0.25) 0,
+      hsl(var(--accent, 24 95% 53%) / 0.25) 6px,
+      transparent 6px,
+      transparent 12px
+    );
+  }
+
+  /* Hide horizontal connectors */
+  .purchase-process__connector {
+    display: none;
+  }
+
+  .purchase-process__step {
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
+    gap: 16px;
+    padding: 0 0 28px 0;
+  }
+
+  .purchase-process__step:last-child {
+    padding-bottom: 0;
+  }
+
+  .purchase-process__number {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+    margin-bottom: 0;
+    flex-shrink: 0;
+    position: relative;
+    left: -28px; /* align with the vertical line */
+    margin-right: -12px; /* reclaim space */
+  }
+
+  .purchase-process__icon {
+    display: none; /* hide icon on mobile to keep it clean */
+  }
+
+  .purchase-process__title {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .purchase-process__desc {
+    max-width: none;
+    font-size: 14px;
+  }
+
+  /* Wrap title+desc in a flex column */
+  .purchase-process__step {
+    flex-wrap: wrap;
+  }
+
+  /* Compact mobile tweaks */
+  .purchase-process--compact {
+    padding: 0;
+  }
+
+  .purchase-process--compact .purchase-process__step {
+    padding-bottom: 20px;
+  }
+
+  .purchase-process--compact .purchase-process__number {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .purchase-process--compact .purchase-process__timeline {
+    padding-left: 22px;
+  }
+
+  .purchase-process--compact .purchase-process__timeline::before {
+    left: 14px;
+  }
+
+  .purchase-process--compact .purchase-process__number {
+    left: -22px;
+    margin-right: -8px;
+  }
+
+  .purchase-process--compact .purchase-process__title {
+    font-size: 14px;
+  }
+}
+
+/* Tablet: 3-column layout */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .purchase-process__timeline {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 36px;
+  }
+
+  .purchase-process__step:nth-child(4),
+  .purchase-process__step:nth-child(5) {
+    grid-row: 2;
+  }
+
+  /* Hide connectors that bridge rows */
+  .purchase-process__step:nth-child(3) .purchase-process__connector {
+    display: none;
+  }
+}
