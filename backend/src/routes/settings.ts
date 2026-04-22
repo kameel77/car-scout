@@ -105,7 +105,7 @@ async function recalculateAllPrices(fastify: FastifyInstance) {
 
     // Single SQL UPDATE for all non-archived listings — O(1) round-trip instead of N queries
     const result = await fastify.prisma.$executeRaw`
-        UPDATE "Listing"
+        UPDATE "listings"
         SET
             "dealer_price_net_pln" = "price_pln" / 1.23,
             "dealer_price_net_eur" = "price_pln" / 1.23 / ${settings.eurExRate}::float,
