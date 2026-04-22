@@ -83,6 +83,9 @@ export function SettingsModule() {
         negotiatePriceEnabled: data?.negotiatePriceEnabled !== undefined
             ? Boolean(data.negotiatePriceEnabled)
             : true,
+        csflowEnabled: data?.csflowEnabled !== undefined
+            ? Boolean(data.csflowEnabled)
+            : true,
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -374,6 +377,26 @@ export function SettingsModule() {
                                 </label>
                                 <p className="text-xs text-slate-600">
                                     Gdy wyłączone, przycisk negocjacji zniknie ze wszystkich stron ofert.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* CSFlow integration */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-bold">Integracja z CSFlow</Label>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border bg-slate-50">
+                            <Checkbox
+                                id="csflow-enabled"
+                                checked={Boolean(settings.csflowEnabled)}
+                                onCheckedChange={(val) => setSettings({ ...settings, csflowEnabled: Boolean(val) })}
+                            />
+                            <div className="space-y-1">
+                                <label htmlFor="csflow-enabled" className="font-medium cursor-pointer">
+                                    Pobieraj i wyświetlaj pojazdy z CSFlow
+                                </label>
+                                <p className="text-xs text-amber-600">
+                                    Odznaczenie tej opcji natychmiastowo zarchiwizuje i ukryje auta z CSFlow.
                                 </p>
                             </div>
                         </div>
