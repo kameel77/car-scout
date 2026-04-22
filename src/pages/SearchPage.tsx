@@ -208,7 +208,7 @@ export default function SearchPage() {
   const homeTitle = (seoConfig ? (seoConfig as any)[`homeTitle${suffix}`] : undefined) || seoConfig?.homeTitle;
   const homeDescription = (seoConfig ? (seoConfig as any)[`homeDescription${suffix}`] : undefined) || seoConfig?.homeDescription;
 
-  const { data: settings } = useAppSettings();
+
   const siteName = React.useMemo(() => {
     if (!settings) return '';
     const langCode = i18n.language.slice(0, 2).toLowerCase();
