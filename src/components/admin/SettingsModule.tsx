@@ -377,7 +377,6 @@ export function SettingsModule() {
                                 </p>
                             </div>
                         </div>
-                        </div>
                     </div>
 
                     {/* Default sorting */}
