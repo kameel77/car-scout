@@ -85,7 +85,17 @@ export default function SearchPage() {
     };
   });
 
-  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || 'year_desc');
+  const { settings } = useAppSettings();
+  const defaultSortCars = settings?.defaultSortCars || 'year_desc';
+  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || defaultSortCars);
+  
+  // Re-sync default if settings loads after initial mount and no explicit sort is set
+  React.useEffect(() => {
+     if (settings?.defaultSortCars && !searchParams.get('sortBy') && sortBy !== settings.defaultSortCars) {
+       setSortBy(settings.defaultSortCars);
+     }
+  }, [settings?.defaultSortCars, searchParams]);
+
   const initialPage = parseNumberParam(searchParams.get('page'), 1);
   const initialPerPage = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
   const [page, setPage] = React.useState(initialPage);
@@ -124,7 +134,7 @@ export default function SearchPage() {
       if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
 
       if (filters.query) params.set('q', filters.query);
-      if (sortBy !== 'year_desc') params.set('sortBy', sortBy);
+      if (sortBy !== defaultSortCars) params.set('sortBy', sortBy);
       if (page > 1) params.set('page', page.toString());
       if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
 
