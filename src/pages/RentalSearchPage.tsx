@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
@@ -6,6 +6,7 @@ import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { rentalPublicApi } from '@/services/rental-api';
 import { useBrand } from '@/contexts/BrandContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car, Building2, User } from 'lucide-react';
@@ -24,18 +25,32 @@ function getStoredClientType(): ClientType {
 
 export default function RentalSearchPage() {
     const { config } = useBrand();
+    const { data: settings } = useAppSettings();
     const isMotolia = config.id === 'motolia';
     const accent = 'hsl(var(--accent))';
     const accentText = 'hsl(var(--accent-foreground))';
+
+    const defaultSortRental = settings?.defaultSortRental || 'createdAt_desc';
+    const [initialSortBy, initialSortOrder] = defaultSortRental.split('_');
 
     const [search, setSearch] = useState('');
     const [make, setMake] = useState('');
     const [fuelType, setFuelType] = useState('');
     const [bodyType, setBodyType] = useState('');
     const [page, setPage] = useState(1);
-    const [sortBy, setSortBy] = useState('createdAt');
-    const [sortOrder, setSortOrder] = useState('desc');
+    const [sortBy, setSortBy] = useState(initialSortBy || 'createdAt');
+    const [sortOrder, setSortOrder] = useState(initialSortOrder || 'desc');
     const [clientType, setClientType] = useState<ClientType>(getStoredClientType);
+
+    useEffect(() => {
+        if (settings?.defaultSortRental) {
+            const [defSortBy, defSortOrder] = settings.defaultSortRental.split('_');
+            if (defSortBy && defSortOrder && sortBy === 'createdAt' && sortOrder === 'desc') {
+                setSortBy(defSortBy);
+                setSortOrder(defSortOrder);
+            }
+        }
+    }, [settings?.defaultSortRental]);
 
     const handleClientTypeChange = (type: ClientType) => {
         setClientType(type);
