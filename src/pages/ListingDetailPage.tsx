@@ -637,6 +637,11 @@ export default function ListingDetailPage() {
             </div>
 
             <Separator />
+
+            {/* Purchase Process Steps */}
+            <PurchaseProcessStepper variant="compact" />
+
+            <Separator />
             <DynamicFinancingContent
               financingType={financingType}
               listing={{
@@ -698,11 +703,6 @@ export default function ListingDetailPage() {
                 </div>
               </div>
             </section>
-
-            <Separator />
-
-            {/* Purchase Process Steps */}
-            <PurchaseProcessStepper variant="compact" />
 
             <Separator />
 

@@ -305,16 +305,18 @@ export default function RentalDetailPage() {
                                 </div>
                             )}
                             
+                            {/* Purchase Process Steps */}
+                            <div className="mt-8">
+                                <PurchaseProcessStepper variant="compact" />
+                            </div>
+
                             {/* SEO/Informational Content block for Long Term Rental */}
                             <div className="mt-8">
                                 <RentalFinancingContent vehicle={vehicle} />
                             </div>
                      </div>
 
-                     {/* Purchase Process Steps */}
-                     <div className="bg-white rounded-2xl shadow-sm border p-6">
-                         <PurchaseProcessStepper variant="compact" />
-                     </div>
+
 
                      {/* FAQ in left column — stays visible while calculator is sticky on the right */}
                      {faqEntries.filter((e: FaqEntry) => e.isPublished).length > 0 && (
