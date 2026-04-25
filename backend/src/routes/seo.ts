@@ -59,4 +59,131 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         return config;
     });
+
+    // Sitemap generation
+    fastify.get('/api/sitemap.xml', async (request, reply) => {
+        const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://carsalon.pl';
+        
+        // Helper to format dates
+        const formatDate = (date: Date) => date.toISOString().split('T')[0];
+        const today = formatDate(new Date());
+
+        const urls: { loc: string; lastmod: string; changefreq: string; priority: string }[] = [];
+
+        // 1. Static Pages
+        const staticPages = [
+            { path: '', priority: '1.0' },
+            { path: '/samochody', priority: '0.9' },
+            { path: '/wynajem-dlugoterminowy', priority: '0.9' },
+            { path: '/dla-ciebie', priority: '0.8' },
+            { path: '/faq', priority: '0.5' },
+            { path: '/kontakt', priority: '0.5' }
+        ];
+
+        staticPages.forEach(page => {
+            urls.push({
+                loc: `${baseUrl}${page.path}`,
+                lastmod: today,
+                changefreq: 'daily',
+                priority: page.priority
+            });
+        });
+
+        // Slug generation helpers (must match frontend url-utils.ts)
+        const POLISH_CHARS: Record<string, string> = {
+            'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n',
+            'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
+            'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N',
+            'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z'
+        };
+
+        const transliteratePolish = (text: string) => 
+            text.split('').map(char => POLISH_CHARS[char] || char).join('');
+
+        const sanitizeForSlug = (text: string) => 
+            transliteratePolish(text)
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+        const generateListingSlug = (l: any) => {
+            const parts = [
+                sanitizeForSlug(l.make),
+                sanitizeForSlug(l.model),
+                l.version ? sanitizeForSlug(l.version) : null,
+                String(l.productionYear),
+                l.bodyType ? sanitizeForSlug(l.bodyType) : null,
+                l.fuelType ? sanitizeForSlug(l.fuelType) : null,
+                l.id
+            ].filter(Boolean);
+            return parts.join('-');
+        };
+
+        // 2. Dynamic Pages: Listings
+        const listings = await fastify.prisma.listing.findMany({
+            where: { isArchived: false },
+            select: {
+                id: true,
+                make: true,
+                model: true,
+                version: true,
+                productionYear: true,
+                bodyType: true,
+                fuelType: true,
+                updatedAt: true
+            }
+        });
+
+        listings.forEach(listing => {
+            const slug = generateListingSlug(listing);
+            const lastmod = formatDate(listing.updatedAt);
+            
+            // For each listing, generate 3 URLs (oferta, kredyt, leasing) as they are self-canonical in frontend
+            ['/oferta', '/kredyt', '/leasing'].forEach(prefix => {
+                urls.push({
+                    loc: `${baseUrl}${prefix}/${slug}`,
+                    lastmod,
+                    changefreq: 'weekly',
+                    priority: '0.8'
+                });
+            });
+        });
+
+        // 3. Dynamic Pages: Rental Vehicles
+        const rentals = await fastify.prisma.rentalVehicle.findMany({
+            where: { isActive: true },
+            select: { slug: true, updatedAt: true }
+        });
+
+        rentals.forEach(rental => {
+            if (rental.slug) {
+                urls.push({
+                    loc: `${baseUrl}/wynajem-dlugoterminowy/${rental.slug}`,
+                    lastmod: formatDate(rental.updatedAt),
+                    changefreq: 'weekly',
+                    priority: '0.8'
+                });
+            }
+        });
+
+        // Build XML
+        let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+        
+        urls.forEach(url => {
+            xml += `  <url>\n`;
+            xml += `    <loc>${url.loc}</loc>\n`;
+            xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
+            xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+            xml += `    <priority>${url.priority}</priority>\n`;
+            xml += `  </url>\n`;
+        });
+        
+        xml += `</urlset>`;
+
+        return reply.header('Content-Type', 'application/xml').send(xml);
+    });
 }

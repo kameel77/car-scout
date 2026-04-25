@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/accordion';
 import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
+import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import {
     ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
@@ -304,11 +305,18 @@ export default function RentalDetailPage() {
                                 </div>
                             )}
                             
+                            {/* Purchase Process Steps */}
+                            <div className="mt-8">
+                                <PurchaseProcessStepper variant="compact" />
+                            </div>
+
                             {/* SEO/Informational Content block for Long Term Rental */}
                             <div className="mt-8">
                                 <RentalFinancingContent vehicle={vehicle} />
                             </div>
                      </div>
+
+
 
                      {/* FAQ in left column — stays visible while calculator is sticky on the right */}
                      {faqEntries.filter((e: FaqEntry) => e.isPublished).length > 0 && (
