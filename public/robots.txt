@@ -1,5 +1,6 @@
 User-agent: Googlebot
 Allow: /
+Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
 Disallow: /nowy/podglad/
@@ -7,6 +8,7 @@ Disallow: /storage/
 
 User-agent: Bingbot
 Allow: /
+Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
 Disallow: /nowy/podglad/
@@ -19,17 +21,12 @@ User-agent: facebookexternalhit
 Allow: /
 
 User-agent: YandexBot
-Crawl-delay: 10
-Allow: /
-Disallow: /login
-Disallow: /api/
-Disallow: /nowy/podglad/
-Disallow: /storage/
-Disallow: /oferty-samochodow?*page=
+Disallow: /
 
 User-agent: SemrushBot
 Crawl-delay: 10
 Allow: /
+Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
 Disallow: /nowy/podglad/
@@ -37,6 +34,7 @@ Disallow: /storage/
 
 User-agent: *
 Allow: /
+Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
 Disallow: /nowy/podglad/
@@ -47,4 +45,4 @@ Disallow: /wp/
 Disallow: /old/
 Disallow: /new/
 
-Sitemap: https://carsalon.pl/sitemap.xml
+Sitemap: https://carsalon.pl/api/sitemap.xml

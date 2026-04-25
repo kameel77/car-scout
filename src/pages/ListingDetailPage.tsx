@@ -47,6 +47,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
+import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 
 import { MetaHead } from '@/components/seo/MetaHead';
 import { Helmet } from 'react-helmet-async';
@@ -634,6 +635,11 @@ export default function ListingDetailPage() {
                 />
               ))}
             </div>
+
+            <Separator />
+
+            {/* Purchase Process Steps */}
+            <PurchaseProcessStepper variant="compact" />
 
             <Separator />
             <DynamicFinancingContent

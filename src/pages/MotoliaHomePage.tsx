@@ -23,6 +23,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 import { DynamicWidget } from '@/components/public/DynamicWidget';
+import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -382,45 +383,7 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── JAK TO DZIAŁA ────────────────────────────────────────────────── */}
-      <section className="py-28 bg-white" id="jak-to-dziala">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <FadeIn>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: YELLOW_DARK }}>
-                {config.homePage.steps.tag}
-              </p>
-              <h2
-                className="text-4xl md:text-5xl font-outfit font-bold mb-5 text-[#1A1A1A]"
-                dangerouslySetInnerHTML={{
-                  __html: config.homePage.steps.title.replace(
-                    '<span>',
-                    `<span style="color:${YELLOW_DARK}">`,
-                  ),
-                }}
-              />
-              <p className="text-lg text-gray-500">{config.homePage.steps.subtitle}</p>
-            </FadeIn>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 relative">
-            {config.homePage.steps.items.map((item, index) => (
-              <FadeIn key={index} delay={index * 0.12} className="relative">
-                <div className="bg-[#FAFAF8] border border-gray-100 rounded-3xl p-8 h-full hover:shadow-md transition-all duration-300">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-outfit font-bold mb-6 text-[#1A1A1A]"
-                    style={{ background: YELLOW }}>
-                    {index + 1}
-                  </div>
-                  <h3 className="text-xl font-bold mb-3 text-[#1A1A1A]">{item.title}</h3>
-                  <p className="text-gray-500 leading-relaxed">{item.description}</p>
-                </div>
-                {index < config.homePage.steps.items.length - 1 && (
-                  <div className="hidden md:block absolute top-12 -right-3 w-6 border-t-2 border-dashed border-gray-200" />
-                )}
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PurchaseProcessStepper variant="full" />
 
       {/* ── MARKI I PARTNERZY ─────────────────────────────────────────────── */}
       <section className="py-24 bg-[#FAFAF8] border-y border-gray-100">
