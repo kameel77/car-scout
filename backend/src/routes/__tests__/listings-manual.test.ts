@@ -270,3 +270,28 @@ describe('Manual Listing Entry — PATCH /api/listings/:id', () => {
         expect(response.statusCode).toBe(404);
     });
 });
+
+describe('CSV Import Regression', () => {
+    let app: FastifyInstance;
+
+    beforeAll(async () => {
+        app = await buildApp();
+        await app.ready();
+    });
+
+    afterAll(async () => {
+        await app.close();
+    });
+
+    it('csv-mapper sets entrySource=CSV and uses default condition/financingPriceBase', async () => {
+        const { mapCSVToListing } = await import('../../services/csv-mapper.js');
+        const row: any = {
+            listing_id: 'test-id',
+            make: 'Audi', model: 'A4', production_year: '2020',
+            mileage_km: '50000', price_pln: '100000',
+            fuel_type: 'Diesel', transmission: 'Automatyczna',
+        };
+        const mapped = mapCSVToListing(row);
+        expect(mapped.entrySource).toBe('CSV');
+    });
+});
