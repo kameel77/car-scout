@@ -8,6 +8,7 @@ export function mapCSVToListing(row: CSVRow, dealerId?: string, importSource?: s
         listingUrl: row.listing_url || undefined,
         marketplace: getMarketplaceFromUrl(row.listing_url),
         importSource: importSource || undefined,
+        entrySource: 'CSV' as const,
         scrapedAt: row.scraped_at ? new Date(row.scraped_at) : undefined,
 
         make: row.make,
