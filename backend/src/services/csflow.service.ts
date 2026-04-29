@@ -245,7 +245,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                             ...payload,
                             isArchived: false,
                             archivedAt: null,
-                            archivedReason: null
+                            archivedReason: null,
+                            entrySource: 'CSFLOW' as const
                         }
                     });
 
@@ -255,11 +256,12 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                     result.updated++;
                 } else {
                     const temporarySlug = generateListingSlug(make, model, version, prodYear, bodyType, fuelType, listingId);
-                    
+
                     savedListing = await prisma.listing.create({
                         data: {
                             ...payload,
-                            slug: temporarySlug
+                            slug: temporarySlug,
+                            entrySource: 'CSFLOW' as const
                         }
                     });
 
