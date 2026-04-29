@@ -378,6 +378,8 @@ export const listingsApi = {
             if (filters.currency) params.append('currency', filters.currency);
             if (filters.page) params.append('page', filters.page.toString());
             if (filters.perPage) params.append('perPage', filters.perPage.toString());
+            if (filters.entrySource) params.append('entrySource', filters.entrySource);
+            if (filters.lastManualEditBefore) params.append('lastManualEditBefore', filters.lastManualEditBefore);
         }
 
         const url = `${API_BASE_URL}/api/listings?${params.toString()}`;

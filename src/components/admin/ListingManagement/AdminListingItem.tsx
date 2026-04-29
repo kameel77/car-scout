@@ -22,6 +22,15 @@ import {
 import { cn } from '@/lib/utils';
 import { getListingUrlPath } from '@/utils/url-utils';
 
+function formatRelative(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const days = Math.floor(diffMs / 86400000);
+    if (days < 1) return 'dziś';
+    if (days < 30) return `${days} dni temu`;
+    const months = Math.floor(days / 30);
+    return `${months} mies. temu`;
+}
+
 interface AdminListingItemProps {
     listing: Listing;
     isSelected?: boolean;
@@ -105,6 +114,14 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onTogg
                     <p className="text-[10px] text-gray-400 font-mono truncate">
                         {listing.vin || 'Brak VIN'}
                     </p>
+                    {listing.lastManualEditAt && (
+                        <p
+                            className="text-[10px] text-gray-500 mt-0.5 truncate"
+                            title={new Date(listing.lastManualEditAt).toLocaleString('pl-PL')}
+                        >
+                            Edytowano: {formatRelative(listing.lastManualEditAt)}
+                        </p>
+                    )}
                 </div>
 
                 {/* Specs Columns */}

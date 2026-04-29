@@ -187,7 +187,9 @@ export async function listingRoutes(fastify: FastifyInstance) {
             includeArchived,
             currency, // Added currency parameter
             page: pageParam,
-            perPage: perPageParam
+            perPage: perPageParam,
+            entrySource,
+            lastManualEditBefore,
         } = request.query as any;
 
         // Helper to parse comma-separated lists into array or undefined
@@ -282,6 +284,14 @@ export async function listingRoutes(fastify: FastifyInstance) {
             transmission: transmissions ? { in: transmissions, mode: 'insensitive' as const } : undefined,
             bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' as const } : undefined,
             isArchived: includeArchived === 'true' ? undefined : false,
+            entrySource: lastManualEditBefore
+                ? ('MANUAL' as const)
+                : (entrySource && ['CSV', 'CSFLOW', 'MANUAL'].includes(String(entrySource))
+                    ? (String(entrySource) as 'CSV' | 'CSFLOW' | 'MANUAL')
+                    : undefined),
+            lastManualEditAt: lastManualEditBefore
+                ? { lt: new Date(String(lastManualEditBefore)) }
+                : undefined,
             // Apply scope-based dealerId filter (if authenticated with scoped context)
             ...scopeDealerFilter,
         };
