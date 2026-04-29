@@ -2,7 +2,12 @@ import { FastifyInstance } from 'fastify';
 import { refreshListingImages } from '../services/image-refresh.service.js';
 import { generateListingSlug, extractListingIdFromSlug } from '../utils/url-utils.js';
 import { resolveScope } from '../utils/scope-resolver.js';
-import { mapManualPayloadToListing, validateListingPayload } from '../services/listing-mapper.js';
+import {
+    mapManualPayloadToListing,
+    mapManualPayloadToListingUpdate,
+    pickCsvEditableFields,
+    validateListingPayload,
+} from '../services/listing-mapper.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
     // Get filter options (makes and models) - only active listings
@@ -99,6 +104,58 @@ export async function listingRoutes(fastify: FastifyInstance) {
         });
 
         return reply.code(201).send({ listing: updated });
+    });
+
+    fastify.patch('/api/listings/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const body = request.body as any;
+        const scope = await resolveScope(fastify, request);
+
+        const existing = await fastify.prisma.listing.findUnique({ where: { id } });
+        if (!existing) {
+            return reply.code(404).send({ error: 'Listing not found' });
+        }
+
+        if (!scope.isPlatform && existing.dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && existing.dealerId !== allowed) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+            if (allowed && typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(existing.dealerId)) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+        }
+
+        const isImported = existing.entrySource === 'CSV' || existing.entrySource === 'CSFLOW';
+
+        let updateData: any;
+        if (isImported) {
+            updateData = pickCsvEditableFields(body);
+        } else {
+            const errors = validateListingPayload({
+                ...existing,
+                ...body,
+            });
+            if (errors.length > 0) {
+                return reply.code(400).send({ errors });
+            }
+            updateData = mapManualPayloadToListingUpdate(body);
+        }
+
+        if (!isImported && body.pricePln !== undefined && body.pricePln !== existing.pricePln) {
+            const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
+            const brokerFeePct = settings?.brokerFeePctPln ?? 3.5;
+            updateData.brokerPricePln = Math.round(body.pricePln * (1 + brokerFeePct / 100));
+        }
+
+        updateData.lastManualEditAt = new Date();
+
+        const updated = await fastify.prisma.listing.update({
+            where: { id },
+            data: updateData,
+        });
+
+        return reply.send({ listing: updated });
     });
 
     // Get all listings (with filters)

@@ -153,3 +153,120 @@ describe('Manual Listing Entry — POST /api/listings', () => {
         expect(response.json().listing.dealerId).toBe(otherDealerId);
     });
 });
+
+describe('Manual Listing Entry — PATCH /api/listings/:id', () => {
+    let app: FastifyInstance;
+    let _platformToken: string;
+    let dealerAdminToken: string;
+    let dealerId: string;
+    let manualListingId: string;
+    let csvListingId: string;
+
+    beforeAll(async () => {
+        app = await buildApp();
+        await app.ready();
+
+        const dealer = await app.prisma.dealer.create({
+            data: { name: 'PATCH Test Dealer', addressLine1: 'PATCH Addr' },
+        });
+        dealerId = dealer.id;
+
+        _platformToken = app.jwt.sign({
+            userId: 'p-patch',
+            email: 'pp@test.com',
+            role: 'admin',
+            activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' },
+        });
+        dealerAdminToken = app.jwt.sign({
+            userId: 'da-patch',
+            email: 'dap@test.com',
+            memberships: [{
+                id: 'mp',
+                scopeType: 'DEALER',
+                scopeId: dealerId,
+                role: 'DEALER_ADMIN',
+                isDefaultContext: true,
+            }],
+            activeContext: { scopeType: 'DEALER', scopeId: dealerId },
+        });
+    });
+
+    afterAll(async () => {
+        await app.prisma.listing.deleteMany({ where: { dealerId } });
+        await app.prisma.dealer.delete({ where: { id: dealerId } });
+        await app.close();
+    });
+
+    beforeEach(async () => {
+        await app.prisma.listing.deleteMany({ where: { dealerId } });
+
+        const manual = await app.prisma.listing.create({
+            data: {
+                make: 'Toyota', model: 'Yaris', productionYear: 2026,
+                pricePln: 95000, brokerPricePln: 98325, mileageKm: 0,
+                condition: 'NEW', financingPriceBase: 'BROKER_PRICE_PLN',
+                entrySource: 'MANUAL', dealerId,
+            },
+        });
+        manualListingId = manual.id;
+
+        const csv = await app.prisma.listing.create({
+            data: {
+                make: 'Volvo', model: 'XC60', productionYear: 2024,
+                pricePln: 250000, brokerPricePln: 258750, mileageKm: 30000,
+                condition: 'USED', financingPriceBase: 'BROKER_PRICE_PLN',
+                entrySource: 'CSV', dealerId,
+            },
+        });
+        csvListingId = csv.id;
+    });
+
+    it('MANUAL: updates pricePln and recalculates brokerPricePln', async () => {
+        const response = await app.inject({
+            method: 'PATCH',
+            url: `/api/listings/${manualListingId}`,
+            headers: { authorization: `Bearer ${dealerAdminToken}` },
+            payload: { pricePln: 100000, make: 'Toyota', model: 'Yaris', productionYear: 2026, mileageKm: 0, condition: 'NEW' },
+        });
+        expect(response.statusCode).toBe(200);
+        const { listing } = response.json();
+        expect(listing.pricePln).toBe(100000);
+        expect(listing.brokerPricePln).toBeGreaterThan(100000);
+        expect(listing.lastManualEditAt).toBeTruthy();
+    });
+
+    it('CSV: ignores pricePln in payload (not whitelisted)', async () => {
+        const response = await app.inject({
+            method: 'PATCH',
+            url: `/api/listings/${csvListingId}`,
+            headers: { authorization: `Bearer ${dealerAdminToken}` },
+            payload: { pricePln: 999999, isFeatured: true },
+        });
+        expect(response.statusCode).toBe(200);
+        const { listing } = response.json();
+        expect(listing.pricePln).toBe(250000);
+        expect(listing.isFeatured).toBe(true);
+        expect(listing.lastManualEditAt).toBeTruthy();
+    });
+
+    it('CSV: accepts catalogPrice and isChineseBrand', async () => {
+        const response = await app.inject({
+            method: 'PATCH',
+            url: `/api/listings/${csvListingId}`,
+            headers: { authorization: `Bearer ${dealerAdminToken}` },
+            payload: { catalogPrice: 280000, isChineseBrand: false },
+        });
+        expect(response.statusCode).toBe(200);
+        expect(response.json().listing.catalogPrice).toBe(280000);
+    });
+
+    it('returns 404 for nonexistent listing', async () => {
+        const response = await app.inject({
+            method: 'PATCH',
+            url: `/api/listings/cnonexistentid000000000000`,
+            headers: { authorization: `Bearer ${dealerAdminToken}` },
+            payload: { isFeatured: true },
+        });
+        expect(response.statusCode).toBe(404);
+    });
+});
