@@ -8,7 +8,9 @@ import {
     Trash2,
     Copy,
     Star,
+    Pencil,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import {
     DropdownMenu,
@@ -184,6 +186,12 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onTogg
                         <DropdownMenuItem onClick={handleCopyLink}>
                             <Copy className="w-4 h-4 mr-2" />
                             <span>Kopiuj link</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link to={`/admin/listings/${listing.listing_id}/edit`} className="flex items-center gap-2">
+                                <Pencil className="w-4 h-4" />
+                                <span>Edytuj</span>
+                            </Link>
                         </DropdownMenuItem>
                         {isArchived ? (
                             <DropdownMenuItem onClick={() => onRestore?.(listing.listing_id)} className="text-green-600">
