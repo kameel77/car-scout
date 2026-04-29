@@ -3,7 +3,8 @@ import { useListings } from '@/hooks/useListings';
 import { AdminListingList } from '@/components/admin/ListingManagement/AdminListingList';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Car, Filter, Archive, RotateCcw, X, Trash2 } from 'lucide-react';
+import { Search, Car, Filter, Archive, RotateCcw, X, Trash2, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { FilterState } from '@/components/FilterPanel';
 import { listingsApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -53,6 +54,8 @@ export default function ListingManagementPage() {
     const [page, setPage] = useState(1);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [bulkAction, setBulkAction] = useState<'archive' | 'restore' | 'delete' | null>(null);
+    const [showManualOnly, setShowManualOnly] = useState(false);
+    const [showStaleOnly, setShowStaleOnly] = useState(false);
     const { token } = useAuth();
     const { toast } = useToast();
     const queryClient = useQueryClient();
@@ -62,7 +65,18 @@ export default function ListingManagementPage() {
         query: searchQuery
     }), [searchQuery]);
 
-    const { data, isLoading } = useListings(filters, sortBy, page, 50);
+    const adminFilters = useMemo(() => {
+        const out: { entrySource?: 'MANUAL'; lastManualEditBefore?: string } = {};
+        if (showManualOnly) out.entrySource = 'MANUAL';
+        if (showStaleOnly) {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 30);
+            out.lastManualEditBefore = cutoff.toISOString();
+        }
+        return out;
+    }, [showManualOnly, showStaleOnly]);
+
+    const { data, isLoading } = useListings(filters, sortBy, page, 50, adminFilters);
 
     const handleArchive = async (id: string) => {
         if (!token) return;
@@ -228,10 +242,18 @@ export default function ListingManagementPage() {
                         Zarządzaj bazą pojazdów, przeglądaj specyfikacje i archiwizuj ogłoszenia.
                     </p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500 bg-blue-50 px-4 py-2 rounded-lg border border-blue-100">
-                    <Car className="w-4 h-4 text-blue-600" />
-                    <span className="font-semibold text-blue-700">{data?.count || 0}</span>
-                    <span>pojazdów w bazie</span>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 bg-blue-50 px-4 py-2 rounded-lg border border-blue-100">
+                        <Car className="w-4 h-4 text-blue-600" />
+                        <span className="font-semibold text-blue-700">{data?.count || 0}</span>
+                        <span>pojazdów w bazie</span>
+                    </div>
+                    <Button asChild className="h-10">
+                        <Link to="/admin/listings/new">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Dodaj pojazd
+                        </Link>
+                    </Button>
                 </div>
             </div>
 
@@ -259,6 +281,24 @@ export default function ListingManagementPage() {
                             <SelectItem value="year_desc">Rocznik: najnowsze</SelectItem>
                         </SelectContent>
                     </Select>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 px-2">
+                        <input
+                            type="checkbox"
+                            checked={showManualOnly}
+                            onChange={(e) => setShowManualOnly(e.target.checked)}
+                            className="h-4 w-4"
+                        />
+                        Tylko ręcznie
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 px-2">
+                        <input
+                            type="checkbox"
+                            checked={showStaleOnly}
+                            onChange={(e) => setShowStaleOnly(e.target.checked)}
+                            className="h-4 w-4"
+                        />
+                        Nieedytowane &gt;30 dni
+                    </label>
                     <Button variant="outline" size="icon" className="h-10 w-10">
                         <Filter className="w-4 h-4" />
                     </Button>

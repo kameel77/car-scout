@@ -6,18 +6,11 @@ import type { RentalVehicle, RentalCompany } from '@/services/rental-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { VehicleDataForm } from '@/components/admin/VehicleForm/VehicleDataForm';
 import {
     Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star,
     ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil, Upload
 } from 'lucide-react';
-
-// Helper: parse comma-separated text to array
-function textToArray(text: string): string[] {
-    return text.split('\n').map(s => s.trim()).filter(Boolean);
-}
-function arrayToText(arr: string[] | undefined | null): string {
-    return (arr || []).join('\n');
-}
 
 // ─── Copyable ID ─────────────────────────────────────────────────
 
@@ -41,276 +34,6 @@ function CopyableId({ id }: { id: string }) {
             {short}
             {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
         </button>
-    );
-}
-
-// ─── Vehicle Form ────────────────────────────────────────────────
-
-interface VehicleFormProps {
-    vehicle?: RentalVehicle;
-    dealers: Array<{ id: string; name: string; city?: string }>;
-    companies: RentalCompany[];
-    onSave: (data: any) => void;
-    onCancel: () => void;
-    isSaving: boolean;
-    /** When true, buttons are rendered outside via formId pattern */
-    externalButtons?: boolean;
-    formId?: string;
-}
-
-function VehicleForm({ vehicle, dealers, companies, onSave, onCancel, isSaving, externalButtons, formId }: VehicleFormProps) {
-    const defaultProvider = vehicle?.dealerId 
-        ? `dealer_${vehicle.dealerId}` 
-        : vehicle?.ownerRentalCompanyId 
-            ? `company_${vehicle.ownerRentalCompanyId}` 
-            : '';
-
-    const [form, setForm] = useState({
-        make: vehicle?.make || '',
-        model: vehicle?.model || '',
-        version: vehicle?.version || '',
-        bodyType: vehicle?.bodyType || '',
-        fuelType: vehicle?.fuelType || '',
-        transmission: vehicle?.transmission || '',
-        enginePowerHp: vehicle?.enginePowerHp?.toString() || '',
-        engineCapacityCm3: vehicle?.engineCapacityCm3?.toString() || '',
-        productionYear: vehicle?.productionYear?.toString() || new Date().getFullYear().toString(),
-        color: vehicle?.color || '',
-        paintType: vehicle?.paintType || '',
-        doors: vehicle?.doors?.toString() || '',
-        seats: vehicle?.seats?.toString() || '',
-        drive: vehicle?.drive || '',
-        catalogPrice: vehicle?.catalogPrice?.toString() || '',
-        sellingPrice: vehicle?.sellingPrice?.toString() || '',
-        providerId: defaultProvider,
-        additionalInfoHeader: vehicle?.additionalInfoHeader || '',
-        additionalInfoContent: vehicle?.additionalInfoContent || '',
-        equipmentAudioMultimedia: arrayToText(vehicle?.equipmentAudioMultimedia),
-        equipmentSafety: arrayToText(vehicle?.equipmentSafety),
-        equipmentComfortExtras: arrayToText(vehicle?.equipmentComfortExtras),
-        equipmentOther: arrayToText(vehicle?.equipmentOther),
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        // Parse providerId
-        let dealerId = null;
-        let ownerRentalCompanyId = null;
-        if (form.providerId.startsWith('dealer_')) {
-            dealerId = form.providerId.replace('dealer_', '');
-        } else if (form.providerId.startsWith('company_')) {
-            ownerRentalCompanyId = form.providerId.replace('company_', '');
-        }
-
-        onSave({
-            ...form,
-            dealerId,
-            ownerRentalCompanyId,
-            enginePowerHp: form.enginePowerHp ? parseInt(form.enginePowerHp) : null,
-            engineCapacityCm3: form.engineCapacityCm3 ? parseInt(form.engineCapacityCm3) : null,
-            productionYear: parseInt(form.productionYear),
-            doors: form.doors ? parseInt(form.doors) : null,
-            seats: form.seats ? parseInt(form.seats) : null,
-            catalogPrice: parseInt(form.catalogPrice),
-            sellingPrice: form.sellingPrice ? parseInt(form.sellingPrice) : null,
-            equipmentAudioMultimedia: textToArray(form.equipmentAudioMultimedia),
-            equipmentSafety: textToArray(form.equipmentSafety),
-            equipmentComfortExtras: textToArray(form.equipmentComfortExtras),
-            equipmentOther: textToArray(form.equipmentOther),
-            // Note: primaryImageUrl, imageUrls, specificationUrl are NOT sent here.
-            // They are managed by dedicated ImageSection and SpecificationSection components
-            // to avoid stale form values overwriting fresh uploads.
-        });
-    };
-
-    const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-        setForm(prev => ({ ...prev, [field]: e.target.value }));
-
-    return (
-        <form id={formId} onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Basic Info */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Marka *</label>
-                    <Input value={form.make} onChange={set('make')} required placeholder="np. BMW" />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Model *</label>
-                    <Input value={form.model} onChange={set('model')} required placeholder="np. X3" />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Wersja</label>
-                    <Input value={form.version} onChange={set('version')} placeholder="np. xDrive20d" />
-                </div>
-
-                {/* Technical */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Typ nadwozia</label>
-                    <select value={form.bodyType} onChange={set('bodyType')} className="w-full h-10 px-3 rounded-md border text-sm">
-                        <option value="">Wybierz</option>
-                        {['SUV', 'Sedan', 'Kombi', 'Hatchback', 'Coupe', 'Kabriolet', 'Van', 'Pickup'].map(t => (
-                            <option key={t} value={t}>{t}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Paliwo</label>
-                    <select value={form.fuelType} onChange={set('fuelType')} className="w-full h-10 px-3 rounded-md border text-sm">
-                        <option value="">Wybierz</option>
-                        {['Benzyna', 'Diesel', 'Hybryda', 'Plug-in Hybrid', 'Elektryczny', 'LPG'].map(t => (
-                            <option key={t} value={t}>{t}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Skrzynia biegów</label>
-                    <select value={form.transmission} onChange={set('transmission')} className="w-full h-10 px-3 rounded-md border text-sm">
-                        <option value="">Wybierz</option>
-                        <option value="Automatyczna">Automatyczna</option>
-                        <option value="Manualna">Manualna</option>
-                    </select>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Moc (KM)</label>
-                    <Input type="number" value={form.enginePowerHp} onChange={set('enginePowerHp')} placeholder="np. 190" />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Pojemność (cm³)</label>
-                    <Input type="number" value={form.engineCapacityCm3} onChange={set('engineCapacityCm3')} placeholder="np. 1998" />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Rok produkcji *</label>
-                    <Input type="number" value={form.productionYear} onChange={set('productionYear')} required />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Kolor</label>
-                    <Input value={form.color} onChange={set('color')} placeholder="np. Czarny" />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Napęd</label>
-                    <select value={form.drive} onChange={set('drive')} className="w-full h-10 px-3 rounded-md border text-sm">
-                        <option value="">Wybierz</option>
-                        <option value="Przedni">Przedni</option>
-                        <option value="Tylny">Tylny</option>
-                        <option value="4x4">4x4</option>
-                    </select>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Drzwi</label>
-                    <Input type="number" value={form.doors} onChange={set('doors')} />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Miejsca</label>
-                    <Input type="number" value={form.seats} onChange={set('seats')} />
-                </div>
-
-                {/* Pricing */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Cena katalogowa (PLN) *</label>
-                    <Input type="number" value={form.catalogPrice} onChange={set('catalogPrice')} required />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Cena sprzedaży (PLN)</label>
-                    <Input type="number" value={form.sellingPrice} onChange={set('sellingPrice')} />
-                </div>
-
-                {/* Provider (Dealer / Firm) */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Dostawca *</label>
-                    <select value={form.providerId} onChange={set('providerId')} className="w-full h-10 px-3 rounded-md border text-sm" required>
-                        <option value="">Wybierz dostawcę...</option>
-                        <optgroup label="Firmy Najmujące">
-                            {companies.map(c => (
-                                <option key={c.id} value={`company_${c.id}`}>{c.name}</option>
-                            ))}
-                        </optgroup>
-                        <optgroup label="Dealerzy">
-                            {dealers.map(d => (
-                                <option key={d.id} value={`dealer_${d.id}`}>{d.name}{d.city ? ` (${d.city})` : ''}</option>
-                            ))}
-                        </optgroup>
-                    </select>
-                </div>
-                
-                {/* Info: Zdjęcia i specyfikacja zarządzane po zapisaniu w dedykowanych sekcjach */}
-                {!vehicle && (
-                    <div className="col-span-1 md:col-span-2 lg:col-span-3 pt-2 border-t">
-                        <p className="text-sm text-gray-500 flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4" />
-                            Zdjęcia i specyfikację PDF dodasz po zapisaniu pojazdu.
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            {/* Equipment Categories */}
-            <div className="col-span-full">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 mt-2 border-b pb-2">Wyposażenie</h3>
-                <p className="text-xs text-gray-500 mb-3">Wprowadź każdy element wyposażenia w nowej linii.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">🎵 Audio i Multimedia</label>
-                        <textarea
-                            value={form.equipmentAudioMultimedia}
-                            onChange={set('equipmentAudioMultimedia')}
-                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
-                            placeholder={`np.\nSystem nawigacji\nApple CarPlay\nBluetooth`}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">🛡️ Bezpieczeństwo</label>
-                        <textarea
-                            value={form.equipmentSafety}
-                            onChange={set('equipmentSafety')}
-                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
-                            placeholder={`np.\nABS\nESP\nAsystent pasa ruchu`}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">🛋️ Komfort i Dodatki</label>
-                        <textarea
-                            value={form.equipmentComfortExtras}
-                            onChange={set('equipmentComfortExtras')}
-                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
-                            placeholder={`np.\nKlimatyzacja automatyczna\nPodgrzewane fotele\nKamera cofania`}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">📦 Inne</label>
-                        <textarea
-                            value={form.equipmentOther}
-                            onChange={set('equipmentOther')}
-                            className="w-full min-h-[100px] px-3 py-2 rounded-md border text-sm"
-                            placeholder={`np.\nFelgi aluminiowe 19"\nHak holowniczy\nRelingi dachowe`}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Additional info */}
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Dodatkowy nagłówek</label>
-                <Input value={form.additionalInfoHeader} onChange={set('additionalInfoHeader')} />
-            </div>
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Dodatkowy opis</label>
-                <textarea
-                    value={form.additionalInfoContent}
-                    onChange={set('additionalInfoContent')}
-                    className="w-full min-h-[80px] px-3 py-2 rounded-md border text-sm"
-                />
-            </div>
-
-            {!externalButtons && (
-                <div className="flex gap-3 pt-4 border-t">
-                    <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
-                        {isSaving ? 'Zapisywanie...' : vehicle ? 'Zapisz zmiany' : 'Dodaj pojazd'}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={onCancel}>Anuluj</Button>
-                </div>
-            )}
-        </form>
     );
 }
 
@@ -867,10 +590,11 @@ export default function RentalVehiclesPage() {
         return (
             <div className="p-6 max-w-5xl">
                 <h2 className="text-2xl font-bold mb-6">Dodaj pojazd najmu</h2>
-                <VehicleForm
+                <VehicleDataForm
+                    mode="rental"
                     dealers={dealers}
                     companies={companies}
-                    onSave={data => createMutation.mutate(data)}
+                    onSave={async data => { await createMutation.mutateAsync(data); }}
                     onCancel={() => setView('list')}
                     isSaving={createMutation.isPending}
                 />
@@ -882,11 +606,12 @@ export default function RentalVehiclesPage() {
         return (
             <div className="p-6 max-w-5xl">
                 <h2 className="text-2xl font-bold mb-6">Edytuj pojazd najmu</h2>
-                <VehicleForm
+                <VehicleDataForm
+                    mode="rental"
                     vehicle={vehicleDetailQuery.data.vehicle}
                     dealers={dealers}
                     companies={companies}
-                    onSave={data => updateMutation.mutate({ id: editingId, data })}
+                    onSave={async data => { await updateMutation.mutateAsync({ id: editingId, data }); }}
                     onCancel={() => { setView('list'); setEditingId(null); }}
                     isSaving={updateMutation.isPending}
                     externalButtons

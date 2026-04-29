@@ -26,6 +26,7 @@ import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import { FinancingCalculator } from '@/components/FinancingCalculator';
+import { getFinancingBasePrice } from '@/utils/listingPrice';
 import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -604,7 +605,13 @@ export default function ListingDetailPage() {
                 <FinancingCalculator
                   listingId={listing.listing_id}
                   price={applySpecialOfferDiscount(
-                    priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : (listing.broker_price_pln || listing.price_pln),
+                    priceType === 'net'
+                      ? (listing.dealer_price_net_pln || listing.price_pln)
+                      : getFinancingBasePrice({
+                          pricePln: listing.price_pln,
+                          brokerPricePln: listing.broker_price_pln,
+                          financingPriceBase: listing.financingPriceBase,
+                        }),
                     discount
                   )}
                   currency={settings?.displayCurrency || 'PLN'}
@@ -840,7 +847,13 @@ export default function ListingDetailPage() {
                   <FinancingCalculator
                     listingId={listing.listing_id}
                     price={applySpecialOfferDiscount(
-                      priceType === 'net' ? (listing.dealer_price_net_pln || listing.price_pln) : (listing.broker_price_pln || listing.price_pln),
+                      priceType === 'net'
+                        ? (listing.dealer_price_net_pln || listing.price_pln)
+                        : getFinancingBasePrice({
+                            pricePln: listing.price_pln,
+                            brokerPricePln: listing.broker_price_pln,
+                            financingPriceBase: listing.financingPriceBase,
+                          }),
                       discount
                     )}
                     currency={settings?.displayCurrency || 'PLN'}
