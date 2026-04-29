@@ -155,7 +155,6 @@ export function FinancingCalculator({
 
     React.useEffect(() => {
         let isCancelled = false;
-        let debounceTimer: ReturnType<typeof setTimeout>;
 
         const calculateExternal = async () => {
             if (!selectedProduct || selectedProduct.provider === 'OWN') {
@@ -205,7 +204,7 @@ export function FinancingCalculator({
         };
 
         // Debounce external API calls to prevent rapid-fire requests
-        debounceTimer = setTimeout(calculateExternal, 500);
+        const debounceTimer = setTimeout(calculateExternal, 500);
 
         return () => {
             isCancelled = true;

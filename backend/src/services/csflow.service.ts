@@ -78,7 +78,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
         // Do śledzenia historii cen z transaction
         const priceHistoryEntries: any[] = [];
         
-        let i = 1;
+        const i = 1;
         // Pętla odpytująca dokładnie każde auto - optymalizujemy: używamy Promise.all dla max 5 na raz.
         // Jednak na potrzeby stabilności po prostu iterujemy asynchronicznie.
         for (const basicCar of carsData) {

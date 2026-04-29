@@ -68,7 +68,7 @@ export default function RentalDetailPage() {
         try {
             const stored = localStorage.getItem('rentalClientType');
             if (stored === 'business' || stored === 'consumer') return stored;
-        } catch {}
+        } catch { /* localStorage unavailable */ }
         return 'business';
     });
     const [showAllSpecs, setShowAllSpecs] = useState(false);
@@ -352,7 +352,7 @@ export default function RentalDetailPage() {
                                 <label className="text-sm font-medium text-gray-700">Typ oferty</label>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => { setSelectedOfferType('business'); try { localStorage.setItem('rentalClientType', 'business'); } catch {} }}
+                                        onClick={() => { setSelectedOfferType('business'); try { localStorage.setItem('rentalClientType', 'business'); } catch { /* localStorage unavailable */ } }}
                                         disabled={!availableOfferTypes.has('business')}
                                         className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                             selectedOfferType === 'business'
@@ -365,7 +365,7 @@ export default function RentalDetailPage() {
                                         <Building2 className="w-4 h-4" /> Na firmę
                                     </button>
                                     <button
-                                        onClick={() => { setSelectedOfferType('consumer'); try { localStorage.setItem('rentalClientType', 'consumer'); } catch {} }}
+                                        onClick={() => { setSelectedOfferType('consumer'); try { localStorage.setItem('rentalClientType', 'consumer'); } catch { /* localStorage unavailable */ } }}
                                         disabled={!availableOfferTypes.has('consumer')}
                                         className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                             selectedOfferType === 'consumer'

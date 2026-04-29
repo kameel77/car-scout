@@ -88,7 +88,7 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
         }
 
         // Try to find existing listing first to reuse the CUID or generate new random ID for slug
-        let existingListing = await fastify.prisma.listing.findUnique({
+        const existingListing = await fastify.prisma.listing.findUnique({
             where: { vin: vin }
         });
 

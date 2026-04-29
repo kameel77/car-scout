@@ -27,7 +27,7 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
         };
 
         // Build scope-aware where clause
-        let where: any = {};
+        const where: any = {};
 
         // Platform roles can see all; they can additionally filter by groupId
         const isPlatform = memberships.some(m =>
