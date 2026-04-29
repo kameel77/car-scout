@@ -7,6 +7,7 @@ import { PricingSection } from './sections/PricingSection';
 import { FlagsSection } from './sections/FlagsSection';
 import { DescriptionSection } from './sections/DescriptionSection';
 import { ImagesSection } from './sections/ImagesSection';
+import { ProviderSection } from './sections/ProviderSection';
 import type { VehicleFormMode, VehicleFormState } from './types';
 
 interface VehicleDataFormProps {
@@ -113,6 +114,9 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
         };
 
         if (mode === 'sale') {
+            const dealerId = form.providerId.startsWith('dealer_')
+                ? form.providerId.replace('dealer_', '')
+                : null;
             await onSave({
                 ...basePayload,
                 vin: form.vin || null,
@@ -123,6 +127,7 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
                 condition: form.condition,
                 financingPriceBase: form.financingPriceBase,
                 isChineseBrand: form.isChineseBrand,
+                dealerId,
             });
         } else {
             let dealerId = null;
@@ -143,6 +148,9 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
         <form id={formId} onSubmit={handleSubmit} className="space-y-8">
             <Section title="Identyfikacja">
                 <IdentificationSection form={form} setField={setField} mode={mode} isImported={isImported} />
+            </Section>
+            <Section title={mode === 'sale' ? 'Dealer' : 'Dostawca'}>
+                <ProviderSection form={form} setField={setField} mode={mode} dealers={dealers} companies={companies} />
             </Section>
             <Section title="Parametry techniczne">
                 <TechnicalSpecsSection form={form} setField={setField} mode={mode} isImported={isImported} />
