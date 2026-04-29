@@ -18,6 +18,8 @@ interface VehicleDataFormProps {
     onSave: (data: any) => Promise<void>;
     onCancel: () => void;
     isSaving: boolean;
+    externalButtons?: boolean;
+    formId?: string;
 }
 
 const arrayToText = (arr?: string[] | null): string => (arr || []).join('\n');
@@ -66,7 +68,7 @@ function buildInitialState(mode: VehicleFormMode, vehicle?: any): VehicleFormSta
     };
 }
 
-export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported, onSave, onCancel, isSaving }: VehicleDataFormProps) {
+export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported, onSave, onCancel, isSaving, externalButtons, formId }: VehicleDataFormProps) {
     const [form, setForm] = useState<VehicleFormState>(() => buildInitialState(mode, vehicle));
     const [images, setImages] = useState<{ primaryImageUrl: string | null; imageUrls: string[] }>({
         primaryImageUrl: vehicle?.primaryImageUrl ?? null,
@@ -138,7 +140,7 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form id={formId} onSubmit={handleSubmit} className="space-y-8">
             <Section title="Identyfikacja">
                 <IdentificationSection form={form} setField={setField} mode={mode} isImported={isImported} />
             </Section>
@@ -167,12 +169,14 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
                 />
             </Section>
 
-            <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={onCancel}>Anuluj</Button>
-                <Button type="submit" disabled={isSaving}>
-                    {isSaving ? 'Zapisywanie...' : 'Zapisz'}
-                </Button>
-            </div>
+            {!externalButtons && (
+                <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={onCancel}>Anuluj</Button>
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? 'Zapisywanie...' : 'Zapisz'}
+                    </Button>
+                </div>
+            )}
         </form>
     );
 }
