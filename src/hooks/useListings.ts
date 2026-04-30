@@ -4,6 +4,7 @@ import { FilterState } from '@/components/FilterPanel';
 import { Listing } from '@/data/mockData';
 import { mapBackendListingToFrontend } from '@/utils/listingMapper';
 import { useAppSettings } from './useAppSettings';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ListingsResponse {
     listings: Listing[];
@@ -24,12 +25,17 @@ export function useListings(
     page: number,
     perPage: number,
     adminFilters?: AdminListingFilters,
+    scoped: boolean = false,
 ) {
     const { data: settings } = useAppSettings();
+    const { token, activeContext } = useAuth();
     const currency = settings?.displayCurrency || 'PLN';
 
+    const authToken = scoped ? token : null;
+    const scopeKey = scoped ? `${activeContext.scopeType}:${activeContext.scopeId}` : null;
+
     return useQuery<ListingsResponse>({
-        queryKey: ['listings', filters, sortBy, page, perPage, currency, adminFilters],
+        queryKey: ['listings', filters, sortBy, page, perPage, currency, adminFilters, scopeKey],
         queryFn: async () => {
             console.log('Fetching listings with filters:', filters, 'sortBy:', sortBy, 'page:', page);
             try {
@@ -40,7 +46,7 @@ export function useListings(
                     page,
                     perPage,
                     ...adminFilters,
-                });
+                }, authToken);
                 console.log('API response received:', {
                     hasData: !!data,
                     listingsCount: data?.listings?.length || 0,

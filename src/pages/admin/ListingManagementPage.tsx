@@ -76,7 +76,7 @@ export default function ListingManagementPage() {
         return out;
     }, [showManualOnly, showStaleOnly]);
 
-    const { data, isLoading } = useListings(filters, sortBy, page, 50, adminFilters);
+    const { data, isLoading } = useListings(filters, sortBy, page, 50, adminFilters, true);
 
     const handleArchive = async (id: string) => {
         if (!token) return;
