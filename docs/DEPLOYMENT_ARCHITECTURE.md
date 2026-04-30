@@ -187,6 +187,26 @@ Defined in `.github/dependabot.yml`. Five ecosystems, all targeting `dev` branch
 
 **Dependabot security alerts** (separate from version updates) are enabled in repo Settings → Code security. Alerts open PRs against the **default branch** (`main`), independent of `dependabot.yml`. Standard handling: cherry-pick / rebase the security PR onto `dev`, run CI, promote through staging → main like any other change.
 
+### 10.3 npm overrides (transitive CVE patching)
+
+`backend/package.json` declares an `overrides` block:
+
+```json
+"overrides": {
+  "fast-jwt": "^6.2.0"
+}
+```
+
+**Why it exists:** `@fastify/jwt@8.0.1` (the latest version compatible with `fastify@4`) ships with `fast-jwt@4.0.5`, which has two CRITICAL CVEs — CVE-2026-34950 (JWT Algorithm Confusion) and CVE-2026-35039 (Cache Confusion via cacheKeyBuilder). Both are fixed in `fast-jwt@6.2.0+`. `@fastify/jwt@9` and `@fastify/jwt@10` bundle the patched versions but require `fastify@5` (verified via `fastify-plugin` runtime check), which would force a multi-plugin ecosystem upgrade (cors, multipart, swagger).
+
+The override forces `fast-jwt@6.2.4` while keeping `@fastify/jwt@8` and `fastify@4`. Smoke-tested locally with our exact JWT payload shape (memberships + activeContext) — `sign` and `verify` work unchanged.
+
+**Do NOT remove this override** until either:
+- A backport patch lands in `fast-jwt@4.x` (unlikely — upstream advised upgrade to 6.x), OR
+- The codebase is migrated to `fastify@5` + `@fastify/jwt@10`, at which point `fast-jwt@6.2.0+` becomes a direct dep and the override becomes redundant.
+
+If you upgrade `@fastify/jwt` later, re-run `npm ls fast-jwt` in `backend/` and confirm the resolved version is ≥ 6.2.0 before deleting the override.
+
 ---
 
 ## 11. Per-Environment Deployment Details
