@@ -338,7 +338,7 @@ export const listingsApi = {
         return response.json() as Promise<{ makes: string[]; models: { make: string; model: string }[] }>;
     },
 
-    getListings: async (filters?: any) => {
+    getListings: async (filters?: any, token?: string | null) => {
         const params = new URLSearchParams();
 
         if (filters) {
@@ -386,7 +386,9 @@ export const listingsApi = {
         console.log('Making API call to:', url);
 
         try {
-            const response = await fetch(url);
+            const headers: Record<string, string> = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            const response = await fetch(url, { headers });
             console.log('API response status:', response.status);
 
             if (!response.ok) {
