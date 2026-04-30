@@ -19,7 +19,7 @@
 ## 2. Build & Deployment Pipeline
 
 ```
-git push → GitHub Actions → build Docker images → push to GHCR → Coolify webhook → redeploy
+git push → GitHub Actions: CI (quality gates) + Docker Build & Push → GHCR → Coolify webhook → redeploy
 ```
 
 - **Images are built by GitHub Actions**, not by Coolify. Coolify only pulls pre-built images from GHCR.
@@ -27,6 +27,9 @@ git push → GitHub Actions → build Docker images → push to GHCR → Coolify
 - Coolify build pack: **dockercompose** (not Nixpacks, not single Dockerfile).
 - `docker-compose.coolify.yml` references `ghcr.io/kameel77/car-scout-backend:${IMAGE_TAG}` and `ghcr.io/kameel77/car-scout-frontend:${IMAGE_TAG}`.
 - Never switch build pack to Nixpacks — it will fail (no GHCR auth).
+- Two GitHub Actions workflows run on every push to `dev`/`staging`/`main` and on every PR (see Section 10):
+  - `ci.yml` — type-check + lint + unit tests (frontend + backend typecheck)
+  - `docker.yml` — builds and pushes images to GHCR (only on push to branches, not on PRs)
 
 ---
 
@@ -139,3 +142,137 @@ Standalone databases created in Coolify (PostgreSQL, Redis):
 | 502 Bad Gateway | Traefik can't reach frontend, or frontend Nginx can't reach backend | Check port exposure (frontend exposes 80), check `BACKEND_URL` |
 | Frontend calls wrong backend | `VITE_API_URL` set to absolute URL pointing to wrong env | Set back to `/api` |
 | Build fails with 403 from GHCR | Coolify trying to build with Nixpacks instead of pulling image | Ensure build pack = `dockercompose`, images are pre-built by GHA |
+
+---
+
+## 10. CI Pipeline (Quality Gates)
+
+Defined in `.github/workflows/ci.yml`. Runs on every PR and on every push to `dev`, `staging`, `main`.
+
+| Job | Steps | Purpose |
+|---|---|---|
+| `frontend` | `npm ci` → `tsc --noEmit` → `npm run lint` → `npm test -- --run` (vitest) | Catches type errors, lint regressions, and unit-test failures before deployment |
+| `backend` | `npm ci` → `npx prisma generate` → `tsc --noEmit` (in `backend/`) | Catches type errors in Fastify/Prisma backend |
+
+**Important constraints:**
+
+- Vitest is scoped via `vitest.config.ts` to `src/**/*.{test,spec}.{ts,tsx}` and explicitly excludes `backend/` and `apps/`. Backend tests would otherwise be picked up by the frontend job, which doesn't install backend dependencies (would fail with `ERR_MODULE_NOT_FOUND` for `fastify`).
+- `concurrency.cancel-in-progress: true` — pushing a new commit to the same branch cancels in-flight CI runs.
+- CI does NOT run end-to-end tests, integration tests, or DB migrations — these are verified manually on `dev.carsalon.pl` after deploy.
+- Lint must stay clean — when adding `eslint-disable` comments, prefer a per-line rule disable with a one-line justification (see existing examples in `backend/src/routes/rental-vehicles.ts` for `no-control-regex` on transliteration regex).
+
+---
+
+## 11. Per-Environment Deployment Details
+
+### 11.1 `dev` → `dev.carsalon.pl`
+
+**Purpose:** Active development branch. First place where merged feature branches are observed running. Considered live but unstable.
+
+**Trigger:** Direct push to `dev` (no PR required). Feature branches merge here via `git merge --no-ff` or fast-forward.
+
+**Coolify resource:**
+- `COMPOSE_PROJECT_NAME=carscout-dev`
+- `IMAGE_TAG=dev`
+- Coolify branch source: `dev`
+- Domain: `https://dev.carsalon.pl` (frontend) — backend not exposed publicly
+- Auto-deploy on GHCR webhook: **enabled**
+
+**Database/Redis:** Dedicated dev instances (separate UUIDs from staging/prod). Schema may diverge transiently while migrations are being authored — run `npx prisma migrate deploy` against the dev DB before pushing.
+
+**JWT_SECRET / FRONTEND_URL / CORS_ORIGINS:** Distinct values per environment. `CORS_ORIGINS=https://dev.carsalon.pl`.
+
+**Verification after deploy:**
+1. `curl -I https://dev.carsalon.pl/api/health` → 200
+2. Smoke test the changed feature in browser
+3. Check Coolify container logs for Prisma errors (most common dev failure mode after schema changes)
+
+---
+
+### 11.2 `staging` → `staging.carsalon.pl`
+
+**Purpose:** Pre-production verification. Mirror of prod data shape, used to catch issues before promoting to `main`.
+
+**Trigger:** Merge from `dev` to `staging` via PR (recommended) or fast-forward push. **CI must pass.**
+
+**Coolify resource:**
+- `COMPOSE_PROJECT_NAME=carscout-staging`
+- `IMAGE_TAG=staging`
+- Coolify branch source: `staging`
+- Domain: `https://staging.carsalon.pl`
+- Auto-deploy on GHCR webhook: **enabled**
+
+**Database/Redis:** Dedicated staging instances. Should always be at the same migration head as production. Run `prisma migrate deploy` as part of deploy verification.
+
+**Required env-var differences vs prod:**
+- `CORS_ORIGINS=https://staging.carsalon.pl`
+- `FRONTEND_URL=https://staging.carsalon.pl`
+- `JWT_SECRET` — distinct from prod (prevents staging tokens being accepted by prod and vice versa)
+
+**Verification before promoting to main:**
+1. CI green on staging push
+2. `dev.carsalon.pl` smoke test passed earlier
+3. Manual regression on `staging.carsalon.pl` (login, search, listing CRUD, financing calculator, rental flow)
+4. No new errors in Coolify backend logs over 5–10 min observation window
+
+---
+
+### 11.3 `main` → `carsalon.pl` (production)
+
+**Purpose:** Production. Customer-facing.
+
+**Trigger:** PR from `staging` to `main`. **PR review + green CI required** (branch protection — see Section 12).
+
+**Coolify resource:**
+- `COMPOSE_PROJECT_NAME=carscout-prod`
+- `IMAGE_TAG=main`
+- Coolify branch source: `main`
+- Domain: `https://carsalon.pl` (and `https://www.carsalon.pl` redirect if configured)
+- Auto-deploy on GHCR webhook: **enabled**, but consider gating manual redeploy for high-risk changes (schema migrations, network changes)
+
+**Database/Redis:** Production instances. **Never** run destructive migrations without a backup and rehearsal on staging.
+
+**Required env-var differences vs staging:**
+- `CORS_ORIGINS=https://carsalon.pl`
+- `FRONTEND_URL=https://carsalon.pl`
+- `JWT_SECRET` — distinct from dev/staging
+- Any third-party API keys (payment, email, analytics) point to live accounts, not sandbox
+
+**Verification after deploy:**
+1. `curl -I https://carsalon.pl/api/health` → 200
+2. Spot-check: login, top of search results, one listing detail page
+3. Watch Coolify backend logs and error tracker for 15–30 min
+4. Be ready to rollback by redeploying the previous `main` commit (Coolify keeps prior images in GHCR)
+
+---
+
+## 12. Branch Flow & Protection
+
+```
+feature branches → dev → staging → main
+                   │      │         │
+                   │      │         └─ branch protection: PR review + CI required
+                   │      └─ recommended PR; CI required
+                   └─ direct push allowed; CI required
+```
+
+**Rules:**
+
+- All three branches require CI to pass before deployment is meaningful (CI green is a precondition for trusting the deployed image).
+- `main` is protected via `gh api`-managed branch protection: required CI checks (`Frontend (lint + typecheck + test)`, `Backend (typecheck)`, `build-and-push`), required PR review, no direct push, no force push.
+- `staging` may also be protected (recommended) with the same CI requirements but optional review.
+- `dev` is intentionally NOT protected — fast iteration is more important than gatekeeping, and CI still runs on every push.
+- Never bypass CI with `[skip ci]` or hook skips on `staging`/`main`. On `dev` only with explicit reason in commit body.
+
+**Promoting changes:**
+
+```bash
+# dev → staging
+git checkout staging && git pull
+git merge --ff-only origin/dev   # or open PR staging ← dev
+git push origin staging
+
+# staging → main (always via PR)
+gh pr create --base main --head staging --title "release: <summary>"
+# wait for review + CI, then merge
+```
