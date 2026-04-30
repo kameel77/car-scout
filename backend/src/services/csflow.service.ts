@@ -38,6 +38,12 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
     console.log('[CSFlow] Start synchronizacji API');
 
     try {
+        const settings = await prisma.appSettings.findUnique({ where: { id: 'default' } });
+        if (settings?.csflowEnabled === false) {
+            console.log('[CSFlow] Synchronizacja pominięta — integracja wyłączona w ustawieniach');
+            return { inserted: 0, updated: 0, archived: 0, failed: 0, totalRows: 0, skipped: true };
+        }
+
         const carsData = await getCSFlowCars();
         console.log(`[CSFlow] Pobrane pojazdy z API: ${carsData.length}`);
 

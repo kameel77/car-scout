@@ -293,7 +293,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             if (oldSettings?.csflowEnabled === true && data.csflowEnabled === false) {
                 fastify.log.info('CSFlow synchronization disabled automatically archiving existing CSFlow vehicles...');
                 const archivedCount = await fastify.prisma.listing.updateMany({
-                    where: { importSource: 'csflow', isArchived: false },
+                    where: { entrySource: 'CSFLOW', isArchived: false },
                     data: { isArchived: true, archivedAt: new Date(), archivedReason: 'csflow_disabled' }
                 });
                 fastify.log.info({ count: archivedCount.count }, 'Archived CSFlow vehicles because integration was disabled');
