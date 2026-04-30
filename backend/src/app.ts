@@ -26,6 +26,7 @@ import { partnerAdsRoutes } from './routes/partnerAds.js';
 import { otomotoEmulatorRoutes } from './routes/otomotoEmulator.js';
 import { partnerManagementRoutes } from './routes/partners.js';
 import { rentalUploadRoutes } from './routes/rental-upload.js';
+import { listingUploadRoutes } from './routes/listing-upload.js';
 import { rentalVehicleRoutes } from './routes/rental-vehicles.js';
 import { rentalCompanyRoutes } from './routes/rental-companies.js';
 import { rentalMatrixRoutes } from './routes/rental-matrix.js';
@@ -252,6 +253,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(otomotoEmulatorRoutes);
     await fastify.register(partnerManagementRoutes);
     await fastify.register(rentalUploadRoutes);
+    await fastify.register(listingUploadRoutes);
     await fastify.register(rentalVehicleRoutes);
     await fastify.register(rentalCompanyRoutes);
     await fastify.register(rentalMatrixRoutes);
@@ -291,6 +293,13 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.get('/uploads/rental-images/:vehicleId/:file', async (request, reply) => {
         const { vehicleId, file } = request.params as { vehicleId: string; file: string };
         const filePath = path.join(uploadsRoot, 'rental-images', vehicleId, file);
+        return serveStaticFile(filePath, reply);
+    });
+
+    // Static files — listing images
+    fastify.get('/uploads/listing-images/:listingId/:file', async (request, reply) => {
+        const { listingId, file } = request.params as { listingId: string; file: string };
+        const filePath = path.join(uploadsRoot, 'listing-images', listingId, file);
         return serveStaticFile(filePath, reply);
     });
 

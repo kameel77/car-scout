@@ -9,6 +9,7 @@ function generateSlug(make: string, model: string, version: string | null, produ
     };
 
     const transliterate = (str: string) =>
+        // eslint-disable-next-line no-control-regex
         str.toLowerCase().replace(/[^\x00-\x7F]/g, char => translitMap[char] || char);
 
     const parts = [make, model, version, productionYear != null ? String(productionYear) : null, bodyType, fuelType, id]
@@ -151,7 +152,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             dealerId = scope.activeContext.scopeId;
         }
         
-        let ownerRentalCompanyId = body.ownerRentalCompanyId;
+        const ownerRentalCompanyId = body.ownerRentalCompanyId;
         
         if (!dealerId && !ownerRentalCompanyId) {
             return reply.code(400).send({ error: 'dealerId or ownerRentalCompanyId is required' });

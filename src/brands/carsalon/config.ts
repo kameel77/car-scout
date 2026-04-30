@@ -14,6 +14,10 @@ export const carsalonConfig: BrandConfig = {
     phone: '+48 22 688 77 57',
     email: 'kontakt@carsalon.pl',
   },
+  logo: {
+    header: '/brands/carsalon/logo.png',
+    footer: '/brands/carsalon/logo.png',
+  },
   contactPage: {
     title: 'Porozmawiajmy o <span>Twoim nowym aucie</span>',
     subtitle: 'Zostaw kontakt, a doradca CarSalon oddzwoni i przeprowadzi Cię przez cały proces: wybór auta, finansowanie i formalności.',

@@ -204,7 +204,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
                 if (!response.ok) {
                     let errorData: any = {};
-                    try { errorData = JSON.parse(responseText); } catch { }
+                    try { errorData = JSON.parse(responseText); } catch { /* non-JSON response */ }
                     return reply.code(502).send({
                         error: 'Provider request failed',
                         details: errorData?.message || errorData?.error || responseText || 'Unknown provider error',
@@ -213,7 +213,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 }
 
                 let result: any = {};
-                try { result = JSON.parse(responseText); } catch { }
+                try { result = JSON.parse(responseText); } catch { /* non-JSON response */ }
 
                 // Inbank documentation says payment_amount_monthly or installment_amount
                 const monthlyInstallment = Number(

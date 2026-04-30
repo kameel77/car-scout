@@ -8,7 +8,9 @@ import {
     Trash2,
     Copy,
     Star,
+    Pencil,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import {
     DropdownMenu,
@@ -19,6 +21,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { getListingUrlPath } from '@/utils/url-utils';
+
+function formatRelative(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const days = Math.floor(diffMs / 86400000);
+    if (days < 1) return 'dziś';
+    if (days < 30) return `${days} dni temu`;
+    const months = Math.floor(days / 30);
+    return `${months} mies. temu`;
+}
 
 interface AdminListingItemProps {
     listing: Listing;
@@ -103,6 +114,14 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onTogg
                     <p className="text-[10px] text-gray-400 font-mono truncate">
                         {listing.vin || 'Brak VIN'}
                     </p>
+                    {listing.lastManualEditAt && (
+                        <p
+                            className="text-[10px] text-gray-500 mt-0.5 truncate"
+                            title={new Date(listing.lastManualEditAt).toLocaleString('pl-PL')}
+                        >
+                            Edytowano: {formatRelative(listing.lastManualEditAt)}
+                        </p>
+                    )}
                 </div>
 
                 {/* Specs Columns */}
@@ -184,6 +203,12 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onTogg
                         <DropdownMenuItem onClick={handleCopyLink}>
                             <Copy className="w-4 h-4 mr-2" />
                             <span>Kopiuj link</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link to={`/admin/listings/${listing.listing_id}/edit`} className="flex items-center gap-2">
+                                <Pencil className="w-4 h-4" />
+                                <span>Edytuj</span>
+                            </Link>
                         </DropdownMenuItem>
                         {isArchived ? (
                             <DropdownMenuItem onClick={() => onRestore?.(listing.listing_id)} className="text-green-600">

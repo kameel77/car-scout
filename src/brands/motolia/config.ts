@@ -18,6 +18,10 @@ export const motoliaConfig: BrandConfig = {
     phone: '+48 519 188 087',
     email: 'kontakt@motolia.pl',
   },
+  logo: {
+    header: '/brands/motolia/logo.png',
+    footer: '/brands/motolia/logo.png',
+  },
   contactPage: {
     title: 'Znajdź swoje <span>wymarzone auto</span>',
     subtitle: 'Nasi doradcy dobiorą dla Ciebie najlepsze finansowanie – kredyt, leasing lub wynajem. Zostaw kontakt, odezwiemy się w ciągu 24h.',

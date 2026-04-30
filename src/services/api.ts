@@ -378,6 +378,8 @@ export const listingsApi = {
             if (filters.currency) params.append('currency', filters.currency);
             if (filters.page) params.append('page', filters.page.toString());
             if (filters.perPage) params.append('perPage', filters.perPage.toString());
+            if (filters.entrySource) params.append('entrySource', filters.entrySource);
+            if (filters.lastManualEditBefore) params.append('lastManualEditBefore', filters.lastManualEditBefore);
         }
 
         const url = `${API_BASE_URL}/api/listings?${params.toString()}`;
@@ -528,6 +530,51 @@ export const listingsApi = {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Delete failed');
         return data;
+    },
+
+    createListing: async (data: any, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/listings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || 'Create failed');
+        return body;
+    },
+
+    updateListing: async (id: string, data: any, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || 'Update failed');
+        return body;
+    },
+
+    uploadImages: async (id: string, files: File[], setPrimary: boolean, token: string) => {
+        const fd = new FormData();
+        files.forEach(f => fd.append('files', f));
+        fd.append('setPrimary', String(setPrimary));
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/images`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd,
+        });
+        if (!response.ok) throw new Error('Upload failed');
+        return response.json();
+    },
+
+    deleteImage: async (id: string, url: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/images`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ url }),
+        });
+        if (!response.ok) throw new Error('Delete failed');
+        return response.json();
     },
 };
 
