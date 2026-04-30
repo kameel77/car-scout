@@ -153,6 +153,7 @@ Defined in `.github/workflows/ci.yml`. Runs on every PR and on every push to `de
 |---|---|---|
 | `frontend` | `npm ci` → `tsc --noEmit` → `npm run lint` → `npm test -- --run` (vitest) | Catches type errors, lint regressions, and unit-test failures before deployment |
 | `backend` | `npm ci` → `npx prisma generate` → `tsc --noEmit` (in `backend/`) | Catches type errors in Fastify/Prisma backend |
+| `gitleaks` | `gitleaks-action@v2` over full git history | **Always blocking** — fails CI if any secret pattern is detected anywhere in history |
 
 **Important constraints:**
 
@@ -160,6 +161,31 @@ Defined in `.github/workflows/ci.yml`. Runs on every PR and on every push to `de
 - `concurrency.cancel-in-progress: true` — pushing a new commit to the same branch cancels in-flight CI runs.
 - CI does NOT run end-to-end tests, integration tests, or DB migrations — these are verified manually on `dev.carsalon.pl` after deploy.
 - Lint must stay clean — when adding `eslint-disable` comments, prefer a per-line rule disable with a one-line justification (see existing examples in `backend/src/routes/rental-vehicles.ts` for `no-control-regex` on transliteration regex).
+- Gitleaks scans the **entire git history** (`fetch-depth: 0`). If a secret was ever committed and only later removed, it will still fail. Rotate the secret AND rewrite history (`git filter-repo` or BFG) — re-pushing without rewrite will keep failing.
+
+### 10.1 Container vulnerability scan (Trivy)
+
+Defined in `.github/workflows/docker.yml`. Runs after each image is pushed to GHCR for `dev`, `staging`, `main`. Three matrix jobs (backend, frontend-carsalon, frontend-motolia) each scan their own image.
+
+- **Severity filter:** `CRITICAL` only (HIGH and below are noise for a small team — surface them only if requested).
+- **Ignore unfixed:** `true` — CVEs without an upstream fix don't block; we can't act on them anyway.
+- **Vuln types:** `os,library` (Alpine packages + node_modules).
+- **Blocking behavior:** `exit-code: 1` only on `main`; on `dev` and `staging` the scan runs and reports but doesn't fail the workflow. This means a fresh CRITICAL CVE shows up in dev/staging logs as a warning before it can block production.
+- Trivy pulls the image from GHCR using the branch tag (`ghcr.io/.../car-scout-<service>:${branch}`), so it runs against the exact image Coolify will deploy.
+
+### 10.2 Dependency updates (Dependabot)
+
+Defined in `.github/dependabot.yml`. Five ecosystems, all targeting `dev` branch:
+
+| Ecosystem | Directory | Cadence |
+|---|---|---|
+| `npm` | `/` (frontend) | Mondays, max 5 open PRs |
+| `npm` | `/backend` | Mondays, max 5 open PRs |
+| `github-actions` | `/` | Weekly |
+| `docker` | `/` (frontend Dockerfile) | Weekly |
+| `docker` | `/backend` | Weekly |
+
+**Dependabot security alerts** (separate from version updates) are enabled in repo Settings → Code security. Alerts open PRs against the **default branch** (`main`), independent of `dependabot.yml`. Standard handling: cherry-pick / rebase the security PR onto `dev`, run CI, promote through staging → main like any other change.
 
 ---
 

@@ -73,3 +73,13 @@ jobs:
             VITE_API_URL=/api
             VITE_BRAND=${{ matrix.brand }}
 
+      - name: Trivy vulnerability scan (${{ matrix.service }})
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.ref_name }}
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          vuln-type: os,library
+          exit-code: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
+
