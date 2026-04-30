@@ -384,26 +384,6 @@ export function SettingsModule() {
                         </div>
                     </div>
 
-                    {/* CSFlow integration */}
-                    <div className="space-y-3">
-                        <Label className="text-sm font-bold">Integracja z CSFlow</Label>
-                        <div className="flex items-center space-x-3 p-3 rounded-lg border bg-slate-50">
-                            <Checkbox
-                                id="csflow-enabled"
-                                checked={Boolean(settings.csflowEnabled)}
-                                onCheckedChange={(val) => setSettings({ ...settings, csflowEnabled: Boolean(val) })}
-                            />
-                            <div className="space-y-1">
-                                <label htmlFor="csflow-enabled" className="font-medium cursor-pointer">
-                                    Pobieraj i wyświetlaj pojazdy z CSFlow
-                                </label>
-                                <p className="text-xs text-amber-600">
-                                    Odznaczenie tej opcji natychmiastowo zarchiwizuje i ukryje auta z CSFlow.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* Default sorting */}
                     <div className="space-y-4 pt-4 border-t border-slate-100">
                         <div className="space-y-3">
