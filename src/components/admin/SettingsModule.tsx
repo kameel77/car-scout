@@ -18,6 +18,7 @@ import { Languages, Coins, Percent, RefreshCw, Save, CheckCircle2, AlertCircle, 
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { useBrand } from '@/contexts/BrandContext';
 
 type LegalDocKey = 'imprint' | 'privacyPolicy' | 'terms' | 'cookies';
 type LegalDocumentsState = Record<LegalDocKey, Record<string, string>>;
@@ -46,6 +47,7 @@ export function SettingsModule() {
     const { token } = useAuth();
     const queryClient = useQueryClient();
     const { priceType, setPriceType } = usePriceSettings();
+    const { config: brandConfig } = useBrand();
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
     const [settings, setSettings] = React.useState<any>(null);
@@ -207,7 +209,7 @@ export function SettingsModule() {
                                 <Input
                                     value={settings.headerLogoUrl || ''}
                                     onChange={(e) => setSettings({ ...settings, headerLogoUrl: e.target.value })}
-                                    placeholder="https://cdn.example.com/logo-header.png"
+                                    placeholder={brandConfig.logo?.header || 'https://cdn.example.com/logo-header.png'}
                                     className="bg-white"
                                 />
                                 <div className="inline-flex">
@@ -241,7 +243,7 @@ export function SettingsModule() {
                                 <Input
                                     value={settings.footerLogoUrl || ''}
                                     onChange={(e) => setSettings({ ...settings, footerLogoUrl: e.target.value })}
-                                    placeholder="https://cdn.example.com/logo-footer.png"
+                                    placeholder={brandConfig.logo?.footer || 'https://cdn.example.com/logo-footer.png'}
                                     className="bg-white"
                                 />
                                 <div className="inline-flex">

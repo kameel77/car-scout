@@ -46,12 +46,18 @@ export interface ContactInfo {
   email: string;
 }
 
+export interface BrandLogo {
+  header?: string;
+  footer?: string;
+}
+
 export interface BrandConfig {
   id: string;
   name: string;
   domain: string;
   colors: BrandColors;
   contactInfo: ContactInfo;
+  logo?: BrandLogo;
   homePage: {
     hero: HeroConfig;
     trustBar: TrustBarItem[];
