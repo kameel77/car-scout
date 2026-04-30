@@ -25,6 +25,8 @@ import FinancingPage from "./pages/admin/FinancingPage";
 import ImportPage from "./pages/admin/ImportPage";
 import PriceAnalyticsPage from "./pages/admin/PriceAnalyticsPage";
 import ListingManagementPage from "./pages/admin/ListingManagementPage";
+import ListingNewPage from "./pages/admin/ListingNewPage";
+import ListingEditPage from "./pages/admin/ListingEditPage";
 import NotFound from "./pages/NotFound";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
@@ -118,6 +120,22 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <ListingManagementPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/listings/new"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <ListingNewPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/listings/:id/edit"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <ListingEditPage />
                             </ProtectedRoute>
                           }
                         />

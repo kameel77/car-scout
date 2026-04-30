@@ -45,6 +45,12 @@ export interface Listing {
   };
   is_archived?: boolean;
   is_featured?: boolean;
+  catalogPrice?: number | null;
+  condition: 'NEW' | 'USED';
+  financingPriceBase: 'PRICE_PLN' | 'BROKER_PRICE_PLN';
+  isChineseBrand: boolean;
+  lastManualEditAt?: string | null;
+  entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL' | null;
 }
 
 export interface Lead {
@@ -352,6 +358,12 @@ export function generateMockListings(count: number = 50): Listing[] {
         driverAssist: randomSubset(equipmentDriverAssist, 3, 7),
         other: randomSubset(equipmentOther, 1, 4),
       },
+      catalogPrice: price.pln,
+      condition: 'USED',
+      financingPriceBase: 'BROKER_PRICE_PLN',
+      isChineseBrand: false,
+      lastManualEditAt: null,
+      entrySource: 'CSV',
     });
   }
 

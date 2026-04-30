@@ -106,15 +106,16 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   const headerLogoText = getHeaderLogoText();
   const siteName = getSiteName();
   const { part1, part2 } = getSiteNameParts();
+  const headerLogoSrc = settings?.headerLogoUrl || config.logo?.header || '';
 
   return (
     <header id="landing-nav" className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
       <div className="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0">
-          {settings?.headerLogoUrl ? (
+          {headerLogoSrc ? (
             <img
-              src={buildAssetUrl(settings.headerLogoUrl)}
+              src={buildAssetUrl(headerLogoSrc)}
               alt={siteName}
               className="h-14 md:h-16 w-auto max-w-[240px] object-contain"
               loading="lazy"
@@ -241,9 +242,9 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
             <SheetContent side="right" className="w-[300px] p-0">
               <div className="flex flex-col h-full bg-white">
                 <div className="p-6 border-b">
-                  {settings?.headerLogoUrl ? (
+                  {headerLogoSrc ? (
                     <img
-                      src={buildAssetUrl(settings.headerLogoUrl)}
+                      src={buildAssetUrl(headerLogoSrc)}
                       alt={siteName}
                       className="h-12 w-auto object-contain"
                     />

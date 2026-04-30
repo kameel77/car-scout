@@ -13,12 +13,23 @@ interface ListingsResponse {
     totalPages?: number;
 }
 
-export function useListings(filters: FilterState, sortBy: string, page: number, perPage: number) {
+interface AdminListingFilters {
+    entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL';
+    lastManualEditBefore?: string;
+}
+
+export function useListings(
+    filters: FilterState,
+    sortBy: string,
+    page: number,
+    perPage: number,
+    adminFilters?: AdminListingFilters,
+) {
     const { data: settings } = useAppSettings();
     const currency = settings?.displayCurrency || 'PLN';
 
     return useQuery<ListingsResponse>({
-        queryKey: ['listings', filters, sortBy, page, perPage, currency],
+        queryKey: ['listings', filters, sortBy, page, perPage, currency, adminFilters],
         queryFn: async () => {
             console.log('Fetching listings with filters:', filters, 'sortBy:', sortBy, 'page:', page);
             try {
@@ -27,7 +38,8 @@ export function useListings(filters: FilterState, sortBy: string, page: number, 
                     sortBy,
                     currency,
                     page,
-                    perPage
+                    perPage,
+                    ...adminFilters,
                 });
                 console.log('API response received:', {
                     hasData: !!data,

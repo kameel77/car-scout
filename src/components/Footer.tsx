@@ -53,7 +53,12 @@ export function Footer() {
     settings?.legalRegisterNumber ||
     settings?.legalRepresentative;
 
-  const logo = buildAssetUrl(settings?.footerLogoUrl || settings?.headerLogoUrl);
+  const logo = buildAssetUrl(
+    settings?.footerLogoUrl ||
+    settings?.headerLogoUrl ||
+    config.logo?.footer ||
+    config.logo?.header
+  );
   const sloganText = React.useMemo(() => {
     const lang = normalizeLang(i18n.language);
     const candidates = [

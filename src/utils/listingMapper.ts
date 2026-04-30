@@ -104,7 +104,15 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
                 performance: [], // Map if available
                 driverAssist: [], // Map if available
                 other: backendListing.equipmentOther || []
-            }
+            },
+
+            // Manual entry fields
+            catalogPrice: backendListing.catalogPrice ?? null,
+            condition: backendListing.condition ?? 'USED',
+            financingPriceBase: backendListing.financingPriceBase ?? 'BROKER_PRICE_PLN',
+            isChineseBrand: backendListing.isChineseBrand ?? false,
+            lastManualEditAt: backendListing.lastManualEditAt ?? null,
+            entrySource: backendListing.entrySource ?? null,
         };
     } catch (error) {
         console.error('Failed to map backend listing to frontend:', error, backendListing);

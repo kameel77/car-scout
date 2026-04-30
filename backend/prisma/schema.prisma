@@ -30,6 +30,21 @@ enum ContactMode {
   DEALER_EMPLOYEE
 }
 
+enum FinancingPriceBase {
+  PRICE_PLN
+  BROKER_PRICE_PLN
+}
+
+enum ListingCondition {
+  NEW
+  USED
+}
+
+enum EntrySource {
+  CSV
+  CSFLOW
+  MANUAL
+}
 
 model Listing {
   id                       String         @id @default(cuid())
@@ -87,6 +102,12 @@ model Listing {
   marketplace              String?        @map("marketplace")
   importSource             String?        @map("import_source")
   slug                     String?        @unique @map("slug")
+  catalogPrice             Int?           @map("catalog_price")
+  condition                ListingCondition   @default(USED)
+  financingPriceBase       FinancingPriceBase @default(BROKER_PRICE_PLN) @map("financing_price_base")
+  isChineseBrand           Boolean            @default(false)             @map("is_chinese_brand")
+  lastManualEditAt         DateTime?          @map("last_manual_edit_at")
+  entrySource              EntrySource?       @map("entry_source")
   leads                    Lead[]
   dealer                   Dealer?        @relation(fields: [dealerId], references: [id])
   ownerUser                User?          @relation("ListingOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
@@ -102,6 +123,9 @@ model Listing {
   @@index([slug])
   @@index([ownerUserId])
   @@index([isFeatured])
+  @@index([condition])
+  @@index([isChineseBrand])
+  @@index([lastManualEditAt])
   @@index([dealerId, isArchived, createdAt])
   @@map("listings")
 }

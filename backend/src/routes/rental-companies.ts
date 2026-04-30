@@ -9,6 +9,7 @@ function generateCompanySlug(name: string): string {
 
     return name
         .toLowerCase()
+        // eslint-disable-next-line no-control-regex
         .replace(/[^\x00-\x7F]/g, char => translitMap[char] || char)
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
