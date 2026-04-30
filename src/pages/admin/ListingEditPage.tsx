@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { listingsApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/api\/?$/, '');
 
 async function fetchDealers(token: string) {
     const res = await fetch(`${API_BASE_URL}/api/admin/dealers`, {
