@@ -183,6 +183,49 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
         return { success: true, primaryImageUrl: imageUrl };
     });
 
+    // Add image by URL (external link, no file upload)
+    fastify.post('/api/rental-vehicles/:id/images/url', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { url } = request.body as { url: string };
+
+        if (!url) return reply.code(400).send({ error: 'url is required' });
+
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        if (!vehicle) return reply.code(404).send({ error: 'Rental vehicle not found' });
+
+        const newUrls = [...(vehicle.imageUrls || []), url];
+        const newPrimary = vehicle.primaryImageUrl || url;
+
+        await fastify.prisma.rentalVehicle.update({
+            where: { id },
+            data: { imageUrls: newUrls, primaryImageUrl: newPrimary },
+        });
+
+        return reply.send({ success: true, imageUrls: newUrls, primaryImageUrl: newPrimary });
+    });
+
+    // Reorder images
+    fastify.patch('/api/rental-vehicles/:id/images/reorder', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { imageUrls } = request.body as { imageUrls: string[] };
+
+        if (!Array.isArray(imageUrls)) return reply.code(400).send({ error: 'imageUrls must be an array' });
+
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        if (!vehicle) return reply.code(404).send({ error: 'Rental vehicle not found' });
+
+        await fastify.prisma.rentalVehicle.update({
+            where: { id },
+            data: { imageUrls },
+        });
+
+        return reply.send({ success: true, imageUrls });
+    });
+
     // Upload specification for a rental vehicle
     fastify.post('/api/rental-vehicles/:id/specs', {
         preHandler: [fastify.authenticate]

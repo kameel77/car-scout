@@ -118,4 +118,74 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
 
         return reply.send({ listing: updated });
     });
+
+    // Set primary image
+    fastify.patch('/api/listings/:id/images/primary', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { url } = request.body as { url: string };
+
+        if (!url) return reply.code(400).send({ error: 'url is required' });
+
+        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        if (!listing) return reply.code(404).send({ error: 'Listing not found' });
+
+        if (!(listing.imageUrls || []).includes(url)) {
+            return reply.code(400).send({ error: 'URL not in image list' });
+        }
+
+        const updated = await fastify.prisma.listing.update({
+            where: { id },
+            data: { primaryImageUrl: url, lastManualEditAt: new Date() },
+        });
+
+        return reply.send({ listing: updated });
+    });
+
+    // Add image by URL (external link, no file upload)
+    fastify.post('/api/listings/:id/images/url', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { url } = request.body as { url: string };
+
+        if (!url) return reply.code(400).send({ error: 'url is required' });
+
+        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        if (!listing) return reply.code(404).send({ error: 'Listing not found' });
+
+        const newUrls = [...(listing.imageUrls || []), url];
+        const newPrimary = listing.primaryImageUrl || url;
+
+        const updated = await fastify.prisma.listing.update({
+            where: { id },
+            data: {
+                imageUrls: newUrls,
+                primaryImageUrl: newPrimary,
+                imageCount: newUrls.length,
+                lastManualEditAt: new Date(),
+            },
+        });
+
+        return reply.send({ listing: updated });
+    });
+
+    // Reorder images
+    fastify.patch('/api/listings/:id/images/reorder', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { imageUrls } = request.body as { imageUrls: string[] };
+
+        if (!Array.isArray(imageUrls)) return reply.code(400).send({ error: 'imageUrls must be an array' });
+
+        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        if (!listing) return reply.code(404).send({ error: 'Listing not found' });
+
+        const updated = await fastify.prisma.listing.update({
+            where: { id },
+            data: {
+                imageUrls,
+                imageCount: imageUrls.length,
+                lastManualEditAt: new Date(),
+            },
+        });
+
+        return reply.send({ listing: updated });
+    });
 }
