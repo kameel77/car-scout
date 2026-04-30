@@ -12,6 +12,22 @@ import { Button } from '@/components/ui/button';
 import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car, Building2, User } from 'lucide-react';
 import { normalizeRentalImageUrl } from '@/lib/utils';
 import { formatNumber } from '@/utils/formatters';
+import { ImageSwiper } from '@/components/ImageSwiper';
+
+function buildRentalImageList(v: any): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    const push = (raw: string | null | undefined) => {
+        const url = normalizeRentalImageUrl(raw, v.id);
+        if (url && !seen.has(url)) {
+            seen.add(url);
+            out.push(url);
+        }
+    };
+    push(v.primaryImageUrl);
+    for (const u of v.imageUrls || []) push(u);
+    return out;
+}
 
 type ClientType = 'business' | 'consumer';
 
@@ -179,20 +195,20 @@ export default function RentalSearchPage() {
                                 className="group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-gray-300"
                             >
                                 {/* Image */}
-                                <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
-                                    {normalizeRentalImageUrl(v.primaryImageUrl, v.id) ? (
-                                        <img
-                                            src={normalizeRentalImageUrl(v.primaryImageUrl, v.id)!}
-                                            alt={`${v.make} ${v.model}`}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <Car className="w-16 h-16 text-gray-300" />
-                                        </div>
-                                    )}
+                                <div className="relative">
+                                    <ImageSwiper
+                                        images={buildRentalImageList(v)}
+                                        alt={`${v.make} ${v.model}`}
+                                        aspectClassName="aspect-[16/10]"
+                                        imgClassName="group-hover:scale-105"
+                                        fallback={
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <Car className="w-16 h-16 text-gray-300" />
+                                            </div>
+                                        }
+                                    />
                                     {v.rentalCompanyCount > 1 && (
-                                        <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs font-medium px-2 py-1 rounded-full">
+                                        <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs font-medium px-2 py-1 rounded-full z-10">
                                             {v.rentalCompanyCount} oferty
                                         </div>
                                     )}
