@@ -11,6 +11,7 @@ import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { formatPrice } from '@/utils/formatters';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
+import { ImageSwiper } from '@/components/ImageSwiper';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { translateTechnicalValue } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
@@ -19,6 +20,22 @@ interface ListingCardProps {
   listing: Listing;
   index?: number;
   financingType?: FinancingType;
+}
+
+function dedupImages(primary: string | undefined, all: string[] | undefined): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  if (primary) {
+    seen.add(primary);
+    out.push(primary);
+  }
+  for (const url of all || []) {
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      out.push(url);
+    }
+  }
+  return out;
 }
 
 export function ListingCard({ listing, index = 0, financingType }: ListingCardProps) {
@@ -91,14 +108,14 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
         fuelType: listing.fuel_type
       }, effectiveFinancingType)} onClick={handleListingClick} className="block">
         {/* Image */}
-        <div className="relative aspect-[16/10] overflow-hidden">
-          <img
-            src={listing.primary_image_url}
+        <div className="relative">
+          <ImageSwiper
+            images={dedupImages(listing.primary_image_url, listing.image_urls)}
             alt={`${listing.make} ${listing.model}`}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
+            aspectClassName="aspect-[16/10]"
+            imgClassName="group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
           {hasSpecialOffer && (
             <div className="absolute top-3 left-3">

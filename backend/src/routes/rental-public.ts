@@ -68,6 +68,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     catalogPrice: true,
                     sellingPrice: true,
                     primaryImageUrl: true,
+                    imageUrls: true,
                     slug: true,
                     dealer: {
                         select: { id: true, name: true, city: true }

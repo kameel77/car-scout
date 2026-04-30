@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { useSwipe } from '@/hooks/useSwipe';
 
 interface ImageGalleryProps {
   images: string[];
@@ -13,6 +14,8 @@ interface ImageGalleryProps {
 export function ImageGallery({ images, title }: ImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
+  const thumbsRef = React.useRef<HTMLDivElement>(null);
+  const [thumbsOverflow, setThumbsOverflow] = React.useState(false);
 
   const goToPrevious = React.useCallback(() => {
     setSelectedIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -21,6 +24,25 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
   const goToNext = React.useCallback(() => {
     setSelectedIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   }, [images.length]);
+
+  const mainSwipe = useSwipe({ onSwipeLeft: goToNext, onSwipeRight: goToPrevious });
+  const lightboxSwipe = useSwipe({ onSwipeLeft: goToNext, onSwipeRight: goToPrevious });
+
+  const scrollThumbs = (dir: 'prev' | 'next') => {
+    const el = thumbsRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === 'next' ? 240 : -240, behavior: 'smooth' });
+  };
+
+  React.useEffect(() => {
+    const el = thumbsRef.current;
+    if (!el) return;
+    const update = () => setThumbsOverflow(el.scrollWidth > el.clientWidth + 4);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [images]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -48,8 +70,9 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
       <div className="space-y-3">
         {/* Main Image */}
         <div
-          className="relative aspect-[16/9] rounded-xl overflow-hidden bg-muted cursor-pointer group"
+          className="relative aspect-[16/9] rounded-xl overflow-hidden bg-muted cursor-pointer group touch-pan-y select-none"
           onClick={() => setLightboxOpen(true)}
+          {...mainSwipe}
         >
           <AnimatePresence mode="wait">
             <motion.img
@@ -105,23 +128,48 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
 
         {/* Thumbnails */}
         {images.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {images.map((image, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedIndex(index)}
-                className={cn(
-                  'gallery-thumbnail flex-shrink-0',
-                  selectedIndex === index && 'active'
-                )}
-              >
-                <img
-                  src={image}
-                  alt={`${title} thumbnail ${index + 1}`}
-                  className="h-full w-full object-cover"
-                />
-              </button>
-            ))}
+          <div className="relative">
+            <div
+              ref={thumbsRef}
+              className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 scroll-smooth"
+            >
+              {images.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedIndex(index)}
+                  className={cn(
+                    'gallery-thumbnail flex-shrink-0',
+                    selectedIndex === index && 'active'
+                  )}
+                >
+                  <img
+                    src={image}
+                    alt={`${title} thumbnail ${index + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+            {thumbsOverflow && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Przewiń miniatury w lewo"
+                  onClick={() => scrollThumbs('prev')}
+                  className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-background/90 text-foreground shadow-md hover:bg-background"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Przewiń miniatury w prawo"
+                  onClick={() => scrollThumbs('next')}
+                  className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-background/90 text-foreground shadow-md hover:bg-background"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -129,7 +177,10 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
       {/* Lightbox */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-foreground/95 border-0">
-          <div className="relative w-full h-[90vh] flex items-center justify-center">
+          <div
+            className="relative w-full h-[90vh] flex items-center justify-center touch-pan-y select-none"
+            {...lightboxSwipe}
+          >
             <Button
               variant="ghost"
               size="icon"
