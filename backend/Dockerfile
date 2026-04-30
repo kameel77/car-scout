@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-slim AS builder
+FROM node:25-slim AS builder
 
 # Ensure openssl is available for Prisma engines
 RUN apt-get update && \
@@ -28,7 +28,7 @@ COPY . .
 RUN npm run build || npx tsc
 
 # Production stage
-FROM node:20-slim AS runner
+FROM node:25-slim AS runner
 
 # Ensure openssl and curl are available for Prisma runtime and healthchecks
 RUN apt-get update && \
