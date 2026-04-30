@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 const uploadsRoot = path.resolve(__dirname, '../../uploads');
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const ALLOWED_PDF_MIME = ['application/pdf'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 function generateFilename(originalName: string): string {
@@ -184,6 +185,80 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
                 imageCount: imageUrls.length,
                 lastManualEditAt: new Date(),
             },
+        });
+
+        return reply.send({ listing: updated });
+    });
+
+    // Upload specification PDF for a listing
+    fastify.post('/api/listings/:id/specs', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        if (!listing) return reply.code(404).send({ error: 'Listing not found' });
+
+        const parts = request.parts();
+        let uploadedUrl: string | null = null;
+
+        const specDir = path.join(uploadsRoot, 'listing-specs', id);
+        await fs.mkdir(specDir, { recursive: true });
+
+        for await (const part of parts) {
+            if (part.type !== 'file') continue;
+
+            if (!ALLOWED_PDF_MIME.includes(part.mimetype)) {
+                return reply.code(400).send({ error: `Unsupported MIME: ${part.mimetype}. Only PDF allowed.` });
+            }
+
+            const filename = generateFilename(part.filename || 'spec.pdf');
+            const filepath = path.join(specDir, filename);
+            await pipeline(part.file, createWriteStream(filepath));
+
+            const stats = await fs.stat(filepath);
+            if (stats.size > MAX_FILE_SIZE) {
+                await fs.unlink(filepath);
+                return reply.code(413).send({ error: 'File too large (max 10MB)' });
+            }
+
+            // Remove old spec file if it was uploaded
+            if (listing.specificationUrl?.startsWith('/uploads/listing-specs/')) {
+                const oldPath = path.join(uploadsRoot, listing.specificationUrl.replace('/uploads/', ''));
+                try { await fs.unlink(oldPath); } catch { /* ignore */ }
+            }
+
+            uploadedUrl = `/uploads/listing-specs/${id}/${filename}`;
+            break; // only first file
+        }
+
+        if (!uploadedUrl) {
+            return reply.code(400).send({ error: 'No file uploaded' });
+        }
+
+        const updated = await fastify.prisma.listing.update({
+            where: { id },
+            data: { specificationUrl: uploadedUrl, lastManualEditAt: new Date() },
+        });
+
+        return reply.send({ listing: updated, specificationUrl: uploadedUrl });
+    });
+
+    // Save spec URL (external link) or clear it for a listing
+    fastify.patch('/api/listings/:id/specs', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { specificationUrl } = request.body as { specificationUrl: string | null };
+
+        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        if (!listing) return reply.code(404).send({ error: 'Listing not found' });
+
+        // If clearing and old file was uploaded — delete it
+        if (!specificationUrl && listing.specificationUrl?.startsWith('/uploads/listing-specs/')) {
+            const oldPath = path.join(uploadsRoot, listing.specificationUrl.replace('/uploads/', ''));
+            try { await fs.unlink(oldPath); } catch { /* ignore */ }
+        }
+
+        const updated = await fastify.prisma.listing.update({
+            where: { id },
+            data: { specificationUrl: specificationUrl || null, lastManualEditAt: new Date() },
         });
 
         return reply.send({ listing: updated });

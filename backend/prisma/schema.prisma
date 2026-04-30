@@ -89,6 +89,7 @@ model Listing {
   additionalInfoHeader     String?        @map("additional_info_header")
   additionalInfoContent    String?        @map("additional_info_content")
   specsJson                Json?          @map("specs_json")
+  specificationUrl         String?        @map("specification_url")
   isFeatured               Boolean        @default(false) @map("is_featured")
   isArchived               Boolean        @default(false) @map("is_archived")
   archivedAt               DateTime?      @map("archived_at")

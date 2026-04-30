@@ -7,6 +7,7 @@ import { PricingSection } from './sections/PricingSection';
 import { FlagsSection } from './sections/FlagsSection';
 import { DescriptionSection } from './sections/DescriptionSection';
 import { ImagesSection } from './sections/ImagesSection';
+import { SpecificationSection } from './sections/SpecificationSection';
 import { ProviderSection } from './sections/ProviderSection';
 import type { VehicleFormMode, VehicleFormState } from './types';
 
@@ -75,6 +76,7 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
         primaryImageUrl: vehicle?.primaryImageUrl ?? null,
         imageUrls: vehicle?.imageUrls ?? [],
     });
+    const [specificationUrl, setSpecificationUrl] = useState<string | null>(vehicle?.specificationUrl ?? null);
 
     const setField = (field: keyof VehicleFormState, value: any) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -174,6 +176,14 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
                     primaryImageUrl={images.primaryImageUrl}
                     imageUrls={images.imageUrls}
                     onUpdated={setImages}
+                />
+            </Section>
+            <Section title="Specyfikacja">
+                <SpecificationSection
+                    mode={mode}
+                    vehicleId={vehicle?.id}
+                    specificationUrl={specificationUrl}
+                    onUpdated={setSpecificationUrl}
                 />
             </Section>
 

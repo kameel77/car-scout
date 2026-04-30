@@ -617,7 +617,6 @@ export default function RentalVehiclesPage() {
                     externalButtons
                     formId="edit-vehicle-form"
                 />
-                <SpecificationSection vehicle={vehicleDetailQuery.data.vehicle} />
                 <AssignmentSection
                     vehicleId={editingId}
                     assignments={vehicleDetailQuery.data.vehicle.rentalAssignments || []}
