@@ -63,7 +63,7 @@ export default function RentalDetailPage() {
     // Calculator state — init with first available option
     const [selectedMileage, setSelectedMileage] = useState<number | null>(null);
     const [selectedMonths, setSelectedMonths] = useState<number | null>(null);
-    const [selectedPayment, setSelectedPayment] = useState<number | null>(null);
+    const [selectedPayment, setSelectedPayment] = useState<{ pct: number, amountNet: number, amountGross: number } | null>(null);
     const [selectedOfferType, setSelectedOfferType] = useState<OfferType>(() => {
         try {
             const stored = localStorage.getItem('rentalClientType');
@@ -110,7 +110,9 @@ export default function RentalDetailPage() {
         queryFn: () => rentalPublicApi.calculate(slug!, {
             annualMileageKm: selectedMileage!,
             contractMonths: selectedMonths!,
-            initialPaymentPct: selectedPayment!,
+            initialPaymentPct: selectedPayment!.pct,
+            initialPaymentAmountNet: selectedPayment!.amountNet,
+            initialPaymentAmountGross: selectedPayment!.amountGross,
             offerType: selectedOfferType
         }),
         enabled: !!slug && selectedMileage !== null && selectedMonths !== null && selectedPayment !== null,
@@ -134,7 +136,9 @@ export default function RentalDetailPage() {
             monthlyRate: offer.monthlyRateGross,
             annualMileageKm: selectedMileage ?? undefined,
             contractMonths: selectedMonths ?? undefined,
-            initialPaymentPct: selectedPayment ?? undefined,
+            initialPaymentPct: selectedPayment?.pct ?? undefined,
+            initialPaymentAmountNet: selectedPayment?.amountNet ?? undefined,
+            initialPaymentAmountGross: selectedPayment?.amountGross ?? undefined,
             offerType: selectedOfferType,
         }
     }), [isLoggedIn, selectedMileage, selectedMonths, selectedPayment, selectedOfferType]);
@@ -424,19 +428,21 @@ export default function RentalDetailPage() {
                             <div className="space-y-2 mb-6">
                                 <label className="text-sm font-medium text-gray-700">Opłata wstępna</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {options?.initialPaymentOptions?.map((pct: number) => (
+                                    {options?.initialPaymentOptions?.map((opt: { pct: number, amountNet: number, amountGross: number }, i: number) => {
+                                        const isSelected = selectedPayment?.pct === opt.pct && selectedPayment?.amountNet === opt.amountNet;
+                                        return (
                                         <button
-                                            key={pct}
-                                            onClick={() => setSelectedPayment(pct)}
+                                            key={i}
+                                            onClick={() => setSelectedPayment(opt)}
                                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                                                selectedPayment === pct
+                                                isSelected
                                                     ? 'bg-accent text-accent-foreground shadow-md'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                         >
-                                            {pct}%
+                                            {opt.amountNet > 0 ? `${formatNumber(selectedOfferType === 'consumer' ? opt.amountGross : opt.amountNet)} zł` : `${opt.pct}%`}
                                         </button>
-                                    ))}
+                                    )})}
                                 </div>
                             </div>
 

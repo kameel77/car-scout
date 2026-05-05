@@ -46,6 +46,8 @@ export default function RentalLeadFormPage() {
         annualMileageKm?: number;
         contractMonths?: number;
         initialPaymentPct?: number;
+        initialPaymentAmountNet?: number;
+        initialPaymentAmountGross?: number;
         offerType?: string;
     } | undefined;
 
@@ -88,7 +90,17 @@ export default function RentalLeadFormPage() {
                 lines.push(`Konfiguracja kalkulatora:`);
                 if (rentalData.annualMileageKm) lines.push(`  • Przebieg roczny: ${(rentalData.annualMileageKm / 1000).toFixed(0)} tys. km`);
                 if (rentalData.contractMonths) lines.push(`  • Okres: ${rentalData.contractMonths} mies.`);
-                if (rentalData.initialPaymentPct !== undefined) lines.push(`  • Opłata wstępna: ${rentalData.initialPaymentPct}%`);
+                
+                if (rentalData.initialPaymentAmountNet || rentalData.initialPaymentAmountGross) {
+                    const amount = rentalData.offerType === 'business' ? rentalData.initialPaymentAmountNet : rentalData.initialPaymentAmountGross;
+                    const typeLabel = rentalData.offerType === 'business' ? 'netto' : 'brutto';
+                    if (amount) {
+                        lines.push(`  • Opłata wstępna: ${amount.toLocaleString('pl-PL')} zł ${typeLabel}`);
+                    }
+                } else if (rentalData.initialPaymentPct !== undefined) {
+                    lines.push(`  • Opłata wstępna: ${rentalData.initialPaymentPct}%`);
+                }
+                
                 lines.push(`  • Rata: ${rentalData.monthlyRate.toLocaleString('pl-PL')} zł brutto / mies.`);
             }
 
@@ -116,6 +128,8 @@ export default function RentalLeadFormPage() {
                 rentalAnnualMileageKm: rentalData?.annualMileageKm,
                 rentalContractMonths: rentalData?.contractMonths,
                 rentalInitialPaymentPct: rentalData?.initialPaymentPct,
+                rentalInitialPaymentAmountNet: rentalData?.initialPaymentAmountNet,
+                rentalInitialPaymentAmountGross: rentalData?.initialPaymentAmountGross,
                 rentalMonthlyRate: rentalData?.monthlyRate,
             });
 
@@ -257,10 +271,12 @@ export default function RentalLeadFormPage() {
                                                         <div className="font-semibold">{rentalData.contractMonths} mies.</div>
                                                     </div>
                                                 )}
-                                                {rentalData.initialPaymentPct !== undefined && (
+                                                {(rentalData.initialPaymentPct !== undefined || rentalData.initialPaymentAmountNet !== undefined || rentalData.initialPaymentAmountGross !== undefined) && (
                                                     <div className="bg-gray-50 rounded-lg p-2">
                                                         <div className="text-gray-400 uppercase tracking-wider" style={{fontSize: '9px'}}>Wpłata</div>
-                                                        <div className="font-semibold">{rentalData.initialPaymentPct}%</div>
+                                                        <div className="font-semibold">
+                                                            {rentalData.initialPaymentAmountNet ? `${(rentalData.offerType === 'business' ? rentalData.initialPaymentAmountNet : rentalData.initialPaymentAmountGross)?.toLocaleString('pl-PL')} zł` : `${rentalData.initialPaymentPct}%`}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>

@@ -187,6 +187,8 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             annualMileageKm: number;
             contractMonths: number;
             initialPaymentPct: number;
+            initialPaymentAmountNet: number;
+            initialPaymentAmountGross: number;
             offerType: string;
             monthlyRateNet: number;
             monthlyRateGross: number;
@@ -225,6 +227,8 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
                 annualMileageKm: entry.annualMileageKm,
                 contractMonths: entry.contractMonths,
                 initialPaymentPct: entry.initialPaymentPct,
+                initialPaymentAmountNet: entry.initialPaymentAmountNet,
+                initialPaymentAmountGross: entry.initialPaymentAmountGross,
                 offerType: entry.offerType,
                 monthlyRateNet: entry.monthlyRateNet,
                 monthlyRateGross: entry.monthlyRateGross,
