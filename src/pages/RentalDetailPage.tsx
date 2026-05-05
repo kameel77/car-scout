@@ -262,19 +262,19 @@ export default function RentalDetailPage() {
 
                             {/* Equipment — all 4 categories */}
                             {equipmentCategories.length > 0 && (
-                                <div className="mt-8 pt-6 border-t space-y-4">
-                                    <h3 className="font-heading text-xl font-semibold mb-2">Wyposażenie</h3>
+                                <div className="mt-10 pt-8 border-t space-y-6">
+                                    <h3 className="font-heading text-2xl font-bold mb-6">Wyposażenie</h3>
                                     {equipmentCategories.map(cat => {
                                         const Icon = cat.icon;
                                         return (
-                                            <details key={cat.label} className="group">
-                                                <summary className="flex items-center gap-2 cursor-pointer text-base font-semibold text-foreground hover:text-accent transition-colors py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md">
+                                            <details key={cat.label} className="group" open>
+                                                <summary className="flex items-center gap-2 cursor-pointer text-lg font-bold text-foreground hover:text-accent transition-colors py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md">
                                                     <ChevronDown className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
                                                     <Icon className="w-5 h-5 text-primary" />
                                                     {cat.label}
-                                                    <span className="text-sm font-normal text-muted-foreground ml-1">({cat.items.length})</span>
+                                                    <span className="text-base font-normal text-muted-foreground ml-1">({cat.items.length})</span>
                                                 </summary>
-                                                <div className="pl-9 pt-1 pb-3 space-y-2">
+                                                <div className="pl-9 pt-2 pb-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                                                     {cat.items.map((e: string, i: number) => (
                                                         <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-snug">
                                                             <span className="text-accent font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
@@ -440,7 +440,7 @@ export default function RentalDetailPage() {
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                         >
-                                            {opt.amountNet > 0 ? `${formatNumber(selectedOfferType === 'consumer' ? opt.amountGross : opt.amountNet)} zł` : `${opt.pct}%`}
+                                            {opt.amountNet > 0 ? `${formatNumber(selectedOfferType === 'consumer' ? opt.amountGross : opt.amountNet)} zł` : (opt.pct === 0 ? '0 zł' : `${opt.pct}%`)}
                                         </button>
                                     )})}
                                 </div>
@@ -456,11 +456,13 @@ export default function RentalDetailPage() {
 
                             {offers.length > 0 && (
                                 <div className="space-y-3">
-                                    {offers.map((offer: any, i: number) => (
+                                    {offers.map((offer: any, i: number) => {
+                                        const isBest = offers.length > 1 && i === 0;
+                                        return (
                                         <div
                                             key={i}
                                             className={`p-4 rounded-xl border-2 transition-all ${
-                                                i === 0 ? 'border-accent bg-accent/5' : 'border-gray-200 bg-white'
+                                                isBest ? 'border-accent bg-accent/5' : 'border-gray-200 bg-white'
                                             }`}
                                         >
                                             <div className="flex items-center justify-between mb-2">
@@ -472,7 +474,7 @@ export default function RentalDetailPage() {
                                                 ) : (
                                                     <div></div>
                                                 )}
-                                                {i === 0 && (
+                                                {isBest && (
                                                     <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full font-medium">Najlepsza</span>
                                                 )}
                                             </div>
@@ -517,7 +519,7 @@ export default function RentalDetailPage() {
                                                 <FileText className="w-4 h-4 mr-2" /> Zapytaj o ofertę
                                             </Button>
                                         </div>
-                                    ))}
+                                    )})}
                                 </div>
                             )}
 

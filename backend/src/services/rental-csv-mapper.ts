@@ -232,7 +232,10 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
         : [];
 
     // Offer type: optional, defaults to 'all'
-    const rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    let rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    if (['b2b', 'firma', 'business'].includes(rawOfferType)) rawOfferType = 'business';
+    if (['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(rawOfferType)) rawOfferType = 'consumer';
+    
     const validOfferTypes = ['business', 'consumer', 'all'];
     const offerType = validOfferTypes.includes(rawOfferType) ? rawOfferType : 'all';
 
@@ -294,7 +297,10 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
     const monthlyRateGross = Math.round(monthlyRateNet * VAT_MULTIPLIER * 100) / 100;
 
     // Parse offer type
-    const rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    let rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    if (['b2b', 'firma', 'business'].includes(rawOfferType)) rawOfferType = 'business';
+    if (['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(rawOfferType)) rawOfferType = 'consumer';
+    
     const validOfferTypes = ['business', 'consumer', 'all'];
     const offerType = validOfferTypes.includes(rawOfferType) ? rawOfferType : 'all';
 
