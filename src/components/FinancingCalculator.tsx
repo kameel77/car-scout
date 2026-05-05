@@ -366,7 +366,7 @@ export function FinancingCalculator({
                                     <span className="font-semibold text-sm">{months} mies.</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-[10px] text-muted-foreground w-4">{selectedProduct.minInstallments}</span>
+                                    <span className="text-xs text-muted-foreground w-6">{selectedProduct.minInstallments}</span>
                                     <Slider
                                         value={[months]}
                                         min={selectedProduct.minInstallments}
@@ -375,7 +375,7 @@ export function FinancingCalculator({
                                         onValueChange={v => setMonths(v[0])}
                                         className="flex-1"
                                     />
-                                    <span className="text-[10px] text-muted-foreground w-4">{selectedProduct.maxInstallments}</span>
+                                    <span className="text-xs text-muted-foreground w-6 text-right">{selectedProduct.maxInstallments}</span>
                                 </div>
                             </div>
 
@@ -385,11 +385,11 @@ export function FinancingCalculator({
                                     <Label className="text-sm">Wpłata własna</Label>
                                     <div className="text-right flex items-baseline gap-2">
                                         <span className="font-semibold text-sm">{initialPaymentPct}%</span>
-                                        <span className="text-[10px] text-muted-foreground">{formatPrice(initialPaymentAmount, currency)}</span>
+                                        <span className="text-xs text-muted-foreground">{formatPrice(initialPaymentAmount, currency)}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-[10px] text-muted-foreground w-4">
+                                    <span className="text-xs text-muted-foreground w-6">
                                         {selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0}%
                                     </span>
                                     <Slider
@@ -400,7 +400,7 @@ export function FinancingCalculator({
                                         onValueChange={v => setInitialPaymentPct(v[0])}
                                         className="flex-1"
                                     />
-                                    <span className="text-[10px] text-muted-foreground w-4">{selectedProduct.maxInitialPayment}%</span>
+                                    <span className="text-xs text-muted-foreground w-6 text-right">{selectedProduct.maxInitialPayment}%</span>
                                 </div>
                             </div>
 
@@ -411,11 +411,11 @@ export function FinancingCalculator({
                                         <Label className="text-sm">Wykup (Rata balonowa)</Label>
                                         <div className="text-right flex items-baseline gap-2">
                                             <span className="font-semibold text-sm">{finalPaymentPct}%</span>
-                                            <span className="text-[10px] text-muted-foreground">{formatPrice(finalPaymentAmount, currency)}</span>
+                                            <span className="text-xs text-muted-foreground">{formatPrice(finalPaymentAmount, currency)}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[10px] text-muted-foreground w-4">
+                                        <span className="text-xs text-muted-foreground w-6">
                                             {selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0}%
                                         </span>
                                         <Slider
@@ -426,7 +426,7 @@ export function FinancingCalculator({
                                             onValueChange={v => setFinalPaymentPct(v[0])}
                                             className="flex-1"
                                         />
-                                        <span className="text-[10px] text-muted-foreground w-4">{selectedProduct.maxFinalPayment}%</span>
+                                        <span className="text-xs text-muted-foreground w-6 text-right">{selectedProduct.maxFinalPayment}%</span>
                                     </div>
                                 </div>
                             )}
@@ -434,7 +434,7 @@ export function FinancingCalculator({
 
                         <div className="bg-slate-50 rounded-lg p-4 mt-2 border border-slate-100">
                             <div className="flex flex-col items-center justify-center text-center space-y-1">
-                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Miesięczna rata</span>
+                                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Miesięczna rata</span>
                                 <span className="text-3xl font-bold text-primary">
                                     {selectedProduct.provider === 'INBANK' && externalLoading && displayInstallment == null
                                         ? '...'
@@ -447,35 +447,35 @@ export function FinancingCalculator({
                                     </div>
                                 )}
                                 {selectedProduct.category === 'LEASING' && (
-                                    <span className="text-[10px] text-muted-foreground">netto (bez VAT)</span>
+                                    <span className="text-xs text-muted-foreground">netto (bez VAT)</span>
                                 )}
                             </div>
 
                             {selectedProduct.provider !== 'OWN' ? (
-                                <div className="mt-4 pt-3 border-t border-slate-200 text-[11px] text-muted-foreground text-center">
+                                <div className="mt-4 pt-3 border-t border-slate-200 text-xs text-muted-foreground text-center">
                                     Rata wyliczana na podstawie kalkulacji partnera.
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-slate-200">
                                     <div>
-                                        <span className="block text-[10px] text-muted-foreground">Prowizja</span>
-                                        <span className="font-medium text-xs">{formatPrice(commissionAmount, currency)}</span>
+                                        <span className="block text-xs text-muted-foreground">Prowizja</span>
+                                        <span className="font-medium text-sm">{formatPrice(commissionAmount, currency)}</span>
                                     </div>
                                     <div className="text-right">
-                                        <span className="block text-[10px] text-muted-foreground">RRSO / Oproc.</span>
-                                        <span className="font-medium text-xs">{(annualRate).toFixed(2)}%</span>
+                                        <span className="block text-xs text-muted-foreground">RRSO / Oproc.</span>
+                                        <span className="font-medium text-sm">{(annualRate).toFixed(2)}%</span>
                                     </div>
                                 </div>
                             )}
 
                             {offerInitialPayment && (
-                                <div className="mt-4 pt-3 border-t border-slate-200 text-[11px] text-muted-foreground text-center">
+                                <div className="mt-4 pt-3 border-t border-slate-200 text-xs text-muted-foreground text-center">
                                     W kalkulacji założono pierwszą wpłatę na poziomie {formatPrice(offerInitialPayment, currency)}. Możesz dokonać wyższej wpłaty zmieniając kwotę suwakiem kalkulatora.
                                 </div>
                             )}
                         </div>
 
-                        <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-blue-50/50 p-2.5 rounded text-blue-800">
+                        <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-blue-50/50 p-2.5 rounded text-blue-800">
                             <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                             <p>
                                 Kalkulacja ma charakter poglądowy i nie stanowi oferty.

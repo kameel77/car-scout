@@ -48,6 +48,8 @@ interface RentalLeadPayload {
     rentalAnnualMileageKm?: number;
     rentalContractMonths?: number;
     rentalInitialPaymentPct?: number;
+    rentalInitialPaymentAmountNet?: number;
+    rentalInitialPaymentAmountGross?: number;
     rentalMonthlyRate?: number;
 }
 
@@ -237,6 +239,8 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 rentalAnnualMileageKm: data.rentalAnnualMileageKm,
                 rentalContractMonths: data.rentalContractMonths,
                 rentalInitialPaymentPct: data.rentalInitialPaymentPct,
+                rentalInitialPaymentAmountNet: data.rentalInitialPaymentAmountNet,
+                rentalInitialPaymentAmountGross: data.rentalInitialPaymentAmountGross,
                 rentalMonthlyRate: data.rentalMonthlyRate,
             },
             include: {

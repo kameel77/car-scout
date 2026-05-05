@@ -848,6 +848,7 @@ export const leadsApi = {
         rentalAnnualMileageKm?: number;
         rentalContractMonths?: number;
         rentalInitialPaymentPct?: number;
+        rentalInitialPaymentAmount?: number;
         rentalMonthlyRate?: number;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads/rental`, {

@@ -248,8 +248,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
             const netPrice = Math.round(data.price / 1.23);
             const vehisPayload = {
                 client: clientType,
-                initialFee: Math.max(1, Math.min(50, Math.round(initialFeePercent))),
-                repurchase: Math.max(1, Math.min(35, Math.round(finalPaymentPercent))),
+                initialFee: Math.max(1, Math.min(product.maxInitialPayment, Math.round(initialFeePercent))),
+                repurchase: Math.max(1, Math.min(product.maxFinalPayment, Math.round(finalPaymentPercent))),
                 duration: data.period,
                 cars: [
                     {
@@ -281,19 +281,23 @@ export async function financingRoutes(fastify: FastifyInstance) {
                     body: JSON.stringify(vehisPayload)
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({})) as { message?: string };
-                    return reply.code(502).send({
-                        error: 'Provider request failed',
-                        details: errorData?.message || 'Unknown provider error'
-                    });
-                }
-
-                const result = await response.json().catch(() => ({}));
+                const responseText = await response.text();
 
                 console.log('--- VEHIS RESPONSE ---');
                 console.log('Status:', response.status);
-                console.log('Body:', JSON.stringify(result, null, 2));
+                console.log('Body:', responseText);
+
+                if (!response.ok) {
+                    let errorData: any = {};
+                    try { errorData = JSON.parse(responseText); } catch { /* non-JSON response */ }
+                    return reply.code(502).send({
+                        error: 'Provider request failed',
+                        details: errorData?.message || errorData?.error || responseText || 'Unknown provider error'
+                    });
+                }
+
+                let result: any = {};
+                try { result = JSON.parse(responseText); } catch { /* non-JSON response */ }
 
                 // Vehis returns rich object for broker/calculate
                 // We wrap it to match user's requested format for preview

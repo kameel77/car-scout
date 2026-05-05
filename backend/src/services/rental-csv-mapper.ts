@@ -7,8 +7,11 @@ export interface RentalMatrixCSVRow {
     annual_mileage_km: string;
     contract_months: string;
     initial_payment_pct: string;
-    monthly_rate_net: string;
-    monthly_rate_gross: string;
+    initial_payment_amount?: string;
+    monthly_rate?: string;
+    monthly_rate_net?: string;
+    monthly_rate_gross?: string;
+    amounts_type?: string;
     services_included?: string;
     offer_type?: string; // "business" | "consumer" | "all" — defaults to "all"
 }
@@ -40,6 +43,9 @@ export interface ProviderCSVRow {
     insurance_500?: string;
     insurance_nolim?: string;
     tires_nolim?: string;
+    initial_payment_pct?: string;
+    initial_payment_amount?: string;
+    amounts_type?: string;
 }
 
 export interface RentalMatrixImportResult {
@@ -67,7 +73,12 @@ export function detectCSVFormat(headers: string[]): { format: CSVFormat | null; 
     const normalizedHeaders = headers.map(h => h.trim().toLowerCase());
 
     // Check internal format first
-    const missingInternal = INTERNAL_REQUIRED.filter(col => !normalizedHeaders.includes(col));
+    const missingInternal = INTERNAL_REQUIRED.filter(col => {
+        if (col === 'monthly_rate_net' || col === 'monthly_rate_gross') {
+            return !normalizedHeaders.includes(col) && !normalizedHeaders.includes('monthly_rate');
+        }
+        return !normalizedHeaders.includes(col);
+    });
     if (missingInternal.length === 0) {
         return { format: 'internal', missing: [] };
     }
@@ -134,6 +145,8 @@ export interface MappedMatrixEntry {
     annualMileageKm: number;
     contractMonths: number;
     initialPaymentPct: number;
+    initialPaymentAmountNet: number;
+    initialPaymentAmountGross: number;
     offerType: string;
     monthlyRateNet: number;
     monthlyRateGross: number;
@@ -175,14 +188,43 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
         return { data: null, error: `Row ${rowIndex}: invalid initial_payment_pct (must be 0-100)` };
     }
 
-    const monthlyRateNet = safeFloat(row.monthly_rate_net);
-    if (monthlyRateNet === null || monthlyRateNet <= 0) {
-        return { data: null, error: `Row ${rowIndex}: invalid monthly_rate_net` };
+    const amountsType = row.amounts_type?.trim().toLowerCase();
+    const isGross = amountsType === 'gross' || amountsType === 'brutto';
+
+    let monthlyRateNet = safeFloat(row.monthly_rate_net);
+    let monthlyRateGross = safeFloat(row.monthly_rate_gross);
+    const monthlyRate = safeFloat(row.monthly_rate);
+
+    if (monthlyRate !== null) {
+        if (isGross) {
+            monthlyRateGross = monthlyRate;
+            monthlyRateNet = Math.round((monthlyRate / 1.23) * 100) / 100;
+        } else {
+            monthlyRateNet = monthlyRate;
+            monthlyRateGross = Math.round((monthlyRate * 1.23) * 100) / 100;
+        }
     }
 
-    const monthlyRateGross = safeFloat(row.monthly_rate_gross);
+    if (monthlyRateNet === null || monthlyRateNet <= 0) {
+        return { data: null, error: `Row ${rowIndex}: invalid monthly_rate_net or monthly_rate` };
+    }
+
     if (monthlyRateGross === null || monthlyRateGross <= 0) {
-        return { data: null, error: `Row ${rowIndex}: invalid monthly_rate_gross` };
+        return { data: null, error: `Row ${rowIndex}: invalid monthly_rate_gross or monthly_rate` };
+    }
+
+    const initialPaymentAmountRaw = safeFloat(row.initial_payment_amount) ?? 0;
+    let initialPaymentAmountNet = 0;
+    let initialPaymentAmountGross = 0;
+
+    if (initialPaymentAmountRaw > 0) {
+        if (isGross) {
+            initialPaymentAmountGross = initialPaymentAmountRaw;
+            initialPaymentAmountNet = Math.round((initialPaymentAmountRaw / 1.23) * 100) / 100;
+        } else {
+            initialPaymentAmountNet = initialPaymentAmountRaw;
+            initialPaymentAmountGross = Math.round((initialPaymentAmountRaw * 1.23) * 100) / 100;
+        }
     }
 
     const servicesIncluded = row.services_included
@@ -190,7 +232,10 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
         : [];
 
     // Offer type: optional, defaults to 'all'
-    const rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    let rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    if (['b2b', 'firma', 'business'].includes(rawOfferType)) rawOfferType = 'business';
+    if (['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(rawOfferType)) rawOfferType = 'consumer';
+    
     const validOfferTypes = ['business', 'consumer', 'all'];
     const offerType = validOfferTypes.includes(rawOfferType) ? rawOfferType : 'all';
 
@@ -201,6 +246,8 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
             annualMileageKm,
             contractMonths,
             initialPaymentPct,
+            initialPaymentAmountNet,
+            initialPaymentAmountGross,
             offerType,
             monthlyRateNet,
             monthlyRateGross,
@@ -250,9 +297,32 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
     const monthlyRateGross = Math.round(monthlyRateNet * VAT_MULTIPLIER * 100) / 100;
 
     // Parse offer type
-    const rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    let rawOfferType = (row.offer_type?.trim()?.toLowerCase()) || 'all';
+    if (['b2b', 'firma', 'business'].includes(rawOfferType)) rawOfferType = 'business';
+    if (['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(rawOfferType)) rawOfferType = 'consumer';
+    
     const validOfferTypes = ['business', 'consumer', 'all'];
     const offerType = validOfferTypes.includes(rawOfferType) ? rawOfferType : 'all';
+
+    // Parse initial payment
+    const initialPaymentPct = safeFloat(row.initial_payment_pct) ?? 0;
+    const initialPaymentAmountRaw = safeFloat(row.initial_payment_amount) ?? 0;
+    
+    let initialPaymentAmountNet = 0;
+    let initialPaymentAmountGross = 0;
+
+    const amountsType = row.amounts_type?.trim().toLowerCase();
+    const isGross = amountsType === 'gross' || amountsType === 'brutto';
+
+    if (initialPaymentAmountRaw > 0) {
+        if (isGross) {
+            initialPaymentAmountGross = initialPaymentAmountRaw;
+            initialPaymentAmountNet = Math.round((initialPaymentAmountRaw / 1.23) * 100) / 100;
+        } else {
+            initialPaymentAmountNet = initialPaymentAmountRaw;
+            initialPaymentAmountGross = Math.round((initialPaymentAmountRaw * 1.23) * 100) / 100;
+        }
+    }
 
     // Parse service flags
     const servicesIncluded = parseServiceFlags(row);
@@ -277,7 +347,9 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
         calculationId: row.calc_id?.toString().trim() || null,
         annualMileageKm,
         contractMonths,
-        initialPaymentPct: 0, // Provider format has no initial payment — always 0%
+        initialPaymentPct,
+        initialPaymentAmountNet,
+        initialPaymentAmountGross,
         offerType,
         monthlyRateNet,
         monthlyRateGross,
