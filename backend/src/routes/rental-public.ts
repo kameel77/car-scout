@@ -12,12 +12,19 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             fuelType,
             search,
             sortBy = 'createdAt',
-            sortOrder = 'desc'
+            sortOrder = 'desc',
+            offerType
         } = request.query as Record<string, string | undefined>;
 
         const pageNum = Math.max(1, parseInt(page || '1'));
         const limitNum = Math.min(50, Math.max(1, parseInt(limit || '12')));
         const skip = (pageNum - 1) * limitNum;
+
+        // Build matrix entry filter for offerType
+        const matrixEntryFilter: any = {};
+        if (offerType && offerType !== 'all') {
+            matrixEntryFilter.offerType = { in: [offerType, 'all'] };
+        }
 
         const where: any = {
             isActive: true,
@@ -25,7 +32,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 some: {
                     isActive: true,
                     matrixEntries: {
-                        some: {} // Must have at least one matrix entry
+                        some: matrixEntryFilter // Must have at least one matrix entry matching offerType
                     }
                 }
             }
@@ -80,6 +87,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 select: { id: true, name: true, slug: true, logoUrl: true }
                             },
                             matrixEntries: {
+                                where: matrixEntryFilter,
                                 orderBy: { monthlyRateGross: 'asc' },
                                 take: 1,
                                 select: {

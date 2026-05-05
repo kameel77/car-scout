@@ -74,7 +74,7 @@ export default function RentalSearchPage() {
     };
 
     const { data, isLoading } = useQuery({
-        queryKey: ['rental-public', page, search, make, fuelType, bodyType, sortBy, sortOrder],
+        queryKey: ['rental-public', page, search, make, fuelType, bodyType, sortBy, sortOrder, clientType],
         queryFn: () => rentalPublicApi.listVehicles({
             page: String(page),
             limit: '12',
@@ -83,7 +83,8 @@ export default function RentalSearchPage() {
             fuelType: fuelType || undefined,
             bodyType: bodyType || undefined,
             sortBy,
-            sortOrder
+            sortOrder,
+            offerType: clientType === 'consumer' ? 'b2c' : 'b2b'
         })
     });
 
