@@ -187,7 +187,7 @@
   }
 
   .spec-item {
-    @apply flex flex-col gap-1 p-4 rounded-lg bg-secondary/50;
+    @apply flex flex-col gap-1 p-4 rounded-lg bg-gray-100 dark:bg-gray-800;
   }
 
   .spec-label {
@@ -224,7 +224,7 @@
   }
 
   .gallery-thumbnail {
-    @apply w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all;
+    @apply w-20 h-20 rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all;
   }
 
   .gallery-thumbnail.active {

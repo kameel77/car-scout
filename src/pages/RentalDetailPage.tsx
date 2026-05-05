@@ -267,7 +267,7 @@ export default function RentalDetailPage() {
                                     {equipmentCategories.map(cat => {
                                         const Icon = cat.icon;
                                         return (
-                                            <details key={cat.label} className="group" open>
+                                            <details key={cat.label} className="group">
                                                 <summary className="flex items-center gap-2 cursor-pointer text-lg font-bold text-foreground hover:text-accent transition-colors py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md">
                                                     <ChevronDown className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
                                                     <Icon className="w-5 h-5 text-primary" />
@@ -457,7 +457,11 @@ export default function RentalDetailPage() {
                             {offers.length > 0 && (
                                 <div className="space-y-3">
                                     {offers.map((offer: any, i: number) => {
-                                        const isBest = offers.length > 1 && i === 0;
+                                        const uniqueCompaniesCount = new Set(offers.map((o: any) => o.company?.id)).size;
+                                        const minPrice = Math.min(...offers.map((o: any) => selectedOfferType === 'business' ? o.monthlyRateNet : o.monthlyRateGross));
+                                        const currentPrice = selectedOfferType === 'business' ? offer.monthlyRateNet : offer.monthlyRateGross;
+                                        const isBest = uniqueCompaniesCount > 1 && currentPrice === minPrice;
+                                        
                                         return (
                                         <div
                                             key={i}
