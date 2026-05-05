@@ -75,19 +75,19 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   };
 
   const getSiteName = () => {
-    if (!settings) return 'Car Scout';
+    if (!settings) return config.name;
     const lang = i18n.language;
     let name = '';
     if (lang === 'de') name = settings.siteNameDe;
     else if (lang === 'en') name = settings.siteNameEn;
     else name = settings.siteNamePl;
 
-    return name?.trim() || 'Car Scout';
+    return name?.trim() || config.name;
   };
 
   const getSiteNameParts = () => {
     const name = getSiteName();
-    if (name === 'Car Scout') return { part1: 'Car', part2: 'Scout' };
+    if (name === config.name && !name.includes(' ')) return { part1: name, part2: '' };
 
     const firstSpaceIndex = name.indexOf(' ');
     if (firstSpaceIndex === -1) {

@@ -177,14 +177,18 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         // Fetch explicit distinct options from the DB rather than mapping thousands of entries in memory
         const assignmentOptions = await fastify.prisma.rentalMatrixEntry.findMany({
             where: { assignmentId: { in: assignmentIds } },
-            select: { annualMileageKm: true, contractMonths: true, initialPaymentPct: true, offerType: true },
-            distinct: ['annualMileageKm', 'contractMonths', 'initialPaymentPct', 'offerType']
+            select: { annualMileageKm: true, contractMonths: true, initialPaymentPct: true, initialPaymentAmountNet: true, initialPaymentAmountGross: true, offerType: true },
+            distinct: ['annualMileageKm', 'contractMonths', 'initialPaymentPct', 'initialPaymentAmountNet', 'initialPaymentAmountGross', 'offerType']
         });
+
+        const initialPayments = assignmentOptions.map(e => ({ pct: e.initialPaymentPct, amountNet: e.initialPaymentAmountNet, amountGross: e.initialPaymentAmountGross }));
+        const uniqueInitialPayments = Array.from(new Set(initialPayments.map(p => JSON.stringify(p)))).map(p => JSON.parse(p));
+        uniqueInitialPayments.sort((a, b) => (a.pct === b.pct) ? (a.amountNet - b.amountNet) : (a.pct - b.pct));
 
         const options = {
             annualMileageOptions: [...new Set(assignmentOptions.map(e => e.annualMileageKm))].sort((a, b) => a - b),
             contractMonthOptions: [...new Set(assignmentOptions.map(e => e.contractMonths))].sort((a, b) => a - b),
-            initialPaymentOptions: [...new Set(assignmentOptions.map(e => e.initialPaymentPct))].sort((a, b) => a - b),
+            initialPaymentOptions: uniqueInitialPayments,
             offerTypeOptions: [...new Set(assignmentOptions.map(e => e.offerType))].sort()
         };
 
@@ -194,10 +198,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
     // Public: Calculate rate lookup
     fastify.get('/api/rental/vehicles/:slug/calculate', async (request, reply) => {
         const { slug } = request.params as { slug: string };
-        const { annualMileageKm, contractMonths, initialPaymentPct, offerType } = request.query as {
+        const { annualMileageKm, contractMonths, initialPaymentPct, initialPaymentAmountNet, initialPaymentAmountGross, offerType } = request.query as {
             annualMileageKm: string;
             contractMonths: string;
             initialPaymentPct: string;
+            initialPaymentAmountNet?: string;
+            initialPaymentAmountGross?: string;
             offerType?: string;
         };
 
@@ -228,6 +234,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 annualMileageKm: parseInt(annualMileageKm),
                                 contractMonths: parseInt(contractMonths),
                                 initialPaymentPct: parseFloat(initialPaymentPct),
+                                ...(initialPaymentAmountNet && { initialPaymentAmountNet: parseFloat(initialPaymentAmountNet) }),
+                                ...(initialPaymentAmountGross && { initialPaymentAmountGross: parseFloat(initialPaymentAmountGross) }),
                                 ...(offerType && offerType !== 'all'
                                     ? { offerType: { in: [offerType, 'all'] } }
                                     : {})
@@ -250,7 +258,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 monthlyRateNet: Math.ceil(a.matrixEntries[0].monthlyRateNet),
                 monthlyRateGross: Math.ceil(a.matrixEntries[0].monthlyRateGross),
                 servicesIncluded: a.matrixEntries[0].servicesIncluded,
-                initialPaymentAmount: (vehicle.sellingPrice || 0) * (parseFloat(initialPaymentPct) / 100)
+                initialPaymentAmountNet: a.matrixEntries[0].initialPaymentAmountNet,
+                initialPaymentAmountGross: a.matrixEntries[0].initialPaymentAmountGross
             }))
             .sort((a, b) => a.monthlyRateGross - b.monthlyRateGross);
 

@@ -75,6 +75,8 @@ export interface RentalMatrixEntry {
     annualMileageKm: number;
     contractMonths: number;
     initialPaymentPct: number;
+    initialPaymentAmountNet?: number;
+    initialPaymentAmountGross?: number;
     monthlyRateNet: number;
     monthlyRateGross: number;
     servicesIncluded: string[];
@@ -99,7 +101,7 @@ export interface MatrixImportResult {
 export interface MatrixOptions {
     annualMileageOptions: number[];
     contractMonthOptions: number[];
-    initialPaymentOptions: number[];
+    initialPaymentOptions: Array<{ pct: number, amountNet: number, amountGross: number }>;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────
@@ -310,12 +312,18 @@ export const rentalPublicApi = {
         return response.json();
     },
 
-    calculate: async (slug: string, params: { annualMileageKm: number; contractMonths: number; initialPaymentPct: number; offerType?: string }) => {
+    calculate: async (slug: string, params: { annualMileageKm: number; contractMonths: number; initialPaymentPct: number; initialPaymentAmountNet?: number; initialPaymentAmountGross?: number; offerType?: string }) => {
         const queryParams = new URLSearchParams({
             annualMileageKm: params.annualMileageKm.toString(),
             contractMonths: params.contractMonths.toString(),
             initialPaymentPct: params.initialPaymentPct.toString()
         });
+        if (params.initialPaymentAmountNet !== undefined) {
+            queryParams.append('initialPaymentAmountNet', params.initialPaymentAmountNet.toString());
+        }
+        if (params.initialPaymentAmountGross !== undefined) {
+            queryParams.append('initialPaymentAmountGross', params.initialPaymentAmountGross.toString());
+        }
         if (params.offerType) queryParams.set('offerType', params.offerType);
 
         const response = await fetch(`${API_BASE_URL}/api/rental/vehicles/${slug}/calculate?${queryParams}`);
@@ -336,6 +344,8 @@ export const rentalPublicApi = {
         rentalAnnualMileageKm?: number;
         rentalContractMonths?: number;
         rentalInitialPaymentPct?: number;
+        rentalInitialPaymentAmountNet?: number;
+        rentalInitialPaymentAmountGross?: number;
         rentalMonthlyRate?: number;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads/rental`, {
