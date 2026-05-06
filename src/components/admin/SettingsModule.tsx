@@ -654,7 +654,7 @@ export function SettingsModule() {
                                 <Input
                                     value={settings.siteNamePl || ''}
                                     onChange={(e) => setSettings({ ...settings, siteNamePl: e.target.value })}
-                                    placeholder="Car Scout"
+                                    placeholder={brandConfig.name}
                                     className="bg-white"
                                 />
                             </div>
@@ -663,7 +663,7 @@ export function SettingsModule() {
                                 <Input
                                     value={settings.siteNameEn || ''}
                                     onChange={(e) => setSettings({ ...settings, siteNameEn: e.target.value })}
-                                    placeholder="Car Scout"
+                                    placeholder={brandConfig.name}
                                     className="bg-white"
                                 />
                             </div>
@@ -672,7 +672,7 @@ export function SettingsModule() {
                                 <Input
                                     value={settings.siteNameDe || ''}
                                     onChange={(e) => setSettings({ ...settings, siteNameDe: e.target.value })}
-                                    placeholder="Car Scout"
+                                    placeholder={brandConfig.name}
                                     className="bg-white"
                                 />
                             </div>
@@ -782,7 +782,7 @@ export function SettingsModule() {
                                     id="og-title"
                                     value={settings.defaultOgTitle || ''}
                                     onChange={(e) => setSettings({ ...settings, defaultOgTitle: e.target.value })}
-                                    placeholder="Car Scout - Twoje auto w zasięgu ręki"
+                                    placeholder={`${brandConfig.name} - Twoje auto w zasięgu ręki`}
                                     className="bg-white"
                                 />
                                 <p className="text-xs text-slate-500">Domyślny tytuł przy udostępnianiu strony głównej (jeśli nie wybrano innego w SEO).</p>

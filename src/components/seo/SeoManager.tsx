@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useBrand } from '@/contexts/BrandContext';
 import React from 'react';
 
 export interface SeoConfig {
@@ -37,6 +38,7 @@ export function useSeoConfig() {
 export function SeoManager() {
     const { data: seoConfig } = useSeoConfig();
     const { i18n } = useTranslation();
+    const { config } = useBrand();
     const lang = i18n.language;
     const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
 
@@ -45,7 +47,7 @@ export function SeoManager() {
 
     const { data: settings } = useAppSettings();
     const siteName = React.useMemo(() => {
-        if (!settings) return '';
+        if (!settings) return config.name;
         const langCode = i18n.language.slice(0, 2).toLowerCase();
         const candidates = [
             langCode === 'en' ? settings?.siteNameEn : null,
@@ -56,8 +58,8 @@ export function SeoManager() {
             settings?.siteNamePl
         ];
         const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
-        return pick?.trim() || 'Car Scout';
-    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
+        return pick?.trim() || config.name;
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings, config.name]);
 
     useEffect(() => {
         if (seoConfig?.gtmId) {
@@ -78,7 +80,7 @@ export function SeoManager() {
         }
     }, [seoConfig?.gtmId]);
 
-    const finalOgTitle = seoConfig?.homeTitle || (settings as any)?.defaultOgTitle || homeTitle || siteName || 'Car Scout';
+    const finalOgTitle = seoConfig?.homeTitle || (settings as any)?.defaultOgTitle || homeTitle || siteName || config.name;
     const finalOgDescription = seoConfig?.homeDescription || (settings as any)?.defaultOgDescription || homeDescription || '';
     const finalOgImage = seoConfig?.homeOgImage || (settings as any)?.defaultOgImage || '';
 
