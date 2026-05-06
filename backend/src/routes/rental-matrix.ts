@@ -139,6 +139,10 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
         // Multiple vehicles can share the same externalVehicleId (e.g. same model in different colors)
         const assignmentMap = new Map<string, string[]>();
 
+        // Diagnostic: log what we're trying to match
+        fastify.log.info(`Import matching: ${vehicleIds.length} unique CSV car_ids: ${JSON.stringify(vehicleIds)}`);
+        fastify.log.info(`Import matching: ${existingAssignments.length} assignments for company ${rentalCompanyId}: ${JSON.stringify(existingAssignments.map(a => ({ id: a.id.slice(0, 10), vId: a.vehicleId.slice(0, 10), extId: a.externalVehicleId })))}`);
+
         for (const csvVehicleId of vehicleIds) {
             // Try matching by externalVehicleId first — collect ALL matches
             const byExternal = existingAssignments.filter(a => a.externalVehicleId === csvVehicleId);
