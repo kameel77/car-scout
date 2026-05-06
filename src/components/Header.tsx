@@ -87,8 +87,6 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
 
   const getSiteNameParts = () => {
     const name = getSiteName();
-    if (name === config.name && !name.includes(' ')) return { part1: name, part2: '' };
-
     const firstSpaceIndex = name.indexOf(' ');
     if (firstSpaceIndex === -1) {
       if (name.length > 8) {

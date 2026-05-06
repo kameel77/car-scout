@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useBrand } from '@/contexts/BrandContext';
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { toast } from 'sonner';
@@ -16,10 +17,11 @@ export default function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
     const { data: settings } = useAppSettings();
+    const { config } = useBrand();
     const { i18n } = useTranslation();
 
     const siteName = React.useMemo(() => {
-        if (!settings) return '';
+        if (!settings) return config.name;
         const langCode = i18n.language.slice(0, 2).toLowerCase();
         const candidates = [
             langCode === 'en' ? settings?.siteNameEn : null,
@@ -30,8 +32,8 @@ export default function LoginPage() {
             settings?.siteNamePl
         ];
         const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
-        return pick?.trim() || 'Car Scout';
-    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
+        return pick?.trim() || config.name;
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings, config.name]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

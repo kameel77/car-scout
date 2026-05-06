@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuth, MemberRole, ROLE_LABELS } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useBrand } from '@/contexts/BrandContext';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -90,10 +91,11 @@ export function AdminSidebar() {
     const location = useLocation();
     const { user, effectiveRole, activeContext, isPlatformUser } = useAuth();
     const { data: settings } = useAppSettings();
+    const { config } = useBrand();
     const { i18n } = useTranslation();
 
     const siteName = React.useMemo(() => {
-        if (!settings) return '';
+        if (!settings) return config.name;
         const lang = i18n.language.slice(0, 2).toLowerCase();
         const candidates = [
             lang === 'en' ? settings?.siteNameEn : null,
@@ -104,8 +106,8 @@ export function AdminSidebar() {
             settings?.siteNamePl
         ];
         const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
-        return pick?.trim() || 'Car Scout';
-    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
+        return pick?.trim() || config.name;
+    }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings, config.name]);
 
     const initial = siteName.charAt(0).toUpperCase();
     const initials = siteName.split(' ').map(s => s.charAt(0)).join('').toUpperCase().slice(0, 2);
