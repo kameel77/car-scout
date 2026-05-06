@@ -20,10 +20,15 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         const limitNum = Math.min(50, Math.max(1, parseInt(limit || '12')));
         const skip = (pageNum - 1) * limitNum;
 
+        // Normalize offerType (frontend sends b2b/b2c, DB stores business/consumer)
+        let normalizedOfferType = offerType?.trim().toLowerCase();
+        if (normalizedOfferType && ['b2b', 'firma', 'business'].includes(normalizedOfferType)) normalizedOfferType = 'business';
+        if (normalizedOfferType && ['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(normalizedOfferType)) normalizedOfferType = 'consumer';
+
         // Build matrix entry filter for offerType
         const matrixEntryFilter: any = {};
-        if (offerType && offerType !== 'all') {
-            matrixEntryFilter.offerType = { in: [offerType, 'all'] };
+        if (normalizedOfferType && normalizedOfferType !== 'all') {
+            matrixEntryFilter.offerType = { in: [normalizedOfferType, 'all'] };
         }
 
         const where: any = {
@@ -221,6 +226,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             });
         }
 
+        // Normalize offerType
+        let calcOfferType = offerType?.trim().toLowerCase();
+        if (calcOfferType && ['b2b', 'firma', 'business'].includes(calcOfferType)) calcOfferType = 'business';
+        if (calcOfferType && ['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(calcOfferType)) calcOfferType = 'consumer';
+
         const vehicle = await fastify.prisma.rentalVehicle.findFirst({
             where: {
                 OR: [{ slug }, { id: slug }],
@@ -244,8 +254,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 initialPaymentPct: parseFloat(initialPaymentPct),
                                 ...(initialPaymentAmountNet && { initialPaymentAmountNet: parseFloat(initialPaymentAmountNet) }),
                                 ...(initialPaymentAmountGross && { initialPaymentAmountGross: parseFloat(initialPaymentAmountGross) }),
-                                ...(offerType && offerType !== 'all'
-                                    ? { offerType: { in: [offerType, 'all'] } }
+                                ...(calcOfferType && calcOfferType !== 'all'
+                                    ? { offerType: { in: [calcOfferType, 'all'] } }
                                     : {})
                             }
                         }
