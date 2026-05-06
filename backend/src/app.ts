@@ -36,6 +36,7 @@ import { dealerGroupRoutes } from './routes/dealer-groups.js';
 import { dealerAdminRoutes } from './routes/dealers-admin.js';
 import { featuredRoutes } from './routes/featured.js';
 import { widgetRoutes } from './routes/widgets.js';
+import { onepagerRoutes } from './routes/onepager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -263,6 +264,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(dealerAdminRoutes);
     await fastify.register(featuredRoutes);
     await fastify.register(widgetRoutes);
+    await fastify.register(onepagerRoutes);
 
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {
