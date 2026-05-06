@@ -108,7 +108,7 @@ Partner → /dla-firm (preview w przeglądarce)
 - Fonty `@fontsource/inter` i `@fontsource/outfit` — inlinuje w bundle, działa offline
 - `useListingsByIds` (już istnieje)
 - Schema Prisma `Listing.isFeatured` (już istnieje); istniejący endpoint `/api/featured` zwraca podział `{newCars, usedCars, rentals}` — nie używamy go bezpośrednio na onepagerze, dodajemy dedykowany `/api/onepager/offers` (sekcja 5.6)
-- Dane kontaktowe — ten sam źródłowy hook/config co `Footer` (do weryfikacji w fazie implementacji — czy z BrandContext, settings API czy hardcoded w Footer)
+- Dane kontaktowe — hook `useAppSettings()` (pola `legalContactPhone`, `legalContactEmail`), ten sam jak w `Footer.tsx`. Zachowuje multilang/multibrand wartości.
 
 ### 4.1 Layout strony
 
@@ -372,13 +372,40 @@ return { offers: [...featured, ...filler] };
 
 **Uwaga:** Jeśli w schemacie istnieje pole listingów rozróżniające "tylko sprzedaż" vs inne typy (np. `listingType`, `isForRent`) — należy dodać do `where`. W oparciu o eksplorację `schema.prisma`: model `Listing` jest dla sprzedaży, `RentalVehicle` to osobny model — więc filtr brand-level "sale only" nie jest potrzebny, query po `Listing` z definicji jest sale-only.
 
-### 5.7 Environment variables
+### 5.7 Coolify infrastructure changes
+
+**Plik:** `docker-compose.coolify.yml` — dodać alias `frontend` do sieci `carscout-private` w service `frontend` oraz env var `INTERNAL_FRONTEND_URL` w service `carscout-api`.
+
+```yaml
+services:
+  carscout-api:
+    environment:
+      # ... existing env vars ...
+      INTERNAL_FRONTEND_URL: ${INTERNAL_FRONTEND_URL:-http://frontend:80}
+    # rest unchanged
+
+  frontend:
+    networks:
+      carscout-private:
+        aliases:
+          - frontend     # ← NEW: backend addresses frontend by this alias
+      coolify:
+        # unchanged
+```
+
+**Coolify UI — żaden nowy env var do ustawienia:** `INTERNAL_FRONTEND_URL` ma fallback `http://frontend:80`, identyczny dla wszystkich środowisk (dev/staging/prod), więc nie trzeba ustawiać go ręcznie w panelu. Zostawiamy `${VAR:-default}` żeby nie wymusić nadpisania, ale w praktyce default zawsze działa.
+
+**Frontend port:** Service `frontend` to Nginx serwujący zbuildowany Vite bundle, listenuje na `:80` (`expose: - "80"`). Backend w sieci Docker dociera tam przez `http://frontend:80/dla-firm?print=1`.
+
+**Brand resolution w Puppeteerze:** Frontend image jest brand-specific (`car-scout-frontend-${BRAND}`), więc backend wywołuje frontend tego samego brandu co serwis. Brand carsalon → onepager renderuje copy carsalon. Brand motolia → onepager nadal renderuje copy carsalon (out of scope, ale nie crashuje — jest jeden komponent React, hardcoded copy).
+
+### 5.8 Environment variables
 
 Nowa zmienna: `INTERNAL_FRONTEND_URL`
-- Dev: `http://localhost:5173` (lub aktualny port Vite dev server)
-- Coolify prod: nazwa wewnętrznego serwisu Docker, np. `http://frontend:80` (do potwierdzenia w fazie 1 — sprawdzić `docker-compose.coolify.yml`)
+- **Wszystkie środowiska Coolify** (dev/staging/prod): `http://frontend:80` (alias Docker w sieci `carscout-private` — patrz 5.7)
+- **Lokalny dev backend** (poza Dockerem, jeśli ktoś tak pracuje): `http://localhost:5173` (Vite dev server) — ustawia się w `.env.local`
 
-Jeśli istnieje już `FRONTEND_URL` używana publicznie — `INTERNAL_FRONTEND_URL` to osobna zmienna (publiczny URL może mieć rate-limit / WAF / nie być osiągalny z wewnątrz kontenera).
+Istniejąca zmienna `FRONTEND_URL` (publiczny URL, np. `https://carsalon.pl`) **pozostaje bez zmian** — używana do CORS / linków w mailach. `INTERNAL_FRONTEND_URL` jest osobna, żeby Puppeteer chodził po sieci Docker (mniej hopów, brak Traefik/SSL/WAF).
 
 ---
 
@@ -440,7 +467,7 @@ Jeśli istnieje już `FRONTEND_URL` używana publicznie — `INTERNAL_FRONTEND_U
 
 | # | Etap | Estymacja |
 |---|------|---|
-| 1 | Backend deps + Dockerfile (+`puppeteer-core`, `@sparticuz/chromium`, apt-get libs) + `puppeteer.ts` service | 2h |
+| 1 | Backend deps + Dockerfile (+`puppeteer-core`, `@sparticuz/chromium`, apt-get libs) + `puppeteer.ts` service + `docker-compose.coolify.yml` alias `frontend` + env `INTERNAL_FRONTEND_URL` | 2.5h |
 | 2 | Backend routes `/api/onepager/offers` (JSON) + `/api/onepager/pdf` (PDF, bez cache) + walidacja + error handling | 3h |
 | 3 | Frontend: route `/dla-firm` + `B2BOnepagerPage` + hardcoded copy + integracja z Footer kontakt | 3h |
 | 4 | Frontend: `B2BListingCard` + `B2BOfferGrid` + hook `useB2BOfferList` (fetch z `/api/onepager/offers`) | 3h |
@@ -461,7 +488,7 @@ Każdy etap mergowalny osobno (etapy 1-2 bez frontu nie produkują obserwowalnej
 |---|---|---|---|
 | Fonty Inter/Outfit nie ładują się w Puppeteerze | Niskie | Średnie (estetyka PDF) | `@fontsource` inlinuje fonty w bundle. Test w fazie 5. Fallback: `fonts-liberation` w apt-get. |
 | Coolify request timeout < cold start Puppeteera | Średnie | Wysokie (pierwszy request fails) | Warmup browser w `app.ts` przy starcie serwera. Rozważyć healthcheck który warmupuje. |
-| `INTERNAL_FRONTEND_URL` brak/nieosiągalny z backendu | Średnie | Wysokie (PDF generation 100% fail) | Sprawdzić `docker-compose.coolify.yml` w fazie 1. Dodać do dokumentacji deploymentu. |
+| `INTERNAL_FRONTEND_URL` brak/nieosiągalny z backendu | Niskie (rozstrzygnięte) | Wysokie | Alias `frontend` w sieci `carscout-private` (sekcja 5.7); fallback `http://frontend:80` w env var. Manual smoke test: `docker exec backend curl http://frontend:80/dla-firm` przed pierwszym real requestem. |
 | Obrazki ofert ładowane lazy → puste w PDF | Średnie | Wysokie | Eager loading w `?print=1`. `data-onepager-ready` czeka na `<img onLoad>` dla każdej karty. |
 | Cache stale po zmianie copy w komponencie | Niskie | Niskie | TTL 30 min — naturalna invalidacja. Manualny `redis-cli DEL onepager:pdf:default` w razie pilnej zmiany. |
 | Puppeteer crash / memory leak przy długim uptime | Średnie | Średnie | Singleton z disconnect detection — auto-recreate. Coolify restart cyklicznie. |
@@ -485,8 +512,18 @@ Każdy etap mergowalny osobno (etapy 1-2 bez frontu nie produkują obserwowalnej
 
 ## 11. Pytania otwarte do weryfikacji w fazie implementacji
 
-1. **Skąd pochodzą dane kontaktowe Footera** (BrandContext config? settings API? hardcoded w komponencie?) — do potwierdzenia w fazie 3.
-2. **`INTERNAL_FRONTEND_URL` w Coolify** — czy istnieje już taki internal hostname dla frontu, czy trzeba dodać do compose? — fazie 1.
-3. **Limit RAM kontenera backend w Coolify** — Puppeteer może zjeść 200–500 MB peak. Sprawdzić.
-4. **Coolify request timeout** — czy domyślnie wystarczy dla cold start Puppeteera (~5–8s)? Jeśli nie — trzeba zwiększyć w konfiguracji proxy.
-5. **Redis client API w Fastify** — `fastify.redis.getBuffer(key)` vs inny pattern (sprawdzić jak są obsługiwane buffery w istniejącym kodzie).
+Wszystkie krytyczne otwarte pytania zostały rozstrzygnięte przed startem implementacji:
+
+| # | Pytanie | Rozstrzygnięcie |
+|---|---|---|
+| 1 | Źródło danych kontaktowych Footera | Hook `useAppSettings()` (`legalContactPhone`, `legalContactEmail`) — re-użyty w `B2BCtaSection` |
+| 2 | `INTERNAL_FRONTEND_URL` w Coolify | Dodać alias `frontend` w sieci `carscout-private` w `docker-compose.coolify.yml`. Backend dociera przez `http://frontend:80`. Bez nowych env vars do ustawienia w UI Coolify (default fallback). |
+| 3 | Redis client API | `ioredis` decorated jako `fastify.redis`. `getBuffer(key)` i `set(key, Buffer, 'EX', ttl)` natywnie wspierane. |
+
+**Zostają do sprawdzenia w trakcie implementacji (nie blokujące):**
+
+| # | Pytanie | Mitigacja |
+|---|---|---|
+| A | Limit RAM kontenera backend w Coolify | Monitorować `docker stats` po pierwszym deploy; w razie OOM zwiększyć w UI Coolify (Resources tab). Singleton browser pomaga (zero memory growth pod równym obciążeniem). |
+| B | Coolify request timeout dla pierwszego cold-start Puppeteera | Mitigacja: warmup browser w `app.ts` przy starcie serwera. Jeśli mimo to timeout w Coolify proxy < 30s — zwiększyć w UI. |
+| C | Frontend image build time po dodaniu nowej strony | Drobny wzrost bundle (~5-10 KB), ignorowalny. |
