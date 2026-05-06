@@ -14,7 +14,9 @@
         "prisma:studio": "prisma studio",
         "prisma:seed": "tsx prisma/seed.ts",
         "db:push": "prisma db push",
-        "db:seed": "prisma db seed"
+        "db:seed": "prisma db seed",
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
     "prisma": {
         "seed": "tsx prisma/seed.ts"
@@ -39,10 +41,13 @@
         "@types/node": "^20.11.16",
         "@types/node-cron": "^3.0.11",
         "@types/nodemailer": "^7.0.11",
+        "@types/supertest": "^6.0.2",
         "form-data": "^4.0.5",
         "prisma": "^5.22.0",
+        "supertest": "^7.0.0",
         "tsx": "^4.7.0",
-        "typescript": "^5.3.3"
+        "typescript": "^5.3.3",
+        "vitest": "^1.6.0"
     },
     "overrides": {
         "fast-jwt": "^6.2.0"
