@@ -19,7 +19,7 @@ export async function getBrowser(): Promise<Browser> {
     const browser = await browserPromise;
     if (!browser.isConnected()) {
       browserPromise = launch();
-      return browserPromise;
+      return await browserPromise;
     }
     return browser;
   } catch (err) {
