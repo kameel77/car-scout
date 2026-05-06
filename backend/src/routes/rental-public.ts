@@ -12,12 +12,24 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             fuelType,
             search,
             sortBy = 'createdAt',
-            sortOrder = 'desc'
+            sortOrder = 'desc',
+            offerType
         } = request.query as Record<string, string | undefined>;
 
         const pageNum = Math.max(1, parseInt(page || '1'));
         const limitNum = Math.min(50, Math.max(1, parseInt(limit || '12')));
         const skip = (pageNum - 1) * limitNum;
+
+        // Normalize offerType (frontend sends b2b/b2c, DB stores business/consumer)
+        let normalizedOfferType = offerType?.trim().toLowerCase();
+        if (normalizedOfferType && ['b2b', 'firma', 'business'].includes(normalizedOfferType)) normalizedOfferType = 'business';
+        if (normalizedOfferType && ['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(normalizedOfferType)) normalizedOfferType = 'consumer';
+
+        // Build matrix entry filter for offerType
+        const matrixEntryFilter: any = {};
+        if (normalizedOfferType && normalizedOfferType !== 'all') {
+            matrixEntryFilter.offerType = { in: [normalizedOfferType, 'all'] };
+        }
 
         const where: any = {
             isActive: true,
@@ -25,7 +37,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 some: {
                     isActive: true,
                     matrixEntries: {
-                        some: {} // Must have at least one matrix entry
+                        some: matrixEntryFilter // Must have at least one matrix entry matching offerType
                     }
                 }
             }
@@ -80,6 +92,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 select: { id: true, name: true, slug: true, logoUrl: true }
                             },
                             matrixEntries: {
+                                where: matrixEntryFilter,
                                 orderBy: { monthlyRateGross: 'asc' },
                                 take: 1,
                                 select: {
@@ -213,6 +226,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             });
         }
 
+        // Normalize offerType
+        let calcOfferType = offerType?.trim().toLowerCase();
+        if (calcOfferType && ['b2b', 'firma', 'business'].includes(calcOfferType)) calcOfferType = 'business';
+        if (calcOfferType && ['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(calcOfferType)) calcOfferType = 'consumer';
+
         const vehicle = await fastify.prisma.rentalVehicle.findFirst({
             where: {
                 OR: [{ slug }, { id: slug }],
@@ -236,8 +254,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 initialPaymentPct: parseFloat(initialPaymentPct),
                                 ...(initialPaymentAmountNet && { initialPaymentAmountNet: parseFloat(initialPaymentAmountNet) }),
                                 ...(initialPaymentAmountGross && { initialPaymentAmountGross: parseFloat(initialPaymentAmountGross) }),
-                                ...(offerType && offerType !== 'all'
-                                    ? { offerType: { in: [offerType, 'all'] } }
+                                ...(calcOfferType && calcOfferType !== 'all'
+                                    ? { offerType: { in: [calcOfferType, 'all'] } }
                                     : {})
                             }
                         }

@@ -23,6 +23,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
 import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
+import { useBrand } from '@/contexts/BrandContext';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -59,6 +60,7 @@ export default function SearchPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: seoConfig } = useSeoConfig();
+  const { config } = useBrand();
 
   // Initialize from URL
   const [filters, setFilters] = React.useState<FilterState>(() => {
@@ -221,8 +223,8 @@ export default function SearchPage() {
       settings?.siteNamePl
     ];
     const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
-    return pick?.trim() || 'Car Scout';
-  }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings]);
+    return pick?.trim() || config.name;
+  }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings, config.name]);
 
   return (
     <div className="min-h-screen bg-background">

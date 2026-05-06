@@ -135,21 +135,22 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             select: { id: true, vehicleId: true, externalVehicleId: true }
         });
 
-        // Build lookup: csvVehicleId → assignmentId
-        const assignmentMap = new Map<string, string>();
+        // Build lookup: csvVehicleId → assignmentId(s)
+        // Multiple vehicles can share the same externalVehicleId (e.g. same model in different colors)
+        const assignmentMap = new Map<string, string[]>();
 
         for (const csvVehicleId of vehicleIds) {
-            // Try matching by externalVehicleId first
-            const byExternal = existingAssignments.find(a => a.externalVehicleId === csvVehicleId);
-            if (byExternal) {
-                assignmentMap.set(csvVehicleId, byExternal.id);
+            // Try matching by externalVehicleId first — collect ALL matches
+            const byExternal = existingAssignments.filter(a => a.externalVehicleId === csvVehicleId);
+            if (byExternal.length > 0) {
+                assignmentMap.set(csvVehicleId, byExternal.map(a => a.id));
                 continue;
             }
 
             // Fallback: try matching by internal vehicle ID (CUID)
             const byInternal = existingAssignments.find(a => a.vehicleId === csvVehicleId);
             if (byInternal) {
-                assignmentMap.set(csvVehicleId, byInternal.id);
+                assignmentMap.set(csvVehicleId, [byInternal.id]);
                 continue;
             }
 
@@ -163,7 +164,7 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
                 const newAssignment = await fastify.prisma.vehicleRentalAssignment.create({
                     data: { vehicleId: csvVehicleId, rentalCompanyId }
                 });
-                assignmentMap.set(csvVehicleId, newAssignment.id);
+                assignmentMap.set(csvVehicleId, [newAssignment.id]);
                 continue;
             }
 
@@ -175,7 +176,7 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
 
         // Delete existing matrix entries for resolved assignments (full replace strategy)
         if (assignmentMap.size > 0) {
-            const assignmentIds = [...new Set(assignmentMap.values())];
+            const assignmentIds = [...new Set([...assignmentMap.values()].flat())];
             await fastify.prisma.rentalMatrixEntry.deleteMany({
                 where: { assignmentId: { in: assignmentIds } }
             });
@@ -208,48 +209,50 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
         }>();
 
         for (const entry of allMappedEntries) {
-            const assignmentId = assignmentMap.get(entry.vehicleId);
-            if (!assignmentId) {
+            const assignmentIds = assignmentMap.get(entry.vehicleId);
+            if (!assignmentIds || assignmentIds.length === 0) {
                 result.skipped++;
                 continue;
             }
 
-            // Update calculationId on assignment if provided
-            if (entry.calculationId) {
-                await fastify.prisma.vehicleRentalAssignment.update({
-                    where: { id: assignmentId },
-                    data: { calculationId: entry.calculationId }
+            // Insert matrix entry for EACH resolved assignment (supports multi-vehicle per car_id)
+            for (const assignmentId of assignmentIds) {
+                // Update calculationId on assignment if provided
+                if (entry.calculationId) {
+                    await fastify.prisma.vehicleRentalAssignment.update({
+                        where: { id: assignmentId },
+                        data: { calculationId: entry.calculationId }
+                    });
+                }
+
+                batchData.push({
+                    assignmentId,
+                    annualMileageKm: entry.annualMileageKm,
+                    contractMonths: entry.contractMonths,
+                    initialPaymentPct: entry.initialPaymentPct,
+                    initialPaymentAmountNet: entry.initialPaymentAmountNet,
+                    initialPaymentAmountGross: entry.initialPaymentAmountGross,
+                    offerType: entry.offerType,
+                    monthlyRateNet: entry.monthlyRateNet,
+                    monthlyRateGross: entry.monthlyRateGross,
+                    servicesIncluded: entry.servicesIncluded,
+                    overMileageCost: entry.overMileageCost,
+                    insuranceExcess500: entry.insuranceExcess500,
+                    insuranceNoLimit: entry.insuranceNoLimit,
+                    tiresNoLimit: entry.tiresNoLimit
                 });
-            }
 
-            batchData.push({
-                assignmentId,
-                annualMileageKm: entry.annualMileageKm,
-                contractMonths: entry.contractMonths,
-                initialPaymentPct: entry.initialPaymentPct,
-                initialPaymentAmountNet: entry.initialPaymentAmountNet,
-                initialPaymentAmountGross: entry.initialPaymentAmountGross,
-                offerType: entry.offerType,
-                monthlyRateNet: entry.monthlyRateNet,
-                monthlyRateGross: entry.monthlyRateGross,
-                servicesIncluded: entry.servicesIncluded,
-                overMileageCost: entry.overMileageCost,
-                insuranceExcess500: entry.insuranceExcess500,
-                insuranceNoLimit: entry.insuranceNoLimit,
-                tiresNoLimit: entry.tiresNoLimit
-            });
-
-            // Collect vehicle metadata updates
-            if (entry.vehicleMeta) {
-                // Find the actual vehicleId from the assignment
-                const assignment = existingAssignments.find(a => a.id === assignmentId);
-                if (assignment) {
-                    const existing = vehicleMetaUpdates.get(assignment.vehicleId) || {};
-                    if (entry.vehicleMeta.carClass) existing.carClass = entry.vehicleMeta.carClass;
-                    if (entry.vehicleMeta.modelCode) existing.modelCode = entry.vehicleMeta.modelCode;
-                    if (entry.vehicleMeta.catalogPriceGross) existing.catalogPrice = entry.vehicleMeta.catalogPriceGross;
-                    if (entry.vehicleMeta.investmentNet) existing.sellingPrice = entry.vehicleMeta.investmentNet;
-                    vehicleMetaUpdates.set(assignment.vehicleId, existing);
+                // Collect vehicle metadata updates
+                if (entry.vehicleMeta) {
+                    const assignment = existingAssignments.find(a => a.id === assignmentId);
+                    if (assignment) {
+                        const existing = vehicleMetaUpdates.get(assignment.vehicleId) || {};
+                        if (entry.vehicleMeta.carClass) existing.carClass = entry.vehicleMeta.carClass;
+                        if (entry.vehicleMeta.modelCode) existing.modelCode = entry.vehicleMeta.modelCode;
+                        if (entry.vehicleMeta.catalogPriceGross) existing.catalogPrice = entry.vehicleMeta.catalogPriceGross;
+                        if (entry.vehicleMeta.investmentNet) existing.sellingPrice = entry.vehicleMeta.investmentNet;
+                        vehicleMetaUpdates.set(assignment.vehicleId, existing);
+                    }
                 }
             }
         }
