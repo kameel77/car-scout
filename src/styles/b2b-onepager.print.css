@@ -30,15 +30,21 @@
     padding: 0 !important;
     max-width: none !important;
   }
-  /* Hero fills page 1; the rest of the onepager starts on page 2 */
+  /* Override the homepage hero's massive 140px/80px paddings; keep modest
+     sides so content doesn't touch A4 edges. The link wrapper itself adds
+     no padding and stays a strict single page. */
+  .home-hero {
+    padding: 18mm 10mm !important;
+    background: #fff !important;
+  }
   .home-hero-link {
-    min-height: 100vh;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden;
     display: flex;
     align-items: center;
     break-after: page;
     page-break-after: always;
-    padding: 12mm;
-    box-sizing: border-box;
   }
   .home-hero-link > .home-hero {
     width: 100%;
