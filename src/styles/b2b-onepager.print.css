@@ -1,6 +1,6 @@
 @page {
   size: A4;
-  margin: 12mm;
+  margin: 6mm;
 }
 
 @media print {
@@ -11,8 +11,13 @@
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  /* Onepager body uses 10pt for compactness on A4 */
   html, body {
-    font-size: 10pt;
+    font-size: 9pt;
+  }
+  /* Tighten container padding for email-distributed PDF */
+  main.container {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    max-width: none !important;
   }
 }

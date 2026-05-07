@@ -24,17 +24,17 @@ const benefits = [
 
 export function B2BBenefitGrid() {
   return (
-    <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 print:grid-cols-3 print:gap-3 print:mb-3">
       {benefits.map((b) => (
         <div
           key={b.title}
-          className="rounded-xl border border-border bg-card p-6 flex flex-col gap-3"
+          className="rounded-xl border border-border bg-card p-6 flex flex-col gap-3 print:p-3 print:gap-2 print:rounded-lg"
         >
-          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-            <b.icon className="h-6 w-6" />
+          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary print:h-8 print:w-8">
+            <b.icon className="h-6 w-6 print:h-4 print:w-4" />
           </div>
-          <h3 className="font-semibold text-lg">{b.title}</h3>
-          <p className="text-sm text-muted-foreground">{b.description}</p>
+          <h3 className="font-semibold text-lg print:text-sm">{b.title}</h3>
+          <p className="text-sm text-muted-foreground print:text-xs print:leading-snug">{b.description}</p>
         </div>
       ))}
     </section>

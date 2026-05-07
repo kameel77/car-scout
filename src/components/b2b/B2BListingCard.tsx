@@ -22,7 +22,7 @@ export function B2BListingCard({ offer }: { offer: B2BOffer }) {
   const leasingApprox = Math.round(offer.pricePln * LEASING_FACTOR);
 
   return (
-    <article className="rounded-xl border border-border bg-card overflow-hidden flex flex-col">
+    <article className="rounded-xl border border-border bg-card overflow-hidden flex flex-col print:rounded-md">
       {image && (
         <div className="aspect-[16/10] bg-muted overflow-hidden">
           <img
@@ -33,23 +33,23 @@ export function B2BListingCard({ offer }: { offer: B2BOffer }) {
           />
         </div>
       )}
-      <div className="p-4 flex flex-col gap-2 flex-1">
+      <div className="p-4 flex flex-col gap-2 flex-1 print:p-2 print:gap-1">
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="font-semibold text-base leading-tight">
+          <h3 className="font-semibold text-base leading-tight print:text-xs">
             {offer.make} {offer.model}
           </h3>
-          <span className="text-xs text-muted-foreground shrink-0">{offer.productionYear}</span>
+          <span className="text-xs text-muted-foreground shrink-0 print:text-[9px]">{offer.productionYear}</span>
         </div>
-        <div className="text-lg font-bold">{PLN.format(offer.pricePln)} zł</div>
-        <div className="text-xs text-muted-foreground space-y-1 mt-1">
+        <div className="text-lg font-bold print:text-sm">{PLN.format(offer.pricePln)} zł</div>
+        <div className="text-xs text-muted-foreground space-y-1 mt-1 print:text-[9px] print:space-y-0 print:mt-0">
           <div data-testid="kredyt-rate">Kredyt od: <strong>{PLN.format(kredytApprox)} zł/mc</strong></div>
           <div data-testid="leasing-rate">Leasing od: <strong>{PLN.format(leasingApprox)} zł/mc</strong></div>
         </div>
         <Link
           to={href}
-          className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline pt-2"
+          className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline pt-2 print:text-[9px] print:pt-1"
         >
-          Zobacz ofertę <ArrowRight className="h-3.5 w-3.5" />
+          Zobacz ofertę <ArrowRight className="h-3.5 w-3.5 print:h-3 print:w-3" />
         </Link>
       </div>
     </article>

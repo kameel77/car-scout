@@ -24,9 +24,9 @@ export function B2BOfferGrid({ ids, onLoadComplete }: Props) {
   }
 
   return (
-    <section className="mb-8">
-      <h2 className="text-2xl font-bold mb-4">Aktualne oferty</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <section className="mb-8 print:mb-3">
+      <h2 className="text-2xl font-bold mb-4 print:text-base print:mb-2">Aktualne oferty</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print:grid-cols-3 print:gap-2">
         {data.map((offer) => (
           <B2BListingCard key={offer.id} offer={offer} />
         ))}

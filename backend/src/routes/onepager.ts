@@ -79,11 +79,12 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
       await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 2 });
       await page.goto(url, { waitUntil: 'networkidle0', timeout: 20000 });
       await page.waitForSelector('[data-onepager-ready]', { timeout: 10000 });
+      await page.emulateMediaType('print');
 
       const pdf = await page.pdf({
         format: 'A4',
         printBackground: true,
-        margin: { top: '12mm', right: '12mm', bottom: '12mm', left: '12mm' },
+        margin: { top: '6mm', right: '6mm', bottom: '6mm', left: '6mm' },
       });
 
       if (!ids) {
