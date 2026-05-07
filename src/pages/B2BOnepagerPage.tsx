@@ -34,8 +34,10 @@ export default function B2BOnepagerPage() {
         <B2BHero />
         <div className="b2b-onepager__body">
           <B2BBenefitGrid />
-          <B2BOfferGrid ids={ids} onLoadComplete={() => setOffersLoaded(true)} />
-          <B2BCtaSection />
+          <div className="b2b-onepager__offers">
+            <B2BOfferGrid ids={ids} onLoadComplete={() => setOffersLoaded(true)} />
+            <B2BCtaSection />
+          </div>
         </div>
       </main>
       {!isPrintMode && <Footer />}

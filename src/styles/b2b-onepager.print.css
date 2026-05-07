@@ -36,27 +36,22 @@
     padding: 0 !important;
     max-width: none !important;
   }
-  /* Override the homepage hero's massive 140px/80px paddings; keep modest
-     sides so content doesn't touch A4 edges. The link wrapper itself adds
-     no padding and stays a strict single page. */
+  /* Tight hero so it shares page 1 with the benefits grid */
   .home-hero {
-    padding: 18mm 10mm !important;
+    padding: 8mm 10mm !important;
     background: #fff !important;
   }
   .home-hero-link {
-    height: 100vh;
-    box-sizing: border-box;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    break-after: page;
-    page-break-after: always;
+    display: block;
   }
-  .home-hero-link > .home-hero {
-    width: 100%;
-  }
-  /* Inner padding for everything after the hero (benefits, offers, CTA) */
+  /* Inner padding for benefits / offers / CTA */
   .b2b-onepager__body {
-    padding: 8mm 8mm 0 8mm;
+    padding: 0 8mm 0 8mm;
+  }
+  /* Force the offers section + CTA onto page 2 */
+  .b2b-onepager__offers {
+    page-break-before: always;
+    break-before: page;
+    padding-top: 8mm;
   }
 }
