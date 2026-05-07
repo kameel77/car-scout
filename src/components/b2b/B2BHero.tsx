@@ -17,7 +17,7 @@ export function B2BHero() {
 
   return (
     <Link to={homeHref} className="home-hero-link">
-      <section className="home-hero home-hero--text-only">
+      <section className="home-hero">
         <div className="home-hero__inner">
           <div>
             <div className="home-hero__badge">{B2B_BADGE}</div>
@@ -33,6 +33,9 @@ export function B2BHero() {
                 </span>
               ))}
             </div>
+          </div>
+          <div className="home-hero__visual">
+            <img src={hero.image} alt={`${config.name} - auta`} />
           </div>
         </div>
       </section>
