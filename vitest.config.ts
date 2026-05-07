@@ -5,6 +5,8 @@ export default defineConfig({
     test: {
         include: ['src/**/*.{test,spec}.{ts,tsx}'],
         exclude: ['node_modules', 'dist', 'backend', 'apps'],
+        environment: 'jsdom',
+        setupFiles: ['./src/test-setup.ts'],
     },
     resolve: {
         alias: {

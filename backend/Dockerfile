@@ -31,9 +31,13 @@ RUN npm run build || npx tsc
 FROM node:20-slim AS runner
 
 # Ensure openssl and curl are available for Prisma runtime and healthchecks
+# libnss3, libfontconfig1, libfreetype6, fonts-liberation, ca-certificates — shared libs for @sparticuz/chromium
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends openssl curl && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+      openssl curl \
+      libnss3 libfontconfig1 libfreetype6 \
+      fonts-liberation ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

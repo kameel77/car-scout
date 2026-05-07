@@ -9,8 +9,16 @@ import { useToast } from '@/hooks/use-toast';
 import { VehicleDataForm } from '@/components/admin/VehicleForm/VehicleDataForm';
 import {
     Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star,
-    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil, Upload
+    ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil, Upload,
+    MoreVertical, CopyPlus
 } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ─── Copyable ID ─────────────────────────────────────────────────
 
@@ -569,6 +577,30 @@ export default function RentalVehiclesPage() {
         }
     });
 
+    const duplicateModelMutation = useMutation({
+        mutationFn: (id: string) => rentalVehiclesApi.duplicateModel(id, token!),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({ title: 'Skopiowano model' });
+            // Go to edit mode for the newly created vehicle
+            setEditingId(data.vehicle.id);
+            setView('edit');
+        },
+        onError: (e: Error) => toast({ title: 'Błąd kopiowania', description: e.message, variant: 'destructive' })
+    });
+
+    const duplicateOfferMutation = useMutation({
+        mutationFn: (id: string) => rentalVehiclesApi.duplicateOffer(id, token!),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({ title: 'Zduplikowano ofertę' });
+            // Go to edit mode for the newly created vehicle
+            setEditingId(data.vehicle.id);
+            setView('edit');
+        },
+        onError: (e: Error) => toast({ title: 'Błąd duplikowania', description: e.message, variant: 'destructive' })
+    });
+
     const toggleFeaturedMutation = useMutation({
         mutationFn: ({ id, isFeatured }: { id: string, isFeatured: boolean }) => rentalVehiclesApi.toggleFeatured(id, isFeatured, token!),
         onSuccess: (_, variables) => {
@@ -719,18 +751,39 @@ export default function RentalVehiclesPage() {
                                             >
                                                 <Star className="w-4 h-4" fill={v.isFeatured ? "currentColor" : "none"} />
                                             </Button>
-                                            <Button size="sm" variant="ghost" onClick={() => { setEditingId(v.id); setView('edit'); }}>
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
-                                            {v.isActive ? (
-                                                <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate(v.id)}>
-                                                    <Archive className="w-4 h-4 text-orange-500" />
-                                                </Button>
-                                            ) : (
-                                                <Button size="sm" variant="ghost" onClick={() => restoreMutation.mutate(v.id)}>
-                                                    <RotateCcw className="w-4 h-4 text-green-500" />
-                                                </Button>
-                                            )}
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm" className="text-gray-500 hover:bg-gray-100 px-2">
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48" onClick={e => e.stopPropagation()}>
+                                                    <DropdownMenuItem onClick={() => duplicateModelMutation.mutate(v.id)}>
+                                                        <Copy className="w-4 h-4 mr-2" />
+                                                        <span>Kopiuj model</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => duplicateOfferMutation.mutate(v.id)}>
+                                                        <CopyPlus className="w-4 h-4 mr-2" />
+                                                        <span>Duplikuj ofertę</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => { setEditingId(v.id); setView('edit'); }}>
+                                                        <Pencil className="w-4 h-4 mr-2" />
+                                                        <span>Edytuj</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    {v.isActive ? (
+                                                        <DropdownMenuItem onClick={() => archiveMutation.mutate(v.id)} className="text-orange-600">
+                                                            <Archive className="w-4 h-4 mr-2" />
+                                                            <span>Archiwizuj</span>
+                                                        </DropdownMenuItem>
+                                                    ) : (
+                                                        <DropdownMenuItem onClick={() => restoreMutation.mutate(v.id)} className="text-green-600">
+                                                            <RotateCcw className="w-4 h-4 mr-2" />
+                                                            <span>Przywróć</span>
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </td>
                                 </tr>
