@@ -22,13 +22,13 @@ export function B2BListingCard({ offer }: { offer: B2BOffer }) {
   const leasingApprox = Math.round(offer.pricePln * LEASING_FACTOR);
 
   return (
-    <article className="rounded-xl border border-border bg-card overflow-hidden flex flex-col print:rounded-md">
-      <div className="aspect-[16/10] bg-muted overflow-hidden flex items-center justify-center">
+    <article className="rounded-xl border border-border bg-card overflow-hidden flex flex-col print:rounded-none print:overflow-visible print:border-gray-200">
+      <div className="aspect-[16/10] bg-muted overflow-hidden flex items-center justify-center print:aspect-auto print:overflow-visible print:bg-transparent">
         {image ? (
           <img
             src={image}
             alt={`${offer.make} ${offer.model}`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover print:h-auto print:object-contain"
             loading="eager"
           />
         ) : (
@@ -37,12 +37,12 @@ export function B2BListingCard({ offer }: { offer: B2BOffer }) {
       </div>
       <div className="p-4 flex flex-col gap-2 flex-1 print:p-2 print:gap-1">
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="font-semibold text-base leading-tight print:text-xs">
+          <h3 className="font-semibold text-base leading-tight print:text-sm">
             {offer.make} {offer.model}
           </h3>
-          <span className="text-xs text-muted-foreground shrink-0 print:text-[9px]">{offer.productionYear}</span>
+          <span className="text-xs text-muted-foreground shrink-0 print:text-[10px]">{offer.productionYear}</span>
         </div>
-        <div className="text-lg font-bold print:text-sm">{PLN.format(offer.pricePln)} zł</div>
+        <div className="text-lg font-bold print:text-base">{PLN.format(offer.pricePln)} zł</div>
         <div className="text-xs text-muted-foreground space-y-1 mt-1 print:text-[9px] print:space-y-0 print:mt-0">
           <div data-testid="kredyt-rate">Kredyt od: <strong>{PLN.format(kredytApprox)} zł/mc</strong></div>
           <div data-testid="leasing-rate">Leasing od: <strong>{PLN.format(leasingApprox)} zł/mc</strong></div>
