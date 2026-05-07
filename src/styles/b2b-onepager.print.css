@@ -38,8 +38,11 @@
   }
   /* Tight hero so it shares page 1 with the benefits grid */
   .home-hero {
-    padding: 8mm 10mm !important;
+    padding: 4mm 10mm 2mm !important;
     background: #fff !important;
+  }
+  .home-hero__inner {
+    gap: 4mm !important;
   }
   .home-hero-link {
     display: block;
