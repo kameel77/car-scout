@@ -5,6 +5,7 @@ import { Footer } from '@/components/Footer';
 import { B2BHero } from '@/components/b2b/B2BHero';
 import { B2BBenefitGrid } from '@/components/b2b/B2BBenefitGrid';
 import { B2BOfferGrid } from '@/components/b2b/B2BOfferGrid';
+import { B2BCtaSection } from '@/components/b2b/B2BCtaSection';
 
 export default function B2BOnepagerPage() {
   const [params] = useSearchParams();
@@ -19,6 +20,7 @@ export default function B2BOnepagerPage() {
         <B2BHero />
         <B2BBenefitGrid />
         <B2BOfferGrid ids={ids} />
+        <B2BCtaSection />
       </main>
       {!isPrintMode && <Footer />}
     </div>
