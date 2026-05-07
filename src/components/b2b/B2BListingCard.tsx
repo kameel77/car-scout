@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import type { B2BOffer } from '@/hooks/useB2BOfferList';
 import { getListingUrlPath } from '@/utils/url-utils';
+import { useTrackedUrl } from '@/hooks/useTrackedUrl';
 
 const PLN = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 });
 
@@ -14,7 +15,8 @@ const LEASING_FACTOR = 0.012;
 
 export function B2BListingCard({ offer }: { offer: B2BOffer }) {
   const image = offer.primaryImageUrl || offer.imageUrls?.[0];
-  const href = getListingUrlPath(offer);
+  const baseHref = getListingUrlPath(offer);
+  const href = useTrackedUrl(baseHref);
 
   const kredytApprox = Math.round(offer.pricePln * KREDYT_FACTOR);
   const leasingApprox = Math.round(offer.pricePln * LEASING_FACTOR);

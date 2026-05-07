@@ -2,11 +2,13 @@ import React from 'react';
 import { Phone, Mail, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useTrackedUrl } from '@/hooks/useTrackedUrl';
 
 export function B2BCtaSection() {
   const { data: settings } = useAppSettings();
   const phone = settings?.legalContactPhone;
   const email = settings?.legalContactEmail;
+  const homeHref = useTrackedUrl('/');
 
   return (
     <section className="rounded-xl bg-muted p-6 md:p-8 mb-8">
@@ -29,7 +31,7 @@ export function B2BCtaSection() {
         )}
       </div>
       <Link
-        to="/"
+        to={homeHref}
         className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
         Więcej o Carsalon <ExternalLink className="h-3.5 w-3.5" />
