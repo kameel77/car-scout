@@ -79,7 +79,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
     const page = await browser.newPage();
 
     try {
-      await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 2 });
+      await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
       await page.goto(url, { waitUntil: 'networkidle0', timeout: 20000 });
       await page.waitForSelector('[data-onepager-ready]', { timeout: 10000 });
       await page.emulateMediaType('print');
