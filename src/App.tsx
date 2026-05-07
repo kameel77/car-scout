@@ -43,6 +43,7 @@ import RentalVehiclesPage from "./pages/admin/RentalVehiclesPage";
 import RentalCompaniesPage from "./pages/admin/RentalCompaniesPage";
 import RentalMatrixPage from "./pages/admin/RentalMatrixPage";
 import PersonalOfferPage from "./pages/PersonalOfferPage";
+import B2BOnepagerPage from "./pages/B2BOnepagerPage";
 import RentalSearchPage from "./pages/RentalSearchPage";
 import RentalDetailPage from "./pages/RentalDetailPage";
 import RentalLeadFormPage from "./pages/RentalLeadFormPage";
@@ -90,6 +91,7 @@ const App = () => (
                       <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/oferta/:slug/negotiate" element={<LeadFormPage />} />
                       <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
+                      <Route path="/dla-firm" element={<B2BOnepagerPage />} />
                       <Route path="/wynajem-dlugoterminowy" element={<RentalSearchPage />} />
                       <Route path="/wynajem-dlugoterminowy/:slug" element={<RentalDetailPage />} />
                       <Route path="/wynajem-dlugoterminowy/:slug/zapytanie" element={<RentalLeadFormPage />} />

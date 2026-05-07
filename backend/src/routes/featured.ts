@@ -75,6 +75,7 @@ export async function featuredRoutes(fastify: FastifyInstance) {
 
         // Invalidate cache
         await fastify.redis.del('featured:vehicles');
+        await fastify.redis.del('onepager:pdf:default');
 
         return { success: true, isFeatured: listing.isFeatured };
     });
@@ -93,6 +94,7 @@ export async function featuredRoutes(fastify: FastifyInstance) {
 
         // Invalidate cache
         await fastify.redis.del('featured:vehicles');
+        await fastify.redis.del('onepager:pdf:default');
 
         return { success: true, isFeatured: rv.isFeatured };
     });

@@ -164,6 +164,14 @@ export const rentalVehiclesApi = {
         return fetchWithAuth(`${API_BASE_URL}/api/rental-vehicles/${id}`, token, { method: 'DELETE' });
     },
 
+    duplicateModel: async (id: string, token: string): Promise<{ vehicle: RentalVehicle }> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-vehicles/${id}/duplicate-model`, token, { method: 'POST' });
+    },
+
+    duplicateOffer: async (id: string, token: string): Promise<{ vehicle: RentalVehicle }> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-vehicles/${id}/duplicate-offer`, token, { method: 'POST' });
+    },
+
     toggleFeatured: async (id: string, isFeatured: boolean, token: string) => {
         return fetchWithAuth(`${API_BASE_URL}/api/rental-vehicles/${id}/featured`, token, {
             method: 'POST',

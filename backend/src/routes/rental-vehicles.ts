@@ -440,4 +440,94 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
         return { success: true };
     });
+    // Duplicate model (technical specs only)
+    fastify.post('/api/rental-vehicles/:id/duplicate-model', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        const newVehicle = await fastify.prisma.rentalVehicle.create({
+            data: {
+                dealerId: vehicle.dealerId,
+                ownerRentalCompanyId: vehicle.ownerRentalCompanyId,
+                make: vehicle.make,
+                model: vehicle.model,
+                version: vehicle.version,
+                bodyType: vehicle.bodyType,
+                fuelType: vehicle.fuelType,
+                transmission: vehicle.transmission,
+                enginePowerHp: vehicle.enginePowerHp,
+                engineCapacityCm3: vehicle.engineCapacityCm3,
+                productionYear: vehicle.productionYear,
+                doors: vehicle.doors,
+                seats: vehicle.seats,
+                drive: vehicle.drive,
+                // Do not copy colors, prices, equipment, images, specsJson
+                color: null,
+                paintType: null,
+                catalogPrice: null,
+                sellingPrice: null,
+                primaryImageUrl: null,
+                imageUrls: [],
+                equipmentAudioMultimedia: [],
+                equipmentSafety: [],
+                equipmentComfortExtras: [],
+                equipmentOther: [],
+                additionalInfoHeader: null,
+                additionalInfoContent: null,
+                specsJson: null,
+                specificationUrl: null,
+                carClass: vehicle.carClass,
+                modelCode: vehicle.modelCode
+            }
+        });
+
+        const slug = generateSlug(
+            newVehicle.make, newVehicle.model, newVehicle.version,
+            newVehicle.productionYear, newVehicle.bodyType, newVehicle.fuelType, newVehicle.id
+        );
+
+        const updated = await fastify.prisma.rentalVehicle.update({
+            where: { id: newVehicle.id },
+            data: { slug }
+        });
+
+        return reply.code(201).send({ vehicle: updated });
+    });
+
+    // Duplicate offer (full copy without assignments)
+    fastify.post('/api/rental-vehicles/:id/duplicate-offer', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        // Copy everything except id, slug, isFeatured, isActive, assignments
+        const { id: _id, slug: _slug, isFeatured: _isFeatured, isActive: _isActive, ...dataToCopy } = vehicle;
+
+        const newVehicle = await fastify.prisma.rentalVehicle.create({
+            data: dataToCopy
+        });
+
+        const slug = generateSlug(
+            newVehicle.make, newVehicle.model, newVehicle.version,
+            newVehicle.productionYear, newVehicle.bodyType, newVehicle.fuelType, newVehicle.id
+        );
+
+        const updated = await fastify.prisma.rentalVehicle.update({
+            where: { id: newVehicle.id },
+            data: { slug }
+        });
+
+        return reply.code(201).send({ vehicle: updated });
+    });
 }
