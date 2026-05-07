@@ -7,6 +7,7 @@ import { B2BBenefitGrid } from '@/components/b2b/B2BBenefitGrid';
 import { B2BOfferGrid } from '@/components/b2b/B2BOfferGrid';
 import { B2BCtaSection } from '@/components/b2b/B2BCtaSection';
 import { DownloadPdfButton } from '@/components/b2b/DownloadPdfButton';
+import '@/pages/home-page.css';
 import '@/styles/b2b-onepager.print.css';
 
 export default function B2BOnepagerPage() {
