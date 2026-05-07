@@ -25,6 +25,12 @@
   html, body {
     font-size: 9pt;
   }
+  /* Kill all box-shadows — they bloat the PDF as huge soft-edged
+     PNG layers (~1-2 MB per shadow) without adding visible value. */
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
   /* No outer padding in PDF — full bleed since this is for email, not print */
   main.container {
     padding: 0 !important;
