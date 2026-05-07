@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { getBrowser } from '../services/puppeteer.js';
 
 const ID_REGEX = /^[\w-]+(,[\w-]+)*$/;
+const CACHE_KEY = 'onepager:pdf:default';
+const CACHE_TTL_S = 1800;
 
 export async function onepagerRoutes(fastify: FastifyInstance) {
   fastify.get('/api/onepager/offers', async (req, reply) => {
@@ -54,6 +56,18 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
       return reply.code(400).send({ error: 'Invalid ids format' });
     }
 
+    // Cache hit (default URL only)
+    if (!ids) {
+      const cached = await fastify.redis.getBuffer(CACHE_KEY);
+      if (cached && cached.length > 0) {
+        const filename = `carsalon-oferta-${new Date().toISOString().slice(0, 10)}.pdf`;
+        return reply
+          .header('Content-Type', 'application/pdf')
+          .header('Content-Disposition', `attachment; filename="${filename}"`)
+          .send(cached);
+      }
+    }
+
     const internalBase = process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80';
     const idsQs = ids ? `&ids=${encodeURIComponent(ids)}` : '';
     const url = `${internalBase}/dla-firm?print=1${idsQs}`;
@@ -71,6 +85,10 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
         printBackground: true,
         margin: { top: '12mm', right: '12mm', bottom: '12mm', left: '12mm' },
       });
+
+      if (!ids) {
+        await fastify.redis.set(CACHE_KEY, pdf, 'EX', CACHE_TTL_S);
+      }
 
       const filename = `carsalon-oferta-${new Date().toISOString().slice(0, 10)}.pdf`;
       return reply

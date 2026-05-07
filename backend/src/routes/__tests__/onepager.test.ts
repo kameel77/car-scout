@@ -152,4 +152,40 @@ describe('Onepager — GET /api/onepager/pdf', () => {
       expect.any(Object)
     );
   });
+
+  it('caches default PDF in Redis for 30 minutes', async () => {
+    await app.redis.del('onepager:pdf:default');
+
+    const res1 = await app.inject({ method: 'GET', url: '/api/onepager/pdf' });
+    expect(res1.statusCode).toBe(200);
+
+    const cached = await app.redis.getBuffer('onepager:pdf:default');
+    expect(cached).toBeInstanceOf(Buffer);
+    expect(cached!.length).toBeGreaterThan(0);
+
+    const ttl = await app.redis.ttl('onepager:pdf:default');
+    expect(ttl).toBeGreaterThan(1700);
+    expect(ttl).toBeLessThanOrEqual(1800);
+  });
+
+  it('returns cached PDF without calling Puppeteer on second request', async () => {
+    const { getBrowser } = await import('../../services/puppeteer');
+    // Pre-populate cache
+    await app.redis.set('onepager:pdf:default', Buffer.from('%PDF-cached'), 'EX', 1800);
+
+    const callsBefore = (getBrowser as any).mock.calls.length;
+    const res = await app.inject({ method: 'GET', url: '/api/onepager/pdf' });
+    const callsAfter = (getBrowser as any).mock.calls.length;
+
+    expect(res.statusCode).toBe(200);
+    expect(callsAfter).toBe(callsBefore); // no new Puppeteer call
+    expect(res.rawPayload.toString()).toBe('%PDF-cached');
+  });
+
+  it('does not cache when ids param is given', async () => {
+    await app.redis.del('onepager:pdf:default');
+    await app.inject({ method: 'GET', url: '/api/onepager/pdf?ids=abc' });
+    const cached = await app.redis.get('onepager:pdf:default');
+    expect(cached).toBeNull();
+  });
 });
