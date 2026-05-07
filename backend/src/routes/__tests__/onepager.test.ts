@@ -98,15 +98,15 @@ describe('Onepager — GET /api/onepager/pdf', () => {
     vi.mock('../../services/puppeteer', () => ({
       getBrowser: vi.fn(async () => ({
         newPage: vi.fn(async () => ({
-          setViewport: vi.fn(),
-          goto: vi.fn(),
-          waitForSelector: vi.fn(),
+          setViewport: vi.fn(async () => {}),
+          goto: vi.fn(async () => {}),
+          waitForSelector: vi.fn(async () => {}),
           pdf: vi.fn(async () => Buffer.from('%PDF-fake-content')),
-          close: vi.fn(),
+          close: vi.fn(async () => {}),
         })),
         isConnected: () => true,
       })),
-      closeBrowser: vi.fn(),
+      closeBrowser: vi.fn(async () => {}),
     }));
 
     app = await buildApp();
@@ -139,11 +139,11 @@ describe('Onepager — GET /api/onepager/pdf', () => {
     const goto = vi.fn();
     (getBrowser as any).mockResolvedValueOnce({
       newPage: async () => ({
-        setViewport: vi.fn(),
+        setViewport: vi.fn(async () => {}),
         goto,
-        waitForSelector: vi.fn(),
+        waitForSelector: vi.fn(async () => {}),
         pdf: async () => Buffer.from('%PDF'),
-        close: vi.fn(),
+        close: vi.fn(async () => {}),
       }),
     });
     await app.inject({ method: 'GET', url: '/api/onepager/pdf?ids=abc,def' });

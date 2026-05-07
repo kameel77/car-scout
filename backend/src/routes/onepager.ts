@@ -84,7 +84,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
         .code(isTimeout ? 504 : 500)
         .send({ error: isTimeout ? 'PDF generation timeout' : 'PDF generation failed' });
     } finally {
-      await Promise.resolve(page.close()).catch(() => {});
+      await page.close().catch(() => {});
     }
   });
 }
