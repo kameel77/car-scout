@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
 
@@ -85,5 +85,71 @@ describe('Onepager — GET /api/onepager/offers', () => {
     const res = await app.inject({ method: 'GET', url: '/api/onepager/offers' });
     const body = res.json();
     expect(body.offers.every((o: any) => o.make !== 'TEST_ONEPAGER' || !o.isArchived)).toBe(true);
+  });
+});
+
+describe('Onepager — GET /api/onepager/pdf', () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    process.env.INTERNAL_FRONTEND_URL = 'http://frontend:80';
+
+    // Mock puppeteer service before app build
+    vi.mock('../../services/puppeteer', () => ({
+      getBrowser: vi.fn(async () => ({
+        newPage: vi.fn(async () => ({
+          setViewport: vi.fn(),
+          goto: vi.fn(),
+          waitForSelector: vi.fn(),
+          pdf: vi.fn(async () => Buffer.from('%PDF-fake-content')),
+          close: vi.fn(),
+        })),
+        isConnected: () => true,
+      })),
+      closeBrowser: vi.fn(),
+    }));
+
+    app = await buildApp();
+    await app.ready();
+  });
+
+  afterAll(async () => {
+    await app.close();
+    vi.resetAllMocks();
+  });
+
+  it('returns PDF buffer with correct headers', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/onepager/pdf' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('application/pdf');
+    expect(res.headers['content-disposition']).toMatch(/attachment; filename="carsalon-oferta-\d{4}-\d{2}-\d{2}\.pdf"/);
+    expect(res.rawPayload.length).toBeGreaterThan(0);
+  });
+
+  it('rejects invalid ids format', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/onepager/pdf?ids=<%>',
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('passes ids through to internal URL', async () => {
+    const { getBrowser } = await import('../../services/puppeteer');
+    const goto = vi.fn();
+    (getBrowser as any).mockResolvedValueOnce({
+      newPage: async () => ({
+        setViewport: vi.fn(),
+        goto,
+        waitForSelector: vi.fn(),
+        pdf: async () => Buffer.from('%PDF'),
+        close: vi.fn(),
+      }),
+    });
+    await app.inject({ method: 'GET', url: '/api/onepager/pdf?ids=abc,def' });
+    expect(goto).toHaveBeenCalledWith(
+      expect.stringContaining('/dla-firm?print=1&ids=abc%2Cdef'),
+      expect.any(Object)
+    );
   });
 });
