@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Car } from 'lucide-react';
 import type { B2BOffer } from '@/hooks/useB2BOfferList';
 import { getListingUrlPath } from '@/utils/url-utils';
 import { useTrackedUrl } from '@/hooks/useTrackedUrl';
@@ -23,16 +23,18 @@ export function B2BListingCard({ offer }: { offer: B2BOffer }) {
 
   return (
     <article className="rounded-xl border border-border bg-card overflow-hidden flex flex-col print:rounded-md">
-      {image && (
-        <div className="aspect-[16/10] bg-muted overflow-hidden">
+      <div className="aspect-[16/10] bg-muted overflow-hidden flex items-center justify-center">
+        {image ? (
           <img
             src={image}
             alt={`${offer.make} ${offer.model}`}
             className="w-full h-full object-cover"
             loading="eager"
           />
-        </div>
-      )}
+        ) : (
+          <Car className="h-10 w-10 text-muted-foreground/40 print:h-6 print:w-6" />
+        )}
+      </div>
       <div className="p-4 flex flex-col gap-2 flex-1 print:p-2 print:gap-1">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="font-semibold text-base leading-tight print:text-xs">
