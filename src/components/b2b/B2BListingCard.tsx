@@ -22,13 +22,13 @@ export function B2BListingCard({ offer }: { offer: B2BOffer }) {
   const leasingApprox = Math.round(offer.pricePln * LEASING_FACTOR);
 
   return (
-    <article className="rounded-xl border border-border bg-card overflow-hidden flex flex-col print:rounded-md print:border-gray-200">
-      <div className="aspect-[16/10] bg-muted overflow-hidden flex items-center justify-center">
+    <article className="rounded-xl border border-border bg-card overflow-hidden flex flex-col print:rounded-none print:overflow-visible print:border-gray-200">
+      <div className="aspect-[16/10] bg-muted overflow-hidden flex items-center justify-center print:aspect-auto print:overflow-visible print:bg-transparent">
         {image ? (
           <img
             src={image}
             alt={`${offer.make} ${offer.model}`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover print:h-auto print:object-contain"
             loading="eager"
           />
         ) : (
