@@ -1,0 +1,23 @@
+@page {
+  size: A4;
+  margin: 6mm;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  html, body {
+    font-size: 9pt;
+  }
+  /* Tighten container padding for email-distributed PDF */
+  main.container {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    max-width: none !important;
+  }
+}

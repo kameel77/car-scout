@@ -30,6 +30,7 @@ services:
       ANALYTICS_MAX_DAYS: ${ANALYTICS_MAX_DAYS:-365}
       ANALYTICS_CACHE_TTL: ${ANALYTICS_CACHE_TTL:-300}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      INTERNAL_FRONTEND_URL: ${INTERNAL_FRONTEND_URL:-http://frontend:80}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3000}/health"]
       interval: 10s
@@ -66,8 +67,10 @@ services:
       carscout-api:
         condition: service_healthy
     networks:
-      - carscout-private
-      - coolify
+      carscout-private:
+        aliases:
+          - frontend
+      coolify: {}
 
 volumes:
   rental-uploads:
