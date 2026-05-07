@@ -4,14 +4,25 @@ import chromium from '@sparticuz/chromium';
 let browserPromise: Promise<Browser> | null = null;
 
 async function launch(): Promise<Browser> {
-  // Allow overriding executable path for local dev — @sparticuz/chromium ships
-  // a Linux-only binary that fails with ENOEXEC on macOS / non-x64 dev hosts.
-  // Set PUPPETEER_EXECUTABLE_PATH in backend/.env to e.g. system Chrome.
-  const executablePath =
-    process.env.PUPPETEER_EXECUTABLE_PATH || (await chromium.executablePath());
+  // @sparticuz/chromium ships a Linux-only binary that fails on macOS dev hosts.
+  // When PUPPETEER_EXECUTABLE_PATH is set we use the system Chrome with minimal,
+  // isolated args (own user-data-dir avoids conflict with the user's running Chrome).
+  // Production (no override) keeps the sparticuz Lambda-tuned flags.
+  const localChrome = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (localChrome) {
+    return puppeteer.launch({
+      executablePath: localChrome,
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        `--user-data-dir=/tmp/puppeteer-onepager-${process.pid}`,
+      ],
+    });
+  }
   return puppeteer.launch({
     args: chromium.args,
-    executablePath,
+    executablePath: await chromium.executablePath(),
     headless: true,
   });
 }
