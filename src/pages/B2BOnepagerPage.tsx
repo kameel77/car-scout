@@ -32,9 +32,11 @@ export default function B2BOnepagerPage() {
       {!isPrintMode && <Header />}
       <main className="container py-8">
         <B2BHero />
-        <B2BBenefitGrid />
-        <B2BOfferGrid ids={ids} onLoadComplete={() => setOffersLoaded(true)} />
-        <B2BCtaSection />
+        <div className="b2b-onepager__body">
+          <B2BBenefitGrid />
+          <B2BOfferGrid ids={ids} onLoadComplete={() => setOffersLoaded(true)} />
+          <B2BCtaSection />
+        </div>
       </main>
       {!isPrintMode && <Footer />}
       {!isPrintMode && <DownloadPdfButton />}

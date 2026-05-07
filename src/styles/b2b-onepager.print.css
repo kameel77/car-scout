@@ -1,6 +1,6 @@
 @page {
   size: A4;
-  margin: 6mm;
+  margin: 0;
 }
 
 /* Whole hero is a clickable link to the homepage: keep look intact */
@@ -17,17 +17,34 @@
   .no-print {
     display: none !important;
   }
-  body {
+  body, html, .landing-page-root {
+    background: #fff !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
   html, body {
     font-size: 9pt;
   }
-  /* Tighten container padding for email-distributed PDF */
+  /* No outer padding in PDF — full bleed since this is for email, not print */
   main.container {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    padding: 0 !important;
     max-width: none !important;
+  }
+  /* Hero fills page 1; the rest of the onepager starts on page 2 */
+  .home-hero-link {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    break-after: page;
+    page-break-after: always;
+    padding: 12mm;
+    box-sizing: border-box;
+  }
+  .home-hero-link > .home-hero {
+    width: 100%;
+  }
+  /* Inner padding for everything after the hero (benefits, offers, CTA) */
+  .b2b-onepager__body {
+    padding: 8mm 8mm 0 8mm;
   }
 }
