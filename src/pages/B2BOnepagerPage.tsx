@@ -4,10 +4,13 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { B2BHero } from '@/components/b2b/B2BHero';
 import { B2BBenefitGrid } from '@/components/b2b/B2BBenefitGrid';
+import { B2BOfferGrid } from '@/components/b2b/B2BOfferGrid';
 
 export default function B2BOnepagerPage() {
   const [params] = useSearchParams();
   const isPrintMode = params.get('print') === '1';
+  const idsParam = params.get('ids');
+  const ids = idsParam ? idsParam.split(',') : undefined;
 
   return (
     <div className="min-h-screen bg-background">
@@ -15,9 +18,7 @@ export default function B2BOnepagerPage() {
       <main className="container py-8">
         <B2BHero />
         <B2BBenefitGrid />
-        <div data-testid="b2b-onepager-root">
-          {/* Benefits, Offers, CTA — kolejne taski */}
-        </div>
+        <B2BOfferGrid ids={ids} />
       </main>
       {!isPrintMode && <Footer />}
     </div>
