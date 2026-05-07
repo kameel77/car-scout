@@ -15,7 +15,7 @@ const LEASING_FACTOR = 0.012;
 
 export function B2BListingCard({ offer }: { offer: B2BOffer }) {
   const image = offer.primaryImageUrl || offer.imageUrls?.[0];
-  const baseHref = getListingUrlPath(offer);
+  const baseHref = getListingUrlPath(offer, 'gotowka');
   const href = useTrackedUrl(baseHref);
 
   const kredytApprox = Math.round(offer.pricePln * KREDYT_FACTOR);

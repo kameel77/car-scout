@@ -3,6 +3,11 @@
   margin: 6mm;
 }
 
+/* Hero variant without right-side visual: collapse the 1fr 1fr grid */
+.home-hero--text-only .home-hero__inner {
+  grid-template-columns: 1fr;
+}
+
 @media print {
   .no-print {
     display: none !important;

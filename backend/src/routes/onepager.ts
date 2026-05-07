@@ -4,6 +4,7 @@ import { getBrowser } from '../services/puppeteer.js';
 const ID_REGEX = /^[\w-]+(,[\w-]+)*$/;
 const CACHE_KEY = 'onepager:pdf:default';
 const CACHE_TTL_S = 1800;
+const OFFERS_LIMIT = 9;
 
 export async function onepagerRoutes(fastify: FastifyInstance) {
   fastify.get('/api/onepager/offers', async (req, reply) => {
@@ -26,16 +27,16 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
 
     const featured = await fastify.prisma.listing.findMany({
       where: { isFeatured: true, isArchived: false },
-      take: 6,
+      take: OFFERS_LIMIT,
       orderBy: { createdAt: 'desc' },
       include: { dealer: true },
     });
 
-    if (featured.length >= 6) {
+    if (featured.length >= OFFERS_LIMIT) {
       return { offers: featured };
     }
 
-    const fillCount = 6 - featured.length;
+    const fillCount = OFFERS_LIMIT - featured.length;
     const filler = await fastify.prisma.listing.findMany({
       where: {
         isArchived: false,
@@ -69,8 +70,10 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
     }
 
     const internalBase = process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80';
+    const publicBase = process.env.FRONTEND_URL?.replace(/\/$/, '');
     const idsQs = ids ? `&ids=${encodeURIComponent(ids)}` : '';
-    const url = `${internalBase}/dla-firm?print=1${idsQs}`;
+    const publicQs = publicBase ? `&publicBase=${encodeURIComponent(publicBase)}` : '';
+    const url = `${internalBase}/dla-firm?print=1${idsQs}${publicQs}`;
 
     const browser = await getBrowser();
     const page = await browser.newPage();

@@ -36,25 +36,25 @@ describe('Onepager — GET /api/onepager/offers', () => {
     });
   }
 
-  it('returns 6 featured offers when 6+ exist', async () => {
-    for (let i = 0; i < 7; i++) {
+  it('returns 9 featured offers when 9+ exist', async () => {
+    for (let i = 0; i < 10; i++) {
       await createListing({ isFeatured: true });
     }
     const res = await app.inject({ method: 'GET', url: '/api/onepager/offers' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.offers).toHaveLength(6);
+    expect(body.offers).toHaveLength(9);
     expect(body.offers.every((o: any) => o.isFeatured)).toBe(true);
   });
 
-  it('falls back to newest when < 6 featured', async () => {
+  it('falls back to newest when < 9 featured', async () => {
     const featured = await createListing({ isFeatured: true });  // 1 featured
-    for (let i = 0; i < 5; i++) {
-      await createListing({ isFeatured: false });  // 5 non-featured
+    for (let i = 0; i < 8; i++) {
+      await createListing({ isFeatured: false });  // 8 non-featured
     }
     const res = await app.inject({ method: 'GET', url: '/api/onepager/offers' });
     const body = res.json();
-    expect(body.offers).toHaveLength(6);
+    expect(body.offers).toHaveLength(9);
     // The specific TEST_ONEPAGER featured listing must appear in the response
     expect(body.offers.some((o: any) => o.id === featured.id)).toBe(true);
   });
