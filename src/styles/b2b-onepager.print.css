@@ -8,6 +8,16 @@
   grid-template-columns: 1fr;
 }
 
+/* Whole hero is a clickable link to the homepage: keep look intact */
+.home-hero-link,
+.home-hero-link:hover,
+.home-hero-link:visited,
+.home-hero-link:active {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
 @media print {
   .no-print {
     display: none !important;

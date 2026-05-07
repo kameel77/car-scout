@@ -11,34 +11,31 @@ const B2B_SUBTITLE_HTML =
 export function B2BHero() {
   const { config } = useBrand();
   const hero = config.homePage?.hero;
-  const ctaHref = useTrackedUrl('/');
+  const homeHref = useTrackedUrl('/');
 
   if (!hero) return null;
 
   return (
-    <section className="home-hero home-hero--text-only">
-      <div className="home-hero__inner">
-        <div>
-          <div className="home-hero__badge">{B2B_BADGE}</div>
-          <h1 dangerouslySetInnerHTML={{ __html: hero.title }} />
-          <p
-            className="home-hero__sub"
-            dangerouslySetInnerHTML={{ __html: B2B_SUBTITLE_HTML }}
-          />
-          <div className="home-hero__actions">
-            <Link to={ctaHref} className="home-btn-primary">
-              {hero.ctaLabel}
-            </Link>
-          </div>
-          <div className="home-hero__trust">
-            {hero.trustBadges.map((badge, idx) => (
-              <span key={idx}>
-                <CheckCircle2 size={16} /> {badge}
-              </span>
-            ))}
+    <Link to={homeHref} className="home-hero-link">
+      <section className="home-hero home-hero--text-only">
+        <div className="home-hero__inner">
+          <div>
+            <div className="home-hero__badge">{B2B_BADGE}</div>
+            <h1 dangerouslySetInnerHTML={{ __html: hero.title }} />
+            <p
+              className="home-hero__sub"
+              dangerouslySetInnerHTML={{ __html: B2B_SUBTITLE_HTML }}
+            />
+            <div className="home-hero__trust">
+              {hero.trustBadges.map((badge, idx) => (
+                <span key={idx}>
+                  <CheckCircle2 size={16} /> {badge}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </Link>
   );
 }
