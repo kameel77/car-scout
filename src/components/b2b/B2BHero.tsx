@@ -11,12 +11,12 @@ const B2B_SUBTITLE_HTML =
 export function B2BHero() {
   const { config } = useBrand();
   const hero = config.homePage?.hero;
-  const ctaHref = useTrackedUrl('/samochody');
+  const ctaHref = useTrackedUrl('/');
 
   if (!hero) return null;
 
   return (
-    <section className="home-hero">
+    <section className="home-hero home-hero--text-only">
       <div className="home-hero__inner">
         <div>
           <div className="home-hero__badge">{B2B_BADGE}</div>
@@ -36,17 +36,6 @@ export function B2BHero() {
                 <CheckCircle2 size={16} /> {badge}
               </span>
             ))}
-          </div>
-        </div>
-        <div className="home-hero__visual">
-          <img src={hero.image} alt={`${config.name} - auta`} />
-          <div className="home-hero__stat home-hero__stat--left">
-            <strong>{hero.stats[0].value}</strong>
-            <small>{hero.stats[0].label}</small>
-          </div>
-          <div className="home-hero__stat home-hero__stat--right">
-            <strong>{hero.stats[1].value}</strong>
-            <small>{hero.stats[1].label}</small>
           </div>
         </div>
       </div>

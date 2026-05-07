@@ -24,8 +24,10 @@ const benefits = [
 
 export function B2BBenefitGrid() {
   return (
-    <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 print:grid-cols-3 print:gap-3 print:mb-3">
-      {benefits.map((b) => (
+    <section className="mb-8 print:mb-3">
+      <h2 className="text-2xl font-bold mb-4 print:text-base print:mb-2">Jak możemy Ci pomóc?</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3 print:gap-3">
+        {benefits.map((b) => (
         <div
           key={b.title}
           className="rounded-xl border border-border bg-card p-6 flex flex-col gap-3 print:p-3 print:gap-2 print:rounded-lg"
@@ -37,6 +39,7 @@ export function B2BBenefitGrid() {
           <p className="text-sm text-muted-foreground print:text-xs print:leading-snug">{b.description}</p>
         </div>
       ))}
+      </div>
     </section>
   );
 }
