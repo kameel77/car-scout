@@ -14,7 +14,7 @@ export function B2BCtaSection() {
     <section className="rounded-xl bg-muted p-6 md:p-8 mb-8 print:p-4 print:mb-0 print:rounded-md print:border print:border-gray-200">
       <h2 className="text-2xl font-bold mb-2 print:text-xl print:mb-2">Skontaktuj się z naszym zespołem</h2>
       <p className="text-muted-foreground mb-4 print:text-sm print:mb-3">
-        Doradzimy w wyborze pojazdu i finansowaniu — także po szkodzie całkowitej.
+        Doradzimy w wyborze pojazdu i finansowaniu - także po szkodzie całkowitej.
       </p>
       <div className="flex flex-col md:flex-row gap-4 mb-4 print:flex-row print:gap-4 print:mb-3">
         {phone && (
