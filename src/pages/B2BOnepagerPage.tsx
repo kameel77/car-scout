@@ -28,7 +28,7 @@ export default function B2BOnepagerPage() {
   }, [offersLoaded]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background landing-page-root">
       {!isPrintMode && <Header />}
       <main className="container py-8">
         <B2BHero />

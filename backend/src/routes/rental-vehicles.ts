@@ -480,7 +480,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                 equipmentOther: [],
                 additionalInfoHeader: null,
                 additionalInfoContent: null,
-                specsJson: null,
+                specsJson: null as any,
                 specificationUrl: null,
                 carClass: vehicle.carClass,
                 modelCode: vehicle.modelCode
@@ -515,7 +515,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         const { id: _id, slug: _slug, isFeatured: _isFeatured, isActive: _isActive, ...dataToCopy } = vehicle;
 
         const newVehicle = await fastify.prisma.rentalVehicle.create({
-            data: dataToCopy
+            data: dataToCopy as any
         });
 
         const slug = generateSlug(
