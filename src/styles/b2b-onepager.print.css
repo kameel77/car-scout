@@ -1,0 +1,18 @@
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  /* Onepager body uses 10pt for compactness on A4 */
+  html, body {
+    font-size: 10pt;
+  }
+}
