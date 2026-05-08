@@ -5,7 +5,9 @@ import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { StatusTabs } from '@/components/StatusTabs';
+import { TopFilterBar } from '@/components/TopFilterBar';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
 import { ListingPagination } from '@/components/ListingPagination';
@@ -107,6 +109,9 @@ export default function SearchPage() {
   const [perPage, setPerPage] = React.useState(
     PAGE_SIZE_OPTIONS.includes(initialPerPage) ? initialPerPage : DEFAULT_PER_PAGE
   );
+
+  // "Wszystkie filtry" sheet (full FilterPanel) trigger
+  const [allFiltersOpen, setAllFiltersOpen] = React.useState(false);
 
   // Sync URL when state changes - use a ref to prevent loops
   const urlSyncTimeoutRef = React.useRef<NodeJS.Timeout>();
@@ -247,21 +252,34 @@ export default function SearchPage() {
 
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
-      <main className="container pt-0 pb-6">
-        <div className="flex gap-6">
-          {/* Desktop Filters */}
-          <aside className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-16 h-[calc(100vh-4rem)] pt-4">
-              <FilterPanel
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onClear={handleClearFilters}
-                resultCount={totalCount}
-                availableMakes={options?.makes || []}
-                availableModels={options?.models || []}
-              />
-            </div>
-          </aside>
+      <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+          <SheetHeader className="px-6 pt-6 pb-2">
+            <SheetTitle>{t('filters.title')}</SheetTitle>
+          </SheetHeader>
+          <div className="px-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
+            <FilterPanel
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onClear={handleClearFilters}
+              resultCount={totalCount}
+              availableMakes={options?.makes || []}
+              availableModels={options?.models || []}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <main className="container pt-4 pb-6">
+        <div className="min-w-0">
+          {/* Top filter bar on desktop */}
+          <TopFilterBar
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            availableMakes={options?.makes || []}
+            availableModels={options?.models || []}
+            onOpenAllFilters={() => setAllFiltersOpen(true)}
+          />
 
           {/* Results */}
           <div className="flex-1 min-w-0">
@@ -309,7 +327,7 @@ export default function SearchPage() {
               </div>
             )}
 
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
