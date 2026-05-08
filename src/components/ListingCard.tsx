@@ -22,6 +22,14 @@ interface ListingCardProps {
   financingType?: FinancingType;
 }
 
+// Static approximations matching B2B onepager card.
+// Real rates available on offer detail page.
+// Kredyt: ~1.4%/mc on gross price (36mc, 10% wkład, ~9% APR)
+// Leasing: ~1.2%/mc on net price (36mc, 20% wkład, ~6.5% APR)
+const KREDYT_FACTOR = 0.014;
+const LEASING_FACTOR = 0.012;
+const PLN = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 });
+
 function dedupImages(primary: string | undefined, all: string[] | undefined): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -76,6 +84,22 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
     return { primaryLabel: listing.price_display, secondaryLabel: null };
   }, [listing, settings, priceType, discount]);
+
+  // Approximate monthly rates (PLN only — skip for EUR pricing to avoid mixing currencies)
+  const monthlyRates = React.useMemo(() => {
+    const currency = settings?.displayCurrency || 'PLN';
+    if (currency !== 'PLN') return null;
+    const grossPln = applySpecialOfferDiscount(
+      listing.broker_price_pln || listing.price_pln || 0,
+      discount
+    );
+    if (!grossPln || grossPln <= 0) return null;
+    const netPln = grossPln / 1.23;
+    return {
+      kredyt: Math.round(grossPln * KREDYT_FACTOR),
+      leasing: Math.round(netPln * LEASING_FACTOR),
+    };
+  }, [listing, settings, discount]);
 
   const handleSpecialOfferClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -138,8 +162,15 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
         {/* Content */}
         <div className="p-4 space-y-3">
-          {/* Title */}
+          {/* Status label + Title */}
           <div>
+            <span
+              className={`text-[10px] font-bold tracking-wider ${
+                listing.condition === 'NEW' ? 'text-accent' : 'text-muted-foreground'
+              }`}
+            >
+              {listing.condition === 'NEW' ? t('listing.statusNew') : t('listing.statusUsed')}
+            </span>
             <h3 className="font-heading text-lg font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
               {listing.make} {listing.model}
             </h3>
@@ -183,6 +214,24 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
               <span>{listing.dealer_city}</span>
             </div>
           </div>
+
+          {/* Approximate financing rates */}
+          {monthlyRates && (
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-xs">
+              <div>
+                <div className="text-muted-foreground">{t('listing.kredytFrom')}</div>
+                <div className="font-bold text-accent text-sm">
+                  {PLN.format(monthlyRates.kredyt)} zł{t('listing.perMonth')}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">{t('listing.leasingFrom')}</div>
+                <div className="font-bold text-accent text-sm">
+                  {PLN.format(monthlyRates.leasing)} zł{t('listing.perMonth')}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Link>
 

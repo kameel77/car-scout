@@ -237,23 +237,21 @@ export function ActiveFilters({
             </SheetContent>
           </Sheet>
 
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 flex-1">
-                  {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                  {t('listing.gross')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                  {t('listing.net')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 flex-1">
+                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
+                {t('listing.gross')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
+                {t('listing.net')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -301,23 +299,21 @@ export function ActiveFilters({
             />
           </div>
 
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 whitespace-nowrap">
-                  {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                  {t('listing.gross')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                  {t('listing.net')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 whitespace-nowrap">
+                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
+                {t('listing.gross')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
+                {t('listing.net')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
