@@ -77,6 +77,13 @@ export const translations = {
         capacityTo: "Pojemność do",
         priceFrom: "Cena od",
         priceTo: "Cena do",
+        status: "Stan",
+      },
+
+      // Vehicle status (NEW / USED)
+      status: {
+        new: "Nowy",
+        used: "Używany",
       },
 
       // Fuel types
@@ -137,8 +144,13 @@ export const translations = {
         dealer: "Dealer",
         location: "Lokalizacja",
         mileage: "Przebieg",
-        net: "ceny netto",
-        gross: "ceny brutto",
+        net: "Firma (netto)",
+        gross: "Konsument (brutto)",
+        kredytFrom: "Kredyt od",
+        leasingFrom: "Leasing od",
+        perMonth: "/mc",
+        statusNew: "NOWY",
+        statusUsed: "UŻYWANY",
         specialOffer: "Oferta dla Ciebie",
       },
 
@@ -423,6 +435,13 @@ export const translations = {
         capacityTo: "Capacity to",
         priceFrom: "Price from",
         priceTo: "Price to",
+        status: "Status",
+      },
+
+      // Vehicle status (NEW / USED)
+      status: {
+        new: "New",
+        used: "Used",
       },
 
       // Fuel types
@@ -483,8 +502,13 @@ export const translations = {
         dealer: "Dealer",
         location: "Location",
         mileage: "Mileage",
-        net: "net prices",
-        gross: "gross prices",
+        net: "Business (net)",
+        gross: "Consumer (gross)",
+        kredytFrom: "Loan from",
+        leasingFrom: "Lease from",
+        perMonth: "/mo",
+        statusNew: "NEW",
+        statusUsed: "USED",
         specialOffer: "Your special offer",
       },
 
@@ -767,6 +791,13 @@ export const translations = {
         capacityTo: "Hubraum bis",
         priceFrom: "Preis von",
         priceTo: "Preis bis",
+        status: "Zustand",
+      },
+
+      // Vehicle status (NEW / USED)
+      status: {
+        new: "Neu",
+        used: "Gebraucht",
       },
 
       // Fuel types
@@ -827,8 +858,13 @@ export const translations = {
         dealer: "Händler",
         location: "Standort",
         mileage: "Kilometerstand",
-        net: "Nettopreise",
-        gross: "Bruttopreise",
+        net: "Firma (netto)",
+        gross: "Privatkunde (brutto)",
+        kredytFrom: "Kredit ab",
+        leasingFrom: "Leasing ab",
+        perMonth: "/Mt",
+        statusNew: "NEU",
+        statusUsed: "GEBRAUCHT",
         specialOffer: "Angebot für dich",
       },
 
