@@ -259,12 +259,12 @@ export function TopFilterBar({
         />
       </FilterPill>
 
-      {/* Search input — inline with pills, flexible width */}
+      {/* Search input — between Rok produkcji and Filtry, pushed right via ml-auto */}
       {onQueryChange && (
-        <div className="relative flex-1 min-w-[160px] max-w-xs">
+        <div className="relative ml-auto min-w-[200px] max-w-sm flex-shrink-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder={t('search.placeholder', 'Szukaj marki, modelu...')}
+            placeholder={t('search.placeholder', 'Szukaj marki, modelu, typu nadwozia...')}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             className="pl-9 h-9 text-sm rounded-full border-border bg-background"

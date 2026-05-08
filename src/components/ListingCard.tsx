@@ -317,10 +317,10 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             </div>
           )}
 
-          {/* Financing rates — styled like wynajem-dlugoterminowy, grow to push CTA down */}
+          {/* Financing rates — no border, just spacing */}
           <div className="flex-1" />
           {monthlyRates && (
-            <div className="pt-3 border-t border-border">
+            <div className="pt-3">
               <div className="grid grid-cols-2 gap-3">
                 {/* Kredyt */}
                 <div>
@@ -330,11 +330,11 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                   </span>
                   <div className="flex items-baseline gap-1.5">
                     <span
-                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-lg"
+                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
                       style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                     >
                       {PLN.format(monthlyRates.kredyt)}
-                      <span className="text-sm font-semibold ml-0.5">zł</span>
+                      <span className="text-base font-semibold ml-0.5">zł</span>
                     </span>
                     <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
                   </div>
@@ -348,11 +348,11 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                   </span>
                   <div className="flex items-baseline gap-1.5">
                     <span
-                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-lg"
+                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
                       style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                     >
                       {PLN.format(monthlyRates.leasing)}
-                      <span className="text-sm font-semibold ml-0.5">zł</span>
+                      <span className="text-base font-semibold ml-0.5">zł</span>
                     </span>
                     <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
                   </div>
@@ -363,35 +363,8 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
         </div>
       </Link>
 
-      {/* CTA — pinned to bottom, brand color on hover */}
-      <div className="px-4 pb-4 pt-2">
-        <Link
-          to={offerPath}
-          className="listing-card__cta w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 h-11 text-sm font-medium border-2 transition-all duration-200 active:scale-[0.98]"
-          style={
-            {
-              '--brand-color': brandColor,
-              borderColor: 'hsl(var(--primary))',
-              color: 'hsl(var(--primary))',
-            } as React.CSSProperties
-          }
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLAnchorElement;
-            el.style.backgroundColor = brandColor;
-            el.style.borderColor = brandColor;
-            el.style.color = '#ffffff';
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLAnchorElement;
-            el.style.backgroundColor = 'transparent';
-            el.style.borderColor = 'hsl(var(--primary))';
-            el.style.color = 'hsl(var(--primary))';
-          }}
-        >
-          {t('listing.viewOffer')}
-          <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-        </Link>
-      </div>
+      {/* bottom padding */}
+      <div className="pb-4" />
     </motion.div>
   );
 }
