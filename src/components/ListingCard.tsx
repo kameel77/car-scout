@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Gauge, Fuel, Settings2, Zap, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, Gauge, Fuel, ArrowRight, Cog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
 
@@ -46,6 +46,70 @@ function dedupImages(primary: string | undefined, all: string[] | undefined): st
   return out;
 }
 
+/**
+ * Returns the primary brand color for the given car make.
+ * Falls back to the CSS accent color if the brand is not in the map.
+ */
+function getBrandColor(make: string | undefined): string {
+  if (!make) return 'hsl(var(--primary))';
+  const normalized = make.toLowerCase().trim();
+  const brandColors: Record<string, string> = {
+    // German
+    volkswagen: '#001e50',
+    vw: '#001e50',
+    audi: '#bb0a30',
+    bmw: '#1c69d4',
+    mercedes: '#222222',
+    'mercedes-benz': '#222222',
+    porsche: '#d5001c',
+    opel: '#f5a100',
+    // French
+    peugeot: '#002a5e',
+    renault: '#ffcc00',
+    citroen: '#d9000d',
+    ds: '#a0845c',
+    // Italian
+    fiat: '#c8102e',
+    alfa: '#8d172e',
+    'alfa romeo': '#8d172e',
+    ferrari: '#dc0000',
+    lamborghini: '#c4a141',
+    maserati: '#1f4793',
+    // Japanese
+    toyota: '#eb0a1e',
+    honda: '#cc0000',
+    mazda: '#910a0a',
+    nissan: '#c3002f',
+    subaru: '#0033a0',
+    mitsubishi: '#e60012',
+    suzuki: '#005aab',
+    lexus: '#1a1a2e',
+    // Korean
+    hyundai: '#002c5f',
+    kia: '#bb162b',
+    genesis: '#1e1e1e',
+    // American
+    ford: '#003499',
+    chevrolet: '#d4af37',
+    jeep: '#4a7c59',
+    dodge: '#d22630',
+    tesla: '#cc0000',
+    // Swedish
+    volvo: '#003057',
+    // Czech
+    skoda: '#4ba82e',
+    // Other
+    seat: '#eb5f06',
+    cupra: '#c8a96e',
+    dacia: '#005480',
+    mini: '#f50537',
+    land: '#005a2b',
+    'land rover': '#005a2b',
+    jaguar: '#1c1c1c',
+  };
+  return brandColors[normalized] || 'hsl(var(--primary))';
+}
+
 export function ListingCard({ listing, index = 0, financingType }: ListingCardProps) {
   const { t } = useTranslation();
   const { data: settings } = useAppSettings();
@@ -54,6 +118,8 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
   // Use explicit prop, or read user's cached preference (defaults to 'kredyt')
   const effectiveFinancingType = financingType || getPreferredFinancingType();
+
+  const brandColor = getBrandColor(listing.make);
 
   const priceInfo = React.useMemo(() => {
     const currency = settings?.displayCurrency || 'PLN';
@@ -115,6 +181,16 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     }
   };
 
+  const offerPath = getListingUrlPath({
+    id: listing.listing_id,
+    make: listing.make,
+    model: listing.model,
+    version: listing.version,
+    productionYear: listing.production_year,
+    bodyType: listing.body_type,
+    fuelType: listing.fuel_type,
+  }, effectiveFinancingType);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -122,15 +198,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
       transition={{ duration: 0.3, delay: index * 0.05 }}
       className="listing-card group"
     >
-      <Link to={getListingUrlPath({
-        id: listing.listing_id,
-        make: listing.make,
-        model: listing.model,
-        version: listing.version,
-        productionYear: listing.production_year,
-        bodyType: listing.body_type,
-        fuelType: listing.fuel_type
-      }, effectiveFinancingType)} onClick={handleListingClick} className="block">
+      <Link to={offerPath} onClick={handleListingClick} className="block">
         {/* Image */}
         <div className="relative">
           <ImageSwiper
@@ -174,60 +242,92 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             <h3 className="font-heading text-lg font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
               {listing.make} {listing.model}
             </h3>
-            <p className="text-sm text-muted-foreground line-clamp-1">
-              {listing.version}
+            {/* Trim — always reserves space to keep card heights aligned */}
+            <p className="text-sm text-muted-foreground line-clamp-1 min-h-[1.25rem]">
+              {listing.version || '\u00A0'}
             </p>
           </div>
 
-          {/* Specs Grid */}
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>{listing.production_year}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Gauge className="h-3.5 w-3.5" />
-              <span>{listing.mileage_km.toLocaleString('pl-PL')} {t('listing.km')}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Fuel className="h-3.5 w-3.5" />
-              <span className="capitalize">
+          {/* Spec pills — rok, przebieg, paliwo, skrzynia, moc */}
+          <div className="flex flex-wrap gap-1.5">
+            {/* Year */}
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
+              <Calendar className="h-3 w-3 shrink-0" />
+              {listing.production_year}
+            </span>
+
+            {/* Mileage */}
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
+              <Gauge className="h-3 w-3 shrink-0" />
+              {listing.mileage_km.toLocaleString('pl-PL')} {t('listing.km')}
+            </span>
+
+            {/* Fuel */}
+            {listing.fuel_type && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
+                <Fuel className="h-3 w-3 shrink-0" />
                 {translateTechnicalValue('fuel', listing.fuel_type, t)}
               </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Settings2 className="h-3.5 w-3.5" />
-              <span className="capitalize">
+            )}
+
+            {/* Transmission */}
+            {listing.transmission && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
+                <Cog className="h-3 w-3 shrink-0" />
                 {translateTechnicalValue('transmission', listing.transmission, t)}
               </span>
-            </div>
+            )}
+
+            {/* Power */}
+            {listing.engine_power_hp && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
+                <svg className="h-3 w-3 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                <span className="text-foreground font-semibold">{listing.engine_power_hp}</span>
+                <span>{t('listing.hp')}</span>
+              </span>
+            )}
           </div>
 
-          {/* Power & Location */}
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <div className="flex items-center gap-1.5 text-sm">
-              <Zap className="h-3.5 w-3.5 text-accent" />
-              <span className="font-medium">{listing.engine_power_hp} {t('listing.hp')}</span>
-            </div>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5" />
-              <span>{listing.dealer_city}</span>
-            </div>
+          {/* Location */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground pt-0.5">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span>{listing.dealer_city}</span>
           </div>
 
-          {/* Approximate financing rates */}
+          {/* Financing rates — styled like wynajem-dlugoterminowy */}
           {monthlyRates && (
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-xs">
-              <div>
-                <div className="text-muted-foreground">{t('listing.kredytFrom')}</div>
-                <div className="font-bold text-accent text-sm">
-                  {PLN.format(monthlyRates.kredyt)} zł{t('listing.perMonth')}
+            <div className="pt-3 border-t border-border">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Kredyt */}
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">{t('listing.kredytFrom')}</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span
+                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1 rounded-lg font-bold text-base"
+                      style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
+                    >
+                      {PLN.format(monthlyRates.kredyt)}
+                      <span className="text-sm font-semibold ml-0.5">zł</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">{t('listing.leasingFrom')}</div>
-                <div className="font-bold text-accent text-sm">
-                  {PLN.format(monthlyRates.leasing)} zł{t('listing.perMonth')}
+
+                {/* Leasing */}
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">{t('listing.leasingFrom')}</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span
+                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1 rounded-lg font-bold text-base"
+                      style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
+                    >
+                      {PLN.format(monthlyRates.leasing)}
+                      <span className="text-sm font-semibold ml-0.5">zł</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -235,22 +335,34 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
         </div>
       </Link>
 
-      {/* CTA */}
+      {/* CTA — brand color on hover */}
       <div className="px-4 pb-4">
-        <Button asChild variant="outline-primary" className="w-full group/btn">
-          <Link to={getListingUrlPath({
-            id: listing.listing_id,
-            make: listing.make,
-            model: listing.model,
-            version: listing.version,
-            productionYear: listing.production_year,
-            bodyType: listing.body_type,
-            fuelType: listing.fuel_type
-          }, effectiveFinancingType)}>
-            {t('listing.viewOffer')}
-            <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-          </Link>
-        </Button>
+        <Link
+          to={offerPath}
+          className="listing-card__cta w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 h-10 text-sm font-medium border-2 transition-all duration-200 active:scale-[0.98]"
+          style={
+            {
+              '--brand-color': brandColor,
+              borderColor: 'hsl(var(--primary))',
+              color: 'hsl(var(--primary))',
+            } as React.CSSProperties
+          }
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLAnchorElement;
+            el.style.backgroundColor = brandColor;
+            el.style.borderColor = brandColor;
+            el.style.color = '#ffffff';
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLAnchorElement;
+            el.style.backgroundColor = 'transparent';
+            el.style.borderColor = 'hsl(var(--primary))';
+            el.style.color = 'hsl(var(--primary))';
+          }}
+        >
+          {t('listing.viewOffer')}
+          <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+        </Link>
       </div>
     </motion.div>
   );
@@ -265,15 +377,17 @@ export function ListingCardSkeleton() {
           <div className="h-5 w-3/4 skeleton-shimmer" />
           <div className="h-4 w-1/2 skeleton-shimmer" />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="h-4 skeleton-shimmer" />
-          <div className="h-4 skeleton-shimmer" />
-          <div className="h-4 skeleton-shimmer" />
-          <div className="h-4 skeleton-shimmer" />
+        <div className="flex flex-wrap gap-1.5">
+          <div className="h-6 w-12 skeleton-shimmer rounded-full" />
+          <div className="h-6 w-20 skeleton-shimmer rounded-full" />
+          <div className="h-6 w-10 skeleton-shimmer rounded-full" />
+          <div className="h-6 w-8 skeleton-shimmer rounded-full" />
+          <div className="h-6 w-14 skeleton-shimmer rounded-full" />
         </div>
-        <div className="flex justify-between pt-2">
-          <div className="h-4 w-16 skeleton-shimmer" />
-          <div className="h-4 w-20 skeleton-shimmer" />
+        <div className="h-4 w-20 skeleton-shimmer" />
+        <div className="flex gap-3 pt-3">
+          <div className="h-8 w-1/2 skeleton-shimmer rounded-lg" />
+          <div className="h-8 w-1/2 skeleton-shimmer rounded-lg" />
         </div>
       </div>
       <div className="px-4 pb-4">

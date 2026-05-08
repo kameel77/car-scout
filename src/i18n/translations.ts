@@ -88,20 +88,20 @@ export const translations = {
 
       // Fuel types
       fuel: {
-        petrol: "Benzyna",
-        diesel: "Diesel",
+        petrol: "PB",
+        diesel: "ON",
         hybrid: "Hybryda",
         hybridHev: "Hybryda HEV",
         hybridPhev: "Hybryda PHEV",
-        electric: "Elektryczny",
+        electric: "Elektryk",
         lpg: "LPG",
         cng: "CNG",
       },
 
       // Transmission
       transmission: {
-        manual: "Manualna",
-        automatic: "Automatyczna",
+        manual: "M",
+        automatic: "A",
       },
 
       // Drive
