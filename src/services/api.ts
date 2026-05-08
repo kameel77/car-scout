@@ -366,6 +366,7 @@ export const listingsApi = {
             appendArray('transmission', filters.transmissions);
             appendArray('bodyType', filters.bodyTypes);
             appendArray('drive', filters.drives);
+            appendArray('condition', filters.conditions);
 
             if (filters.powerFrom) params.append('powerMin', filters.powerFrom.toString());
             if (filters.powerTo) params.append('powerMax', filters.powerTo.toString());

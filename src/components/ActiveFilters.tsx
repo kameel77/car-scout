@@ -135,6 +135,15 @@ export function ActiveFilters({
     });
   });
 
+  filters.conditions.forEach((cond) => {
+    activeChips.push({
+      key: `cond-${cond}`,
+      label: t(`condition.${cond.toLowerCase()}`),
+      onRemove: () =>
+        onFilterChange({ ...filters, conditions: filters.conditions.filter((c) => c !== cond) }),
+    });
+  });
+
   if (filters.yearFrom || filters.yearTo) {
     activeChips.push({
       key: 'year',

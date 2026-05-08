@@ -77,6 +77,13 @@ export const translations = {
         capacityTo: "Pojemność do",
         priceFrom: "Cena od",
         priceTo: "Cena do",
+        condition: "Stan",
+      },
+
+      // Vehicle condition (NEW / USED)
+      condition: {
+        new: "Nowy",
+        used: "Używany",
       },
 
       // Fuel types
@@ -423,6 +430,13 @@ export const translations = {
         capacityTo: "Capacity to",
         priceFrom: "Price from",
         priceTo: "Price to",
+        condition: "Condition",
+      },
+
+      // Vehicle condition (NEW / USED)
+      condition: {
+        new: "New",
+        used: "Used",
       },
 
       // Fuel types
@@ -767,6 +781,13 @@ export const translations = {
         capacityTo: "Hubraum bis",
         priceFrom: "Preis von",
         priceTo: "Preis bis",
+        condition: "Zustand",
+      },
+
+      // Vehicle condition (NEW / USED)
+      condition: {
+        new: "Neu",
+        used: "Gebraucht",
       },
 
       // Fuel types

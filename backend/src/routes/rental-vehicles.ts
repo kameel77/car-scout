@@ -440,6 +440,123 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
         return { success: true };
     });
+    // Import JSON of vehicles
+    fastify.post('/api/rental-vehicles/import-json', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const body = request.body as any;
+        
+        if (!body.vehicles || !Array.isArray(body.vehicles)) {
+            return reply.code(400).send({ error: 'Missing or invalid "vehicles" array in payload' });
+        }
+
+        // Resolve scope for dealer assignment (if needed)
+        const scope = await resolveScope(fastify, request);
+
+        // Can optionally provide dealerId or ownerRentalCompanyId to assign to all imported vehicles
+        let dealerId = body.dealerId;
+        if (!dealerId && scope.activeContext.scopeType === 'DEALER') {
+            dealerId = scope.activeContext.scopeId;
+        }
+        const ownerRentalCompanyId = body.ownerRentalCompanyId;
+
+        // Verify dealer/company exists if provided
+        if (dealerId) {
+            const dealer = await fastify.prisma.dealer.findUnique({ where: { id: dealerId } });
+            if (!dealer) return reply.code(400).send({ error: 'Dealer not found' });
+        }
+
+        if (ownerRentalCompanyId) {
+            const company = await fastify.prisma.rentalCompany.findUnique({ where: { id: ownerRentalCompanyId } });
+            if (!company) return reply.code(400).send({ error: 'Rental company not found' });
+        }
+
+        // Non-platform users can only import for their own dealers
+        if (!scope.isPlatform && dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
+
+        const stats = {
+            total: body.vehicles.length,
+            imported: 0,
+            failed: 0,
+            errors: [] as string[]
+        };
+
+        for (const [index, item] of body.vehicles.entries()) {
+            try {
+                if (!item.make || !item.model) {
+                    throw new Error(`Row ${index + 1}: Missing required fields make/model`);
+                }
+
+                // Prepare parsed data
+                const vehicleData = {
+                    dealerId: dealerId || null,
+                    ownerRentalCompanyId: ownerRentalCompanyId || null,
+                    make: item.make,
+                    model: item.model,
+                    version: item.version || null,
+                    bodyType: item.bodyType || null,
+                    fuelType: item.fuelType || null,
+                    transmission: item.transmission || null,
+                    enginePowerHp: item.enginePowerHp ? parseInt(item.enginePowerHp) : null,
+                    engineCapacityCm3: item.engineCapacityCm3 ? parseInt(item.engineCapacityCm3) : null,
+                    productionYear: item.productionYear ? parseInt(item.productionYear) : null,
+                    color: item.color || null,
+                    paintType: item.paintType || null,
+                    doors: item.doors ? parseInt(item.doors) : null,
+                    seats: item.seats ? parseInt(item.seats) : null,
+                    drive: item.drive || null,
+                    catalogPrice: item.catalogPrice ? parseInt(item.catalogPrice) : null,
+                    sellingPrice: item.sellingPrice ? parseInt(item.sellingPrice) : null,
+                    primaryImageUrl: item.primaryImageUrl || null,
+                    imageUrls: item.imageUrls || [],
+                    equipmentAudioMultimedia: item.equipmentAudioMultimedia || [],
+                    equipmentSafety: item.equipmentSafety || [],
+                    equipmentComfortExtras: item.equipmentComfortExtras || [],
+                    equipmentOther: item.equipmentOther || [],
+                    additionalInfoHeader: item.additionalInfoHeader || null,
+                    additionalInfoContent: item.additionalInfoContent || null,
+                    specsJson: item.specsJson || null,
+                    specificationUrl: item.specificationUrl || null,
+                    isActive: true
+                };
+
+                const createdVehicle = await fastify.prisma.rentalVehicle.create({
+                    data: vehicleData
+                });
+
+                // Generate slug
+                const slug = generateSlug(
+                    createdVehicle.make,
+                    createdVehicle.model,
+                    createdVehicle.version,
+                    createdVehicle.productionYear,
+                    createdVehicle.bodyType,
+                    createdVehicle.fuelType,
+                    createdVehicle.id
+                );
+
+                await fastify.prisma.rentalVehicle.update({
+                    where: { id: createdVehicle.id },
+                    data: { slug }
+                });
+
+                stats.imported++;
+            } catch (err: any) {
+                stats.failed++;
+                stats.errors.push(`Row ${index + 1} (${item.make} ${item.model}): ${err.message}`);
+            }
+        }
+
+        return reply.code(201).send({
+            message: `Import completed. ${stats.imported} imported, ${stats.failed} failed.`,
+            stats
+        });
+    });
+
     // Duplicate model (technical specs only)
     fastify.post('/api/rental-vehicles/:id/duplicate-model', {
         preHandler: [fastify.authenticate]

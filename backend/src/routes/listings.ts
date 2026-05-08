@@ -183,6 +183,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             powerMin, powerMax,
             capacityMin, capacityMax,
             fuelType, transmission, bodyType,
+            condition,
             sortBy,
             includeArchived,
             currency, // Added currency parameter
@@ -204,6 +205,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const bodyTypes = toArray(bodyType);
         const makes = toArray(make);
         const models = toArray(model);
+        // condition: 'new' | 'used' (case-insensitive); maps to ListingCondition enum NEW | USED
+        const conditions = toArray(condition)
+            ?.map((c) => c.toUpperCase())
+            .filter((c) => c === 'NEW' || c === 'USED') as ('NEW' | 'USED')[] | undefined;
 
         const isEur = currency === 'EUR';
         const priceField = isEur ? 'brokerPriceEur' : 'brokerPricePln';
@@ -283,6 +288,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' as const } : undefined,
             transmission: transmissions ? { in: transmissions, mode: 'insensitive' as const } : undefined,
             bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' as const } : undefined,
+            condition: conditions && conditions.length ? { in: conditions } : undefined,
             isArchived: includeArchived === 'true' ? undefined : false,
             entrySource: lastManualEditBefore
                 ? ('MANUAL' as const)

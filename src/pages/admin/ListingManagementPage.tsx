@@ -43,6 +43,7 @@ const initialFilters: FilterState = {
     capacityFrom: '',
     capacityTo: '',
     bodyTypes: [],
+    conditions: [],
     priceFrom: '',
     priceTo: '',
     query: ''

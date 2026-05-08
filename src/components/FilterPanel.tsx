@@ -32,6 +32,7 @@ export interface FilterState {
   capacityFrom: string;
   capacityTo: string;
   bodyTypes: string[];
+  conditions: string[]; // 'NEW' | 'USED'
   priceFrom: string;
   priceTo: string;
   query: string;
@@ -72,6 +73,11 @@ const bodyTypeOptions = [
   { value: 'SUV', label: 'body.suv' },
   { value: 'kombi', label: 'body.kombi' },
   { value: 'coupe', label: 'body.coupe' },
+];
+
+const conditionOptions = [
+  { value: 'NEW', label: 'condition.new' },
+  { value: 'USED', label: 'condition.used' },
 ];
 
 interface FilterSectionProps {
@@ -275,6 +281,17 @@ export function FilterPanel({
       <Separator className="mb-4" />
 
       <div className="space-y-1 overflow-y-auto flex-1 pr-3 min-h-0 -mr-1">
+        {/* Condition (new / used) */}
+        <FilterSection title={t('filters.condition')} defaultOpen>
+          <MultiSelect
+            options={conditionOptions}
+            selected={filters.conditions}
+            onChange={(v) => updateFilter('conditions', v)}
+          />
+        </FilterSection>
+
+        <Separator />
+
         {/* Make */}
         <FilterSection title={t('filters.make')}>
           <MultiSelect

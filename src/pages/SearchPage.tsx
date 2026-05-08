@@ -40,6 +40,7 @@ const emptyFilters: FilterState = {
   capacityFrom: '',
   capacityTo: '',
   bodyTypes: [],
+  conditions: [],
   priceFrom: '',
   priceTo: '',
   query: '',
@@ -71,6 +72,7 @@ export default function SearchPage() {
       transmissions: parseArray(searchParams.get('transmission')),
       bodyTypes: parseArray(searchParams.get('bodyType')),
       drives: parseArray(searchParams.get('drive')),
+      conditions: parseArray(searchParams.get('condition')).map((c) => c.toUpperCase()),
 
       yearFrom: searchParams.get('yearMin') || '',
       yearTo: searchParams.get('yearMax') || '',
@@ -123,6 +125,7 @@ export default function SearchPage() {
       if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
       if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
       if (filters.drives.length) params.set('drive', filters.drives.join(','));
+      if (filters.conditions.length) params.set('condition', filters.conditions.map((c) => c.toLowerCase()).join(','));
 
       if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
       if (filters.yearTo) params.set('yearMax', filters.yearTo);
