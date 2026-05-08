@@ -88,20 +88,20 @@ export const translations = {
 
       // Fuel types
       fuel: {
-        petrol: "Benzyna",
-        diesel: "Diesel",
+        petrol: "PB",
+        diesel: "ON",
         hybrid: "Hybryda",
         hybridHev: "Hybryda HEV",
         hybridPhev: "Hybryda PHEV",
-        electric: "Elektryczny",
+        electric: "Elektryk",
         lpg: "LPG",
         cng: "CNG",
       },
 
       // Transmission
       transmission: {
-        manual: "Manualna",
-        automatic: "Automatyczna",
+        manual: "M",
+        automatic: "A",
       },
 
       // Drive
@@ -144,8 +144,8 @@ export const translations = {
         dealer: "Dealer",
         location: "Lokalizacja",
         mileage: "Przebieg",
-        net: "Firma (netto)",
-        gross: "Konsument (brutto)",
+        net: "Na firmę",
+        gross: "Prywatnie",
         kredytFrom: "Kredyt od",
         leasingFrom: "Leasing od",
         perMonth: "/mc",
@@ -502,8 +502,8 @@ export const translations = {
         dealer: "Dealer",
         location: "Location",
         mileage: "Mileage",
-        net: "Business (net)",
-        gross: "Consumer (gross)",
+        net: "Business",
+        gross: "Personal",
         kredytFrom: "Loan from",
         leasingFrom: "Lease from",
         perMonth: "/mo",
@@ -858,8 +858,8 @@ export const translations = {
         dealer: "Händler",
         location: "Standort",
         mileage: "Kilometerstand",
-        net: "Firma (netto)",
-        gross: "Privatkunde (brutto)",
+        net: "Geschäft",
+        gross: "Privat",
         kredytFrom: "Kredit ab",
         leasingFrom: "Leasing ab",
         perMonth: "/Mt",

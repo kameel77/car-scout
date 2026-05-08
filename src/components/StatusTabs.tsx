@@ -1,24 +1,54 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { ArrowUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 interface StatusTabsProps {
   activeStatuses: string[]; // current filters.statuses
   byCondition?: { NEW: number; USED: number };
   onChange: (statuses: string[]) => void;
   className?: string;
+  /** Total result count shown in "Znaleziono: N" */
+  resultCount?: number;
+  /** Current sort value */
+  sortBy?: string;
+  /** Callback when sort changes */
+  onSortChange?: (value: string) => void;
 }
+
+const sortOptions = [
+  { value: 'price_asc', label: 'sort.cheapest' },
+  { value: 'price_desc', label: 'sort.mostExpensive' },
+  { value: 'mileage_asc', label: 'sort.lowestMileage' },
+  { value: 'year_desc', label: 'sort.newest' },
+  { value: 'newest', label: 'sort.recentlyAdded' },
+];
 
 const PLN = new Intl.NumberFormat('pl-PL');
 
 /**
  * Quick-switch tabs over the listings grid: All / New / Used.
- * Mirrors the condition filter — clicking a tab updates filters.statuses.
- * Counts come from backend response.byCondition (computed without the
- * condition filter so each tab shows its true total).
+ * Also hosts "Na firmę/Prywatnie", sort selector and "Znaleziono" count on the right.
  */
-export function StatusTabs({ activeStatuses, byCondition, onChange, className }: StatusTabsProps) {
+export function StatusTabs({
+  activeStatuses,
+  byCondition,
+  onChange,
+  className,
+  resultCount,
+  sortBy,
+  onSortChange,
+}: StatusTabsProps) {
   const { t } = useTranslation();
+  const { priceType, setPriceType } = usePriceSettings();
 
   const isAll = activeStatuses.length === 0;
   const isNew = activeStatuses.length === 1 && activeStatuses[0] === 'NEW';
@@ -28,14 +58,17 @@ export function StatusTabs({ activeStatuses, byCondition, onChange, className }:
 
   const tabClass = (active: boolean) =>
     cn(
-      'px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+      'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
       active
         ? 'border-accent text-foreground'
         : 'border-transparent text-muted-foreground hover:text-foreground'
     );
 
+  const currentSort = sortOptions.find((s) => s.value === sortBy);
+
   return (
-    <div className={cn('flex gap-1 border-b border-border overflow-x-auto', className)}>
+    <div className={cn('flex items-center gap-1 border-b border-border overflow-x-auto', className)}>
+      {/* Tabs: Filtry / Nowy / Używany */}
       <button type="button" onClick={() => onChange([])} className={tabClass(isAll)}>
         {t('filters.title')}
         {totalCount !== null && (
@@ -54,6 +87,77 @@ export function StatusTabs({ activeStatuses, byCondition, onChange, className }:
           <span className="ml-1.5 text-xs text-muted-foreground">({PLN.format(byCondition.USED)})</span>
         )}
       </button>
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Znaleziono */}
+      {resultCount !== undefined && (
+        <span className="hidden sm:block text-sm text-muted-foreground whitespace-nowrap px-2">
+          {t('common.found')}:{' '}
+          <span className="font-semibold text-foreground">{PLN.format(resultCount)}</span>
+        </span>
+      )}
+
+      {/* Na firmę / Prywatnie toggle */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 h-8 text-xs whitespace-nowrap border border-border rounded-full px-3 hover:bg-secondary"
+          >
+            {priceType === 'net' ? t('listing.net') : t('listing.gross')}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => setPriceType('gross')}
+            className={cn('gap-2', priceType === 'gross' && 'bg-accent')}
+          >
+            {priceType === 'gross' && <Check className="h-3.5 w-3.5" />}
+            {t('listing.gross')}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setPriceType('net')}
+            className={cn('gap-2', priceType === 'net' && 'bg-accent')}
+          >
+            {priceType === 'net' && <Check className="h-3.5 w-3.5" />}
+            {t('listing.net')}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Sort */}
+      {onSortChange && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 h-8 text-xs whitespace-nowrap border border-border rounded-full px-3 hover:bg-secondary"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              {currentSort ? t(currentSort.label) : t('sort.title')}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {sortOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => onSortChange(option.value)}
+                className={cn('gap-2', sortBy === option.value && 'bg-accent')}
+              >
+                {sortBy === option.value && <Check className="h-3.5 w-3.5" />}
+                {t(option.label)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+      {/* Right padding */}
+      <div className="w-1" />
     </div>
   );
 }

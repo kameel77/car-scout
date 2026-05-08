@@ -88,6 +88,7 @@ export function SettingsModule() {
         csflowEnabled: data?.csflowEnabled !== undefined
             ? Boolean(data.csflowEnabled)
             : true,
+        searchGridColumns: Number(data?.searchGridColumns) === 3 ? 3 : 4,
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -342,6 +343,26 @@ export function SettingsModule() {
                                 <SelectItem value="EUR">EUR (Euro)</SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    {/* Search grid columns */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-bold">Liczba kolumn na wyszukiwarce (desktop XL)</Label>
+                        <Select
+                            value={String(settings.searchGridColumns ?? 4)}
+                            onValueChange={(val) => setSettings({ ...settings, searchGridColumns: Number(val) })}
+                        >
+                            <SelectTrigger className="w-full bg-white">
+                                <SelectValue placeholder="Wybierz liczbę kolumn" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="3">3 kolumny (większe karty)</SelectItem>
+                                <SelectItem value="4">4 kolumny (więcej ofert na ekranie)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-600">
+                            Dotyczy ekranów ≥ 1280 px. Mniejsze ekrany zachowują standardowy układ (1/2/3 kolumny).
+                        </p>
                     </div>
 
                     {/* Auto image refresh */}
