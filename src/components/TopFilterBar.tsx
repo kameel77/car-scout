@@ -40,7 +40,7 @@ function FilterPill({ label, activeCount, children }: FilterPillProps) {
           className={cn(
             'inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-sm whitespace-nowrap transition-colors',
             activeCount && activeCount > 0
-              ? 'border-accent bg-accent/10 text-accent-foreground'
+              ? 'border-accent bg-accent/15 text-foreground font-medium'
               : 'border-border bg-background hover:bg-secondary/50'
           )}
         >
@@ -186,7 +186,7 @@ export function TopFilterBar({
   const priceActive = filters.priceFrom !== '' || filters.priceTo !== '';
 
   return (
-    <div className="hidden lg:flex flex-wrap items-center gap-2 mb-3">
+    <div className="hidden lg:flex flex-wrap items-center gap-2 mb-3 sticky top-20 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border">
       <FilterPill label={t('filters.make')} activeCount={filters.makes.length}>
         <MultiCheck
           options={makeOptions}
