@@ -191,7 +191,7 @@ export function TopFilterBar({
   const priceActive = filters.priceFrom !== '' || filters.priceTo !== '';
 
   return (
-    <div className="hidden lg:flex flex-wrap items-center gap-2 mb-3 sticky top-20 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border">
+    <div className="hidden lg:flex flex-wrap items-center gap-2 mb-3 sticky top-20 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <FilterPill label={t('filters.make')} activeCount={filters.makes.length}>
         <MultiCheck
           options={makeOptions}
@@ -259,9 +259,12 @@ export function TopFilterBar({
         />
       </FilterPill>
 
-      {/* Search input — between Rok produkcji and Filtry, pushed right via ml-auto */}
+      {/* Left spacer — pushes search to center */}
+      <div className="flex-1" />
+
+      {/* Search input — centered between Rok produkcji and Filtry */}
       {onQueryChange && (
-        <div className="relative ml-auto min-w-[200px] max-w-sm flex-shrink-0">
+        <div className="relative w-[340px] flex-shrink-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
             placeholder={t('search.placeholder', 'Szukaj marki, modelu, typu nadwozia...')}
@@ -271,6 +274,9 @@ export function TopFilterBar({
           />
         </div>
       )}
+
+      {/* Right spacer — equal to left, keeps Filtry at far right */}
+      <div className="flex-1" />
 
       <Button
         variant="outline"
