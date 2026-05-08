@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface ListingsResponse {
     listings: Listing[];
     count: number;
+    byCondition?: { NEW: number; USED: number };
     page?: number;
     perPage?: number;
     totalPages?: number;
@@ -75,6 +76,7 @@ export function useListings(
                 return {
                     listings: mappedListings,
                     count: data.count,
+                    byCondition: data.byCondition,
                     page: data.page,
                     perPage: data.perPage,
                     totalPages: data.totalPages

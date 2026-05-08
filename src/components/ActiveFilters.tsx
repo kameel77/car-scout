@@ -75,38 +75,61 @@ export function ActiveFilters({
     }
   }, [filters.query, searchValue, isUserTyping]);
 
-  const activeChips: { key: string; label: string; onRemove: () => void }[] = [];
+  type Chip = { key: string; label: string; onRemove: () => void };
+  type ChipGroup = { key: string; groupLabel: string; chips: Chip[] };
+  const chipGroups: ChipGroup[] = [];
+  const pushGroup = (key: string, groupLabel: string, chips: Chip[]) => {
+    if (chips.length > 0) chipGroups.push({ key, groupLabel, chips });
+  };
 
-  // Build active chips
-  filters.makes.forEach((make) => {
-    activeChips.push({
+  pushGroup(
+    'status',
+    t('filters.status'),
+    filters.statuses.map((s) => ({
+      key: `status-${s}`,
+      label: t(`status.${s.toLowerCase()}`),
+      onRemove: () =>
+        onFilterChange({ ...filters, statuses: filters.statuses.filter((x) => x !== s) }),
+    }))
+  );
+
+  pushGroup(
+    'make',
+    t('filters.make'),
+    filters.makes.map((make) => ({
       key: `make-${make}`,
       label: make,
       onRemove: () =>
         onFilterChange({ ...filters, makes: filters.makes.filter((m) => m !== make) }),
-    });
-  });
+    }))
+  );
 
-  filters.models.forEach((model) => {
-    activeChips.push({
+  pushGroup(
+    'model',
+    t('filters.model'),
+    filters.models.map((model) => ({
       key: `model-${model}`,
       label: model,
       onRemove: () =>
         onFilterChange({ ...filters, models: filters.models.filter((m) => m !== model) }),
-    });
-  });
+    }))
+  );
 
-  filters.fuelTypes.forEach((fuel) => {
-    activeChips.push({
+  pushGroup(
+    'fuel',
+    t('filters.fuelType'),
+    filters.fuelTypes.map((fuel) => ({
       key: `fuel-${fuel}`,
       label: t(`fuel.${fuel === 'benzyna' ? 'petrol' : fuel === 'diesel' ? 'diesel' : fuel === 'hybryda' ? 'hybrid' : fuel === 'elektryczny' ? 'electric' : 'lpg'}`),
       onRemove: () =>
         onFilterChange({ ...filters, fuelTypes: filters.fuelTypes.filter((f) => f !== fuel) }),
-    });
-  });
+    }))
+  );
 
-  filters.transmissions.forEach((trans) => {
-    activeChips.push({
+  pushGroup(
+    'transmission',
+    t('filters.transmission'),
+    filters.transmissions.map((trans) => ({
       key: `trans-${trans}`,
       label: t(`transmission.${trans === 'manualna' ? 'manual' : 'automatic'}`),
       onRemove: () =>
@@ -114,58 +137,72 @@ export function ActiveFilters({
           ...filters,
           transmissions: filters.transmissions.filter((t) => t !== trans),
         }),
-    });
-  });
+    }))
+  );
 
-  filters.drives.forEach((drive) => {
-    activeChips.push({
+  pushGroup(
+    'drive',
+    t('filters.drive'),
+    filters.drives.map((drive) => ({
       key: `drive-${drive}`,
       label: drive,
       onRemove: () =>
         onFilterChange({ ...filters, drives: filters.drives.filter((d) => d !== drive) }),
-    });
-  });
+    }))
+  );
 
-  filters.bodyTypes.forEach((body) => {
-    activeChips.push({
+  pushGroup(
+    'body',
+    t('filters.bodyType'),
+    filters.bodyTypes.map((body) => ({
       key: `body-${body}`,
       label: body,
       onRemove: () =>
         onFilterChange({ ...filters, bodyTypes: filters.bodyTypes.filter((b) => b !== body) }),
-    });
-  });
+    }))
+  );
 
   if (filters.yearFrom || filters.yearTo) {
-    activeChips.push({
-      key: 'year',
-      label: `${t('filters.productionYear')}: ${filters.yearFrom || '...'} - ${filters.yearTo || '...'}`,
-      onRemove: () => onFilterChange({ ...filters, yearFrom: '', yearTo: '' }),
-    });
+    pushGroup('year', t('filters.productionYear'), [
+      {
+        key: 'year-range',
+        label: `${filters.yearFrom || '...'} - ${filters.yearTo || '...'}`,
+        onRemove: () => onFilterChange({ ...filters, yearFrom: '', yearTo: '' }),
+      },
+    ]);
   }
 
   if (filters.mileageFrom || filters.mileageTo) {
-    activeChips.push({
-      key: 'mileage',
-      label: `${t('filters.mileage')}: ${filters.mileageFrom || '0'} - ${filters.mileageTo || '∞'} km`,
-      onRemove: () => onFilterChange({ ...filters, mileageFrom: '', mileageTo: '' }),
-    });
+    pushGroup('mileage', t('filters.mileage'), [
+      {
+        key: 'mileage-range',
+        label: `${filters.mileageFrom || '0'} - ${filters.mileageTo || '∞'} km`,
+        onRemove: () => onFilterChange({ ...filters, mileageFrom: '', mileageTo: '' }),
+      },
+    ]);
   }
 
   if (filters.powerFrom || filters.powerTo) {
-    activeChips.push({
-      key: 'power',
-      label: `${t('filters.power')}: ${filters.powerFrom || '0'} - ${filters.powerTo || '∞'} KM`,
-      onRemove: () => onFilterChange({ ...filters, powerFrom: '', powerTo: '' }),
-    });
+    pushGroup('power', t('filters.power'), [
+      {
+        key: 'power-range',
+        label: `${filters.powerFrom || '0'} - ${filters.powerTo || '∞'} KM`,
+        onRemove: () => onFilterChange({ ...filters, powerFrom: '', powerTo: '' }),
+      },
+    ]);
   }
 
   if (filters.priceFrom || filters.priceTo) {
-    activeChips.push({
-      key: 'price',
-      label: `${t('filters.price')}: ${filters.priceFrom || '0'} - ${filters.priceTo || '∞'} PLN`,
-      onRemove: () => onFilterChange({ ...filters, priceFrom: '', priceTo: '' }),
-    });
+    pushGroup('price', t('filters.price'), [
+      {
+        key: 'price-range',
+        label: `${filters.priceFrom || '0'} - ${filters.priceTo || '∞'} PLN`,
+        onRemove: () => onFilterChange({ ...filters, priceFrom: '', priceTo: '' }),
+      },
+    ]);
   }
+
+  const totalChipCount = chipGroups.reduce((acc, g) => acc + g.chips.length, 0);
 
   const currentSort = sortOptions.find((s) => s.value === sortBy);
 
@@ -191,9 +228,9 @@ export function ActiveFilters({
               <Button variant="outline" className="gap-2 flex-1">
                 <SlidersHorizontal className="h-4 w-4" />
                 {t('filters.title')}
-                {activeChips.length > 0 && (
+                {totalChipCount > 0 && (
                   <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                    {activeChips.length}
+                    {totalChipCount}
                   </span>
                 )}
               </Button>
@@ -228,23 +265,21 @@ export function ActiveFilters({
             </SheetContent>
           </Sheet>
 
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 flex-1">
-                  {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                  {t('listing.gross')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                  {t('listing.net')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 flex-1">
+                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
+                {t('listing.gross')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
+                {t('listing.net')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -292,23 +327,21 @@ export function ActiveFilters({
             />
           </div>
 
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 whitespace-nowrap">
-                  {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                  {t('listing.gross')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                  {t('listing.net')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 whitespace-nowrap">
+                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
+                {t('listing.gross')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
+                {t('listing.net')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -332,20 +365,27 @@ export function ActiveFilters({
           </DropdownMenu>
         </div>
 
-        {/* Active Filter Chips - Now inside sticky widget for desktop */}
-        {activeChips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/40">
-            {activeChips.map((chip) => (
-              <button
-                key={chip.key}
-                onClick={chip.onRemove}
-                className="chip chip-active chip-removable group text-xs py-1"
-              >
-                <span>{chip.label}</span>
-                <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
-              </button>
+        {/* Active Filter Chips - Grouped, inside sticky widget for desktop */}
+        {totalChipCount > 0 && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-1 border-t border-border/40">
+            {chipGroups.map((group) => (
+              <div key={group.key} className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                  {group.groupLabel}:
+                </span>
+                {group.chips.map((chip) => (
+                  <button
+                    key={chip.key}
+                    onClick={chip.onRemove}
+                    className="chip chip-active chip-removable group text-xs py-1"
+                  >
+                    <span>{chip.label}</span>
+                    <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                  </button>
+                ))}
+              </div>
             ))}
-            {activeChips.length > 1 && (
+            {totalChipCount > 1 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -359,20 +399,27 @@ export function ActiveFilters({
         )}
       </div>
 
-      {/* Active Filter Chips - Only for Mobile (stays below) */}
-      {activeChips.length > 0 && (
-        <div className="flex lg:hidden flex-wrap items-center gap-2">
-          {activeChips.map((chip) => (
-            <button
-              key={chip.key}
-              onClick={chip.onRemove}
-              className="chip chip-active chip-removable group"
-            >
-              <span>{chip.label}</span>
-              <X className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100" />
-            </button>
+      {/* Active Filter Chips - Mobile (stays below, also grouped) */}
+      {totalChipCount > 0 && (
+        <div className="flex lg:hidden flex-wrap items-center gap-x-3 gap-y-2">
+          {chipGroups.map((group) => (
+            <div key={group.key} className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                {group.groupLabel}:
+              </span>
+              {group.chips.map((chip) => (
+                <button
+                  key={chip.key}
+                  onClick={chip.onRemove}
+                  className="chip chip-active chip-removable group"
+                >
+                  <span>{chip.label}</span>
+                  <X className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100" />
+                </button>
+              ))}
+            </div>
           ))}
-          {activeChips.length > 1 && (
+          {totalChipCount > 1 && (
             <Button
               variant="ghost"
               size="sm"

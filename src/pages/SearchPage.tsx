@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
+import { StatusTabs } from '@/components/StatusTabs';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
@@ -40,6 +41,7 @@ const emptyFilters: FilterState = {
   capacityFrom: '',
   capacityTo: '',
   bodyTypes: [],
+  statuses: [],
   priceFrom: '',
   priceTo: '',
   query: '',
@@ -71,6 +73,7 @@ export default function SearchPage() {
       transmissions: parseArray(searchParams.get('transmission')),
       bodyTypes: parseArray(searchParams.get('bodyType')),
       drives: parseArray(searchParams.get('drive')),
+      statuses: parseArray(searchParams.get('status')).map((c) => c.toUpperCase()),
 
       yearFrom: searchParams.get('yearMin') || '',
       yearTo: searchParams.get('yearMax') || '',
@@ -123,6 +126,7 @@ export default function SearchPage() {
       if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
       if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
       if (filters.drives.length) params.set('drive', filters.drives.join(','));
+      if (filters.statuses.length) params.set('status', filters.statuses.map((c) => c.toLowerCase()).join(','));
 
       if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
       if (filters.yearTo) params.set('yearMax', filters.yearTo);
@@ -261,6 +265,16 @@ export default function SearchPage() {
 
           {/* Results */}
           <div className="flex-1 min-w-0">
+            <StatusTabs
+              activeStatuses={filters.statuses}
+              byCondition={data?.byCondition}
+              onChange={(statuses) => {
+                handleFilterChange({ ...filters, statuses });
+                setPage(1);
+              }}
+              className="mb-3"
+            />
+
             <ActiveFilters
               filters={filters}
               onFilterChange={handleFilterChange}
