@@ -1,14 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, SlidersHorizontal, ArrowUpDown, Check, Search } from 'lucide-react';
+import { X, SlidersHorizontal, Check, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Sheet,
   SheetContent,
@@ -18,41 +12,28 @@ import {
 } from '@/components/ui/sheet';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { cn } from '@/lib/utils';
-import { usePriceSettings } from '@/contexts/PriceSettingsContext';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface ActiveFiltersProps {
   filters: FilterState;
   onFilterChange: (filters: FilterState) => void;
   onClearFilters: () => void;
   resultCount: number;
-  sortBy: string;
-  onSortChange: (value: string) => void;
+  // sortBy / onSortChange are no longer used here — moved to StatusTabs
+  sortBy?: string;
+  onSortChange?: (value: string) => void;
   availableMakes: string[];
   availableModels: { make: string; model: string }[];
 }
-
-const sortOptions = [
-  { value: 'price_asc', label: 'sort.cheapest' },
-  { value: 'price_desc', label: 'sort.mostExpensive' },
-  { value: 'mileage_asc', label: 'sort.lowestMileage' },
-  { value: 'year_desc', label: 'sort.newest' },
-  { value: 'newest', label: 'sort.recentlyAdded' },
-];
 
 export function ActiveFilters({
   filters,
   onFilterChange,
   onClearFilters,
   resultCount,
-  sortBy,
-  onSortChange,
   availableMakes,
   availableModels,
 }: ActiveFiltersProps) {
   const { t } = useTranslation();
-  const { priceType, setPriceType } = usePriceSettings();
-  const { user } = useAuth();
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState(filters.query || '');
   const [isUserTyping, setIsUserTyping] = React.useState(false);
@@ -204,16 +185,15 @@ export function ActiveFilters({
 
   const totalChipCount = chipGroups.reduce((acc, g) => acc + g.chips.length, 0);
 
-  const currentSort = sortOptions.find((s) => s.value === sortBy);
-
   return (
     <div className="flex flex-col">
-      {/* Top Bar - Mobile */}
-      <div className="flex lg:hidden flex-col gap-4 mb-4 mt-3">
+      {/* ── Mobile top bar ── */}
+      <div className="flex lg:hidden flex-col gap-3 mb-3 mt-3">
+        {/* Search input */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder={t('search.placeholder', 'Search...')}
+            placeholder={t('search.placeholder', 'Szukaj marki, modelu, typu nadwozia...')}
             value={searchValue}
             onChange={(e) => {
               setIsUserTyping(true);
@@ -222,7 +202,8 @@ export function ActiveFilters({
             className="pl-9"
           />
         </div>
-        <div className="flex items-center justify-between gap-4">
+        {/* Filters button row */}
+        <div className="flex items-center gap-2">
           <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" className="gap-2 flex-1">
@@ -264,142 +245,47 @@ export function ActiveFilters({
               </div>
             </SheetContent>
           </Sheet>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 flex-1">
-                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                {t('listing.gross')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                {t('listing.net')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 flex-1">
-                <ArrowUpDown className="h-4 w-4" />
-                <span className="truncate">{currentSort ? t(currentSort.label) : t('sort.title')}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {sortOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => onSortChange(option.value)}
-                  className={cn('gap-2', sortBy === option.value && 'bg-accent')}
-                >
-                  {sortBy === option.value && <Check className="h-4 w-4" />}
-                  {t(option.label)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
-      {/* Results Count & Sort & Search - Desktop Sticky Widget */}
-      <div className="hidden lg:flex flex-col gap-3 sticky top-16 z-20 bg-card p-4 transition-all mt-4">
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-muted-foreground whitespace-nowrap">
-            {t('common.found')}:{' '}
-            <span className="font-semibold text-foreground">{resultCount}</span> {t('common.offers')}
-          </div>
+      {/* ── Desktop: search integrated into TopFilterBar row (this row is now just chips) ── */}
+      {/* Search pill — desktop, shown inline with filter pills in TopFilterBar */}
+      {/* (TopFilterBar renders the search input — nothing extra here on desktop) */}
 
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder={t('search.placeholder', 'Pozwól, że znajdę to za Ciebie...')}
-              value={searchValue}
-              onChange={(e) => {
-                setIsUserTyping(true);
-                setSearchValue(e.target.value);
-              }}
-              className="pl-9 w-full bg-background border-primary/20 focus-visible:ring-primary/30 active:scale-[1.01] transition-all"
-              disabled={false}
-              readOnly={false}
-            />
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 whitespace-nowrap">
-                {priceType === 'gross' ? t('listing.gross') : t('listing.net')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setPriceType('gross')} className={cn(priceType === 'gross' && 'bg-accent')}>
-                {t('listing.gross')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPriceType('net')} className={cn(priceType === 'net' && 'bg-accent')}>
-                {t('listing.net')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 whitespace-nowrap">
-                <ArrowUpDown className="h-4 w-4" />
-                {currentSort ? t(currentSort.label) : t('sort.title')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {sortOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => onSortChange(option.value)}
-                  className={cn('gap-2', sortBy === option.value && 'bg-accent')}
+      {/* ── Active Filter Chips — desktop (below TopFilterBar) ── */}
+      {totalChipCount > 0 && (
+        <div className="hidden lg:flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2">
+          {chipGroups.map((group) => (
+            <div key={group.key} className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                {group.groupLabel}:
+              </span>
+              {group.chips.map((chip) => (
+                <button
+                  key={chip.key}
+                  onClick={chip.onRemove}
+                  className="chip chip-active chip-removable group text-xs py-1"
                 >
-                  {sortBy === option.value && <Check className="h-4 w-4" />}
-                  {t(option.label)}
-                </DropdownMenuItem>
+                  <span>{chip.label}</span>
+                  <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                </button>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </div>
+          ))}
+          {totalChipCount > 1 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearFilters}
+              className="text-destructive hover:text-destructive h-7 text-xs px-2"
+            >
+              {t('common.clearFilters')}
+            </Button>
+          )}
         </div>
+      )}
 
-        {/* Active Filter Chips - Grouped, inside sticky widget for desktop */}
-        {totalChipCount > 0 && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-1 border-t border-border/40">
-            {chipGroups.map((group) => (
-              <div key={group.key} className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-                  {group.groupLabel}:
-                </span>
-                {group.chips.map((chip) => (
-                  <button
-                    key={chip.key}
-                    onClick={chip.onRemove}
-                    className="chip chip-active chip-removable group text-xs py-1"
-                  >
-                    <span>{chip.label}</span>
-                    <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
-                  </button>
-                ))}
-              </div>
-            ))}
-            {totalChipCount > 1 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClearFilters}
-                className="text-destructive hover:text-destructive h-7 text-xs px-2"
-              >
-                {t('common.clearFilters')}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Active Filter Chips - Mobile (stays below, also grouped) */}
+      {/* ── Active Filter Chips — mobile ── */}
       {totalChipCount > 0 && (
         <div className="flex lg:hidden flex-wrap items-center gap-x-3 gap-y-2">
           {chipGroups.map((group) => (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, Search } from 'lucide-react';
 import { FilterState } from '@/components/FilterPanel';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -157,6 +157,9 @@ interface TopFilterBarProps {
   availableMakes: string[];
   availableModels: { make: string; model: string }[];
   onOpenAllFilters: () => void;
+  /** Text search query — shown inline with filter pills on desktop */
+  query?: string;
+  onQueryChange?: (value: string) => void;
 }
 
 /**
@@ -171,6 +174,8 @@ export function TopFilterBar({
   availableMakes,
   availableModels,
   onOpenAllFilters,
+  query = '',
+  onQueryChange,
 }: TopFilterBarProps) {
   const { t } = useTranslation();
 
@@ -254,11 +259,24 @@ export function TopFilterBar({
         />
       </FilterPill>
 
+      {/* Search input — inline with pills, flexible width */}
+      {onQueryChange && (
+        <div className="relative flex-1 min-w-[160px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder={t('search.placeholder', 'Szukaj marki, modelu...')}
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            className="pl-9 h-9 text-sm rounded-full border-border bg-background"
+          />
+        </div>
+      )}
+
       <Button
         variant="outline"
         size="sm"
         onClick={onOpenAllFilters}
-        className="h-9 rounded-full ml-auto gap-1.5"
+        className="h-9 rounded-full gap-1.5"
       >
         <SlidersHorizontal className="h-3.5 w-3.5" />
         {t('filters.title')}

@@ -28,6 +28,7 @@ interface ListingCardProps {
 // Leasing: ~1.2%/mc on net price (36mc, 20% wkład, ~6.5% APR)
 const KREDYT_FACTOR = 0.014;
 const LEASING_FACTOR = 0.012;
+const VAT = 1.23;
 const PLN = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 });
 
 function dedupImages(primary: string | undefined, all: string[] | undefined): string[] {
@@ -138,8 +139,8 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     if (basePrice > 0) {
       const discountedPrice = applySpecialOfferDiscount(basePrice, discount);
       const isNetPrimary = priceType === 'net';
-      const primaryPrice = isNetPrimary ? Math.round(discountedPrice / 1.23) : discountedPrice;
-      const secondaryPrice = isNetPrimary ? discountedPrice : Math.round(discountedPrice / 1.23);
+      const primaryPrice = isNetPrimary ? Math.round(discountedPrice / VAT) : discountedPrice;
+      const secondaryPrice = isNetPrimary ? discountedPrice : Math.round(discountedPrice / VAT);
 
       const primaryLabel = formatPrice(primaryPrice, currency);
       // Secondary price intentionally omitted on listing cards (kept in detail view)
@@ -152,6 +153,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
   }, [listing, settings, priceType, discount]);
 
   // Approximate monthly rates (PLN only — skip for EUR pricing to avoid mixing currencies)
+  // priceType 'net' → show net rates (without VAT), 'gross' → show gross rates
   const monthlyRates = React.useMemo(() => {
     const currency = settings?.displayCurrency || 'PLN';
     if (currency !== 'PLN') return null;
@@ -160,12 +162,25 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
       discount
     );
     if (!grossPln || grossPln <= 0) return null;
-    const netPln = grossPln / 1.23;
+    const netPln = grossPln / VAT;
+
+    const kredytGross = Math.round(grossPln * KREDYT_FACTOR);
+    const leasingNet = Math.round(netPln * LEASING_FACTOR);
+
+    if (priceType === 'net') {
+      // Show net rates: kredyt net / leasing net
+      return {
+        kredyt: Math.round(kredytGross / VAT),
+        leasing: leasingNet,
+        isNet: true,
+      };
+    }
     return {
-      kredyt: Math.round(grossPln * KREDYT_FACTOR),
-      leasing: Math.round(netPln * LEASING_FACTOR),
+      kredyt: kredytGross,
+      leasing: leasingNet,
+      isNet: false,
     };
-  }, [listing, settings, discount]);
+  }, [listing, settings, discount, priceType]);
 
   const handleSpecialOfferClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -196,9 +211,10 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      className="listing-card group"
+      className="listing-card group flex flex-col"
     >
-      <Link to={offerPath} onClick={handleListingClick} className="block">
+      {/* Clickable area — grows to fill card */}
+      <Link to={offerPath} onClick={handleListingClick} className="block flex-1 flex flex-col">
         {/* Image */}
         <div className="relative">
           <ImageSwiper
@@ -229,7 +245,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-3">
+        <div className="p-4 space-y-3 flex-1 flex flex-col">
           {/* Status label + Title */}
           <div>
             <span
@@ -239,11 +255,12 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             >
               {listing.condition === 'NEW' ? t('listing.statusNew') : t('listing.statusUsed')}
             </span>
-            <h3 className="font-heading text-lg font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+            {/* Make + Model — larger font */}
+            <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
               {listing.make} {listing.model}
             </h3>
             {/* Trim — always reserves space to keep card heights aligned */}
-            <p className="text-sm text-muted-foreground line-clamp-1 min-h-[1.25rem]">
+            <p className="text-sm font-medium text-muted-foreground line-clamp-1 min-h-[1.25rem]">
               {listing.version || '\u00A0'}
             </p>
           </div>
@@ -251,29 +268,29 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
           {/* Spec pills — rok, przebieg, paliwo, skrzynia, moc */}
           <div className="flex flex-wrap gap-1.5">
             {/* Year */}
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
-              <Calendar className="h-3 w-3 shrink-0" />
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+              <Calendar className="h-3.5 w-3.5 shrink-0" />
               {listing.production_year}
             </span>
 
             {/* Mileage */}
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
-              <Gauge className="h-3 w-3 shrink-0" />
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+              <Gauge className="h-3.5 w-3.5 shrink-0" />
               {listing.mileage_km.toLocaleString('pl-PL')} {t('listing.km')}
             </span>
 
             {/* Fuel */}
             {listing.fuel_type && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
-                <Fuel className="h-3 w-3 shrink-0" />
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+                <Fuel className="h-3.5 w-3.5 shrink-0" />
                 {translateTechnicalValue('fuel', listing.fuel_type, t)}
               </span>
             )}
 
             {/* Transmission */}
             {listing.transmission && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
-                <svg className="h-3 w-3 shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+                <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M40 12v12H8m16-12v24M8 12v24"/>
                   <path d="M44 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M28 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M12 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0m16 32a4 4 0 1 1-8 0a4 4 0 0 1 8 0m-16 0a4 4 0 1 1-8 0a4 4 0 0 1 8 0m28 4a4 4 0 1 0 0-8a4 4 0 0 0 0 8"/>
                 </svg>
@@ -281,34 +298,39 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
               </span>
             )}
 
-            {/* Power */}
+            {/* Power — neutral (no accent color, no bold) */}
             {listing.engine_power_hp && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
-                <svg className="h-3 w-3 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+                <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                <span className="text-foreground font-semibold">{listing.engine_power_hp}</span>
-                <span>{t('listing.hp')}</span>
+                {listing.engine_power_hp} {t('listing.hp')}
               </span>
             )}
           </div>
 
-          {/* Location */}
-          <div className="flex items-center gap-1 text-xs text-muted-foreground pt-0.5">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span>{listing.dealer_city}</span>
-          </div>
+          {/* Location — only shown when not null */}
+          {listing.dealer_city && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span>{listing.dealer_city}</span>
+            </div>
+          )}
 
-          {/* Financing rates — styled like wynajem-dlugoterminowy */}
+          {/* Financing rates — styled like wynajem-dlugoterminowy, grow to push CTA down */}
+          <div className="flex-1" />
           {monthlyRates && (
             <div className="pt-3 border-t border-border">
               <div className="grid grid-cols-2 gap-3">
                 {/* Kredyt */}
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">{t('listing.kredytFrom')}</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    {t('listing.kredytFrom')}
+                    {monthlyRates.isNet && <span className="ml-1 text-[10px] opacity-70">netto</span>}
+                  </span>
                   <div className="flex items-baseline gap-1.5">
                     <span
-                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1 rounded-lg font-bold text-base"
+                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-lg"
                       style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                     >
                       {PLN.format(monthlyRates.kredyt)}
@@ -320,10 +342,13 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
                 {/* Leasing */}
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">{t('listing.leasingFrom')}</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    {t('listing.leasingFrom')}
+                    <span className="ml-1 text-[10px] opacity-70">netto</span>
+                  </span>
                   <div className="flex items-baseline gap-1.5">
                     <span
-                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1 rounded-lg font-bold text-base"
+                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-lg"
                       style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                     >
                       {PLN.format(monthlyRates.leasing)}
@@ -338,11 +363,11 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
         </div>
       </Link>
 
-      {/* CTA — brand color on hover */}
-      <div className="px-4 pb-4">
+      {/* CTA — pinned to bottom, brand color on hover */}
+      <div className="px-4 pb-4 pt-2">
         <Link
           to={offerPath}
-          className="listing-card__cta w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 h-10 text-sm font-medium border-2 transition-all duration-200 active:scale-[0.98]"
+          className="listing-card__cta w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 h-11 text-sm font-medium border-2 transition-all duration-200 active:scale-[0.98]"
           style={
             {
               '--brand-color': brandColor,
@@ -373,11 +398,11 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
 export function ListingCardSkeleton() {
   return (
-    <div className="listing-card">
+    <div className="listing-card flex flex-col">
       <div className="aspect-[16/10] skeleton-shimmer" />
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 flex-1 flex flex-col">
         <div className="space-y-2">
-          <div className="h-5 w-3/4 skeleton-shimmer" />
+          <div className="h-6 w-3/4 skeleton-shimmer" />
           <div className="h-4 w-1/2 skeleton-shimmer" />
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -388,13 +413,14 @@ export function ListingCardSkeleton() {
           <div className="h-6 w-14 skeleton-shimmer rounded-full" />
         </div>
         <div className="h-4 w-20 skeleton-shimmer" />
+        <div className="flex-1" />
         <div className="flex gap-3 pt-3">
-          <div className="h-8 w-1/2 skeleton-shimmer rounded-lg" />
-          <div className="h-8 w-1/2 skeleton-shimmer rounded-lg" />
+          <div className="h-9 w-1/2 skeleton-shimmer rounded-lg" />
+          <div className="h-9 w-1/2 skeleton-shimmer rounded-lg" />
         </div>
       </div>
-      <div className="px-4 pb-4">
-        <div className="h-10 skeleton-shimmer rounded-lg" />
+      <div className="px-4 pb-4 pt-2">
+        <div className="h-11 skeleton-shimmer rounded-lg" />
       </div>
     </div>
   );

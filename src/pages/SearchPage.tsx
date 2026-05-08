@@ -113,6 +113,27 @@ export default function SearchPage() {
   // "Wszystkie filtry" sheet (full FilterPanel) trigger
   const [allFiltersOpen, setAllFiltersOpen] = React.useState(false);
 
+  // Desktop search state (debounced, synced to filters.query)
+  const [desktopSearch, setDesktopSearch] = React.useState(filters.query || '');
+  const [isDesktopTyping, setIsDesktopTyping] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      setIsDesktopTyping(false);
+      if (desktopSearch !== filters.query) {
+        handleFilterChange({ ...filters, query: desktopSearch });
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [desktopSearch]);
+
+  // Sync desktop search when filters cleared externally
+  React.useEffect(() => {
+    if (!isDesktopTyping && filters.query !== desktopSearch) {
+      setDesktopSearch(filters.query || '');
+    }
+  }, [filters.query]);
+
   // Sync URL when state changes - use a ref to prevent loops
   const urlSyncTimeoutRef = React.useRef<NodeJS.Timeout>();
   React.useEffect(() => {
@@ -279,6 +300,11 @@ export default function SearchPage() {
             availableMakes={options?.makes || []}
             availableModels={options?.models || []}
             onOpenAllFilters={() => setAllFiltersOpen(true)}
+            query={desktopSearch}
+            onQueryChange={(v) => {
+              setIsDesktopTyping(true);
+              setDesktopSearch(v);
+            }}
           />
 
           {/* Results */}
@@ -291,6 +317,12 @@ export default function SearchPage() {
                 setPage(1);
               }}
               className="mb-3"
+              resultCount={totalCount}
+              sortBy={sortBy}
+              onSortChange={(value) => {
+                setSortBy(value);
+                setPage(1);
+              }}
             />
 
             <ActiveFilters
