@@ -77,11 +77,11 @@ export const translations = {
         capacityTo: "Pojemność do",
         priceFrom: "Cena od",
         priceTo: "Cena do",
-        condition: "Stan",
+        status: "Stan",
       },
 
-      // Vehicle condition (NEW / USED)
-      condition: {
+      // Vehicle status (NEW / USED)
+      status: {
         new: "Nowy",
         used: "Używany",
       },
@@ -430,11 +430,11 @@ export const translations = {
         capacityTo: "Capacity to",
         priceFrom: "Price from",
         priceTo: "Price to",
-        condition: "Condition",
+        status: "Status",
       },
 
-      // Vehicle condition (NEW / USED)
-      condition: {
+      // Vehicle status (NEW / USED)
+      status: {
         new: "New",
         used: "Used",
       },
@@ -781,11 +781,11 @@ export const translations = {
         capacityTo: "Hubraum bis",
         priceFrom: "Preis von",
         priceTo: "Preis bis",
-        condition: "Zustand",
+        status: "Zustand",
       },
 
-      // Vehicle condition (NEW / USED)
-      condition: {
+      // Vehicle status (NEW / USED)
+      status: {
         new: "Neu",
         used: "Gebraucht",
       },

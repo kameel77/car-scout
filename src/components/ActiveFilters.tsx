@@ -135,12 +135,12 @@ export function ActiveFilters({
     });
   });
 
-  filters.conditions.forEach((cond) => {
+  filters.statuses.forEach((s) => {
     activeChips.push({
-      key: `cond-${cond}`,
-      label: t(`condition.${cond.toLowerCase()}`),
+      key: `status-${s}`,
+      label: t(`status.${s.toLowerCase()}`),
       onRemove: () =>
-        onFilterChange({ ...filters, conditions: filters.conditions.filter((c) => c !== cond) }),
+        onFilterChange({ ...filters, statuses: filters.statuses.filter((x) => x !== s) }),
     });
   });
 
