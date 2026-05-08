@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
+import { StatusTabs } from '@/components/StatusTabs';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
@@ -264,6 +265,16 @@ export default function SearchPage() {
 
           {/* Results */}
           <div className="flex-1 min-w-0">
+            <StatusTabs
+              activeStatuses={filters.statuses}
+              byCondition={data?.byCondition}
+              onChange={(statuses) => {
+                handleFilterChange({ ...filters, statuses });
+                setPage(1);
+              }}
+              className="mb-3"
+            />
+
             <ActiveFilters
               filters={filters}
               onFilterChange={handleFilterChange}

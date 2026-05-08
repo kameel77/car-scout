@@ -302,7 +302,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
             ...scopeDealerFilter,
         };
 
-        const [listings, totalCount] = await Promise.all([
+        // Counts grouped by condition (NEW / USED) IGNORING the condition filter,
+        // so the tab UI can show "Nowe (N)" / "Używane (M)" totals even while one
+        // tab is currently selected.
+        const { condition: _conditionFilter, ...whereWithoutCondition } = where;
+
+        const [listings, totalCount, byConditionRaw] = await Promise.all([
             fastify.prisma.listing.findMany({
                 where,
                 include: {
@@ -312,12 +317,25 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 skip: (page - 1) * perPage,
                 take: perPage
             }),
-            fastify.prisma.listing.count({ where })
+            fastify.prisma.listing.count({ where }),
+            fastify.prisma.listing.groupBy({
+                by: ['condition'],
+                where: whereWithoutCondition,
+                _count: { _all: true },
+            }),
         ]);
+
+        const byCondition = { NEW: 0, USED: 0 };
+        for (const row of byConditionRaw) {
+            if (row.condition === 'NEW' || row.condition === 'USED') {
+                byCondition[row.condition] = row._count._all;
+            }
+        }
 
         return {
             listings,
             count: totalCount,
+            byCondition,
             page,
             perPage,
             totalPages: Math.max(1, Math.ceil(totalCount / perPage))
