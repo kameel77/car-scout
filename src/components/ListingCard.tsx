@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Gauge, Fuel, ArrowRight, Cog } from 'lucide-react';
+import { MapPin, Calendar, Gauge, Fuel, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
 
@@ -273,7 +273,10 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             {/* Transmission */}
             {listing.transmission && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full font-medium">
-                <Cog className="h-3 w-3 shrink-0" />
+                <svg className="h-3 w-3 shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M40 12v12H8m16-12v24M8 12v24"/>
+                  <path d="M44 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M28 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M12 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0m16 32a4 4 0 1 1-8 0a4 4 0 0 1 8 0m-16 0a4 4 0 1 1-8 0a4 4 0 0 1 8 0m28 4a4 4 0 1 0 0-8a4 4 0 0 0 0 8"/>
+                </svg>
                 {translateTechnicalValue('transmission', listing.transmission, t)}
               </span>
             )}
