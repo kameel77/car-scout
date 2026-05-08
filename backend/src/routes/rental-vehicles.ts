@@ -442,7 +442,22 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
     });
     // Import JSON of vehicles
     fastify.post('/api/rental-vehicles/import-json', {
-        preHandler: [fastify.authenticate]
+        preHandler: async (request: any, reply: any) => {
+            const authHeader = request.headers.authorization;
+            const staticKey = process.env.IMPORT_API_KEY;
+            
+            // Allow if valid static key is provided
+            if (staticKey && authHeader === `Bearer ${staticKey}`) {
+                return;
+            }
+            
+            // Otherwise fallback to standard JWT auth
+            try {
+                await request.jwtVerify();
+            } catch (err) {
+                reply.code(401).send({ error: 'Unauthorized' });
+            }
+        }
     }, async (request, reply) => {
         const body = request.body as any;
         
@@ -450,8 +465,20 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Missing or invalid "vehicles" array in payload' });
         }
 
+        const isStaticKey = process.env.IMPORT_API_KEY && request.headers.authorization === `Bearer ${process.env.IMPORT_API_KEY}`;
+
         // Resolve scope for dealer assignment (if needed)
-        const scope = await resolveScope(fastify, request);
+        let scope;
+        if (!isStaticKey) {
+            scope = await resolveScope(fastify, request);
+        } else {
+            // Static key gets platform-level privileges
+            scope = {
+                activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' },
+                isPlatform: true,
+                dealerFilter: {}
+            };
+        }
 
         // Can optionally provide dealerId or ownerRentalCompanyId to assign to all imported vehicles
         let dealerId = body.dealerId;
