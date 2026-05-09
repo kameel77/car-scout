@@ -335,7 +335,7 @@ export const listingsApi = {
         if (!response.ok) {
             throw new Error('Failed to fetch listing options');
         }
-        return response.json() as Promise<{ makes: string[]; models: { make: string; model: string }[] }>;
+        return response.json() as Promise<{ makes: string[]; models: { make: string; model: string }[]; bodyTypes: string[] }>;
     },
 
     getListings: async (filters?: any, token?: string | null) => {
@@ -366,6 +366,7 @@ export const listingsApi = {
             appendArray('transmission', filters.transmissions);
             appendArray('bodyType', filters.bodyTypes);
             appendArray('drive', filters.drives);
+            appendArray('status', filters.statuses);
 
             if (filters.powerFrom) params.append('powerMin', filters.powerFrom.toString());
             if (filters.powerTo) params.append('powerMax', filters.powerTo.toString());

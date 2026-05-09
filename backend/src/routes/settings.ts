@@ -55,6 +55,7 @@ type SettingsPayload = {
     csflowEnabled?: boolean;
     defaultSortCars?: string;
     defaultSortRental?: string;
+    searchGridColumns?: number | string;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -230,6 +231,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                         : undefined,
                     defaultSortCars: data.defaultSortCars || 'year_desc',
                     defaultSortRental: data.defaultSortRental || 'createdAt_desc',
+                    searchGridColumns: data.searchGridColumns
+                        ? toNumberOrFallback(data.searchGridColumns, 4)
+                        : undefined,
                 },
                 create: {
                     id: 'default',
@@ -287,6 +291,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                         : true,
                     defaultSortCars: data.defaultSortCars || 'year_desc',
                     defaultSortRental: data.defaultSortRental || 'createdAt_desc',
+                    searchGridColumns: toNumberOrFallback(data.searchGridColumns, 4),
                 }
             });
 

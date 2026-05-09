@@ -32,6 +32,7 @@ export interface FilterState {
   capacityFrom: string;
   capacityTo: string;
   bodyTypes: string[];
+  statuses: string[]; // 'NEW' | 'USED'
   priceFrom: string;
   priceTo: string;
   query: string;
@@ -72,6 +73,11 @@ const bodyTypeOptions = [
   { value: 'SUV', label: 'body.suv' },
   { value: 'kombi', label: 'body.kombi' },
   { value: 'coupe', label: 'body.coupe' },
+];
+
+const statusOptions = [
+  { value: 'NEW', label: 'status.new' },
+  { value: 'USED', label: 'status.used' },
 ];
 
 interface FilterSectionProps {
@@ -116,6 +122,8 @@ interface MultiSelectProps {
   onChange: (values: string[]) => void;
   searchable?: boolean;
   searchPlaceholder?: string;
+  /** When true, renders options as wrapped row instead of stacked column. */
+  inline?: boolean;
 }
 
 function MultiSelect({
@@ -124,6 +132,7 @@ function MultiSelect({
   onChange,
   searchable,
   searchPlaceholder,
+  inline,
 }: MultiSelectProps) {
   const { t } = useTranslation();
   const [search, setSearch] = React.useState('');
@@ -157,7 +166,7 @@ function MultiSelect({
         </div>
       )}
       <ScrollArea className={searchable ? 'h-40' : 'max-h-48'}>
-        <div className="space-y-1">
+        <div className={inline ? 'flex flex-wrap gap-x-4 gap-y-1' : 'space-y-1'}>
           {filteredOptions.map((option) => {
             const id = `filter-${option.value.replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2, 9)}`;
             return (
@@ -172,7 +181,7 @@ function MultiSelect({
                 />
                 <label
                   htmlFor={id}
-                  className="text-sm cursor-pointer flex-1 select-none"
+                  className="text-sm cursor-pointer select-none whitespace-nowrap"
                 >
                   {t(option.label, option.label)}
                 </label>
@@ -275,6 +284,18 @@ export function FilterPanel({
       <Separator className="mb-4" />
 
       <div className="space-y-1 overflow-y-auto flex-1 pr-3 min-h-0 -mr-1">
+        {/* Status (new / used) */}
+        <FilterSection title={t('filters.status')} defaultOpen>
+          <MultiSelect
+            options={statusOptions}
+            selected={filters.statuses}
+            onChange={(v) => updateFilter('statuses', v)}
+            inline
+          />
+        </FilterSection>
+
+        <Separator />
+
         {/* Make */}
         <FilterSection title={t('filters.make')}>
           <MultiSelect

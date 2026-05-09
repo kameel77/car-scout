@@ -4,7 +4,10 @@ import { useSearchParams } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
+import { StatusTabs } from '@/components/StatusTabs';
+import { TopFilterBar } from '@/components/TopFilterBar';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
 import { ListingPagination } from '@/components/ListingPagination';
@@ -40,6 +43,7 @@ const emptyFilters: FilterState = {
   capacityFrom: '',
   capacityTo: '',
   bodyTypes: [],
+  statuses: [],
   priceFrom: '',
   priceTo: '',
   query: '',
@@ -71,6 +75,7 @@ export default function SearchPage() {
       transmissions: parseArray(searchParams.get('transmission')),
       bodyTypes: parseArray(searchParams.get('bodyType')),
       drives: parseArray(searchParams.get('drive')),
+      statuses: parseArray(searchParams.get('status')).map((c) => c.toUpperCase()),
 
       yearFrom: searchParams.get('yearMin') || '',
       yearTo: searchParams.get('yearMax') || '',
@@ -105,6 +110,41 @@ export default function SearchPage() {
     PAGE_SIZE_OPTIONS.includes(initialPerPage) ? initialPerPage : DEFAULT_PER_PAGE
   );
 
+  // "Wszystkie filtry" sheet (full FilterPanel) trigger
+  const [allFiltersOpen, setAllFiltersOpen] = React.useState(() => {
+    return searchParams.get('openFilters') === 'true';
+  });
+
+  // Clean up openFilters param after reading it
+  React.useEffect(() => {
+    if (searchParams.get('openFilters')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('openFilters');
+      setSearchParams(next, { replace: true });
+    }
+  }, []);
+
+  // Desktop search state (debounced, synced to filters.query)
+  const [desktopSearch, setDesktopSearch] = React.useState(filters.query || '');
+  const [isDesktopTyping, setIsDesktopTyping] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      setIsDesktopTyping(false);
+      if (desktopSearch !== filters.query) {
+        handleFilterChange({ ...filters, query: desktopSearch });
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [desktopSearch]);
+
+  // Sync desktop search when filters cleared externally
+  React.useEffect(() => {
+    if (!isDesktopTyping && filters.query !== desktopSearch) {
+      setDesktopSearch(filters.query || '');
+    }
+  }, [filters.query]);
+
   // Sync URL when state changes - use a ref to prevent loops
   const urlSyncTimeoutRef = React.useRef<NodeJS.Timeout>();
   React.useEffect(() => {
@@ -123,6 +163,7 @@ export default function SearchPage() {
       if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
       if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
       if (filters.drives.length) params.set('drive', filters.drives.join(','));
+      if (filters.statuses.length) params.set('status', filters.statuses.map((c) => c.toLowerCase()).join(','));
 
       if (filters.yearFrom) params.set('yearMin', filters.yearFrom);
       if (filters.yearTo) params.set('yearMax', filters.yearTo);
@@ -243,24 +284,58 @@ export default function SearchPage() {
 
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
-      <main className="container pt-0 pb-6">
-        <div className="flex gap-6">
-          {/* Desktop Filters */}
-          <aside className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-16 h-[calc(100vh-4rem)] pt-4">
-              <FilterPanel
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onClear={handleClearFilters}
-                resultCount={totalCount}
-                availableMakes={options?.makes || []}
-                availableModels={options?.models || []}
-              />
-            </div>
-          </aside>
+      <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+          <SheetHeader className="px-6 pt-6 pb-2">
+            <SheetTitle>{t('filters.title')}</SheetTitle>
+          </SheetHeader>
+          <div className="px-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
+            <FilterPanel
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onClear={handleClearFilters}
+              resultCount={totalCount}
+              availableMakes={options?.makes || []}
+              availableModels={options?.models || []}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <main className="container pt-4 pb-6">
+        <div className="min-w-0">
+          {/* Top filter bar on desktop */}
+          <TopFilterBar
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            availableMakes={options?.makes || []}
+            availableModels={options?.models || []}
+            onOpenAllFilters={() => setAllFiltersOpen(true)}
+            query={desktopSearch}
+            onQueryChange={(v) => {
+              setIsDesktopTyping(true);
+              setDesktopSearch(v);
+            }}
+          />
 
           {/* Results */}
           <div className="flex-1 min-w-0">
+            <StatusTabs
+              activeStatuses={filters.statuses}
+              byCondition={data?.byCondition}
+              onChange={(statuses) => {
+                handleFilterChange({ ...filters, statuses });
+                setPage(1);
+              }}
+              className="mb-3"
+              resultCount={totalCount}
+              sortBy={sortBy}
+              onSortChange={(value) => {
+                setSortBy(value);
+                setPage(1);
+              }}
+            />
+
             <ActiveFilters
               filters={filters}
               onFilterChange={handleFilterChange}
@@ -295,7 +370,7 @@ export default function SearchPage() {
               </div>
             )}
 
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
