@@ -335,7 +335,7 @@ export const listingsApi = {
         if (!response.ok) {
             throw new Error('Failed to fetch listing options');
         }
-        return response.json() as Promise<{ makes: string[]; models: { make: string; model: string }[] }>;
+        return response.json() as Promise<{ makes: string[]; models: { make: string; model: string }[]; bodyTypes: string[] }>;
     },
 
     getListings: async (filters?: any, token?: string | null) => {

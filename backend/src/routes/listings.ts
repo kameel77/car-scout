@@ -28,10 +28,19 @@ export async function listingRoutes(fastify: FastifyInstance) {
             orderBy: { model: 'asc' }
         });
 
+        // fetch distinct body types from non-archived listings
+        const bodyTypesRaw = await fastify.prisma.listing.findMany({
+            where: { isArchived: false, bodyType: { not: null } },
+            select: { bodyType: true },
+            distinct: ['bodyType'],
+            orderBy: { bodyType: 'asc' }
+        });
+
         const makes = makesRaw.map(m => m.make).filter(Boolean);
         const models = modelsRaw.map(m => ({ make: m.make, model: m.model })).filter(m => m.make && m.model);
+        const bodyTypes = bodyTypesRaw.map(b => b.bodyType).filter(Boolean) as string[];
 
-        return { makes, models };
+        return { makes, models, bodyTypes };
     });
 
     fastify.post('/api/listings', { preHandler: [fastify.authenticate] }, async (request, reply) => {

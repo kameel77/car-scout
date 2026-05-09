@@ -4,6 +4,7 @@ import { listingsApi } from '../services/api';
 export interface ListingOptions {
     makes: string[];
     models: { make: string; model: string }[];
+    bodyTypes: string[];
 }
 
 export function useListingOptions() {
