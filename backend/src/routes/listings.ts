@@ -28,10 +28,19 @@ export async function listingRoutes(fastify: FastifyInstance) {
             orderBy: { model: 'asc' }
         });
 
+        // fetch distinct body types from non-archived listings
+        const bodyTypesRaw = await fastify.prisma.listing.findMany({
+            where: { isArchived: false, bodyType: { not: null } },
+            select: { bodyType: true },
+            distinct: ['bodyType'],
+            orderBy: { bodyType: 'asc' }
+        });
+
         const makes = makesRaw.map(m => m.make).filter(Boolean);
         const models = modelsRaw.map(m => ({ make: m.make, model: m.model })).filter(m => m.make && m.model);
+        const bodyTypes = bodyTypesRaw.map(b => b.bodyType).filter(Boolean) as string[];
 
-        return { makes, models };
+        return { makes, models, bodyTypes };
     });
 
     fastify.post('/api/listings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
@@ -183,6 +192,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             powerMin, powerMax,
             capacityMin, capacityMax,
             fuelType, transmission, bodyType,
+            status,
             sortBy,
             includeArchived,
             currency, // Added currency parameter
@@ -204,6 +214,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const bodyTypes = toArray(bodyType);
         const makes = toArray(make);
         const models = toArray(model);
+        // status: 'new' | 'used' (case-insensitive); maps to Prisma `condition` enum NEW | USED
+        const statuses = toArray(status)
+            ?.map((c) => c.toUpperCase())
+            .filter((c) => c === 'NEW' || c === 'USED') as ('NEW' | 'USED')[] | undefined;
 
         const isEur = currency === 'EUR';
         const priceField = isEur ? 'brokerPriceEur' : 'brokerPricePln';
@@ -283,6 +297,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' as const } : undefined,
             transmission: transmissions ? { in: transmissions, mode: 'insensitive' as const } : undefined,
             bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' as const } : undefined,
+            condition: statuses && statuses.length ? { in: statuses } : undefined,
             isArchived: includeArchived === 'true' ? undefined : false,
             entrySource: lastManualEditBefore
                 ? ('MANUAL' as const)
@@ -296,7 +311,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
             ...scopeDealerFilter,
         };
 
-        const [listings, totalCount] = await Promise.all([
+        // Counts grouped by condition (NEW / USED) IGNORING the condition filter,
+        // so the tab UI can show "Nowe (N)" / "Używane (M)" totals even while one
+        // tab is currently selected.
+        const { condition: _conditionFilter, ...whereWithoutCondition } = where;
+
+        const [listings, totalCount, byConditionRaw] = await Promise.all([
             fastify.prisma.listing.findMany({
                 where,
                 include: {
@@ -306,12 +326,25 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 skip: (page - 1) * perPage,
                 take: perPage
             }),
-            fastify.prisma.listing.count({ where })
+            fastify.prisma.listing.count({ where }),
+            fastify.prisma.listing.groupBy({
+                by: ['condition'],
+                where: whereWithoutCondition,
+                _count: { _all: true },
+            }),
         ]);
+
+        const byCondition = { NEW: 0, USED: 0 };
+        for (const row of byConditionRaw) {
+            if (row.condition === 'NEW' || row.condition === 'USED') {
+                byCondition[row.condition] = row._count._all;
+            }
+        }
 
         return {
             listings,
             count: totalCount,
+            byCondition,
             page,
             perPage,
             totalPages: Math.max(1, Math.ceil(totalCount / perPage))

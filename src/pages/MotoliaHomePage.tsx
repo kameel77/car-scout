@@ -24,6 +24,7 @@ import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 import { DynamicWidget } from '@/components/public/DynamicWidget';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
+import HeroVehicleFilter from '@/components/HeroVehicleFilter';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -244,44 +245,9 @@ export default function MotoliaHomePage() {
               </FadeIn>
             </div>
 
-            {/* Right col — image + floating stats */}
-            <FadeIn delay={0.4} className="relative hidden lg:block">
-              <div className="absolute inset-0 rounded-[2.5rem] rotate-2"
-                style={{ background: `linear-gradient(135deg, ${YELLOW}30, transparent)`, filter: 'blur(20px)' }} />
-              <img
-                src="https://images.unsplash.com/photo-1617469767053-d3b523a0b982?q=80&w=2662&auto=format&fit=crop"
-                alt="Motolia – szeroki wybór aut"
-                className="relative z-10 rounded-[2.5rem] w-full object-cover aspect-[4/3] shadow-2xl border border-gray-100"
-              />
-
-              {/* Stat card 1 */}
-              <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -bottom-6 -left-8 z-20 bg-white border border-gray-100 p-5 rounded-3xl shadow-xl"
-              >
-                <div className="text-3xl font-outfit font-bold mb-0.5" style={{ color: YELLOW_DARK }}>
-                  {config.homePage.hero.stats[0].value}
-                </div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wider">
-                  {config.homePage.hero.stats[0].label}
-                </div>
-              </motion.div>
-
-              {/* Stat card 2 */}
-              <motion.div
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -top-6 -right-8 z-20 p-5 rounded-3xl shadow-xl text-white"
-                style={{ background: BLACK }}
-              >
-                <div className="text-3xl font-outfit font-bold mb-0.5" style={{ color: YELLOW }}>
-                  {config.homePage.hero.stats[1].value}
-                </div>
-                <div className="text-gray-400 text-xs font-medium uppercase tracking-wider">
-                  {config.homePage.hero.stats[1].label}
-                </div>
-              </motion.div>
+            {/* Right col — vehicle filter widget */}
+            <FadeIn delay={0.4} className="relative">
+              <HeroVehicleFilter />
             </FadeIn>
 
           </div>

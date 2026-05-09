@@ -77,24 +77,31 @@ export const translations = {
         capacityTo: "Pojemność do",
         priceFrom: "Cena od",
         priceTo: "Cena do",
+        status: "Stan",
+      },
+
+      // Vehicle status (NEW / USED)
+      status: {
+        new: "Nowy",
+        used: "Używany",
       },
 
       // Fuel types
       fuel: {
-        petrol: "Benzyna",
-        diesel: "Diesel",
+        petrol: "PB",
+        diesel: "ON",
         hybrid: "Hybryda",
         hybridHev: "Hybryda HEV",
         hybridPhev: "Hybryda PHEV",
-        electric: "Elektryczny",
+        electric: "Elektryk",
         lpg: "LPG",
         cng: "CNG",
       },
 
       // Transmission
       transmission: {
-        manual: "Manualna",
-        automatic: "Automatyczna",
+        manual: "M",
+        automatic: "A",
       },
 
       // Drive
@@ -137,8 +144,13 @@ export const translations = {
         dealer: "Dealer",
         location: "Lokalizacja",
         mileage: "Przebieg",
-        net: "ceny netto",
-        gross: "ceny brutto",
+        net: "Na firmę",
+        gross: "Prywatnie",
+        kredytFrom: "Kredyt od",
+        leasingFrom: "Leasing od",
+        perMonth: "/mc",
+        statusNew: "NOWY",
+        statusUsed: "UŻYWANY",
         specialOffer: "Oferta dla Ciebie",
       },
 
@@ -423,6 +435,13 @@ export const translations = {
         capacityTo: "Capacity to",
         priceFrom: "Price from",
         priceTo: "Price to",
+        status: "Status",
+      },
+
+      // Vehicle status (NEW / USED)
+      status: {
+        new: "New",
+        used: "Used",
       },
 
       // Fuel types
@@ -483,8 +502,13 @@ export const translations = {
         dealer: "Dealer",
         location: "Location",
         mileage: "Mileage",
-        net: "net prices",
-        gross: "gross prices",
+        net: "Business",
+        gross: "Personal",
+        kredytFrom: "Loan from",
+        leasingFrom: "Lease from",
+        perMonth: "/mo",
+        statusNew: "NEW",
+        statusUsed: "USED",
         specialOffer: "Your special offer",
       },
 
@@ -767,6 +791,13 @@ export const translations = {
         capacityTo: "Hubraum bis",
         priceFrom: "Preis von",
         priceTo: "Preis bis",
+        status: "Zustand",
+      },
+
+      // Vehicle status (NEW / USED)
+      status: {
+        new: "Neu",
+        used: "Gebraucht",
       },
 
       // Fuel types
@@ -827,8 +858,13 @@ export const translations = {
         dealer: "Händler",
         location: "Standort",
         mileage: "Kilometerstand",
-        net: "Nettopreise",
-        gross: "Bruttopreise",
+        net: "Geschäft",
+        gross: "Privat",
+        kredytFrom: "Kredit ab",
+        leasingFrom: "Leasing ab",
+        perMonth: "/Mt",
+        statusNew: "NEU",
+        statusUsed: "GEBRAUCHT",
         specialOffer: "Angebot für dich",
       },
 
