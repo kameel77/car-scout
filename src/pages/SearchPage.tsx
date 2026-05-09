@@ -111,7 +111,18 @@ export default function SearchPage() {
   );
 
   // "Wszystkie filtry" sheet (full FilterPanel) trigger
-  const [allFiltersOpen, setAllFiltersOpen] = React.useState(false);
+  const [allFiltersOpen, setAllFiltersOpen] = React.useState(() => {
+    return searchParams.get('openFilters') === 'true';
+  });
+
+  // Clean up openFilters param after reading it
+  React.useEffect(() => {
+    if (searchParams.get('openFilters')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('openFilters');
+      setSearchParams(next, { replace: true });
+    }
+  }, []);
 
   // Desktop search state (debounced, synced to filters.query)
   const [desktopSearch, setDesktopSearch] = React.useState(filters.query || '');

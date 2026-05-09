@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Search, SlidersHorizontal, ArrowRight } from 'lucide-react';
+import { ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useListingOptions } from '@/hooks/useListingOptions';
+import { rentalPublicApi } from '@/services/rental-api';
 import './HeroVehicleFilter.css';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -17,6 +19,12 @@ interface FilterState {
   model: string;
   priceMin: string;
   priceMax: string;
+}
+
+interface OptionsData {
+  makes: string[];
+  models: { make: string; model: string }[];
+  bodyTypes: string[];
 }
 
 // ─── Custom Dropdown ────────────────────────────────────────────────────────
@@ -125,11 +133,31 @@ function Dropdown({ label, placeholder, value, options, onChange, disabled, sear
   );
 }
 
+// ─── Hook: fetch rental filter options (public endpoint) ────────────────────
+
+function useRentalFilterOptions() {
+  return useQuery<OptionsData>({
+    queryKey: ['rentalFilterOptions'],
+    queryFn: async () => {
+      const data = await rentalPublicApi.listVehicles({ limit: '1' });
+      const filters = data.filters || {};
+      return {
+        makes: (filters.makes || []).sort() as string[],
+        bodyTypes: (filters.bodyTypes || []).sort() as string[],
+        // Rental doesn't have per-make models from the filter options endpoint,
+        // so we return an empty array. The user will search by make only.
+        models: [] as { make: string; model: string }[],
+      };
+    },
+    staleTime: 1000 * 60 * 30, // 30 min
+    refetchOnWindowFocus: false,
+  });
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function HeroVehicleFilter() {
   const navigate = useNavigate();
-  const { data: options, isLoading } = useListingOptions();
 
   const [filters, setFilters] = useState<FilterState>({
     clientType: 'private',
@@ -141,44 +169,69 @@ export default function HeroVehicleFilter() {
     priceMax: '',
   });
 
+  // Fetch options for both contexts
+  const { data: listingOptions, isLoading: listingLoading } = useListingOptions();
+  const { data: rentalOptions, isLoading: rentalLoading } = useRentalFilterOptions();
+
+  // Pick the right options based on current status
+  const isRental = filters.status === 'rental';
+  const activeOptions = isRental ? rentalOptions : listingOptions;
+  const isLoading = isRental ? rentalLoading : listingLoading;
+
+  const makes = activeOptions?.makes ?? [];
+  const bodyTypes = activeOptions?.bodyTypes ?? [];
+
   // Derived: models filtered by selected make
   const availableModels = useMemo(() => {
-    if (!options?.models || !filters.make) return [];
-    return options.models
+    if (!activeOptions?.models || !filters.make) return [];
+    return activeOptions.models
       .filter(m => m.make.toLowerCase() === filters.make.toLowerCase())
       .map(m => m.model)
       .sort();
-  }, [options?.models, filters.make]);
+  }, [activeOptions?.models, filters.make]);
+
+  // Reset dependent fields when status changes
+  const handleStatusChange = useCallback((status: VehicleStatus) => {
+    setFilters(prev => ({
+      ...prev,
+      status,
+      bodyType: '',
+      make: '',
+      model: '',
+    }));
+  }, []);
 
   // Reset model when make changes
   const handleMakeChange = useCallback((make: string) => {
     setFilters(prev => ({ ...prev, make, model: '' }));
   }, []);
 
-  const handleStatusChange = useCallback((status: VehicleStatus) => {
-    if (status === 'rental') {
-      navigate('/wynajem-dlugoterminowy');
-      return;
-    }
-    setFilters(prev => ({ ...prev, status }));
-  }, [navigate]);
-
   const handleSubmit = useCallback(() => {
-    const params = new URLSearchParams();
-
-    if (filters.status) params.set('status', filters.status);
-    if (filters.bodyType) params.set('bodyType', filters.bodyType);
-    if (filters.make) params.set('make', filters.make);
-    if (filters.model) params.set('model', filters.model);
-    if (filters.priceMin) params.set('priceMin', filters.priceMin);
-    if (filters.priceMax) params.set('priceMax', filters.priceMax);
-
-    const qs = params.toString();
-    navigate(`/samochody${qs ? `?${qs}` : ''}`);
+    if (filters.status === 'rental') {
+      // Navigate to rental search
+      const params = new URLSearchParams();
+      if (filters.bodyType) params.set('bodyType', filters.bodyType);
+      if (filters.make) params.set('make', filters.make);
+      if (filters.clientType === 'business') params.set('offerType', 'b2b');
+      const qs = params.toString();
+      navigate(`/wynajem-dlugoterminowy${qs ? `?${qs}` : ''}`);
+    } else {
+      // Navigate to listings search
+      const params = new URLSearchParams();
+      if (filters.status) params.set('status', filters.status);
+      if (filters.bodyType) params.set('bodyType', filters.bodyType);
+      if (filters.make) params.set('make', filters.make);
+      if (filters.model) params.set('model', filters.model);
+      if (filters.priceMin) params.set('priceMin', filters.priceMin);
+      if (filters.priceMax) params.set('priceMax', filters.priceMax);
+      const qs = params.toString();
+      navigate(`/samochody${qs ? `?${qs}` : ''}`);
+    }
   }, [filters, navigate]);
 
-  const makes = options?.makes ?? [];
-  const bodyTypes = options?.bodyTypes ?? [];
+  const handleAdvancedSearch = useCallback(() => {
+    navigate('/samochody?openFilters=true');
+  }, [navigate]);
 
   return (
     <div className="hvf">
@@ -253,14 +306,20 @@ export default function HeroVehicleFilter() {
         searchable
       />
 
-      {/* Model (cascading, disabled if no make) */}
+      {/* Model (cascading, disabled if no make or rental mode) */}
       <Dropdown
         label="Model"
-        placeholder={filters.make ? 'Wybierz model' : 'Najpierw wybierz markę'}
+        placeholder={
+          isRental
+            ? 'Niedostępne w wynajmie'
+            : filters.make
+              ? 'Wybierz model'
+              : 'Najpierw wybierz markę'
+        }
         value={filters.model}
         options={availableModels}
         onChange={val => setFilters(prev => ({ ...prev, model: val }))}
-        disabled={!filters.make}
+        disabled={!filters.make || isRental}
       />
 
       {/* Price range */}
@@ -287,11 +346,11 @@ export default function HeroVehicleFilter() {
       {/* Footer */}
       <div className="hvf__footer">
         <a
-          href="/samochody"
+          href="/samochody?openFilters=true"
           className="hvf__advanced-link"
           onClick={e => {
             e.preventDefault();
-            navigate('/samochody');
+            handleAdvancedSearch();
           }}
         >
           <SlidersHorizontal size={13} />
