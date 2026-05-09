@@ -218,6 +218,7 @@ export default function HeroVehicleFilter() {
     } else {
       // Navigate to listings search
       const params = new URLSearchParams();
+      if (filters.clientType === 'business') params.set('clientType', 'business');
       if (filters.status) params.set('status', filters.status);
       if (filters.bodyType) params.set('bodyType', filters.bodyType);
       if (filters.make) params.set('make', filters.make);
