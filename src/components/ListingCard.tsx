@@ -9,7 +9,7 @@ import { Listing } from '@/data/mockData';
 
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
-import { formatPrice } from '@/utils/formatters';
+import { formatPrice, formatNumber } from '@/utils/formatters';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { ImageSwiper } from '@/components/ImageSwiper';
@@ -330,7 +330,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                       className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
                       style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                     >
-                      {PLN.format(monthlyRates.kredyt)}
+                      {formatNumber(monthlyRates.kredyt)}
                       <span className="text-base font-semibold ml-0.5">zł</span>
                     </span>
                     <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
@@ -338,8 +338,8 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-[11px] text-muted-foreground">
                       {monthlyRates.isNet
-                        ? `${PLN.format(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
-                        : `${PLN.format(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
+                        ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
+                        : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
                     </span>
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
@@ -364,14 +364,14 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                       className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
                       style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                     >
-                      {PLN.format(monthlyRates.leasing)}
+                      {formatNumber(monthlyRates.leasing)}
                       <span className="text-base font-semibold ml-0.5">zł</span>
                     </span>
                     <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-[11px] text-muted-foreground">
-                      {`${PLN.format(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
+                      {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
                     </span>
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
