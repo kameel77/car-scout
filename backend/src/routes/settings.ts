@@ -56,6 +56,7 @@ type SettingsPayload = {
     defaultSortCars?: string;
     defaultSortRental?: string;
     searchGridColumns?: number | string;
+    splitNewUsed?: boolean;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -234,6 +235,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     searchGridColumns: data.searchGridColumns
                         ? toNumberOrFallback(data.searchGridColumns, 4)
                         : undefined,
+                    splitNewUsed: data.splitNewUsed !== undefined
+                        ? Boolean(data.splitNewUsed)
+                        : undefined,
                 },
                 create: {
                     id: 'default',
@@ -292,6 +296,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     defaultSortCars: data.defaultSortCars || 'year_desc',
                     defaultSortRental: data.defaultSortRental || 'createdAt_desc',
                     searchGridColumns: toNumberOrFallback(data.searchGridColumns, 4),
+                    splitNewUsed: Boolean(data.splitNewUsed),
                 }
             });
 
