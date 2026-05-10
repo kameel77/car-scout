@@ -346,7 +346,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                         <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
                           <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
                           Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania.
                         </TooltipContent>
                       </Tooltip>
@@ -378,7 +378,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                         <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
                           <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
                           Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania.
                         </TooltipContent>
                       </Tooltip>
