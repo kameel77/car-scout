@@ -98,16 +98,7 @@ export default function RentalSearchPage() {
         <div className="min-h-screen bg-gray-50">
             <Header onClearFilters={() => {}} hasActiveFilters={false} />
 
-            <main className="container pb-10">
-                {/* Hero section */}
-                <div className="py-10 text-center">
-                    <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-                        Najem długoterminowy
-                    </h1>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                        Wybierz pojazd i sprawdź ratę miesięczną. Oferta od wiodących firm najmowych.
-                    </p>
-                </div>
+            <main className="container pt-4 pb-10">
 
                 {/* Filters bar */}
                 <div className="bg-white rounded-2xl shadow-sm border p-4 mb-8">
