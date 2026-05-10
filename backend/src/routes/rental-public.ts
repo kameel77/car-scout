@@ -13,7 +13,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             search,
             sortBy = 'createdAt',
             sortOrder = 'desc',
-            offerType
+            offerType,
+            yearFrom,
+            yearTo,
+            priceFrom,
+            priceTo,
+            condition
         } = request.query as Record<string, string | undefined>;
 
         const pageNum = Math.max(1, parseInt(page || '1'));
@@ -48,6 +53,18 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         if (bodyType) where.bodyType = { equals: bodyType, mode: 'insensitive' };
         if (fuelType) where.fuelType = { equals: fuelType, mode: 'insensitive' };
 
+        // Condition filter (NEW / USED)
+        if (condition && (condition === 'NEW' || condition === 'USED')) {
+            where.condition = condition;
+        }
+
+        // Year range filter
+        if (yearFrom || yearTo) {
+            where.productionYear = {};
+            if (yearFrom) where.productionYear.gte = parseInt(yearFrom);
+            if (yearTo) where.productionYear.lte = parseInt(yearTo);
+        }
+
         if (search) {
             where.OR = [
                 { make: { contains: search, mode: 'insensitive' } },
@@ -57,7 +74,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         }
 
         const orderBy: any = {};
-        const validSortFields = ['createdAt', 'sellingPrice', 'make', 'productionYear'];
+        const validSortFields = ['createdAt', 'sellingPrice', 'make', 'productionYear', 'minMonthlyRateNet'];
         const sortField = validSortFields.includes(sortBy || '') ? sortBy : 'createdAt';
         orderBy[sortField!] = sortOrder === 'asc' ? 'asc' : 'desc';
 
@@ -111,7 +128,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         ]);
 
         // Transform to include minRate
-        const vehiclesWithRates = vehicles.map((v) => {
+        let vehiclesWithRates = vehicles.map((v) => {
             const allMinRates = v.rentalAssignments
                 .flatMap(a => a.matrixEntries.map(e => ({
                     ...e,
@@ -134,12 +151,25 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     servicesIncluded: minRate.servicesIncluded
                 } : null,
                 rentalCompanyCount: v.rentalAssignments.length,
-                rentalAssignments: undefined // Remove raw assignments from public response
+                rentalAssignments: undefined, // Remove raw assignments from public response
+                productionYear: v.productionYear,
+                condition: v.condition
             };
         });
 
-        // Get filter options
-        const filterOptions = await getFilterOptions(fastify);
+        // Post-filter by monthly rate range (rates are computed from matrix, not a direct column)
+        if (priceFrom || priceTo) {
+            const from = priceFrom ? parseInt(priceFrom) : 0;
+            const to = priceTo ? parseInt(priceTo) : Infinity;
+            vehiclesWithRates = vehiclesWithRates.filter(v => {
+                const rate = v.minMonthlyRateGross;
+                if (rate === null) return false;
+                return rate >= from && rate <= to;
+            });
+        }
+
+        // Get filter options (including condition counts)
+        const filterOptions = await getFilterOptions(fastify, where);
 
         return {
             vehicles: vehiclesWithRates,
@@ -294,38 +324,66 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
     });
 }
 
-async function getFilterOptions(fastify: FastifyInstance) {
+async function getFilterOptions(fastify: FastifyInstance, currentWhere?: any) {
     const cacheKey = 'api:rental:filter-options';
     const cached = await fastify.redis.get(cacheKey);
+
+    let staticOptions: any;
     if (cached) {
-        return JSON.parse(cached);
+        staticOptions = JSON.parse(cached);
+    } else {
+        const activeWhere = { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } };
+
+        const [makes, models, bodyTypes, fuelTypes, years] = await Promise.all([
+            fastify.prisma.rentalVehicle.findMany({
+                where: activeWhere,
+                select: { make: true },
+                distinct: ['make']
+            }),
+            fastify.prisma.rentalVehicle.findMany({
+                where: activeWhere,
+                select: { make: true, model: true },
+                distinct: ['make', 'model']
+            }),
+            fastify.prisma.rentalVehicle.findMany({
+                where: { ...activeWhere, bodyType: { not: null } },
+                select: { bodyType: true },
+                distinct: ['bodyType']
+            }),
+            fastify.prisma.rentalVehicle.findMany({
+                where: { ...activeWhere, fuelType: { not: null } },
+                select: { fuelType: true },
+                distinct: ['fuelType']
+            }),
+            fastify.prisma.rentalVehicle.findMany({
+                where: { ...activeWhere, productionYear: { not: null } },
+                select: { productionYear: true },
+                distinct: ['productionYear'],
+                orderBy: { productionYear: 'desc' }
+            })
+        ]);
+
+        staticOptions = {
+            makes: makes.map(v => v.make).sort(),
+            models: models.map(v => ({ make: v.make, model: v.model })).sort((a, b) => a.model.localeCompare(b.model)),
+            bodyTypes: bodyTypes.map(v => v.bodyType as string).sort(),
+            fuelTypes: fuelTypes.map(v => v.fuelType as string).sort(),
+            years: years.map(v => v.productionYear as number)
+        };
+
+        // Cache for 10 minutes
+        await fastify.redis.set(cacheKey, JSON.stringify(staticOptions), 'EX', 600);
     }
 
-    const [makes, bodyTypes, fuelTypes] = await Promise.all([
-        fastify.prisma.rentalVehicle.findMany({
-            where: { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } },
-            select: { make: true },
-            distinct: ['make']
-        }),
-        fastify.prisma.rentalVehicle.findMany({
-            where: { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } }, bodyType: { not: null } },
-            select: { bodyType: true },
-            distinct: ['bodyType']
-        }),
-        fastify.prisma.rentalVehicle.findMany({
-            where: { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } }, fuelType: { not: null } },
-            select: { fuelType: true },
-            distinct: ['fuelType']
-        })
+    // Condition counts — always fresh (based on active vehicles, ignoring condition filter)
+    const baseWhere = { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } };
+    const [newCount, usedCount] = await Promise.all([
+        fastify.prisma.rentalVehicle.count({ where: { ...baseWhere, condition: 'NEW' } }),
+        fastify.prisma.rentalVehicle.count({ where: { ...baseWhere, condition: 'USED' } })
     ]);
 
-    const options = {
-        makes: makes.map(v => v.make).sort(),
-        bodyTypes: bodyTypes.map(v => v.bodyType as string).sort(),
-        fuelTypes: fuelTypes.map(v => v.fuelType as string).sort()
+    return {
+        ...staticOptions,
+        byCondition: { NEW: newCount, USED: usedCount }
     };
-
-    // Cache for 10 minutes
-    await fastify.redis.set(cacheKey, JSON.stringify(options), 'EX', 600);
-    return options;
 }

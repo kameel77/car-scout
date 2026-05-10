@@ -597,10 +597,11 @@ model RentalVehicle {
   carClass                 String?  @map("car_class")
   modelCode                String?  @map("model_code")
   slug                     String?  @unique
-  isFeatured               Boolean  @default(false) @map("is_featured")
-  isActive                 Boolean  @default(true) @map("is_active")
-  createdAt                DateTime @default(now()) @map("created_at")
-  updatedAt                DateTime @updatedAt @map("updated_at")
+  isFeatured               Boolean          @default(false) @map("is_featured")
+  isActive                 Boolean          @default(true) @map("is_active")
+  condition                ListingCondition @default(NEW) @map("condition")
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
 
   dealer             Dealer?                   @relation(fields: [dealerId], references: [id])
   ownerRentalCompany RentalCompany?            @relation("VehicleOwnerCompany", fields: [ownerRentalCompanyId], references: [id])
@@ -612,6 +613,7 @@ model RentalVehicle {
   @@index([make, model])
   @@index([isActive])
   @@index([isFeatured])
+  @@index([condition])
   @@index([slug])
   @@map("rental_vehicles")
 }
