@@ -8,6 +8,7 @@ import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { rentalPublicApi } from '@/services/rental-api';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { MetaHead } from '@/components/seo/MetaHead';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -237,6 +238,45 @@ export default function RentalSearchPage() {
     <div className="min-h-screen bg-background">
       <Header onClearFilters={clearAllFilters} hasActiveFilters={hasActiveFilters} />
 
+      <MetaHead
+        title={`Wynajem długoterminowy | ${config.name}`}
+        description="Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne."
+        canonical="/wynajem-dlugoterminowy"
+        schema={{
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'CollectionPage',
+              name: 'Wynajem długoterminowy',
+              description: 'Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne.',
+              url: `${window.location.origin}/wynajem-dlugoterminowy`,
+              mainEntity: {
+                '@type': 'ItemList',
+                numberOfItems: totalCount,
+                itemListElement: vehicles.slice(0, 10).map((v: any, i: number) => ({
+                  '@type': 'ListItem',
+                  position: i + 1,
+                  item: {
+                    '@type': 'Car',
+                    name: `${v.make} ${v.model}`,
+                    url: `${window.location.origin}/wynajem-dlugoterminowy/${v.slug || v.id}`,
+                    vehicleModelDate: v.productionYear?.toString(),
+                    fuelType: v.fuelType,
+                  },
+                })),
+              },
+            },
+            {
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Strona główna', item: window.location.origin },
+                { '@type': 'ListItem', position: 2, name: 'Wynajem długoterminowy', item: `${window.location.origin}/wynajem-dlugoterminowy` },
+              ],
+            },
+          ],
+        }}
+      />
+
       {/* ── Side Sheet: All Filters ── */}
       <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0">
@@ -296,6 +336,12 @@ export default function RentalSearchPage() {
       </Sheet>
 
       <main className="container pt-4 pb-10">
+        {/* Page heading */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-foreground">Wynajem długoterminowy</h1>
+          <p className="text-sm text-muted-foreground mt-1">Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne.</p>
+        </div>
+
         {/* ── Desktop TopFilterBar ── */}
         <div className="hidden lg:flex flex-wrap items-center gap-2 mb-3 sticky top-20 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <FilterPill label={t('filters.make')} activeCount={makes.length}>

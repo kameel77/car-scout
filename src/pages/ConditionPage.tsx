@@ -5,17 +5,19 @@
  * Routes: /nowe → condition="NEW"   /uzywane → condition="USED"
  */
 import React from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Car, Calendar, Gauge, Fuel, Settings2 } from 'lucide-react';
+import { Car, Calendar, Gauge, Fuel, Settings2, Building2, User, ArrowUpDown, Check } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { TopFilterBar } from '@/components/TopFilterBar';
-import { StatusTabs } from '@/components/StatusTabs';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { ListingPagination } from '@/components/ListingPagination';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -37,6 +39,7 @@ import { normalizeRentalImageUrl, cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+const PLN_FMT = new Intl.NumberFormat('pl-PL');
 
 /* ── helpers ── */
 const emptyFilters: FilterState = {
@@ -64,6 +67,73 @@ function buildRentalImageList(v: any): string[] {
   push(v.primaryImageUrl);
   for (const u of v.imageUrls || []) push(u);
   return out;
+}
+/* ── ConditionNavTabs ── */
+
+const sortOpts = [
+  { value: 'year_desc', label: 'Najmłodszy rocznik' },
+  { value: 'year_asc', label: 'Najstarszy rocznik' },
+  { value: 'price_asc', label: 'Cena rosnąco' },
+  { value: 'price_desc', label: 'Cena malejąco' },
+  { value: 'mileage_asc', label: 'Przebieg rosnąco' },
+];
+
+function ConditionNavTabs({ condition, resultCount, sortBy, onSortChange }: {
+  condition: 'NEW' | 'USED'; resultCount?: number; sortBy: string;
+  onSortChange: (v: string) => void;
+}) {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { priceType, setPriceType } = usePriceSettings();
+  const isNew = condition === 'NEW';
+  const tabCls = (active: boolean) => cn(
+    'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer',
+    active ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+  );
+  const currentSort = sortOpts.find(s => s.value === sortBy);
+  return (
+    <div className="flex items-center gap-1 border-b border-border overflow-x-auto mb-3">
+      <button type="button" onClick={() => navigate('/nowe')} className={tabCls(isNew)}>
+        {t('status.new', 'Nowy')}
+      </button>
+      <button type="button" onClick={() => navigate('/uzywane')} className={tabCls(!isNew)}>
+        {t('status.used', 'Używany')}
+      </button>
+      <div className="flex-1" />
+      {resultCount !== undefined && (
+        <span className="hidden sm:block text-sm text-muted-foreground whitespace-nowrap px-2">
+          {t('common.found')}: <span className="font-semibold text-foreground">{PLN_FMT.format(resultCount)}</span>
+        </span>
+      )}
+      <div className="flex bg-secondary rounded-lg p-0.5">
+        <button type="button" onClick={() => setPriceType('net')}
+          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+            priceType === 'net' ? 'bg-accent shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+          <Building2 className="w-3.5 h-3.5" /> {t('pricing.business', 'Na firmę')}
+        </button>
+        <button type="button" onClick={() => setPriceType('gross')}
+          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+            priceType === 'gross' ? 'bg-accent shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+          <User className="w-3.5 h-3.5" /> {t('pricing.private', 'Prywatnie')}
+        </button>
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-1.5 h-8 text-xs whitespace-nowrap border border-border rounded-full px-3 hover:bg-secondary">
+            <ArrowUpDown className="h-3.5 w-3.5" /> {currentSort?.label || 'Sortuj'}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {sortOpts.map(o => (
+            <DropdownMenuItem key={o.value} onClick={() => onSortChange(o.value)}>
+              {sortBy === o.value && <Check className="h-4 w-4 mr-2" />}
+              {o.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }
 
 /* ── component ── */
@@ -288,6 +358,41 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
         title={`${pageTitle} | ${siteName}`}
         description={pageDescription}
         image={seoConfig?.homeOgImage}
+        canonical={isNew ? '/nowe' : '/uzywane'}
+        schema={{
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'CollectionPage',
+              name: pageTitle,
+              description: pageDescription,
+              url: `${window.location.origin}${isNew ? '/nowe' : '/uzywane'}`,
+              mainEntity: {
+                '@type': 'ItemList',
+                numberOfItems: totalCombined,
+                itemListElement: saleListings.slice(0, 10).map((l: any, i: number) => ({
+                  '@type': 'ListItem',
+                  position: i + 1,
+                  item: {
+                    '@type': 'Car',
+                    name: `${l.make} ${l.model}`,
+                    url: `${window.location.origin}/samochody/${l.slug || l.listing_id}`,
+                    vehicleModelDate: l.year?.toString(),
+                    fuelType: l.fuel_type,
+                    vehicleTransmission: l.transmission,
+                  },
+                })),
+              },
+            },
+            {
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Strona główna', item: window.location.origin },
+                { '@type': 'ListItem', position: 2, name: pageTitle, item: `${window.location.origin}${isNew ? '/nowe' : '/uzywane'}` },
+              ],
+            },
+          ],
+        }}
       />
 
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
@@ -333,12 +438,10 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
             }}
           />
 
-          {/* Tabs: don't show condition tabs (locked), but show sort + business/private */}
+          {/* Tabs: Nowy / Używany – navigate between /nowe and /uzywane */}
           <div className="flex-1 min-w-0">
-            <StatusTabs
-              activeStatuses={filters.statuses}
-              onChange={() => {}} // condition is locked, no-op
-              className="mb-3"
+            <ConditionNavTabs
+              condition={condition}
               resultCount={totalCombined}
               sortBy={sortBy}
               onSortChange={(value) => {
@@ -361,154 +464,46 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               availableModels={options?.models || []}
             />
 
-            {/* ── RENTAL VEHICLES section (shown first, above sale listings) ── */}
-            {rentalVehicles.length > 0 && (
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-4 mt-6">
-                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Car className="w-5 h-5 text-accent" />
-                    Wynajem długoterminowy
-                    <span className="text-sm font-normal text-muted-foreground ml-1">({rentalVehicles.length})</span>
-                  </h2>
-                  <Link
-                    to={`/wynajem-dlugoterminowy`}
-                    className="text-sm text-accent hover:underline font-medium"
-                  >
-                    Zobacz wszystkie →
-                  </Link>
-                </div>
-                <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
-                  {rentalVehicles.map((v: any) => (
-                    <Link
-                      key={v.id}
-                      to={`/wynajem-dlugoterminowy/${v.slug || v.id}`}
-                      className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-                    >
-                      <div className="relative">
-                        <ImageSwiper
-                          images={buildRentalImageList(v)}
-                          alt={`${v.make} ${v.model}`}
-                          aspectClassName="aspect-[16/10]"
-                          imgClassName="group-hover:scale-105"
-                          fallback={<div className="w-full h-full flex items-center justify-center"><Car className="w-16 h-16 text-gray-300" /></div>}
-                        />
-                        {/* Rental badge */}
-                        <div className="absolute top-3 left-3 bg-accent text-accent-foreground text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full z-10">
-                          WYNAJEM
-                        </div>
-                        {v.rentalCompanyCount > 1 && (
-                          <div className="absolute top-3 right-3 bg-card/95 backdrop-blur-sm text-xs font-medium px-2 py-1 rounded-full z-10">
-                            {v.rentalCompanyCount} oferty
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4 space-y-3 flex-1 flex flex-col">
-                        <div>
-                          <span className={`text-[10px] font-bold tracking-wider ${isNew ? 'text-accent' : 'text-muted-foreground'}`}>
-                            {isNew ? t('listing.statusNew') : t('listing.statusUsed')}
-                          </span>
-                          <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                            {v.make} {v.model}
-                          </h3>
-                          <p className="text-sm font-medium text-muted-foreground line-clamp-1 min-h-[1.25rem]">
-                            {v.version || '\u00A0'}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {v.productionYear && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
-                              <Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}
-                            </span>
-                          )}
-                          {v.enginePowerHp && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
-                              <Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM
-                            </span>
-                          )}
-                          {v.fuelType && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
-                              <Fuel className="h-3.5 w-3.5 shrink-0" /> {v.fuelType}
-                            </span>
-                          )}
-                          {v.transmission && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
-                              <Settings2 className="h-3.5 w-3.5 shrink-0" /> {v.transmission}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1" />
-                        {/* Monthly rate */}
-                        <div className="pt-3">
-                          {v.minMonthlyRateGross ? (
-                            <div>
-                              <span className="text-xs text-muted-foreground block mb-1">Rata od</span>
-                              <div className="flex items-baseline gap-1.5">
-                                <span
-                                  className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
-                                  style={{ background: accent, color: accentText }}
-                                >
-                                  {isBusiness
-                                    ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))
-                                    : formatNumber(Math.ceil(v.minMonthlyRateGross))}
-                                  <span className="text-base font-semibold ml-0.5">zł</span>
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {isBusiness ? 'netto / mies.' : 'brutto / mies.'}
-                                </span>
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {isBusiness
-                                  ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto`
-                                  : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`}
-                              </div>
-                              {v.minRateConfig && (
-                                <span className="text-xs text-muted-foreground">
-                                  {v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)}tys. km/rok
-                                </span>
-                              )}
-                            </div>
-                          ) : <span className="text-sm text-muted-foreground">Zapytaj o cenę</span>}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── SALE VEHICLES section ── */}
-            {(saleLoading || saleListings.length > 0) && (
-              <div>
-                {rentalVehicles.length > 0 && (
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                      <Car className="w-5 h-5 text-primary" />
-                      Leasing i kredyt
-                      <span className="text-sm font-normal text-muted-foreground ml-1">({saleTotalCount})</span>
-                    </h2>
-                    <Link
-                      to={`/samochody?status=${condition.toLowerCase()}`}
-                      className="text-sm text-accent hover:underline font-medium"
-                    >
-                      Zobacz wszystkie →
-                    </Link>
+            {/* ── UNIFIED GRID ── */}
+            <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
+              {rentalVehicles.map((v: any) => (
+                <Link key={`r-${v.id}`} to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                  <div className="relative">
+                    <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center"><Car className="w-16 h-16 text-gray-300" /></div>} />
+                    <div className="absolute top-3 left-3 bg-accent text-accent-foreground text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full z-10">WYNAJEM</div>
                   </div>
-                )}
-
-                <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
-                  {saleLoading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <ListingCardSkeleton key={i} />
-                    ))
-                  ) : saleListings.length > 0 ? (
-                    saleListings.map((listing, index) => (
-                      <ListingCard key={listing.listing_id} listing={listing} index={index} />
-                    ))
-                  ) : null}
-                </div>
-              </div>
-            )}
-
+                  <div className="p-4 space-y-3 flex-1 flex flex-col">
+                    <div>
+                      <span className={`text-[10px] font-bold tracking-wider ${isNew ? 'text-accent' : 'text-muted-foreground'}`}>{isNew ? t('listing.statusNew') : t('listing.statusUsed')}</span>
+                      <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{v.make} {v.model}</h3>
+                      <p className="text-sm font-medium text-muted-foreground line-clamp-1 min-h-[1.25rem]">{v.version || '\u00A0'}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}</span>}
+                      {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM</span>}
+                      {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {v.fuelType}</span>}
+                      {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Settings2 className="h-3.5 w-3.5 shrink-0" /> {v.transmission}</span>}
+                    </div>
+                    <div className="flex-1" />
+                    <div className="pt-3">
+                      {v.minMonthlyRateGross ? (<div>
+                        <span className="text-xs text-muted-foreground block mb-1">Rata od</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl" style={{ background: accent, color: accentText }}>
+                            {isBusiness ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23)) : formatNumber(Math.ceil(v.minMonthlyRateGross))}
+                            <span className="text-base font-semibold ml-0.5">zł</span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">{isBusiness ? 'netto / mies.' : 'brutto / mies.'}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">{isBusiness ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto` : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`}</div>
+                        {v.minRateConfig && <span className="text-xs text-muted-foreground">{v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)}tys. km/rok</span>}
+                      </div>) : <span className="text-sm text-muted-foreground">Zapytaj o cenę</span>}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+              {saleLoading ? Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={i} />) : saleListings.map((listing, index) => <ListingCard key={listing.listing_id} listing={listing} index={index} />)}
+            </div>
             {/* Empty state */}
             {!saleLoading && !rentalLoading && saleListings.length === 0 && rentalVehicles.length === 0 && (
               <div className="col-span-full py-16 text-center">
