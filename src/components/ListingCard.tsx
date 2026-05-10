@@ -2,13 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Gauge, Fuel, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, Gauge, Fuel, ArrowRight, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
 
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
-import { formatPrice } from '@/utils/formatters';
+import { formatPrice, formatNumber } from '@/utils/formatters';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { ImageSwiper } from '@/components/ImageSwiper';
@@ -207,10 +208,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
   }, effectiveFinancingType);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
+    <div
       className="listing-card group flex flex-col"
     >
       {/* Clickable area — grows to fill card */}
@@ -326,17 +324,33 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                 <div>
                   <span className="text-xs text-muted-foreground block mb-1">
                     {t('listing.kredytFrom')}
-                    {monthlyRates.isNet && <span className="ml-1 text-[10px] opacity-70">netto</span>}
                   </span>
                   <div className="flex items-baseline gap-1.5">
                     <span
                       className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
                       style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                     >
-                      {PLN.format(monthlyRates.kredyt)}
+                      {formatNumber(monthlyRates.kredyt)}
                       <span className="text-base font-semibold ml-0.5">zł</span>
                     </span>
                     <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-[11px] text-muted-foreground">
+                      {monthlyRates.isNet
+                        ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
+                        : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
+                    </span>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+                          Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
 
@@ -344,17 +358,31 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                 <div>
                   <span className="text-xs text-muted-foreground block mb-1">
                     {t('listing.leasingFrom')}
-                    <span className="ml-1 text-[10px] opacity-70">netto</span>
                   </span>
                   <div className="flex items-baseline gap-1.5">
                     <span
                       className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
                       style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                     >
-                      {PLN.format(monthlyRates.leasing)}
+                      {formatNumber(monthlyRates.leasing)}
                       <span className="text-base font-semibold ml-0.5">zł</span>
                     </span>
                     <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-[11px] text-muted-foreground">
+                      {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
+                    </span>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+                          Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               </div>
@@ -365,7 +393,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
       {/* bottom padding */}
       <div className="pb-4" />
-    </motion.div>
+    </div>
   );
 }
 

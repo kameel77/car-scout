@@ -30,6 +30,8 @@ interface HeaderProps {
 
 const ALL_NAV_LINKS = [
   { key: 'samochody', label: 'Samochody', to: '/samochody' },
+  { key: 'nowe', label: 'Nowe', to: '/nowe' },
+  { key: 'uzywane', label: 'Używane', to: '/uzywane' },
   { key: 'wynajem', label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
   { key: 'faq', label: 'FAQ', to: '/faq' },
   { key: 'kontakt', label: 'Kontakt', to: '/kontakt' },
@@ -46,12 +48,22 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
 
   const navItems = React.useMemo(() => {
     const visibility: string[] = settings?.navItemsVisibility ?? ['samochody', 'wynajem'];
+    const splitNewUsed = Boolean(settings?.splitNewUsed);
+
     return ALL_NAV_LINKS.filter((link) => {
       // FAQ and Kontakt are always shown
       if (link.key === 'faq' || link.key === 'kontakt') return true;
+      // When splitNewUsed is active: hide 'samochody', show 'nowe'+'uzywane'
+      if (splitNewUsed) {
+        if (link.key === 'samochody') return false;
+        if (link.key === 'nowe' || link.key === 'uzywane') return true;
+      } else {
+        // Default: hide nowe/uzywane, show samochody based on visibility
+        if (link.key === 'nowe' || link.key === 'uzywane') return false;
+      }
       return visibility.includes(link.key);
     });
-  }, [settings?.navItemsVisibility]);
+  }, [settings?.navItemsVisibility, settings?.splitNewUsed]);
 
   const enabledLanguages = React.useMemo(() => {
     const codes = settings?.enabledLanguages || ['pl'];
@@ -64,7 +76,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
     i18n.changeLanguage(code);
   };
 
-  const isSearchPage = location.pathname === '/' || location.pathname === '/search' || location.pathname === '/samochody';
+  const isSearchPage = location.pathname === '/' || location.pathname === '/search' || location.pathname === '/samochody' || location.pathname === '/nowe' || location.pathname === '/uzywane';
 
   const getHeaderLogoText = () => {
     if (!settings) return null;

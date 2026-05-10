@@ -46,6 +46,7 @@ import PersonalOfferPage from "./pages/PersonalOfferPage";
 import B2BOnepagerPage from "./pages/B2BOnepagerPage";
 import RentalSearchPage from "./pages/RentalSearchPage";
 import RentalDetailPage from "./pages/RentalDetailPage";
+import ConditionPage from "./pages/ConditionPage";
 import RentalLeadFormPage from "./pages/RentalLeadFormPage";
 import DealerGroupsPage from "./pages/admin/DealerGroupsPage";
 import DealersPage from "./pages/admin/DealersPage";
@@ -75,6 +76,8 @@ const App = () => (
                       <Route path="/" element={<HomePage />} />
                       <Route path="/samochody" element={<SearchPage />} />
                       <Route path="/search" element={<SearchPage />} />
+                      <Route path="/nowe" element={<ConditionPage condition="NEW" />} />
+                      <Route path="/uzywane" element={<ConditionPage condition="USED" />} />
                       <Route path="/kontakt" element={<ContactPage />} />
                       <Route path="/faq" element={<PublicFaqPage />} />
 

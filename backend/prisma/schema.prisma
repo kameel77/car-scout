@@ -300,6 +300,7 @@ model AppSettings {
   defaultSortCars             String   @default("year_desc") @map("default_sort_cars")
   defaultSortRental           String   @default("createdAt_desc") @map("default_sort_rental")
   searchGridColumns           Int      @default(4) @map("search_grid_columns")
+  splitNewUsed                Boolean  @default(false) @map("split_new_used")
 
   @@map("app_settings")
 }
