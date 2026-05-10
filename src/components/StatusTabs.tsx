@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpDown, Check } from 'lucide-react';
+import { ArrowUpDown, Check, Building2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import {
@@ -68,9 +68,9 @@ export function StatusTabs({
 
   return (
     <div className={cn('flex items-center gap-1 border-b border-border overflow-x-auto', className)}>
-      {/* Tabs: Filtry / Nowy / Używany */}
+      {/* Tabs: Wszystkie / Nowy / Używany */}
       <button type="button" onClick={() => onChange([])} className={tabClass(isAll)}>
-        {t('filters.title')}
+        {t('status.all', 'Wszystkie')}
         {totalCount !== null && (
           <span className="ml-1.5 text-xs text-muted-foreground">({PLN.format(totalCount)})</span>
         )}
@@ -99,34 +99,35 @@ export function StatusTabs({
         </span>
       )}
 
-      {/* Na firmę / Prywatnie toggle */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 h-8 text-xs whitespace-nowrap border border-border rounded-full px-3 hover:bg-secondary"
-          >
-            {priceType === 'net' ? t('listing.net') : t('listing.gross')}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => setPriceType('gross')}
-            className={cn('gap-2', priceType === 'gross' && 'bg-accent')}
-          >
-            {priceType === 'gross' && <Check className="h-3.5 w-3.5" />}
-            {t('listing.gross')}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setPriceType('net')}
-            className={cn('gap-2', priceType === 'net' && 'bg-accent')}
-          >
-            {priceType === 'net' && <Check className="h-3.5 w-3.5" />}
-            {t('listing.net')}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Na firmę / Prywatnie pill toggle */}
+      <div className="flex bg-secondary rounded-lg p-0.5">
+        <button
+          type="button"
+          onClick={() => setPriceType('net')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+            priceType === 'net'
+              ? 'bg-accent shadow-sm text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Building2 className="w-3.5 h-3.5" />
+          {t('listing.net')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setPriceType('gross')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+            priceType === 'gross'
+              ? 'bg-accent shadow-sm text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <User className="w-3.5 h-3.5" />
+          {t('listing.gross')}
+        </button>
+      </div>
 
       {/* Sort */}
       {onSortChange && (
