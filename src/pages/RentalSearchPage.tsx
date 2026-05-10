@@ -45,7 +45,7 @@ function getStoredClientType(): ClientType {
   try {
     const s = localStorage.getItem('rentalClientType');
     if (s === 'business' || s === 'consumer') return s;
-  } catch {}
+  } catch { /* ignore */ }
   return 'business';
 }
 
@@ -175,7 +175,7 @@ export default function RentalSearchPage() {
 
   const handleClientTypeChange = (type: ClientType) => {
     setClientType(type);
-    try { localStorage.setItem('rentalClientType', type); } catch {}
+    try { localStorage.setItem('rentalClientType', type); } catch { /* ignore */ }
   };
 
   // ── API query ──
