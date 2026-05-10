@@ -9,10 +9,19 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car, Building2, User } from 'lucide-react';
+import { Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight, Car, Building2, User, ChevronDown, ArrowUpDown, Check } from 'lucide-react';
 import { normalizeRentalImageUrl } from '@/lib/utils';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 function buildRentalImageList(v: any): string[] {
     const seen = new Set<string>();
@@ -39,10 +48,110 @@ function getStoredClientType(): ClientType {
     return 'business';
 }
 
+/* ── Filter pill (same visual as TopFilterBar) ──────────────────── */
+
+interface FilterPillProps {
+    label: string;
+    active?: boolean;
+    children: React.ReactNode;
+}
+
+function FilterPill({ label, active, children }: FilterPillProps) {
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className={cn(
+                        'inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-sm whitespace-nowrap transition-colors',
+                        active
+                            ? 'border-accent bg-accent/15 text-foreground font-medium'
+                            : 'border-border bg-background hover:bg-secondary/50'
+                    )}
+                >
+                    <span>{label}</span>
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-72 p-3">
+                {children}
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+interface SingleSelectListProps {
+    options: string[];
+    selected: string;
+    onChange: (value: string) => void;
+    allLabel: string;
+    searchable?: boolean;
+}
+
+function SingleSelectList({ options, selected, onChange, allLabel, searchable }: SingleSelectListProps) {
+    const [search, setSearch] = useState('');
+    const filtered = searchable
+        ? options.filter(o => o.toLowerCase().includes(search.toLowerCase()))
+        : options;
+
+    return (
+        <div className="space-y-2">
+            {searchable && (
+                <Input
+                    placeholder="Szukaj..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-9"
+                />
+            )}
+            <ScrollArea className="max-h-64">
+                <div className="space-y-0.5">
+                    <button
+                        type="button"
+                        onClick={() => onChange('')}
+                        className={cn(
+                            'w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors',
+                            selected === '' ? 'bg-accent/15 font-medium' : 'hover:bg-secondary/50'
+                        )}
+                    >
+                        {allLabel}
+                    </button>
+                    {filtered.map(option => (
+                        <button
+                            key={option}
+                            type="button"
+                            onClick={() => onChange(option)}
+                            className={cn(
+                                'w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors',
+                                selected === option ? 'bg-accent/15 font-medium' : 'hover:bg-secondary/50'
+                            )}
+                        >
+                            {option}
+                        </button>
+                    ))}
+                    {filtered.length === 0 && (
+                        <p className="text-xs text-muted-foreground p-2">Brak wyników</p>
+                    )}
+                </div>
+            </ScrollArea>
+        </div>
+    );
+}
+
+/* ── Sort options for rental ──────────────────────────────────── */
+
+const rentalSortOptions = [
+    { sortBy: 'minMonthlyRateNet', sortOrder: 'asc', label: 'Najtańsze' },
+    { sortBy: 'minMonthlyRateNet', sortOrder: 'desc', label: 'Najdroższe' },
+    { sortBy: 'createdAt', sortOrder: 'desc', label: 'Najnowsze' },
+    { sortBy: 'make', sortOrder: 'asc', label: 'Marka A-Z' },
+];
+
+/* ── Main component ───────────────────────────────────────────── */
+
 export default function RentalSearchPage() {
     const { config } = useBrand();
     const { data: settings } = useAppSettings();
-    const isMotolia = config.id === 'motolia';
     const accent = 'hsl(var(--accent))';
     const accentText = 'hsl(var(--accent-foreground))';
 
@@ -94,74 +203,177 @@ export default function RentalSearchPage() {
 
     const isBusiness = clientType === 'business';
 
+    const currentSortOption = rentalSortOptions.find(
+        o => o.sortBy === sortBy && o.sortOrder === sortOrder
+    );
+
+    const totalCount = pagination?.total ?? vehicles.length;
+
+    const hasActiveFilters = make !== '' || fuelType !== '' || bodyType !== '' || search !== '';
+
     return (
-        <div className="min-h-screen bg-gray-50">
-            <Header onClearFilters={() => {}} hasActiveFilters={false} />
+        <div className="min-h-screen bg-background">
+            <Header onClearFilters={() => { setMake(''); setFuelType(''); setBodyType(''); setSearch(''); setPage(1); }} hasActiveFilters={hasActiveFilters} />
 
             <main className="container pt-4 pb-10">
+                {/* ── Top Filter Bar (pill-based, same as /samochody/) ── */}
+                <div className="hidden lg:flex flex-wrap items-center gap-2 mb-3 sticky top-20 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                    <FilterPill label="Marka" active={make !== ''}>
+                        <SingleSelectList
+                            options={filters?.makes || []}
+                            selected={make}
+                            onChange={(v) => { setMake(v); setPage(1); }}
+                            allLabel="Wszystkie marki"
+                            searchable
+                        />
+                    </FilterPill>
 
-                {/* Filters bar */}
-                <div className="bg-white rounded-2xl shadow-sm border p-4 mb-8">
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-                        <div className="relative md:col-span-2">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input
-                                value={search}
-                                onChange={e => { setSearch(e.target.value); setPage(1); }}
-                                placeholder="Szukaj: marka, model..."
-                                className="pl-10"
-                            />
-                        </div>
+                    <FilterPill label="Rodzaj paliwa" active={fuelType !== ''}>
+                        <SingleSelectList
+                            options={filters?.fuelTypes || []}
+                            selected={fuelType}
+                            onChange={(v) => { setFuelType(v); setPage(1); }}
+                            allLabel="Wszystkie"
+                        />
+                    </FilterPill>
+
+                    <FilterPill label="Typ nadwozia" active={bodyType !== ''}>
+                        <SingleSelectList
+                            options={filters?.bodyTypes || []}
+                            selected={bodyType}
+                            onChange={(v) => { setBodyType(v); setPage(1); }}
+                            allLabel="Wszystkie"
+                        />
+                    </FilterPill>
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Search */}
+                    <div className="relative w-[340px] flex-shrink-0">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                        <Input
+                            placeholder="Szukaj marki, modelu, typu nadwozia..."
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                            className="pl-9 h-9 text-sm rounded-full border-border bg-background"
+                        />
+                    </div>
+
+                    <div className="flex-1" />
+                </div>
+
+                {/* ── Mobile filters (visible on small screens) ── */}
+                <div className="lg:hidden mb-4 space-y-3">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            value={search}
+                            onChange={e => { setSearch(e.target.value); setPage(1); }}
+                            placeholder="Szukaj: marka, model..."
+                            className="pl-10"
+                        />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
                         <select
                             value={make}
                             onChange={e => { setMake(e.target.value); setPage(1); }}
-                            className="h-10 px-3 rounded-md border text-sm"
+                            className="h-10 px-3 rounded-md border text-sm bg-background"
                         >
-                            <option value="">Wszystkie marki</option>
+                            <option value="">Marka</option>
                             {filters?.makes?.map((m: string) => <option key={m} value={m}>{m}</option>)}
                         </select>
                         <select
                             value={fuelType}
                             onChange={e => { setFuelType(e.target.value); setPage(1); }}
-                            className="h-10 px-3 rounded-md border text-sm"
+                            className="h-10 px-3 rounded-md border text-sm bg-background"
                         >
-                            <option value="">Rodzaj paliwa</option>
+                            <option value="">Paliwo</option>
                             {filters?.fuelTypes?.map((f: string) => <option key={f} value={f}>{f}</option>)}
                         </select>
                         <select
                             value={bodyType}
                             onChange={e => { setBodyType(e.target.value); setPage(1); }}
-                            className="h-10 px-3 rounded-md border text-sm"
+                            className="h-10 px-3 rounded-md border text-sm bg-background"
                         >
-                            <option value="">Typ nadwozia</option>
+                            <option value="">Nadwozie</option>
                             {filters?.bodyTypes?.map((b: string) => <option key={b} value={b}>{b}</option>)}
                         </select>
                     </div>
+                </div>
 
-                    {/* Client type toggle — second row */}
-                    <div className="flex items-center gap-3 mt-3 pt-3 border-t">
-                        <span className="text-sm font-medium text-gray-600">Oferta dla:</span>
-                        <div className="flex bg-gray-100 rounded-lg p-0.5">
-                            <button
-                                onClick={() => handleClientTypeChange('business')}
-                                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                    isBusiness ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                                style={isBusiness ? { color: accent } : {}}
-                            >
-                                <Building2 className="w-3.5 h-3.5" /> Na firmę
-                            </button>
-                            <button
-                                onClick={() => handleClientTypeChange('consumer')}
-                                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                    !isBusiness ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                                style={!isBusiness ? { color: accent } : {}}
-                            >
-                                <User className="w-3.5 h-3.5" /> Prywatnie
-                            </button>
-                        </div>
+                {/* ── Status bar (Na firmę/Prywatnie + count + sort) — same as StatusTabs ── */}
+                <div className="flex items-center gap-1 border-b border-border overflow-x-auto mb-6">
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Znaleziono */}
+                    <span className="hidden sm:block text-sm text-muted-foreground whitespace-nowrap px-2">
+                        Znaleziono:{' '}
+                        <span className="font-semibold text-foreground">{totalCount}</span>
+                    </span>
+
+                    {/* Na firmę / Prywatnie pill toggle */}
+                    <div className="flex bg-secondary rounded-lg p-0.5">
+                        <button
+                            type="button"
+                            onClick={() => handleClientTypeChange('business')}
+                            className={cn(
+                                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+                                isBusiness
+                                    ? 'bg-accent shadow-sm text-foreground'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            )}
+                        >
+                            <Building2 className="w-3.5 h-3.5" />
+                            Na firmę
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleClientTypeChange('consumer')}
+                            className={cn(
+                                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+                                !isBusiness
+                                    ? 'bg-accent shadow-sm text-foreground'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            )}
+                        >
+                            <User className="w-3.5 h-3.5" />
+                            Prywatnie
+                        </button>
                     </div>
+
+                    {/* Sort */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1.5 h-8 text-xs whitespace-nowrap border border-border rounded-full px-3 hover:bg-secondary"
+                            >
+                                <ArrowUpDown className="h-3.5 w-3.5" />
+                                {currentSortOption?.label || 'Sortuj'}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {rentalSortOptions.map((option) => {
+                                const isActive = sortBy === option.sortBy && sortOrder === option.sortOrder;
+                                return (
+                                    <DropdownMenuItem
+                                        key={`${option.sortBy}_${option.sortOrder}`}
+                                        onClick={() => { setSortBy(option.sortBy); setSortOrder(option.sortOrder); setPage(1); }}
+                                        className={cn('gap-2', isActive && 'bg-accent')}
+                                    >
+                                        {isActive && <Check className="h-3.5 w-3.5" />}
+                                        {option.label}
+                                    </DropdownMenuItem>
+                                );
+                            })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Right padding */}
+                    <div className="w-1" />
                 </div>
 
                 {/* Results */}

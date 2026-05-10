@@ -107,7 +107,7 @@ export function StatusTabs({
           className={cn(
             'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
             priceType === 'net'
-              ? 'bg-background shadow-sm text-accent-foreground'
+              ? 'bg-accent shadow-sm text-foreground'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
@@ -120,7 +120,7 @@ export function StatusTabs({
           className={cn(
             'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
             priceType === 'gross'
-              ? 'bg-background shadow-sm text-accent-foreground'
+              ? 'bg-accent shadow-sm text-foreground'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
