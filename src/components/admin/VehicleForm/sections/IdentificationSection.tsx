@@ -26,27 +26,23 @@ export function IdentificationSection({ form, setField, mode, isImported }: Sect
                     <label className="text-sm font-medium text-gray-700">Rok produkcji *</label>
                     <Input type="number" value={form.productionYear} onChange={e => setField('productionYear', e.target.value)} required />
                 </div>
-                {mode === 'sale' && (
-                    <>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">VIN</label>
-                            <Input value={form.vin} onChange={e => setField('vin', e.target.value.toUpperCase())} placeholder="17 znaków" maxLength={17} />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">Stan *</label>
-                            <div className="flex gap-4 pt-2">
-                                <label className="flex items-center gap-2">
-                                    <input type="radio" checked={form.condition === 'NEW'} onChange={() => setField('condition', 'NEW')} />
-                                    <span>Nowy</span>
-                                </label>
-                                <label className="flex items-center gap-2">
-                                    <input type="radio" checked={form.condition === 'USED'} onChange={() => setField('condition', 'USED')} />
-                                    <span>Używany</span>
-                                </label>
-                            </div>
-                        </div>
-                    </>
-                )}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">VIN</label>
+                    <Input value={form.vin} onChange={e => setField('vin', e.target.value.toUpperCase())} placeholder="17 znaków" maxLength={17} />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Stan *</label>
+                    <div className="flex gap-4 pt-2">
+                        <label className="flex items-center gap-2">
+                            <input type="radio" checked={form.condition === 'NEW'} onChange={() => setField('condition', 'NEW')} />
+                            <span>Nowy</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                            <input type="radio" checked={form.condition === 'USED'} onChange={() => setField('condition', 'USED')} />
+                            <span>Używany</span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </fieldset>
     );

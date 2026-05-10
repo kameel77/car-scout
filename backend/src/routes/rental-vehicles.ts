@@ -213,7 +213,12 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                 additionalInfoHeader: body.additionalInfoHeader || null,
                 additionalInfoContent: body.additionalInfoContent || null,
                 specsJson: body.specsJson || null,
-                specificationUrl: body.specificationUrl || null
+                specificationUrl: body.specificationUrl || null,
+                condition: body.condition || 'NEW',
+                vin: body.vin || null,
+                mileageKm: body.mileageKm != null ? parseInt(body.mileageKm) : null,
+                firstRegistrationDate: body.firstRegistrationDate || null,
+                registrationNumber: body.registrationNumber || null
             }
         });
 
@@ -251,9 +256,10 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         // Build update data — only include provided fields
         const updateData: any = {};
         const stringFields = ['make', 'model', 'version', 'bodyType', 'fuelType', 'transmission',
-            'color', 'paintType', 'drive', 'primaryImageUrl', 'additionalInfoHeader', 'additionalInfoContent', 'specificationUrl'];
+            'color', 'paintType', 'drive', 'primaryImageUrl', 'additionalInfoHeader', 'additionalInfoContent', 'specificationUrl',
+            'condition', 'vin', 'firstRegistrationDate', 'registrationNumber'];
         const intFields = ['enginePowerHp', 'engineCapacityCm3', 'productionYear', 'catalogPrice',
-            'sellingPrice', 'doors', 'seats'];
+            'sellingPrice', 'doors', 'seats', 'mileageKm'];
         const arrayFields = ['imageUrls', 'equipmentAudioMultimedia', 'equipmentSafety',
             'equipmentComfortExtras', 'equipmentOther'];
 
