@@ -8,6 +8,7 @@ import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { rentalPublicApi } from '@/services/rental-api';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { MetaHead } from '@/components/seo/MetaHead';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,7 +45,7 @@ function getStoredClientType(): ClientType {
   try {
     const s = localStorage.getItem('rentalClientType');
     if (s === 'business' || s === 'consumer') return s;
-  } catch {}
+  } catch { /* ignore */ }
   return 'business';
 }
 
@@ -174,7 +175,7 @@ export default function RentalSearchPage() {
 
   const handleClientTypeChange = (type: ClientType) => {
     setClientType(type);
-    try { localStorage.setItem('rentalClientType', type); } catch {}
+    try { localStorage.setItem('rentalClientType', type); } catch { /* ignore */ }
   };
 
   // ── API query ──
@@ -237,6 +238,45 @@ export default function RentalSearchPage() {
     <div className="min-h-screen bg-background">
       <Header onClearFilters={clearAllFilters} hasActiveFilters={hasActiveFilters} />
 
+      <MetaHead
+        title={`Wynajem długoterminowy | ${config.name}`}
+        description="Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne."
+        canonical="/wynajem-dlugoterminowy"
+        schema={{
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'CollectionPage',
+              name: 'Wynajem długoterminowy',
+              description: 'Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne.',
+              url: `${window.location.origin}/wynajem-dlugoterminowy`,
+              mainEntity: {
+                '@type': 'ItemList',
+                numberOfItems: totalCount,
+                itemListElement: vehicles.slice(0, 10).map((v: any, i: number) => ({
+                  '@type': 'ListItem',
+                  position: i + 1,
+                  item: {
+                    '@type': 'Car',
+                    name: `${v.make} ${v.model}`,
+                    url: `${window.location.origin}/wynajem-dlugoterminowy/${v.slug || v.id}`,
+                    vehicleModelDate: v.productionYear?.toString(),
+                    fuelType: v.fuelType,
+                  },
+                })),
+              },
+            },
+            {
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Strona główna', item: window.location.origin },
+                { '@type': 'ListItem', position: 2, name: 'Wynajem długoterminowy', item: `${window.location.origin}/wynajem-dlugoterminowy` },
+              ],
+            },
+          ],
+        }}
+      />
+
       {/* ── Side Sheet: All Filters ── */}
       <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0">
@@ -296,6 +336,12 @@ export default function RentalSearchPage() {
       </Sheet>
 
       <main className="container pt-4 pb-10">
+        {/* Page heading */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-foreground">Wynajem długoterminowy</h1>
+          <p className="text-sm text-muted-foreground mt-1">Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne.</p>
+        </div>
+
         {/* ── Desktop TopFilterBar ── */}
         <div className="hidden lg:flex flex-wrap items-center gap-2 mb-3 sticky top-20 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <FilterPill label={t('filters.make')} activeCount={makes.length}>
@@ -410,49 +456,56 @@ export default function RentalSearchPage() {
         </div>
 
         {/* ── Results ── */}
+        <div className="mt-4">
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl shadow-sm border h-[380px] animate-pulse">
-                <div className="h-48 bg-gray-200 rounded-t-2xl" />
-                <div className="p-5 space-y-3"><div className="h-5 bg-gray-200 rounded w-3/4" /><div className="h-4 bg-gray-200 rounded w-1/2" /><div className="h-8 bg-gray-200 rounded w-2/3" /></div>
+              <div key={i} className="listing-card h-[380px] animate-pulse">
+                <div className="h-48 bg-secondary rounded-t-xl" />
+                <div className="p-4 space-y-3"><div className="h-5 bg-secondary rounded w-3/4" /><div className="h-4 bg-secondary rounded w-1/2" /><div className="h-8 bg-secondary rounded w-2/3" /></div>
               </div>
             ))}
           </div>
         ) : vehicles.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
             {vehicles.map((v: any) => (
-              <Link key={v.id} to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} className="group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-gray-300">
+              <Link key={v.id} to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <div className="relative">
                   <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center"><Car className="w-16 h-16 text-gray-300" /></div>} />
-                  {v.rentalCompanyCount > 1 && <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs font-medium px-2 py-1 rounded-full z-10">{v.rentalCompanyCount} oferty</div>}
+                  {v.rentalCompanyCount > 1 && <div className="absolute top-3 right-3 bg-card/95 backdrop-blur-sm text-xs font-medium px-2 py-1 rounded-full z-10">{v.rentalCompanyCount} oferty</div>}
                 </div>
-                <div className="p-5">
-                  <h3 className="font-semibold text-lg text-gray-900">{v.make} {v.model}</h3>
-                  {v.version && <p className="text-sm text-gray-500 mt-0.5">{v.version}</p>}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded"><Calendar className="w-3 h-3" /> {v.productionYear}</span>}
-                    {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded"><Gauge className="w-3 h-3" /> {v.enginePowerHp} KM</span>}
-                    {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded"><Fuel className="w-3 h-3" /> {v.fuelType}</span>}
-                    {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded"><Settings2 className="w-3 h-3" /> {v.transmission}</span>}
+                <div className="p-4 space-y-3 flex-1 flex flex-col">
+                  <div>
+                    <span className={`text-[10px] font-bold tracking-wider ${v.condition === 'NEW' ? 'text-accent' : 'text-muted-foreground'}`}>
+                      {v.condition === 'NEW' ? t('listing.statusNew', 'NOWY') : t('listing.statusUsed', 'UŻYWANY')}
+                    </span>
+                    <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{v.make} {v.model}</h3>
+                    <p className="text-sm font-medium text-muted-foreground line-clamp-1 min-h-[1.25rem]">{v.version || '\u00A0'}</p>
                   </div>
-                  <div className="mt-4 pt-4 border-t">
+                  <div className="flex flex-wrap gap-1.5">
+                    {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}</span>}
+                    {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM</span>}
+                    {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {v.fuelType}</span>}
+                    {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Settings2 className="h-3.5 w-3.5 shrink-0" /> {v.transmission}</span>}
+                  </div>
+                  <div className="flex-1" />
+                  <div className="pt-3">
                     {v.minMonthlyRateGross ? (
                       <div>
-                        <span className="text-xs text-gray-500">Rata od</span>
-                        <div className="flex items-baseline gap-2 mt-1">
-                          <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-bold text-2xl" style={{ background: accent, color: accentText }}>
+                        <span className="text-xs text-muted-foreground block mb-1">Rata od</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl" style={{ background: accent, color: accentText }}>
                             {isBusiness ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23)) : formatNumber(Math.ceil(v.minMonthlyRateGross))}
-                            <span className="text-base font-semibold">zł</span>
+                            <span className="text-base font-semibold ml-0.5">zł</span>
                           </span>
-                          <span className="text-sm text-gray-500 font-normal">{isBusiness ? 'netto / mies.' : 'brutto / mies.'}</span>
+                          <span className="text-xs text-muted-foreground">{isBusiness ? 'netto / mies.' : 'brutto / mies.'}</span>
                         </div>
-                        <div className="text-xs text-gray-400 mt-1">
+                        <div className="text-xs text-muted-foreground mt-1">
                           {isBusiness ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto` : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`}
                         </div>
-                        {v.minRateConfig && <span className="text-xs text-gray-400">{v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)}tys. km/rok</span>}
+                        {v.minRateConfig && <span className="text-xs text-muted-foreground">{v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)}tys. km/rok</span>}
                       </div>
-                    ) : <span className="text-sm text-gray-400">Zapytaj o cenę</span>}
+                    ) : <span className="text-sm text-muted-foreground">Zapytaj o cenę</span>}
                   </div>
                 </div>
               </Link>
@@ -465,6 +518,7 @@ export default function RentalSearchPage() {
             <p className="text-gray-500 mt-1">Zmień filtry lub sprawdź później</p>
           </div>
         )}
+        </div>
 
         {/* ── Pagination ── */}
         {pagination && pagination.totalPages > 1 && (

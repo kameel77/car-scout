@@ -82,6 +82,7 @@ export function SettingsModule() {
         navItemsVisibility: Array.isArray(data?.navItemsVisibility)
             ? data.navItemsVisibility
             : ['samochody', 'wynajem'],
+        splitNewUsed: Boolean(data?.splitNewUsed),
         negotiatePriceEnabled: data?.negotiatePriceEnabled !== undefined
             ? Boolean(data.negotiatePriceEnabled)
             : true,
@@ -326,6 +327,28 @@ export function SettingsModule() {
                                 Uwaga: brak zaznaczonych pozycji ukryje obie sekcje z menu.
                             </p>
                         )}
+                    </div>
+
+                    {/* Split Samochody into Nowe/Używane */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-bold">Podział menu: Nowe / Używane</Label>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border bg-slate-50">
+                            <Checkbox
+                                id="split-new-used"
+                                checked={Boolean(settings.splitNewUsed)}
+                                onCheckedChange={(val) => setSettings({ ...settings, splitNewUsed: Boolean(val) })}
+                            />
+                            <div className="space-y-1">
+                                <label htmlFor="split-new-used" className="font-medium cursor-pointer">
+                                    Podziel "Samochody" na "Nowe" i "Używane"
+                                </label>
+                                <p className="text-xs text-slate-600">
+                                    Zastępuje pozycję "Samochody" dwoma oddzielnymi stronami: /nowe i /uzywane.
+                                    Każda strona łączy oferty sprzedaży i wynajmu przefiltrowane po stanie pojazdu.
+                                    Lepsze dla SEO - osobne rankingi na frazy "nowe samochody" i "używane samochody".
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Currency */}
