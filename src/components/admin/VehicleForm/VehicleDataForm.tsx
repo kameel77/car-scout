@@ -40,7 +40,7 @@ function buildInitialState(mode: VehicleFormMode, vehicle?: any): VehicleFormSta
         version: vehicle?.version || '',
         vin: vehicle?.vin || '',
         productionYear: vehicle?.productionYear?.toString() || new Date().getFullYear().toString(),
-        condition: vehicle?.condition || 'USED',
+        condition: vehicle?.condition || (mode === 'rental' ? 'NEW' : 'USED'),
         bodyType: vehicle?.bodyType || '',
         fuelType: vehicle?.fuelType || '',
         transmission: vehicle?.transmission || '',
@@ -139,6 +139,7 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
 
             await onSave({
                 ...basePayload,
+                condition: form.condition,
                 sellingPrice: form.sellingPrice ? parseInt(form.sellingPrice) : null,
                 dealerId,
                 ownerRentalCompanyId,

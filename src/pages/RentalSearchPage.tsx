@@ -12,12 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight,
-  Car, Building2, User, ChevronDown, ArrowUpDown, Check
+  Car, Building2, User, ChevronDown, ArrowUpDown, Check, SlidersHorizontal
 } from 'lucide-react';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -160,6 +161,7 @@ export default function RentalSearchPage() {
   const [sortBy, setSortBy] = useState(initSortBy || 'createdAt');
   const [sortOrder, setSortOrder] = useState(initSortOrder || 'desc');
   const [clientType, setClientType] = useState<ClientType>(getStoredClientType);
+  const [allFiltersOpen, setAllFiltersOpen] = useState(false);
 
   useEffect(() => {
     if (settings?.defaultSortRental) {
@@ -235,6 +237,64 @@ export default function RentalSearchPage() {
     <div className="min-h-screen bg-background">
       <Header onClearFilters={clearAllFilters} hasActiveFilters={hasActiveFilters} />
 
+      {/* ── Side Sheet: All Filters ── */}
+      <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+          <SheetHeader className="px-6 pt-6 pb-2">
+            <SheetTitle>{t('filters.title')}</SheetTitle>
+          </SheetHeader>
+          <div className="px-6 pb-6 overflow-y-auto h-[calc(100vh-5rem)] space-y-5">
+            {/* Marka */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.make')}</label>
+              <MultiCheck options={makeOptions} selected={makes} onChange={v => { setMakes(v); if (v.length === 0) setModels([]); setPage(1); }} searchable searchPlaceholder={t('filters.selectMake')} />
+            </div>
+            {/* Model */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.model')}</label>
+              {makes.length > 0
+                ? <MultiCheck options={modelOptions} selected={models} onChange={v => { setModels(v); setPage(1); }} searchable searchPlaceholder={t('filters.selectModel')} />
+                : <p className="text-sm text-muted-foreground">{t('filters.selectMake')}</p>}
+            </div>
+            {/* Typ nadwozia */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.bodyType')}</label>
+              <MultiCheck options={bodyTypeOptions} selected={bodyTypes} onChange={v => { setBodyTypes(v); setPage(1); }} />
+            </div>
+            {/* Paliwo */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.fuelType')}</label>
+              <MultiCheck options={fuelTypeOptions} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} />
+            </div>
+            {/* Rata (od-do) */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Rata miesięczna</label>
+              <RangePopover fromValue={priceFrom} toValue={priceTo} onFromChange={v => { setPriceFrom(v); setPage(1); }} onToChange={v => { setPriceTo(v); setPage(1); }} fromPh="Rata od (zł)" toPh="Rata do (zł)" />
+            </div>
+            {/* Rok produkcji (od-do) */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.productionYear')}</label>
+              <RangePopover fromValue={yearFrom} toValue={yearTo} onFromChange={v => { setYearFrom(v); setPage(1); }} onToChange={v => { setYearTo(v); setPage(1); }} fromPh={t('filters.yearFrom')} toPh={t('filters.yearTo')} />
+            </div>
+            {/* Stan (Nowy / Używany) */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Stan pojazdu</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setCondition([]); setPage(1); }} className={cn('px-4 py-2 rounded-lg text-sm font-medium border transition-colors', isAll ? 'bg-accent text-foreground border-accent' : 'bg-background border-border hover:bg-secondary/50')}>Wszystkie</button>
+                <button type="button" onClick={() => { setCondition(['NEW']); setPage(1); }} className={cn('px-4 py-2 rounded-lg text-sm font-medium border transition-colors', isNew ? 'bg-accent text-foreground border-accent' : 'bg-background border-border hover:bg-secondary/50')}>Nowy</button>
+                <button type="button" onClick={() => { setCondition(['USED']); setPage(1); }} className={cn('px-4 py-2 rounded-lg text-sm font-medium border transition-colors', isUsed ? 'bg-accent text-foreground border-accent' : 'bg-background border-border hover:bg-secondary/50')}>Używany</button>
+              </div>
+            </div>
+            {/* Clear all */}
+            {hasActiveFilters && (
+              <Button variant="outline" className="w-full" onClick={() => { clearAllFilters(); setAllFiltersOpen(false); }}>
+                Wyczyść wszystkie filtry
+              </Button>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <main className="container pt-4 pb-10">
         {/* ── Desktop TopFilterBar ── */}
         <div className="hidden lg:flex flex-wrap items-center gap-2 mb-3 sticky top-20 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -270,6 +330,11 @@ export default function RentalSearchPage() {
             <Input placeholder={t('search.placeholder', 'Szukaj marki, modelu, typu nadwozia...')} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-9 h-9 text-sm rounded-full border-border bg-background" />
           </div>
           <div className="flex-1" />
+
+          <Button variant="outline" size="sm" onClick={() => setAllFiltersOpen(true)} className="h-9 rounded-full gap-1.5">
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            {t('filters.title')}
+          </Button>
         </div>
 
         {/* ── Mobile filters ── */}
@@ -291,10 +356,10 @@ export default function RentalSearchPage() {
           </div>
         </div>
 
-        {/* ── StatusTabs: Filtry / Nowy / Używany + Na firmę/Prywatnie + Sort ── */}
+        {/* ── StatusTabs: Wszystkie / Nowy / Używany + Na firmę/Prywatnie + Sort ── */}
         <div className="flex items-center gap-1 border-b border-border overflow-x-auto mb-6">
           <button type="button" onClick={() => { setCondition([]); setPage(1); }} className={tabClass(isAll)}>
-            {t('filters.title')}
+            {t('status.all', 'Wszystkie')}
             {totalConditionCount !== null && <span className="ml-1.5 text-xs text-muted-foreground">({PLN.format(totalConditionCount)})</span>}
           </button>
           <button type="button" onClick={() => { setCondition(['NEW']); setPage(1); }} className={tabClass(isNew)}>

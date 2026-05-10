@@ -68,9 +68,9 @@ export function StatusTabs({
 
   return (
     <div className={cn('flex items-center gap-1 border-b border-border overflow-x-auto', className)}>
-      {/* Tabs: Filtry / Nowy / Używany */}
+      {/* Tabs: Wszystkie / Nowy / Używany */}
       <button type="button" onClick={() => onChange([])} className={tabClass(isAll)}>
-        {t('filters.title')}
+        {t('status.all', 'Wszystkie')}
         {totalCount !== null && (
           <span className="ml-1.5 text-xs text-muted-foreground">({PLN.format(totalCount)})</span>
         )}
