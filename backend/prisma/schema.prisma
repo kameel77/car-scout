@@ -597,6 +597,10 @@ model RentalVehicle {
   carClass                 String?  @map("car_class")
   modelCode                String?  @map("model_code")
   slug                     String?  @unique
+  vin                      String?  @map("vin")
+  mileageKm                Int?     @map("mileage_km")
+  firstRegistrationDate    String?  @map("first_registration_date")
+  registrationNumber       String?  @map("registration_number")
   isFeatured               Boolean          @default(false) @map("is_featured")
   isActive                 Boolean          @default(true) @map("is_active")
   condition                ListingCondition @default(NEW) @map("condition")

@@ -26,12 +26,10 @@ export function IdentificationSection({ form, setField, mode, isImported }: Sect
                     <label className="text-sm font-medium text-gray-700">Rok produkcji *</label>
                     <Input type="number" value={form.productionYear} onChange={e => setField('productionYear', e.target.value)} required />
                 </div>
-                {mode === 'sale' && (
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">VIN</label>
-                        <Input value={form.vin} onChange={e => setField('vin', e.target.value.toUpperCase())} placeholder="17 znaków" maxLength={17} />
-                    </div>
-                )}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">VIN</label>
+                    <Input value={form.vin} onChange={e => setField('vin', e.target.value.toUpperCase())} placeholder="17 znaków" maxLength={17} />
+                </div>
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Stan *</label>
                     <div className="flex gap-4 pt-2">
