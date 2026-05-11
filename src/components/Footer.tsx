@@ -55,7 +55,6 @@ export function Footer() {
 
   const logo = buildAssetUrl(
     settings?.footerLogoUrl ||
-    settings?.headerLogoUrl ||
     config.logo?.footer ||
     config.logo?.header
   );
