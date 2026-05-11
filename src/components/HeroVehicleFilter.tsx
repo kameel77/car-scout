@@ -13,7 +13,7 @@ type VehicleStatus = 'new' | 'used' | 'rental';
 
 interface FilterState {
   clientType: ClientType;
-  status: VehicleStatus;
+  statuses: Set<VehicleStatus>;
   bodyType: string;
   make: string;
   model: string;
@@ -161,7 +161,7 @@ export default function HeroVehicleFilter() {
 
   const [filters, setFilters] = useState<FilterState>({
     clientType: 'private',
-    status: 'new',
+    statuses: new Set<VehicleStatus>(['new']),
     bodyType: '',
     make: '',
     model: '',
@@ -173,10 +173,10 @@ export default function HeroVehicleFilter() {
   const { data: listingOptions, isLoading: listingLoading } = useListingOptions();
   const { data: rentalOptions, isLoading: rentalLoading } = useRentalFilterOptions();
 
-  // Pick the right options based on current status
-  const isRental = filters.status === 'rental';
-  const activeOptions = isRental ? rentalOptions : listingOptions;
-  const isLoading = isRental ? rentalLoading : listingLoading;
+  // Pick the right options based on current statuses
+  const isOnlyRental = filters.statuses.size === 1 && filters.statuses.has('rental');
+  const activeOptions = isOnlyRental ? rentalOptions : listingOptions;
+  const isLoading = isOnlyRental ? rentalLoading : listingLoading;
 
   const makes = activeOptions?.makes ?? [];
   const bodyTypes = activeOptions?.bodyTypes ?? [];
@@ -190,15 +190,23 @@ export default function HeroVehicleFilter() {
       .sort();
   }, [activeOptions?.models, filters.make]);
 
-  // Reset dependent fields when status changes
+  // Toggle status (multi-select, at least one must remain selected)
   const handleStatusChange = useCallback((status: VehicleStatus) => {
-    setFilters(prev => ({
-      ...prev,
-      status,
-      bodyType: '',
-      make: '',
-      model: '',
-    }));
+    setFilters(prev => {
+      const next = new Set(prev.statuses);
+      if (next.has(status)) {
+        if (next.size > 1) next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return {
+        ...prev,
+        statuses: next,
+        bodyType: '',
+        make: '',
+        model: '',
+      };
+    });
   }, []);
 
   // Reset model when make changes
@@ -207,27 +215,54 @@ export default function HeroVehicleFilter() {
   }, []);
 
   const handleSubmit = useCallback(() => {
-    if (filters.status === 'rental') {
-      // Navigate to rental search
-      const params = new URLSearchParams();
-      if (filters.bodyType) params.set('bodyType', filters.bodyType);
-      if (filters.make) params.set('make', filters.make);
-      if (filters.clientType === 'business') params.set('offerType', 'b2b');
-      const qs = params.toString();
+    const { statuses } = filters;
+    const hasNew = statuses.has('new');
+    const hasUsed = statuses.has('used');
+    const hasRental = statuses.has('rental');
+
+    const params = new URLSearchParams();
+    if (filters.clientType === 'business') params.set('clientType', 'business');
+    if (filters.bodyType) params.set('bodyType', filters.bodyType);
+    if (filters.make) params.set('make', filters.make);
+    if (filters.model) params.set('model', filters.model);
+    if (filters.priceMin) params.set('priceMin', filters.priceMin);
+    if (filters.priceMax) params.set('priceMax', filters.priceMax);
+
+    let path: string;
+
+    if (hasNew && hasUsed && hasRental) {
+      // All selected → /samochody (shows everything)
+      path = '/samochody';
+    } else if (hasNew && hasUsed) {
+      // Both conditions → /samochody
+      path = '/samochody';
+    } else if (hasNew && hasRental) {
+      // New + rental → /nowe (ConditionPage shows new listings + rental)
+      path = '/nowe';
+    } else if (hasUsed && hasRental) {
+      // Used + rental → /uzywane
+      path = '/uzywane';
+    } else if (hasRental) {
+      // Only rental
+      const rParams = new URLSearchParams();
+      if (filters.bodyType) rParams.set('bodyType', filters.bodyType);
+      if (filters.make) rParams.set('make', filters.make);
+      if (filters.clientType === 'business') rParams.set('offerType', 'b2b');
+      const qs = rParams.toString();
       navigate(`/wynajem-dlugoterminowy${qs ? `?${qs}` : ''}`);
+      return;
+    } else if (hasUsed) {
+      path = '/uzywane';
     } else {
-      // Navigate to listings search
-      const params = new URLSearchParams();
-      if (filters.clientType === 'business') params.set('clientType', 'business');
-      if (filters.status) params.set('status', filters.status);
-      if (filters.bodyType) params.set('bodyType', filters.bodyType);
-      if (filters.make) params.set('make', filters.make);
-      if (filters.model) params.set('model', filters.model);
-      if (filters.priceMin) params.set('priceMin', filters.priceMin);
-      if (filters.priceMax) params.set('priceMax', filters.priceMax);
-      const qs = params.toString();
-      navigate(`/samochody${qs ? `?${qs}` : ''}`);
+      // hasNew (default)
+      path = '/nowe';
     }
+
+    if (hasNew && !hasUsed) params.set('status', 'new');
+    else if (hasUsed && !hasNew) params.set('status', 'used');
+
+    const qs = params.toString();
+    navigate(`${path}${qs ? `?${qs}` : ''}`);
   }, [filters, navigate]);
 
   const handleAdvancedSearch = useCallback(() => {
@@ -263,25 +298,25 @@ export default function HeroVehicleFilter() {
         </button>
       </div>
 
-      {/* Status toggle */}
+      {/* Status toggle (multi-select) */}
       <div className="hvf__toggle-group">
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.status === 'new' ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.statuses.has('new') ? 'hvf__toggle-btn--accent' : ''}`}
           onClick={() => handleStatusChange('new')}
         >
           Nowy
         </button>
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.status === 'used' ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.statuses.has('used') ? 'hvf__toggle-btn--accent' : ''}`}
           onClick={() => handleStatusChange('used')}
         >
           Używany
         </button>
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.status === 'rental' ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.statuses.has('rental') ? 'hvf__toggle-btn--accent' : ''}`}
           onClick={() => handleStatusChange('rental')}
         >
           Wynajem
@@ -307,11 +342,11 @@ export default function HeroVehicleFilter() {
         searchable
       />
 
-      {/* Model (cascading, disabled if no make or rental mode) */}
+      {/* Model (cascading, disabled if no make or rental-only mode) */}
       <Dropdown
         label="Model"
         placeholder={
-          isRental
+          isOnlyRental
             ? 'Niedostępne w wynajmie'
             : filters.make
               ? 'Wybierz model'
@@ -320,7 +355,7 @@ export default function HeroVehicleFilter() {
         value={filters.model}
         options={availableModels}
         onChange={val => setFilters(prev => ({ ...prev, model: val }))}
-        disabled={!filters.make || isRental}
+        disabled={!filters.make || isOnlyRental}
       />
 
       {/* Price range */}

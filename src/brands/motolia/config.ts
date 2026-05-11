@@ -19,8 +19,8 @@ export const motoliaConfig: BrandConfig = {
     email: 'kontakt@motolia.pl',
   },
   logo: {
-    header: '/brands/motolia/logo.png',
-    footer: '/brands/motolia/logo.png',
+    header: '/brands/motolia/logo-header.svg',
+    footer: '/brands/motolia/logo-footer.svg',
   },
   contactPage: {
     title: 'Znajdź swoje <span>wymarzone auto</span>',
