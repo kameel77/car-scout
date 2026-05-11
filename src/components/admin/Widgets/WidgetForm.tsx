@@ -181,7 +181,7 @@ export function WidgetForm({ widget, onClose }: { widget: any, onClose: () => vo
                       <div className="space-y-2">
                         <Label>Nadwozie</Label>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          {['SUV', 'Sedan', 'Kombi', 'Hatchback', 'Coupe', 'Cabrio'].map(bt => (
+                          {['SUV', 'Sedan', 'Kombi', 'Hatchback', 'Coupe', 'Cabrio', 'Van', 'Pickup', 'Dostawczy', 'Ciężarowy'].map(bt => (
                             <label key={bt} className="flex items-center gap-2">
                                <Checkbox 
                                  checked={(formData.filterParams.bodyType || []).includes(bt)}

@@ -122,6 +122,8 @@ export const translations = {
         van: "Van",
         pickup: "Pickup",
         minivan: "Minivan",
+        dostawczy: "Dostawczy",
+        ciezarowy: "Ciężarowy",
       },
 
       // Sorting
@@ -480,6 +482,8 @@ export const translations = {
         van: "Van",
         pickup: "Pickup",
         minivan: "Minivan",
+        dostawczy: "LCV / Delivery",
+        ciezarowy: "Truck",
       },
 
       // Sorting
@@ -836,6 +840,8 @@ export const translations = {
         van: "Van",
         pickup: "Pickup",
         minivan: "Minivan",
+        dostawczy: "Lieferwagen",
+        ciezarowy: "LKW",
       },
 
       // Sorting
