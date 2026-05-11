@@ -130,10 +130,21 @@ function parseCarIds(raw: string): string[] {
 
 function parseServiceFlags(row: ProviderCSVRow): string[] {
     const services: string[] = [];
-    if (row.insurance_net && row.insurance_net.toString().trim().toUpperCase() === 'I') services.push('insurance');
-    if (row.tires_net && row.tires_net.toString().trim().toUpperCase() === 'I') services.push('tires');
-    if (row.service_net && row.service_net.toString().trim().toUpperCase() === 'I') services.push('service');
-    if (row.other_cost_net && row.other_cost_net.toString().trim().toUpperCase() === 'I') services.push('other');
+
+    const isIncluded = (val: string | undefined): boolean => {
+        if (!val) return false;
+        const strVal = val.toString().trim().toUpperCase();
+        if (['I', 'TRUE', 'YES', '1', 'TAK'].includes(strVal)) return true;
+        
+        // If it's a numeric cost, treat it as included if > 0
+        const numVal = parseFloat(strVal);
+        return !isNaN(numVal) && numVal > 0;
+    };
+
+    if (isIncluded(row.insurance_net)) services.push('insurance');
+    if (isIncluded(row.tires_net)) services.push('tires');
+    if (isIncluded(row.service_net)) services.push('service');
+    if (isIncluded(row.other_cost_net)) services.push('other');
     return services;
 }
 
