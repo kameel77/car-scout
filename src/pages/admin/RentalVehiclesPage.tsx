@@ -577,6 +577,15 @@ export default function RentalVehiclesPage() {
         }
     });
 
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => rentalVehiclesApi.delete(id, token!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({ title: 'Pojazd trwale usunięty' });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd usuwania', description: e.message, variant: 'destructive' })
+    });
+
     const duplicateModelMutation = useMutation({
         mutationFn: (id: string) => rentalVehiclesApi.duplicateModel(id, token!),
         onSuccess: (data) => {
@@ -782,6 +791,18 @@ export default function RentalVehiclesPage() {
                                                             <span>Przywróć</span>
                                                         </DropdownMenuItem>
                                                     )}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem 
+                                                        onClick={() => {
+                                                            if(window.confirm('Czy na pewno chcesz usunąć ten pojazd? Ta operacja jest nieodwracalna.')) {
+                                                                deleteMutation.mutate(v.id);
+                                                            }
+                                                        }} 
+                                                        className="text-red-600"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                        <span>Usuń</span>
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
