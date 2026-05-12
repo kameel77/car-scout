@@ -25,6 +25,20 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         const limitNum = Math.min(50, Math.max(1, parseInt(limit || '12')));
         const skip = (pageNum - 1) * limitNum;
 
+        const toArray = (val: unknown): string[] | undefined => {
+            if (!val) return undefined;
+            if (Array.isArray(val)) return val.map(String);
+            return String(val).split(',');
+        };
+
+        const makes = toArray(make);
+        const models = toArray(model);
+        const bodyTypes = toArray(bodyType);
+        const fuelTypes = toArray(fuelType);
+        const statuses = toArray(condition)
+            ?.map((c) => c.toUpperCase())
+            .filter((c) => c === 'NEW' || c === 'USED') as ('NEW' | 'USED')[] | undefined;
+
         // Normalize offerType (frontend sends b2b/b2c, DB stores business/consumer)
         let normalizedOfferType = offerType?.trim().toLowerCase();
         if (normalizedOfferType && ['b2b', 'firma', 'business'].includes(normalizedOfferType)) normalizedOfferType = 'business';
@@ -48,14 +62,14 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             }
         };
 
-        if (make) where.make = { contains: make, mode: 'insensitive' };
-        if (model) where.model = { contains: model, mode: 'insensitive' };
-        if (bodyType) where.bodyType = { equals: bodyType, mode: 'insensitive' };
-        if (fuelType) where.fuelType = { equals: fuelType, mode: 'insensitive' };
+        if (makes) where.make = { in: makes, mode: 'insensitive' as const };
+        if (models) where.model = { in: models, mode: 'insensitive' as const };
+        if (bodyTypes) where.bodyType = { in: bodyTypes, mode: 'insensitive' as const };
+        if (fuelTypes) where.fuelType = { in: fuelTypes, mode: 'insensitive' as const };
 
         // Condition filter (NEW / USED)
-        if (condition && (condition === 'NEW' || condition === 'USED')) {
-            where.condition = condition;
+        if (statuses) {
+            where.condition = { in: statuses };
         }
 
         // Year range filter
