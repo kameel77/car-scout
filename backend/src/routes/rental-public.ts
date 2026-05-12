@@ -172,8 +172,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 });
             } else {
                 mapped.sort((a, b) => {
-                    let valA = a.sortFieldValue;
-                    let valB = b.sortFieldValue;
+                    const valA = a.sortFieldValue;
+                    const valB = b.sortFieldValue;
                     if (valA === null || valA === undefined) return sortOrder === 'asc' ? 1 : -1;
                     if (valB === null || valB === undefined) return sortOrder === 'asc' ? -1 : 1;
                     if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -211,7 +211,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         }
 
         // Transform to include minRate
-        let vehiclesWithRates = vehicles.map((v) => {
+        const vehiclesWithRates = vehicles.map((v) => {
             const allMinRates = v.rentalAssignments
                 .flatMap((a: any) => a.matrixEntries.map((e: any) => ({
                     ...e,
