@@ -122,7 +122,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     },
                     matrixEntries: {
                         where: matrixEntryFilter,
-                        orderBy: { monthlyRateGross: 'asc' },
+                        orderBy: [
+                            { contractMonths: 'asc' },
+                            { annualMileageKm: 'asc' },
+                            { monthlyRateGross: 'asc' }
+                        ] as any,
                         take: 1,
                         select: {
                             monthlyRateNet: true,
@@ -151,7 +155,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                         select: {
                             matrixEntries: {
                                 where: matrixEntryFilter,
-                                select: { monthlyRateGross: true }
+                                select: { 
+                                    monthlyRateGross: true,
+                                    contractMonths: true,
+                                    annualMileageKm: true
+                                }
                             }
                         }
                     }
@@ -160,14 +168,27 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
             // 2. Compute min rate
             let mapped = (allVehiclesMinimal as any[]).map(v => {
-                let minRate: number | null = null;
+                let bestRateEntry: any = null;
                 for (const a of v.rentalAssignments || []) {
                     for (const m of a.matrixEntries || []) {
-                        if (minRate === null || m.monthlyRateGross < minRate) {
-                            minRate = m.monthlyRateGross;
+                        if (!bestRateEntry) {
+                            bestRateEntry = m;
+                        } else {
+                            if (m.contractMonths < bestRateEntry.contractMonths) {
+                                bestRateEntry = m;
+                            } else if (m.contractMonths === bestRateEntry.contractMonths) {
+                                if (m.annualMileageKm < bestRateEntry.annualMileageKm) {
+                                    bestRateEntry = m;
+                                } else if (m.annualMileageKm === bestRateEntry.annualMileageKm) {
+                                    if (m.monthlyRateGross < bestRateEntry.monthlyRateGross) {
+                                        bestRateEntry = m;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                const minRate = bestRateEntry ? bestRateEntry.monthlyRateGross : null;
                 return { id: String(v.id), minRate, sortFieldValue: v[sortField as string] };
             });
 
@@ -234,7 +255,14 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 })));
 
             const minRate = allMinRates.length > 0
-                ? allMinRates.reduce((min: any, r: any) => r.monthlyRateGross < min.monthlyRateGross ? r : min)
+                ? allMinRates.reduce((best: any, current: any) => {
+                    if (current.contractMonths < best.contractMonths) return current;
+                    if (current.contractMonths > best.contractMonths) return best;
+                    if (current.annualMileageKm < best.annualMileageKm) return current;
+                    if (current.annualMileageKm > best.annualMileageKm) return best;
+                    if (current.monthlyRateGross < best.monthlyRateGross) return current;
+                    return best;
+                })
                 : null;
 
             return {
