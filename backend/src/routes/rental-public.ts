@@ -125,6 +125,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                         orderBy: [
                             { contractMonths: 'asc' },
                             { annualMileageKm: 'asc' },
+                            { initialPaymentPct: 'asc' },
                             { monthlyRateGross: 'asc' }
                         ] as any,
                         take: 1,
@@ -133,6 +134,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                             monthlyRateGross: true,
                             contractMonths: true,
                             annualMileageKm: true,
+                            initialPaymentPct: true,
                             servicesIncluded: true
                         }
                     }
@@ -158,7 +160,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 select: { 
                                     monthlyRateGross: true,
                                     contractMonths: true,
-                                    annualMileageKm: true
+                                    annualMileageKm: true,
+                                    initialPaymentPct: true
                                 }
                             }
                         }
@@ -180,8 +183,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 if (m.annualMileageKm < bestRateEntry.annualMileageKm) {
                                     bestRateEntry = m;
                                 } else if (m.annualMileageKm === bestRateEntry.annualMileageKm) {
-                                    if (m.monthlyRateGross < bestRateEntry.monthlyRateGross) {
+                                    if (m.initialPaymentPct < bestRateEntry.initialPaymentPct) {
                                         bestRateEntry = m;
+                                    } else if (m.initialPaymentPct === bestRateEntry.initialPaymentPct) {
+                                        if (m.monthlyRateGross < bestRateEntry.monthlyRateGross) {
+                                            bestRateEntry = m;
+                                        }
                                     }
                                 }
                             }
@@ -260,6 +267,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     if (current.contractMonths > best.contractMonths) return best;
                     if (current.annualMileageKm < best.annualMileageKm) return current;
                     if (current.annualMileageKm > best.annualMileageKm) return best;
+                    if (current.initialPaymentPct < best.initialPaymentPct) return current;
+                    if (current.initialPaymentPct > best.initialPaymentPct) return best;
                     if (current.monthlyRateGross < best.monthlyRateGross) return current;
                     return best;
                 })
