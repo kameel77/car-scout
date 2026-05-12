@@ -73,72 +73,154 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             ];
         }
 
+        const isRateSort = sortBy === 'minMonthlyRateNet' || sortBy === 'minMonthlyRateGross';
+        const isPriceFilter = !!(priceFrom || priceTo);
+
         const orderBy: any = {};
-        const validSortFields = ['createdAt', 'sellingPrice', 'make', 'productionYear', 'minMonthlyRateNet'];
+        const validSortFields = ['createdAt', 'sellingPrice', 'make', 'productionYear', 'catalogPrice'];
         const sortField = validSortFields.includes(sortBy || '') ? sortBy : 'createdAt';
         orderBy[sortField!] = sortOrder === 'asc' ? 'asc' : 'desc';
 
-        const [vehicles, total] = await Promise.all([
-            fastify.prisma.rentalVehicle.findMany({
+        const fullSelect = {
+            id: true,
+            make: true,
+            model: true,
+            version: true,
+            bodyType: true,
+            fuelType: true,
+            transmission: true,
+            enginePowerHp: true,
+            productionYear: true,
+            catalogPrice: true,
+            sellingPrice: true,
+            primaryImageUrl: true,
+            imageUrls: true,
+            slug: true,
+            condition: true,
+            dealer: {
+                select: { id: true, name: true, city: true }
+            },
+            rentalAssignments: {
+                where: { isActive: true },
+                include: {
+                    rentalCompany: {
+                        select: { id: true, name: true, slug: true, logoUrl: true }
+                    },
+                    matrixEntries: {
+                        where: matrixEntryFilter,
+                        orderBy: { monthlyRateGross: 'asc' },
+                        take: 1,
+                        select: {
+                            monthlyRateNet: true,
+                            monthlyRateGross: true,
+                            contractMonths: true,
+                            annualMileageKm: true,
+                            servicesIncluded: true
+                        }
+                    }
+                }
+            }
+        } as const;
+
+        let vehicles: any[] = [];
+        let total = 0;
+
+        if (isRateSort || isPriceFilter) {
+            // 1. Fetch minimal data for all matching vehicles
+            const allVehiclesMinimal = await fastify.prisma.rentalVehicle.findMany({
                 where,
-                skip,
-                take: limitNum,
-                orderBy,
                 select: {
                     id: true,
-                    make: true,
-                    model: true,
-                    version: true,
-                    bodyType: true,
-                    fuelType: true,
-                    transmission: true,
-                    enginePowerHp: true,
-                    productionYear: true,
-                    catalogPrice: true,
-                    sellingPrice: true,
-                    primaryImageUrl: true,
-                    imageUrls: true,
-                    slug: true,
-                    condition: true,
-                    dealer: {
-                        select: { id: true, name: true, city: true }
-                    },
+                    [sortField as string]: true,
                     rentalAssignments: {
                         where: { isActive: true },
-                        include: {
-                            rentalCompany: {
-                                select: { id: true, name: true, slug: true, logoUrl: true }
-                            },
+                        select: {
                             matrixEntries: {
                                 where: matrixEntryFilter,
-                                orderBy: { monthlyRateGross: 'asc' },
-                                take: 1,
-                                select: {
-                                    monthlyRateNet: true,
-                                    monthlyRateGross: true,
-                                    contractMonths: true,
-                                    annualMileageKm: true,
-                                    servicesIncluded: true
-                                }
+                                select: { monthlyRateGross: true }
                             }
                         }
                     }
                 }
-            }),
-            fastify.prisma.rentalVehicle.count({ where })
-        ]);
+            } as any); // Cast to any because of dynamic sortField
+
+            // 2. Compute min rate
+            let mapped = (allVehiclesMinimal as any[]).map(v => {
+                let minRate: number | null = null;
+                for (const a of v.rentalAssignments || []) {
+                    for (const m of a.matrixEntries || []) {
+                        if (minRate === null || m.monthlyRateGross < minRate) {
+                            minRate = m.monthlyRateGross;
+                        }
+                    }
+                }
+                return { id: String(v.id), minRate, sortFieldValue: v[sortField as string] };
+            });
+
+            // 3. Filter by price
+            if (isPriceFilter) {
+                const from = priceFrom ? parseInt(priceFrom) : 0;
+                const to = priceTo ? parseInt(priceTo) : Infinity;
+                mapped = mapped.filter(v => v.minRate !== null && v.minRate >= from && v.minRate <= to);
+            }
+
+            // 4. Sort
+            if (isRateSort) {
+                mapped.sort((a, b) => {
+                    const diff = (a.minRate ?? Infinity) - (b.minRate ?? Infinity);
+                    return sortOrder === 'asc' ? diff : -diff;
+                });
+            } else {
+                mapped.sort((a, b) => {
+                    const valA = a.sortFieldValue;
+                    const valB = b.sortFieldValue;
+                    if (valA === null || valA === undefined) return sortOrder === 'asc' ? 1 : -1;
+                    if (valB === null || valB === undefined) return sortOrder === 'asc' ? -1 : 1;
+                    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            total = mapped.length;
+            const pagedIds = mapped.slice(skip, skip + limitNum).map(v => v.id);
+
+            // 5. Fetch full details
+            if (pagedIds.length > 0) {
+                const unsortedVehicles = await fastify.prisma.rentalVehicle.findMany({
+                    where: { id: { in: pagedIds } },
+                    select: fullSelect
+                });
+                // Re-sort to match pagedIds order
+                vehicles = pagedIds.map((id: string) => unsortedVehicles.find(v => v.id === id)).filter(Boolean);
+            }
+        } else {
+            // Standard Prisma sort and pagination
+            const [fetchedVehicles, totalCount] = await Promise.all([
+                fastify.prisma.rentalVehicle.findMany({
+                    where,
+                    skip,
+                    take: limitNum,
+                    orderBy,
+                    select: fullSelect
+                }),
+                fastify.prisma.rentalVehicle.count({ where })
+            ]);
+            vehicles = fetchedVehicles;
+            total = totalCount;
+        }
 
         // Transform to include minRate
-        let vehiclesWithRates = vehicles.map((v) => {
+        const vehiclesWithRates = vehicles.map((v) => {
             const allMinRates = v.rentalAssignments
-                .flatMap(a => a.matrixEntries.map(e => ({
+                .flatMap((a: any) => a.matrixEntries.map((e: any) => ({
                     ...e,
                     companyName: a.rentalCompany.name,
                     companySlug: a.rentalCompany.slug
                 })));
 
             const minRate = allMinRates.length > 0
-                ? allMinRates.reduce((min, r) => r.monthlyRateGross < min.monthlyRateGross ? r : min)
+                ? allMinRates.reduce((min: any, r: any) => r.monthlyRateGross < min.monthlyRateGross ? r : min)
                 : null;
 
             return {
@@ -157,17 +239,6 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 condition: v.condition
             };
         });
-
-        // Post-filter by monthly rate range (rates are computed from matrix, not a direct column)
-        if (priceFrom || priceTo) {
-            const from = priceFrom ? parseInt(priceFrom) : 0;
-            const to = priceTo ? parseInt(priceTo) : Infinity;
-            vehiclesWithRates = vehiclesWithRates.filter(v => {
-                const rate = v.minMonthlyRateGross;
-                if (rate === null) return false;
-                return rate >= from && rate <= to;
-            });
-        }
 
         // Get filter options (including condition counts)
         const filterOptions = await getFilterOptions(fastify, where);
