@@ -125,7 +125,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                         orderBy: [
                             { contractMonths: 'asc' },
                             { annualMileageKm: 'asc' },
-                            { initialPaymentPct: 'asc' },
+                            { initialPaymentAmountNet: 'asc' },
                             { monthlyRateGross: 'asc' }
                         ] as any,
                         take: 1,
@@ -134,7 +134,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                             monthlyRateGross: true,
                             contractMonths: true,
                             annualMileageKm: true,
-                            initialPaymentPct: true,
+                            initialPaymentAmountNet: true,
                             servicesIncluded: true
                         }
                     }
@@ -161,7 +161,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                     monthlyRateGross: true,
                                     contractMonths: true,
                                     annualMileageKm: true,
-                                    initialPaymentPct: true
+                                    initialPaymentAmountNet: true
                                 }
                             }
                         }
@@ -183,9 +183,9 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 if (m.annualMileageKm < bestRateEntry.annualMileageKm) {
                                     bestRateEntry = m;
                                 } else if (m.annualMileageKm === bestRateEntry.annualMileageKm) {
-                                    if (m.initialPaymentPct < bestRateEntry.initialPaymentPct) {
+                                    if (m.initialPaymentAmountNet < bestRateEntry.initialPaymentAmountNet) {
                                         bestRateEntry = m;
-                                    } else if (m.initialPaymentPct === bestRateEntry.initialPaymentPct) {
+                                    } else if (m.initialPaymentAmountNet === bestRateEntry.initialPaymentAmountNet) {
                                         if (m.monthlyRateGross < bestRateEntry.monthlyRateGross) {
                                             bestRateEntry = m;
                                         }
@@ -267,8 +267,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     if (current.contractMonths > best.contractMonths) return best;
                     if (current.annualMileageKm < best.annualMileageKm) return current;
                     if (current.annualMileageKm > best.annualMileageKm) return best;
-                    if (current.initialPaymentPct < best.initialPaymentPct) return current;
-                    if (current.initialPaymentPct > best.initialPaymentPct) return best;
+                    if (current.initialPaymentAmountNet < best.initialPaymentAmountNet) return current;
+                    if (current.initialPaymentAmountNet > best.initialPaymentAmountNet) return best;
                     if (current.monthlyRateGross < best.monthlyRateGross) return current;
                     return best;
                 })
