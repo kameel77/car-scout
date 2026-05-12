@@ -184,15 +184,15 @@ export default function RentalSearchPage() {
     queryFn: () => rentalPublicApi.listVehicles({
       page: String(page), limit: '12',
       search: search || undefined,
-      make: makes.length === 1 ? makes[0] : undefined,
-      model: models.length === 1 ? models[0] : undefined,
-      fuelType: fuelTypes.length === 1 ? fuelTypes[0] : undefined,
-      bodyType: bodyTypes.length === 1 ? bodyTypes[0] : undefined,
+      make: makes.length > 0 ? makes.join(',') : undefined,
+      model: models.length > 0 ? models.join(',') : undefined,
+      fuelType: fuelTypes.length > 0 ? fuelTypes.join(',') : undefined,
+      bodyType: bodyTypes.length > 0 ? bodyTypes.join(',') : undefined,
       yearFrom: yearFrom || undefined,
       yearTo: yearTo || undefined,
       priceFrom: priceFrom || undefined,
       priceTo: priceTo || undefined,
-      condition: condition.length === 1 ? condition[0] : undefined,
+      condition: condition.length > 0 ? condition.join(',') : undefined,
       sortBy, sortOrder,
       offerType: clientType === 'consumer' ? 'b2c' : 'b2b'
     })
