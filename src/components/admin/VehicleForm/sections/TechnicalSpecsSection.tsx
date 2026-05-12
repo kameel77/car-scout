@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import type { SectionProps } from '../types';
 
-const BODY_TYPES = ['SUV', 'Sedan', 'Kombi', 'Hatchback', 'Coupe', 'Kabriolet', 'Van', 'Pickup'];
+const BODY_TYPES = ['SUV', 'Sedan', 'Kombi', 'Hatchback', 'Coupe', 'Kabriolet', 'Van', 'Pickup', 'Dostawczy', 'Ciężarowy'];
 const FUEL_TYPES = ['Benzyna', 'Diesel', 'Hybryda', 'Plug-in Hybrid', 'Elektryczny', 'LPG'];
 
 export function TechnicalSpecsSection({ form, setField, isImported }: SectionProps) {
