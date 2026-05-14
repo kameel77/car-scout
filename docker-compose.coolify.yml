@@ -38,9 +38,10 @@ services:
       retries: 10
       start_period: 60s
     volumes:
-      # Persist uploaded rental vehicle images across deploys & restarts.
-      # Named using COMPOSE_PROJECT_NAME so each environment has its own isolated volume.
-      - rental-uploads:/app/uploads
+      # Bind mount: data lives on host filesystem, survives docker compose down -v and Coolify stack resets.
+      # Each environment gets its own isolated directory via COMPOSE_PROJECT_NAME.
+      # The directory is auto-created by Docker on first run.
+      - /srv/${COMPOSE_PROJECT_NAME}-uploads:/app/uploads
     networks:
       carscout-private:
         aliases:
@@ -72,10 +73,9 @@ services:
           - frontend
       coolify: {}
 
-volumes:
-  rental-uploads:
-    # Isolated per environment via COMPOSE_PROJECT_NAME prefix
-    name: "${COMPOSE_PROJECT_NAME}-rental-uploads"
+# NOTE: No named volumes - using bind mounts instead (see carscout-api.volumes).
+# Data is stored on host at /srv/<COMPOSE_PROJECT_NAME>-uploads/
+# and survives stack resets, compose down -v, and Coolify rebuilds.
 
 networks:
   carscout-private:
