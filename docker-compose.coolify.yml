@@ -8,6 +8,12 @@ version: '3.8'
 #           motolia.pl          (IMAGE_TAG=main,    BRAND=motolia,   COMPOSE_PROJECT_NAME=motolia-prod)
 #
 # In Coolify: set "Docker Compose Location" to /docker-compose.coolify.yml
+#
+# UPLOADS PERSISTENCE NOTE:
+# Named volume 'carscout-uploads' uses local driver with bind mount device /srv/carscout-uploads.
+# Coolify renames the volume to <uuid>_carscout-uploads but data physically lives on the host
+# at /srv/carscout-uploads - survives docker compose down -v, stack resets, and rebuilds.
+# IMPORTANT: Create /srv/carscout-uploads on the host before first deploy.
 
 services:
   # Backend API — pulled from GHCR, built by GitHub Actions
@@ -38,10 +44,7 @@ services:
       retries: 10
       start_period: 60s
     volumes:
-      # Bind mount: data lives on host filesystem, survives docker compose down -v and Coolify stack resets.
-      # Each environment gets its own isolated directory via COMPOSE_PROJECT_NAME.
-      # The directory is auto-created by Docker on first run.
-      - /srv/${COMPOSE_PROJECT_NAME}-uploads:/app/uploads
+      - carscout-uploads:/app/uploads
     networks:
       carscout-private:
         aliases:
@@ -73,9 +76,16 @@ services:
           - frontend
       coolify: {}
 
-# NOTE: No named volumes - using bind mounts instead (see carscout-api.volumes).
-# Data is stored on host at /srv/<COMPOSE_PROJECT_NAME>-uploads/
-# and survives stack resets, compose down -v, and Coolify rebuilds.
+# Named volume using local driver with bind mount.
+# Coolify prefixes the volume name with UUID but the device path stays fixed on the host.
+# Files at /srv/carscout-uploads survive docker compose down -v and Coolify stack resets.
+volumes:
+  carscout-uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /srv/carscout-uploads
 
 networks:
   carscout-private:
@@ -84,4 +94,3 @@ networks:
   coolify:
     name: coolify
     external: true
-# force deploy
