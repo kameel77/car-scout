@@ -7,6 +7,7 @@ import {
     MoreVertical,
     Trash2,
     Copy,
+    CopyPlus,
     Star,
     Pencil,
 } from 'lucide-react';
@@ -39,9 +40,11 @@ interface AdminListingItemProps {
     onArchive?: (id: string) => void;
     onRestore?: (id: string) => void;
     onDelete?: (id: string) => void;
+    onDuplicateModel?: (id: string) => void;
+    onDuplicateOffer?: (id: string) => void;
 }
 
-export function AdminListingItem({ listing, isSelected = false, onSelect, onToggleFeatured, onArchive, onRestore, onDelete }: AdminListingItemProps) {
+export function AdminListingItem({ listing, isSelected = false, onSelect, onToggleFeatured, onArchive, onRestore, onDelete, onDuplicateModel, onDuplicateOffer }: AdminListingItemProps) {
     const isArchived = listing.is_archived;
     const isFeatured = listing.is_featured;
     const { toast } = useToast();
@@ -204,6 +207,18 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onTogg
                             <Copy className="w-4 h-4 mr-2" />
                             <span>Kopiuj link</span>
                         </DropdownMenuItem>
+                        {onDuplicateModel && (
+                            <DropdownMenuItem onClick={() => onDuplicateModel(listing.listing_id)}>
+                                <Copy className="w-4 h-4 mr-2" />
+                                <span>Kopiuj model</span>
+                            </DropdownMenuItem>
+                        )}
+                        {onDuplicateOffer && (
+                            <DropdownMenuItem onClick={() => onDuplicateOffer(listing.listing_id)}>
+                                <CopyPlus className="w-4 h-4 mr-2" />
+                                <span>Duplikuj ofertę</span>
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem asChild>
                             <Link to={`/admin/listings/${listing.listing_id}/edit`} className="flex items-center gap-2">
                                 <Pencil className="w-4 h-4" />

@@ -626,6 +626,125 @@ export async function listingRoutes(fastify: FastifyInstance) {
         }
     });
 
+    // Duplicate model (technical specs only)
+    fastify.post('/api/listings/:id/duplicate-model', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const scope = await resolveScope(fastify, request);
+
+        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        if (!listing) {
+            return reply.code(404).send({ error: 'Listing not found' });
+        }
+
+        if (!scope.isPlatform && listing.dealerId) {
+            const allowedDealerIds = scope.dealerFilter.dealerId;
+            if (typeof allowedDealerIds === 'string' && listing.dealerId !== allowedDealerIds) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowedDealerIds === 'object' && 'in' in allowedDealerIds && !allowedDealerIds.in.includes(listing.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
+
+        const newListing = await fastify.prisma.listing.create({
+            data: {
+                dealerId: listing.dealerId,
+                ownerUserId: listing.ownerUserId,
+                make: listing.make,
+                model: listing.model,
+                version: listing.version,
+                bodyType: listing.bodyType,
+                fuelType: listing.fuelType,
+                transmission: listing.transmission,
+                enginePowerHp: listing.enginePowerHp,
+                engineCapacityCm3: listing.engineCapacityCm3,
+                productionYear: listing.productionYear,
+                doors: listing.doors,
+                seats: listing.seats,
+                drive: listing.drive,
+                condition: listing.condition,
+                isChineseBrand: listing.isChineseBrand,
+                financingPriceBase: listing.financingPriceBase,
+                // Required fields with placeholder values — user will fill in
+                pricePln: 0,
+                mileageKm: 0,
+                // Do not copy: VIN, prices, equipment, images, contact data, listingId/url, slug
+                // Archive by default so placeholder-priced draft is not shown publicly
+                isArchived: true,
+                archivedAt: new Date(),
+                archivedReason: 'Draft from duplicate model',
+                entrySource: 'MANUAL',
+                lastManualEditAt: new Date(),
+            }
+        });
+
+        const slug = generateListingSlug(
+            newListing.make, newListing.model, newListing.version,
+            newListing.productionYear, newListing.bodyType, newListing.fuelType, newListing.id
+        );
+
+        const updated = await fastify.prisma.listing.update({
+            where: { id: newListing.id },
+            data: { slug }
+        });
+
+        return reply.code(201).send({ listing: updated });
+    });
+
+    // Duplicate offer (full copy without unique fields and state)
+    fastify.post('/api/listings/:id/duplicate-offer', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const scope = await resolveScope(fastify, request);
+
+        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        if (!listing) {
+            return reply.code(404).send({ error: 'Listing not found' });
+        }
+
+        if (!scope.isPlatform && listing.dealerId) {
+            const allowedDealerIds = scope.dealerFilter.dealerId;
+            if (typeof allowedDealerIds === 'string' && listing.dealerId !== allowedDealerIds) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowedDealerIds === 'object' && 'in' in allowedDealerIds && !allowedDealerIds.in.includes(listing.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
+
+        // Copy everything except id, unique fields, and state
+        const {
+            id: _id,
+            slug: _slug,
+            vin: _vin,
+            listingId: _listingId,
+            listingUrl: _listingUrl,
+            scrapedAt: _scrapedAt,
+            isFeatured: _isFeatured,
+            isArchived: _isArchived,
+            archivedAt: _archivedAt,
+            archivedReason: _archivedReason,
+            createdAt: _createdAt,
+            updatedAt: _updatedAt,
+            ...dataToCopy
+        } = listing;
+
+        const newListing = await fastify.prisma.listing.create({
+            data: {
+                ...dataToCopy,
+                entrySource: 'MANUAL',
+                lastManualEditAt: new Date(),
+            } as any
+        });
+
+        const slug = generateListingSlug(
+            newListing.make, newListing.model, newListing.version,
+            newListing.productionYear, newListing.bodyType, newListing.fuelType, newListing.id
+        );
+
+        const updated = await fastify.prisma.listing.update({
+            where: { id: newListing.id },
+            data: { slug }
+        });
+
+        return reply.code(201).send({ listing: updated });
+    });
+
     // Refresh images from source (admin only for manual refresh, public for auto-refresh)
     fastify.post('/api/listings/:id/refresh-images', async (request, reply) => {
         const { id } = request.params as { id: string };
