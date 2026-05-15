@@ -4,7 +4,7 @@ import { AdminListingList } from '@/components/admin/ListingManagement/AdminList
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Car, Filter, Archive, RotateCcw, X, Trash2, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FilterState } from '@/components/FilterPanel';
 import { listingsApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,6 +60,7 @@ export default function ListingManagementPage() {
     const { token } = useAuth();
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
     const filters = useMemo(() => ({
         ...initialFilters,
@@ -128,6 +129,42 @@ export default function ListingManagementPage() {
             toast({
                 title: "Błąd",
                 description: "Nie udało się usunąć pojazdu.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleDuplicateModel = async (id: string) => {
+        if (!token) return;
+        try {
+            const result = await listingsApi.duplicateModel(id, token);
+            queryClient.invalidateQueries({ queryKey: ['listings'] });
+            toast({ title: "Skopiowano model" });
+            if (result?.listing?.id) {
+                navigate(`/admin/listings/${result.listing.id}/edit`);
+            }
+        } catch (error: any) {
+            toast({
+                title: "Błąd kopiowania",
+                description: error?.message || 'Nie udało się skopiować modelu.',
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleDuplicateOffer = async (id: string) => {
+        if (!token) return;
+        try {
+            const result = await listingsApi.duplicateOffer(id, token);
+            queryClient.invalidateQueries({ queryKey: ['listings'] });
+            toast({ title: "Zduplikowano ofertę" });
+            if (result?.listing?.id) {
+                navigate(`/admin/listings/${result.listing.id}/edit`);
+            }
+        } catch (error: any) {
+            toast({
+                title: "Błąd duplikowania",
+                description: error?.message || 'Nie udało się zduplikować oferty.',
                 variant: "destructive"
             });
         }
@@ -365,6 +402,8 @@ export default function ListingManagementPage() {
                 onArchive={handleArchive}
                 onRestore={handleRestore}
                 onDelete={handleDelete}
+                onDuplicateModel={handleDuplicateModel}
+                onDuplicateOffer={handleDuplicateOffer}
             />
 
             {/* Pagination placeholder */}

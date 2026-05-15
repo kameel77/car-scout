@@ -474,6 +474,34 @@ export const listingsApi = {
         return response.json();
     },
 
+    duplicateModel: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/duplicate-model`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to duplicate model');
+        }
+
+        return response.json();
+    },
+
+    duplicateOffer: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/duplicate-offer`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to duplicate offer');
+        }
+
+        return response.json();
+    },
+
     refreshImages: async (id: string, token?: string) => {
         const headers: Record<string, string> = {};
         if (token) {
