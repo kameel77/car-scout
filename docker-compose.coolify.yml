@@ -11,9 +11,11 @@ version: '3.8'
 #
 # UPLOADS PERSISTENCE:
 # Uses a literal bind mount path - Coolify rejects ${...} variables in bind mount paths
-# but accepts literal paths. Each environment has its own path on each host.
+# but accepts literal paths. Each environment has its own path on its host.
 # Pre-requisite: host directory must exist before first deploy.
-# PROD path: /srv/carscout-prod-uploads
+# DEV path:     /srv/carscout-uploads          (separate server)
+# STAGING path: /srv/carscout-staging-uploads  (shares server with prod)
+# PROD path:    /srv/carscout-prod-uploads     (shares server with staging)
 
 services:
   # Backend API — pulled from GHCR, built by GitHub Actions

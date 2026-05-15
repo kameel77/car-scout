@@ -12,17 +12,21 @@ interface AdminListingListProps {
     onArchive?: (id: string) => void;
     onRestore?: (id: string) => void;
     onDelete?: (id: string) => void;
+    onDuplicateModel?: (id: string) => void;
+    onDuplicateOffer?: (id: string) => void;
 }
 
-export function AdminListingList({ 
-    listings, 
-    isLoading, 
-    selectedIds, 
+export function AdminListingList({
+    listings,
+    isLoading,
+    selectedIds,
     onSelectionChange,
     onToggleFeatured,
-    onArchive, 
+    onArchive,
     onRestore,
-    onDelete 
+    onDelete,
+    onDuplicateModel,
+    onDuplicateOffer
 }: AdminListingListProps) {
     const handleSelect = (id: string, selected: boolean) => {
         if (selected) {
@@ -118,6 +122,8 @@ export function AdminListingList({
                         onArchive={onArchive}
                         onRestore={onRestore}
                         onDelete={onDelete}
+                        onDuplicateModel={onDuplicateModel}
+                        onDuplicateOffer={onDuplicateOffer}
                     />
                 ))}
             </div>

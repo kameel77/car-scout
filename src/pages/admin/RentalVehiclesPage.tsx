@@ -294,12 +294,17 @@ function SpecificationSection({ vehicle }: { vehicle: RentalVehicle }) {
 
 // ─── Image Upload ────────────────────────────────────────────────
 
+/** Returns true for images uploaded to the local server (/uploads/...) */
+const isLocalImage = (url: string) => url.startsWith('/uploads/');
+
 function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
     const { token } = useAuth();
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const [imageUrl, setImageUrl] = useState('');
     const imageFileRef = useRef<HTMLInputElement>(null);
+
+    const localImageCount = (vehicle.imageUrls || []).filter(isLocalImage).length;
 
     const uploadMutation = useMutation({
         mutationFn: (files: File[]) => rentalVehiclesApi.uploadImages(vehicle.id, files, !vehicle.primaryImageUrl, token!),
@@ -381,15 +386,37 @@ function ImageSection({ vehicle }: { vehicle: RentalVehicle }) {
         <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-lg">
             <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4" /> Zdjęcia ({vehicle.imageUrls?.length || 0})
+                {localImageCount > 0 && (
+                    <span className="ml-auto flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                        ⚠ {localImageCount} lokaln{localImageCount === 1 ? 'e' : 'ych'} - chronione bind mount
+                    </span>
+                )}
             </h4>
 
             {vehicle.imageUrls?.length > 0 && (
                 <div className="flex gap-4 flex-wrap">
                     {vehicle.imageUrls.map((url, i) => (
-                        <div key={i} className={`group relative w-32 h-32 rounded-lg overflow-hidden border-2 ${url === vehicle.primaryImageUrl ? 'border-blue-500 shadow-md' : 'border-gray-200'}`}>
+                        <div key={i} className={`group relative w-32 h-32 rounded-lg overflow-hidden border-2 ${url === vehicle.primaryImageUrl ? 'border-blue-500 shadow-md' : isLocalImage(url) ? 'border-amber-300' : 'border-gray-200'}`}>
                             <img src={url} alt={`Zdjęcie ${i + 1}`} className="w-full h-full object-cover" />
                             {url === vehicle.primaryImageUrl && (
                                 <span className="absolute top-0 left-0 right-0 bg-blue-500/80 text-white text-[10px] font-bold py-0.5 text-center uppercase tracking-wider backdrop-blur-sm">Główne</span>
+                            )}
+                            {/* Local storage badge */}
+                            {isLocalImage(url) && url !== vehicle.primaryImageUrl && (
+                                <span
+                                    className="absolute top-0 left-0 right-0 bg-amber-400/85 text-amber-900 text-[9px] font-bold py-0.5 text-center uppercase tracking-wider backdrop-blur-sm"
+                                    title={`Plik lokalny na serwerze: ${url}`}
+                                >
+                                    Lokalny
+                                </span>
+                            )}
+                            {isLocalImage(url) && url === vehicle.primaryImageUrl && (
+                                <span
+                                    className="absolute top-0 left-0 right-0 bg-blue-500/80 text-white text-[10px] font-bold py-0.5 text-center uppercase tracking-wider backdrop-blur-sm"
+                                    title={`Główne + lokalny plik: ${url}`}
+                                >
+                                    Główne (lokal)
+                                </span>
                             )}
                             
                             {/* Hover ActionsOverlay */}
