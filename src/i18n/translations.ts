@@ -51,7 +51,7 @@ export const translations = {
 
       // Filters
       filters: {
-        title: "Filtry",
+        title: "Wszystkie filtry",
         make: "Marka",
         model: "Model",
         version: "Wersja",
@@ -411,7 +411,7 @@ export const translations = {
 
       // Filters
       filters: {
-        title: "Filters",
+        title: "All filters",
         make: "Make",
         model: "Model",
         version: "Trim / Version",
@@ -769,7 +769,7 @@ export const translations = {
 
       // Filters
       filters: {
-        title: "Filter",
+        title: "Alle Filter",
         make: "Marke",
         model: "Modell",
         version: "Variante / Ausstattung",

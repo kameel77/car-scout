@@ -56,7 +56,9 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             where.OR = [
                 { make: { contains: search, mode: 'insensitive' } },
                 { model: { contains: search, mode: 'insensitive' } },
-                { version: { contains: search, mode: 'insensitive' } }
+                { version: { contains: search, mode: 'insensitive' } },
+                { rentalAssignments: { some: { rentalCompany: { name: { contains: search, mode: 'insensitive' } } } } },
+                { ownerRentalCompany: { name: { contains: search, mode: 'insensitive' } } }
             ];
         }
 
@@ -274,6 +276,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         }
         if (body.specsJson !== undefined) updateData.specsJson = body.specsJson;
         if (body.isActive !== undefined) updateData.isActive = body.isActive;
+        if (body.isPublished !== undefined) updateData.isPublished = body.isPublished;
         if (body.dealerId !== undefined) updateData.dealerId = body.dealerId;
         if (body.ownerRentalCompanyId !== undefined) updateData.ownerRentalCompanyId = body.ownerRentalCompanyId;
 

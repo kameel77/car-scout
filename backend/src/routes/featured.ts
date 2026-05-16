@@ -98,4 +98,22 @@ export async function featuredRoutes(fastify: FastifyInstance) {
 
         return { success: true, isFeatured: rv.isFeatured };
     });
+
+    // Toggle published (frontend visibility) status for a rental vehicle
+    fastify.post('/api/rental-vehicles/:id/published', {
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { isPublished } = request.body as { isPublished: boolean };
+
+        const rv = await fastify.prisma.rentalVehicle.update({
+            where: { id },
+            data: { isPublished }
+        });
+
+        // Invalidate cache (featured list may have referenced this vehicle)
+        await fastify.redis.del('featured:vehicles');
+
+        return { success: true, isPublished: rv.isPublished };
+    });
 }

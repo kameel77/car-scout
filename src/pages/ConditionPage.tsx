@@ -78,8 +78,10 @@ const sortOpts = [
   { value: 'mileage_asc', label: 'Przebieg rosnąco' },
 ];
 
-function ConditionNavTabs({ condition, resultCount, sortBy, onSortChange }: {
-  condition: 'NEW' | 'USED'; resultCount?: number; sortBy: string;
+function ConditionNavTabs({ condition, resultCount, byCondition, sortBy, onSortChange }: {
+  condition: 'NEW' | 'USED'; resultCount?: number;
+  byCondition?: { NEW: number; USED: number };
+  sortBy: string;
   onSortChange: (v: string) => void;
 }) {
   const navigate = useNavigate();
@@ -91,13 +93,26 @@ function ConditionNavTabs({ condition, resultCount, sortBy, onSortChange }: {
     active ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
   );
   const currentSort = sortOpts.find(s => s.value === sortBy);
+  const totalCount = byCondition ? byCondition.NEW + byCondition.USED : null;
   return (
     <div className="flex items-center gap-1 border-b border-border overflow-x-auto mb-3">
+      <button type="button" onClick={() => navigate('/samochody')} className={tabCls(false)}>
+        {t('status.all', 'Wszystkie')}
+        {totalCount !== null && (
+          <span className="ml-1.5 text-xs text-muted-foreground">({PLN_FMT.format(totalCount)})</span>
+        )}
+      </button>
       <button type="button" onClick={() => navigate('/nowe')} className={tabCls(isNew)}>
         {t('status.new', 'Nowy')}
+        {byCondition && (
+          <span className="ml-1.5 text-xs text-muted-foreground">({PLN_FMT.format(byCondition.NEW)})</span>
+        )}
       </button>
       <button type="button" onClick={() => navigate('/uzywane')} className={tabCls(!isNew)}>
         {t('status.used', 'Używany')}
+        {byCondition && (
+          <span className="ml-1.5 text-xs text-muted-foreground">({PLN_FMT.format(byCondition.USED)})</span>
+        )}
       </button>
       <div className="flex-1" />
       {resultCount !== undefined && (
@@ -400,10 +415,10 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       {/* Full-page filter sheet */}
       <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0">
-          <SheetHeader className="px-6 pt-6 pb-2">
+          <SheetHeader className="sr-only">
             <SheetTitle>{t('filters.title')}</SheetTitle>
           </SheetHeader>
-          <div className="px-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
+          <div className="px-6 pt-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
             <FilterPanel
               filters={filters}
               onFilterChange={handleFilterChange}
@@ -443,6 +458,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
             <ConditionNavTabs
               condition={condition}
               resultCount={totalCombined}
+              byCondition={saleData?.byCondition}
               sortBy={sortBy}
               onSortChange={(value) => {
                 setSortBy(value);
