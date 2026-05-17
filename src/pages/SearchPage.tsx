@@ -46,6 +46,10 @@ const emptyFilters: FilterState = {
   statuses: [],
   priceFrom: '',
   priceTo: '',
+  rateFrom: '',
+  rateTo: '',
+  rateType: 'credit',
+  rateBasis: 'gross',
   query: '',
 };
 
@@ -68,6 +72,8 @@ export default function SearchPage() {
 
   // Initialize from URL
   const [filters, setFilters] = React.useState<FilterState>(() => {
+    const rt = searchParams.get('rateType');
+    const rb = searchParams.get('rateBasis');
     return {
       makes: parseArray(searchParams.get('make')),
       models: parseArray(searchParams.get('model')),
@@ -87,6 +93,10 @@ export default function SearchPage() {
       powerTo: searchParams.get('powerMax') || '',
       capacityFrom: searchParams.get('capacityMin') || '',
       capacityTo: searchParams.get('capacityMax') || '',
+      rateFrom: searchParams.get('rateMin') || '',
+      rateTo: searchParams.get('rateMax') || '',
+      rateType: rt === 'lease' ? 'lease' : 'credit',
+      rateBasis: rb === 'net' ? 'net' : 'gross',
 
       query: searchParams.get('q') || '',
     };
@@ -175,6 +185,10 @@ export default function SearchPage() {
       if (filters.powerTo) params.set('powerMax', filters.powerTo);
       if (filters.capacityFrom) params.set('capacityMin', filters.capacityFrom);
       if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
+      if (filters.rateFrom) params.set('rateMin', filters.rateFrom);
+      if (filters.rateTo) params.set('rateMax', filters.rateTo);
+      if ((filters.rateFrom || filters.rateTo) && filters.rateType !== 'credit') params.set('rateType', filters.rateType);
+      if ((filters.rateFrom || filters.rateTo) && filters.rateBasis !== 'gross') params.set('rateBasis', filters.rateBasis);
 
       if (filters.query) params.set('q', filters.query);
       if (sortBy !== defaultSortCars) params.set('sortBy', sortBy);
@@ -248,8 +262,8 @@ export default function SearchPage() {
   const lang = i18n.language;
   const suffix = lang === 'pl' ? '' : lang === 'en' ? 'En' : 'De';
 
-  const homeTitle = (seoConfig ? (seoConfig as any)[`homeTitle${suffix}`] : undefined) || seoConfig?.homeTitle;
-  const homeDescription = (seoConfig ? (seoConfig as any)[`homeDescription${suffix}`] : undefined) || seoConfig?.homeDescription;
+  const pageTitleBase = 'Samochody nowe i używane z finansowaniem';
+  const pageDescription = 'Tysiące sprawdzonych ofert nowych i używanych samochodów w jednym miejscu. Dobieramy kredyt, leasing lub wynajem długoterminowy — i prowadzimy Cię przez cały proces zakupu.';
 
 
   const siteName = React.useMemo(() => {
@@ -270,15 +284,34 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-background">
       <MetaHead
-        title={homeTitle}
-        description={homeDescription}
+        title={`${pageTitleBase} | ${siteName}`}
+        description={pageDescription}
         image={seoConfig?.homeOgImage}
+        canonical="/samochody"
         schema={{
           "@context": "https://schema.org",
-          "@type": "Organization",
-          "name": siteName,
-          "url": window.location.origin,
-          "logo": seoConfig?.homeOgImage
+          "@graph": [
+            {
+              "@type": "Organization",
+              "name": siteName,
+              "url": window.location.origin,
+              "logo": seoConfig?.homeOgImage,
+            },
+            {
+              "@type": "CollectionPage",
+              "name": pageTitleBase,
+              "description": pageDescription,
+              "url": `${window.location.origin}/samochody`,
+              "isPartOf": { "@type": "WebSite", "name": siteName, "url": window.location.origin },
+            },
+            {
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Strona główna", "item": window.location.origin },
+                { "@type": "ListItem", "position": 2, "name": pageTitleBase, "item": `${window.location.origin}/samochody` },
+              ],
+            },
+          ],
         }}
       />
 
@@ -297,6 +330,7 @@ export default function SearchPage() {
               resultCount={totalCount}
               availableMakes={options?.makes || []}
               availableModels={options?.models || []}
+              facets={data?.facets}
             />
           </div>
         </SheetContent>
@@ -304,6 +338,12 @@ export default function SearchPage() {
 
       <main className="container pt-4 pb-6">
         <div className="min-w-0">
+          {/* Page heading */}
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold text-foreground">Samochody nowe i używane z elastycznym finansowaniem</h1>
+            <p className="text-sm text-muted-foreground mt-1">Tysiące sprawdzonych aut w jednym miejscu. Dobieramy kredyt, leasing lub wynajem długoterminowy i prowadzimy Cię przez cały proces — od wyboru pojazdu po odbiór kluczyków.</p>
+          </div>
+
           {/* Top filter bar on desktop */}
           <TopFilterBar
             filters={filters}
@@ -316,6 +356,7 @@ export default function SearchPage() {
               setIsDesktopTyping(true);
               setDesktopSearch(v);
             }}
+            facets={data?.facets}
           />
 
           {/* Results */}

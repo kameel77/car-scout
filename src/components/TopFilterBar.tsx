@@ -1,29 +1,20 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, SlidersHorizontal, Search } from 'lucide-react';
-import { FilterState } from '@/components/FilterPanel';
+import { FilterState, ListingFacets } from '@/components/FilterPanel';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-const fuelTypeOptions = [
-  { value: 'benzyna', label: 'fuel.petrol' },
-  { value: 'diesel', label: 'fuel.diesel' },
-  { value: 'hybryda', label: 'fuel.hybrid' },
-  { value: 'elektryczny', label: 'fuel.electric' },
-  { value: 'lpg', label: 'fuel.lpg' },
-];
-
-const bodyTypeOptions = [
-  { value: 'sedan', label: 'body.sedan' },
-  { value: 'hatchback', label: 'body.hatchback' },
-  { value: 'SUV', label: 'body.suv' },
-  { value: 'kombi', label: 'body.kombi' },
-  { value: 'coupe', label: 'body.coupe' },
-];
+// Build options dynamically from facet keys returned by the API (DB values, e.g.
+// 'benzynowy', 'benzynowy + gaz', 'hybryda plug-in'). The previous hardcoded
+// 'benzyna'/'hybryda' never matched real values for most listings.
+function optionsFromFacet(facet?: Record<string, number>): { value: string; label: string }[] {
+  if (!facet) return [];
+  return Object.keys(facet).map((k) => ({ value: k, label: k }));
+}
 
 interface FilterPillProps {
   label: string;
@@ -65,11 +56,22 @@ interface MultiCheckProps {
   onChange: (values: string[]) => void;
   searchable?: boolean;
   searchPlaceholder?: string;
+  counts?: Record<string, number>;
 }
 
-function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder }: MultiCheckProps) {
+function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder, counts }: MultiCheckProps) {
   const { t } = useTranslation();
   const [search, setSearch] = React.useState('');
+
+  const getCount = (value: string) => {
+    if (!counts) return undefined;
+    if (value in counts) return counts[value];
+    const lower = value.toLowerCase();
+    for (const k of Object.keys(counts)) {
+      if (k.toLowerCase() === lower) return counts[k];
+    }
+    return undefined;
+  };
 
   const filtered = searchable
     ? options.filter((o) => {
@@ -77,6 +79,22 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
         return label.includes(search.toLowerCase()) || o.value.toLowerCase().includes(search.toLowerCase());
       })
     : options;
+
+  const sorted = React.useMemo(() => {
+    if (!counts) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const ca = getCount(a.value);
+      const cb = getCount(b.value);
+      const aHas = ca !== undefined && ca > 0;
+      const bHas = cb !== undefined && cb > 0;
+      if (aHas && bHas) return (cb! - ca!) || a.label.localeCompare(b.label);
+      if (aHas) return -1;
+      if (bHas) return 1;
+      return a.label.localeCompare(b.label);
+    });
+    return arr;
+  }, [filtered, counts]);
 
   const toggle = (value: string) => {
     if (selected.includes(value)) onChange(selected.filter((v) => v !== value));
@@ -93,30 +111,41 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
           className="h-9"
         />
       )}
-      <ScrollArea className="max-h-64">
+      <div className="max-h-72 overflow-y-auto pr-1">
         <div className="space-y-1">
-          {filtered.map((option) => {
+          {sorted.map((option) => {
             const id = `topfilter-${option.value.replace(/\s+/g, '-')}`;
+            const count = getCount(option.value);
+            const isSelected = selected.includes(option.value);
+            const isZero = counts !== undefined && (count === undefined || count === 0);
             return (
               <label
                 key={option.value}
                 htmlFor={id}
-                className="flex items-center gap-2 p-1.5 rounded-md hover:bg-secondary/50 cursor-pointer"
+                className={cn(
+                  'flex items-center gap-2 p-1.5 rounded-md cursor-pointer',
+                  isZero && !isSelected ? 'opacity-50' : 'hover:bg-secondary/50'
+                )}
               >
                 <Checkbox
                   id={id}
-                  checked={selected.includes(option.value)}
+                  checked={isSelected}
                   onCheckedChange={() => toggle(option.value)}
                 />
-                <span className="text-sm">{t(option.label, option.label)}</span>
+                <span className="text-sm flex-1 flex items-center justify-between gap-2">
+                  <span>{t(option.label, option.label)}</span>
+                  {count !== undefined && (
+                    <span className="text-xs text-muted-foreground tabular-nums">({count})</span>
+                  )}
+                </span>
               </label>
             );
           })}
-          {filtered.length === 0 && (
+          {sorted.length === 0 && (
             <p className="text-xs text-muted-foreground p-2">{t('common.noResults', 'Brak wyników')}</p>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -160,6 +189,7 @@ interface TopFilterBarProps {
   /** Text search query — shown inline with filter pills on desktop */
   query?: string;
   onQueryChange?: (value: string) => void;
+  facets?: ListingFacets;
 }
 
 /**
@@ -176,6 +206,7 @@ export function TopFilterBar({
   onOpenAllFilters,
   query = '',
   onQueryChange,
+  facets,
 }: TopFilterBarProps) {
   const { t } = useTranslation();
 
@@ -204,6 +235,7 @@ export function TopFilterBar({
           }}
           searchable
           searchPlaceholder={t('filters.selectMake')}
+          counts={facets?.make}
         />
       </FilterPill>
 
@@ -215,6 +247,7 @@ export function TopFilterBar({
             onChange={(v) => update('models', v)}
             searchable
             searchPlaceholder={t('filters.selectModel')}
+            counts={facets?.model}
           />
         ) : (
           <p className="text-sm text-muted-foreground p-2">{t('filters.selectMake')}</p>
@@ -223,17 +256,19 @@ export function TopFilterBar({
 
       <FilterPill label={t('filters.bodyType')} activeCount={filters.bodyTypes.length}>
         <MultiCheck
-          options={bodyTypeOptions}
+          options={optionsFromFacet(facets?.bodyType)}
           selected={filters.bodyTypes}
           onChange={(v) => update('bodyTypes', v)}
+          counts={facets?.bodyType}
         />
       </FilterPill>
 
       <FilterPill label={t('filters.fuelType')} activeCount={filters.fuelTypes.length}>
         <MultiCheck
-          options={fuelTypeOptions}
+          options={optionsFromFacet(facets?.fuelType)}
           selected={filters.fuelTypes}
           onChange={(v) => update('fuelTypes', v)}
+          counts={facets?.fuelType}
         />
       </FilterPill>
 

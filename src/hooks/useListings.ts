@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { listingsApi } from '@/services/api';
-import { FilterState } from '@/components/FilterPanel';
+import { FilterState, ListingFacets } from '@/components/FilterPanel';
 import { Listing } from '@/data/mockData';
 import { mapBackendListingToFrontend } from '@/utils/listingMapper';
 import { useAppSettings } from './useAppSettings';
 import { useAuth } from '@/contexts/AuthContext';
 
+export type { ListingFacets };
+
 interface ListingsResponse {
     listings: Listing[];
     count: number;
     byCondition?: { NEW: number; USED: number };
+    facets?: ListingFacets;
     page?: number;
     perPage?: number;
     totalPages?: number;
@@ -77,6 +80,7 @@ export function useListings(
                     listings: mappedListings,
                     count: data.count,
                     byCondition: data.byCondition,
+                    facets: data.facets,
                     page: data.page,
                     perPage: data.perPage,
                     totalPages: data.totalPages
