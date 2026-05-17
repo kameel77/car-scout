@@ -21,7 +21,7 @@ import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import {
-    ArrowLeft, Calendar, Gauge, Fuel, Settings2, MapPin,
+    ArrowLeft, Calendar, Gauge, Fuel, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
     User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone
 } from 'lucide-react';
@@ -29,6 +29,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { normalizeRentalImageUrl } from '@/lib/utils';
 import { formatNumber } from '@/utils/formatters';
 import { RentalFinancingContent } from '@/components/RentalFinancingContent';
+import { GearboxIcon } from '@/components/icons/GearboxIcon';
 
 type OfferType = 'business' | 'consumer';
 
@@ -71,8 +72,6 @@ export default function RentalDetailPage() {
         } catch { /* localStorage unavailable */ }
         return 'business';
     });
-    const [showAllSpecs, setShowAllSpecs] = useState(false);
-
     // Initialize defaults when data loads
     if (options && selectedMileage === null && options.annualMileageOptions?.length > 0) {
         setSelectedMileage(options.annualMileageOptions[0]);
@@ -173,7 +172,7 @@ export default function RentalDetailPage() {
         { label: 'Rok produkcji', value: vehicle.productionYear, icon: Calendar },
         { label: 'Moc', value: vehicle.enginePowerHp ? `${vehicle.enginePowerHp} KM` : null, icon: Gauge },
         { label: 'Paliwo', value: vehicle.fuelType, icon: Fuel },
-        { label: 'Skrzynia biegów', value: vehicle.transmission, icon: Settings2 },
+        { label: 'Skrzynia biegów', value: vehicle.transmission, icon: GearboxIcon },
         { label: 'Napęd', value: vehicle.drive, icon: Cog },
         { label: 'Pojemność', value: vehicle.engineCapacityCm3 ? `${vehicle.engineCapacityCm3} cm³` : null, icon: Hash },
         { label: 'Nadwozie', value: vehicle.bodyType, icon: Car },
@@ -236,7 +235,7 @@ export default function RentalDetailPage() {
                             {/* Key Parameters — using design-system spec classes */}
                             <h2 className="font-heading text-xl font-semibold mt-6 mb-4">Kluczowe parametry</h2>
                             <div className="spec-grid">
-                                {specs.slice(0, showAllSpecs ? specs.length : 8).map(s => {
+                                {specs.map(s => {
                                     const Icon = s.icon;
                                     return (
                                         <div key={s.label} className="spec-item">
@@ -249,75 +248,65 @@ export default function RentalDetailPage() {
                                     );
                                 })}
                             </div>
+                     </div>
 
-                            {specs.length > 8 && (
-                                <button
-                                    onClick={() => setShowAllSpecs(!showAllSpecs)}
-                                    className="text-sm text-accent hover:opacity-80 mt-3 flex items-center gap-1"
-                                >
-                                    <ChevronDown className={`w-4 h-4 transition-transform ${showAllSpecs ? 'rotate-180' : ''}`} />
-                                    {showAllSpecs ? 'Zwiń specyfikację' : 'Pełna specyfikacja'}
-                                </button>
-                            )}
+                     {/* Equipment — own card */}
+                     {equipmentCategories.length > 0 && (
+                         <div className="bg-white rounded-2xl shadow-sm border p-6 space-y-6">
+                             <h3 className="font-heading text-2xl font-bold mb-6">Wyposażenie</h3>
+                             {equipmentCategories.map(cat => {
+                                 const Icon = cat.icon;
+                                 return (
+                                     <details key={cat.label} className="group">
+                                         <summary className="flex items-center gap-2 cursor-pointer text-lg font-bold text-foreground hover:text-accent transition-colors py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md">
+                                             <ChevronDown className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
+                                             <Icon className="w-5 h-5 text-primary" />
+                                             {cat.label}
+                                             <span className="text-base font-normal text-muted-foreground ml-1">({cat.items.length})</span>
+                                         </summary>
+                                         <div className="pl-9 pt-2 pb-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                                             {cat.items.map((e: string, i: number) => (
+                                                 <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-snug">
+                                                     <span className="text-accent font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
+                                                     {e}
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     </details>
+                                 );
+                             })}
+                         </div>
+                     )}
 
-                            {/* Equipment — all 4 categories */}
-                            {equipmentCategories.length > 0 && (
-                                <div className="mt-10 pt-8 border-t space-y-6">
-                                    <h3 className="font-heading text-2xl font-bold mb-6">Wyposażenie</h3>
-                                    {equipmentCategories.map(cat => {
-                                        const Icon = cat.icon;
-                                        return (
-                                            <details key={cat.label} className="group">
-                                                <summary className="flex items-center gap-2 cursor-pointer text-lg font-bold text-foreground hover:text-accent transition-colors py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md">
-                                                    <ChevronDown className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
-                                                    <Icon className="w-5 h-5 text-primary" />
-                                                    {cat.label}
-                                                    <span className="text-base font-normal text-muted-foreground ml-1">({cat.items.length})</span>
-                                                </summary>
-                                                <div className="pl-9 pt-2 pb-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                                                    {cat.items.map((e: string, i: number) => (
-                                                        <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-snug">
-                                                            <span className="text-accent font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
-                                                            {e}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </details>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                     {/* Below Equipment Ads */}
+                     {belowEquipmentAds.filter(a => a.isActive).length > 0 && (
+                         <div className="bg-white rounded-2xl shadow-sm border p-6">
+                             {belowEquipmentAds.filter(a => a.isActive).map(ad => (
+                                 <PartnerSidebarAd
+                                     key={ad.id}
+                                     title={ad.title}
+                                     description={ad.description || ''}
+                                     ctaText={ad.ctaText}
+                                     url={ad.url}
+                                     brandName={ad.brandName}
+                                     imageUrl={ad.imageUrl}
+                                     features={ad.features}
+                                     overlayOpacity={ad.overlayOpacity}
+                                     hideUiElements={ad.hideUiElements}
+                                     className="my-4"
+                                 />
+                             ))}
+                         </div>
+                     )}
 
-                            {/* Below Equipment Ads */}
-                            {belowEquipmentAds.filter(a => a.isActive).length > 0 && (
-                                <div className="mt-6 pt-6 border-t">
-                                    {belowEquipmentAds.filter(a => a.isActive).map(ad => (
-                                        <PartnerSidebarAd
-                                            key={ad.id}
-                                            title={ad.title}
-                                            description={ad.description || ''}
-                                            ctaText={ad.ctaText}
-                                            url={ad.url}
-                                            brandName={ad.brandName}
-                                            imageUrl={ad.imageUrl}
-                                            features={ad.features}
-                                            overlayOpacity={ad.overlayOpacity}
-                                            hideUiElements={ad.hideUiElements}
-                                            className="my-4"
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                            
-                            {/* Purchase Process Steps */}
-                            <div className="mt-8 pt-8 border-t border-border">
-                                <PurchaseProcessStepper variant="compact" />
-                            </div>
+                     {/* Purchase Process Steps — own card */}
+                     <div className="bg-white rounded-2xl shadow-sm border p-6">
+                         <PurchaseProcessStepper variant="compact" />
+                     </div>
 
-                            {/* SEO/Informational Content block for Long Term Rental */}
-                            <div className="mt-8">
-                                <RentalFinancingContent vehicle={vehicle} />
-                            </div>
+                     {/* SEO/Informational Content block for Long Term Rental */}
+                     <div className="bg-white rounded-2xl shadow-sm border p-6">
+                         <RentalFinancingContent vehicle={vehicle} />
                      </div>
 
 
