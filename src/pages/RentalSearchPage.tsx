@@ -177,6 +177,17 @@ const TRANSMISSION_LABEL_MAP: Record<string, string> = {
   automatic: 'transmission.automatic',
 };
 
+const FUEL_LABEL_MAP: Record<string, string> = {
+  petrol: 'fuel.petrol',
+  diesel: 'fuel.diesel',
+  hybrid: 'fuel.hybrid',
+  hybrid_plugin: 'fuel.hybridPlugin',
+  petrol_lpg: 'fuel.petrolLpg',
+  electric: 'fuel.electric',
+  lpg: 'fuel.lpg',
+  cng: 'fuel.cng',
+};
+
 /* ── Sort options ── */
 
 const rentalSortOptions = [
@@ -295,7 +306,6 @@ export default function RentalSearchPage() {
   const modelOptions = (filters?.models || [])
     .filter((m: any) => makes.length === 0 || makes.includes(m.make))
     .map((m: any) => ({ value: m.model, label: m.model }));
-  const fuelTypeOptions = (filters?.fuelTypes || []).map((f: string) => ({ value: f, label: f }));
   const bodyTypeOptions = (filters?.bodyTypes || []).map((b: string) => ({ value: b, label: b }));
 
   const isAll = condition.length === 0;
@@ -381,7 +391,7 @@ export default function RentalSearchPage() {
             {/* Paliwo */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.fuelType')}</label>
-              <MultiCheck options={fuelTypeOptions} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
+              <MultiCheck options={optionsFromFacet(data?.facets?.fuelType, FUEL_LABEL_MAP)} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
             </div>
             {/* Skrzynia */}
             <div>
@@ -477,7 +487,7 @@ export default function RentalSearchPage() {
           </FilterPill>
 
           <FilterPill label={t('filters.fuelType')} activeCount={fuelTypes.length}>
-            <MultiCheck options={fuelTypeOptions} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
+            <MultiCheck options={optionsFromFacet(data?.facets?.fuelType, FUEL_LABEL_MAP)} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
           </FilterPill>
 
           <FilterPill label="Rata" activeCount={priceActive ? 1 : 0}>
@@ -512,7 +522,7 @@ export default function RentalSearchPage() {
               <MultiCheck options={makeOptions} selected={makes} onChange={v => { setMakes(v); if (v.length === 0) setModels([]); setPage(1); }} searchable searchPlaceholder={t('filters.selectMake')} counts={data?.facets?.make} />
             </FilterPill>
             <FilterPill label={t('filters.fuelType')} activeCount={fuelTypes.length}>
-              <MultiCheck options={fuelTypeOptions} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
+              <MultiCheck options={optionsFromFacet(data?.facets?.fuelType, FUEL_LABEL_MAP)} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
             </FilterPill>
             <FilterPill label={t('filters.bodyType')} activeCount={bodyTypes.length}>
               <MultiCheck options={bodyTypeOptions} selected={bodyTypes} onChange={v => { setBodyTypes(v); setPage(1); }} counts={data?.facets?.bodyType} />

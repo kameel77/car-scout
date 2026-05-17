@@ -945,13 +945,14 @@ export default function ListingDetailPage() {
       {/* Mobile Sticky CTA */}
       <div className="sticky-cta">
         <div className="flex gap-3 items-center">
-          {/* Phone circle icon */}
+          {/* Phone CTA — replaces the mobile-only Thulium chat widget on small screens */}
           <a
             href={`tel:${listing.contact_phone}`}
-            aria-label="Zadzwoń"
-            className="flex items-center justify-center w-12 h-12 rounded-full bg-secondary text-foreground border border-border hover:bg-accent hover:text-white hover:border-accent transition-all duration-200 active:scale-95 flex-shrink-0"
+            aria-label="Kontakt telefoniczny"
+            className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
           >
-            <Phone className="h-5 w-5" />
+            <Phone className="h-4 w-4" />
+            Kontakt
           </a>
           <Button asChild variant="hero" size="lg" className="flex-1">
             <Link to={`${getListingUrlPath({

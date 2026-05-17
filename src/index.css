@@ -223,6 +223,22 @@
     @apply fixed bottom-0 left-0 right-0 p-4 bg-card/95 backdrop-blur-sm border-t shadow-lg z-40 md:hidden;
   }
 
+  /* Thulium chat-widget — hide on mobile (collides with .sticky-cta).
+     On desktop the floating widget stays visible. Selectors are broad on
+     purpose because Thulium's class names are subject to change. */
+  @media (max-width: 767px) {
+    iframe[src*="thulium.com"],
+    iframe[src*="thulium"],
+    div[class*="thulium"],
+    div[id*="thulium"],
+    div[class*="ChatBtn"],
+    div[class*="chat-loader"],
+    #tc-chat-widget,
+    #thulium-chat-widget {
+      display: none !important;
+    }
+  }
+
   .gallery-thumbnail {
     @apply w-20 h-20 rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all;
   }

@@ -94,14 +94,16 @@ export const translations = {
         used: "Używany",
       },
 
-      // Fuel types
+      // Fuel types (canonical bucket labels — used by filter, listing pills, tech spec).
       fuel: {
-        petrol: "PB",
-        diesel: "ON",
+        petrol: "Benzyna",
+        diesel: "Diesel",
         hybrid: "Hybryda",
+        hybridPlugin: "Hybryda plug-in",
+        petrolLpg: "Benzyna + LPG",
         hybridHev: "Hybryda HEV",
         hybridPhev: "Hybryda PHEV",
-        electric: "Elektryk",
+        electric: "Elektryczny",
         lpg: "LPG",
         cng: "CNG",
       },
@@ -470,6 +472,8 @@ export const translations = {
         petrol: "Petrol",
         diesel: "Diesel",
         hybrid: "Hybrid",
+        hybridPlugin: "Plug-in hybrid",
+        petrolLpg: "Petrol + LPG",
         hybridHev: "Hybrid HEV",
         hybridPhev: "Plug-in Hybrid",
         electric: "Electric",
@@ -836,6 +840,8 @@ export const translations = {
         petrol: "Benzin",
         diesel: "Diesel",
         hybrid: "Hybrid",
+        hybridPlugin: "Plug-in-Hybrid",
+        petrolLpg: "Benzin + LPG",
         hybridHev: "Hybrid HEV",
         hybridPhev: "Plug-in Hybrid",
         electric: "Elektro",

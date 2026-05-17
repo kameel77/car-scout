@@ -4,12 +4,20 @@ import { TFunction } from 'i18next';
  * Maps common Polish technical values to i18n keys
  */
 const valueMap: Record<string, string> = {
-    // Fuel types
+    // Fuel types — common raw variants from imports/dealers map to the canonical bucket
     'beznyna': 'fuel.petrol',
     'benzyna': 'fuel.petrol',
+    'benzynowy': 'fuel.petrol',
+    'pb': 'fuel.petrol',
     'diesel': 'fuel.diesel',
+    'on': 'fuel.diesel',
     'hybryda': 'fuel.hybrid',
+    'hybrydowy': 'fuel.hybrid',
+    'hybryda plug-in': 'fuel.hybridPlugin',
+    'benzynowy + gaz': 'fuel.petrolLpg',
+    'benzyna + lpg': 'fuel.petrolLpg',
     'elektryczny': 'fuel.electric',
+    'elektryk': 'fuel.electric',
     'lpg': 'fuel.lpg',
     'cng': 'fuel.cng',
 
@@ -82,6 +90,26 @@ export function canonicalTransmission(value: string | null | undefined): string 
     const lower = value.toLowerCase();
     if (lower.startsWith('manual')) return 'manual';
     if (lower.startsWith('automat')) return 'automatic';
+    return value;
+}
+
+/**
+ * Normalises a raw fuel value (any vendor variant) to a canonical filter token.
+ * Mirrors the backend bucket logic in listings.ts / rental-public.ts so that
+ * URL bookmarks built from old raw values still match the new checkbox state.
+ */
+export function canonicalFuel(value: string | null | undefined): string {
+    if (!value) return '';
+    const lower = value.toLowerCase();
+    if (lower.includes('plug') && lower.includes('hybryd')) return 'hybrid_plugin';
+    if (lower.includes('plug-in')) return 'hybrid_plugin';
+    if (lower.startsWith('hybryd') || lower.startsWith('hybrid')) return 'hybrid';
+    if (/benzyn.*gaz|benzyn.*lpg|gaz.*benzyn|petrol.*lpg/.test(lower)) return 'petrol_lpg';
+    if (lower.startsWith('benzyn') || lower === 'pb' || lower === 'petrol') return 'petrol';
+    if (lower.startsWith('diesel') || lower === 'on') return 'diesel';
+    if (lower.startsWith('elektry') || lower === 'ev' || lower === 'bev' || lower === 'electric') return 'electric';
+    if (lower === 'lpg' || lower === 'gaz') return 'lpg';
+    if (lower === 'cng') return 'cng';
     return value;
 }
 

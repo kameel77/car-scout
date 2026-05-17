@@ -211,12 +211,28 @@ export async function listingRoutes(fastify: FastifyInstance) {
             return String(val).split(',');
         };
 
-        const fuelTypes = toArray(fuelType);
+        const fuelTypesRaw = toArray(fuelType);
         const transmissionsRaw = toArray(transmission);
         const bodyTypes = toArray(bodyType);
         const drives = toArray(drive);
         const makes = toArray(make);
         const models = toArray(model);
+
+        // Canonical fuel buckets. Order matters in the if-chain below.
+        const FUEL_CANONICALS = new Set(['petrol', 'diesel', 'hybrid', 'hybrid_plugin', 'petrol_lpg', 'electric', 'lpg', 'cng']);
+        const fuelCanonical = (raw: string): string => {
+            const lower = raw.toLowerCase();
+            if (lower.includes('plug') && lower.includes('hybryd')) return 'hybrid_plugin';
+            if (lower.includes('plug-in')) return 'hybrid_plugin';
+            if (lower.startsWith('hybryd') || lower.startsWith('hybrid')) return 'hybrid';
+            if (/benzyn.*gaz|benzyn.*lpg|gaz.*benzyn|petrol.*lpg/.test(lower)) return 'petrol_lpg';
+            if (lower.startsWith('benzyn') || lower === 'pb' || lower === 'petrol') return 'petrol';
+            if (lower.startsWith('diesel') || lower === 'on') return 'diesel';
+            if (lower.startsWith('elektry') || lower === 'ev' || lower === 'bev' || lower === 'electric') return 'electric';
+            if (lower === 'lpg' || lower === 'gaz') return 'lpg';
+            if (lower === 'cng') return 'cng';
+            return raw;
+        };
 
         // Expand canonical transmission tokens ('manual'/'automatic') into the set of raw
         // DB values that start with the corresponding prefix. Anything else (raw values,
@@ -233,6 +249,23 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 const lower = token.toLowerCase();
                 if (lower === 'manual') return allRaw.filter((v) => v.toLowerCase().startsWith('manual'));
                 if (lower === 'automatic') return allRaw.filter((v) => v.toLowerCase().startsWith('automat'));
+                return [token];
+            });
+        }
+
+        // Expand canonical fuel tokens to the set of raw DB values matching the bucket.
+        let fuelTypes: string[] | undefined = fuelTypesRaw;
+        if (fuelTypesRaw && fuelTypesRaw.some((t) => FUEL_CANONICALS.has(t))) {
+            const distinctFuel = await fastify.prisma.listing.findMany({
+                where: { isArchived: false, fuelType: { not: null } },
+                select: { fuelType: true },
+                distinct: ['fuelType'],
+            });
+            const allRawFuel = distinctFuel.map((d) => d.fuelType).filter((v): v is string => !!v);
+            fuelTypes = fuelTypesRaw.flatMap((token) => {
+                if (FUEL_CANONICALS.has(token)) {
+                    return allRawFuel.filter((v) => fuelCanonical(v) === token);
+                }
                 return [token];
             });
         }
@@ -433,7 +466,6 @@ export async function listingRoutes(fastify: FastifyInstance) {
         }
 
         // Canonical bucket for transmission: collapse vendor variants under "manual"/"automatic".
-        // Anything that doesn't start with manual/automat falls back to its first-seen case.
         const transmissionCanonical = (raw: string): string => {
             const lower = raw.toLowerCase();
             if (lower.startsWith('manual')) return 'manual';
@@ -443,9 +475,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         // Build facet maps. Keys preserve the first-seen original case (e.g. "Benzynowy"),
         // but rows with different casings collapse into one bucket. Frontend matching
-        // against these keys must be case-insensitive. For 'transmission' specifically,
-        // raw values are bucketed under canonical 'manual'/'automatic' so the UI can show
-        // just two checkboxes summing all vendor variants (CVT, DCT/DSG, etc.).
+        // against these keys must be case-insensitive. For 'transmission' and 'fuelType',
+        // raw values are bucketed under canonical keys so the UI shows clean unified
+        // options (e.g. all vendor "automatic" variants roll up to one "automatic",
+        // and "benzynowy"/"benzyna"/"PB" all roll up to "petrol").
         const toFacetMap = (rows: any[], key: string): Record<string, number> => {
             const out: Record<string, number> = {};
             const canonical: Record<string, string> = {};
@@ -455,6 +488,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 const raw = String(v);
                 if (key === 'transmission') {
                     const k = transmissionCanonical(raw);
+                    out[k] = (out[k] || 0) + r._count._all;
+                    continue;
+                }
+                if (key === 'fuelType') {
+                    const k = fuelCanonical(raw);
                     out[k] = (out[k] || 0) + r._count._all;
                     continue;
                 }

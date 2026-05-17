@@ -42,9 +42,25 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         const makes = toArray(make);
         const models = toArray(model);
         const bodyTypes = toArray(bodyType);
-        const fuelTypes = toArray(fuelType);
+        const fuelTypesRaw = toArray(fuelType);
         const transmissionsRaw = toArray(transmission);
         const drives = toArray(drive);
+
+        // Canonical fuel buckets (mirrors listings.ts).
+        const FUEL_CANONICALS = new Set(['petrol', 'diesel', 'hybrid', 'hybrid_plugin', 'petrol_lpg', 'electric', 'lpg', 'cng']);
+        const fuelCanonical = (raw: string): string => {
+            const lower = raw.toLowerCase();
+            if (lower.includes('plug') && lower.includes('hybryd')) return 'hybrid_plugin';
+            if (lower.includes('plug-in')) return 'hybrid_plugin';
+            if (lower.startsWith('hybryd') || lower.startsWith('hybrid')) return 'hybrid';
+            if (/benzyn.*gaz|benzyn.*lpg|gaz.*benzyn|petrol.*lpg/.test(lower)) return 'petrol_lpg';
+            if (lower.startsWith('benzyn') || lower === 'pb' || lower === 'petrol') return 'petrol';
+            if (lower.startsWith('diesel') || lower === 'on') return 'diesel';
+            if (lower.startsWith('elektry') || lower === 'ev' || lower === 'bev' || lower === 'electric') return 'electric';
+            if (lower === 'lpg' || lower === 'gaz') return 'lpg';
+            if (lower === 'cng') return 'cng';
+            return raw;
+        };
 
         // Expand canonical transmission tokens ('manual'/'automatic') into raw DB values
         // matching the corresponding prefix. Anything else passes through unchanged.
@@ -60,6 +76,23 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 const lower = token.toLowerCase();
                 if (lower === 'manual') return allRaw.filter((v) => v.toLowerCase().startsWith('manual'));
                 if (lower === 'automatic') return allRaw.filter((v) => v.toLowerCase().startsWith('automat'));
+                return [token];
+            });
+        }
+
+        // Expand canonical fuel tokens to matching raw DB values.
+        let fuelTypes: string[] | undefined = fuelTypesRaw;
+        if (fuelTypesRaw && fuelTypesRaw.some((t) => FUEL_CANONICALS.has(t))) {
+            const distinctFuel = await fastify.prisma.rentalVehicle.findMany({
+                where: { isActive: true, fuelType: { not: null } },
+                select: { fuelType: true },
+                distinct: ['fuelType'],
+            });
+            const allRawFuel = distinctFuel.map((d) => d.fuelType).filter((v): v is string => !!v);
+            fuelTypes = fuelTypesRaw.flatMap((token) => {
+                if (FUEL_CANONICALS.has(token)) {
+                    return allRawFuel.filter((v) => fuelCanonical(v) === token);
+                }
                 return [token];
             });
         }
@@ -519,6 +552,21 @@ async function computeFacets(fastify: FastifyInstance, where: any) {
         return raw;
     };
 
+    // Canonical bucket for fuel (mirrors the main endpoint).
+    const fuelCanonical = (raw: string): string => {
+        const lower = raw.toLowerCase();
+        if (lower.includes('plug') && lower.includes('hybryd')) return 'hybrid_plugin';
+        if (lower.includes('plug-in')) return 'hybrid_plugin';
+        if (lower.startsWith('hybryd') || lower.startsWith('hybrid')) return 'hybrid';
+        if (/benzyn.*gaz|benzyn.*lpg|gaz.*benzyn|petrol.*lpg/.test(lower)) return 'petrol_lpg';
+        if (lower.startsWith('benzyn') || lower === 'pb' || lower === 'petrol') return 'petrol';
+        if (lower.startsWith('diesel') || lower === 'on') return 'diesel';
+        if (lower.startsWith('elektry') || lower === 'ev' || lower === 'bev' || lower === 'electric') return 'electric';
+        if (lower === 'lpg' || lower === 'gaz') return 'lpg';
+        if (lower === 'cng') return 'cng';
+        return raw;
+    };
+
     const toFacetMap = (rows: any[], key: string): Record<string, number> => {
         const out: Record<string, number> = {};
         const canonical: Record<string, string> = {};
@@ -528,6 +576,11 @@ async function computeFacets(fastify: FastifyInstance, where: any) {
             const raw = String(v);
             if (key === 'transmission') {
                 const k = transmissionCanonical(raw);
+                out[k] = (out[k] || 0) + r._count._all;
+                continue;
+            }
+            if (key === 'fuelType') {
+                const k = fuelCanonical(raw);
                 out[k] = (out[k] || 0) + r._count._all;
                 continue;
             }

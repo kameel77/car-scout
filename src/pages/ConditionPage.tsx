@@ -36,7 +36,7 @@ import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { rentalPublicApi } from '@/services/rental-api';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
-import { getTransmissionShortLabel, canonicalTransmission } from '@/utils/i18n-utils';
+import { getTransmissionShortLabel, canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
@@ -192,7 +192,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
     return {
       makes: parseArray(searchParams.get('make')),
       models: parseArray(searchParams.get('model')),
-      fuelTypes: parseArray(searchParams.get('fuelType')),
+      fuelTypes: parseArray(searchParams.get('fuelType')).map(canonicalFuel),
       transmissions: parseArray(searchParams.get('transmission')).map(canonicalTransmission),
       bodyTypes: parseArray(searchParams.get('bodyType')),
       drives: parseArray(searchParams.get('drive')),

@@ -499,20 +499,23 @@ export default function RentalDetailPage() {
                                             </div>
 
                                             {offer.servicesIncluded?.length > 0 && (
-                                                <div className="mt-3 flex flex-wrap gap-1">
-                                                    {offer.servicesIncluded.map((s: string, j: number) => {
-                                                        const labelMap: Record<string, string> = {
-                                                            insurance: 'Ubezpieczenie',
-                                                            tires: 'Opony',
-                                                            service: 'Przeglądy techniczne',
-                                                            other: 'Assistance 24h'
-                                                        };
-                                                        return (
-                                                            <span key={j} className="inline-flex items-center gap-0.5 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">
-                                                                <Shield className="w-3 h-3" /> {labelMap[s] || s}
-                                                            </span>
-                                                        );
-                                                    })}
+                                                <div className="mt-3">
+                                                    <p className="text-xs font-medium text-muted-foreground mb-1.5">Oferta obejmuje:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {offer.servicesIncluded.map((s: string, j: number) => {
+                                                            const labelMap: Record<string, string> = {
+                                                                insurance: 'Ubezpieczenie',
+                                                                tires: 'Opony',
+                                                                service: 'Przeglądy techniczne',
+                                                                other: 'Assistance 24h'
+                                                            };
+                                                            return (
+                                                                <span key={j} className="inline-flex items-center gap-0.5 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">
+                                                                    <Shield className="w-3 h-3" /> {labelMap[s] || s}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             )}
 
@@ -561,7 +564,7 @@ export default function RentalDetailPage() {
                             onClick={() => window.open(`tel:${config.contactInfo.phone}`)}
                         >
                             <Phone className="h-4 w-4" />
-                            Zadzwoń
+                            Kontakt
                         </button>
                     )}
                     <button

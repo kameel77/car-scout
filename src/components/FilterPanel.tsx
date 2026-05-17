@@ -80,6 +80,17 @@ const TRANSMISSION_LABEL_MAP: Record<string, string> = {
   automatic: 'transmission.automatic',
 };
 
+const FUEL_LABEL_MAP: Record<string, string> = {
+  petrol: 'fuel.petrol',
+  diesel: 'fuel.diesel',
+  hybrid: 'fuel.hybrid',
+  hybrid_plugin: 'fuel.hybridPlugin',
+  petrol_lpg: 'fuel.petrolLpg',
+  electric: 'fuel.electric',
+  lpg: 'fuel.lpg',
+  cng: 'fuel.cng',
+};
+
 const statusOptions = [
   { value: 'NEW', label: 'status.new' },
   { value: 'USED', label: 'status.used' },
@@ -388,7 +399,7 @@ export function FilterPanel({
         {/* Fuel Type */}
         <FilterSection title={t('filters.fuelType')}>
           <MultiSelect
-            options={optionsFromFacet(facets?.fuelType)}
+            options={optionsFromFacet(facets?.fuelType, FUEL_LABEL_MAP)}
             selected={filters.fuelTypes}
             onChange={(v) => updateFilter('fuelTypes', v)}
             counts={facets?.fuelType}
