@@ -10,7 +10,7 @@ import { VehicleDataForm } from '@/components/admin/VehicleForm/VehicleDataForm'
 import {
     Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star,
     ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil, Upload,
-    MoreVertical, CopyPlus
+    MoreVertical, CopyPlus, Eye, EyeOff
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -641,9 +641,21 @@ export default function RentalVehiclesPage() {
         mutationFn: ({ id, isFeatured }: { id: string, isFeatured: boolean }) => rentalVehiclesApi.toggleFeatured(id, isFeatured, token!),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
-            toast({ 
+            toast({
                 title: variables.isFeatured ? 'Pojazd wyróżniony' : 'Wyróżnienie usunięte',
                 description: variables.isFeatured ? 'Pojazd będzie promowany w polecanych.' : 'Pojazd usunięty z polecanych.'
+            });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
+    const togglePublishedMutation = useMutation({
+        mutationFn: ({ id, isPublished }: { id: string, isPublished: boolean }) => rentalVehiclesApi.togglePublished(id, isPublished, token!),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({
+                title: variables.isPublished ? 'Pojazd widoczny dla klientów' : 'Pojazd ukryty przed klientami',
+                description: variables.isPublished ? 'Oferta widoczna na froncie.' : 'Oferta nie będzie wyświetlana na froncie.'
             });
         },
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
@@ -718,7 +730,7 @@ export default function RentalVehiclesPage() {
                 <Input
                     value={search}
                     onChange={e => { setSearch(e.target.value); setPage(1); }}
-                    placeholder="Szukaj: marka, model, wersja..."
+                    placeholder="Szukaj: marka, model, wersja, firma najmowa..."
                     className="pl-10"
                 />
             </div>
@@ -778,9 +790,18 @@ export default function RentalVehiclesPage() {
                                     </td>
                                     <td className="p-3 text-right">
                                         <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                                            <Button 
-                                                size="sm" 
-                                                variant="ghost" 
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => togglePublishedMutation.mutate({ id: v.id, isPublished: v.isPublished === false })}
+                                                className={v.isPublished === false ? "text-red-500 hover:text-red-600 bg-red-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}
+                                                title={v.isPublished === false ? "Niewidoczny dla klientów - kliknij aby pokazać" : "Widoczny dla klientów - kliknij aby ukryć"}
+                                            >
+                                                {v.isPublished === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
                                                 onClick={() => toggleFeaturedMutation.mutate({ id: v.id, isFeatured: !v.isFeatured })}
                                                 className={v.isFeatured ? "text-yellow-500 hover:text-yellow-600 bg-yellow-50" : "text-gray-400 hover:text-yellow-500 hover:bg-gray-100"}
                                                 title={v.isFeatured ? "Usuń z wyróżnionych" : "Dodaj do wyróżnionych"}

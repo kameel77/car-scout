@@ -217,7 +217,7 @@ export function ActiveFilters({
               </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
-              <SheetHeader className="pb-4">
+              <SheetHeader className="sr-only">
                 <SheetTitle>{t('filters.title')}</SheetTitle>
               </SheetHeader>
               <div className="h-full overflow-auto pb-20">
