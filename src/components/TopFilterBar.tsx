@@ -3,27 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDown, SlidersHorizontal, Search } from 'lucide-react';
 import { FilterState, ListingFacets } from '@/components/FilterPanel';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-const fuelTypeOptions = [
-  { value: 'benzyna', label: 'fuel.petrol' },
-  { value: 'diesel', label: 'fuel.diesel' },
-  { value: 'hybryda', label: 'fuel.hybrid' },
-  { value: 'elektryczny', label: 'fuel.electric' },
-  { value: 'lpg', label: 'fuel.lpg' },
-];
-
-const bodyTypeOptions = [
-  { value: 'sedan', label: 'body.sedan' },
-  { value: 'hatchback', label: 'body.hatchback' },
-  { value: 'SUV', label: 'body.suv' },
-  { value: 'kombi', label: 'body.kombi' },
-  { value: 'coupe', label: 'body.coupe' },
-];
+// Build options dynamically from facet keys returned by the API (DB values, e.g.
+// 'benzynowy', 'benzynowy + gaz', 'hybryda plug-in'). The previous hardcoded
+// 'benzyna'/'hybryda' never matched real values for most listings.
+function optionsFromFacet(facet?: Record<string, number>): { value: string; label: string }[] {
+  if (!facet) return [];
+  return Object.keys(facet).map((k) => ({ value: k, label: k }));
+}
 
 interface FilterPillProps {
   label: string;
@@ -72,7 +63,15 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
   const { t } = useTranslation();
   const [search, setSearch] = React.useState('');
 
-  const getCount = (value: string) => counts?.[value.toLowerCase()];
+  const getCount = (value: string) => {
+    if (!counts) return undefined;
+    if (value in counts) return counts[value];
+    const lower = value.toLowerCase();
+    for (const k of Object.keys(counts)) {
+      if (k.toLowerCase() === lower) return counts[k];
+    }
+    return undefined;
+  };
 
   const filtered = searchable
     ? options.filter((o) => {
@@ -112,7 +111,7 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
           className="h-9"
         />
       )}
-      <ScrollArea className="max-h-72">
+      <div className="max-h-72 overflow-y-auto pr-1">
         <div className="space-y-1">
           {sorted.map((option) => {
             const id = `topfilter-${option.value.replace(/\s+/g, '-')}`;
@@ -146,7 +145,7 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
             <p className="text-xs text-muted-foreground p-2">{t('common.noResults', 'Brak wyników')}</p>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -257,7 +256,7 @@ export function TopFilterBar({
 
       <FilterPill label={t('filters.bodyType')} activeCount={filters.bodyTypes.length}>
         <MultiCheck
-          options={bodyTypeOptions}
+          options={optionsFromFacet(facets?.bodyType)}
           selected={filters.bodyTypes}
           onChange={(v) => update('bodyTypes', v)}
           counts={facets?.bodyType}
@@ -266,7 +265,7 @@ export function TopFilterBar({
 
       <FilterPill label={t('filters.fuelType')} activeCount={filters.fuelTypes.length}>
         <MultiCheck
-          options={fuelTypeOptions}
+          options={optionsFromFacet(facets?.fuelType)}
           selected={filters.fuelTypes}
           onChange={(v) => update('fuelTypes', v)}
           counts={facets?.fuelType}

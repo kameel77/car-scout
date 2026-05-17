@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
   Collapsible,
@@ -63,32 +62,13 @@ interface FilterPanelProps {
   facets?: ListingFacets;
 }
 
-const fuelTypeOptions = [
-  { value: 'benzyna', label: 'fuel.petrol' },
-  { value: 'diesel', label: 'fuel.diesel' },
-  { value: 'hybryda', label: 'fuel.hybrid' },
-  { value: 'elektryczny', label: 'fuel.electric' },
-  { value: 'lpg', label: 'fuel.lpg' },
-];
-
-const transmissionOptions = [
-  { value: 'manualna', label: 'transmission.manual' },
-  { value: 'automatyczna', label: 'transmission.automatic' },
-];
-
-const driveOptions = [
-  { value: 'FWD', label: 'drive.fwd' },
-  { value: 'RWD', label: 'drive.rwd' },
-  { value: 'AWD', label: 'drive.awd' },
-];
-
-const bodyTypeOptions = [
-  { value: 'sedan', label: 'body.sedan' },
-  { value: 'hatchback', label: 'body.hatchback' },
-  { value: 'SUV', label: 'body.suv' },
-  { value: 'kombi', label: 'body.kombi' },
-  { value: 'coupe', label: 'body.coupe' },
-];
+// Build options dynamically from facet keys returned by the API (which preserve the
+// original case from the DB). This avoids the previous mismatch where hardcoded
+// 'benzyna' never matched real DB values like 'benzynowy' or 'benzynowy + gaz'.
+function optionsFromFacet(facet?: Record<string, number>): { value: string; label: string }[] {
+  if (!facet) return [];
+  return Object.keys(facet).map((k) => ({ value: k, label: k }));
+}
 
 const statusOptions = [
   { value: 'NEW', label: 'status.new' },
@@ -157,7 +137,12 @@ function MultiSelect({
 
   const getCount = React.useCallback((value: string) => {
     if (!counts) return undefined;
-    return counts[value.toLowerCase()];
+    if (value in counts) return counts[value];
+    const lower = value.toLowerCase();
+    for (const k of Object.keys(counts)) {
+      if (k.toLowerCase() === lower) return counts[k];
+    }
+    return undefined;
   }, [counts]);
 
   const filteredOptions = searchable
@@ -205,7 +190,7 @@ function MultiSelect({
           />
         </div>
       )}
-      <ScrollArea className={searchable ? 'h-64' : 'max-h-64'}>
+      <div className={cn(searchable ? 'h-64' : 'max-h-64', 'overflow-y-auto pr-1')}>
         <div className={inline ? 'flex flex-wrap gap-x-4 gap-y-1' : 'space-y-1'}>
           {sortedOptions.map((option) => {
             const id = `filter-${option.value.replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2, 9)}`;
@@ -238,7 +223,7 @@ function MultiSelect({
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -393,7 +378,7 @@ export function FilterPanel({
         {/* Fuel Type */}
         <FilterSection title={t('filters.fuelType')}>
           <MultiSelect
-            options={fuelTypeOptions}
+            options={optionsFromFacet(facets?.fuelType)}
             selected={filters.fuelTypes}
             onChange={(v) => updateFilter('fuelTypes', v)}
             counts={facets?.fuelType}
@@ -506,7 +491,7 @@ export function FilterPanel({
         {/* Transmission */}
         <FilterSection title={t('filters.transmission')}>
           <MultiSelect
-            options={transmissionOptions}
+            options={optionsFromFacet(facets?.transmission)}
             selected={filters.transmissions}
             onChange={(v) => updateFilter('transmissions', v)}
             counts={facets?.transmission}
@@ -518,7 +503,7 @@ export function FilterPanel({
         {/* Drive */}
         <FilterSection title={t('filters.drive')}>
           <MultiSelect
-            options={driveOptions}
+            options={optionsFromFacet(facets?.drive)}
             selected={filters.drives}
             onChange={(v) => updateFilter('drives', v)}
             counts={facets?.drive}
@@ -558,7 +543,7 @@ export function FilterPanel({
         {/* Body Type */}
         <FilterSection title={t('filters.bodyType')}>
           <MultiSelect
-            options={bodyTypeOptions}
+            options={optionsFromFacet(facets?.bodyType)}
             selected={filters.bodyTypes}
             onChange={(v) => updateFilter('bodyTypes', v)}
             counts={facets?.bodyType}

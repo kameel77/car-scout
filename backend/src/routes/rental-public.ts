@@ -495,10 +495,14 @@ async function computeFacets(fastify: FastifyInstance, where: any) {
 
     const toFacetMap = (rows: any[], key: string): Record<string, number> => {
         const out: Record<string, number> = {};
+        const canonical: Record<string, string> = {};
         for (const r of rows) {
             const v = r[key];
             if (v == null || v === '') continue;
-            const k = String(v).toLowerCase();
+            const raw = String(v);
+            const lower = raw.toLowerCase();
+            if (!canonical[lower]) canonical[lower] = raw;
+            const k = canonical[lower];
             out[k] = (out[k] || 0) + r._count._all;
         }
         return out;

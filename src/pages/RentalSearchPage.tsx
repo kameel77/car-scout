@@ -20,7 +20,6 @@ import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -86,7 +85,15 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
   counts?: Record<string, number>;
 }) {
   const [search, setSearch] = useState('');
-  const getCount = (v: string) => counts?.[v.toLowerCase()];
+  const getCount = (v: string) => {
+    if (!counts) return undefined;
+    if (v in counts) return counts[v];
+    const lower = v.toLowerCase();
+    for (const k of Object.keys(counts)) {
+      if (k.toLowerCase() === lower) return counts[k];
+    }
+    return undefined;
+  };
   const filtered = searchable
     ? options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
     : options;
@@ -107,7 +114,7 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
   return (
     <div className="space-y-2">
       {searchable && <Input placeholder={searchPlaceholder} value={search} onChange={e => setSearch(e.target.value)} className="h-9" />}
-      <ScrollArea className="max-h-72">
+      <div className="max-h-72 overflow-y-auto pr-1">
         <div className="space-y-1">
           {sorted.map(o => {
             const count = getCount(o.value);
@@ -133,7 +140,7 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
           })}
           {sorted.length === 0 && <p className="text-xs text-muted-foreground p-2">Brak wyników</p>}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -153,18 +160,12 @@ function RangePopover({ fromValue, toValue, onFromChange, onToChange, fromPh, to
   );
 }
 
-/* ── Static technical-spec options (parity with sale FilterPanel) ── */
+/* ── Build options dynamically from facet keys (DB values) ── */
 
-const transmissionStaticOptions = [
-  { value: 'manualna', label: 'transmission.manual' },
-  { value: 'automatyczna', label: 'transmission.automatic' },
-];
-
-const driveStaticOptions = [
-  { value: 'FWD', label: 'drive.fwd' },
-  { value: 'RWD', label: 'drive.rwd' },
-  { value: 'AWD', label: 'drive.awd' },
-];
+function optionsFromFacet(facet?: Record<string, number>): { value: string; label: string }[] {
+  if (!facet) return [];
+  return Object.keys(facet).map((k) => ({ value: k, label: k }));
+}
 
 /* ── Sort options ── */
 
@@ -376,7 +377,7 @@ export default function RentalSearchPage() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.transmission')}</label>
               <MultiCheck
-                options={transmissionStaticOptions.map(o => ({ value: o.value, label: t(o.label, o.value) }))}
+                options={optionsFromFacet(data?.facets?.transmission)}
                 selected={transmissions}
                 onChange={v => { setTransmissions(v); setPage(1); }}
                 counts={data?.facets?.transmission}
@@ -386,7 +387,7 @@ export default function RentalSearchPage() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.drive')}</label>
               <MultiCheck
-                options={driveStaticOptions.map(o => ({ value: o.value, label: t(o.label, o.value) }))}
+                options={optionsFromFacet(data?.facets?.drive)}
                 selected={drives}
                 onChange={v => { setDrives(v); setPage(1); }}
                 counts={data?.facets?.drive}
