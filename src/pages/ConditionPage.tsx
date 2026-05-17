@@ -8,7 +8,8 @@ import React from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Car, Calendar, Gauge, Fuel, Settings2, Building2, User, ArrowUpDown, Check } from 'lucide-react';
+import { Car, Calendar, Gauge, Fuel, Building2, User, ArrowUpDown, Check } from 'lucide-react';
+import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
@@ -36,6 +37,7 @@ import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { rentalPublicApi } from '@/services/rental-api';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
+import { getTransmissionShortLabel, canonicalTransmission, canonicalFuel, translateTechnicalValue } from '@/utils/i18n-utils';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
@@ -117,11 +119,6 @@ function ConditionNavTabs({ condition, resultCount, byCondition, sortBy, onSortC
         )}
       </button>
       <div className="flex-1" />
-      {resultCount !== undefined && (
-        <span className="hidden sm:block text-sm text-muted-foreground whitespace-nowrap px-2">
-          {t('common.found')}: <span className="font-semibold text-foreground">{PLN_FMT.format(resultCount)}</span>
-        </span>
-      )}
       <div className="flex bg-secondary rounded-lg p-0.5">
         <button type="button" onClick={() => setPriceType('net')}
           className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
@@ -191,8 +188,8 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
     return {
       makes: parseArray(searchParams.get('make')),
       models: parseArray(searchParams.get('model')),
-      fuelTypes: parseArray(searchParams.get('fuelType')),
-      transmissions: parseArray(searchParams.get('transmission')),
+      fuelTypes: parseArray(searchParams.get('fuelType')).map(canonicalFuel),
+      transmissions: parseArray(searchParams.get('transmission')).map(canonicalTransmission),
       bodyTypes: parseArray(searchParams.get('bodyType')),
       drives: parseArray(searchParams.get('drive')),
       statuses: [condition], // LOCKED
@@ -527,8 +524,8 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
                     <div className="flex flex-wrap gap-1.5">
                       {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}</span>}
                       {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM</span>}
-                      {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {v.fuelType}</span>}
-                      {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Settings2 className="h-3.5 w-3.5 shrink-0" /> {v.transmission}</span>}
+                      {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {translateTechnicalValue('fuel', v.fuelType, t)}</span>}
+                      {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><GearboxIcon className="h-3.5 w-3.5 shrink-0" /> {getTransmissionShortLabel(v.transmission, t)}</span>}
                     </div>
                     <div className="flex-1" />
                     <div className="pt-3">

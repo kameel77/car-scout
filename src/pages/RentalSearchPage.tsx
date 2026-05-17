@@ -12,10 +12,12 @@ import { MetaHead } from '@/components/seo/MetaHead';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
-  Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight,
+  Search, Calendar, Gauge, Fuel, ChevronLeft, ChevronRight,
   Car, Building2, User, ChevronDown, ArrowUpDown, Check, SlidersHorizontal, X
 } from 'lucide-react';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
+import { getTransmissionShortLabel, translateTechnicalValue } from '@/utils/i18n-utils';
+import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -84,6 +86,7 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
   searchPlaceholder?: string;
   counts?: Record<string, number>;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const getCount = (v: string) => {
     if (!counts) return undefined;
@@ -130,7 +133,7 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
               >
                 <Checkbox checked={isSelected} onCheckedChange={() => toggle(o.value)} />
                 <span className="text-sm flex-1 flex items-center justify-between gap-2">
-                  <span>{o.label}</span>
+                  <span>{t(o.label, o.label)}</span>
                   {count !== undefined && (
                     <span className="text-xs text-muted-foreground tabular-nums">({count})</span>
                   )}
@@ -162,10 +165,29 @@ function RangePopover({ fromValue, toValue, onFromChange, onToChange, fromPh, to
 
 /* ── Build options dynamically from facet keys (DB values) ── */
 
-function optionsFromFacet(facet?: Record<string, number>): { value: string; label: string }[] {
+function optionsFromFacet(
+  facet?: Record<string, number>,
+  labelMap?: Record<string, string>,
+): { value: string; label: string }[] {
   if (!facet) return [];
-  return Object.keys(facet).map((k) => ({ value: k, label: k }));
+  return Object.keys(facet).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
+
+const TRANSMISSION_LABEL_MAP: Record<string, string> = {
+  manual: 'transmission.manual',
+  automatic: 'transmission.automatic',
+};
+
+const FUEL_LABEL_MAP: Record<string, string> = {
+  petrol: 'fuel.petrol',
+  diesel: 'fuel.diesel',
+  hybrid: 'fuel.hybrid',
+  hybrid_plugin: 'fuel.hybridPlugin',
+  petrol_lpg: 'fuel.petrolLpg',
+  electric: 'fuel.electric',
+  lpg: 'fuel.lpg',
+  cng: 'fuel.cng',
+};
 
 /* ── Sort options ── */
 
@@ -285,7 +307,6 @@ export default function RentalSearchPage() {
   const modelOptions = (filters?.models || [])
     .filter((m: any) => makes.length === 0 || makes.includes(m.make))
     .map((m: any) => ({ value: m.model, label: m.model }));
-  const fuelTypeOptions = (filters?.fuelTypes || []).map((f: string) => ({ value: f, label: f }));
   const bodyTypeOptions = (filters?.bodyTypes || []).map((b: string) => ({ value: b, label: b }));
 
   const isAll = condition.length === 0;
@@ -371,13 +392,13 @@ export default function RentalSearchPage() {
             {/* Paliwo */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.fuelType')}</label>
-              <MultiCheck options={fuelTypeOptions} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
+              <MultiCheck options={optionsFromFacet(data?.facets?.fuelType, FUEL_LABEL_MAP)} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
             </div>
             {/* Skrzynia */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.transmission')}</label>
               <MultiCheck
-                options={optionsFromFacet(data?.facets?.transmission)}
+                options={optionsFromFacet(data?.facets?.transmission, TRANSMISSION_LABEL_MAP)}
                 selected={transmissions}
                 onChange={v => { setTransmissions(v); setPage(1); }}
                 counts={data?.facets?.transmission}
@@ -467,7 +488,7 @@ export default function RentalSearchPage() {
           </FilterPill>
 
           <FilterPill label={t('filters.fuelType')} activeCount={fuelTypes.length}>
-            <MultiCheck options={fuelTypeOptions} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
+            <MultiCheck options={optionsFromFacet(data?.facets?.fuelType, FUEL_LABEL_MAP)} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
           </FilterPill>
 
           <FilterPill label="Rata" activeCount={priceActive ? 1 : 0}>
@@ -502,7 +523,7 @@ export default function RentalSearchPage() {
               <MultiCheck options={makeOptions} selected={makes} onChange={v => { setMakes(v); if (v.length === 0) setModels([]); setPage(1); }} searchable searchPlaceholder={t('filters.selectMake')} counts={data?.facets?.make} />
             </FilterPill>
             <FilterPill label={t('filters.fuelType')} activeCount={fuelTypes.length}>
-              <MultiCheck options={fuelTypeOptions} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
+              <MultiCheck options={optionsFromFacet(data?.facets?.fuelType, FUEL_LABEL_MAP)} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
             </FilterPill>
             <FilterPill label={t('filters.bodyType')} activeCount={bodyTypes.length}>
               <MultiCheck options={bodyTypeOptions} selected={bodyTypes} onChange={v => { setBodyTypes(v); setPage(1); }} counts={data?.facets?.bodyType} />
@@ -526,10 +547,6 @@ export default function RentalSearchPage() {
           </button>
 
           <div className="flex-1" />
-
-          <span className="hidden sm:block text-sm text-muted-foreground whitespace-nowrap px-2">
-            {t('common.found')}: <span className="font-semibold text-foreground">{PLN.format(totalCount)}</span>
-          </span>
 
           {/* Na firmę / Prywatnie */}
           <div className="flex bg-secondary rounded-lg p-0.5">
@@ -593,8 +610,8 @@ export default function RentalSearchPage() {
                   <div className="flex flex-wrap gap-1.5">
                     {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}</span>}
                     {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM</span>}
-                    {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {v.fuelType}</span>}
-                    {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Settings2 className="h-3.5 w-3.5 shrink-0" /> {v.transmission}</span>}
+                    {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {translateTechnicalValue('fuel', v.fuelType, t)}</span>}
+                    {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><GearboxIcon className="h-3.5 w-3.5 shrink-0" /> {getTransmissionShortLabel(v.transmission, t)}</span>}
                   </div>
                   <div className="flex-1" />
                   <div className="pt-3">

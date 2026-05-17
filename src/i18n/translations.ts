@@ -94,22 +94,29 @@ export const translations = {
         used: "Używany",
       },
 
-      // Fuel types
+      // Fuel types (canonical bucket labels — used by filter, listing pills, tech spec).
       fuel: {
         petrol: "PB",
         diesel: "ON",
         hybrid: "Hybryda",
+        hybridPlugin: "Hybryda plug-in",
+        petrolLpg: "PB + LPG",
         hybridHev: "Hybryda HEV",
         hybridPhev: "Hybryda PHEV",
-        electric: "Elektryk",
+        electric: "Elektryczny",
         lpg: "LPG",
         cng: "CNG",
       },
 
-      // Transmission
+      // Transmission — full labels (used by filters and tech-spec on detail page).
+      // Short labels live in transmission.short.* and are used by listing-card pills.
       transmission: {
-        manual: "M",
-        automatic: "A",
+        manual: "Manualna",
+        automatic: "Automatyczna",
+        short: {
+          manual: "M",
+          automatic: "A",
+        },
       },
 
       // Drive
@@ -465,6 +472,8 @@ export const translations = {
         petrol: "Petrol",
         diesel: "Diesel",
         hybrid: "Hybrid",
+        hybridPlugin: "Plug-in hybrid",
+        petrolLpg: "Petrol + LPG",
         hybridHev: "Hybrid HEV",
         hybridPhev: "Plug-in Hybrid",
         electric: "Electric",
@@ -476,6 +485,10 @@ export const translations = {
       transmission: {
         manual: "Manual",
         automatic: "Automatic",
+        short: {
+          manual: "M",
+          automatic: "A",
+        },
       },
 
       // Drive
@@ -827,6 +840,8 @@ export const translations = {
         petrol: "Benzin",
         diesel: "Diesel",
         hybrid: "Hybrid",
+        hybridPlugin: "Plug-in-Hybrid",
+        petrolLpg: "Benzin + LPG",
         hybridHev: "Hybrid HEV",
         hybridPhev: "Plug-in Hybrid",
         electric: "Elektro",
@@ -838,6 +853,10 @@ export const translations = {
       transmission: {
         manual: "Schaltgetriebe",
         automatic: "Automatik",
+        short: {
+          manual: "M",
+          automatic: "A",
+        },
       },
 
       // Drive

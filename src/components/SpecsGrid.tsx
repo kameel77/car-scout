@@ -5,7 +5,6 @@ import {
   Calendar,
   Gauge,
   Fuel,
-  Settings2,
   Zap,
   Cog,
   Car,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 import { formatNumber } from '@/utils/formatters';
 import { translateTechnicalValue } from '@/utils/i18n-utils';
+import { GearboxIcon } from '@/components/icons/GearboxIcon';
 
 interface SpecsGridProps {
   year: number;
@@ -32,7 +32,7 @@ export function SpecsGrid(props: SpecsGridProps) {
     { key: 'year', icon: Calendar, label: t('filters.productionYear'), value: String(props.year) },
     { key: 'mileage', icon: Gauge, label: t('filters.mileage'), value: `${formatNumber(props.mileage)} ${t('listing.km')}` },
     { key: 'fuelType', icon: Fuel, label: t('filters.fuelType'), value: translateTechnicalValue('fuel', props.fuelType, t) },
-    { key: 'transmission', icon: Settings2, label: t('filters.transmission'), value: translateTechnicalValue('transmission', props.transmission, t) },
+    { key: 'transmission', icon: GearboxIcon, label: t('filters.transmission'), value: translateTechnicalValue('transmission', props.transmission, t) },
     { key: 'drive', icon: Cog, label: t('filters.drive'), value: translateTechnicalValue('drive', props.drive, t) },
     { key: 'power', icon: Zap, label: t('filters.power'), value: `${props.power} ${t('listing.hp')}` },
     { key: 'capacity', icon: Hash, label: t('filters.engineCapacity'), value: `${formatNumber(props.capacity)} ${t('listing.ccm')}` },
