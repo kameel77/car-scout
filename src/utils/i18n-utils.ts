@@ -60,6 +60,32 @@ export function translateTechnicalValue(category: string, value: string | null |
 }
 
 /**
+ * Short 1-letter label for transmission, used on listing card pills.
+ * Buckets all vendor variants by prefix: anything starting with "manual" → M,
+ * anything starting with "automat" → A. Falls back to the raw value otherwise.
+ */
+export function getTransmissionShortLabel(value: string | null | undefined, t: TFunction): string {
+    if (!value) return '';
+    const lower = value.toLowerCase();
+    if (lower.startsWith('manual')) return t('transmission.short.manual', 'M');
+    if (lower.startsWith('automat')) return t('transmission.short.automatic', 'A');
+    return value;
+}
+
+/**
+ * Normalises a raw transmission value (any vendor variant) to one of the
+ * canonical filter tokens 'manual' | 'automatic'. Returns the raw value
+ * unchanged when no prefix matches.
+ */
+export function canonicalTransmission(value: string | null | undefined): string {
+    if (!value) return '';
+    const lower = value.toLowerCase();
+    if (lower.startsWith('manual')) return 'manual';
+    if (lower.startsWith('automat')) return 'automatic';
+    return value;
+}
+
+/**
  * Normalizes equipment feature names for translation keys
  */
 export function getFeatureKey(feature: string): string {

@@ -65,10 +65,20 @@ interface FilterPanelProps {
 // Build options dynamically from facet keys returned by the API (which preserve the
 // original case from the DB). This avoids the previous mismatch where hardcoded
 // 'benzyna' never matched real DB values like 'benzynowy' or 'benzynowy + gaz'.
-function optionsFromFacet(facet?: Record<string, number>): { value: string; label: string }[] {
+// Optional labelMap remaps canonical keys (e.g. 'manual'/'automatic' for transmission)
+// to i18n keys, so the MultiSelect rendering picks up a translated label.
+function optionsFromFacet(
+  facet?: Record<string, number>,
+  labelMap?: Record<string, string>,
+): { value: string; label: string }[] {
   if (!facet) return [];
-  return Object.keys(facet).map((k) => ({ value: k, label: k }));
+  return Object.keys(facet).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
+
+const TRANSMISSION_LABEL_MAP: Record<string, string> = {
+  manual: 'transmission.manual',
+  automatic: 'transmission.automatic',
+};
 
 const statusOptions = [
   { value: 'NEW', label: 'status.new' },
@@ -491,7 +501,7 @@ export function FilterPanel({
         {/* Transmission */}
         <FilterSection title={t('filters.transmission')}>
           <MultiSelect
-            options={optionsFromFacet(facets?.transmission)}
+            options={optionsFromFacet(facets?.transmission, TRANSMISSION_LABEL_MAP)}
             selected={filters.transmissions}
             onChange={(v) => updateFilter('transmissions', v)}
             counts={facets?.transmission}

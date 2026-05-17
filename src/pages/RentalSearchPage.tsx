@@ -16,6 +16,7 @@ import {
   Car, Building2, User, ChevronDown, ArrowUpDown, Check, SlidersHorizontal, X
 } from 'lucide-react';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
+import { getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -84,6 +85,7 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
   searchPlaceholder?: string;
   counts?: Record<string, number>;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const getCount = (v: string) => {
     if (!counts) return undefined;
@@ -130,7 +132,7 @@ function MultiCheck({ options, selected, onChange, searchable, searchPlaceholder
               >
                 <Checkbox checked={isSelected} onCheckedChange={() => toggle(o.value)} />
                 <span className="text-sm flex-1 flex items-center justify-between gap-2">
-                  <span>{o.label}</span>
+                  <span>{t(o.label, o.label)}</span>
                   {count !== undefined && (
                     <span className="text-xs text-muted-foreground tabular-nums">({count})</span>
                   )}
@@ -162,10 +164,18 @@ function RangePopover({ fromValue, toValue, onFromChange, onToChange, fromPh, to
 
 /* ── Build options dynamically from facet keys (DB values) ── */
 
-function optionsFromFacet(facet?: Record<string, number>): { value: string; label: string }[] {
+function optionsFromFacet(
+  facet?: Record<string, number>,
+  labelMap?: Record<string, string>,
+): { value: string; label: string }[] {
   if (!facet) return [];
-  return Object.keys(facet).map((k) => ({ value: k, label: k }));
+  return Object.keys(facet).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
+
+const TRANSMISSION_LABEL_MAP: Record<string, string> = {
+  manual: 'transmission.manual',
+  automatic: 'transmission.automatic',
+};
 
 /* ── Sort options ── */
 
@@ -377,7 +387,7 @@ export default function RentalSearchPage() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.transmission')}</label>
               <MultiCheck
-                options={optionsFromFacet(data?.facets?.transmission)}
+                options={optionsFromFacet(data?.facets?.transmission, TRANSMISSION_LABEL_MAP)}
                 selected={transmissions}
                 onChange={v => { setTransmissions(v); setPage(1); }}
                 counts={data?.facets?.transmission}
@@ -594,7 +604,7 @@ export default function RentalSearchPage() {
                     {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}</span>}
                     {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM</span>}
                     {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {v.fuelType}</span>}
-                    {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Settings2 className="h-3.5 w-3.5 shrink-0" /> {v.transmission}</span>}
+                    {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Settings2 className="h-3.5 w-3.5 shrink-0" /> {getTransmissionShortLabel(v.transmission, t)}</span>}
                   </div>
                   <div className="flex-1" />
                   <div className="pt-3">

@@ -27,6 +27,7 @@ import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
 import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { useBrand } from '@/contexts/BrandContext';
+import { canonicalTransmission } from '@/utils/i18n-utils';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -78,7 +79,7 @@ export default function SearchPage() {
       makes: parseArray(searchParams.get('make')),
       models: parseArray(searchParams.get('model')),
       fuelTypes: parseArray(searchParams.get('fuelType')),
-      transmissions: parseArray(searchParams.get('transmission')),
+      transmissions: parseArray(searchParams.get('transmission')).map(canonicalTransmission),
       bodyTypes: parseArray(searchParams.get('bodyType')),
       drives: parseArray(searchParams.get('drive')),
       statuses: parseArray(searchParams.get('status')).map((c) => c.toUpperCase()),

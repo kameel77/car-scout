@@ -14,7 +14,7 @@ import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
-import { translateTechnicalValue } from '@/utils/i18n-utils';
+import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
 
 interface ListingCardProps {
@@ -292,7 +292,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                   <path d="M40 12v12H8m16-12v24M8 12v24"/>
                   <path d="M44 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M28 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M12 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0m16 32a4 4 0 1 1-8 0a4 4 0 0 1 8 0m-16 0a4 4 0 1 1-8 0a4 4 0 0 1 8 0m28 4a4 4 0 1 0 0-8a4 4 0 0 0 0 8"/>
                 </svg>
-                {translateTechnicalValue('transmission', listing.transmission, t)}
+                {getTransmissionShortLabel(listing.transmission, t)}
               </span>
             )}
 

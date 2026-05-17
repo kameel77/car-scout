@@ -106,10 +106,15 @@ export const translations = {
         cng: "CNG",
       },
 
-      // Transmission
+      // Transmission — full labels (used by filters and tech-spec on detail page).
+      // Short labels live in transmission.short.* and are used by listing-card pills.
       transmission: {
-        manual: "M",
-        automatic: "A",
+        manual: "Manualna",
+        automatic: "Automatyczna",
+        short: {
+          manual: "M",
+          automatic: "A",
+        },
       },
 
       // Drive
@@ -476,6 +481,10 @@ export const translations = {
       transmission: {
         manual: "Manual",
         automatic: "Automatic",
+        short: {
+          manual: "M",
+          automatic: "A",
+        },
       },
 
       // Drive
@@ -838,6 +847,10 @@ export const translations = {
       transmission: {
         manual: "Schaltgetriebe",
         automatic: "Automatik",
+        short: {
+          manual: "M",
+          automatic: "A",
+        },
       },
 
       // Drive

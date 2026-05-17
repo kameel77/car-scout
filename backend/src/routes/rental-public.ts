@@ -43,8 +43,26 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         const models = toArray(model);
         const bodyTypes = toArray(bodyType);
         const fuelTypes = toArray(fuelType);
-        const transmissions = toArray(transmission);
+        const transmissionsRaw = toArray(transmission);
         const drives = toArray(drive);
+
+        // Expand canonical transmission tokens ('manual'/'automatic') into raw DB values
+        // matching the corresponding prefix. Anything else passes through unchanged.
+        let transmissions: string[] | undefined = transmissionsRaw;
+        if (transmissionsRaw && transmissionsRaw.some((t) => t === 'manual' || t === 'automatic')) {
+            const distinct = await fastify.prisma.rentalVehicle.findMany({
+                where: { isActive: true, transmission: { not: null } },
+                select: { transmission: true },
+                distinct: ['transmission'],
+            });
+            const allRaw = distinct.map((d) => d.transmission).filter((v): v is string => !!v);
+            transmissions = transmissionsRaw.flatMap((token) => {
+                const lower = token.toLowerCase();
+                if (lower === 'manual') return allRaw.filter((v) => v.toLowerCase().startsWith('manual'));
+                if (lower === 'automatic') return allRaw.filter((v) => v.toLowerCase().startsWith('automat'));
+                return [token];
+            });
+        }
         const statuses = toArray(condition)
             ?.map((c) => c.toUpperCase())
             .filter((c) => c === 'NEW' || c === 'USED') as ('NEW' | 'USED')[] | undefined;
@@ -493,6 +511,14 @@ async function computeFacets(fastify: FastifyInstance, where: any) {
         return rest;
     };
 
+    // Canonical bucket for transmission: collapse vendor variants under "manual"/"automatic".
+    const transmissionCanonical = (raw: string): string => {
+        const lower = raw.toLowerCase();
+        if (lower.startsWith('manual')) return 'manual';
+        if (lower.startsWith('automat')) return 'automatic';
+        return raw;
+    };
+
     const toFacetMap = (rows: any[], key: string): Record<string, number> => {
         const out: Record<string, number> = {};
         const canonical: Record<string, string> = {};
@@ -500,6 +526,11 @@ async function computeFacets(fastify: FastifyInstance, where: any) {
             const v = r[key];
             if (v == null || v === '') continue;
             const raw = String(v);
+            if (key === 'transmission') {
+                const k = transmissionCanonical(raw);
+                out[k] = (out[k] || 0) + r._count._all;
+                continue;
+            }
             const lower = raw.toLowerCase();
             if (!canonical[lower]) canonical[lower] = raw;
             const k = canonical[lower];

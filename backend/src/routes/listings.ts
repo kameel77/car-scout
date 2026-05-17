@@ -212,11 +212,30 @@ export async function listingRoutes(fastify: FastifyInstance) {
         };
 
         const fuelTypes = toArray(fuelType);
-        const transmissions = toArray(transmission);
+        const transmissionsRaw = toArray(transmission);
         const bodyTypes = toArray(bodyType);
         const drives = toArray(drive);
         const makes = toArray(make);
         const models = toArray(model);
+
+        // Expand canonical transmission tokens ('manual'/'automatic') into the set of raw
+        // DB values that start with the corresponding prefix. Anything else (raw values,
+        // e.g. from legacy bookmarks) passes through unchanged.
+        let transmissions: string[] | undefined = transmissionsRaw;
+        if (transmissionsRaw && transmissionsRaw.some((t) => t === 'manual' || t === 'automatic')) {
+            const distinct = await fastify.prisma.listing.findMany({
+                where: { isArchived: false, transmission: { not: null } },
+                select: { transmission: true },
+                distinct: ['transmission'],
+            });
+            const allRaw = distinct.map((d) => d.transmission).filter((v): v is string => !!v);
+            transmissions = transmissionsRaw.flatMap((token) => {
+                const lower = token.toLowerCase();
+                if (lower === 'manual') return allRaw.filter((v) => v.toLowerCase().startsWith('manual'));
+                if (lower === 'automatic') return allRaw.filter((v) => v.toLowerCase().startsWith('automat'));
+                return [token];
+            });
+        }
         // status: 'new' | 'used' (case-insensitive); maps to Prisma `condition` enum NEW | USED
         const statuses = toArray(status)
             ?.map((c) => c.toUpperCase())
@@ -413,9 +432,20 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         }
 
+        // Canonical bucket for transmission: collapse vendor variants under "manual"/"automatic".
+        // Anything that doesn't start with manual/automat falls back to its first-seen case.
+        const transmissionCanonical = (raw: string): string => {
+            const lower = raw.toLowerCase();
+            if (lower.startsWith('manual')) return 'manual';
+            if (lower.startsWith('automat')) return 'automatic';
+            return raw;
+        };
+
         // Build facet maps. Keys preserve the first-seen original case (e.g. "Benzynowy"),
         // but rows with different casings collapse into one bucket. Frontend matching
-        // against these keys must be case-insensitive.
+        // against these keys must be case-insensitive. For 'transmission' specifically,
+        // raw values are bucketed under canonical 'manual'/'automatic' so the UI can show
+        // just two checkboxes summing all vendor variants (CVT, DCT/DSG, etc.).
         const toFacetMap = (rows: any[], key: string): Record<string, number> => {
             const out: Record<string, number> = {};
             const canonical: Record<string, string> = {};
@@ -423,6 +453,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 const v = r[key];
                 if (v == null || v === '') continue;
                 const raw = String(v);
+                if (key === 'transmission') {
+                    const k = transmissionCanonical(raw);
+                    out[k] = (out[k] || 0) + r._count._all;
+                    continue;
+                }
                 const lower = raw.toLowerCase();
                 if (!canonical[lower]) canonical[lower] = raw;
                 const k = canonical[lower];
