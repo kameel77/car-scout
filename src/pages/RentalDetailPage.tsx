@@ -348,7 +348,7 @@ export default function RentalDetailPage() {
 
                     {/* Right: sticky calculator */}
                     <div>
-                        <div className="bg-white rounded-2xl shadow-sm border p-6 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
+                        <div className="bg-white rounded-2xl shadow-sm border p-6 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
                             <h2 className="text-lg font-bold text-gray-900 mb-5">Kalkulator najmu</h2>
 
                             {/* Offer type toggle: Business / Private */}
