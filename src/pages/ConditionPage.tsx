@@ -46,7 +46,9 @@ const emptyFilters: FilterState = {
   makes: [], models: [], fuelTypes: [], yearFrom: '', yearTo: '',
   mileageFrom: '', mileageTo: '', drives: [], transmissions: [],
   powerFrom: '', powerTo: '', capacityFrom: '', capacityTo: '',
-  bodyTypes: [], statuses: [], priceFrom: '', priceTo: '', query: '',
+  bodyTypes: [], statuses: [], priceFrom: '', priceTo: '',
+  rateFrom: '', rateTo: '', rateType: 'credit', rateBasis: 'gross',
+  query: '',
 };
 
 const parseArray = (param: string | null) => param ? param.split(',') : [];
@@ -165,32 +167,52 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const isNew = condition === 'NEW';
-  const pageTitle = isNew ? 'Nowe samochody' : 'Używane samochody';
+  // Visible h1 — keyword-rich, emphasises the value prop (flexible financing + guidance).
+  const pageTitle = isNew
+    ? 'Nowe samochody z elastycznym finansowaniem'
+    : 'Używane samochody z elastycznym finansowaniem';
+  // Visible sub-heading under the h1.
   const pageDescription = isNew
-    ? 'Nowe samochody dostępne w leasingu, kredycie i wynajmie długoterminowym.'
-    : 'Używane samochody w atrakcyjnych cenach - leasing, kredyt i wynajem długoterminowy.';
+    ? 'Aktualne oferty nowych aut od sprawdzonych dealerów. Dobieramy kredyt, leasing lub wynajem długoterminowy i prowadzimy Cię przez cały proces zakupu — od konfiguracji po odbiór kluczyków.'
+    : 'Sprawdzone używane samochody w atrakcyjnych cenach. Dobieramy kredyt, leasing lub wynajem długoterminowy i wspieramy Cię na każdym etapie zakupu — od wyboru auta po finalizację umowy.';
+  // Shorter copy for <title> tag (keeps room for siteName).
+  const seoTitle = isNew
+    ? 'Nowe samochody z finansowaniem'
+    : 'Używane samochody z finansowaniem';
+  // Shorter copy for <meta description> (155–175 znaków).
+  const seoDescription = isNew
+    ? 'Aktualne oferty nowych samochodów od sprawdzonych dealerów. Dobieramy najkorzystniejszy kredyt, leasing lub wynajem długoterminowy — wspieramy Cię na każdym etapie zakupu.'
+    : 'Sprawdzone używane samochody w atrakcyjnych cenach. Dobieramy kredyt, leasing lub wynajem długoterminowy — prowadzimy Cię przez cały proces zakupu.';
 
   /* ── Sale vehicle filters (condition is locked) ── */
-  const [filters, setFilters] = React.useState<FilterState>(() => ({
-    makes: parseArray(searchParams.get('make')),
-    models: parseArray(searchParams.get('model')),
-    fuelTypes: parseArray(searchParams.get('fuelType')),
-    transmissions: parseArray(searchParams.get('transmission')),
-    bodyTypes: parseArray(searchParams.get('bodyType')),
-    drives: parseArray(searchParams.get('drive')),
-    statuses: [condition], // LOCKED
-    yearFrom: searchParams.get('yearMin') || '',
-    yearTo: searchParams.get('yearMax') || '',
-    mileageFrom: searchParams.get('mileageMin') || '',
-    mileageTo: searchParams.get('mileageMax') || '',
-    priceFrom: searchParams.get('priceMin') || '',
-    priceTo: searchParams.get('priceMax') || '',
-    powerFrom: searchParams.get('powerMin') || '',
-    powerTo: searchParams.get('powerMax') || '',
-    capacityFrom: searchParams.get('capacityMin') || '',
-    capacityTo: searchParams.get('capacityMax') || '',
-    query: searchParams.get('q') || '',
-  }));
+  const [filters, setFilters] = React.useState<FilterState>(() => {
+    const rt = searchParams.get('rateType');
+    const rb = searchParams.get('rateBasis');
+    return {
+      makes: parseArray(searchParams.get('make')),
+      models: parseArray(searchParams.get('model')),
+      fuelTypes: parseArray(searchParams.get('fuelType')),
+      transmissions: parseArray(searchParams.get('transmission')),
+      bodyTypes: parseArray(searchParams.get('bodyType')),
+      drives: parseArray(searchParams.get('drive')),
+      statuses: [condition], // LOCKED
+      yearFrom: searchParams.get('yearMin') || '',
+      yearTo: searchParams.get('yearMax') || '',
+      mileageFrom: searchParams.get('mileageMin') || '',
+      mileageTo: searchParams.get('mileageMax') || '',
+      priceFrom: searchParams.get('priceMin') || '',
+      priceTo: searchParams.get('priceMax') || '',
+      powerFrom: searchParams.get('powerMin') || '',
+      powerTo: searchParams.get('powerMax') || '',
+      capacityFrom: searchParams.get('capacityMin') || '',
+      capacityTo: searchParams.get('capacityMax') || '',
+      rateFrom: searchParams.get('rateMin') || '',
+      rateTo: searchParams.get('rateMax') || '',
+      rateType: rt === 'lease' ? 'lease' : 'credit',
+      rateBasis: rb === 'net' ? 'net' : 'gross',
+      query: searchParams.get('q') || '',
+    };
+  });
 
   // Keep condition locked when user changes other filters
   React.useEffect(() => {
@@ -267,6 +289,10 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       if (filters.powerTo) params.set('powerMax', filters.powerTo);
       if (filters.capacityFrom) params.set('capacityMin', filters.capacityFrom);
       if (filters.capacityTo) params.set('capacityMax', filters.capacityTo);
+      if (filters.rateFrom) params.set('rateMin', filters.rateFrom);
+      if (filters.rateTo) params.set('rateMax', filters.rateTo);
+      if ((filters.rateFrom || filters.rateTo) && filters.rateType !== 'credit') params.set('rateType', filters.rateType);
+      if ((filters.rateFrom || filters.rateTo) && filters.rateBasis !== 'gross') params.set('rateBasis', filters.rateBasis);
       if (filters.query) params.set('q', filters.query);
       if (sortBy !== defaultSortCars) params.set('sortBy', sortBy);
       if (page > 1) params.set('page', page.toString());
@@ -370,8 +396,8 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   return (
     <div className="min-h-screen bg-background">
       <MetaHead
-        title={`${pageTitle} | ${siteName}`}
-        description={pageDescription}
+        title={`${seoTitle} | ${siteName}`}
+        description={seoDescription}
         image={seoConfig?.homeOgImage}
         canonical={isNew ? '/nowe' : '/uzywane'}
         schema={{
@@ -380,8 +406,9 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
             {
               '@type': 'CollectionPage',
               name: pageTitle,
-              description: pageDescription,
+              description: seoDescription,
               url: `${window.location.origin}${isNew ? '/nowe' : '/uzywane'}`,
+              isPartOf: { '@type': 'WebSite', name: siteName, url: window.location.origin },
               mainEntity: {
                 '@type': 'ItemList',
                 numberOfItems: totalCombined,
@@ -403,7 +430,8 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               '@type': 'BreadcrumbList',
               itemListElement: [
                 { '@type': 'ListItem', position: 1, name: 'Strona główna', item: window.location.origin },
-                { '@type': 'ListItem', position: 2, name: pageTitle, item: `${window.location.origin}${isNew ? '/nowe' : '/uzywane'}` },
+                { '@type': 'ListItem', position: 2, name: 'Samochody', item: `${window.location.origin}/samochody` },
+                { '@type': 'ListItem', position: 3, name: isNew ? 'Nowe' : 'Używane', item: `${window.location.origin}${isNew ? '/nowe' : '/uzywane'}` },
               ],
             },
           ],
@@ -426,6 +454,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               resultCount={totalCombined}
               availableMakes={options?.makes || []}
               availableModels={options?.models || []}
+              facets={saleData?.facets}
             />
           </div>
         </SheetContent>
@@ -451,6 +480,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               setIsDesktopTyping(true);
               setDesktopSearch(v);
             }}
+            facets={saleData?.facets}
           />
 
           {/* Tabs: Nowy / Używany – navigate between /nowe and /uzywane */}

@@ -35,7 +35,21 @@ export interface FilterState {
   statuses: string[]; // 'NEW' | 'USED'
   priceFrom: string;
   priceTo: string;
+  // Monthly rate filter (translates server-side to a price filter using fixed factors).
+  rateFrom: string;
+  rateTo: string;
+  rateType: 'credit' | 'lease';
+  rateBasis: 'gross' | 'net';
   query: string;
+}
+
+export interface ListingFacets {
+  make: Record<string, number>;
+  model: Record<string, number>;
+  fuelType: Record<string, number>;
+  transmission: Record<string, number>;
+  bodyType: Record<string, number>;
+  drive: Record<string, number>;
 }
 
 interface FilterPanelProps {
@@ -46,6 +60,7 @@ interface FilterPanelProps {
   className?: string;
   availableMakes: string[];
   availableModels: { make: string; model: string }[];
+  facets?: ListingFacets;
 }
 
 const fuelTypeOptions = [
@@ -124,6 +139,8 @@ interface MultiSelectProps {
   searchPlaceholder?: string;
   /** When true, renders options as wrapped row instead of stacked column. */
   inline?: boolean;
+  /** Per-option counts. Keys must be lowercased. */
+  counts?: Record<string, number>;
 }
 
 function MultiSelect({
@@ -133,9 +150,15 @@ function MultiSelect({
   searchable,
   searchPlaceholder,
   inline,
+  counts,
 }: MultiSelectProps) {
   const { t } = useTranslation();
   const [search, setSearch] = React.useState('');
+
+  const getCount = React.useCallback((value: string) => {
+    if (!counts) return undefined;
+    return counts[value.toLowerCase()];
+  }, [counts]);
 
   const filteredOptions = searchable
     ? options.filter((opt) =>
@@ -143,6 +166,23 @@ function MultiSelect({
       t(opt.label).toLowerCase().includes(search.toLowerCase())
     )
     : options;
+
+  // Sort options: counted desc → zero count → no count info (alphabetical within each group)
+  const sortedOptions = React.useMemo(() => {
+    if (!counts) return filteredOptions;
+    const arr = [...filteredOptions];
+    arr.sort((a, b) => {
+      const ca = getCount(a.value);
+      const cb = getCount(b.value);
+      const aHas = ca !== undefined && ca > 0;
+      const bHas = cb !== undefined && cb > 0;
+      if (aHas && bHas) return (cb! - ca!) || a.label.localeCompare(b.label);
+      if (aHas) return -1;
+      if (bHas) return 1;
+      return a.label.localeCompare(b.label);
+    });
+    return arr;
+  }, [filteredOptions, counts, getCount]);
 
   const handleToggle = (value: string) => {
     if (selected.includes(value)) {
@@ -165,25 +205,34 @@ function MultiSelect({
           />
         </div>
       )}
-      <ScrollArea className={searchable ? 'h-40' : 'max-h-48'}>
+      <ScrollArea className={searchable ? 'h-64' : 'max-h-64'}>
         <div className={inline ? 'flex flex-wrap gap-x-4 gap-y-1' : 'space-y-1'}>
-          {filteredOptions.map((option) => {
+          {sortedOptions.map((option) => {
             const id = `filter-${option.value.replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2, 9)}`;
+            const count = getCount(option.value);
+            const isZero = counts !== undefined && (count === undefined || count === 0);
+            const isSelected = selected.includes(option.value);
             return (
               <div
                 key={option.value}
-                className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary/50 transition-colors"
+                className={cn(
+                  'flex items-center gap-2 p-2 rounded-md transition-colors',
+                  isZero && !isSelected ? 'opacity-50' : 'hover:bg-secondary/50'
+                )}
               >
                 <Checkbox
                   id={id}
-                  checked={selected.includes(option.value)}
+                  checked={isSelected}
                   onCheckedChange={() => handleToggle(option.value)}
                 />
                 <label
                   htmlFor={id}
-                  className="text-sm cursor-pointer select-none whitespace-nowrap"
+                  className="text-sm cursor-pointer select-none whitespace-nowrap flex-1 flex items-center justify-between gap-2"
                 >
-                  {t(option.label, option.label)}
+                  <span>{t(option.label, option.label)}</span>
+                  {count !== undefined && (
+                    <span className="text-xs text-muted-foreground tabular-nums">({count})</span>
+                  )}
                 </label>
               </div>
             );
@@ -242,6 +291,7 @@ export function FilterPanel({
   className,
   availableMakes,
   availableModels: allModels,
+  facets,
 }: FilterPanelProps) {
   const { t } = useTranslation();
   const { data: settings } = useAppSettings();
@@ -314,6 +364,7 @@ export function FilterPanel({
             }}
             searchable
             searchPlaceholder={t('filters.selectMake')}
+            counts={facets?.make}
           />
         </FilterSection>
 
@@ -328,6 +379,7 @@ export function FilterPanel({
               onChange={(v) => updateFilter('models', v)}
               searchable
               searchPlaceholder={t('filters.selectModel')}
+              counts={facets?.model}
             />
           ) : (
             <p className="text-sm text-muted-foreground py-2">
@@ -344,6 +396,7 @@ export function FilterPanel({
             options={fuelTypeOptions}
             selected={filters.fuelTypes}
             onChange={(v) => updateFilter('fuelTypes', v)}
+            counts={facets?.fuelType}
           />
         </FilterSection>
 
@@ -391,12 +444,72 @@ export function FilterPanel({
 
         <Separator />
 
+        {/* Monthly Rate */}
+        <FilterSection title={t('filters.monthlyRate', 'Wysokość raty')}>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => updateFilter('rateType', 'credit')}
+                className={cn(
+                  'px-3 py-1.5 text-xs rounded-full border transition-colors',
+                  filters.rateType === 'credit' ? 'border-accent bg-accent/15 text-foreground font-medium' : 'border-border bg-background hover:bg-secondary/50'
+                )}
+              >
+                {t('filters.credit', 'Kredyt')}
+              </button>
+              <button
+                type="button"
+                onClick={() => updateFilter('rateType', 'lease')}
+                className={cn(
+                  'px-3 py-1.5 text-xs rounded-full border transition-colors',
+                  filters.rateType === 'lease' ? 'border-accent bg-accent/15 text-foreground font-medium' : 'border-border bg-background hover:bg-secondary/50'
+                )}
+              >
+                {t('filters.lease', 'Leasing')}
+              </button>
+              <span className="mx-1 w-px bg-border" />
+              <button
+                type="button"
+                onClick={() => updateFilter('rateBasis', 'gross')}
+                className={cn(
+                  'px-3 py-1.5 text-xs rounded-full border transition-colors',
+                  filters.rateBasis === 'gross' ? 'border-accent bg-accent/15 text-foreground font-medium' : 'border-border bg-background hover:bg-secondary/50'
+                )}
+              >
+                {t('common.gross', 'Brutto')}
+              </button>
+              <button
+                type="button"
+                onClick={() => updateFilter('rateBasis', 'net')}
+                className={cn(
+                  'px-3 py-1.5 text-xs rounded-full border transition-colors',
+                  filters.rateBasis === 'net' ? 'border-accent bg-accent/15 text-foreground font-medium' : 'border-border bg-background hover:bg-secondary/50'
+                )}
+              >
+                {t('common.net', 'Netto')}
+              </button>
+            </div>
+            <RangeInput
+              fromValue={filters.rateFrom}
+              toValue={filters.rateTo}
+              onFromChange={(v) => updateFilter('rateFrom', v)}
+              onToChange={(v) => updateFilter('rateTo', v)}
+              fromPlaceholder="500 zł"
+              toPlaceholder="5 000 zł"
+            />
+          </div>
+        </FilterSection>
+
+        <Separator />
+
         {/* Transmission */}
         <FilterSection title={t('filters.transmission')}>
           <MultiSelect
             options={transmissionOptions}
             selected={filters.transmissions}
             onChange={(v) => updateFilter('transmissions', v)}
+            counts={facets?.transmission}
           />
         </FilterSection>
 
@@ -408,6 +521,7 @@ export function FilterPanel({
             options={driveOptions}
             selected={filters.drives}
             onChange={(v) => updateFilter('drives', v)}
+            counts={facets?.drive}
           />
         </FilterSection>
 
@@ -447,9 +561,23 @@ export function FilterPanel({
             options={bodyTypeOptions}
             selected={filters.bodyTypes}
             onChange={(v) => updateFilter('bodyTypes', v)}
+            counts={facets?.bodyType}
           />
         </FilterSection>
       </div>
+
+      {hasFilters && (
+        <div className="border-t pt-3 mt-2 bg-background">
+          <Button
+            variant="outline"
+            onClick={onClear}
+            className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <X className="h-4 w-4 mr-2" />
+            {t('common.clearAllFilters')}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

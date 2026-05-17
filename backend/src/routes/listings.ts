@@ -191,7 +191,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             mileageMin, mileageMax,
             powerMin, powerMax,
             capacityMin, capacityMax,
-            fuelType, transmission, bodyType,
+            fuelType, transmission, bodyType, drive,
             status,
             sortBy,
             includeArchived,
@@ -200,6 +200,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
             perPage: perPageParam,
             entrySource,
             lastManualEditBefore,
+            // Rate filter (translated to price filter on the fly)
+            rateMin, rateMax, rateType, rateBasis,
         } = request.query as any;
 
         // Helper to parse comma-separated lists into array or undefined
@@ -212,6 +214,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const fuelTypes = toArray(fuelType);
         const transmissions = toArray(transmission);
         const bodyTypes = toArray(bodyType);
+        const drives = toArray(drive);
         const makes = toArray(make);
         const models = toArray(model);
         // status: 'new' | 'used' (case-insensitive); maps to Prisma `condition` enum NEW | USED
@@ -221,6 +224,20 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const isEur = currency === 'EUR';
         const priceField = isEur ? 'brokerPriceEur' : 'brokerPricePln';
+
+        // Translate monthly rate filter into broker price filter (PLN only, mirrors ListingCard formula).
+        // - credit gross rate = price * 0.014
+        // - credit net rate   = price * 0.014 / 1.23
+        // - lease  net rate   = price * 0.012 / 1.23
+        // - lease  gross rate = price * 0.012
+        let rateAsPriceMin: number | undefined;
+        let rateAsPriceMax: number | undefined;
+        if (!isEur && (rateMin || rateMax)) {
+            const factor = rateType === 'lease' ? 0.012 : 0.014;
+            const vatMul = rateBasis === 'net' ? 1.23 : 1;
+            if (rateMin) rateAsPriceMin = Math.floor((parseInt(rateMin) * vatMul) / factor);
+            if (rateMax) rateAsPriceMax = Math.ceil((parseInt(rateMax) * vatMul) / factor);
+        }
 
         const page = Math.max(1, parseInt(pageParam) || 1);
         const parsedPerPage = parseInt(perPageParam);
@@ -274,8 +291,16 @@ export async function listingRoutes(fastify: FastifyInstance) {
             model: models ? { in: models, mode: 'insensitive' as const } : undefined,
 
             [priceField]: {
-                gte: priceMin ? parseInt(priceMin) : undefined,
-                lte: priceMax ? parseInt(priceMax) : undefined
+                gte: (() => {
+                    const fromPrice = priceMin ? parseInt(priceMin) : undefined;
+                    if (rateAsPriceMin !== undefined && fromPrice !== undefined) return Math.max(fromPrice, rateAsPriceMin);
+                    return fromPrice ?? rateAsPriceMin;
+                })(),
+                lte: (() => {
+                    const toPrice = priceMax ? parseInt(priceMax) : undefined;
+                    if (rateAsPriceMax !== undefined && toPrice !== undefined) return Math.min(toPrice, rateAsPriceMax);
+                    return toPrice ?? rateAsPriceMax;
+                })()
             },
             productionYear: {
                 gte: yearMin ? parseInt(yearMin) : undefined,
@@ -297,6 +322,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' as const } : undefined,
             transmission: transmissions ? { in: transmissions, mode: 'insensitive' as const } : undefined,
             bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' as const } : undefined,
+            drive: drives ? { in: drives, mode: 'insensitive' as const } : undefined,
             condition: statuses && statuses.length ? { in: statuses } : undefined,
             isArchived: includeArchived === 'true' ? undefined : false,
             entrySource: lastManualEditBefore
@@ -311,12 +337,28 @@ export async function listingRoutes(fastify: FastifyInstance) {
             ...scopeDealerFilter,
         };
 
-        // Counts grouped by condition (NEW / USED) IGNORING the condition filter,
-        // so the tab UI can show "Nowe (N)" / "Używane (M)" totals even while one
-        // tab is currently selected.
+        // For per-dimension facets, count vehicles grouped by that dimension IGNORING
+        // the filter on that dimension (so the user sees "BMW (24)" even after selecting BMW).
+        // byCondition ignores the condition filter.
         const { condition: _conditionFilter, ...whereWithoutCondition } = where;
+        const { make: _makeFilter, ...whereWithoutMake } = where;
+        const { model: _modelFilter, ...whereWithoutModel } = where;
+        const { fuelType: _fuelFilter, ...whereWithoutFuel } = where;
+        const { transmission: _transmissionFilter, ...whereWithoutTransmission } = where;
+        const { bodyType: _bodyFilter, ...whereWithoutBody } = where;
+        const { drive: _driveFilter, ...whereWithoutDrive } = where;
 
-        const [listings, totalCount, byConditionRaw] = await Promise.all([
+        const [
+            listings,
+            totalCount,
+            byConditionRaw,
+            byMakeRaw,
+            byModelRaw,
+            byFuelRaw,
+            byTransmissionRaw,
+            byBodyRaw,
+            byDriveRaw,
+        ] = await Promise.all([
             fastify.prisma.listing.findMany({
                 where,
                 include: {
@@ -332,6 +374,36 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 where: whereWithoutCondition,
                 _count: { _all: true },
             }),
+            fastify.prisma.listing.groupBy({
+                by: ['make'],
+                where: whereWithoutMake,
+                _count: { _all: true },
+            }),
+            fastify.prisma.listing.groupBy({
+                by: ['model'],
+                where: whereWithoutModel,
+                _count: { _all: true },
+            }),
+            fastify.prisma.listing.groupBy({
+                by: ['fuelType'],
+                where: whereWithoutFuel,
+                _count: { _all: true },
+            }),
+            fastify.prisma.listing.groupBy({
+                by: ['transmission'],
+                where: whereWithoutTransmission,
+                _count: { _all: true },
+            }),
+            fastify.prisma.listing.groupBy({
+                by: ['bodyType'],
+                where: whereWithoutBody,
+                _count: { _all: true },
+            }),
+            fastify.prisma.listing.groupBy({
+                by: ['drive'],
+                where: whereWithoutDrive,
+                _count: { _all: true },
+            }),
         ]);
 
         const byCondition = { NEW: 0, USED: 0 };
@@ -341,10 +413,32 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         }
 
+        // Build facet maps (lowercased keys for case-insensitive matching with frontend options)
+        const toFacetMap = (rows: any[], key: string): Record<string, number> => {
+            const out: Record<string, number> = {};
+            for (const r of rows) {
+                const v = r[key];
+                if (v == null || v === '') continue;
+                const k = String(v).toLowerCase();
+                out[k] = (out[k] || 0) + r._count._all;
+            }
+            return out;
+        };
+
+        const facets = {
+            make: toFacetMap(byMakeRaw, 'make'),
+            model: toFacetMap(byModelRaw, 'model'),
+            fuelType: toFacetMap(byFuelRaw, 'fuelType'),
+            transmission: toFacetMap(byTransmissionRaw, 'transmission'),
+            bodyType: toFacetMap(byBodyRaw, 'bodyType'),
+            drive: toFacetMap(byDriveRaw, 'drive'),
+        };
+
         return {
             listings,
             count: totalCount,
             byCondition,
+            facets,
             page,
             perPage,
             totalPages: Math.max(1, Math.ceil(totalCount / perPage))

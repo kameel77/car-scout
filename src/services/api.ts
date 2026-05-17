@@ -374,6 +374,11 @@ export const listingsApi = {
             if (filters.capacityFrom) params.append('capacityMin', filters.capacityFrom.toString());
             if (filters.capacityTo) params.append('capacityMax', filters.capacityTo.toString());
 
+            if (filters.rateFrom) params.append('rateMin', filters.rateFrom.toString());
+            if (filters.rateTo) params.append('rateMax', filters.rateTo.toString());
+            if (filters.rateType) params.append('rateType', filters.rateType);
+            if (filters.rateBasis) params.append('rateBasis', filters.rateBasis);
+
             if (filters.sortBy) params.append('sortBy', filters.sortBy);
             if (filters.query) params.append('q', filters.query);
             if (filters.currency) params.append('currency', filters.currency);
