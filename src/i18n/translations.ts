@@ -96,11 +96,11 @@ export const translations = {
 
       // Fuel types (canonical bucket labels — used by filter, listing pills, tech spec).
       fuel: {
-        petrol: "Benzyna",
-        diesel: "Diesel",
+        petrol: "PB",
+        diesel: "ON",
         hybrid: "Hybryda",
         hybridPlugin: "Hybryda plug-in",
-        petrolLpg: "Benzyna + LPG",
+        petrolLpg: "PB + LPG",
         hybridHev: "Hybryda HEV",
         hybridPhev: "Hybryda PHEV",
         electric: "Elektryczny",

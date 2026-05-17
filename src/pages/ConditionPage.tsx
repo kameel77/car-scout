@@ -36,7 +36,7 @@ import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { rentalPublicApi } from '@/services/rental-api';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
-import { getTransmissionShortLabel, canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
+import { getTransmissionShortLabel, canonicalTransmission, canonicalFuel, translateTechnicalValue } from '@/utils/i18n-utils';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
@@ -528,7 +528,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
                     <div className="flex flex-wrap gap-1.5">
                       {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}</span>}
                       {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM</span>}
-                      {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {v.fuelType}</span>}
+                      {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {translateTechnicalValue('fuel', v.fuelType, t)}</span>}
                       {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Settings2 className="h-3.5 w-3.5 shrink-0" /> {getTransmissionShortLabel(v.transmission, t)}</span>}
                     </div>
                     <div className="flex-1" />
