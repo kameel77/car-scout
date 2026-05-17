@@ -6,6 +6,7 @@ export const translations = {
         search: "Szukaj",
         clear: "Wyczyść",
         clearFilters: "Wyczyść filtry",
+        clearAllFilters: "Wyczyść wszystkie filtry",
         apply: "Zastosuj",
         cancel: "Anuluj",
         save: "Zapisz",
@@ -27,6 +28,8 @@ export const translations = {
         offers: "ofert",
         perPage: "na stronę",
         toTop: "Do góry",
+        gross: "Brutto",
+        net: "Netto",
       },
 
       // Navigation
@@ -78,6 +81,11 @@ export const translations = {
         priceFrom: "Cena od",
         priceTo: "Cena do",
         status: "Stan",
+        monthlyRate: "Wysokość raty",
+        credit: "Kredyt",
+        lease: "Leasing",
+        gross: "Brutto",
+        net: "Netto",
       },
 
       // Vehicle status (NEW / USED)
@@ -366,6 +374,7 @@ export const translations = {
         search: "Search",
         clear: "Clear",
         clearFilters: "Clear filters",
+        clearAllFilters: "Clear all filters",
         apply: "Apply",
         cancel: "Cancel",
         save: "Save",
@@ -387,6 +396,8 @@ export const translations = {
         offers: "offers",
         perPage: "per page",
         toTop: "Back to top",
+        gross: "Gross",
+        net: "Net",
       },
 
       // Navigation
@@ -438,6 +449,9 @@ export const translations = {
         priceFrom: "Price from",
         priceTo: "Price to",
         status: "Status",
+        monthlyRate: "Monthly rate",
+        credit: "Credit",
+        lease: "Lease",
       },
 
       // Vehicle status (NEW / USED)
@@ -726,6 +740,7 @@ export const translations = {
         search: "Suchen",
         clear: "Löschen",
         clearFilters: "Filter löschen",
+        clearAllFilters: "Alle Filter löschen",
         apply: "Anwenden",
         cancel: "Abbrechen",
         save: "Speichern",
@@ -796,6 +811,9 @@ export const translations = {
         priceFrom: "Preis von",
         priceTo: "Preis bis",
         status: "Zustand",
+        monthlyRate: "Monatsrate",
+        credit: "Kredit",
+        lease: "Leasing",
       },
 
       // Vehicle status (NEW / USED)

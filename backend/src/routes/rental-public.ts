@@ -10,6 +10,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             model,
             bodyType,
             fuelType,
+            transmission,
+            drive,
             search,
             sortBy = 'createdAt',
             sortOrder = 'desc',
@@ -18,6 +20,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             yearTo,
             priceFrom,
             priceTo,
+            mileageFrom,
+            mileageTo,
+            powerFrom,
+            powerTo,
+            capacityFrom,
+            capacityTo,
             condition
         } = request.query as Record<string, string | undefined>;
 
@@ -35,6 +43,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         const models = toArray(model);
         const bodyTypes = toArray(bodyType);
         const fuelTypes = toArray(fuelType);
+        const transmissions = toArray(transmission);
+        const drives = toArray(drive);
         const statuses = toArray(condition)
             ?.map((c) => c.toUpperCase())
             .filter((c) => c === 'NEW' || c === 'USED') as ('NEW' | 'USED')[] | undefined;
@@ -67,6 +77,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         if (models) where.model = { in: models, mode: 'insensitive' as const };
         if (bodyTypes) where.bodyType = { in: bodyTypes, mode: 'insensitive' as const };
         if (fuelTypes) where.fuelType = { in: fuelTypes, mode: 'insensitive' as const };
+        if (transmissions) where.transmission = { in: transmissions, mode: 'insensitive' as const };
+        if (drives) where.drive = { in: drives, mode: 'insensitive' as const };
 
         // Condition filter (NEW / USED)
         if (statuses) {
@@ -78,6 +90,27 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             where.productionYear = {};
             if (yearFrom) where.productionYear.gte = parseInt(yearFrom);
             if (yearTo) where.productionYear.lte = parseInt(yearTo);
+        }
+
+        // Mileage range filter
+        if (mileageFrom || mileageTo) {
+            where.mileageKm = {};
+            if (mileageFrom) where.mileageKm.gte = parseInt(mileageFrom);
+            if (mileageTo) where.mileageKm.lte = parseInt(mileageTo);
+        }
+
+        // Power range filter
+        if (powerFrom || powerTo) {
+            where.enginePowerHp = {};
+            if (powerFrom) where.enginePowerHp.gte = parseInt(powerFrom);
+            if (powerTo) where.enginePowerHp.lte = parseInt(powerTo);
+        }
+
+        // Engine capacity range filter
+        if (capacityFrom || capacityTo) {
+            where.engineCapacityCm3 = {};
+            if (capacityFrom) where.engineCapacityCm3.gte = parseInt(capacityFrom);
+            if (capacityTo) where.engineCapacityCm3.lte = parseInt(capacityTo);
         }
 
         if (search) {
@@ -292,8 +325,9 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             };
         });
 
-        // Get filter options (including condition counts)
+        // Get filter options (including condition counts) + per-dimension facets
         const filterOptions = await getFilterOptions(fastify, where);
+        const facets = await computeFacets(fastify, where);
 
         return {
             vehicles: vehiclesWithRates,
@@ -303,7 +337,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 total,
                 totalPages: Math.ceil(total / limitNum)
             },
-            filters: filterOptions
+            filters: filterOptions,
+            facets
         };
     });
 
@@ -448,6 +483,72 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             cheapest: offers.length > 0 ? offers[0] : null
         };
     });
+}
+
+// Per-dimension facets: for each dimension, count grouped by it with that dimension's filter stripped
+// (so the user sees "BMW (24)" even after selecting BMW — the count is for the alternative if BMW were deselected).
+async function computeFacets(fastify: FastifyInstance, where: any) {
+    const stripKey = (w: any, key: string) => {
+        const { [key]: _, ...rest } = w;
+        return rest;
+    };
+
+    const toFacetMap = (rows: any[], key: string): Record<string, number> => {
+        const out: Record<string, number> = {};
+        const canonical: Record<string, string> = {};
+        for (const r of rows) {
+            const v = r[key];
+            if (v == null || v === '') continue;
+            const raw = String(v);
+            const lower = raw.toLowerCase();
+            if (!canonical[lower]) canonical[lower] = raw;
+            const k = canonical[lower];
+            out[k] = (out[k] || 0) + r._count._all;
+        }
+        return out;
+    };
+
+    const [byMake, byModel, byFuel, byBody, byTransmission, byDrive] = await Promise.all([
+        fastify.prisma.rentalVehicle.groupBy({
+            by: ['make'],
+            where: stripKey(where, 'make'),
+            _count: { _all: true },
+        }),
+        fastify.prisma.rentalVehicle.groupBy({
+            by: ['model'],
+            where: stripKey(where, 'model'),
+            _count: { _all: true },
+        }),
+        fastify.prisma.rentalVehicle.groupBy({
+            by: ['fuelType'],
+            where: stripKey(where, 'fuelType'),
+            _count: { _all: true },
+        }),
+        fastify.prisma.rentalVehicle.groupBy({
+            by: ['bodyType'],
+            where: stripKey(where, 'bodyType'),
+            _count: { _all: true },
+        }),
+        fastify.prisma.rentalVehicle.groupBy({
+            by: ['transmission'],
+            where: stripKey(where, 'transmission'),
+            _count: { _all: true },
+        }),
+        fastify.prisma.rentalVehicle.groupBy({
+            by: ['drive'],
+            where: stripKey(where, 'drive'),
+            _count: { _all: true },
+        }),
+    ]);
+
+    return {
+        make: toFacetMap(byMake, 'make'),
+        model: toFacetMap(byModel, 'model'),
+        fuelType: toFacetMap(byFuel, 'fuelType'),
+        bodyType: toFacetMap(byBody, 'bodyType'),
+        transmission: toFacetMap(byTransmission, 'transmission'),
+        drive: toFacetMap(byDrive, 'drive'),
+    };
 }
 
 async function getFilterOptions(fastify: FastifyInstance, currentWhere?: any) {
