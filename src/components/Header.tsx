@@ -237,12 +237,6 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
               <Phone className="h-4 w-4" />
             </a>
           )}
-          <Link
-            to="/samochody"
-            className="flex sm:hidden h-9 items-center justify-center rounded-full bg-accent px-4 text-xs font-semibold text-accent-foreground"
-          >
-            Znajdź auto
-          </Link>
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-[#2D3142]">

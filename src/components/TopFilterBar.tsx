@@ -11,10 +11,24 @@ import { cn } from '@/lib/utils';
 // Build options dynamically from facet keys returned by the API (DB values, e.g.
 // 'benzynowy', 'benzynowy + gaz', 'hybryda plug-in'). The previous hardcoded
 // 'benzyna'/'hybryda' never matched real values for most listings.
-function optionsFromFacet(facet?: Record<string, number>): { value: string; label: string }[] {
+function optionsFromFacet(
+  facet?: Record<string, number>,
+  labelMap?: Record<string, string>,
+): { value: string; label: string }[] {
   if (!facet) return [];
-  return Object.keys(facet).map((k) => ({ value: k, label: k }));
+  return Object.keys(facet).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
+
+const FUEL_LABEL_MAP: Record<string, string> = {
+  petrol: 'fuel.petrol',
+  diesel: 'fuel.diesel',
+  hybrid: 'fuel.hybrid',
+  hybrid_plugin: 'fuel.hybridPlugin',
+  petrol_lpg: 'fuel.petrolLpg',
+  electric: 'fuel.electric',
+  lpg: 'fuel.lpg',
+  cng: 'fuel.cng',
+};
 
 interface FilterPillProps {
   label: string;
@@ -265,7 +279,7 @@ export function TopFilterBar({
 
       <FilterPill label={t('filters.fuelType')} activeCount={filters.fuelTypes.length}>
         <MultiCheck
-          options={optionsFromFacet(facets?.fuelType)}
+          options={optionsFromFacet(facets?.fuelType, FUEL_LABEL_MAP)}
           selected={filters.fuelTypes}
           onChange={(v) => update('fuelTypes', v)}
           counts={facets?.fuelType}
