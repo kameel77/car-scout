@@ -13,6 +13,7 @@ import { formatPrice, formatNumber } from '@/utils/formatters';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { ImageSwiper } from '@/components/ImageSwiper';
+import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
@@ -288,10 +289,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             {/* Transmission */}
             {listing.transmission && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
-                <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M40 12v12H8m16-12v24M8 12v24"/>
-                  <path d="M44 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M28 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M12 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0m16 32a4 4 0 1 1-8 0a4 4 0 0 1 8 0m-16 0a4 4 0 1 1-8 0a4 4 0 0 1 8 0m28 4a4 4 0 1 0 0-8a4 4 0 0 0 0 8"/>
-                </svg>
+                <GearboxIcon className="h-3.5 w-3.5 shrink-0" />
                 {getTransmissionShortLabel(listing.transmission, t)}
               </span>
             )}

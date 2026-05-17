@@ -310,7 +310,7 @@ export default function RentalDetailPage() {
                             )}
                             
                             {/* Purchase Process Steps */}
-                            <div className="mt-8">
+                            <div className="mt-8 pt-8 border-t border-border">
                                 <PurchaseProcessStepper variant="compact" />
                             </div>
 

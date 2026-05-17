@@ -12,11 +12,12 @@ import { MetaHead } from '@/components/seo/MetaHead';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
-  Search, Calendar, Gauge, Fuel, Settings2, ChevronLeft, ChevronRight,
+  Search, Calendar, Gauge, Fuel, ChevronLeft, ChevronRight,
   Car, Building2, User, ChevronDown, ArrowUpDown, Check, SlidersHorizontal, X
 } from 'lucide-react';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
 import { getTransmissionShortLabel, translateTechnicalValue } from '@/utils/i18n-utils';
+import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { formatNumber } from '@/utils/formatters';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -547,10 +548,6 @@ export default function RentalSearchPage() {
 
           <div className="flex-1" />
 
-          <span className="hidden sm:block text-sm text-muted-foreground whitespace-nowrap px-2">
-            {t('common.found')}: <span className="font-semibold text-foreground">{PLN.format(totalCount)}</span>
-          </span>
-
           {/* Na firmę / Prywatnie */}
           <div className="flex bg-secondary rounded-lg p-0.5">
             <button type="button" onClick={() => handleClientTypeChange('business')} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap', isBusiness ? 'bg-accent shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
@@ -614,7 +611,7 @@ export default function RentalSearchPage() {
                     {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}</span>}
                     {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM</span>}
                     {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {translateTechnicalValue('fuel', v.fuelType, t)}</span>}
-                    {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Settings2 className="h-3.5 w-3.5 shrink-0" /> {getTransmissionShortLabel(v.transmission, t)}</span>}
+                    {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><GearboxIcon className="h-3.5 w-3.5 shrink-0" /> {getTransmissionShortLabel(v.transmission, t)}</span>}
                   </div>
                   <div className="flex-1" />
                   <div className="pt-3">

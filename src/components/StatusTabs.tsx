@@ -91,14 +91,6 @@ export function StatusTabs({
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Znaleziono */}
-      {resultCount !== undefined && (
-        <span className="hidden sm:block text-sm text-muted-foreground whitespace-nowrap px-2">
-          {t('common.found')}:{' '}
-          <span className="font-semibold text-foreground">{PLN.format(resultCount)}</span>
-        </span>
-      )}
-
       {/* Na firmę / Prywatnie pill toggle */}
       <div className="flex bg-secondary rounded-lg p-0.5">
         <button

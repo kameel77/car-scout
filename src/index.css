@@ -224,17 +224,33 @@
   }
 
   /* Thulium chat-widget — hide on mobile (collides with .sticky-cta).
-     On desktop the floating widget stays visible. Selectors are broad on
-     purpose because Thulium's class names are subject to change. */
+     On desktop the floating widget stays visible. Thulium's iframe contents
+     use obfuscated class names like _invitationButtonBubble_1h7bi_1 inside
+     a cross-origin iframe (so the inner content cannot be hit from parent
+     CSS — we hide the iframe element itself by every attribute we know). */
   @media (max-width: 767px) {
-    iframe[src*="thulium.com"],
     iframe[src*="thulium"],
-    div[class*="thulium"],
-    div[id*="thulium"],
+    iframe[src*="thulium.com"],
+    iframe[id*="thulium"],
+    iframe[id*="tlm-"],
+    iframe[id*="tc-chat"],
+    iframe[id*="chat-widget"],
+    iframe[name*="thulium"],
+    iframe[name*="tlm"],
+    iframe[title*="Thulium" i],
+    iframe[title*="Chat" i],
+    div[class*="thulium" i],
+    div[id*="thulium" i],
+    div[id*="tlm-chat"],
+    div[id*="tc-chat"],
+    div[class*="invitationButton"],
+    div[class*="invitationBubble"],
     div[class*="ChatBtn"],
     div[class*="chat-loader"],
+    div[id^="chat-widget"],
     #tc-chat-widget,
-    #thulium-chat-widget {
+    #thulium-chat-widget,
+    #tlm-chat-widget {
       display: none !important;
     }
   }
