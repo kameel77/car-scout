@@ -286,10 +286,10 @@ export default function SearchPage() {
 
       <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0">
-          <SheetHeader className="px-6 pt-6 pb-2">
+          <SheetHeader className="sr-only">
             <SheetTitle>{t('filters.title')}</SheetTitle>
           </SheetHeader>
-          <div className="px-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
+          <div className="px-6 pt-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
             <FilterPanel
               filters={filters}
               onFilterChange={handleFilterChange}

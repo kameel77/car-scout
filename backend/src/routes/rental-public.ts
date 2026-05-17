@@ -52,6 +52,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
         const where: any = {
             isActive: true,
+            isPublished: true,
             rentalAssignments: {
                 some: {
                     isActive: true,
@@ -316,7 +317,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     { slug },
                     { id: slug } // Fallback to ID
                 ],
-                isActive: true
+                isActive: true,
+                isPublished: true
             },
             include: {
                 dealer: {
@@ -387,7 +389,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         const vehicle = await fastify.prisma.rentalVehicle.findFirst({
             where: {
                 OR: [{ slug }, { id: slug }],
-                isActive: true
+                isActive: true,
+                isPublished: true
             },
             select: {
                 id: true,
@@ -455,7 +458,7 @@ async function getFilterOptions(fastify: FastifyInstance, currentWhere?: any) {
     if (cached) {
         staticOptions = JSON.parse(cached);
     } else {
-        const activeWhere = { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } };
+        const activeWhere = { isActive: true, isPublished: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } };
 
         const [makes, models, bodyTypes, fuelTypes, years] = await Promise.all([
             fastify.prisma.rentalVehicle.findMany({
@@ -499,7 +502,7 @@ async function getFilterOptions(fastify: FastifyInstance, currentWhere?: any) {
     }
 
     // Condition counts — always fresh (based on active vehicles, ignoring condition filter)
-    const baseWhere = { isActive: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } };
+    const baseWhere = { isActive: true, isPublished: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } };
     const [newCount, usedCount] = await Promise.all([
         fastify.prisma.rentalVehicle.count({ where: { ...baseWhere, condition: 'NEW' } }),
         fastify.prisma.rentalVehicle.count({ where: { ...baseWhere, condition: 'USED' } })
