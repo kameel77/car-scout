@@ -1,15 +1,19 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { StatusTabs } from '@/components/StatusTabs';
 import { TopFilterBar } from '@/components/TopFilterBar';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
+import { RentalListingCard } from '@/components/RentalListingCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
+import { rentalPublicApi } from '@/services/rental-api';
+import { mergeFacets, mergeMakes, mergeModels } from '@/utils/listingMerge';
 import { ListingPagination } from '@/components/ListingPagination';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { Footer } from '@/components/Footer';
@@ -225,8 +229,53 @@ export default function SearchPage() {
   const { data: adsData } = usePartnerAds();
   const partnersAds = adsData?.ads || [];
   const listings = data?.listings || [];
-  const totalCount = data?.count ?? listings.length;
-  const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((totalCount || 1) / perPage));
+  const saleTotalCount = data?.count ?? listings.length;
+
+  const rentalCondition = filters.statuses.length === 1
+    ? (filters.statuses[0] as 'NEW' | 'USED')
+    : undefined;
+  const { data: rentalData, isLoading: rentalLoading } = useQuery({
+    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.priceFrom, filters.priceTo, filters.query],
+    queryFn: () => rentalPublicApi.listVehicles({
+      page: '1',
+      limit: '50',
+      search: filters.query || undefined,
+      make: filters.makes.length === 1 ? filters.makes[0] : undefined,
+      fuelType: filters.fuelTypes.length === 1 ? filters.fuelTypes[0] : undefined,
+      bodyType: filters.bodyTypes.length === 1 ? filters.bodyTypes[0] : undefined,
+      yearFrom: filters.yearFrom || undefined,
+      yearTo: filters.yearTo || undefined,
+      priceFrom: filters.priceFrom || undefined,
+      priceTo: filters.priceTo || undefined,
+      condition: rentalCondition,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    }),
+  });
+  const rentalVehicles = rentalData?.vehicles || [];
+
+  const rentalByCondition = rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined;
+  const mergedByCondition = data?.byCondition
+    ? {
+        NEW: data.byCondition.NEW + (rentalByCondition?.NEW ?? 0),
+        USED: data.byCondition.USED + (rentalByCondition?.USED ?? 0),
+      }
+    : undefined;
+  const mergedMakes = React.useMemo(
+    () => mergeMakes(options?.makes || [], rentalData?.filters?.makes || []),
+    [options?.makes, rentalData?.filters?.makes],
+  );
+  const mergedModels = React.useMemo(
+    () => mergeModels(options?.models || [], rentalData?.filters?.models || []),
+    [options?.models, rentalData?.filters?.models],
+  );
+  const mergedFacets = React.useMemo(
+    () => mergeFacets(data?.facets, rentalData?.facets),
+    [data?.facets, rentalData?.facets],
+  );
+
+  const totalCount = saleTotalCount + rentalVehicles.length;
+  const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((saleTotalCount || 1) / perPage));
 
   const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
     setFilters(updatedFilters);
@@ -329,9 +378,9 @@ export default function SearchPage() {
               onFilterChange={handleFilterChange}
               onClear={handleClearFilters}
               resultCount={totalCount}
-              availableMakes={options?.makes || []}
-              availableModels={options?.models || []}
-              facets={data?.facets}
+              availableMakes={mergedMakes}
+              availableModels={mergedModels}
+              facets={mergedFacets}
             />
           </div>
         </SheetContent>
@@ -349,22 +398,22 @@ export default function SearchPage() {
           <TopFilterBar
             filters={filters}
             onFilterChange={handleFilterChange}
-            availableMakes={options?.makes || []}
-            availableModels={options?.models || []}
+            availableMakes={mergedMakes}
+            availableModels={mergedModels}
             onOpenAllFilters={() => setAllFiltersOpen(true)}
             query={desktopSearch}
             onQueryChange={(v) => {
               setIsDesktopTyping(true);
               setDesktopSearch(v);
             }}
-            facets={data?.facets}
+            facets={mergedFacets}
           />
 
           {/* Results */}
           <div className="flex-1 min-w-0">
             <StatusTabs
               activeStatuses={filters.statuses}
-              byCondition={data?.byCondition}
+              byCondition={mergedByCondition}
               onChange={(statuses) => {
                 handleFilterChange({ ...filters, statuses });
                 setPage(1);
@@ -389,8 +438,8 @@ export default function SearchPage() {
                 setPage(page === 1 ? 1 : 1); // Reset to page 1 on sort change
                 setPage(1);
               }}
-              availableMakes={options?.makes || []}
-              availableModels={options?.models || []}
+              availableMakes={mergedMakes}
+              availableModels={mergedModels}
             />
 
             {/* Top Banner Ad */}
@@ -413,11 +462,14 @@ export default function SearchPage() {
             )}
 
             <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
+              {rentalVehicles.map((v: any) => (
+                <RentalListingCard key={`r-${v.id}`} v={v} />
+              ))}
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
                 ))
-              ) : listings.length > 0 ? (
+              ) : (
                 listings.map((listing, index) => {
                   const elements = [];
 
@@ -452,7 +504,8 @@ export default function SearchPage() {
 
                   return elements;
                 })
-              ) : (
+              )}
+              {!isLoading && !rentalLoading && listings.length === 0 && rentalVehicles.length === 0 && (
                 <div className="col-span-full py-16 text-center">
                   <p className="text-lg font-medium text-foreground">{t('empty.noResults')}</p>
                   <p className="text-muted-foreground mt-1">{t('empty.noResultsHint')}</p>
