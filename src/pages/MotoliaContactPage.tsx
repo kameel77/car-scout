@@ -318,8 +318,8 @@ export default function MotoliaContactPage() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Adres</p>
-                      <p className="text-base font-semibold text-[#1A1A1A]">ul. Alternatywy 7/135</p>
-                      <p className="text-sm text-gray-500">02-775 Warszawa</p>
+                      <p className="text-base font-semibold text-[#1A1A1A]">ul. Jagielońska 88</p>
+                      <p className="text-sm text-gray-500">03-215 Warszawa</p>
                     </div>
                   </div>
                 </div>

@@ -15,7 +15,7 @@ export const motoliaConfig: BrandConfig = {
     accentForeground: '0 0% 10%',         // black text on yellow bg
   },
   contactInfo: {
-    phone: '+48 519 188 087',
+    phone: '+48 22 112 09 50',
     email: 'kontakt@motolia.pl',
   },
   logo: {
