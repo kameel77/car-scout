@@ -335,6 +335,13 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   });
 
   const rentalVehicles = rentalData?.vehicles || [];
+  const rentalByCondition = rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined;
+  const mergedByCondition = saleData?.byCondition
+    ? {
+        NEW: saleData.byCondition.NEW + (rentalByCondition?.NEW ?? 0),
+        USED: saleData.byCondition.USED + (rentalByCondition?.USED ?? 0),
+      }
+    : undefined;
   const isBusiness = priceType === 'net';
   const accent = 'hsl(var(--accent))';
   const accentText = 'hsl(var(--accent-foreground))';
@@ -485,7 +492,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
             <ConditionNavTabs
               condition={condition}
               resultCount={totalCombined}
-              byCondition={saleData?.byCondition}
+              byCondition={mergedByCondition}
               sortBy={sortBy}
               onSortChange={(value) => {
                 setSortBy(value);

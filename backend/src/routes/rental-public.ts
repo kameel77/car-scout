@@ -686,11 +686,17 @@ async function getFilterOptions(fastify: FastifyInstance, currentWhere?: any) {
         await fastify.redis.set(cacheKey, JSON.stringify(staticOptions), 'EX', 600);
     }
 
-    // Condition counts — always fresh (based on active vehicles, ignoring condition filter)
+    // Condition counts — honour all active filters except `condition` itself,
+    // so the NEW/USED tab counts shrink in step with the rest of the query.
     const baseWhere = { isActive: true, isPublished: true, rentalAssignments: { some: { isActive: true, matrixEntries: { some: {} } } } };
+    let countWhere: any = baseWhere;
+    if (currentWhere) {
+        const { condition: _omit, ...rest } = currentWhere;
+        countWhere = rest;
+    }
     const [newCount, usedCount] = await Promise.all([
-        fastify.prisma.rentalVehicle.count({ where: { ...baseWhere, condition: 'NEW' } }),
-        fastify.prisma.rentalVehicle.count({ where: { ...baseWhere, condition: 'USED' } })
+        fastify.prisma.rentalVehicle.count({ where: { ...countWhere, condition: 'NEW' } }),
+        fastify.prisma.rentalVehicle.count({ where: { ...countWhere, condition: 'USED' } })
     ]);
 
     return {
