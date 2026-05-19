@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mail, Phone, Shield, FileText, ExternalLink } from 'lucide-react';
+import { Mail, Phone, Shield, FileText, ExternalLink, Cookie } from 'lucide-react';
+import { openConsentSettings } from '@/components/consent/ConsentBanner';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
 import { useBrand } from '@/contexts/BrandContext';
@@ -132,6 +133,16 @@ export function Footer() {
                 <ExternalLink className="h-4 w-4 text-slate-500" />
               </a>
             ))}
+            <button
+              type="button"
+              onClick={openConsentSettings}
+              className="flex w-full items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm hover:border-slate-600 hover:bg-slate-900 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <Cookie className="h-4 w-4 text-slate-400" />
+                {t('footer.cookieSettings')}
+              </span>
+            </button>
           </div>
         </div>
 

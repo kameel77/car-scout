@@ -38,6 +38,7 @@ import { featuredRoutes } from './routes/featured.js';
 import { widgetRoutes } from './routes/widgets.js';
 import { onepagerRoutes } from './routes/onepager.js';
 import { featureTileRoutes } from './routes/feature-tiles.js';
+import { consentRoutes } from './routes/consent.js';
 import { closeBrowser } from './services/puppeteer.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -268,6 +269,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(widgetRoutes);
     await fastify.register(onepagerRoutes);
     await fastify.register(featureTileRoutes);
+    await fastify.register(consentRoutes);
 
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {

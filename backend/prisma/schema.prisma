@@ -734,3 +734,17 @@ model FeatureTile {
   @@index([isActive, sortOrder])
   @@map("feature_tiles")
 }
+
+model ConsentRecord {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now()) @map("created_at")
+  brandId       String?  @map("brand_id")
+  ipHash        String   @map("ip_hash")
+  userAgent     String   @map("user_agent")
+  country       String?
+  choice        Json
+  bannerVersion String   @map("banner_version")
+
+  @@index([createdAt])
+  @@map("consent_records")
+}

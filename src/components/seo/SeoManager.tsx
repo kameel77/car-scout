@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useBrand } from '@/contexts/BrandContext';
+import { loadConsent, pushConsentDefault, fetchGeo } from '@/lib/consent';
 import React from 'react';
 
 export interface SeoConfig {
@@ -62,9 +63,28 @@ export function SeoManager() {
     }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings, config.name]);
 
     useEffect(() => {
-        if (seoConfig?.gtmId) {
-            const gtmId = seoConfig.gtmId;
-            // Google Tag Manager
+        if (!seoConfig?.gtmId) return;
+        const gtmId = seoConfig.gtmId;
+
+        let cancelled = false;
+        (async () => {
+            const saved = loadConsent();
+            let analytics = false;
+            let marketing = false;
+            if (saved) {
+                analytics = saved.analytics;
+                marketing = saved.marketing;
+            } else {
+                const geo = await fetchGeo();
+                if (cancelled) return;
+                if (!geo.isEEA) {
+                    analytics = true;
+                    marketing = true;
+                }
+            }
+            pushConsentDefault(analytics, marketing);
+
+            // Google Tag Manager — pushes gtm.start after consent default so gtag.js boots with correct state
             (function (w: any, d: any, s: any, l: any, i: any) {
                 w[l] = w[l] || []; w[l].push({
                     'gtm.start':
@@ -77,7 +97,9 @@ export function SeoManager() {
                 j.src =
                     'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
             })(window, document, 'script', 'dataLayer', gtmId);
-        }
+        })();
+
+        return () => { cancelled = true; };
     }, [seoConfig?.gtmId]);
 
     const finalOgTitle = seoConfig?.homeTitle || (settings as any)?.defaultOgTitle || homeTitle || siteName || config.name;

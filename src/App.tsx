@@ -53,6 +53,7 @@ import DealerGroupsPage from "./pages/admin/DealerGroupsPage";
 import DealersPage from "./pages/admin/DealersPage";
 import WidgetsPage from "./pages/admin/WidgetsPage";
 import WidgetEmbedPage from "./pages/WidgetEmbedPage";
+import { ConsentBanner } from "./components/consent/ConsentBanner";
 
 const queryClient = new QueryClient();
 
@@ -269,6 +270,7 @@ const App = () => (
 
                       <Route path="*" element={<NotFound />} />
                     </Routes>
+                    <ConsentBanner />
                   </PersonalOfferProvider>
                 </CrmTrackingProvider>
               </SpecialOfferProvider>
