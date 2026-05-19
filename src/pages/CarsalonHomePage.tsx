@@ -22,6 +22,7 @@ import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 import { DynamicWidget } from '@/components/public/DynamicWidget';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
+import { FeatureTilesSection } from '@/components/FeatureTilesSection';
 import './home-page.css';
 
 
@@ -122,6 +123,8 @@ export default function CarsalonHomePage() {
           </div>
         </div>
       </section>
+
+      <FeatureTilesSection className="py-12 bg-white" />
 
       <section className="home-trust-bar home-reveal">
         <div className="home-trust-bar__inner">

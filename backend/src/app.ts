@@ -37,6 +37,8 @@ import { dealerAdminRoutes } from './routes/dealers-admin.js';
 import { featuredRoutes } from './routes/featured.js';
 import { widgetRoutes } from './routes/widgets.js';
 import { onepagerRoutes } from './routes/onepager.js';
+import { featureTileRoutes } from './routes/feature-tiles.js';
+import { consentRoutes } from './routes/consent.js';
 import { closeBrowser } from './services/puppeteer.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -266,6 +268,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(featuredRoutes);
     await fastify.register(widgetRoutes);
     await fastify.register(onepagerRoutes);
+    await fastify.register(featureTileRoutes);
+    await fastify.register(consentRoutes);
 
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {
@@ -314,16 +318,17 @@ export async function buildApp(): Promise<FastifyInstance> {
         return serveStaticFile(filePath, reply);
     });
 
-    // Static files — legal documents (PDF) at human-readable slugs
-    const LEGAL_PUBLIC_SLUGS = new Set([
+    // Static files — legal documents (PDF) + feature tile images at human-readable slugs
+    const PUBLIC_SLUGS = new Set([
         'impressum',
         'polityka-prywatnosci',
         'regulamin',
         'polityka-cookies',
+        'feature-tiles',
     ]);
     fastify.get('/uploads/:slug/:file', async (request, reply) => {
         const { slug, file } = request.params as { slug: string; file: string };
-        if (!LEGAL_PUBLIC_SLUGS.has(slug)) {
+        if (!PUBLIC_SLUGS.has(slug)) {
             return reply.code(404).send({ error: 'Not found' });
         }
         const filePath = path.join(uploadsRoot, slug, file);
