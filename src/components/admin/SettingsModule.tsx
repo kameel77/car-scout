@@ -32,7 +32,7 @@ const LEGAL_LANGUAGES = [
 const LEGAL_DOCS: { key: LegalDocKey; label: string; helper: string }[] = [
     { key: 'imprint', label: 'Impressum / Imprint', helper: 'Wymagane w DE – dane firmy + kontakt' },
     { key: 'privacyPolicy', label: 'Polityka prywatności', helper: 'RODO / GDPR' },
-    { key: 'terms', label: 'Regulamin / AGB', helper: 'Zasady korzystania z serwisu' },
+    { key: 'terms', label: 'Regulamin', helper: 'Zasady korzystania z serwisu' },
     { key: 'cookies', label: 'Polityka cookies', helper: 'Informacja o plikach cookie' }
 ];
 

@@ -355,7 +355,7 @@ export const translations = {
         documents: "Dokumenty",
         imprint: "Imprint / Impressum",
         privacy: "Polityka prywatności",
-        terms: "Regulamin / AGB",
+        terms: "Regulamin",
         cookies: "Polityka cookies",
         contact: "Kontakt",
         company: "Dane podmiotu",
