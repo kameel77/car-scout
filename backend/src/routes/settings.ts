@@ -2,6 +2,9 @@ import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
 import path from 'path';
 import fs from 'fs/promises';
+import { createWriteStream } from 'fs';
+import { pipeline } from 'stream/promises';
+import crypto from 'crypto';
 
 const LEGAL_LANGUAGES = ['pl', 'en', 'de'] as const;
 const LEGAL_DOC_KEYS = ['imprint', 'privacyPolicy', 'terms', 'cookies'] as const;
@@ -66,6 +69,10 @@ const toNumberOrFallback = (value: unknown, fallback: number) => {
 
 const LOGO_DIR = path.resolve(process.cwd(), 'uploads', 'logos');
 const ALLOWED_LOGO_EXT = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
+
+const LEGAL_DIR = path.resolve(process.cwd(), 'uploads', 'legal');
+const ALLOWED_PDF_MIME = ['application/pdf'];
+const MAX_LEGAL_PDF_SIZE = 10 * 1024 * 1024;
 
 function normalizeLegalDocuments(raw: any): Record<LegalDocKey, Record<string, string>> {
     const safeDocs: Record<LegalDocKey, Record<string, string>> = {
@@ -382,6 +389,82 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                 footerLogoUrl: target === 'footer' ? url : null
             }
         });
+
+        return { url };
+    });
+
+    // Upload legal document PDF (imprint / privacyPolicy / terms / cookies × pl/en/de)
+    fastify.post('/api/settings/legal-doc', {
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+    }, async (request, reply) => {
+        const file = await request.file();
+        if (!file) {
+            return reply.code(400).send({ error: 'File is required' });
+        }
+
+        const readField = (name: string): string | undefined => {
+            const f = (file.fields as any)?.[name];
+            if (typeof f === 'string') return f;
+            if (Array.isArray(f) && typeof f[0] === 'string') return f[0];
+            if (f && typeof f === 'object' && typeof f.value === 'string') return f.value;
+            const q = (request.query as any)?.[name];
+            return typeof q === 'string' ? q : undefined;
+        };
+
+        const key = readField('key') as LegalDocKey | undefined;
+        const lang = readField('lang');
+        if (!key || !LEGAL_DOC_KEYS.includes(key)) {
+            return reply.code(400).send({ error: `Invalid key. Use one of: ${LEGAL_DOC_KEYS.join(', ')}` });
+        }
+        if (!lang || !LEGAL_LANGUAGES.includes(lang as any)) {
+            return reply.code(400).send({ error: `Invalid lang. Use one of: ${LEGAL_LANGUAGES.join(', ')}` });
+        }
+        if (!ALLOWED_PDF_MIME.includes(file.mimetype)) {
+            return reply.code(400).send({ error: `Unsupported MIME: ${file.mimetype}. Only PDF allowed.` });
+        }
+
+        const docDir = path.join(LEGAL_DIR, key);
+        await fs.mkdir(docDir, { recursive: true });
+
+        const hash = crypto.randomBytes(8).toString('hex');
+        const filename = `${lang}-${Date.now()}-${hash}.pdf`;
+        const filepath = path.join(docDir, filename);
+        await pipeline(file.file, createWriteStream(filepath));
+
+        const stats = await fs.stat(filepath);
+        if (stats.size > MAX_LEGAL_PDF_SIZE) {
+            await fs.unlink(filepath);
+            return reply.code(413).send({ error: 'File too large (max 10MB)' });
+        }
+
+        const url = `/uploads/legal/${key}/${filename}`;
+
+        // Load current settings to merge legalDocuments and delete previous file if it lived in /uploads/legal/
+        const current = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
+        const currentDocs = normalizeLegalDocuments((current as any)?.legalDocuments);
+        const previousUrl = currentDocs[key]?.[lang];
+
+        currentDocs[key] = { ...currentDocs[key], [lang]: url };
+
+        await fastify.prisma.appSettings.upsert({
+            where: { id: 'default' },
+            update: { legalDocuments: currentDocs },
+            create: {
+                id: 'default',
+                enabledLanguages: ['pl'],
+                displayCurrency: 'PLN',
+                eurExRate: 4.3,
+                brokerFeePctPln: 3.5,
+                brokerFeePctEur: 3.5,
+                autoRefreshImages: false,
+                legalDocuments: currentDocs
+            }
+        });
+
+        if (previousUrl && previousUrl.startsWith('/uploads/legal/')) {
+            const oldPath = path.join(process.cwd(), previousUrl.replace(/^\//, ''));
+            try { await fs.unlink(oldPath); } catch { /* ignore */ }
+        }
 
         return { url };
     });

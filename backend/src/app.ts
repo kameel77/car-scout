@@ -276,7 +276,8 @@ export async function buildApp(): Promise<FastifyInstance> {
                 : ext === '.png' ? 'image/png'
                     : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
                         : ext === '.webp' ? 'image/webp'
-                            : 'application/octet-stream';
+                            : ext === '.pdf' ? 'application/pdf'
+                                : 'application/octet-stream';
             reply.header('Content-Type', mime);
             reply.header('Cache-Control', 'public, max-age=31536000');
             return reply.send(createReadStream(filePath));
@@ -310,6 +311,13 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.get('/uploads/csflow-images/:listingId/:file', async (request, reply) => {
         const { listingId, file } = request.params as { listingId: string; file: string };
         const filePath = path.join(uploadsRoot, 'csflow-images', listingId, file);
+        return serveStaticFile(filePath, reply);
+    });
+
+    // Static files — legal documents (PDF)
+    fastify.get('/uploads/legal/:key/:file', async (request, reply) => {
+        const { key, file } = request.params as { key: string; file: string };
+        const filePath = path.join(uploadsRoot, 'legal', key, file);
         return serveStaticFile(filePath, reply);
     });
 
