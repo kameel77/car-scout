@@ -5,11 +5,10 @@
  * Routes: /nowe → condition="NEW"   /uzywane → condition="USED"
  */
 import React from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Car, Calendar, Gauge, Fuel, Building2, User, ArrowUpDown, Check } from 'lucide-react';
-import { GearboxIcon } from '@/components/icons/GearboxIcon';
+import { Car, Building2, User, ArrowUpDown, Check } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
@@ -21,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { ListingPagination } from '@/components/ListingPagination';
+import { RentalListingCard } from '@/components/RentalListingCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Select,
@@ -36,11 +36,10 @@ import { useBrand } from '@/contexts/BrandContext';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { rentalPublicApi } from '@/services/rental-api';
-import { normalizeRentalImageUrl, cn } from '@/lib/utils';
-import { getTransmissionShortLabel, canonicalTransmission, canonicalFuel, translateTechnicalValue } from '@/utils/i18n-utils';
-import { formatNumber } from '@/utils/formatters';
-import { ImageSwiper } from '@/components/ImageSwiper';
+import { cn } from '@/lib/utils';
+import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { mergeFacets, mergeMakes, mergeModels } from '@/utils/listingMerge';
 const PLN_FMT = new Intl.NumberFormat('pl-PL');
 
 /* ── helpers ── */
@@ -61,17 +60,6 @@ const parseNumberParam = (v: string | null, fallback: number) => {
   return Number.isFinite(p) && p > 0 ? p : fallback;
 };
 
-function buildRentalImageList(v: any): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  const push = (raw: string | null | undefined) => {
-    const url = normalizeRentalImageUrl(raw, v.id);
-    if (url && !seen.has(url)) { seen.add(url); out.push(url); }
-  };
-  push(v.primaryImageUrl);
-  for (const u of v.imageUrls || []) push(u);
-  return out;
-}
 /* ── ConditionNavTabs ── */
 
 const sortOpts = [
@@ -160,7 +148,6 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const { config } = useBrand();
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
-  const { priceType } = usePriceSettings();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const isNew = condition === 'NEW';
@@ -342,9 +329,18 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
         USED: saleData.byCondition.USED + (rentalByCondition?.USED ?? 0),
       }
     : undefined;
-  const isBusiness = priceType === 'net';
-  const accent = 'hsl(var(--accent))';
-  const accentText = 'hsl(var(--accent-foreground))';
+  const mergedMakes = React.useMemo(
+    () => mergeMakes(options?.makes || [], rentalData?.filters?.makes || []),
+    [options?.makes, rentalData?.filters?.makes],
+  );
+  const mergedModels = React.useMemo(
+    () => mergeModels(options?.models || [], rentalData?.filters?.models || []),
+    [options?.models, rentalData?.filters?.models],
+  );
+  const mergedFacets = React.useMemo(
+    () => mergeFacets(saleData?.facets, rentalData?.facets),
+    [saleData?.facets, rentalData?.facets],
+  );
 
   /* ── Handlers ── */
   const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
@@ -456,9 +452,9 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               onFilterChange={handleFilterChange}
               onClear={handleClearFilters}
               resultCount={totalCombined}
-              availableMakes={options?.makes || []}
-              availableModels={options?.models || []}
-              facets={saleData?.facets}
+              availableMakes={mergedMakes}
+              availableModels={mergedModels}
+              facets={mergedFacets}
             />
           </div>
         </SheetContent>
@@ -476,15 +472,15 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
           <TopFilterBar
             filters={filters}
             onFilterChange={handleFilterChange}
-            availableMakes={options?.makes || []}
-            availableModels={options?.models || []}
+            availableMakes={mergedMakes}
+            availableModels={mergedModels}
             onOpenAllFilters={() => setAllFiltersOpen(true)}
             query={desktopSearch}
             onQueryChange={(v) => {
               setIsDesktopTyping(true);
               setDesktopSearch(v);
             }}
-            facets={saleData?.facets}
+            facets={mergedFacets}
           />
 
           {/* Tabs: Nowy / Używany – navigate between /nowe and /uzywane */}
@@ -510,47 +506,14 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
                 setSortBy(value);
                 setPage(1);
               }}
-              availableMakes={options?.makes || []}
-              availableModels={options?.models || []}
+              availableMakes={mergedMakes}
+              availableModels={mergedModels}
             />
 
             {/* ── UNIFIED GRID ── */}
             <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
               {rentalVehicles.map((v: any) => (
-                <Link key={`r-${v.id}`} to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                  <div className="relative">
-                    <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center"><Car className="w-16 h-16 text-gray-300" /></div>} />
-                    <div className="absolute top-3 left-3 bg-accent text-accent-foreground text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full z-10">WYNAJEM</div>
-                  </div>
-                  <div className="p-4 space-y-3 flex-1 flex flex-col">
-                    <div>
-                      <span className={`text-[10px] font-bold tracking-wider ${isNew ? 'text-accent' : 'text-muted-foreground'}`}>{isNew ? t('listing.statusNew') : t('listing.statusUsed')}</span>
-                      <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{v.make} {v.model}</h3>
-                      <p className="text-sm font-medium text-muted-foreground line-clamp-1 min-h-[1.25rem]">{v.version || '\u00A0'}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {v.productionYear && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Calendar className="h-3.5 w-3.5 shrink-0" /> {v.productionYear}</span>}
-                      {v.enginePowerHp && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Gauge className="h-3.5 w-3.5 shrink-0" /> {v.enginePowerHp} KM</span>}
-                      {v.fuelType && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><Fuel className="h-3.5 w-3.5 shrink-0" /> {translateTechnicalValue('fuel', v.fuelType, t)}</span>}
-                      {v.transmission && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium"><GearboxIcon className="h-3.5 w-3.5 shrink-0" /> {getTransmissionShortLabel(v.transmission, t)}</span>}
-                    </div>
-                    <div className="flex-1" />
-                    <div className="pt-3">
-                      {v.minMonthlyRateGross ? (<div>
-                        <span className="text-xs text-muted-foreground block mb-1">Rata od</span>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl" style={{ background: accent, color: accentText }}>
-                            {isBusiness ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23)) : formatNumber(Math.ceil(v.minMonthlyRateGross))}
-                            <span className="text-base font-semibold ml-0.5">zł</span>
-                          </span>
-                          <span className="text-xs text-muted-foreground">{isBusiness ? 'netto / mies.' : 'brutto / mies.'}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">{isBusiness ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto` : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`}</div>
-                        {v.minRateConfig && <span className="text-xs text-muted-foreground">{v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)}tys. km/rok</span>}
-                      </div>) : <span className="text-sm text-muted-foreground">Zapytaj o cenę</span>}
-                    </div>
-                  </div>
-                </Link>
+                <RentalListingCard key={`r-${v.id}`} v={v} />
               ))}
               {saleLoading ? Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={i} />) : saleListings.map((listing, index) => <ListingCard key={listing.listing_id} listing={listing} index={index} />)}
             </div>
