@@ -25,6 +25,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { DynamicWidget } from '@/components/public/DynamicWidget';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import HeroVehicleFilter from '@/components/HeroVehicleFilter';
+import { FeatureTilesSection } from '@/components/FeatureTilesSection';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -253,6 +254,9 @@ export default function MotoliaHomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── FEATURE TILES (CMS-managed) ──────────────────────────────────── */}
+      <FeatureTilesSection className="py-12 bg-white border-b border-gray-100" />
 
       {/* ── TRUST BAR ────────────────────────────────────────────────────── */}
       <section className="border-y border-gray-100 bg-white">

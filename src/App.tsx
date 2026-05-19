@@ -21,6 +21,7 @@ import AdminDashboard from "./pages/admin/DashboardPage";
 import TranslationsPage from "./pages/admin/TranslationsPage";
 import UsersPage from "./pages/admin/UsersPage";
 import FaqPage from "./pages/admin/FaqPage";
+import FeatureTilesPage from "./pages/admin/FeatureTilesPage";
 import FinancingPage from "./pages/admin/FinancingPage";
 import ImportPage from "./pages/admin/ImportPage";
 import PriceAnalyticsPage from "./pages/admin/PriceAnalyticsPage";
@@ -52,6 +53,7 @@ import DealerGroupsPage from "./pages/admin/DealerGroupsPage";
 import DealersPage from "./pages/admin/DealersPage";
 import WidgetsPage from "./pages/admin/WidgetsPage";
 import WidgetEmbedPage from "./pages/WidgetEmbedPage";
+import { ConsentBanner } from "./components/consent/ConsentBanner";
 
 const queryClient = new QueryClient();
 
@@ -169,6 +171,14 @@ const App = () => (
                           }
                         />
                         <Route
+                          path="/admin/feature-tiles"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <FeatureTilesPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
                           path="/admin/partners"
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
@@ -260,6 +270,7 @@ const App = () => (
 
                       <Route path="*" element={<NotFound />} />
                     </Routes>
+                    <ConsentBanner />
                   </PersonalOfferProvider>
                 </CrmTrackingProvider>
               </SpecialOfferProvider>
