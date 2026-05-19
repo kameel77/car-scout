@@ -2,6 +2,9 @@ import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
 import path from 'path';
 import fs from 'fs/promises';
+import { createWriteStream } from 'fs';
+import { pipeline } from 'stream/promises';
+import crypto from 'crypto';
 
 const LEGAL_LANGUAGES = ['pl', 'en', 'de'] as const;
 const LEGAL_DOC_KEYS = ['imprint', 'privacyPolicy', 'terms', 'cookies'] as const;
@@ -66,6 +69,17 @@ const toNumberOrFallback = (value: unknown, fallback: number) => {
 
 const LOGO_DIR = path.resolve(process.cwd(), 'uploads', 'logos');
 const ALLOWED_LOGO_EXT = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
+
+const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
+const LEGAL_URL_SLUGS: Record<LegalDocKey, string> = {
+    imprint: 'impressum',
+    privacyPolicy: 'polityka-prywatnosci',
+    terms: 'regulamin',
+    cookies: 'polityka-cookies',
+};
+const LEGAL_SLUG_SET = new Set(Object.values(LEGAL_URL_SLUGS));
+const ALLOWED_PDF_MIME = ['application/pdf'];
+const MAX_LEGAL_PDF_SIZE = 10 * 1024 * 1024;
 
 function normalizeLegalDocuments(raw: any): Record<LegalDocKey, Record<string, string>> {
     const safeDocs: Record<LegalDocKey, Record<string, string>> = {
@@ -382,6 +396,110 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                 footerLogoUrl: target === 'footer' ? url : null
             }
         });
+
+        return { url };
+    });
+
+    // Upload legal document PDF (imprint / privacyPolicy / terms / cookies × pl/en/de)
+    fastify.post('/api/settings/legal-doc', {
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+    }, async (request, reply) => {
+        const parts = request.parts();
+        let key: string | undefined;
+        let lang: string | undefined;
+        let savedPath: string | null = null;
+        let savedFilename: string | null = null;
+        let savedMime: string | null = null;
+
+        // Buffer non-file parts so we can validate key/lang regardless of order,
+        // and stream the file straight to disk under a temp name we rename once
+        // we know where it should live.
+        const tmpDir = path.join(UPLOADS_DIR, '_tmp_legal');
+        await fs.mkdir(tmpDir, { recursive: true });
+
+        for await (const part of parts) {
+            if (part.type === 'file') {
+                if (savedPath) {
+                    // Only one file expected; drain extras
+                    await part.file.resume?.();
+                    continue;
+                }
+                savedMime = part.mimetype;
+                const tmpName = `upload-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.pdf`;
+                savedPath = path.join(tmpDir, tmpName);
+                savedFilename = tmpName;
+                await pipeline(part.file, createWriteStream(savedPath));
+            } else {
+                if (part.fieldname === 'key' && typeof part.value === 'string') key = part.value;
+                if (part.fieldname === 'lang' && typeof part.value === 'string') lang = part.value;
+            }
+        }
+
+        const cleanup = async () => {
+            if (savedPath) {
+                try { await fs.unlink(savedPath); } catch { /* ignore */ }
+            }
+        };
+
+        if (!savedPath || !savedFilename) {
+            return reply.code(400).send({ error: 'File is required' });
+        }
+        if (!key || !LEGAL_DOC_KEYS.includes(key as LegalDocKey)) {
+            await cleanup();
+            return reply.code(400).send({ error: `Invalid key. Use one of: ${LEGAL_DOC_KEYS.join(', ')}` });
+        }
+        if (!lang || !LEGAL_LANGUAGES.includes(lang as any)) {
+            await cleanup();
+            return reply.code(400).send({ error: `Invalid lang. Use one of: ${LEGAL_LANGUAGES.join(', ')}` });
+        }
+        if (!savedMime || !ALLOWED_PDF_MIME.includes(savedMime)) {
+            await cleanup();
+            return reply.code(400).send({ error: `Unsupported MIME: ${savedMime}. Only PDF allowed.` });
+        }
+
+        const stats = await fs.stat(savedPath);
+        if (stats.size > MAX_LEGAL_PDF_SIZE) {
+            await cleanup();
+            return reply.code(413).send({ error: 'File too large (max 10MB)' });
+        }
+
+        const slug = LEGAL_URL_SLUGS[key as LegalDocKey];
+        const docDir = path.join(UPLOADS_DIR, slug);
+        await fs.mkdir(docDir, { recursive: true });
+        const finalName = `${lang}-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.pdf`;
+        const finalPath = path.join(docDir, finalName);
+        await fs.rename(savedPath, finalPath);
+
+        const url = `/uploads/${slug}/${finalName}`;
+
+        const current = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
+        const currentDocs = normalizeLegalDocuments((current as any)?.legalDocuments);
+        const previousUrl = currentDocs[key as LegalDocKey]?.[lang];
+
+        currentDocs[key as LegalDocKey] = { ...currentDocs[key as LegalDocKey], [lang]: url };
+
+        await fastify.prisma.appSettings.upsert({
+            where: { id: 'default' },
+            update: { legalDocuments: currentDocs },
+            create: {
+                id: 'default',
+                enabledLanguages: ['pl'],
+                displayCurrency: 'PLN',
+                eurExRate: 4.3,
+                brokerFeePctPln: 3.5,
+                brokerFeePctEur: 3.5,
+                autoRefreshImages: false,
+                legalDocuments: currentDocs
+            }
+        });
+
+        // Delete previous platform-hosted file (handles both legacy /uploads/legal/...
+        // paths and new /uploads/<slug>/... paths). External URLs are skipped because
+        // they don't start with "/uploads/".
+        if (previousUrl && previousUrl.startsWith('/uploads/')) {
+            const oldPath = path.join(process.cwd(), previousUrl.replace(/^\//, ''));
+            try { await fs.unlink(oldPath); } catch { /* ignore */ }
+        }
 
         return { url };
     });

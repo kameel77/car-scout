@@ -276,7 +276,8 @@ export async function buildApp(): Promise<FastifyInstance> {
                 : ext === '.png' ? 'image/png'
                     : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
                         : ext === '.webp' ? 'image/webp'
-                            : 'application/octet-stream';
+                            : ext === '.pdf' ? 'application/pdf'
+                                : 'application/octet-stream';
             reply.header('Content-Type', mime);
             reply.header('Cache-Control', 'public, max-age=31536000');
             return reply.send(createReadStream(filePath));
@@ -310,6 +311,22 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.get('/uploads/csflow-images/:listingId/:file', async (request, reply) => {
         const { listingId, file } = request.params as { listingId: string; file: string };
         const filePath = path.join(uploadsRoot, 'csflow-images', listingId, file);
+        return serveStaticFile(filePath, reply);
+    });
+
+    // Static files — legal documents (PDF) at human-readable slugs
+    const LEGAL_PUBLIC_SLUGS = new Set([
+        'impressum',
+        'polityka-prywatnosci',
+        'regulamin',
+        'polityka-cookies',
+    ]);
+    fastify.get('/uploads/:slug/:file', async (request, reply) => {
+        const { slug, file } = request.params as { slug: string; file: string };
+        if (!LEGAL_PUBLIC_SLUGS.has(slug)) {
+            return reply.code(404).send({ error: 'Not found' });
+        }
+        const filePath = path.join(uploadsRoot, slug, file);
         return serveStaticFile(filePath, reply);
     });
 
