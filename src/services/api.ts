@@ -690,6 +690,96 @@ export const settingsApi = {
     }
 };
 
+// Feature Tiles API
+export interface FeatureTile {
+    id: string;
+    title: string;
+    imageUrl: string | null;
+    targetUrl: string;
+    sortOrder: number;
+    isActive: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface PublicFeatureTile {
+    id: string;
+    title: string;
+    imageUrl: string | null;
+    targetUrl: string;
+    vehicleCount: number | null;
+}
+
+export const featureTilesApi = {
+    listPublic: async (): Promise<{ tiles: PublicFeatureTile[] }> => {
+        const r = await fetch(`${API_BASE_URL}/api/feature-tiles/public`);
+        if (!r.ok) throw new Error('Failed to fetch feature tiles');
+        return r.json();
+    },
+    listAdmin: async (token: string): Promise<{ tiles: FeatureTile[] }> => {
+        const r = await fetch(`${API_BASE_URL}/api/feature-tiles`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!r.ok) throw new Error('Failed to fetch feature tiles');
+        return r.json();
+    },
+    create: async (data: { title: string; targetUrl: string; imageUrl?: string | null; isActive?: boolean }, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/feature-tiles`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to create tile');
+        return json as { tile: FeatureTile };
+    },
+    update: async (id: string, data: Partial<Pick<FeatureTile, 'title' | 'targetUrl' | 'imageUrl' | 'isActive'>>, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/feature-tiles/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to update tile');
+        return json as { tile: FeatureTile };
+    },
+    remove: async (id: string, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/feature-tiles/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || 'Failed to delete tile');
+        }
+        return true;
+    },
+    reorder: async (order: string[], token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/feature-tiles/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ order })
+        });
+        if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || 'Failed to reorder');
+        }
+        return true;
+    },
+    uploadImage: async (id: string, file: File, token: string) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch(`${API_BASE_URL}/api/feature-tiles/${id}/image`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to upload image');
+        return json as { tile: FeatureTile; url: string };
+    },
+};
+
 // Translations API
 export const translationsApi = {
     list: async (

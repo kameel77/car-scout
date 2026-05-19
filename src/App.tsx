@@ -21,6 +21,7 @@ import AdminDashboard from "./pages/admin/DashboardPage";
 import TranslationsPage from "./pages/admin/TranslationsPage";
 import UsersPage from "./pages/admin/UsersPage";
 import FaqPage from "./pages/admin/FaqPage";
+import FeatureTilesPage from "./pages/admin/FeatureTilesPage";
 import FinancingPage from "./pages/admin/FinancingPage";
 import ImportPage from "./pages/admin/ImportPage";
 import PriceAnalyticsPage from "./pages/admin/PriceAnalyticsPage";
@@ -165,6 +166,14 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <FaqPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/feature-tiles"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <FeatureTilesPage />
                             </ProtectedRoute>
                           }
                         />
