@@ -641,6 +641,32 @@ export const settingsApi = {
         return data as { url: string };
     },
 
+    uploadLegalDoc: async (
+        file: File,
+        key: 'imprint' | 'privacyPolicy' | 'terms' | 'cookies',
+        lang: 'pl' | 'en' | 'de',
+        token: string,
+    ) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('key', key);
+        formData.append('lang', lang);
+
+        const response = await fetch(`${API_BASE_URL}/api/settings/legal-doc`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Legal document upload failed');
+        }
+        return data as { url: string };
+    },
+
     updateSettings: async (settings: any, token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/settings`, {
             method: 'POST',

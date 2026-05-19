@@ -54,6 +54,7 @@ export function SettingsModule() {
     const [logoUploading, setLogoUploading] = React.useState<{ header: boolean; footer: boolean }>({ header: false, footer: false });
     const headerInputRef = React.useRef<HTMLInputElement | null>(null);
     const footerInputRef = React.useRef<HTMLInputElement | null>(null);
+    const [legalUploading, setLegalUploading] = React.useState<Record<string, boolean>>({});
 
     const normalizeSettings = (data: any) => ({
         ...data,
@@ -151,6 +152,21 @@ export function SettingsModule() {
                 }
             };
         });
+    };
+
+    const handleLegalDocUpload = async (docKey: LegalDocKey, lang: string, file: File | null) => {
+        if (!file || !token) return;
+        const slotKey = `${docKey}-${lang}`;
+        try {
+            setLegalUploading((prev) => ({ ...prev, [slotKey]: true }));
+            const { url } = await settingsApi.uploadLegalDoc(file, docKey, lang as 'pl' | 'en' | 'de', token);
+            handleLegalDocChange(docKey, lang, url);
+            toast.success(`Dokument (${docKey} ${lang.toUpperCase()}) zapisany`);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Nie udało się wgrać dokumentu');
+        } finally {
+            setLegalUploading((prev) => ({ ...prev, [slotKey]: false }));
+        }
     };
 
     const handleLogoUpload = async (target: 'header' | 'footer', file: File | null) => {
@@ -666,19 +682,52 @@ export function SettingsModule() {
                                         </div>
                                     </div>
                                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                                        {LEGAL_LANGUAGES.map((lang) => (
-                                            <div key={`${doc.key}-${lang.code}`} className="space-y-2">
-                                                <Label className="text-xs uppercase tracking-wide text-slate-600">
-                                                    {lang.label}
-                                                </Label>
-                                                <Input
-                                                    placeholder="https://twojadomena.com/dokument.pdf"
-                                                    value={settings.legalDocuments?.[doc.key]?.[lang.code] || ''}
-                                                    onChange={(e) => handleLegalDocChange(doc.key, lang.code, e.target.value)}
-                                                    className="bg-white"
-                                                />
-                                            </div>
-                                        ))}
+                                        {LEGAL_LANGUAGES.map((lang) => {
+                                            const slotKey = `${doc.key}-${lang.code}`;
+                                            const uploading = legalUploading[slotKey];
+                                            const currentUrl = settings.legalDocuments?.[doc.key]?.[lang.code] || '';
+                                            const isPlatformUrl = currentUrl.startsWith('/uploads/legal/');
+                                            return (
+                                                <div key={slotKey} className="space-y-2">
+                                                    <Label className="text-xs uppercase tracking-wide text-slate-600">
+                                                        {lang.label}
+                                                    </Label>
+                                                    <Input
+                                                        placeholder="https://twojadomena.com/dokument.pdf"
+                                                        value={currentUrl}
+                                                        onChange={(e) => handleLegalDocChange(doc.key, lang.code, e.target.value)}
+                                                        className="bg-white"
+                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                                                            {uploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                                                            {uploading ? 'Wgrywanie…' : 'Upload PDF'}
+                                                            <input
+                                                                type="file"
+                                                                accept="application/pdf"
+                                                                className="hidden"
+                                                                disabled={uploading}
+                                                                onChange={(e) => {
+                                                                    const f = e.target.files?.[0] ?? null;
+                                                                    handleLegalDocUpload(doc.key, lang.code, f);
+                                                                    e.target.value = '';
+                                                                }}
+                                                            />
+                                                        </label>
+                                                        {currentUrl && (
+                                                            <a
+                                                                href={currentUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-xs text-blue-600 hover:underline"
+                                                            >
+                                                                {isPlatformUrl ? 'Otwórz wgrany' : 'Otwórz link'}
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}
