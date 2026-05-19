@@ -397,54 +397,78 @@ export async function settingsRoutes(fastify: FastifyInstance) {
     fastify.post('/api/settings/legal-doc', {
         preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
-        const file = await request.file();
-        if (!file) {
-            return reply.code(400).send({ error: 'File is required' });
+        const parts = request.parts();
+        let key: string | undefined;
+        let lang: string | undefined;
+        let savedPath: string | null = null;
+        let savedFilename: string | null = null;
+        let savedMime: string | null = null;
+
+        // Buffer non-file parts so we can validate key/lang regardless of order,
+        // and stream the file straight to disk under a temp name we rename once
+        // we know where it should live.
+        const tmpDir = path.join(LEGAL_DIR, '_tmp');
+        await fs.mkdir(tmpDir, { recursive: true });
+
+        for await (const part of parts) {
+            if (part.type === 'file') {
+                if (savedPath) {
+                    // Only one file expected; drain extras
+                    await part.file.resume?.();
+                    continue;
+                }
+                savedMime = part.mimetype;
+                const tmpName = `upload-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.pdf`;
+                savedPath = path.join(tmpDir, tmpName);
+                savedFilename = tmpName;
+                await pipeline(part.file, createWriteStream(savedPath));
+            } else {
+                if (part.fieldname === 'key' && typeof part.value === 'string') key = part.value;
+                if (part.fieldname === 'lang' && typeof part.value === 'string') lang = part.value;
+            }
         }
 
-        const readField = (name: string): string | undefined => {
-            const f = (file.fields as any)?.[name];
-            if (typeof f === 'string') return f;
-            if (Array.isArray(f) && typeof f[0] === 'string') return f[0];
-            if (f && typeof f === 'object' && typeof f.value === 'string') return f.value;
-            const q = (request.query as any)?.[name];
-            return typeof q === 'string' ? q : undefined;
+        const cleanup = async () => {
+            if (savedPath) {
+                try { await fs.unlink(savedPath); } catch { /* ignore */ }
+            }
         };
 
-        const key = readField('key') as LegalDocKey | undefined;
-        const lang = readField('lang');
-        if (!key || !LEGAL_DOC_KEYS.includes(key)) {
+        if (!savedPath || !savedFilename) {
+            return reply.code(400).send({ error: 'File is required' });
+        }
+        if (!key || !LEGAL_DOC_KEYS.includes(key as LegalDocKey)) {
+            await cleanup();
             return reply.code(400).send({ error: `Invalid key. Use one of: ${LEGAL_DOC_KEYS.join(', ')}` });
         }
         if (!lang || !LEGAL_LANGUAGES.includes(lang as any)) {
+            await cleanup();
             return reply.code(400).send({ error: `Invalid lang. Use one of: ${LEGAL_LANGUAGES.join(', ')}` });
         }
-        if (!ALLOWED_PDF_MIME.includes(file.mimetype)) {
-            return reply.code(400).send({ error: `Unsupported MIME: ${file.mimetype}. Only PDF allowed.` });
+        if (!savedMime || !ALLOWED_PDF_MIME.includes(savedMime)) {
+            await cleanup();
+            return reply.code(400).send({ error: `Unsupported MIME: ${savedMime}. Only PDF allowed.` });
+        }
+
+        const stats = await fs.stat(savedPath);
+        if (stats.size > MAX_LEGAL_PDF_SIZE) {
+            await cleanup();
+            return reply.code(413).send({ error: 'File too large (max 10MB)' });
         }
 
         const docDir = path.join(LEGAL_DIR, key);
         await fs.mkdir(docDir, { recursive: true });
+        const finalName = `${lang}-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.pdf`;
+        const finalPath = path.join(docDir, finalName);
+        await fs.rename(savedPath, finalPath);
 
-        const hash = crypto.randomBytes(8).toString('hex');
-        const filename = `${lang}-${Date.now()}-${hash}.pdf`;
-        const filepath = path.join(docDir, filename);
-        await pipeline(file.file, createWriteStream(filepath));
+        const url = `/uploads/legal/${key}/${finalName}`;
 
-        const stats = await fs.stat(filepath);
-        if (stats.size > MAX_LEGAL_PDF_SIZE) {
-            await fs.unlink(filepath);
-            return reply.code(413).send({ error: 'File too large (max 10MB)' });
-        }
-
-        const url = `/uploads/legal/${key}/${filename}`;
-
-        // Load current settings to merge legalDocuments and delete previous file if it lived in /uploads/legal/
         const current = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
         const currentDocs = normalizeLegalDocuments((current as any)?.legalDocuments);
-        const previousUrl = currentDocs[key]?.[lang];
+        const previousUrl = currentDocs[key as LegalDocKey]?.[lang];
 
-        currentDocs[key] = { ...currentDocs[key], [lang]: url };
+        currentDocs[key as LegalDocKey] = { ...currentDocs[key as LegalDocKey], [lang]: url };
 
         await fastify.prisma.appSettings.upsert({
             where: { id: 'default' },
