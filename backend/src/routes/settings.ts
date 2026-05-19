@@ -70,7 +70,14 @@ const toNumberOrFallback = (value: unknown, fallback: number) => {
 const LOGO_DIR = path.resolve(process.cwd(), 'uploads', 'logos');
 const ALLOWED_LOGO_EXT = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
 
-const LEGAL_DIR = path.resolve(process.cwd(), 'uploads', 'legal');
+const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
+const LEGAL_URL_SLUGS: Record<LegalDocKey, string> = {
+    imprint: 'impressum',
+    privacyPolicy: 'polityka-prywatnosci',
+    terms: 'regulamin',
+    cookies: 'polityka-cookies',
+};
+const LEGAL_SLUG_SET = new Set(Object.values(LEGAL_URL_SLUGS));
 const ALLOWED_PDF_MIME = ['application/pdf'];
 const MAX_LEGAL_PDF_SIZE = 10 * 1024 * 1024;
 
@@ -407,7 +414,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
         // Buffer non-file parts so we can validate key/lang regardless of order,
         // and stream the file straight to disk under a temp name we rename once
         // we know where it should live.
-        const tmpDir = path.join(LEGAL_DIR, '_tmp');
+        const tmpDir = path.join(UPLOADS_DIR, '_tmp_legal');
         await fs.mkdir(tmpDir, { recursive: true });
 
         for await (const part of parts) {
@@ -456,13 +463,14 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             return reply.code(413).send({ error: 'File too large (max 10MB)' });
         }
 
-        const docDir = path.join(LEGAL_DIR, key);
+        const slug = LEGAL_URL_SLUGS[key as LegalDocKey];
+        const docDir = path.join(UPLOADS_DIR, slug);
         await fs.mkdir(docDir, { recursive: true });
         const finalName = `${lang}-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.pdf`;
         const finalPath = path.join(docDir, finalName);
         await fs.rename(savedPath, finalPath);
 
-        const url = `/uploads/legal/${key}/${finalName}`;
+        const url = `/uploads/${slug}/${finalName}`;
 
         const current = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
         const currentDocs = normalizeLegalDocuments((current as any)?.legalDocuments);
@@ -485,7 +493,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             }
         });
 
-        if (previousUrl && previousUrl.startsWith('/uploads/legal/')) {
+        // Delete previous platform-hosted file (handles both legacy /uploads/legal/...
+        // paths and new /uploads/<slug>/... paths). External URLs are skipped because
+        // they don't start with "/uploads/".
+        if (previousUrl && previousUrl.startsWith('/uploads/')) {
             const oldPath = path.join(process.cwd(), previousUrl.replace(/^\//, ''));
             try { await fs.unlink(oldPath); } catch { /* ignore */ }
         }

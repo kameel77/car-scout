@@ -314,10 +314,19 @@ export async function buildApp(): Promise<FastifyInstance> {
         return serveStaticFile(filePath, reply);
     });
 
-    // Static files — legal documents (PDF)
-    fastify.get('/uploads/legal/:key/:file', async (request, reply) => {
-        const { key, file } = request.params as { key: string; file: string };
-        const filePath = path.join(uploadsRoot, 'legal', key, file);
+    // Static files — legal documents (PDF) at human-readable slugs
+    const LEGAL_PUBLIC_SLUGS = new Set([
+        'impressum',
+        'polityka-prywatnosci',
+        'regulamin',
+        'polityka-cookies',
+    ]);
+    fastify.get('/uploads/:slug/:file', async (request, reply) => {
+        const { slug, file } = request.params as { slug: string; file: string };
+        if (!LEGAL_PUBLIC_SLUGS.has(slug)) {
+            return reply.code(404).send({ error: 'Not found' });
+        }
+        const filePath = path.join(uploadsRoot, slug, file);
         return serveStaticFile(filePath, reply);
     });
 
