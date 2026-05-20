@@ -227,8 +227,9 @@ export default function HeroVehicleFilter() {
     if (filters.rateMin) params.set('rateMin', filters.rateMin);
     if (filters.rateMax) params.set('rateMax', filters.rateMax);
     if (filters.rateMin || filters.rateMax) {
-      params.set('rateType', filters.clientType === 'business' ? 'lease' : 'credit');
-      params.set('rateBasis', 'net');
+      const isBusiness = filters.clientType === 'business';
+      params.set('rateType', isBusiness ? 'lease' : 'credit');
+      params.set('rateBasis', isBusiness ? 'net' : 'gross');
     }
     params.set('status', filters.status);
 
@@ -336,7 +337,7 @@ export default function HeroVehicleFilter() {
             ? 'rata netto'
             : filters.clientType === 'business'
               ? 'rata leasingu netto'
-              : 'rata kredytu netto'}
+              : 'rata kredytu brutto'}
         </span>
       </span>
       <div className="hvf__range-row">
