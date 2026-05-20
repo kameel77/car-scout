@@ -337,6 +337,14 @@
   margin-bottom: 5px;
 }
 
+.hvf__label-hint {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--hvf-text-muted);
+  opacity: 0.85;
+}
+
 /* ─── Responsive ────────────────────────────────────────────────────────── */
 
 @media (max-width: 1024px) {

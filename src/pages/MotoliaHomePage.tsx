@@ -183,7 +183,7 @@ export default function MotoliaHomePage() {
           style={{ background: `radial-gradient(circle, ${YELLOW}10 0%, transparent 70%)` }} />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="grid lg:grid-cols-[1.5fr_1fr] gap-16 items-center">
 
             {/* Left col */}
             <div className="max-w-2xl">
