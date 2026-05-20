@@ -210,14 +210,14 @@ export default function HeroVehicleFilter() {
       const rParams = new URLSearchParams();
       if (filters.bodyType) rParams.set('bodyType', filters.bodyType);
       if (filters.make) rParams.set('make', filters.make);
-      if (filters.clientType === 'business') rParams.set('offerType', 'b2b');
+      rParams.set('offerType', filters.clientType === 'business' ? 'b2b' : 'b2c');
       const qs = rParams.toString();
       navigate(`/wynajem-dlugoterminowy${qs ? `?${qs}` : ''}`);
       return;
     }
 
     const params = new URLSearchParams();
-    if (filters.clientType === 'business') params.set('clientType', 'business');
+    params.set('clientType', filters.clientType);
     if (filters.bodyType) params.set('bodyType', filters.bodyType);
     if (filters.make) params.set('make', filters.make);
     if (filters.model) params.set('model', filters.model);
@@ -226,8 +226,7 @@ export default function HeroVehicleFilter() {
     params.set('status', filters.status);
 
     const path = filters.status === 'used' ? '/uzywane' : '/nowe';
-    const qs = params.toString();
-    navigate(`${path}${qs ? `?${qs}` : ''}`);
+    navigate(`${path}?${params.toString()}`);
   }, [filters, navigate]);
 
   const handleAdvancedSearch = useCallback(() => {

@@ -149,6 +149,15 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { priceType, setPriceType } = usePriceSettings();
+
+  // Sync URL ?clientType=private|business → global priceType (one-shot on mount/change)
+  React.useEffect(() => {
+    const ct = searchParams.get('clientType');
+    if (ct === 'business') setPriceType('net');
+    else if (ct === 'private') setPriceType('gross');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isNew = condition === 'NEW';
   // Visible h1 — keyword-rich, emphasises the value prop (flexible financing + guidance).
@@ -349,6 +358,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
 
     if (statusChanged) {
       const params = new URLSearchParams();
+      params.set('clientType', priceType === 'net' ? 'business' : 'private');
       if (updatedFilters.makes.length) params.set('make', updatedFilters.makes.join(','));
       if (updatedFilters.models.length) params.set('model', updatedFilters.models.join(','));
       if (updatedFilters.fuelTypes.length) params.set('fuelType', updatedFilters.fuelTypes.join(','));
@@ -384,7 +394,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
 
     setFilters(updatedFilters);
     setPage(1);
-  }, [condition, navigate]);
+  }, [condition, navigate, priceType]);
 
   const handleClearFilters = React.useCallback(() => {
     setFilters({ ...emptyFilters, statuses: [condition] });

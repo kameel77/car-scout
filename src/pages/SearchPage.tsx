@@ -31,6 +31,7 @@ import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
 import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { useBrand } from '@/contexts/BrandContext';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
 
 const emptyFilters: FilterState = {
@@ -74,6 +75,14 @@ export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: seoConfig } = useSeoConfig();
   const { config } = useBrand();
+  const { setPriceType } = usePriceSettings();
+
+  // Sync URL ?clientType=private|business → global priceType (one-shot on mount)
+  React.useEffect(() => {
+    const ct = searchParams.get('clientType');
+    if (ct === 'business') setPriceType('net');
+    else if (ct === 'private') setPriceType('gross');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize from URL
   const [filters, setFilters] = React.useState<FilterState>(() => {
