@@ -198,12 +198,6 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
     };
   });
 
-  // Keep condition locked when user changes other filters
-  React.useEffect(() => {
-    if (filters.statuses.length !== 1 || filters.statuses[0] !== condition) {
-      setFilters(prev => ({ ...prev, statuses: [condition] }));
-    }
-  }, [condition, filters.statuses]);
 
   const defaultSortCars = settings?.defaultSortCars || 'year_desc';
   const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || defaultSortCars);
@@ -302,8 +296,11 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const saleTotalPages = saleData?.totalPages ?? Math.max(1, Math.ceil((saleTotalCount || 1) / perPage));
 
   /* ── Data: rental vehicles (same condition) ── */
+  // Hide rentals when a price range is set: rental "price" is the monthly rate,
+  // which would mix two incompatible scales (full price vs. rate).
+  const hideRentals = Boolean(filters.priceFrom || filters.priceTo);
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-condition', condition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.priceFrom, filters.priceTo, filters.query],
+    queryKey: ['rental-condition', condition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
@@ -313,16 +310,17 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       bodyType: filters.bodyTypes.length === 1 ? filters.bodyTypes[0] : undefined,
       yearFrom: filters.yearFrom || undefined,
       yearTo: filters.yearTo || undefined,
-      priceFrom: filters.priceFrom || undefined,
-      priceTo: filters.priceTo || undefined,
       condition,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     }),
+    enabled: !hideRentals,
   });
 
-  const rentalVehicles = rentalData?.vehicles || [];
-  const rentalByCondition = rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined;
+  const rentalVehicles = hideRentals ? [] : (rentalData?.vehicles || []);
+  const rentalByCondition = hideRentals
+    ? undefined
+    : (rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined);
   const mergedByCondition = saleData?.byCondition
     ? {
         NEW: saleData.byCondition.NEW + (rentalByCondition?.NEW ?? 0),
@@ -344,10 +342,49 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
 
   /* ── Handlers ── */
   const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
-    // Ensure condition stays locked
-    setFilters({ ...updatedFilters, statuses: [condition] });
+    // If the user changed Stan away from the locked condition, redirect to /samochody
+    // with full filters preserved in the URL.
+    const statusChanged =
+      updatedFilters.statuses.length !== 1 || updatedFilters.statuses[0] !== condition;
+
+    if (statusChanged) {
+      const params = new URLSearchParams();
+      if (updatedFilters.makes.length) params.set('make', updatedFilters.makes.join(','));
+      if (updatedFilters.models.length) params.set('model', updatedFilters.models.join(','));
+      if (updatedFilters.fuelTypes.length) params.set('fuelType', updatedFilters.fuelTypes.join(','));
+      if (updatedFilters.transmissions.length) params.set('transmission', updatedFilters.transmissions.join(','));
+      if (updatedFilters.bodyTypes.length) params.set('bodyType', updatedFilters.bodyTypes.join(','));
+      if (updatedFilters.drives.length) params.set('drive', updatedFilters.drives.join(','));
+      if (updatedFilters.statuses.length) {
+        params.set('status', updatedFilters.statuses.map((c) => c.toLowerCase()).join(','));
+      }
+      if (updatedFilters.yearFrom) params.set('yearMin', updatedFilters.yearFrom);
+      if (updatedFilters.yearTo) params.set('yearMax', updatedFilters.yearTo);
+      if (updatedFilters.mileageFrom) params.set('mileageMin', updatedFilters.mileageFrom);
+      if (updatedFilters.mileageTo) params.set('mileageMax', updatedFilters.mileageTo);
+      if (updatedFilters.priceFrom) params.set('priceMin', updatedFilters.priceFrom);
+      if (updatedFilters.priceTo) params.set('priceMax', updatedFilters.priceTo);
+      if (updatedFilters.powerFrom) params.set('powerMin', updatedFilters.powerFrom);
+      if (updatedFilters.powerTo) params.set('powerMax', updatedFilters.powerTo);
+      if (updatedFilters.capacityFrom) params.set('capacityMin', updatedFilters.capacityFrom);
+      if (updatedFilters.capacityTo) params.set('capacityMax', updatedFilters.capacityTo);
+      if (updatedFilters.rateFrom) params.set('rateMin', updatedFilters.rateFrom);
+      if (updatedFilters.rateTo) params.set('rateMax', updatedFilters.rateTo);
+      if ((updatedFilters.rateFrom || updatedFilters.rateTo) && updatedFilters.rateType !== 'credit') {
+        params.set('rateType', updatedFilters.rateType);
+      }
+      if ((updatedFilters.rateFrom || updatedFilters.rateTo) && updatedFilters.rateBasis !== 'gross') {
+        params.set('rateBasis', updatedFilters.rateBasis);
+      }
+      if (updatedFilters.query) params.set('q', updatedFilters.query);
+      const qs = params.toString();
+      navigate(`/samochody${qs ? `?${qs}` : ''}`);
+      return;
+    }
+
+    setFilters(updatedFilters);
     setPage(1);
-  }, [condition]);
+  }, [condition, navigate]);
 
   const handleClearFilters = React.useCallback(() => {
     setFilters({ ...emptyFilters, statuses: [condition] });

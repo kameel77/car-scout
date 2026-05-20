@@ -234,8 +234,11 @@ export default function SearchPage() {
   const rentalCondition = filters.statuses.length === 1
     ? (filters.statuses[0] as 'NEW' | 'USED')
     : undefined;
+  // Hide rentals when a price range is set: rental "price" is the monthly rate,
+  // which would mix two incompatible scales (full price vs. rate).
+  const hideRentals = Boolean(filters.priceFrom || filters.priceTo);
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.priceFrom, filters.priceTo, filters.query],
+    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
@@ -245,16 +248,17 @@ export default function SearchPage() {
       bodyType: filters.bodyTypes.length === 1 ? filters.bodyTypes[0] : undefined,
       yearFrom: filters.yearFrom || undefined,
       yearTo: filters.yearTo || undefined,
-      priceFrom: filters.priceFrom || undefined,
-      priceTo: filters.priceTo || undefined,
       condition: rentalCondition,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     }),
+    enabled: !hideRentals,
   });
-  const rentalVehicles = rentalData?.vehicles || [];
+  const rentalVehicles = hideRentals ? [] : (rentalData?.vehicles || []);
 
-  const rentalByCondition = rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined;
+  const rentalByCondition = hideRentals
+    ? undefined
+    : (rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined);
   const mergedByCondition = data?.byCondition
     ? {
         NEW: data.byCondition.NEW + (rentalByCondition?.NEW ?? 0),
