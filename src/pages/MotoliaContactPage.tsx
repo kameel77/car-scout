@@ -16,6 +16,7 @@ import { motion } from 'framer-motion';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { leadsApi } from '@/services/api';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -59,6 +60,8 @@ const PRODUCTS_QUICK = [
 
 export default function MotoliaContactPage() {
   const { config } = useBrand();
+  const { data: settings } = useAppSettings();
+  const salesPhone = settings?.salesContactPhone || settings?.legalContactPhone || config.contactInfo.phone;
 
   const [form, setForm] = React.useState({ name: '', phone: '', message: '' });
   const [status, setStatus] = React.useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -121,14 +124,14 @@ export default function MotoliaContactPage() {
             {/* Direct contact buttons */}
             <FadeIn delay={0.3} className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
               <a
-                href={`tel:${config.contactInfo.phone.replace(/\s+/g, '')}`}
+                href={`tel:${salesPhone.replace(/\s+/g, '')}`}
                 className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
                 style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}50` }}
                 onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
                 onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
               >
                 <Phone size={20} />
-                {config.contactInfo.phone}
+                {salesPhone}
               </a>
               <a
                 href={`mailto:${config.contactInfo.email}`}
@@ -260,9 +263,9 @@ export default function MotoliaContactPage() {
                     Dane kontaktowe
                   </h2>
 
-                  {/* Phone */}
+                  {/* Phone — sales */}
                   <a
-                    href={`tel:${config.contactInfo.phone.replace(/\s+/g, '')}`}
+                    href={`tel:${salesPhone.replace(/\s+/g, '')}`}
                     className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
                   >
                     <div
@@ -272,8 +275,8 @@ export default function MotoliaContactPage() {
                       <Phone size={22} style={{ color: YELLOW_DARK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Telefon</p>
-                      <p className="text-lg font-bold text-[#1A1A1A]">{config.contactInfo.phone}</p>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Telefon — Sprzedaż</p>
+                      <p className="text-lg font-bold text-[#1A1A1A]">{salesPhone}</p>
                     </div>
                   </a>
 

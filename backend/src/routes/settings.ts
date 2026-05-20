@@ -23,6 +23,7 @@ type SettingsPayload = {
     legalAddress?: string | null;
     legalContactEmail?: string | null;
     legalContactPhone?: string | null;
+    salesContactPhone?: string | null;
     legalVatId?: string | null;
     legalRegisterNumber?: string | null;
     legalRepresentative?: string | null;
@@ -203,6 +204,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     legalAddress: data.legalAddress || null,
                     legalContactEmail: data.legalContactEmail || null,
                     legalContactPhone: data.legalContactPhone || null,
+                    salesContactPhone: data.salesContactPhone || null,
                     legalVatId: data.legalVatId || null,
                     legalRegisterNumber: data.legalRegisterNumber || null,
                     legalRepresentative: data.legalRepresentative || null,
@@ -266,6 +268,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     legalAddress: data.legalAddress || null,
                     legalContactEmail: data.legalContactEmail || null,
                     legalContactPhone: data.legalContactPhone || null,
+                    salesContactPhone: data.salesContactPhone || null,
                     legalVatId: data.legalVatId || null,
                     legalRegisterNumber: data.legalRegisterNumber || null,
                     legalRepresentative: data.legalRepresentative || null,
