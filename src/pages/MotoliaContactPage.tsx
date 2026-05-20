@@ -280,6 +280,25 @@ export default function MotoliaContactPage() {
                     </div>
                   </a>
 
+                  {/* Phone — legal/general */}
+                  {settings?.legalContactPhone && (
+                    <a
+                      href={`tel:${settings.legalContactPhone.replace(/\s+/g, '')}`}
+                      className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
+                    >
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
+                        style={{ background: `${YELLOW}20` }}
+                      >
+                        <Phone size={22} style={{ color: YELLOW_DARK }} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Telefon</p>
+                        <p className="text-lg font-bold text-[#1A1A1A]">{settings.legalContactPhone}</p>
+                      </div>
+                    </a>
+                  )}
+
                   {/* Email */}
                   <a
                     href={`mailto:${config.contactInfo.email}`}
