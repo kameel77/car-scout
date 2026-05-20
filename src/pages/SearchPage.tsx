@@ -394,6 +394,7 @@ export default function SearchPage() {
               availableMakes={mergedMakes}
               availableModels={mergedModels}
               facets={mergedFacets}
+              onApply={() => setAllFiltersOpen(false)}
             />
           </div>
         </SheetContent>

@@ -60,6 +60,7 @@ interface FilterPanelProps {
   availableMakes: string[];
   availableModels: { make: string; model: string }[];
   facets?: ListingFacets;
+  onApply?: () => void;
 }
 
 // Build options dynamically from facet keys returned by the API (which preserve the
@@ -298,6 +299,7 @@ export function FilterPanel({
   availableMakes,
   availableModels: allModels,
   facets,
+  onApply,
 }: FilterPanelProps) {
   const { t } = useTranslation();
   const { data: settings } = useAppSettings();
@@ -572,15 +574,17 @@ export function FilterPanel({
         </FilterSection>
       </div>
 
-      {hasFilters && (
+      {onApply && (
         <div className="border-t pt-3 mt-2 bg-background">
           <Button
-            variant="outline"
-            onClick={onClear}
-            className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+            onClick={onApply}
+            className="w-full"
           >
-            <X className="h-4 w-4 mr-2" />
-            {t('common.clearAllFilters')}
+            <SearchIcon className="h-4 w-4 mr-2" />
+            {t('filters.showResults', 'Pokaż oferty')}
+            {typeof resultCount === 'number' && resultCount >= 0 && (
+              <span className="ml-1 opacity-80">({resultCount})</span>
+            )}
           </Button>
         </div>
       )}

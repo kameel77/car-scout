@@ -17,8 +17,8 @@ interface FilterState {
   bodyType: string;
   make: string;
   model: string;
-  priceMin: string;
-  priceMax: string;
+  rateMin: string;
+  rateMax: string;
 }
 
 interface OptionsData {
@@ -165,8 +165,8 @@ export default function HeroVehicleFilter() {
     bodyType: '',
     make: '',
     model: '',
-    priceMin: '',
-    priceMax: '',
+    rateMin: '',
+    rateMax: '',
   });
 
   // Fetch options for both contexts
@@ -207,9 +207,12 @@ export default function HeroVehicleFilter() {
 
   const handleSubmit = useCallback(() => {
     if (filters.status === 'rental') {
+      // Rental's "price" is its monthly rate, so the rate input maps to priceMin/priceMax here.
       const rParams = new URLSearchParams();
       if (filters.bodyType) rParams.set('bodyType', filters.bodyType);
       if (filters.make) rParams.set('make', filters.make);
+      if (filters.rateMin) rParams.set('priceMin', filters.rateMin);
+      if (filters.rateMax) rParams.set('priceMax', filters.rateMax);
       rParams.set('offerType', filters.clientType === 'business' ? 'b2b' : 'b2c');
       const qs = rParams.toString();
       navigate(`/wynajem-dlugoterminowy${qs ? `?${qs}` : ''}`);
@@ -221,8 +224,12 @@ export default function HeroVehicleFilter() {
     if (filters.bodyType) params.set('bodyType', filters.bodyType);
     if (filters.make) params.set('make', filters.make);
     if (filters.model) params.set('model', filters.model);
-    if (filters.priceMin) params.set('priceMin', filters.priceMin);
-    if (filters.priceMax) params.set('priceMax', filters.priceMax);
+    if (filters.rateMin) params.set('rateMin', filters.rateMin);
+    if (filters.rateMax) params.set('rateMax', filters.rateMax);
+    if (filters.rateMin || filters.rateMax) {
+      params.set('rateType', filters.clientType === 'business' ? 'lease' : 'credit');
+      params.set('rateBasis', 'net');
+    }
     params.set('status', filters.status);
 
     const path = filters.status === 'used' ? '/uzywane' : '/nowe';
@@ -264,21 +271,21 @@ export default function HeroVehicleFilter() {
       <div className="hvf__toggle-group">
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.status === 'new' ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.status === 'new' ? 'hvf__toggle-btn--active' : ''}`}
           onClick={() => handleStatusChange('new')}
         >
           Nowy
         </button>
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.status === 'used' ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.status === 'used' ? 'hvf__toggle-btn--active' : ''}`}
           onClick={() => handleStatusChange('used')}
         >
           Używany
         </button>
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.status === 'rental' ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.status === 'rental' ? 'hvf__toggle-btn--active' : ''}`}
           onClick={() => handleStatusChange('rental')}
         >
           Wynajem
@@ -337,16 +344,16 @@ export default function HeroVehicleFilter() {
           type="number"
           className="hvf__range-input"
           placeholder="Od"
-          value={filters.priceMin}
-          onChange={e => setFilters(prev => ({ ...prev, priceMin: e.target.value }))}
+          value={filters.rateMin}
+          onChange={e => setFilters(prev => ({ ...prev, rateMin: e.target.value }))}
           min={0}
         />
         <input
           type="number"
           className="hvf__range-input"
           placeholder="Do"
-          value={filters.priceMax}
-          onChange={e => setFilters(prev => ({ ...prev, priceMax: e.target.value }))}
+          value={filters.rateMax}
+          onChange={e => setFilters(prev => ({ ...prev, rateMax: e.target.value }))}
           min={0}
         />
       </div>

@@ -502,6 +502,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               availableMakes={mergedMakes}
               availableModels={mergedModels}
               facets={mergedFacets}
+              onApply={() => setAllFiltersOpen(false)}
             />
           </div>
         </SheetContent>
