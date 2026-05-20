@@ -6,7 +6,7 @@ import { useTrackedUrl } from '@/hooks/useTrackedUrl';
 
 export function B2BCtaSection() {
   const { data: settings } = useAppSettings();
-  const phone = settings?.legalContactPhone;
+  const phone = settings?.salesContactPhone || settings?.legalContactPhone;
   const email = settings?.legalContactEmail;
   const homeHref = useTrackedUrl('/');
 

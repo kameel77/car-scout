@@ -183,6 +183,16 @@ export function ActiveFilters({
     ]);
   }
 
+  if (filters.rateFrom || filters.rateTo) {
+    pushGroup('rate', t('filters.rate', 'Rata'), [
+      {
+        key: 'rate-range',
+        label: `${filters.rateFrom || '0'} - ${filters.rateTo || '∞'} PLN`,
+        onRemove: () => onFilterChange({ ...filters, rateFrom: '', rateTo: '' }),
+      },
+    ]);
+  }
+
   const totalChipCount = chipGroups.reduce((acc, g) => acc + g.chips.length, 0);
 
   return (

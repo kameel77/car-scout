@@ -13,12 +13,12 @@ type VehicleStatus = 'new' | 'used' | 'rental';
 
 interface FilterState {
   clientType: ClientType;
-  statuses: Set<VehicleStatus>;
+  status: VehicleStatus;
   bodyType: string;
   make: string;
   model: string;
-  priceMin: string;
-  priceMax: string;
+  rateMin: string;
+  rateMax: string;
 }
 
 interface OptionsData {
@@ -161,22 +161,21 @@ export default function HeroVehicleFilter() {
 
   const [filters, setFilters] = useState<FilterState>({
     clientType: 'private',
-    statuses: new Set<VehicleStatus>(['new']),
+    status: 'new',
     bodyType: '',
     make: '',
     model: '',
-    priceMin: '',
-    priceMax: '',
+    rateMin: '',
+    rateMax: '',
   });
 
   // Fetch options for both contexts
-  const { data: listingOptions, isLoading: listingLoading } = useListingOptions();
-  const { data: rentalOptions, isLoading: rentalLoading } = useRentalFilterOptions();
+  const { data: listingOptions } = useListingOptions();
+  const { data: rentalOptions } = useRentalFilterOptions();
 
-  // Pick the right options based on current statuses
-  const isOnlyRental = filters.statuses.size === 1 && filters.statuses.has('rental');
-  const activeOptions = isOnlyRental ? rentalOptions : listingOptions;
-  const isLoading = isOnlyRental ? rentalLoading : listingLoading;
+  // Pick the right options based on current status
+  const isRental = filters.status === 'rental';
+  const activeOptions = isRental ? rentalOptions : listingOptions;
 
   const makes = activeOptions?.makes ?? [];
   const bodyTypes = activeOptions?.bodyTypes ?? [];
@@ -190,23 +189,15 @@ export default function HeroVehicleFilter() {
       .sort();
   }, [activeOptions?.models, filters.make]);
 
-  // Toggle status (multi-select, at least one must remain selected)
+  // Single-select status; reset dependent fields when switching
   const handleStatusChange = useCallback((status: VehicleStatus) => {
-    setFilters(prev => {
-      const next = new Set(prev.statuses);
-      if (next.has(status)) {
-        if (next.size > 1) next.delete(status);
-      } else {
-        next.add(status);
-      }
-      return {
-        ...prev,
-        statuses: next,
-        bodyType: '',
-        make: '',
-        model: '',
-      };
-    });
+    setFilters(prev => ({
+      ...prev,
+      status,
+      bodyType: '',
+      make: '',
+      model: '',
+    }));
   }, []);
 
   // Reset model when make changes
@@ -215,54 +206,35 @@ export default function HeroVehicleFilter() {
   }, []);
 
   const handleSubmit = useCallback(() => {
-    const { statuses } = filters;
-    const hasNew = statuses.has('new');
-    const hasUsed = statuses.has('used');
-    const hasRental = statuses.has('rental');
-
-    const params = new URLSearchParams();
-    if (filters.clientType === 'business') params.set('clientType', 'business');
-    if (filters.bodyType) params.set('bodyType', filters.bodyType);
-    if (filters.make) params.set('make', filters.make);
-    if (filters.model) params.set('model', filters.model);
-    if (filters.priceMin) params.set('priceMin', filters.priceMin);
-    if (filters.priceMax) params.set('priceMax', filters.priceMax);
-
-    let path: string;
-
-    if (hasNew && hasUsed && hasRental) {
-      // All selected → /samochody (shows everything)
-      path = '/samochody';
-    } else if (hasNew && hasUsed) {
-      // Both conditions → /samochody
-      path = '/samochody';
-    } else if (hasNew && hasRental) {
-      // New + rental → /nowe (ConditionPage shows new listings + rental)
-      path = '/nowe';
-    } else if (hasUsed && hasRental) {
-      // Used + rental → /uzywane
-      path = '/uzywane';
-    } else if (hasRental) {
-      // Only rental
+    if (filters.status === 'rental') {
+      // Rental's "price" is its monthly rate, so the rate input maps to priceMin/priceMax here.
       const rParams = new URLSearchParams();
       if (filters.bodyType) rParams.set('bodyType', filters.bodyType);
       if (filters.make) rParams.set('make', filters.make);
-      if (filters.clientType === 'business') rParams.set('offerType', 'b2b');
+      if (filters.rateMin) rParams.set('priceMin', filters.rateMin);
+      if (filters.rateMax) rParams.set('priceMax', filters.rateMax);
+      rParams.set('offerType', filters.clientType === 'business' ? 'b2b' : 'b2c');
       const qs = rParams.toString();
       navigate(`/wynajem-dlugoterminowy${qs ? `?${qs}` : ''}`);
       return;
-    } else if (hasUsed) {
-      path = '/uzywane';
-    } else {
-      // hasNew (default)
-      path = '/nowe';
     }
 
-    if (hasNew && !hasUsed) params.set('status', 'new');
-    else if (hasUsed && !hasNew) params.set('status', 'used');
+    const params = new URLSearchParams();
+    params.set('clientType', filters.clientType);
+    if (filters.bodyType) params.set('bodyType', filters.bodyType);
+    if (filters.make) params.set('make', filters.make);
+    if (filters.model) params.set('model', filters.model);
+    if (filters.rateMin) params.set('rateMin', filters.rateMin);
+    if (filters.rateMax) params.set('rateMax', filters.rateMax);
+    if (filters.rateMin || filters.rateMax) {
+      const isBusiness = filters.clientType === 'business';
+      params.set('rateType', isBusiness ? 'lease' : 'credit');
+      params.set('rateBasis', isBusiness ? 'net' : 'gross');
+    }
+    params.set('status', filters.status);
 
-    const qs = params.toString();
-    navigate(`${path}${qs ? `?${qs}` : ''}`);
+    const path = filters.status === 'used' ? '/uzywane' : '/nowe';
+    navigate(`${path}?${params.toString()}`);
   }, [filters, navigate]);
 
   const handleAdvancedSearch = useCallback(() => {
@@ -274,9 +246,7 @@ export default function HeroVehicleFilter() {
       {/* Header */}
       <div className="hvf__header">
         <h2 className="hvf__title">
-          Znajdź auto {!isLoading && makes.length > 0 && (
-            <span>z <strong>{makes.length}+</strong> marek</span>
-          )}
+          Znajdź auto dla siebie<strong>!</strong>
         </h2>
       </div>
 
@@ -298,25 +268,25 @@ export default function HeroVehicleFilter() {
         </button>
       </div>
 
-      {/* Status toggle (multi-select) */}
+      {/* Status toggle (single-select) */}
       <div className="hvf__toggle-group">
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.statuses.has('new') ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.status === 'new' ? 'hvf__toggle-btn--active' : ''}`}
           onClick={() => handleStatusChange('new')}
         >
           Nowy
         </button>
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.statuses.has('used') ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.status === 'used' ? 'hvf__toggle-btn--active' : ''}`}
           onClick={() => handleStatusChange('used')}
         >
           Używany
         </button>
         <button
           type="button"
-          className={`hvf__toggle-btn ${filters.statuses.has('rental') ? 'hvf__toggle-btn--accent' : ''}`}
+          className={`hvf__toggle-btn ${filters.status === 'rental' ? 'hvf__toggle-btn--active' : ''}`}
           onClick={() => handleStatusChange('rental')}
         >
           Wynajem
@@ -325,7 +295,7 @@ export default function HeroVehicleFilter() {
 
       {/* Body type */}
       <Dropdown
-        label="Nadwozie"
+        label=""
         placeholder="Wybierz nadwozie"
         value={filters.bodyType}
         options={bodyTypes}
@@ -334,19 +304,19 @@ export default function HeroVehicleFilter() {
 
       {/* Make (searchable) */}
       <Dropdown
-        label="Marka"
-        placeholder="Wszystkie marki"
+        label=""
+        placeholder="Wybierz markę"
         value={filters.make}
         options={makes}
         onChange={handleMakeChange}
         searchable
       />
 
-      {/* Model (cascading, disabled if no make or rental-only mode) */}
+      {/* Model (cascading, disabled if no make or rental mode) */}
       <Dropdown
-        label="Model"
+        label=""
         placeholder={
-          isOnlyRental
+          isRental
             ? 'Niedostępne w wynajmie'
             : filters.make
               ? 'Wybierz model'
@@ -355,26 +325,36 @@ export default function HeroVehicleFilter() {
         value={filters.model}
         options={availableModels}
         onChange={val => setFilters(prev => ({ ...prev, model: val }))}
-        disabled={!filters.make || isOnlyRental}
+        disabled={!filters.make || isRental}
       />
 
-      {/* Price range */}
-      <span className="hvf__label">Cena (PLN)</span>
+      {/* Rate range */}
+      <span className="hvf__label">
+        Rata (PLN)
+        <span className="hvf__label-hint">
+          {' · '}
+          {filters.status === 'rental'
+            ? 'rata netto'
+            : filters.clientType === 'business'
+              ? 'rata leasingu netto'
+              : 'rata kredytu brutto'}
+        </span>
+      </span>
       <div className="hvf__range-row">
         <input
           type="number"
           className="hvf__range-input"
           placeholder="Od"
-          value={filters.priceMin}
-          onChange={e => setFilters(prev => ({ ...prev, priceMin: e.target.value }))}
+          value={filters.rateMin}
+          onChange={e => setFilters(prev => ({ ...prev, rateMin: e.target.value }))}
           min={0}
         />
         <input
           type="number"
           className="hvf__range-input"
           placeholder="Do"
-          value={filters.priceMax}
-          onChange={e => setFilters(prev => ({ ...prev, priceMax: e.target.value }))}
+          value={filters.rateMax}
+          onChange={e => setFilters(prev => ({ ...prev, rateMax: e.target.value }))}
           min={0}
         />
       </div>

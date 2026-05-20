@@ -31,6 +31,7 @@ import { PartnerBannerAd } from '@/components/ads/PartnerBannerAd';
 import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { useBrand } from '@/contexts/BrandContext';
+import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
 
 const emptyFilters: FilterState = {
@@ -74,6 +75,14 @@ export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: seoConfig } = useSeoConfig();
   const { config } = useBrand();
+  const { setPriceType } = usePriceSettings();
+
+  // Sync URL ?clientType=private|business → global priceType (one-shot on mount)
+  React.useEffect(() => {
+    const ct = searchParams.get('clientType');
+    if (ct === 'business') setPriceType('net');
+    else if (ct === 'private') setPriceType('gross');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize from URL
   const [filters, setFilters] = React.useState<FilterState>(() => {
@@ -234,8 +243,11 @@ export default function SearchPage() {
   const rentalCondition = filters.statuses.length === 1
     ? (filters.statuses[0] as 'NEW' | 'USED')
     : undefined;
+  // Hide rentals when a price range is set: rental "price" is the monthly rate,
+  // which would mix two incompatible scales (full price vs. rate).
+  const hideRentals = Boolean(filters.priceFrom || filters.priceTo);
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.priceFrom, filters.priceTo, filters.query],
+    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
@@ -245,16 +257,17 @@ export default function SearchPage() {
       bodyType: filters.bodyTypes.length === 1 ? filters.bodyTypes[0] : undefined,
       yearFrom: filters.yearFrom || undefined,
       yearTo: filters.yearTo || undefined,
-      priceFrom: filters.priceFrom || undefined,
-      priceTo: filters.priceTo || undefined,
       condition: rentalCondition,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     }),
+    enabled: !hideRentals,
   });
-  const rentalVehicles = rentalData?.vehicles || [];
+  const rentalVehicles = hideRentals ? [] : (rentalData?.vehicles || []);
 
-  const rentalByCondition = rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined;
+  const rentalByCondition = hideRentals
+    ? undefined
+    : (rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined);
   const mergedByCondition = data?.byCondition
     ? {
         NEW: data.byCondition.NEW + (rentalByCondition?.NEW ?? 0),
@@ -381,6 +394,7 @@ export default function SearchPage() {
               availableMakes={mergedMakes}
               availableModels={mergedModels}
               facets={mergedFacets}
+              onApply={() => setAllFiltersOpen(false)}
             />
           </div>
         </SheetContent>

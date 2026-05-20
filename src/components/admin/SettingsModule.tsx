@@ -635,6 +635,23 @@ export function SettingsModule() {
                                 placeholder="+49 ..."
                                 className="bg-white"
                             />
+                            <p className="text-xs text-muted-foreground">
+                                Formalny numer firmy — używany w stopce i sekcji „Dane podmiotu".
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Telefon — Sprzedaż</Label>
+                            <Input
+                                value={settings.salesContactPhone || ''}
+                                onChange={(e) => setSettings({ ...settings, salesContactPhone: e.target.value })}
+                                placeholder="+48 ..."
+                                className="bg-white"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Numer komunikowany w materiałach reklamowych i kierujący do działu sprzedaży.
+                                Pokazywany na stronie Kontakt, w nagłówku oraz sekcjach CTA. Jeśli puste —
+                                fallback na „Telefon kontaktowy".
+                            </p>
                         </div>
                         <div className="space-y-2">
                             <Label className="text-sm font-bold">NIP / VAT ID</Label>
