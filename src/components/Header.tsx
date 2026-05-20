@@ -40,6 +40,7 @@ const ALL_NAV_LINKS = [
 export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const { data: settings, isLoading: isSettingsLoading } = useAppSettings();
+  const phoneForSales = settings?.salesContactPhone || settings?.legalContactPhone || '';
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -205,9 +206,9 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
             )}
 
             {/* Phone Button */}
-            {settings?.legalContactPhone && (
+            {phoneForSales && (
               <a
-                href={`tel:${settings.legalContactPhone}`}
+                href={`tel:${phoneForSales}`}
                 aria-label="Zadzwoń do nas"
                 className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 hover:shadow-md hover:shadow-accent/20 active:scale-95"
               >
@@ -228,9 +229,9 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
         {/* Mobile Menu */}
         <div className="flex items-center gap-2 lg:hidden">
           {/* Phone circle - mobile */}
-          {settings?.legalContactPhone && (
+          {phoneForSales && (
             <a
-              href={`tel:${settings.legalContactPhone}`}
+              href={`tel:${phoneForSales}`}
               aria-label="Zadzwoń do nas"
               className="flex items-center justify-center w-9 h-9 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 active:scale-95"
             >

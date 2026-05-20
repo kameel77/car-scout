@@ -3,10 +3,13 @@ import { Phone, Mail } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import './home-page.css';
 
 export default function CarsalonContactPage() {
   const { config } = useBrand();
+  const { data: settings } = useAppSettings();
+  const salesPhone = settings?.salesContactPhone || settings?.legalContactPhone || config.contactInfo.phone;
   return (
     <div className="landing-page-root">
       <Header />
@@ -20,8 +23,8 @@ export default function CarsalonContactPage() {
               {config.contactPage.subtitle}
             </p>
             <div className="home-hero__actions" style={{ justifyContent: 'center' }}>
-              <a href={`tel:${config.contactInfo.phone.replace(/\s+/g, '')}`} className="home-btn-secondary">
-                <Phone size={18} />&nbsp; {config.contactInfo.phone}
+              <a href={`tel:${salesPhone.replace(/\s+/g, '')}`} className="home-btn-secondary">
+                <Phone size={18} />&nbsp; {salesPhone}
               </a>
               <a href={`mailto:${config.contactInfo.email}`} className="home-btn-secondary">
                 <Mail size={18} />&nbsp; {config.contactInfo.email}
