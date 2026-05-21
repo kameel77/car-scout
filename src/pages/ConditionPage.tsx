@@ -396,6 +396,9 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
         params.set('rateBasis', updatedFilters.rateBasis);
       }
       if (updatedFilters.query) params.set('q', updatedFilters.query);
+      // Preserve the "Wszystkie filtry" sheet across the redirect when the user
+      // changed Stan while the sheet was open — SearchPage re-opens it from this URL param.
+      if (allFiltersOpen) params.set('openFilters', 'true');
       const qs = params.toString();
       navigate(`/samochody${qs ? `?${qs}` : ''}`);
       return;
@@ -403,7 +406,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
 
     setFilters(updatedFilters);
     setPage(1);
-  }, [condition, navigate, priceType]);
+  }, [condition, navigate, priceType, allFiltersOpen]);
 
   const handleClearFilters = React.useCallback(() => {
     setFilters({ ...emptyFilters, statuses: [condition] });
