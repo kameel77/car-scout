@@ -32,7 +32,9 @@ FROM node:20-slim AS runner
 
 # Ensure openssl and curl are available for Prisma runtime and healthchecks
 # libnss3, libfontconfig1, libfreetype6, fonts-liberation, ca-certificates — shared libs for @sparticuz/chromium
+# apt-get upgrade pulls in OS security patches that the upstream node:20-slim tag may not yet include.
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
       openssl curl \
       libnss3 libfontconfig1 libfreetype6 \
