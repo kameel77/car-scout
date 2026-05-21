@@ -235,6 +235,9 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
         let vehicles: any[] = [];
         let total = 0;
+        // When rate filter is active, byCondition computed from the in-memory filtered set —
+        // overrides the DB-only count from getFilterOptions so tab counts match the listing.
+        let byConditionOverride: { NEW: number; USED: number } | undefined;
 
         if (isRateSort || isPriceFilter) {
             // 1. Fetch minimal data for all matching vehicles
@@ -242,6 +245,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 where,
                 select: {
                     id: true,
+                    condition: true,
                     [sortField as string]: true,
                     rentalAssignments: {
                         where: { isActive: true },
@@ -288,7 +292,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     }
                 }
                 const minRate = bestRateEntry ? bestRateEntry[rateField] : null;
-                return { id: String(v.id), minRate, sortFieldValue: v[sortField as string] };
+                return { id: String(v.id), condition: v.condition, minRate, sortFieldValue: v[sortField as string] };
             });
 
             // 3. Filter by price (comparing against monthlyRateNet or monthlyRateGross per priceBasis)
@@ -296,6 +300,14 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 const from = priceFrom ? parseInt(priceFrom) : 0;
                 const to = priceTo ? parseInt(priceTo) : Infinity;
                 mapped = mapped.filter(v => v.minRate !== null && v.minRate >= from && v.minRate <= to);
+
+                // Compute byCondition from the post-filter set so tab counts match what the user sees.
+                byConditionOverride = { NEW: 0, USED: 0 };
+                for (const v of mapped) {
+                    if (v.condition === 'NEW' || v.condition === 'USED') {
+                        byConditionOverride[v.condition as 'NEW' | 'USED'] += 1;
+                    }
+                }
             }
 
             // 4. Sort
@@ -386,6 +398,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         // Get filter options (including condition counts) + per-dimension facets
         const filterOptions = await getFilterOptions(fastify, where);
         const facets = await computeFacets(fastify, where);
+
+        // When rate filter shrank the in-memory set, replace the DB-derived byCondition
+        // with the post-filter counts so tab numbers don't overstate the result.
+        if (byConditionOverride) {
+            filterOptions.byCondition = byConditionOverride;
+        }
 
         return {
             vehicles: vehiclesWithRates,
