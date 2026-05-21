@@ -138,15 +138,24 @@ export default function SearchPage() {
   const [allFiltersOpen, setAllFiltersOpen] = React.useState(() => {
     return searchParams.get('openFilters') === 'true';
   });
+  // When the sheet opens because we just landed here from a Stan-switch redirect,
+  // skip the entry animation to mask the brief unmount/mount flicker.
+  const [skipSheetAnimation, setSkipSheetAnimation] = React.useState(
+    () => searchParams.get('openFilters') === 'true',
+  );
 
-  // Clean up openFilters param after reading it
+  // Clean up openFilters param after reading it; re-enable animations on next tick.
   React.useEffect(() => {
     if (searchParams.get('openFilters')) {
       const next = new URLSearchParams(searchParams);
       next.delete('openFilters');
       setSearchParams(next, { replace: true });
     }
-  }, []);
+    if (skipSheetAnimation) {
+      const timer = setTimeout(() => setSkipSheetAnimation(false), 100);
+      return () => clearTimeout(timer);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Desktop search state (debounced, synced to filters.query)
   const [desktopSearch, setDesktopSearch] = React.useState(filters.query || '');
@@ -390,7 +399,7 @@ export default function SearchPage() {
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
       <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+        <SheetContent side="right" className="w-full sm:max-w-md p-0" instant={skipSheetAnimation}>
           <SheetHeader className="sr-only">
             <SheetTitle>{t('filters.title')}</SheetTitle>
           </SheetHeader>
