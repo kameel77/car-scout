@@ -20,6 +20,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             yearTo,
             priceFrom,
             priceTo,
+            priceBasis,
             mileageFrom,
             mileageTo,
             powerFrom,
@@ -28,6 +29,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             capacityTo,
             condition
         } = request.query as Record<string, string | undefined>;
+
+        // priceBasis controls whether priceFrom/priceTo are compared against monthlyRateNet or monthlyRateGross.
+        // Default gross preserves prior behaviour for callers that omit it.
+        const rateField: 'monthlyRateNet' | 'monthlyRateGross' =
+            priceBasis === 'net' ? 'monthlyRateNet' : 'monthlyRateGross';
 
         const pageNum = Math.max(1, parseInt(page || '1'));
         const limitNum = Math.min(50, Math.max(1, parseInt(limit || '12')));
@@ -229,6 +235,9 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
         let vehicles: any[] = [];
         let total = 0;
+        // When rate filter is active, byCondition computed from the in-memory filtered set —
+        // overrides the DB-only count from getFilterOptions so tab counts match the listing.
+        let byConditionOverride: { NEW: number; USED: number } | undefined;
 
         if (isRateSort || isPriceFilter) {
             // 1. Fetch minimal data for all matching vehicles
@@ -236,13 +245,15 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 where,
                 select: {
                     id: true,
+                    condition: true,
                     [sortField as string]: true,
                     rentalAssignments: {
                         where: { isActive: true },
                         select: {
                             matrixEntries: {
                                 where: matrixEntryFilter,
-                                select: { 
+                                select: {
+                                    monthlyRateNet: true,
                                     monthlyRateGross: true,
                                     contractMonths: true,
                                     annualMileageKm: true,
@@ -254,7 +265,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 }
             } as any); // Cast to any because of dynamic sortField
 
-            // 2. Compute min rate
+            // 2. Compute min rate (cheapest entry, tie-broken on contract/mileage/initial/gross)
             let mapped = (allVehiclesMinimal as any[]).map(v => {
                 let bestRateEntry: any = null;
                 for (const a of v.rentalAssignments || []) {
@@ -280,15 +291,23 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                         }
                     }
                 }
-                const minRate = bestRateEntry ? bestRateEntry.monthlyRateGross : null;
-                return { id: String(v.id), minRate, sortFieldValue: v[sortField as string] };
+                const minRate = bestRateEntry ? bestRateEntry[rateField] : null;
+                return { id: String(v.id), condition: v.condition, minRate, sortFieldValue: v[sortField as string] };
             });
 
-            // 3. Filter by price
+            // 3. Filter by price (comparing against monthlyRateNet or monthlyRateGross per priceBasis)
             if (isPriceFilter) {
                 const from = priceFrom ? parseInt(priceFrom) : 0;
                 const to = priceTo ? parseInt(priceTo) : Infinity;
                 mapped = mapped.filter(v => v.minRate !== null && v.minRate >= from && v.minRate <= to);
+
+                // Compute byCondition from the post-filter set so tab counts match what the user sees.
+                byConditionOverride = { NEW: 0, USED: 0 };
+                for (const v of mapped) {
+                    if (v.condition === 'NEW' || v.condition === 'USED') {
+                        byConditionOverride[v.condition as 'NEW' | 'USED'] += 1;
+                    }
+                }
             }
 
             // 4. Sort
@@ -379,6 +398,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         // Get filter options (including condition counts) + per-dimension facets
         const filterOptions = await getFilterOptions(fastify, where);
         const facets = await computeFacets(fastify, where);
+
+        // When rate filter shrank the in-memory set, replace the DB-derived byCondition
+        // with the post-filter counts so tab numbers don't overstate the result.
+        if (byConditionOverride) {
+            filterOptions.byCondition = byConditionOverride;
+        }
 
         return {
             vehicles: vehiclesWithRates,
