@@ -75,7 +75,7 @@ export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: seoConfig } = useSeoConfig();
   const { config } = useBrand();
-  const { setPriceType } = usePriceSettings();
+  const { priceType, setPriceType } = usePriceSettings();
 
   // Sync URL ?clientType=private|business → global priceType (one-shot on mount)
   React.useEffect(() => {
@@ -138,15 +138,24 @@ export default function SearchPage() {
   const [allFiltersOpen, setAllFiltersOpen] = React.useState(() => {
     return searchParams.get('openFilters') === 'true';
   });
+  // When the sheet opens because we just landed here from a Stan-switch redirect,
+  // skip the entry animation to mask the brief unmount/mount flicker.
+  const [skipSheetAnimation, setSkipSheetAnimation] = React.useState(
+    () => searchParams.get('openFilters') === 'true',
+  );
 
-  // Clean up openFilters param after reading it
+  // Clean up openFilters param after reading it; re-enable animations on next tick.
   React.useEffect(() => {
     if (searchParams.get('openFilters')) {
       const next = new URLSearchParams(searchParams);
       next.delete('openFilters');
       setSearchParams(next, { replace: true });
     }
-  }, []);
+    if (skipSheetAnimation) {
+      const timer = setTimeout(() => setSkipSheetAnimation(false), 100);
+      return () => clearTimeout(timer);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Desktop search state (debounced, synced to filters.query)
   const [desktopSearch, setDesktopSearch] = React.useState(filters.query || '');
@@ -243,23 +252,44 @@ export default function SearchPage() {
   const rentalCondition = filters.statuses.length === 1
     ? (filters.statuses[0] as 'NEW' | 'USED')
     : undefined;
-  // Hide rentals when a price range is set: rental "price" is the monthly rate,
-  // which would mix two incompatible scales (full price vs. rate).
+  // Hide rentals when a sale-price range is set: rental "price" is the monthly rate,
+  // not a comparable scale to sale price. Rate filter (rateFrom/rateTo) is mapped
+  // through priceMin/priceMax + priceBasis below so it still applies to rentals.
   const hideRentals = Boolean(filters.priceFrom || filters.priceTo);
+  const rentalOfferType = priceType === 'net' ? 'b2b' : 'b2c';
+  const rentalRateMin = filters.rateFrom || undefined;
+  const rentalRateMax = filters.rateTo || undefined;
+  const rentalRateBasis = (filters.rateFrom || filters.rateTo) ? filters.rateBasis : undefined;
+  // Map the sale sortBy onto rental-backend sort fields so rentals reorder with the user's choice.
+  // For price-based sorts, use the matching rate basis (gross for Prywatnie, net for Firma).
+  const rentalRateField = priceType === 'net' ? 'minMonthlyRateNet' : 'minMonthlyRateGross';
+  const rentalSort: { sortBy: string; sortOrder: 'asc' | 'desc' } = (() => {
+    switch (sortBy) {
+      case 'year_desc': return { sortBy: 'productionYear', sortOrder: 'desc' };
+      case 'year_asc': return { sortBy: 'productionYear', sortOrder: 'asc' };
+      case 'price_asc': return { sortBy: rentalRateField, sortOrder: 'asc' };
+      case 'price_desc': return { sortBy: rentalRateField, sortOrder: 'desc' };
+      default: return { sortBy: 'createdAt', sortOrder: 'desc' };
+    }
+  })();
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query],
+    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
       search: filters.query || undefined,
-      make: filters.makes.length === 1 ? filters.makes[0] : undefined,
-      fuelType: filters.fuelTypes.length === 1 ? filters.fuelTypes[0] : undefined,
-      bodyType: filters.bodyTypes.length === 1 ? filters.bodyTypes[0] : undefined,
+      make: filters.makes.length ? filters.makes.join(',') : undefined,
+      fuelType: filters.fuelTypes.length ? filters.fuelTypes.join(',') : undefined,
+      bodyType: filters.bodyTypes.length ? filters.bodyTypes.join(',') : undefined,
       yearFrom: filters.yearFrom || undefined,
       yearTo: filters.yearTo || undefined,
       condition: rentalCondition,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
+      offerType: rentalOfferType,
+      priceFrom: rentalRateMin,
+      priceTo: rentalRateMax,
+      priceBasis: rentalRateBasis,
+      sortBy: rentalSort.sortBy,
+      sortOrder: rentalSort.sortOrder,
     }),
     enabled: !hideRentals,
   });
@@ -381,7 +411,7 @@ export default function SearchPage() {
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
       <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+        <SheetContent side="right" className="w-full sm:max-w-md p-0" instant={skipSheetAnimation}>
           <SheetHeader className="sr-only">
             <SheetTitle>{t('filters.title')}</SheetTitle>
           </SheetHeader>

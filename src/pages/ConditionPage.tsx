@@ -305,23 +305,44 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const saleTotalPages = saleData?.totalPages ?? Math.max(1, Math.ceil((saleTotalCount || 1) / perPage));
 
   /* ── Data: rental vehicles (same condition) ── */
-  // Hide rentals when a price range is set: rental "price" is the monthly rate,
-  // which would mix two incompatible scales (full price vs. rate).
+  // Hide rentals when a sale-price range is set: rental "price" is the monthly rate,
+  // not a comparable scale to sale price. Rate filter (rateFrom/rateTo) is mapped
+  // through priceMin/priceMax + priceBasis below so it still applies to rentals.
   const hideRentals = Boolean(filters.priceFrom || filters.priceTo);
+  const rentalOfferType = priceType === 'net' ? 'b2b' : 'b2c';
+  const rentalRateMin = filters.rateFrom || undefined;
+  const rentalRateMax = filters.rateTo || undefined;
+  const rentalRateBasis = (filters.rateFrom || filters.rateTo) ? filters.rateBasis : undefined;
+  // Map the sale sortBy onto rental-backend sort fields so rentals reorder with the user's choice.
+  // For price-based sorts, use the matching rate basis (gross for Prywatnie, net for Firma).
+  const rentalRateField = priceType === 'net' ? 'minMonthlyRateNet' : 'minMonthlyRateGross';
+  const rentalSort: { sortBy: string; sortOrder: 'asc' | 'desc' } = (() => {
+    switch (sortBy) {
+      case 'year_desc': return { sortBy: 'productionYear', sortOrder: 'desc' };
+      case 'year_asc': return { sortBy: 'productionYear', sortOrder: 'asc' };
+      case 'price_asc': return { sortBy: rentalRateField, sortOrder: 'asc' };
+      case 'price_desc': return { sortBy: rentalRateField, sortOrder: 'desc' };
+      default: return { sortBy: 'createdAt', sortOrder: 'desc' };
+    }
+  })();
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-condition', condition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query],
+    queryKey: ['rental-condition', condition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
       search: filters.query || undefined,
-      make: filters.makes.length === 1 ? filters.makes[0] : undefined,
-      fuelType: filters.fuelTypes.length === 1 ? filters.fuelTypes[0] : undefined,
-      bodyType: filters.bodyTypes.length === 1 ? filters.bodyTypes[0] : undefined,
+      make: filters.makes.length ? filters.makes.join(',') : undefined,
+      fuelType: filters.fuelTypes.length ? filters.fuelTypes.join(',') : undefined,
+      bodyType: filters.bodyTypes.length ? filters.bodyTypes.join(',') : undefined,
       yearFrom: filters.yearFrom || undefined,
       yearTo: filters.yearTo || undefined,
       condition,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
+      offerType: rentalOfferType,
+      priceFrom: rentalRateMin,
+      priceTo: rentalRateMax,
+      priceBasis: rentalRateBasis,
+      sortBy: rentalSort.sortBy,
+      sortOrder: rentalSort.sortOrder,
     }),
     enabled: !hideRentals,
   });
@@ -387,6 +408,9 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
         params.set('rateBasis', updatedFilters.rateBasis);
       }
       if (updatedFilters.query) params.set('q', updatedFilters.query);
+      // Preserve the "Wszystkie filtry" sheet across the redirect when the user
+      // changed Stan while the sheet was open — SearchPage re-opens it from this URL param.
+      if (allFiltersOpen) params.set('openFilters', 'true');
       const qs = params.toString();
       navigate(`/samochody${qs ? `?${qs}` : ''}`);
       return;
@@ -394,7 +418,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
 
     setFilters(updatedFilters);
     setPage(1);
-  }, [condition, navigate, priceType]);
+  }, [condition, navigate, priceType, allFiltersOpen]);
 
   const handleClearFilters = React.useCallback(() => {
     setFilters({ ...emptyFilters, statuses: [condition] });
