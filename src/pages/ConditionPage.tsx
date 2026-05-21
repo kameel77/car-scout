@@ -313,8 +313,20 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const rentalRateMin = filters.rateFrom || undefined;
   const rentalRateMax = filters.rateTo || undefined;
   const rentalRateBasis = (filters.rateFrom || filters.rateTo) ? filters.rateBasis : undefined;
+  // Map the sale sortBy onto rental-backend sort fields so rentals reorder with the user's choice.
+  // For price-based sorts, use the matching rate basis (gross for Prywatnie, net for Firma).
+  const rentalRateField = priceType === 'net' ? 'minMonthlyRateNet' : 'minMonthlyRateGross';
+  const rentalSort: { sortBy: string; sortOrder: 'asc' | 'desc' } = (() => {
+    switch (sortBy) {
+      case 'year_desc': return { sortBy: 'productionYear', sortOrder: 'desc' };
+      case 'year_asc': return { sortBy: 'productionYear', sortOrder: 'asc' };
+      case 'price_asc': return { sortBy: rentalRateField, sortOrder: 'asc' };
+      case 'price_desc': return { sortBy: rentalRateField, sortOrder: 'desc' };
+      default: return { sortBy: 'createdAt', sortOrder: 'desc' };
+    }
+  })();
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-condition', condition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis],
+    queryKey: ['rental-condition', condition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
@@ -329,8 +341,8 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       priceFrom: rentalRateMin,
       priceTo: rentalRateMax,
       priceBasis: rentalRateBasis,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
+      sortBy: rentalSort.sortBy,
+      sortOrder: rentalSort.sortOrder,
     }),
     enabled: !hideRentals,
   });
