@@ -75,7 +75,7 @@ export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: seoConfig } = useSeoConfig();
   const { config } = useBrand();
-  const { setPriceType } = usePriceSettings();
+  const { priceType, setPriceType } = usePriceSettings();
 
   // Sync URL ?clientType=private|business → global priceType (one-shot on mount)
   React.useEffect(() => {
@@ -243,11 +243,16 @@ export default function SearchPage() {
   const rentalCondition = filters.statuses.length === 1
     ? (filters.statuses[0] as 'NEW' | 'USED')
     : undefined;
-  // Hide rentals when a price range is set: rental "price" is the monthly rate,
-  // which would mix two incompatible scales (full price vs. rate).
+  // Hide rentals when a sale-price range is set: rental "price" is the monthly rate,
+  // not a comparable scale to sale price. Rate filter (rateFrom/rateTo) is mapped
+  // through priceMin/priceMax + priceBasis below so it still applies to rentals.
   const hideRentals = Boolean(filters.priceFrom || filters.priceTo);
+  const rentalOfferType = priceType === 'net' ? 'b2b' : 'b2c';
+  const rentalRateMin = filters.rateFrom || undefined;
+  const rentalRateMax = filters.rateTo || undefined;
+  const rentalRateBasis = (filters.rateFrom || filters.rateTo) ? filters.rateBasis : undefined;
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query],
+    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
@@ -258,6 +263,10 @@ export default function SearchPage() {
       yearFrom: filters.yearFrom || undefined,
       yearTo: filters.yearTo || undefined,
       condition: rentalCondition,
+      offerType: rentalOfferType,
+      priceFrom: rentalRateMin,
+      priceTo: rentalRateMax,
+      priceBasis: rentalRateBasis,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     }),

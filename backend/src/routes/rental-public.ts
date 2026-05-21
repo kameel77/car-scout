@@ -20,6 +20,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             yearTo,
             priceFrom,
             priceTo,
+            priceBasis,
             mileageFrom,
             mileageTo,
             powerFrom,
@@ -28,6 +29,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             capacityTo,
             condition
         } = request.query as Record<string, string | undefined>;
+
+        // priceBasis controls whether priceFrom/priceTo are compared against monthlyRateNet or monthlyRateGross.
+        // Default gross preserves prior behaviour for callers that omit it.
+        const rateField: 'monthlyRateNet' | 'monthlyRateGross' =
+            priceBasis === 'net' ? 'monthlyRateNet' : 'monthlyRateGross';
 
         const pageNum = Math.max(1, parseInt(page || '1'));
         const limitNum = Math.min(50, Math.max(1, parseInt(limit || '12')));
@@ -242,7 +248,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                         select: {
                             matrixEntries: {
                                 where: matrixEntryFilter,
-                                select: { 
+                                select: {
+                                    monthlyRateNet: true,
                                     monthlyRateGross: true,
                                     contractMonths: true,
                                     annualMileageKm: true,
@@ -254,7 +261,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 }
             } as any); // Cast to any because of dynamic sortField
 
-            // 2. Compute min rate
+            // 2. Compute min rate (cheapest entry, tie-broken on contract/mileage/initial/gross)
             let mapped = (allVehiclesMinimal as any[]).map(v => {
                 let bestRateEntry: any = null;
                 for (const a of v.rentalAssignments || []) {
@@ -280,11 +287,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                         }
                     }
                 }
-                const minRate = bestRateEntry ? bestRateEntry.monthlyRateGross : null;
+                const minRate = bestRateEntry ? bestRateEntry[rateField] : null;
                 return { id: String(v.id), minRate, sortFieldValue: v[sortField as string] };
             });
 
-            // 3. Filter by price
+            // 3. Filter by price (comparing against monthlyRateNet or monthlyRateGross per priceBasis)
             if (isPriceFilter) {
                 const from = priceFrom ? parseInt(priceFrom) : 0;
                 const to = priceTo ? parseInt(priceTo) : Infinity;
