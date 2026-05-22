@@ -210,7 +210,7 @@ export default function RentalSearchPage() {
   const accent = 'hsl(var(--accent))';
   const accentText = 'hsl(var(--accent-foreground))';
 
-  const defaultSortRental = settings?.defaultSortRental || 'createdAt_desc';
+  const defaultSortRental = settings?.defaultSortRental || 'minMonthlyRateNet_asc';
   const [initSortBy, initSortOrder] = defaultSortRental.split('_');
 
   // ── Filter state ──
@@ -233,15 +233,15 @@ export default function RentalSearchPage() {
   const [capacityTo, setCapacityTo] = useState('');
   const [condition, setCondition] = useState<string[]>([]); // [] = all, ['NEW'], ['USED']
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState(initSortBy || 'createdAt');
-  const [sortOrder, setSortOrder] = useState(initSortOrder || 'desc');
+  const [sortBy, setSortBy] = useState(initSortBy || 'minMonthlyRateNet');
+  const [sortOrder, setSortOrder] = useState(initSortOrder || 'asc');
   const [clientType, setClientType] = useState<ClientType>(getStoredClientType);
   const [allFiltersOpen, setAllFiltersOpen] = useState(false);
 
   useEffect(() => {
     if (settings?.defaultSortRental) {
       const [dsb, dso] = settings.defaultSortRental.split('_');
-      if (dsb && dso && sortBy === 'createdAt' && sortOrder === 'desc') {
+      if (dsb && dso && sortBy === 'minMonthlyRateNet' && sortOrder === 'asc') {
         setSortBy(dsb); setSortOrder(dso);
       }
     }

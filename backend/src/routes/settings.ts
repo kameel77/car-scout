@@ -246,8 +246,8 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     csflowEnabled: data.csflowEnabled !== undefined
                         ? Boolean(data.csflowEnabled)
                         : undefined,
-                    defaultSortCars: data.defaultSortCars || 'year_desc',
-                    defaultSortRental: data.defaultSortRental || 'createdAt_desc',
+                    defaultSortCars: data.defaultSortCars || 'price_asc',
+                    defaultSortRental: data.defaultSortRental || 'minMonthlyRateNet_asc',
                     searchGridColumns: data.searchGridColumns
                         ? toNumberOrFallback(data.searchGridColumns, 4)
                         : undefined,
@@ -310,8 +310,8 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     csflowEnabled: data.csflowEnabled !== undefined
                         ? Boolean(data.csflowEnabled)
                         : true,
-                    defaultSortCars: data.defaultSortCars || 'year_desc',
-                    defaultSortRental: data.defaultSortRental || 'createdAt_desc',
+                    defaultSortCars: data.defaultSortCars || 'price_asc',
+                    defaultSortRental: data.defaultSortRental || 'minMonthlyRateNet_asc',
                     searchGridColumns: toNumberOrFallback(data.searchGridColumns, 4),
                     splitNewUsed: Boolean(data.splitNewUsed),
                 }

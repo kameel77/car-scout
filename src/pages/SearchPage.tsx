@@ -117,7 +117,7 @@ export default function SearchPage() {
   });
 
   const { data: settings } = useAppSettings();
-  const defaultSortCars = settings?.defaultSortCars || 'year_desc';
+  const defaultSortCars = settings?.defaultSortCars || 'price_asc';
   const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || defaultSortCars);
   
   // Re-sync default if settings loads after initial mount and no explicit sort is set
