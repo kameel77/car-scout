@@ -449,7 +449,7 @@ export function SettingsModule() {
                         <div className="space-y-3">
                             <Label className="text-sm font-bold">Domyślne sortowanie samochodów (Zakup/Leasing)</Label>
                             <Select
-                                value={settings.defaultSortCars || 'year_desc'}
+                                value={settings.defaultSortCars || 'price_asc'}
                                 onValueChange={(val) => setSettings({ ...settings, defaultSortCars: val })}
                             >
                                 <SelectTrigger className="w-full bg-white">
@@ -468,13 +468,14 @@ export function SettingsModule() {
                         <div className="space-y-3">
                             <Label className="text-sm font-bold">Domyślne sortowanie pojazdów (Wynajem)</Label>
                             <Select
-                                value={settings.defaultSortRental || 'createdAt_desc'}
+                                value={settings.defaultSortRental || 'minMonthlyRateNet_asc'}
                                 onValueChange={(val) => setSettings({ ...settings, defaultSortRental: val })}
                             >
                                 <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Wybierz sortowanie" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="minMonthlyRateNet_asc">Rata miesięczna (od najniższej)</SelectItem>
                                     <SelectItem value="createdAt_desc">Data dodania (najnowsze)</SelectItem>
                                     <SelectItem value="sellingPrice_asc">Cena/Rata (od najniższej)</SelectItem>
                                     <SelectItem value="sellingPrice_desc">Cena/Rata (od najwyższej)</SelectItem>
