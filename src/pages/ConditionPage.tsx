@@ -208,7 +208,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   });
 
 
-  const defaultSortCars = settings?.defaultSortCars || 'year_desc';
+  const defaultSortCars = settings?.defaultSortCars || 'price_asc';
   const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || defaultSortCars);
 
   React.useEffect(() => {
