@@ -239,6 +239,15 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(422).send({ error: 'Missing vehicle year' });
             }
 
+            // Vehis API only supports these durations
+            const VEHIS_ALLOWED_DURATIONS = [36, 48, 60];
+            if (!VEHIS_ALLOWED_DURATIONS.includes(data.period)) {
+                return reply.code(422).send({
+                    error: 'Unsupported duration for Vehis',
+                    details: `Allowed: ${VEHIS_ALLOWED_DURATIONS.join(', ')}`
+                });
+            }
+
             const clientType = config.clientType === 'consumer' ? 'consumer' : 'entrepreneur';
             const initialFeePercent = data.initialFeePercent ?? Math.round((data.downPaymentAmount / data.price) * 100);
             const finalPaymentPercent = data.finalPaymentPercent ?? 0;
@@ -300,11 +309,17 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 try { result = JSON.parse(responseText); } catch { /* non-JSON response */ }
 
                 // Vehis returns rich object for broker/calculate
-                // We wrap it to match user's requested format for preview
-                const monthlyInstallment = Number((result as any)?.cars?.[0]?.installment);
-                if (!Number.isFinite(monthlyInstallment)) {
+                // Vehis installment is always NETTO
+                const installmentNetto = Number((result as any)?.cars?.[0]?.installment);
+                if (!Number.isFinite(installmentNetto)) {
                     return reply.code(502).send({ error: 'Invalid provider response', details: result });
                 }
+
+                // For consumer clients, the user pays brutto (netto + 23% VAT)
+                // For entrepreneur clients, the user sees netto (they deduct VAT)
+                const isConsumer = clientType === 'consumer';
+                const installmentBrutto = Math.round(installmentNetto * 1.23);
+                const monthlyInstallment = isConsumer ? installmentBrutto : installmentNetto;
 
                 // Construct rich preview response
                 const richResult = result as any;
@@ -326,6 +341,9 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
                 return {
                     monthlyInstallment,
+                    monthlyInstallmentNetto: installmentNetto,
+                    monthlyInstallmentBrutto: installmentBrutto,
+                    isGross: isConsumer,
                     provider: product.provider,
                     ...richPreview
                 };

@@ -73,6 +73,8 @@ export function FinancingCalculator({
     const [failedProducts, setFailedProducts] = React.useState<Set<string>>(new Set());
     const [externalInstallment, setExternalInstallment] = React.useState<number | null>(null);
     const [externalLoading, setExternalLoading] = React.useState(false);
+    const [externalIsGross, setExternalIsGross] = React.useState(false);
+    const [externalInstallmentNetto, setExternalInstallmentNetto] = React.useState<number | null>(null);
 
     // State for calculation parameters
     const [months, setMonths] = React.useState(36);
@@ -185,6 +187,8 @@ export function FinancingCalculator({
                 });
                 if (!isCancelled) {
                     setExternalInstallment(response.monthlyInstallment);
+                    setExternalIsGross(response.isGross ?? false);
+                    setExternalInstallmentNetto(response.monthlyInstallmentNetto ?? null);
                     // Reset failure counter on success
                     failedCountRef.current = 0;
                 }
@@ -366,16 +370,16 @@ export function FinancingCalculator({
                                     <span className="font-semibold text-sm">{months} mies.</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-xs text-muted-foreground w-6">{selectedProduct.minInstallments}</span>
+                                    <span className="text-xs text-muted-foreground w-6">{selectedProduct.provider === 'VEHIS' ? Math.max(selectedProduct.minInstallments, 36) : selectedProduct.minInstallments}</span>
                                     <Slider
                                         value={[months]}
-                                        min={selectedProduct.minInstallments}
-                                        max={selectedProduct.maxInstallments}
-                                        step={12}
+                                        min={selectedProduct.provider === 'VEHIS' ? Math.max(selectedProduct.minInstallments, 36) : selectedProduct.minInstallments}
+                                        max={selectedProduct.provider === 'VEHIS' ? Math.min(selectedProduct.maxInstallments, 60) : selectedProduct.maxInstallments}
+                                        step={selectedProduct.provider === 'VEHIS' ? 12 : 12}
                                         onValueChange={v => setMonths(v[0])}
                                         className="flex-1"
                                     />
-                                    <span className="text-xs text-muted-foreground w-6 text-right">{selectedProduct.maxInstallments}</span>
+                                    <span className="text-xs text-muted-foreground w-6 text-right">{selectedProduct.provider === 'VEHIS' ? Math.min(selectedProduct.maxInstallments, 60) : selectedProduct.maxInstallments}</span>
                                 </div>
                             </div>
 
@@ -446,9 +450,25 @@ export function FinancingCalculator({
                                         Kalkulacja szacunkowa
                                     </div>
                                 )}
-                                {selectedProduct.category === 'LEASING' && (
+                                {selectedProduct.provider === 'VEHIS' && displayInstallment != null ? (
+                                    <>
+                                        <span className="text-xs text-muted-foreground">
+                                            {externalIsGross ? 'brutto (z VAT)' : 'netto (bez VAT)'}
+                                        </span>
+                                        {externalIsGross && externalInstallmentNetto != null && (
+                                            <span className="text-[10px] text-muted-foreground">
+                                                (netto: {formatPrice(externalInstallmentNetto, currency)})
+                                            </span>
+                                        )}
+                                        {!externalIsGross && externalInstallmentNetto != null && (
+                                            <span className="text-[10px] text-muted-foreground">
+                                                (brutto: {formatPrice(Math.round(externalInstallmentNetto * 1.23), currency)})
+                                            </span>
+                                        )}
+                                    </>
+                                ) : selectedProduct.category === 'LEASING' ? (
                                     <span className="text-xs text-muted-foreground">netto (bez VAT)</span>
-                                )}
+                                ) : null}
                             </div>
 
                             {selectedProduct.provider !== 'OWN' ? (

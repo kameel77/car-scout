@@ -1059,6 +1059,9 @@ export const financingApi = {
 
         return response.json() as Promise<{
             monthlyInstallment: number;
+            monthlyInstallmentNetto?: number;
+            monthlyInstallmentBrutto?: number;
+            isGross?: boolean;
             provider: string;
             client?: string;
             initialFee?: number;
