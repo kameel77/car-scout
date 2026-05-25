@@ -177,12 +177,14 @@ export function FinancingCalculator({
 
             setExternalLoading(true);
             try {
-                // Backend passes price directly to Vehis — no conversion.
-                // Frontend sends brutto for consumer, netto for entrepreneur (based on priceType).
+                // Vehis always operates in netto internally.
+                // Ensure we always send netto price regardless of priceType.
+                const nettoPrice = priceIsNet ? price : Math.round(price / 1.23);
+
                 const response = await financingApi.calculate({
                     productId: selectedProduct.id,
-                    price,
-                    downPaymentAmount: initialPaymentAmount,
+                    price: nettoPrice,
+                    downPaymentAmount: Math.round(nettoPrice * initialPaymentPct / 100),
                     period: months,
                     initialFeePercent: initialPaymentPct,
                     finalPaymentPercent: finalPaymentPct,
@@ -190,8 +192,14 @@ export function FinancingCalculator({
                     mileageKm
                 });
                 if (!isCancelled) {
-                    setExternalInstallment(response.monthlyInstallment);
-                    setExternalIsGross(response.isGross ?? false);
+                    // Vehis returns netto installment.
+                    // For consumer (priceIsNet=false): display brutto = netto * 1.23
+                    // For entrepreneur (priceIsNet=true): display netto as-is
+                    const nettoInstallment = response.monthlyInstallment;
+                    const displayValue = priceIsNet
+                        ? nettoInstallment
+                        : Math.round(nettoInstallment * 1.23);
+                    setExternalInstallment(displayValue);
                     // Reset failure counter on success
                     failedCountRef.current = 0;
                 }
