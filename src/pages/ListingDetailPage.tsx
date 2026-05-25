@@ -222,8 +222,8 @@ export default function ListingDetailPage() {
       //       : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
       //   : null;
 
-      // Let's hide secondary label if there is a discount to clean up the UI
-      const secondaryLabel = (user && !discount)
+      // Show alternative price (netto/brutto) for all visitors
+      const secondaryLabel = !discount
         ? (isNetPrimary
           ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
           : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
