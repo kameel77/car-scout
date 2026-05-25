@@ -604,16 +604,27 @@ export default function ListingDetailPage() {
               <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
                 <FinancingCalculator
                   listingId={listing.listing_id}
-                  price={applySpecialOfferDiscount(
+                  price={
                     priceType === 'net'
-                      ? (listing.dealer_price_net_pln || listing.price_pln)
-                      : getFinancingBasePrice({
-                          pricePln: listing.price_pln,
-                          brokerPricePln: listing.broker_price_pln,
-                          financingPriceBase: listing.financingPriceBase,
-                        }),
-                    discount
-                  )}
+                      ? Math.round(
+                          applySpecialOfferDiscount(
+                            getFinancingBasePrice({
+                              pricePln: listing.price_pln,
+                              brokerPricePln: listing.broker_price_pln,
+                              financingPriceBase: listing.financingPriceBase,
+                            }),
+                            discount
+                          ) / 1.23
+                        )
+                      : applySpecialOfferDiscount(
+                          getFinancingBasePrice({
+                            pricePln: listing.price_pln,
+                            brokerPricePln: listing.broker_price_pln,
+                            financingPriceBase: listing.financingPriceBase,
+                          }),
+                          discount
+                        )
+                  }
                   priceIsNet={priceType === 'net'}
                   currency={settings?.displayCurrency || 'PLN'}
                   manufacturingYear={listing.production_year}
@@ -847,16 +858,27 @@ export default function ListingDetailPage() {
                 >
                   <FinancingCalculator
                     listingId={listing.listing_id}
-                    price={applySpecialOfferDiscount(
+                    price={
                       priceType === 'net'
-                        ? (listing.dealer_price_net_pln || listing.price_pln)
-                        : getFinancingBasePrice({
-                            pricePln: listing.price_pln,
-                            brokerPricePln: listing.broker_price_pln,
-                            financingPriceBase: listing.financingPriceBase,
-                          }),
-                      discount
-                    )}
+                        ? Math.round(
+                            applySpecialOfferDiscount(
+                              getFinancingBasePrice({
+                                pricePln: listing.price_pln,
+                                brokerPricePln: listing.broker_price_pln,
+                                financingPriceBase: listing.financingPriceBase,
+                              }),
+                              discount
+                            ) / 1.23
+                          )
+                        : applySpecialOfferDiscount(
+                            getFinancingBasePrice({
+                              pricePln: listing.price_pln,
+                              brokerPricePln: listing.broker_price_pln,
+                              financingPriceBase: listing.financingPriceBase,
+                            }),
+                            discount
+                          )
+                    }
                     priceIsNet={priceType === 'net'}
                     currency={settings?.displayCurrency || 'PLN'}
                     manufacturingYear={listing.production_year}
