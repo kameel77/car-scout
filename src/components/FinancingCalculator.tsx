@@ -454,9 +454,16 @@ export function FinancingCalculator({
                                     </div>
                                 )}
                                 {selectedProduct.provider === 'VEHIS' && displayInstallment != null ? (
-                                    <span className="text-xs text-muted-foreground">
-                                        {externalIsGross ? 'brutto (z VAT)' : 'netto (bez VAT)'}
-                                    </span>
+                                    <div className="flex flex-col items-center gap-0.5">
+                                        <span className="text-xs text-muted-foreground">
+                                            {externalIsGross ? 'brutto' : 'netto (bez VAT)'}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground">
+                                            {externalIsGross
+                                                ? `(${formatPrice(Math.round((displayInstallment ?? 0) / 1.23), currency)} netto)`
+                                                : `(${formatPrice(Math.round((displayInstallment ?? 0) * 1.23), currency)} brutto)`}
+                                        </span>
+                                    </div>
                                 ) : selectedProduct.category === 'LEASING' ? (
                                     <span className="text-xs text-muted-foreground">netto (bez VAT)</span>
                                 ) : null}
