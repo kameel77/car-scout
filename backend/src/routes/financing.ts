@@ -239,13 +239,25 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(422).send({ error: 'Missing vehicle year' });
             }
 
+            // Vehis API only supports these durations
+            const VEHIS_ALLOWED_DURATIONS = [36, 48, 60];
+            if (!VEHIS_ALLOWED_DURATIONS.includes(data.period)) {
+                return reply.code(422).send({
+                    error: 'Unsupported duration for Vehis',
+                    details: `Allowed: ${VEHIS_ALLOWED_DURATIONS.join(', ')}`
+                });
+            }
+
             const clientType = config.clientType === 'consumer' ? 'consumer' : 'entrepreneur';
             const initialFeePercent = data.initialFeePercent ?? Math.round((data.downPaymentAmount / data.price) * 100);
             const finalPaymentPercent = data.finalPaymentPercent ?? 0;
             const vehicleState = data.mileageKm != null && data.mileageKm > 10 ? 1 : 0;
 
-            // Vehis requires net price. We receive gross from frontend.
-            const netPrice = Math.round(data.price / 1.23);
+            // Vehis /broker/calculate does not distinguish netto/brutto explicitly.
+            // The API interprets the price based on the client type:
+            //   - consumer: frontend sends brutto -> Vehis returns brutto installment
+            //   - entrepreneur: frontend sends netto -> Vehis returns netto installment
+            // So we pass the price through as-is — no conversion needed.
             const vehisPayload = {
                 client: clientType,
                 initialFee: Math.max(1, Math.min(product.maxInitialPayment, Math.round(initialFeePercent))),
@@ -255,7 +267,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
                     {
                         state: vehicleState,
                         manufacturing_year: data.manufacturingYear,
-                        price: netPrice
+                        price: Math.round(data.price)
                     }
                 ]
             };
@@ -299,12 +311,16 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 let result: any = {};
                 try { result = JSON.parse(responseText); } catch { /* non-JSON response */ }
 
-                // Vehis returns rich object for broker/calculate
-                // We wrap it to match user's requested format for preview
+                // Vehis returns installment in the same convention as the input price:
+                //   - consumer input (brutto) -> installment is brutto
+                //   - entrepreneur input (netto) -> installment is netto
+                // No conversion needed — just pass through.
                 const monthlyInstallment = Number((result as any)?.cars?.[0]?.installment);
                 if (!Number.isFinite(monthlyInstallment)) {
                     return reply.code(502).send({ error: 'Invalid provider response', details: result });
                 }
+
+                const isConsumer = clientType === 'consumer';
 
                 // Construct rich preview response
                 const richResult = result as any;
@@ -326,6 +342,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
                 return {
                     monthlyInstallment,
+                    isGross: isConsumer,
                     provider: product.provider,
                     ...richPreview
                 };

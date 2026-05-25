@@ -18,6 +18,8 @@ import { setPreferredFinancingType } from '@/utils/url-utils';
 interface FinancingCalculatorProps {
     listingId?: string;
     price: number;
+    /** True when the price prop is already netto (e.g. priceType='net' sites) */
+    priceIsNet?: boolean;
     currency?: string;
     manufacturingYear?: number;
     mileageKm?: number;
@@ -39,6 +41,7 @@ const FINANCING_TO_CATEGORY: Record<string, FinancingProduct['category']> = {
 export function FinancingCalculator({
     listingId,
     price,
+    priceIsNet,
     currency = 'PLN',
     manufacturingYear,
     mileageKm,
@@ -73,6 +76,7 @@ export function FinancingCalculator({
     const [failedProducts, setFailedProducts] = React.useState<Set<string>>(new Set());
     const [externalInstallment, setExternalInstallment] = React.useState<number | null>(null);
     const [externalLoading, setExternalLoading] = React.useState(false);
+    const [externalIsGross, setExternalIsGross] = React.useState(false);
 
     // State for calculation parameters
     const [months, setMonths] = React.useState(36);
@@ -173,10 +177,14 @@ export function FinancingCalculator({
 
             setExternalLoading(true);
             try {
+                // Vehis always operates in netto internally.
+                // Ensure we always send netto price regardless of priceType.
+                const nettoPrice = priceIsNet ? price : Math.round(price / 1.23);
+
                 const response = await financingApi.calculate({
                     productId: selectedProduct.id,
-                    price,
-                    downPaymentAmount: initialPaymentAmount,
+                    price: nettoPrice,
+                    downPaymentAmount: Math.round(nettoPrice * initialPaymentPct / 100),
                     period: months,
                     initialFeePercent: initialPaymentPct,
                     finalPaymentPercent: finalPaymentPct,
@@ -184,7 +192,14 @@ export function FinancingCalculator({
                     mileageKm
                 });
                 if (!isCancelled) {
-                    setExternalInstallment(response.monthlyInstallment);
+                    // Vehis returns netto installment.
+                    // For consumer (priceIsNet=false): display brutto = netto * 1.23
+                    // For entrepreneur (priceIsNet=true): display netto as-is
+                    const nettoInstallment = response.monthlyInstallment;
+                    const displayValue = priceIsNet
+                        ? nettoInstallment
+                        : Math.round(nettoInstallment * 1.23);
+                    setExternalInstallment(displayValue);
                     // Reset failure counter on success
                     failedCountRef.current = 0;
                 }
@@ -210,7 +225,7 @@ export function FinancingCalculator({
             isCancelled = true;
             clearTimeout(debounceTimer);
         };
-    }, [selectedProduct, price, initialPaymentAmount, initialPaymentPct, finalPaymentPct, months, manufacturingYear, mileageKm]);
+    }, [selectedProduct, price, priceIsNet, initialPaymentAmount, initialPaymentPct, finalPaymentPct, months, manufacturingYear, mileageKm]);
 
     React.useEffect(() => {
         if (!selectedProduct) return;
@@ -366,16 +381,16 @@ export function FinancingCalculator({
                                     <span className="font-semibold text-sm">{months} mies.</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-xs text-muted-foreground w-6">{selectedProduct.minInstallments}</span>
+                                    <span className="text-xs text-muted-foreground w-6">{selectedProduct.provider === 'VEHIS' ? Math.max(selectedProduct.minInstallments, 36) : selectedProduct.minInstallments}</span>
                                     <Slider
                                         value={[months]}
-                                        min={selectedProduct.minInstallments}
-                                        max={selectedProduct.maxInstallments}
-                                        step={12}
+                                        min={selectedProduct.provider === 'VEHIS' ? Math.max(selectedProduct.minInstallments, 36) : selectedProduct.minInstallments}
+                                        max={selectedProduct.provider === 'VEHIS' ? Math.min(selectedProduct.maxInstallments, 60) : selectedProduct.maxInstallments}
+                                        step={selectedProduct.provider === 'VEHIS' ? 12 : 12}
                                         onValueChange={v => setMonths(v[0])}
                                         className="flex-1"
                                     />
-                                    <span className="text-xs text-muted-foreground w-6 text-right">{selectedProduct.maxInstallments}</span>
+                                    <span className="text-xs text-muted-foreground w-6 text-right">{selectedProduct.provider === 'VEHIS' ? Math.min(selectedProduct.maxInstallments, 60) : selectedProduct.maxInstallments}</span>
                                 </div>
                             </div>
 
@@ -446,9 +461,20 @@ export function FinancingCalculator({
                                         Kalkulacja szacunkowa
                                     </div>
                                 )}
-                                {selectedProduct.category === 'LEASING' && (
+                                {selectedProduct.provider === 'VEHIS' && displayInstallment != null ? (
+                                    <div className="flex flex-col items-center gap-0.5">
+                                        <span className="text-xs text-muted-foreground">
+                                            {priceIsNet ? 'netto (bez VAT)' : 'brutto'}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground">
+                                            {priceIsNet
+                                                ? `(${formatPrice(Math.round((displayInstallment ?? 0) * 1.23), currency)} brutto)`
+                                                : `(${formatPrice(Math.round((displayInstallment ?? 0) / 1.23), currency)} netto)`}
+                                        </span>
+                                    </div>
+                                ) : selectedProduct.category === 'LEASING' ? (
                                     <span className="text-xs text-muted-foreground">netto (bez VAT)</span>
-                                )}
+                                ) : null}
                             </div>
 
                             {selectedProduct.provider !== 'OWN' ? (

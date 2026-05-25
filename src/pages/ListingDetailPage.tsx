@@ -222,8 +222,8 @@ export default function ListingDetailPage() {
       //       : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
       //   : null;
 
-      // Let's hide secondary label if there is a discount to clean up the UI
-      const secondaryLabel = (user && !discount)
+      // Show alternative price (netto/brutto) for all visitors
+      const secondaryLabel = !discount
         ? (isNetPrimary
           ? `(${t('listing.gross')}: ${formatPrice(secondaryPrice, currency)})`
           : `(${t('listing.net')}: ${formatPrice(secondaryPrice, currency)})`)
@@ -604,16 +604,28 @@ export default function ListingDetailPage() {
               <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
                 <FinancingCalculator
                   listingId={listing.listing_id}
-                  price={applySpecialOfferDiscount(
+                  price={
                     priceType === 'net'
-                      ? (listing.dealer_price_net_pln || listing.price_pln)
-                      : getFinancingBasePrice({
-                          pricePln: listing.price_pln,
-                          brokerPricePln: listing.broker_price_pln,
-                          financingPriceBase: listing.financingPriceBase,
-                        }),
-                    discount
-                  )}
+                      ? Math.round(
+                          applySpecialOfferDiscount(
+                            getFinancingBasePrice({
+                              pricePln: listing.price_pln,
+                              brokerPricePln: listing.broker_price_pln,
+                              financingPriceBase: listing.financingPriceBase,
+                            }),
+                            discount
+                          ) / 1.23
+                        )
+                      : applySpecialOfferDiscount(
+                          getFinancingBasePrice({
+                            pricePln: listing.price_pln,
+                            brokerPricePln: listing.broker_price_pln,
+                            financingPriceBase: listing.financingPriceBase,
+                          }),
+                          discount
+                        )
+                  }
+                  priceIsNet={priceType === 'net'}
                   currency={settings?.displayCurrency || 'PLN'}
                   manufacturingYear={listing.production_year}
                   mileageKm={listing.mileage_km}
@@ -846,16 +858,28 @@ export default function ListingDetailPage() {
                 >
                   <FinancingCalculator
                     listingId={listing.listing_id}
-                    price={applySpecialOfferDiscount(
+                    price={
                       priceType === 'net'
-                        ? (listing.dealer_price_net_pln || listing.price_pln)
-                        : getFinancingBasePrice({
-                            pricePln: listing.price_pln,
-                            brokerPricePln: listing.broker_price_pln,
-                            financingPriceBase: listing.financingPriceBase,
-                          }),
-                      discount
-                    )}
+                        ? Math.round(
+                            applySpecialOfferDiscount(
+                              getFinancingBasePrice({
+                                pricePln: listing.price_pln,
+                                brokerPricePln: listing.broker_price_pln,
+                                financingPriceBase: listing.financingPriceBase,
+                              }),
+                              discount
+                            ) / 1.23
+                          )
+                        : applySpecialOfferDiscount(
+                            getFinancingBasePrice({
+                              pricePln: listing.price_pln,
+                              brokerPricePln: listing.broker_price_pln,
+                              financingPriceBase: listing.financingPriceBase,
+                            }),
+                            discount
+                          )
+                    }
+                    priceIsNet={priceType === 'net'}
                     currency={settings?.displayCurrency || 'PLN'}
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}
