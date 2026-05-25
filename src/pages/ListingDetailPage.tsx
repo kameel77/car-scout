@@ -614,6 +614,7 @@ export default function ListingDetailPage() {
                         }),
                     discount
                   )}
+                  priceIsNet={priceType === 'net'}
                   currency={settings?.displayCurrency || 'PLN'}
                   manufacturingYear={listing.production_year}
                   mileageKm={listing.mileage_km}
@@ -856,6 +857,7 @@ export default function ListingDetailPage() {
                           }),
                       discount
                     )}
+                    priceIsNet={priceType === 'net'}
                     currency={settings?.displayCurrency || 'PLN'}
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}

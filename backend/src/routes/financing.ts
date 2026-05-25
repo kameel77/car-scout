@@ -253,8 +253,11 @@ export async function financingRoutes(fastify: FastifyInstance) {
             const finalPaymentPercent = data.finalPaymentPercent ?? 0;
             const vehicleState = data.mileageKm != null && data.mileageKm > 10 ? 1 : 0;
 
-            // Vehis requires net price. We receive gross from frontend.
-            const netPrice = Math.round(data.price / 1.23);
+            // Vehis /broker/calculate does not distinguish netto/brutto explicitly.
+            // The API interprets the price based on the client type:
+            //   - consumer: frontend sends brutto -> Vehis returns brutto installment
+            //   - entrepreneur: frontend sends netto -> Vehis returns netto installment
+            // So we pass the price through as-is — no conversion needed.
             const vehisPayload = {
                 client: clientType,
                 initialFee: Math.max(1, Math.min(product.maxInitialPayment, Math.round(initialFeePercent))),
@@ -264,7 +267,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
                     {
                         state: vehicleState,
                         manufacturing_year: data.manufacturingYear,
-                        price: netPrice
+                        price: Math.round(data.price)
                     }
                 ]
             };
@@ -308,18 +311,16 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 let result: any = {};
                 try { result = JSON.parse(responseText); } catch { /* non-JSON response */ }
 
-                // Vehis returns rich object for broker/calculate
-                // Vehis installment is always NETTO
-                const installmentNetto = Number((result as any)?.cars?.[0]?.installment);
-                if (!Number.isFinite(installmentNetto)) {
+                // Vehis returns installment in the same convention as the input price:
+                //   - consumer input (brutto) -> installment is brutto
+                //   - entrepreneur input (netto) -> installment is netto
+                // No conversion needed — just pass through.
+                const monthlyInstallment = Number((result as any)?.cars?.[0]?.installment);
+                if (!Number.isFinite(monthlyInstallment)) {
                     return reply.code(502).send({ error: 'Invalid provider response', details: result });
                 }
 
-                // For consumer clients, the user pays brutto (netto + 23% VAT)
-                // For entrepreneur clients, the user sees netto (they deduct VAT)
                 const isConsumer = clientType === 'consumer';
-                const installmentBrutto = Math.round(installmentNetto * 1.23);
-                const monthlyInstallment = isConsumer ? installmentBrutto : installmentNetto;
 
                 // Construct rich preview response
                 const richResult = result as any;
@@ -341,8 +342,6 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
                 return {
                     monthlyInstallment,
-                    monthlyInstallmentNetto: installmentNetto,
-                    monthlyInstallmentBrutto: installmentBrutto,
                     isGross: isConsumer,
                     provider: product.provider,
                     ...richPreview

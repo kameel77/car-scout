@@ -18,6 +18,8 @@ import { setPreferredFinancingType } from '@/utils/url-utils';
 interface FinancingCalculatorProps {
     listingId?: string;
     price: number;
+    /** True when the price prop is already netto (e.g. priceType='net' sites) */
+    priceIsNet?: boolean;
     currency?: string;
     manufacturingYear?: number;
     mileageKm?: number;
@@ -39,6 +41,7 @@ const FINANCING_TO_CATEGORY: Record<string, FinancingProduct['category']> = {
 export function FinancingCalculator({
     listingId,
     price,
+    priceIsNet,
     currency = 'PLN',
     manufacturingYear,
     mileageKm,
@@ -74,7 +77,6 @@ export function FinancingCalculator({
     const [externalInstallment, setExternalInstallment] = React.useState<number | null>(null);
     const [externalLoading, setExternalLoading] = React.useState(false);
     const [externalIsGross, setExternalIsGross] = React.useState(false);
-    const [externalInstallmentNetto, setExternalInstallmentNetto] = React.useState<number | null>(null);
 
     // State for calculation parameters
     const [months, setMonths] = React.useState(36);
@@ -175,6 +177,8 @@ export function FinancingCalculator({
 
             setExternalLoading(true);
             try {
+                // Backend passes price directly to Vehis — no conversion.
+                // Frontend sends brutto for consumer, netto for entrepreneur (based on priceType).
                 const response = await financingApi.calculate({
                     productId: selectedProduct.id,
                     price,
@@ -188,7 +192,6 @@ export function FinancingCalculator({
                 if (!isCancelled) {
                     setExternalInstallment(response.monthlyInstallment);
                     setExternalIsGross(response.isGross ?? false);
-                    setExternalInstallmentNetto(response.monthlyInstallmentNetto ?? null);
                     // Reset failure counter on success
                     failedCountRef.current = 0;
                 }
@@ -214,7 +217,7 @@ export function FinancingCalculator({
             isCancelled = true;
             clearTimeout(debounceTimer);
         };
-    }, [selectedProduct, price, initialPaymentAmount, initialPaymentPct, finalPaymentPct, months, manufacturingYear, mileageKm]);
+    }, [selectedProduct, price, priceIsNet, initialPaymentAmount, initialPaymentPct, finalPaymentPct, months, manufacturingYear, mileageKm]);
 
     React.useEffect(() => {
         if (!selectedProduct) return;
@@ -451,21 +454,9 @@ export function FinancingCalculator({
                                     </div>
                                 )}
                                 {selectedProduct.provider === 'VEHIS' && displayInstallment != null ? (
-                                    <>
-                                        <span className="text-xs text-muted-foreground">
-                                            {externalIsGross ? 'brutto (z VAT)' : 'netto (bez VAT)'}
-                                        </span>
-                                        {externalIsGross && externalInstallmentNetto != null && (
-                                            <span className="text-[10px] text-muted-foreground">
-                                                (netto: {formatPrice(externalInstallmentNetto, currency)})
-                                            </span>
-                                        )}
-                                        {!externalIsGross && externalInstallmentNetto != null && (
-                                            <span className="text-[10px] text-muted-foreground">
-                                                (brutto: {formatPrice(Math.round(externalInstallmentNetto * 1.23), currency)})
-                                            </span>
-                                        )}
-                                    </>
+                                    <span className="text-xs text-muted-foreground">
+                                        {externalIsGross ? 'brutto (z VAT)' : 'netto (bez VAT)'}
+                                    </span>
                                 ) : selectedProduct.category === 'LEASING' ? (
                                     <span className="text-xs text-muted-foreground">netto (bez VAT)</span>
                                 ) : null}
