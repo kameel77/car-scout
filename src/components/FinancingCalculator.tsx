@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Calculator, Info, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import type { FinancingType } from '@/utils/url-utils';
 import { setPreferredFinancingType } from '@/utils/url-utils';
 
@@ -77,11 +78,43 @@ export function FinancingCalculator({
     const [externalInstallment, setExternalInstallment] = React.useState<number | null>(null);
     const [externalLoading, setExternalLoading] = React.useState(false);
     const [externalIsGross, setExternalIsGross] = React.useState(false);
+    const [inbankDetails, setInbankDetails] = React.useState<any | null>(null);
 
     // State for calculation parameters
     const [months, setMonths] = React.useState(36);
     const [initialPaymentPct, setInitialPaymentPct] = React.useState(10);
     const [finalPaymentPct, setFinalPaymentPct] = React.useState(20);
+
+    const formatRate = React.useCallback((val: number | null | undefined) => {
+        if (val == null || !Number.isFinite(val)) return '0,00';
+        // If the rate is a decimal fraction (e.g. 0.18 representing 18%), multiply by 100.
+        // We consider any value < 1.0 (except 0) to be a fraction that needs multiplying by 100.
+        const percentageValue = (val > 0 && val < 1.0) ? val * 100 : val;
+        return percentageValue.toFixed(2).replace('.', ',');
+    }, []);
+
+    const getInbankRepresentativeExample = React.useCallback(() => {
+        if (!inbankDetails) return '';
+
+        // If consumer client (priceIsNet is false), Inbank calculations must be shown in gross (brutto).
+        // Since the price was passed as net internally, Inbank returns net values.
+        // We multiply net values by 1.23 for consumers, or display net as-is for entrepreneurs.
+        const multiplier = priceIsNet ? 1 : 1.23;
+
+        const rrso = formatRate(inbankDetails.creditCostRateAnnual);
+        const downPayment = formatPrice(Math.round(price * initialPaymentPct / 100), currency);
+        const netCredit = formatPrice(Math.round(price * (1 - initialPaymentPct / 100)), currency);
+        const totalRepayments = formatPrice(Math.round((inbankDetails.repaymentsAmountTotal ?? 0) * multiplier), currency);
+        const nominalRate = formatRate(inbankDetails.interestRateAnnual);
+        const totalCost = formatPrice(Math.round((inbankDetails.creditCostAmountTotal ?? 0) * multiplier), currency);
+        const commission = formatPrice(Math.round((inbankDetails.contractFeeAmountTotal ?? 0) * multiplier), currency);
+        const interest = formatPrice(Math.round((inbankDetails.interestAmountTotal ?? 0) * multiplier), currency);
+        const installmentAmount = formatPrice(externalInstallment ?? 0, currency);
+        const lastInstallment = formatPrice(Math.round((inbankDetails.lastPaymentAmount ?? (inbankDetails.monthlyInstallment ?? 0)) * multiplier), currency);
+        const installmentsCount = months;
+
+        return `Dla wybranej raty kredytu Rzeczywista Roczna Stopa Oprocentowania (RRSO) wynosi ${rrso}% przy założeniach: wpłata własna ${downPayment}, całkowita kwota kredytu (bez kredytowanych kosztów kredytu) ${netCredit}, całkowita kwota do zapłaty przez konsumenta ${totalRepayments}, oprocentowanie stałe ${nominalRate}% w skali roku, całkowity koszt kredytu ${totalCost} (w tym: prowizja ${commission}, odsetki ${interest}), ${installmentsCount - 1} miesięcznych rat równych w wysokości ${installmentAmount} oraz ostatnia rata wyrównująca w wysokości ${lastInstallment}. Motolia Sp. z o.o. jest pośrednikiem Banku umocowanym w zakresie czynności faktycznych i prawnych związanych z zawieraniem umów kredytu.`;
+    }, [inbankDetails, price, priceIsNet, initialPaymentPct, externalInstallment, months, currency, formatRate]);
     const offerInitialPaymentPct = React.useMemo(() => {
         if (!offerInitialPayment || !Number.isFinite(price) || price <= 0) return null;
         return Math.round((offerInitialPayment / price) * 100);
@@ -163,6 +196,7 @@ export function FinancingCalculator({
         const calculateExternal = async () => {
             if (!selectedProduct || selectedProduct.provider === 'OWN') {
                 setExternalInstallment(null);
+                setInbankDetails(null);
                 setExternalLoading(false);
                 return;
             }
@@ -171,6 +205,7 @@ export function FinancingCalculator({
             if (failedCountRef.current >= MAX_EXTERNAL_FAILURES) {
                 console.warn(`Skipping external calculation: ${failedCountRef.current} failures reached limit`);
                 setExternalInstallment(null);
+                setInbankDetails(null);
                 setExternalLoading(false);
                 return;
             }
@@ -200,6 +235,13 @@ export function FinancingCalculator({
                         ? nettoInstallment
                         : Math.round(nettoInstallment * 1.23);
                     setExternalInstallment(displayValue);
+                    
+                    if (selectedProduct.provider === 'INBANK') {
+                        setInbankDetails(response);
+                    } else {
+                        setInbankDetails(null);
+                    }
+
                     // Reset failure counter on success
                     failedCountRef.current = 0;
                 }
@@ -210,6 +252,7 @@ export function FinancingCalculator({
                     // Add to failed set to trigger fallback to next candidate
                     setFailedProducts(prev => new Set([...prev, selectedProduct.id]));
                     setExternalInstallment(null);
+                    setInbankDetails(null);
                 }
             } finally {
                 if (!isCancelled) {
@@ -477,7 +520,45 @@ export function FinancingCalculator({
                                 ) : null}
                             </div>
 
-                            {selectedProduct.provider !== 'OWN' ? (
+                            {selectedProduct.provider === 'INBANK' ? (
+                                <div className="mt-4 pt-3 border-t border-slate-200 space-y-2">
+                                    {inbankDetails?.creditCostRateAnnual != null && (
+                                        <div className="flex justify-between items-center text-xs font-semibold text-slate-800">
+                                            <span>RRSO dla tej raty:</span>
+                                            <div className="flex items-center gap-1.5 font-bold">
+                                                <span>{formatRate(inbankDetails.creditCostRateAnnual)}%</span>
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <button 
+                                                            type="button" 
+                                                            className="text-emerald-700 hover:text-emerald-800 transition-colors p-0.5 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                            title="Wyświetl przykład reprezentatywny"
+                                                        >
+                                                            <Info className="w-4 h-4 shrink-0" />
+                                                        </button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="max-w-md p-6 bg-white rounded-lg shadow-lg border border-slate-200">
+                                                        <DialogHeader>
+                                                            <DialogTitle className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                                                                <Info className="w-5 h-5 text-emerald-700" />
+                                                                Przykład reprezentatywny
+                                                            </DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="mt-4 text-[11px] leading-relaxed text-slate-600 space-y-3">
+                                                            <p className="font-normal text-justify">
+                                                                {getInbankRepresentativeExample()}
+                                                            </p>
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="text-[10px] text-muted-foreground text-center pt-1.5 border-t border-slate-100">
+                                        Rata wyliczana na podstawie kalkulacji partnera.
+                                    </div>
+                                </div>
+                            ) : selectedProduct.provider !== 'OWN' ? (
                                 <div className="mt-4 pt-3 border-t border-slate-200 text-xs text-muted-foreground text-center">
                                     Rata wyliczana na podstawie kalkulacji partnera.
                                 </div>
