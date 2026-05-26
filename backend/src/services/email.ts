@@ -11,8 +11,27 @@ export const sendLeadEmail = async (
         where: { id: 'default' }
     });
 
-    if (!settings?.smtpHost || !settings?.smtpPort || !settings?.smtpUser || !settings?.smtpPassword || !settings?.smtpRecipientEmail) {
-        fastify.log.warn('Email configuration missing in AppSettings. Skipping email notification.');
+    if (!settings) {
+        fastify.log.warn('AppSettings not found. Skipping email notification.');
+        return;
+    }
+
+    let recipientEmail = settings.smtpRecipientEmail;
+
+    if (settings.leadRecipientUserId) {
+        const designatedUser = await fastify.prisma.user.findUnique({
+            where: { id: settings.leadRecipientUserId }
+        });
+        if (designatedUser && designatedUser.email) {
+            recipientEmail = designatedUser.email;
+            fastify.log.info({ leadRecipientUserId: settings.leadRecipientUserId, email: recipientEmail }, 'Using designated platform user for lead email notification');
+        } else {
+            fastify.log.warn({ leadRecipientUserId: settings.leadRecipientUserId }, 'Designated lead recipient user not found or has no email. Falling back to default SMTP recipient.');
+        }
+    }
+
+    if (!settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword || !recipientEmail) {
+        fastify.log.warn('Email SMTP or recipient configuration missing in AppSettings. Skipping email notification.');
         return;
     }
 
@@ -116,11 +135,11 @@ export const sendLeadEmail = async (
         fastify.log.info({ host: settings.smtpHost, port: settings.smtpPort }, 'Attempting to send mail via SMTP...');
         await transporter.sendMail({
             from: `"CarSalon Powiadomienia" <${settings.smtpFromEmail || settings.smtpUser}>`,
-            to: settings.smtpRecipientEmail,
+            to: recipientEmail,
             subject,
             html: htmlContent
         });
-        fastify.log.info(`Email notification sent for lead ${lead.id} to ${settings.smtpRecipientEmail}`);
+        fastify.log.info(`Email notification sent for lead ${lead.id} to ${recipientEmail}`);
     } catch (error) {
         fastify.log.error(error, 'Failed to send email notification in email.ts');
     }

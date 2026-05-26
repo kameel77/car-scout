@@ -53,6 +53,7 @@ type SettingsPayload = {
     smtpPassword?: string | null;
     smtpFromEmail?: string | null;
     smtpRecipientEmail?: string | null;
+    leadRecipientUserId?: string | null;
     navItemsVisibility?: string[];
     featuredModulesVisibility?: string[];
     negotiatePriceEnabled?: boolean;
@@ -234,6 +235,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpPassword: data.smtpPassword || null,
                     smtpFromEmail: data.smtpFromEmail || null,
                     smtpRecipientEmail: data.smtpRecipientEmail || null,
+                    leadRecipientUserId: data.leadRecipientUserId || null,
                     navItemsVisibility: Array.isArray(data.navItemsVisibility)
                         ? data.navItemsVisibility
                         : ['samochody', 'wynajem'],
@@ -298,6 +300,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpPassword: data.smtpPassword || null,
                     smtpFromEmail: data.smtpFromEmail || null,
                     smtpRecipientEmail: data.smtpRecipientEmail || null,
+                    leadRecipientUserId: data.leadRecipientUserId || null,
                     navItemsVisibility: Array.isArray(data.navItemsVisibility)
                         ? data.navItemsVisibility
                         : ['samochody', 'wynajem'],

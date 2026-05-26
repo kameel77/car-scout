@@ -324,7 +324,18 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 
 ### Kontekst stron (pageContext)
 - Nowe pole `pageContext` na obu modelach: **FaqEntry** i **PartnerAd**.
-- Dostępne wartości: `offers` (sprzedaż — samochody nowe/używane), `rental` (najem), `all` (wszystkie).
-- Domyślna wartość: `all` — istniejące wpisy bez zmian, wyświetlają się na wszystkich typach ofert.
+- Dostępne wartości: `offers` (sprzedaż - samochody nowe/używane), `rental` (najem), `all` (wszystkie).
+- Domyślna wartość: `all` - istniejące wpisy bez zmian, wyświetlają się na wszystkich typach ofert.
 - Admin UI: dodano select „Kontekst stron" w formularzach FAQ i Reklam z kolorowymi badge'ami na liście.
 - Filtrowanie: backend filtruje `WHERE pageContext IN ('all', <requested>)`, frontend wysyła odpowiedni kontekst (`offers` / `rental`).
+
+## 26. Dynamiczne kierowanie zapytań kontaktowych (leadów) do wybranego operatora
+- **Cel**: automatyczne przesyłanie powiadomień o nowych leadach do skrzynki e-mail wybranego pracownika/operatora platformy, zamiast wyłącznie na ogólny adres e-mail.
+- **Zasada działania**:
+  - Superadmin w backoffice, w sekcji "Lead Management", ma dostęp do dedykowanego panelu konfiguracji odbiorcy.
+  - Panel wyboru pobiera listę aktywnych użytkowników z bazy danych za pomocą API użytkowników platformy.
+  - Wybór jest zapisywany w globalnych ustawieniach aplikacji w polu `leadRecipientUserId`.
+  - Po zapisaniu, każde nowe zapytanie (formularz sprzedaży, leasingu, najmu czy prośba o szybki kontakt) automatycznie ustala adres e-mail wybranego użytkownika jako głównego odbiorcę.
+  - **Bezpieczny fallback**: W przypadku braku wybranego użytkownika (wartość domyślna) lub gdy wybrany użytkownik zostanie usunięty/dezaktywowany, system automatycznie wysyła powiadomienie na ogólny adres e-mail zdefiniowany w konfiguracji SMTP (`smtpRecipientEmail`).
+- **Ograniczenia dostępu**:
+  - Wybór odbiorcy leada jest całkowicie ukryty przed użytkownikami o niższych rolach (np. Dealer Admin, Dealer Employee, Platform Manager). Opcja ta jest widoczna i modyfikowalna wyłącznie dla roli `SUPERADMIN_PLATFORM`.
