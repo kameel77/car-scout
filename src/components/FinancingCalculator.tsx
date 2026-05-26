@@ -84,6 +84,29 @@ export function FinancingCalculator({
     const [months, setMonths] = React.useState(36);
     const [initialPaymentPct, setInitialPaymentPct] = React.useState(10);
     const [finalPaymentPct, setFinalPaymentPct] = React.useState(20);
+
+    const getInbankRepresentativeExample = React.useCallback(() => {
+        if (!inbankDetails) return '';
+
+        // If consumer client (priceIsNet is false), Inbank calculations must be shown in gross (brutto).
+        // Since the price was passed as net internally, Inbank returns net values.
+        // We multiply net values by 1.23 for consumers, or display net as-is for entrepreneurs.
+        const multiplier = priceIsNet ? 1 : 1.23;
+
+        const rrso = (inbankDetails.creditCostRateAnnual ?? 0).toFixed(2).replace('.', ',');
+        const downPayment = formatPrice(Math.round(price * initialPaymentPct / 100), currency);
+        const netCredit = formatPrice(Math.round(price * (1 - initialPaymentPct / 100)), currency);
+        const totalRepayments = formatPrice(Math.round((inbankDetails.repaymentsAmountTotal ?? 0) * multiplier), currency);
+        const nominalRate = (inbankDetails.interestRateAnnual ?? 0).toFixed(2).replace('.', ',');
+        const totalCost = formatPrice(Math.round((inbankDetails.creditCostAmountTotal ?? 0) * multiplier), currency);
+        const commission = formatPrice(Math.round((inbankDetails.contractFeeAmountTotal ?? 0) * multiplier), currency);
+        const interest = formatPrice(Math.round((inbankDetails.interestAmountTotal ?? 0) * multiplier), currency);
+        const installmentAmount = formatPrice(externalInstallment ?? 0, currency);
+        const lastInstallment = formatPrice(Math.round((inbankDetails.lastPaymentAmount ?? (inbankDetails.monthlyInstallment ?? 0)) * multiplier), currency);
+        const installmentsCount = months;
+
+        return `Dla wybranej raty kredytu Rzeczywista Roczna Stopa Oprocentowania (RRSO) wynosi ${rrso}% przy założeniach: wpłata własna ${downPayment}, całkowita kwota kredytu (bez kredytowanych kosztów kredytu) ${netCredit}, całkowita kwota do zapłaty przez konsumenta ${totalRepayments}, oprocentowanie stałe ${nominalRate}% w skali roku, całkowity koszt kredytu ${totalCost} (w tym: prowizja ${commission}, odsetki ${interest}), ${installmentsCount - 1} miesięcznych rat równych w wysokości ${installmentAmount} oraz ostatnia rata wyrównująca w wysokości ${lastInstallment}. Motolia Sp. z o.o. jest pośrednikiem Banku umocowanym w zakresie czynności faktycznych i prawnych związanych z zawieraniem umów kredytu.`;
+    }, [inbankDetails, price, priceIsNet, initialPaymentPct, externalInstallment, months, currency]);
     const offerInitialPaymentPct = React.useMemo(() => {
         if (!offerInitialPayment || !Number.isFinite(price) || price <= 0) return null;
         return Math.round((offerInitialPayment / price) * 100);
@@ -320,29 +343,6 @@ export function FinancingCalculator({
 
     const commissionAmount = selectedProduct ? amountToFinance * selectedProduct.commission / 100 : 0;
     const displayInstallment = selectedProduct?.provider === 'OWN' ? monthlyInstallment : externalInstallment;
-
-    const getInbankRepresentativeExample = React.useCallback(() => {
-        if (!inbankDetails) return '';
-
-        // If consumer client (priceIsNet is false), Inbank calculations must be shown in gross (brutto).
-        // Since the price was passed as net internally, Inbank returns net values.
-        // We multiply net values by 1.23 for consumers, or display net as-is for entrepreneurs.
-        const multiplier = priceIsNet ? 1 : 1.23;
-
-        const rrso = (inbankDetails.creditCostRateAnnual ?? 0).toFixed(2).replace('.', ',');
-        const downPayment = formatPrice(Math.round(price * initialPaymentPct / 100), currency);
-        const netCredit = formatPrice(Math.round(price * (1 - initialPaymentPct / 100)), currency);
-        const totalRepayments = formatPrice(Math.round((inbankDetails.repaymentsAmountTotal ?? 0) * multiplier), currency);
-        const nominalRate = (inbankDetails.interestRateAnnual ?? 0).toFixed(2).replace('.', ',');
-        const totalCost = formatPrice(Math.round((inbankDetails.creditCostAmountTotal ?? 0) * multiplier), currency);
-        const commission = formatPrice(Math.round((inbankDetails.contractFeeAmountTotal ?? 0) * multiplier), currency);
-        const interest = formatPrice(Math.round((inbankDetails.interestAmountTotal ?? 0) * multiplier), currency);
-        const installmentAmount = formatPrice(displayInstallment ?? 0, currency);
-        const lastInstallment = formatPrice(Math.round((inbankDetails.lastPaymentAmount ?? (inbankDetails.monthlyInstallment ?? 0)) * multiplier), currency);
-        const installmentsCount = months;
-
-        return `Dla wybranej raty kredytu Rzeczywista Roczna Stopa Oprocentowania (RRSO) wynosi ${rrso}% przy założeniach: wpłata własna ${downPayment}, całkowita kwota kredytu (bez kredytowanych kosztów kredytu) ${netCredit}, całkowita kwota do zapłaty przez konsumenta ${totalRepayments}, oprocentowanie stałe ${nominalRate}% w skali roku, całkowity koszt kredytu ${totalCost} (w tym: prowizja ${commission}, odsetki ${interest}), ${installmentsCount - 1} miesięcznych rat równych w wysokości ${installmentAmount} oraz ostatnia rata wyrównująca w wysokości ${lastInstallment}. Motolia Sp. z o.o. jest pośrednikiem Banku umocowanym w zakresie czynności faktycznych i prawnych związanych z zawieraniem umów kredytu.`;
-    }, [inbankDetails, price, priceIsNet, initialPaymentPct, displayInstallment, months, currency]);
 
 
     return (
