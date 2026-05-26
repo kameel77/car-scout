@@ -13,4 +13,31 @@ export async function debugRoutes(fastify: FastifyInstance) {
             return reply.code(500).send({ success: false, error: error.message, stdout: error.stdout, stderr: error.stderr });
         }
     });
+
+    fastify.get('/api/debug/smtp-check', async (request, reply) => {
+        try {
+            const settings = await fastify.prisma.appSettings.findUnique({
+                where: { id: 'default' }
+            });
+            if (!settings) {
+                return { error: 'No AppSettings found in database' };
+            }
+            return {
+                hasSmtpHost: !!settings.smtpHost,
+                smtpHost: settings.smtpHost,
+                hasSmtpPort: !!settings.smtpPort,
+                smtpPort: settings.smtpPort,
+                hasSmtpUser: !!settings.smtpUser,
+                smtpUser: settings.smtpUser,
+                hasSmtpPassword: !!settings.smtpPassword,
+                smtpPasswordLength: settings.smtpPassword ? settings.smtpPassword.length : 0,
+                hasSmtpRecipient: !!settings.smtpRecipientEmail,
+                smtpRecipientEmail: settings.smtpRecipientEmail,
+                hasLeadRecipientUser: !!settings.leadRecipientUserId,
+                leadRecipientUserId: settings.leadRecipientUserId,
+            };
+        } catch (error: any) {
+            return { error: error.message };
+        }
+    });
 }
