@@ -85,6 +85,14 @@ export function FinancingCalculator({
     const [initialPaymentPct, setInitialPaymentPct] = React.useState(10);
     const [finalPaymentPct, setFinalPaymentPct] = React.useState(20);
 
+    const formatRate = React.useCallback((val: number | null | undefined) => {
+        if (val == null || !Number.isFinite(val)) return '0,00';
+        // If the rate is a decimal fraction (e.g. 0.18 representing 18%), multiply by 100.
+        // We consider any value < 1.0 (except 0) to be a fraction that needs multiplying by 100.
+        const percentageValue = (val > 0 && val < 1.0) ? val * 100 : val;
+        return percentageValue.toFixed(2).replace('.', ',');
+    }, []);
+
     const getInbankRepresentativeExample = React.useCallback(() => {
         if (!inbankDetails) return '';
 
@@ -93,11 +101,11 @@ export function FinancingCalculator({
         // We multiply net values by 1.23 for consumers, or display net as-is for entrepreneurs.
         const multiplier = priceIsNet ? 1 : 1.23;
 
-        const rrso = (inbankDetails.creditCostRateAnnual ?? 0).toFixed(2).replace('.', ',');
+        const rrso = formatRate(inbankDetails.creditCostRateAnnual);
         const downPayment = formatPrice(Math.round(price * initialPaymentPct / 100), currency);
         const netCredit = formatPrice(Math.round(price * (1 - initialPaymentPct / 100)), currency);
         const totalRepayments = formatPrice(Math.round((inbankDetails.repaymentsAmountTotal ?? 0) * multiplier), currency);
-        const nominalRate = (inbankDetails.interestRateAnnual ?? 0).toFixed(2).replace('.', ',');
+        const nominalRate = formatRate(inbankDetails.interestRateAnnual);
         const totalCost = formatPrice(Math.round((inbankDetails.creditCostAmountTotal ?? 0) * multiplier), currency);
         const commission = formatPrice(Math.round((inbankDetails.contractFeeAmountTotal ?? 0) * multiplier), currency);
         const interest = formatPrice(Math.round((inbankDetails.interestAmountTotal ?? 0) * multiplier), currency);
@@ -106,7 +114,7 @@ export function FinancingCalculator({
         const installmentsCount = months;
 
         return `Dla wybranej raty kredytu Rzeczywista Roczna Stopa Oprocentowania (RRSO) wynosi ${rrso}% przy założeniach: wpłata własna ${downPayment}, całkowita kwota kredytu (bez kredytowanych kosztów kredytu) ${netCredit}, całkowita kwota do zapłaty przez konsumenta ${totalRepayments}, oprocentowanie stałe ${nominalRate}% w skali roku, całkowity koszt kredytu ${totalCost} (w tym: prowizja ${commission}, odsetki ${interest}), ${installmentsCount - 1} miesięcznych rat równych w wysokości ${installmentAmount} oraz ostatnia rata wyrównująca w wysokości ${lastInstallment}. Motolia Sp. z o.o. jest pośrednikiem Banku umocowanym w zakresie czynności faktycznych i prawnych związanych z zawieraniem umów kredytu.`;
-    }, [inbankDetails, price, priceIsNet, initialPaymentPct, externalInstallment, months, currency]);
+    }, [inbankDetails, price, priceIsNet, initialPaymentPct, externalInstallment, months, currency, formatRate]);
     const offerInitialPaymentPct = React.useMemo(() => {
         if (!offerInitialPayment || !Number.isFinite(price) || price <= 0) return null;
         return Math.round((offerInitialPayment / price) * 100);
@@ -518,7 +526,7 @@ export function FinancingCalculator({
                                         <div className="flex justify-between items-center text-xs font-semibold text-slate-800">
                                             <span>RRSO dla tej raty:</span>
                                             <div className="flex items-center gap-1.5 font-bold">
-                                                <span>{inbankDetails.creditCostRateAnnual.toFixed(2).replace('.', ',')}%</span>
+                                                <span>{formatRate(inbankDetails.creditCostRateAnnual)}%</span>
                                                 <Dialog>
                                                     <DialogTrigger asChild>
                                                         <button 

@@ -232,22 +232,83 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 // Parse additional fields for RRSO and representative example calculation
                 const creditCostRateAnnual = Number(result?.credit_cost_rate_annual ?? result?.creditCostRateAnnual);
                 const interestRateAnnual = Number(result?.interest_rate_annual ?? result?.interestRateAnnual);
-                const repaymentsAmountTotal = Number(result?.repayments_amount_total ?? result?.repaymentsAmountTotal ?? result?.advanced?.repaymentsAmountTotal ?? result?.advanced?.repayments_amount_total);
-                const creditCostAmountTotal = Number(result?.credit_cost_amount_total ?? result?.creditCostAmountTotal ?? result?.advanced?.creditCostAmountTotal ?? result?.advanced?.credit_cost_amount_total);
-                const contractFeeAmountTotal = Number(result?.contract_fee_amount_total ?? result?.contractFeeAmountTotal ?? result?.advanced?.contractFeeAmountTotal ?? result?.advanced?.contract_fee_amount_total);
-                const interestAmountTotal = Number(result?.interest_amount_total ?? result?.interestAmountTotal ?? result?.advanced?.interestAmountTotal ?? result?.advanced?.interest_amount_total);
-                const lastPaymentAmount = Number(result?.last_payment_amount ?? result?.lastPaymentAmount ?? result?.advanced?.lastPaymentAmount ?? result?.advanced?.last_payment_amount);
+                
+                // repaymentsAmountTotal maps to total_cost in Inbank v2
+                const repaymentsAmountTotal = Number(
+                    result?.total_cost 
+                    ?? result?.totalCost 
+                    ?? result?.repayments_amount_total 
+                    ?? result?.repaymentsAmountTotal 
+                    ?? result?.advanced?.repaymentsAmountTotal 
+                    ?? result?.advanced?.repayments_amount_total
+                );
+                
+                // creditCostAmountTotal maps to total_cost_of_credit in Inbank v2
+                const creditCostAmountTotal = Number(
+                    result?.total_cost_of_credit 
+                    ?? result?.totalCostOfCredit 
+                    ?? result?.credit_cost_amount_total 
+                    ?? result?.creditCostAmountTotal 
+                    ?? result?.advanced?.creditCostAmountTotal 
+                    ?? result?.advanced?.credit_cost_amount_total
+                );
+                
+                const contractFeeAmountTotal = Number(
+                    result?.contract_fee 
+                    ?? result?.contractFee 
+                    ?? result?.contract_fee_amount 
+                    ?? result?.contractFeeAmount 
+                    ?? result?.contract_fee_amount_total 
+                    ?? result?.contractFeeAmountTotal 
+                    ?? result?.advanced?.contractFeeAmountTotal 
+                    ?? result?.advanced?.contract_fee_amount_total 
+                    ?? 0
+                );
+                
+                const interestAmountTotal = Number(
+                    result?.interest_amount 
+                    ?? result?.interestAmount 
+                    ?? result?.interest_amount_total 
+                    ?? result?.interestAmountTotal 
+                    ?? result?.advanced?.interestAmountTotal 
+                    ?? result?.advanced?.interest_amount_total
+                );
+                
+                const lastPaymentAmount = Number(
+                    result?.last_payment_amount 
+                    ?? result?.lastPaymentAmount 
+                    ?? result?.advanced?.lastPaymentAmount 
+                    ?? result?.advanced?.last_payment_amount
+                );
+
+                const repaymentsAmountTotalVal = Number.isFinite(repaymentsAmountTotal) ? repaymentsAmountTotal : null;
+                const creditCostAmountTotalVal = Number.isFinite(creditCostAmountTotal) ? creditCostAmountTotal : null;
+                const contractFeeAmountTotalVal = Number.isFinite(contractFeeAmountTotal) ? contractFeeAmountTotal : 0;
+                
+                // Calculate interest dynamically if not provided (repaymentsAmountTotal - netCredit - contractFee)
+                let interestAmountTotalVal = Number.isFinite(interestAmountTotal) ? interestAmountTotal : null;
+                if (interestAmountTotalVal === null && repaymentsAmountTotalVal !== null) {
+                    const netCredit = data.price - data.downPaymentAmount;
+                    interestAmountTotalVal = Math.max(0, repaymentsAmountTotalVal - netCredit - contractFeeAmountTotalVal);
+                }
+
+                // Calculate lastPaymentAmount dynamically if not provided (repaymentsAmountTotal - monthlyInstallment * (period - 1))
+                const lastPaymentAmountVal = Number.isFinite(lastPaymentAmount) 
+                    ? lastPaymentAmount 
+                    : (repaymentsAmountTotalVal !== null 
+                        ? Math.max(0, repaymentsAmountTotalVal - monthlyInstallment * (data.period - 1))
+                        : monthlyInstallment);
 
                 return {
                     monthlyInstallment,
                     provider: product.provider,
                     creditCostRateAnnual: Number.isFinite(creditCostRateAnnual) ? creditCostRateAnnual : null,
                     interestRateAnnual: Number.isFinite(interestRateAnnual) ? interestRateAnnual : null,
-                    repaymentsAmountTotal: Number.isFinite(repaymentsAmountTotal) ? repaymentsAmountTotal : null,
-                    creditCostAmountTotal: Number.isFinite(creditCostAmountTotal) ? creditCostAmountTotal : null,
-                    contractFeeAmountTotal: Number.isFinite(contractFeeAmountTotal) ? contractFeeAmountTotal : 0,
-                    interestAmountTotal: Number.isFinite(interestAmountTotal) ? interestAmountTotal : null,
-                    lastPaymentAmount: Number.isFinite(lastPaymentAmount) ? lastPaymentAmount : monthlyInstallment
+                    repaymentsAmountTotal: repaymentsAmountTotalVal,
+                    creditCostAmountTotal: creditCostAmountTotalVal,
+                    contractFeeAmountTotal: contractFeeAmountTotalVal,
+                    interestAmountTotal: interestAmountTotalVal,
+                    lastPaymentAmount: lastPaymentAmountVal
                 };
             }
 
