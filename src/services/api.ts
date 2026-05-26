@@ -1067,6 +1067,13 @@ export const financingApi = {
             initialFee?: number;
             repurchase?: number;
             duration?: number;
+            creditCostRateAnnual?: number | null;
+            interestRateAnnual?: number | null;
+            repaymentsAmountTotal?: number | null;
+            creditCostAmountTotal?: number | null;
+            contractFeeAmountTotal?: number;
+            interestAmountTotal?: number | null;
+            lastPaymentAmount?: number | null;
             cars?: Array<{
                 state: number;
                 manufacturing_year: number;

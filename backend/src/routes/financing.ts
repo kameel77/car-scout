@@ -166,10 +166,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
                     payment_day: config.paymentDay
                 };
 
-                // Include response_level if configured (production API may require it)
-                if (config.responseLevel) {
-                    payload.response_level = config.responseLevel;
-                }
+                // Include response_level (always default to advanced to support RRSO/representative example)
+                payload.response_level = config.responseLevel || 'advanced';
 
                 // Inbank API calculation path: /partner/v2/shops/:shop_uuid/calculations
                 const rawBaseUrl = (process.env.INBANK_BASE_URL || connection.apiBaseUrl).replace(/\/$/, '');
@@ -231,7 +229,26 @@ export async function financingRoutes(fastify: FastifyInstance) {
                     return reply.code(502).send({ error: 'Invalid provider response', details: result });
                 }
 
-                return { monthlyInstallment, provider: product.provider };
+                // Parse additional fields for RRSO and representative example calculation
+                const creditCostRateAnnual = Number(result?.credit_cost_rate_annual ?? result?.creditCostRateAnnual);
+                const interestRateAnnual = Number(result?.interest_rate_annual ?? result?.interestRateAnnual);
+                const repaymentsAmountTotal = Number(result?.repayments_amount_total ?? result?.repaymentsAmountTotal ?? result?.advanced?.repaymentsAmountTotal ?? result?.advanced?.repayments_amount_total);
+                const creditCostAmountTotal = Number(result?.credit_cost_amount_total ?? result?.creditCostAmountTotal ?? result?.advanced?.creditCostAmountTotal ?? result?.advanced?.credit_cost_amount_total);
+                const contractFeeAmountTotal = Number(result?.contract_fee_amount_total ?? result?.contractFeeAmountTotal ?? result?.advanced?.contractFeeAmountTotal ?? result?.advanced?.contract_fee_amount_total);
+                const interestAmountTotal = Number(result?.interest_amount_total ?? result?.interestAmountTotal ?? result?.advanced?.interestAmountTotal ?? result?.advanced?.interest_amount_total);
+                const lastPaymentAmount = Number(result?.last_payment_amount ?? result?.lastPaymentAmount ?? result?.advanced?.lastPaymentAmount ?? result?.advanced?.last_payment_amount);
+
+                return {
+                    monthlyInstallment,
+                    provider: product.provider,
+                    creditCostRateAnnual: Number.isFinite(creditCostRateAnnual) ? creditCostRateAnnual : null,
+                    interestRateAnnual: Number.isFinite(interestRateAnnual) ? interestRateAnnual : null,
+                    repaymentsAmountTotal: Number.isFinite(repaymentsAmountTotal) ? repaymentsAmountTotal : null,
+                    creditCostAmountTotal: Number.isFinite(creditCostAmountTotal) ? creditCostAmountTotal : null,
+                    contractFeeAmountTotal: Number.isFinite(contractFeeAmountTotal) ? contractFeeAmountTotal : 0,
+                    interestAmountTotal: Number.isFinite(interestAmountTotal) ? interestAmountTotal : null,
+                    lastPaymentAmount: Number.isFinite(lastPaymentAmount) ? lastPaymentAmount : monthlyInstallment
+                };
             }
 
             const config = (product.providerConfig || {}) as Record<string, any>;
