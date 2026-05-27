@@ -799,7 +799,7 @@ export default function ListingDetailPage() {
             {isMotolia && (
               <CustomerTypeToggle className="w-full mb-6" />
             )}
-            <div className="sticky top-20 space-y-6">
+            <div className={cn("sticky space-y-6", isMotolia ? "top-24" : "top-20")}>
 
               {/* Motolia sidebar: Calculator-first layout */}
               {isMotolia && (
