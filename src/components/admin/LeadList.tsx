@@ -41,16 +41,70 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { leadsApi } from '@/services/api';
+import { leadsApi, usersApi, settingsApi } from '@/services/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 export function LeadList() {
-    const { token } = useAuth();
+    const { token, effectiveRole } = useAuth();
+    const isSuperAdmin = effectiveRole === 'SUPERADMIN_PLATFORM';
+
     const queryClient = useQueryClient();
     const [selectedLead, setSelectedLead] = React.useState<Lead | null>(null);
     const [searchQuery, setSearchQuery] = React.useState('');
+    const [selectedRecipientId, setSelectedRecipientId] = React.useState<string>('default');
+    const [isSavingRecipient, setIsSavingRecipient] = React.useState(false);
+
+    const { data: usersData, isLoading: isLoadingUsers } = useQuery({
+        queryKey: ['adminUsersList', token],
+        queryFn: async () => {
+            if (!token) throw new Error('Brak tokenu');
+            return usersApi.list(token);
+        },
+        enabled: !!token && isSuperAdmin
+    });
+
+    const { data: settingsData, isLoading: isLoadingSettings } = useQuery({
+        queryKey: ['appSettings', token],
+        queryFn: async () => {
+            return settingsApi.getSettings();
+        },
+        enabled: !!token && isSuperAdmin
+    });
+
+    React.useEffect(() => {
+        if (settingsData) {
+            setSelectedRecipientId(settingsData.leadRecipientUserId || 'default');
+        }
+    }, [settingsData]);
+
+    const handleSaveRecipient = async () => {
+        if (!token || !settingsData) return;
+        try {
+            setIsSavingRecipient(true);
+            const nextRecipientId = selectedRecipientId === 'default' ? null : selectedRecipientId;
+            await settingsApi.updateSettings({
+                ...settingsData,
+                leadRecipientUserId: nextRecipientId
+            }, token);
+            await queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+            toast.success('Pomyślnie zaktualizowano odbiorcę powiadomień o leadach');
+        } catch (error) {
+            toast.error('Błąd podczas zapisywania odbiorcy');
+            console.error(error);
+        } finally {
+            setIsSavingRecipient(false);
+        }
+    };
+
     const { data, isLoading, isFetching, isError } = useQuery({
         queryKey: ['leads', token],
         queryFn: async () => {
@@ -173,6 +227,68 @@ export function LeadList() {
 
     return (
         <div className="space-y-4">
+            {isSuperAdmin && (
+                <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail-check"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h9"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="m16 19 2 2 4-4"/></svg>
+                                </span>
+                                Odbiorca powiadomień o leadach (Superadmin)
+                            </h3>
+                            <p className="text-xs text-slate-500">
+                                Wybierz osobę z zespołu operatora, do której będą przesyłane zapytania klientów z formularzy kontaktowych.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {isLoadingSettings || isLoadingUsers ? (
+                                <div className="text-xs text-slate-400 flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                                    Wczytywanie...
+                                </div>
+                            ) : (
+                                <>
+                                    <Select
+                                        value={selectedRecipientId}
+                                        onValueChange={setSelectedRecipientId}
+                                    >
+                                        <SelectTrigger className="w-[280px] bg-slate-50 hover:bg-slate-100/50 border-slate-200 text-sm focus:ring-blue-500 font-medium">
+                                            <SelectValue placeholder="Wybierz odbiorcę" />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[300px]">
+                                            <SelectItem value="default" className="font-semibold text-slate-500 cursor-pointer">
+                                                Domyślny adres SMTP (fallback)
+                                            </SelectItem>
+                                            {(usersData?.users || [])
+                                                .filter(u => u.isActive)
+                                                .map(u => (
+                                                    <SelectItem key={u.id} value={u.id} className="cursor-pointer">
+                                                        {u.name ? `${u.name} (${u.email})` : u.email}
+                                                    </SelectItem>
+                                                ))
+                                            }
+                                        </SelectContent>
+                                    </Select>
+                                    <Button
+                                        onClick={handleSaveRecipient}
+                                        disabled={isSavingRecipient}
+                                        className="bg-blue-600 hover:bg-blue-700 font-medium shadow-sm transition-all duration-200 shrink-0 text-white"
+                                    >
+                                        {isSavingRecipient ? (
+                                            <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+                                        )}
+                                        Zapisz
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input

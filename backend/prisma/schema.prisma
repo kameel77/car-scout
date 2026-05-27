@@ -293,6 +293,7 @@ model AppSettings {
   smtpPassword                String?  @map("smtp_password")
   smtpFromEmail               String?  @map("smtp_from_email")
   smtpRecipientEmail          String?  @map("smtp_recipient_email")
+  leadRecipientUserId         String?  @map("lead_recipient_user_id")
   navItemsVisibility          String[] @default(["samochody", "wynajem"]) @map("nav_items_visibility")
   featuredModulesVisibility   String[] @default(["nowe", "uzywane", "wynajem"]) @map("featured_modules_visibility")
   negotiatePriceEnabled       Boolean  @default(true) @map("negotiate_price_enabled")

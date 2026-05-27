@@ -4,15 +4,46 @@ import { FastifyInstance } from 'fastify';
 
 export const sendLeadEmail = async (
     fastify: FastifyInstance,
-    lead: Lead & { listing?: Listing | null, financingProduct?: FinancingProduct | null }
+    lead: Lead & { listing?: Listing | null, financingProduct?: FinancingProduct | null },
+    baseUrl?: string
 ) => {
+    // Determine frontend URL dynamically
+    let frontendUrl = baseUrl;
+    if (!frontendUrl) {
+        frontendUrl = process.env.FRONTEND_URL || 'https://carsalon.pl';
+    }
+    frontendUrl = frontendUrl.replace(/\/$/, '');
+
+    // Derive site name for branding
+    const domainName = frontendUrl.replace(/^https?:\/\/(www\.)?/, '');
+    const siteName = domainName.toLowerCase().includes('motolia') ? 'Motolia' : 'CarSalon';
+
     // Get settings from database
     const settings = await fastify.prisma.appSettings.findFirst({
         where: { id: 'default' }
     });
 
-    if (!settings?.smtpHost || !settings?.smtpPort || !settings?.smtpUser || !settings?.smtpPassword || !settings?.smtpRecipientEmail) {
-        fastify.log.warn('Email configuration missing in AppSettings. Skipping email notification.');
+    if (!settings) {
+        fastify.log.warn('AppSettings not found. Skipping email notification.');
+        return;
+    }
+
+    let recipientEmail = settings.smtpRecipientEmail;
+
+    if (settings.leadRecipientUserId) {
+        const designatedUser = await fastify.prisma.user.findUnique({
+            where: { id: settings.leadRecipientUserId }
+        });
+        if (designatedUser && designatedUser.email) {
+            recipientEmail = designatedUser.email;
+            fastify.log.info({ leadRecipientUserId: settings.leadRecipientUserId, email: recipientEmail }, 'Using designated platform user for lead email notification');
+        } else {
+            fastify.log.warn({ leadRecipientUserId: settings.leadRecipientUserId }, 'Designated lead recipient user not found or has no email. Falling back to default SMTP recipient.');
+        }
+    }
+
+    if (!settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword || !recipientEmail) {
+        fastify.log.warn('Email SMTP or recipient configuration missing in AppSettings. Skipping email notification.');
         return;
     }
 
@@ -43,8 +74,8 @@ export const sendLeadEmail = async (
     }
 
     const subject = isQuickContact
-        ? `[CarSalon] ${subjectTitle} (Tel): ${lead.name}`
-        : `[CarSalon] ${subjectTitle}: ${lead.listing?.make} ${lead.listing?.model}`;
+        ? `[${siteName}] ${subjectTitle} (Tel): ${lead.name}`
+        : `[${siteName}] ${subjectTitle}: ${lead.listing?.make} ${lead.listing?.model}`;
 
     const listingSlug = lead.listing?.slug || [
         lead.listing?.make,
@@ -69,7 +100,7 @@ export const sendLeadEmail = async (
             <li><strong>Przebieg:</strong> ${lead.listing.mileageKm} km</li>
             <li><strong>Dealer:</strong> ID: ${lead.listing.dealerId || 'Brak'}</li>
         </ul>
-        <p><a href="https://carsalon.pl/oferta/${listingSlug}">Link do ogłoszenia</a></p>
+        <p><a href="${frontendUrl}/oferta/${listingSlug}">Link do ogłoszenia</a></p>
     ` : '<p><strong>Typ zgłoszenia:</strong> Zapytanie ogólne / Szybki kontakt ze strony głównej</p>';
 
     const financingDetails = lead.financingProductId ? `
@@ -106,7 +137,7 @@ export const sendLeadEmail = async (
 
             <br/>
             <p style="font-size: 12px; color: #999;">
-                Wiadomość wygenerowana automatycznie przez system CarSalon.<br/>
+                Wiadomość wygenerowana automatycznie przez system ${siteName}.<br/>
                 Numer referencyjny leada: ${lead.referenceNumber}
             </p>
         </div>
@@ -115,12 +146,12 @@ export const sendLeadEmail = async (
     try {
         fastify.log.info({ host: settings.smtpHost, port: settings.smtpPort }, 'Attempting to send mail via SMTP...');
         await transporter.sendMail({
-            from: `"CarSalon Powiadomienia" <${settings.smtpFromEmail || settings.smtpUser}>`,
-            to: settings.smtpRecipientEmail,
+            from: `"${siteName} Powiadomienia" <${settings.smtpFromEmail || settings.smtpUser}>`,
+            to: recipientEmail,
             subject,
             html: htmlContent
         });
-        fastify.log.info(`Email notification sent for lead ${lead.id} to ${settings.smtpRecipientEmail}`);
+        fastify.log.info(`Email notification sent for lead ${lead.id} to ${recipientEmail}`);
     } catch (error) {
         fastify.log.error(error, 'Failed to send email notification in email.ts');
     }
