@@ -795,13 +795,15 @@ export default function ListingDetailPage() {
 
           {/* Sidebar */}
           <div className="hidden lg:block">
+            {/* Motolia: toggle scrolls with page, not sticky */}
+            {isMotolia && (
+              <CustomerTypeToggle className="w-full mb-6" />
+            )}
             <div className="sticky top-20 space-y-6">
 
               {/* Motolia sidebar: Calculator-first layout */}
               {isMotolia && (
                 <>
-                  {/* Customer type toggle — scrolls with sidebar, not sticky */}
-                  <CustomerTypeToggle className="w-full" />
 
                   {/* Financing Calculator — primary element with price inside */}
                   {(settings?.financingCalculatorEnabled ?? true) && (
