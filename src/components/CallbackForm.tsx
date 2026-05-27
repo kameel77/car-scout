@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Car, ShieldCheck } from 'lucide-react';
 import { leadsApi } from '@/services/api';
+import { useBrand } from '@/contexts/BrandContext';
 
 interface CallbackFormProps {
     title?: string;
@@ -17,6 +18,7 @@ export function CallbackForm({
 }: CallbackFormProps) {
     const [phone, setPhone] = useState('');
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const { config } = useBrand();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,6 +26,21 @@ export function CallbackForm({
         setStatus('loading');
         try {
             await leadsApi.submitQuickLead({ phone: phone.trim() });
+            
+            // Push event to Google Tag Manager dataLayer
+            if (typeof window !== 'undefined') {
+                (window as any).dataLayer = (window as any).dataLayer || [];
+                (window as any).dataLayer.push({
+                    event: 'generate_lead',
+                    lead_type: 'quick_callback',
+                    form_id: 'callback_form',
+                    brand: config.id,
+                    lead_details: {
+                        phone: phone.trim(),
+                    }
+                });
+            }
+
             setStatus('success');
             setPhone('');
         } catch {

@@ -905,6 +905,7 @@ export const leadsApi = {
         financingDownPayment?: number;
         financingInstallment?: number;
         financingFinalPayment?: number;
+        turnstileToken?: string;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads`, {
             method: 'POST',
@@ -929,6 +930,7 @@ export const leadsApi = {
         proposedPrice: number;
         consentMarketing: boolean;
         consentPrivacy: boolean;
+        turnstileToken?: string;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads/negotiation`, {
             method: 'POST',
@@ -970,7 +972,7 @@ export const leadsApi = {
 
         return response.json();
     },
-    submitQuickLead: async (data: { phone: string; name?: string; }) => {
+    submitQuickLead: async (data: { phone: string; name?: string; turnstileToken?: string; }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads/quick`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1000,6 +1002,7 @@ export const leadsApi = {
         rentalInitialPaymentPct?: number;
         rentalInitialPaymentAmount?: number;
         rentalMonthlyRate?: number;
+        turnstileToken?: string;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads/rental`, {
             method: 'POST',

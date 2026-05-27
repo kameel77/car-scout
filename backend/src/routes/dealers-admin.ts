@@ -110,6 +110,13 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
             },
         });
 
+        if (dealer.settings) {
+            dealer.settings = {
+                ...dealer.settings,
+                smtpPassword: dealer.settings.smtpPassword ? '••••••••' : null
+            } as any;
+        }
+
         return { dealer, members };
     });
 
@@ -220,6 +227,17 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Dealer not found' });
         }
 
+        const oldSettings = await fastify.prisma.dealerSettings.findUnique({
+            where: { dealerId: id }
+        });
+
+        let smtpPassword = oldSettings?.smtpPassword || null;
+        if (settings.smtpPassword === '') {
+            smtpPassword = null;
+        } else if (settings.smtpPassword && settings.smtpPassword !== '••••••••') {
+            smtpPassword = settings.smtpPassword;
+        }
+
         const result = await fastify.prisma.dealerSettings.upsert({
             where: { dealerId: id },
             update: {
@@ -228,7 +246,7 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
                 smtpHost: settings.smtpHost,
                 smtpPort: settings.smtpPort,
                 smtpUser: settings.smtpUser,
-                smtpPassword: settings.smtpPassword,
+                smtpPassword,
                 smtpFromEmail: settings.smtpFromEmail,
                 smtpRecipientEmail: settings.smtpRecipientEmail,
             },
@@ -239,13 +257,18 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
                 smtpHost: settings.smtpHost,
                 smtpPort: settings.smtpPort,
                 smtpUser: settings.smtpUser,
-                smtpPassword: settings.smtpPassword,
+                smtpPassword,
                 smtpFromEmail: settings.smtpFromEmail,
                 smtpRecipientEmail: settings.smtpRecipientEmail,
             },
         });
 
-        return { settings: result };
+        return {
+            settings: {
+                ...result,
+                smtpPassword: result.smtpPassword ? '••••••••' : null
+            }
+        };
     });
 
     // Delete dealer

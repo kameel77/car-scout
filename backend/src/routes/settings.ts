@@ -160,6 +160,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
             return {
                 ...settings,
+                smtpPassword: settings.smtpPassword ? '••••••••' : null,
                 legalDocuments: normalizeLegalDocuments(settings.legalDocuments)
             };
         } catch (error) {
@@ -190,6 +191,13 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             const oldSettings = await fastify.prisma.appSettings.findUnique({
                 where: { id: 'default' }
             });
+
+            let smtpPassword = oldSettings?.smtpPassword || null;
+            if (data.smtpPassword === '') {
+                smtpPassword = null;
+            } else if (data.smtpPassword && data.smtpPassword !== '••••••••') {
+                smtpPassword = data.smtpPassword;
+            }
 
             const settings = await fastify.prisma.appSettings.upsert({
                 where: { id: 'default' },
@@ -232,7 +240,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpHost: data.smtpHost || null,
                     smtpPort: data.smtpPort ? toNumberOrFallback(data.smtpPort, 465) : null,
                     smtpUser: data.smtpUser || null,
-                    smtpPassword: data.smtpPassword || null,
+                    smtpPassword,
                     smtpFromEmail: data.smtpFromEmail || null,
                     smtpRecipientEmail: data.smtpRecipientEmail || null,
                     leadRecipientUserId: data.leadRecipientUserId || null,
@@ -297,7 +305,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpHost: data.smtpHost || null,
                     smtpPort: data.smtpPort ? toNumberOrFallback(data.smtpPort, 465) : null,
                     smtpUser: data.smtpUser || null,
-                    smtpPassword: data.smtpPassword || null,
+                    smtpPassword,
                     smtpFromEmail: data.smtpFromEmail || null,
                     smtpRecipientEmail: data.smtpRecipientEmail || null,
                     leadRecipientUserId: data.leadRecipientUserId || null,
@@ -333,7 +341,11 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             const updatedCount = await recalculateAllPrices(fastify);
             fastify.log.info({ updatedCount }, 'Automatic price recalculation triggered by settings change');
 
-            return { ...settings, recalculatedCount: updatedCount };
+            return {
+                ...settings,
+                smtpPassword: settings.smtpPassword ? '••••••••' : null,
+                recalculatedCount: updatedCount
+            };
         } catch (error) {
             fastify.log.error({ err: error }, 'Failed to update settings');
             return reply.code(500).send({ error: 'Failed to update settings', message: (error as Error).message });
