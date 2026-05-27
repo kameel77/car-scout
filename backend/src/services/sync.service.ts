@@ -222,6 +222,27 @@ export async function syncListingsFromCSV(
             });
         }
 
+        // 6.5. Recalculate prices using the current settings for all active listings
+        const settings = await tx.appSettings.findUnique({
+            where: { id: 'default' }
+        });
+
+        if (settings) {
+            await tx.$executeRaw`
+                UPDATE "listings"
+                SET
+                    "dealer_price_net_pln" = "price_pln" / 1.23,
+                    "dealer_price_net_eur" = "price_pln" / 1.23 / ${settings.eurExRate}::float,
+                    "broker_price_pln"     = ROUND(
+                        ("price_pln" / 1.23 * (1 + ${settings.brokerFeePctPln}::float / 100) * 1.23) / 10
+                    ) * 10,
+                    "broker_price_eur"     = CEIL(
+                        ("price_pln" / 1.23 / ${settings.eurExRate}::float * (1 + ${settings.brokerFeePctEur}::float / 100) * 1.23) / 10
+                    ) * 10
+                WHERE "is_archived" = false
+            `;
+        }
+
         // 7. Create import log
         const duration = Date.now() - startTime;
 
