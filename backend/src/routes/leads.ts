@@ -2,6 +2,18 @@ import { FastifyInstance } from 'fastify';
 import { sendLeadEmail } from '../services/email.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 
+const getBaseUrl = (request: any): string | undefined => {
+    const referer = request.headers.referer || request.headers.origin;
+    if (referer) {
+        try {
+            return new URL(referer).origin;
+        } catch {
+            // ignore
+        }
+    }
+    return undefined;
+};
+
 type PreferredContact = 'email' | 'phone';
 
 interface LeadPayload {
@@ -106,7 +118,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
         });
 
         // Wyślij powiadomienie email (nie blokując odpowiedzi API)
-        sendLeadEmail(fastify, lead as any).catch((err: any) => {
+        sendLeadEmail(fastify, lead as any, getBaseUrl(request)).catch((err: any) => {
             fastify.log.error(err, 'Error sending lead notification email');
         });
 
@@ -181,7 +193,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
             }
         });
 
-        sendLeadEmail(fastify, lead as any).catch((err: any) => {
+        sendLeadEmail(fastify, lead as any, getBaseUrl(request)).catch((err: any) => {
             fastify.log.error(err, 'Error sending negotiation lead notification email');
         });
 
@@ -251,7 +263,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
         });
 
         // Wyślij powiadomienie email
-        sendLeadEmail(fastify, lead as any).catch((err: any) => {
+        sendLeadEmail(fastify, lead as any, getBaseUrl(request)).catch((err: any) => {
             fastify.log.error(err, 'Error sending rental lead notification email');
         });
 
@@ -282,7 +294,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
         });
 
         // Wyślij powiadomienie email (nie blokując odpowiedzi API)
-        sendLeadEmail(fastify, lead as any).catch((err: any) => {
+        sendLeadEmail(fastify, lead as any, getBaseUrl(request)).catch((err: any) => {
             fastify.log.error(err, 'Error sending quick lead notification email');
         });
 

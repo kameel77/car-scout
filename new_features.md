@@ -3,6 +3,7 @@
 Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które pojawiają się w trakcie rozwoju projektu.
 
 ## 1. Funkcjonalności
+- [x] Przesyłanie zapytań kontaktowych (leadów) na e-mail wybranego operatora platformy z możliwością wyboru tej osoby przez Superadmina w backoffice w sekcji Lead Management.
 - [ ] Cena specjalna z zaszyfrowanego parametru `offer` zapisywana w cookie oraz uwzględniana w cenach i kalkulatorze finansowania.
 - [ ] Integracje produktów kredytowych (np. Inbank) z modułem finansowania, z możliwością wyboru dostawcy i produktu na karcie oferty przez administratora (lista z priorytetem/warunkami).
 - [ ] Moduł konfiguracji połączeń z instytucjami finansowymi (produkcyjne środowiska i klucze API).

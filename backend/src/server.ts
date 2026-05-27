@@ -84,5 +84,3 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 start();
-
-import { debugRoutes } from './routes/debug.js';
