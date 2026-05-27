@@ -34,6 +34,10 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 # Copy rate limiting config (http-level directives, not templated)
 COPY nginx-rate-limit.conf /etc/nginx/conf.d/rate-limit.conf
 
+# Copy dynamic turnstile site key replacement script
+COPY replace-turnstile-key.sh /docker-entrypoint.d/30-replace-turnstile-key.sh
+RUN chmod +x /docker-entrypoint.d/30-replace-turnstile-key.sh
+
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
