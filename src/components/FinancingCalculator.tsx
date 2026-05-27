@@ -29,6 +29,10 @@ interface FinancingCalculatorProps {
     financingType?: FinancingType;
     onFinancingTypeChange?: (type: FinancingType) => void;
     isDuplicateHeading?: boolean;
+    /** Optional ReactNode rendered between the disclaimer and the CTA button */
+    priceSlot?: React.ReactNode;
+    /** When true, changes CTA button text to "Zapytaj o ofertę" */
+    motoliaMode?: boolean;
 }
 
 /** Maps URL financing type to product category */
@@ -49,7 +53,9 @@ export function FinancingCalculator({
     offerInitialPayment,
     financingType,
     onFinancingTypeChange,
-    isDuplicateHeading
+    isDuplicateHeading,
+    priceSlot,
+    motoliaMode,
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
 
@@ -592,6 +598,9 @@ export function FinancingCalculator({
                             </p>
                         </div>
 
+                        {/* Optional price slot (used by Motolia to show minimized price here) */}
+                        {priceSlot}
+
                         {listingId && (
                             <Button
                                 variant="hero"
@@ -610,7 +619,14 @@ export function FinancingCalculator({
                                     }
                                 })}
                             >
-                                Kontynuuj z tym finansowaniem
+                                {motoliaMode ? (
+                                    <>
+                                        <MessageSquare className="h-5 w-5" />
+                                        Zapytaj o ofertę
+                                    </>
+                                ) : (
+                                    'Kontynuuj z tym finansowaniem'
+                                )}
                             </Button>
                         )}
                     </>

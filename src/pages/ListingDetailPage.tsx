@@ -800,10 +800,10 @@ export default function ListingDetailPage() {
               {/* Motolia sidebar: Calculator-first layout */}
               {isMotolia && (
                 <>
-                  {/* Customer type toggle */}
-                  <CustomerTypeToggle className="w-full justify-center" />
+                  {/* Customer type toggle — scrolls with sidebar, not sticky */}
+                  <CustomerTypeToggle className="w-full" />
 
-                  {/* Financing Calculator — primary element */}
+                  {/* Financing Calculator — primary element with price inside */}
                   {(settings?.financingCalculatorEnabled ?? true) && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -839,12 +839,38 @@ export default function ListingDetailPage() {
                         offerInitialPayment={initialPayment ?? undefined}
                         financingType={financingType}
                         onFinancingTypeChange={handleFinancingTypeChange}
+                        motoliaMode={true}
+                        priceSlot={
+                          <div className="pt-2 border-t border-slate-200 mt-2">
+                            <div className="flex items-baseline justify-between">
+                              <span className="text-xs text-muted-foreground">Cena pojazdu:</span>
+                              <span className="text-sm text-muted-foreground font-medium">
+                                {priceInfo.primaryLabel}
+                              </span>
+                            </div>
+                            {priceInfo.secondaryLabel && (
+                              <div className="text-right">
+                                <span className="text-xs text-muted-foreground">
+                                  {priceInfo.secondaryLabel}
+                                </span>
+                              </div>
+                            )}
+                            {hasSpecialOffer && (
+                              <div className="flex items-center justify-end gap-1.5 mt-1">
+                                <SpecialOfferTag />
+                                <span className="text-xs text-muted-foreground">
+                                  (rabat: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        }
                       />
                     </motion.div>
                   )}
 
-                  {/* CTAs */}
-                  <motion.div
+                  {/* Secondary CTA — commented out, may be needed in the future */}
+                  {/* <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
@@ -880,47 +906,27 @@ export default function ListingDetailPage() {
                         </Link>
                       </Button>
                     )}
+                  </motion.div> */}
 
-                    {/* Minimized price — bottom of sidebar */}
-                    <div className="pt-3 border-t border-border">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-xs text-muted-foreground">Cena pojazdu:</span>
-                        <span className="text-sm text-muted-foreground font-medium">
-                          {priceInfo.primaryLabel}
-                        </span>
-                      </div>
-                      {priceInfo.secondaryLabel && (
-                        <div className="text-right">
-                          <span className="text-xs text-muted-foreground">
-                            {priceInfo.secondaryLabel}
-                          </span>
-                        </div>
-                      )}
-                      {hasSpecialOffer && (
-                        <div className="flex items-center justify-end gap-1.5 mt-1">
-                          <SpecialOfferTag />
-                          <span className="text-xs text-muted-foreground">
-                            (rabat: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {canManage && (
-                      <div className="pt-2 border-t mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full gap-2 text-xs"
-                          onClick={handleRefreshImages}
-                          disabled={refreshing}
-                        >
-                          <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
-                          {refreshing ? 'Odświeżanie...' : 'Odśwież zdjęcia (Admin)'}
-                        </Button>
-                      </div>
-                    )}
-                  </motion.div>
+                  {canManage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="bg-card rounded-xl shadow-card p-4"
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-2 text-xs"
+                        onClick={handleRefreshImages}
+                        disabled={refreshing}
+                      >
+                        <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+                        {refreshing ? 'Odświeżanie...' : 'Odśwież zdjęcia (Admin)'}
+                      </Button>
+                    </motion.div>
+                  )}
                 </>
               )}
 
