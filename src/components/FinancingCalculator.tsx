@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatPrice } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
-import { Calculator, Info, MessageSquare } from 'lucide-react';
+import { Calculator, Info, MessageSquare, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -493,11 +493,14 @@ export function FinancingCalculator({
                         <div className="bg-slate-50 rounded-lg p-4 mt-2 border border-slate-100">
                             <div className="flex flex-col items-center justify-center text-center space-y-1">
                                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Miesięczna rata</span>
-                                <span className="text-3xl font-bold text-primary">
-                                    {selectedProduct.provider === 'INBANK' && externalLoading && displayInstallment == null
-                                        ? '...'
-                                        : formatPrice(displayInstallment ?? monthlyInstallment, currency)}
-                                </span>
+                                <div className="relative flex items-center justify-center gap-2 min-h-[40px]">
+                                    <span className={cn("text-3xl font-bold text-primary transition-all duration-200", externalLoading && "opacity-40 scale-[0.98]")}>
+                                        {formatPrice(displayInstallment ?? monthlyInstallment, currency)}
+                                    </span>
+                                    {externalLoading && (
+                                        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                                    )}
+                                </div>
                                 {selectedProduct.provider !== 'OWN' && displayInstallment == null && !externalLoading && (
                                     <div className="flex items-center gap-1 text-[9px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-1">
                                         <Info className="w-2.5 h-2.5" />
