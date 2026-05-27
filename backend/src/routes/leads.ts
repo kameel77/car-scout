@@ -1,6 +1,44 @@
 import { FastifyInstance } from 'fastify';
 import { sendLeadEmail } from '../services/email.js';
 import { resolveScope } from '../utils/scope-resolver.js';
+import fetch from 'node-fetch';
+
+async function verifyTurnstile(token: string | undefined, ip: string, log: any): Promise<boolean> {
+    const secretKey = process.env.TURNSTILE_SECRET_KEY || '1x00000000000000000000000000000000';
+
+    if (!token) {
+        if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+            log.warn('Turnstile: Token is missing in production/staging request.');
+            return false;
+        }
+        log.info('Turnstile: Token missing in development, bypassing verification.');
+        return true;
+    }
+
+    try {
+        const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                secret: secretKey,
+                response: token,
+                remoteip: ip
+            }).toString()
+        });
+
+        const data = await response.json() as { success: boolean; 'error-codes'?: string[] };
+        if (!data.success) {
+            log.warn({ errorCodes: data['error-codes'] }, 'Turnstile: Verification failed.');
+            return false;
+        }
+
+        log.info('Turnstile: Token verified successfully.');
+        return true;
+    } catch (error) {
+        log.error(error, 'Turnstile: Error verifying token');
+        return true; // Graceful fallback: do not lock out user if Cloudflare service is down
+    }
+}
 
 const getBaseUrl = (request: any): string | undefined => {
     const referer = request.headers.referer || request.headers.origin;
@@ -73,7 +111,12 @@ const generateReference = () => {
 export async function leadRoutes(fastify: FastifyInstance) {
     // Create new lead from public form (sale)
     fastify.post('/api/leads', async (request, reply) => {
-        const data = request.body as LeadPayload;
+        const data = request.body as LeadPayload & { turnstileToken?: string };
+
+        const isTokenValid = await verifyTurnstile(data.turnstileToken, request.ip, fastify.log);
+        if (!isTokenValid) {
+            return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
+        }
 
         if (!data.listingId || !data.name || !data.email || !data.message) {
             return reply.code(400).send({ error: 'listingId, name, email and message are required' });
@@ -127,7 +170,12 @@ export async function leadRoutes(fastify: FastifyInstance) {
 
     // Create new negotiation lead from listing page
     fastify.post('/api/leads/negotiation', async (request, reply) => {
-        const data = request.body as NegotiationLeadPayload;
+        const data = request.body as NegotiationLeadPayload & { turnstileToken?: string };
+
+        const isTokenValid = await verifyTurnstile(data.turnstileToken, request.ip, fastify.log);
+        if (!isTokenValid) {
+            return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
+        }
 
         if (!data.listingId || !data.name || !data.email || !data.proposedPrice) {
             return reply.code(400).send({ error: 'listingId, name, email and proposedPrice are required' });
@@ -218,7 +266,12 @@ export async function leadRoutes(fastify: FastifyInstance) {
 
     // Create new rental lead from calculator page
     fastify.post('/api/leads/rental', async (request, reply) => {
-        const data = request.body as RentalLeadPayload;
+        const data = request.body as RentalLeadPayload & { turnstileToken?: string };
+
+        const isTokenValid = await verifyTurnstile(data.turnstileToken, request.ip, fastify.log);
+        if (!isTokenValid) {
+            return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
+        }
 
         if (!data.rentalVehicleId || !data.name || !data.email || !data.message) {
             return reply.code(400).send({ error: 'rentalVehicleId, name, email and message are required' });
@@ -275,6 +328,11 @@ export async function leadRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
         const phone = body.phone;
         const name = body.name || 'Szybki Kontakt';
+
+        const isTokenValid = await verifyTurnstile(body.turnstileToken, request.ip, fastify.log);
+        if (!isTokenValid) {
+            return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
+        }
 
         if (!phone) {
             return reply.code(400).send({ error: 'phone is required' });

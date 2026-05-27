@@ -17,7 +17,20 @@ export async function dealerGroupRoutes(fastify: FastifyInstance) {
             orderBy: { name: 'asc' },
         });
 
-        return { groups };
+        const maskedGroups = groups.map(g => {
+            if (g.settings) {
+                return {
+                    ...g,
+                    settings: {
+                        ...g.settings,
+                        smtpPassword: g.settings.smtpPassword ? '••••••••' : null
+                    }
+                };
+            }
+            return g;
+        });
+
+        return { groups: maskedGroups };
     });
 
     // Get single dealer group
@@ -42,6 +55,13 @@ export async function dealerGroupRoutes(fastify: FastifyInstance) {
 
         if (!group) {
             return reply.code(404).send({ error: 'Dealer group not found' });
+        }
+
+        if (group.settings) {
+            group.settings = {
+                ...group.settings,
+                smtpPassword: group.settings.smtpPassword ? '••••••••' : null
+            } as any;
         }
 
         return { group };
@@ -163,6 +183,17 @@ export async function dealerGroupRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Dealer group not found' });
         }
 
+        const oldSettings = await fastify.prisma.dealerGroupSettings.findUnique({
+            where: { dealerGroupId: id }
+        });
+
+        let smtpPassword = oldSettings?.smtpPassword || null;
+        if (settings.smtpPassword === '') {
+            smtpPassword = null;
+        } else if (settings.smtpPassword && settings.smtpPassword !== '••••••••') {
+            smtpPassword = settings.smtpPassword;
+        }
+
         const result = await fastify.prisma.dealerGroupSettings.upsert({
             where: { dealerGroupId: id },
             update: {
@@ -171,7 +202,7 @@ export async function dealerGroupRoutes(fastify: FastifyInstance) {
                 smtpHost: settings.smtpHost,
                 smtpPort: settings.smtpPort,
                 smtpUser: settings.smtpUser,
-                smtpPassword: settings.smtpPassword,
+                smtpPassword,
                 smtpFromEmail: settings.smtpFromEmail,
                 smtpRecipientEmail: settings.smtpRecipientEmail,
             },
@@ -182,13 +213,18 @@ export async function dealerGroupRoutes(fastify: FastifyInstance) {
                 smtpHost: settings.smtpHost,
                 smtpPort: settings.smtpPort,
                 smtpUser: settings.smtpUser,
-                smtpPassword: settings.smtpPassword,
+                smtpPassword,
                 smtpFromEmail: settings.smtpFromEmail,
                 smtpRecipientEmail: settings.smtpRecipientEmail,
             },
         });
 
-        return { settings: result };
+        return {
+            settings: {
+                ...result,
+                smtpPassword: result.smtpPassword ? '••••••••' : null
+            }
+        };
     });
 
     // Assign dealer to group

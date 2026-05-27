@@ -18,6 +18,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBrand } from '@/contexts/BrandContext';
 import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
@@ -25,6 +26,7 @@ import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath } from '@/utils/url-utils';
 import { Footer } from '@/components/Footer';
 import { leadsApi } from '@/services/api';
+import { Turnstile } from '@/components/Turnstile';
 
 const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
@@ -46,6 +48,7 @@ type LeadFormData = z.infer<typeof leadSchema>;
 export default function LeadFormPage() {
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const { t } = useTranslation();
+  const { config } = useBrand();
 
   // Use slug if available (new URL format), otherwise fall back to id (legacy format)
   const listingIdentifier = slug || id;
@@ -65,6 +68,7 @@ export default function LeadFormPage() {
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [referenceNumber, setReferenceNumber] = React.useState('');
   const [negotiationAutoReply, setNegotiationAutoReply] = React.useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = React.useState('');
 
   const { data, isLoading: isListingLoading } = useListing(listingIdentifier);
   const { data: settingsData } = useAppSettings();
@@ -172,6 +176,7 @@ export default function LeadFormPage() {
           proposedPrice: Number(formData.proposedPrice),
           consentMarketing: formData.consentMarketing,
           consentPrivacy: formData.consentPrivacy,
+          turnstileToken,
         })
         : await leadsApi.submitLead({
           listingId: listing.listing_id,
@@ -189,11 +194,45 @@ export default function LeadFormPage() {
           financingDownPayment: financingData?.downPayment,
           financingInstallment: financingData?.installment,
           financingFinalPayment: financingData?.finalPayment,
+          turnstileToken,
         });
 
       const { lead } = response;
       setReferenceNumber(lead?.referenceNumber || lead?.id || '');
       setNegotiationAutoReply(response?.negotiation?.autoReply || null);
+
+      // Push event to Google Tag Manager dataLayer
+      if (typeof window !== 'undefined') {
+        (window as any).dataLayer = (window as any).dataLayer || [];
+        (window as any).dataLayer.push({
+          event: 'generate_lead',
+          lead_type: isNegotiationFlow ? 'negotiation' : 'offer_inquiry',
+          form_id: isNegotiationFlow ? 'negotiation_form' : 'offer_inquiry_form',
+          brand: config.id,
+          lead_details: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone || undefined,
+            preferred_contact: formData.preferredContact,
+            proposed_price: isNegotiationFlow ? Number(formData.proposedPrice) : undefined,
+          },
+          vehicle_details: {
+            listing_id: listing.listing_id,
+            make: listing.make,
+            model: listing.model,
+            version: listing.version,
+            year: listing.production_year,
+            price: listing.broker_price_pln || listing.price_pln,
+            financing_type: financingType || 'cash',
+          },
+          financing_details: financingData ? {
+            installment: financingData.installment,
+            period: financingData.period,
+            down_payment: financingData.downPayment,
+          } : undefined
+        });
+      }
+
       setStatus('success');
     } catch (e) {
       setStatus('error');
@@ -529,6 +568,8 @@ export default function LeadFormPage() {
                     <p className="text-[10px] text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
                   )}
                 </div>
+
+                <Turnstile onVerify={setTurnstileToken} />
 
                 {status === 'error' && (
                   <div className="flex items-center gap-3 p-4 bg-destructive/5 border border-destructive/20 rounded-xl text-destructive text-sm font-medium">

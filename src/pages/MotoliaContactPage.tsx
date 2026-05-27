@@ -72,6 +72,23 @@ export default function MotoliaContactPage() {
     setStatus('sending');
     try {
       await leadsApi.submitQuickLead({ phone: form.phone, name: form.name, message: form.message });
+
+      // Push event to Google Tag Manager dataLayer
+      if (typeof window !== 'undefined') {
+        (window as any).dataLayer = (window as any).dataLayer || [];
+        (window as any).dataLayer.push({
+          event: 'generate_lead',
+          lead_type: 'general_contact',
+          form_id: 'contact_page_form',
+          brand: config.id,
+          lead_details: {
+            name: form.name || undefined,
+            phone: form.phone,
+            message_length: form.message ? form.message.length : 0,
+          }
+        });
+      }
+
       setStatus('success');
       setForm({ name: '', phone: '', message: '' });
     } catch {

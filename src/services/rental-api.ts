@@ -364,6 +364,7 @@ export const rentalPublicApi = {
         rentalInitialPaymentAmountNet?: number;
         rentalInitialPaymentAmountGross?: number;
         rentalMonthlyRate?: number;
+        turnstileToken?: string;
     }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads/rental`, {
             method: 'POST',

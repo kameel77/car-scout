@@ -563,9 +563,9 @@ export default function MotoliaHomePage() {
                   className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto"
                   onSubmit={async (e) => {
                     e.preventDefault();
-                    const form = e.target as HTMLFormElement;
-                    const phoneInput = form.querySelector('input[type="tel"]') as HTMLInputElement;
-                    const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                    const formElement = e.target as HTMLFormElement;
+                    const phoneInput = formElement.querySelector('input[type="tel"]') as HTMLInputElement;
+                    const button = formElement.querySelector('button[type="submit"]') as HTMLButtonElement;
                     const phone = phoneInput.value;
                     if (!phone) return;
                     try {
@@ -573,6 +573,21 @@ export default function MotoliaHomePage() {
                       const originalText = button.innerHTML;
                       button.innerHTML = 'Wysyłanie...';
                       await leadsApi.submitQuickLead({ phone });
+
+                      // Push event to Google Tag Manager dataLayer
+                      if (typeof window !== 'undefined') {
+                        (window as any).dataLayer = (window as any).dataLayer || [];
+                        (window as any).dataLayer.push({
+                          event: 'generate_lead',
+                          lead_type: 'quick_callback',
+                          form_id: 'home_page_cta_form',
+                          brand: config.id,
+                          lead_details: {
+                            phone: phone.trim(),
+                          }
+                        });
+                      }
+
                       button.innerHTML = 'Otrzymano!';
                       phoneInput.value = '';
                       setTimeout(() => {
