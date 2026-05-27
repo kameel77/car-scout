@@ -16,6 +16,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { rentalPublicApi } from '@/services/rental-api';
 import { leadsApi } from '@/services/api';
+import { useBrand } from '@/contexts/BrandContext';
+import { Turnstile } from '@/components/Turnstile';
 
 const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
@@ -37,6 +39,7 @@ export default function RentalLeadFormPage() {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const location = useLocation();
+    const { config } = useBrand();
 
     // Rental config passed via location.state from the calculator
     const rentalData = location.state?.rental as {
@@ -53,6 +56,7 @@ export default function RentalLeadFormPage() {
 
     const [status, setStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [referenceNumber, setReferenceNumber] = React.useState('');
+    const [turnstileToken, setTurnstileToken] = React.useState('');
 
     const { data, isLoading } = useQuery({
         queryKey: ['rental-vehicle-public', slug],
@@ -131,9 +135,44 @@ export default function RentalLeadFormPage() {
                 rentalInitialPaymentAmountNet: rentalData?.initialPaymentAmountNet,
                 rentalInitialPaymentAmountGross: rentalData?.initialPaymentAmountGross,
                 rentalMonthlyRate: rentalData?.monthlyRate,
+                turnstileToken,
             });
 
             setReferenceNumber(response.lead?.referenceNumber || response.lead?.id || '');
+
+            // Push event to Google Tag Manager dataLayer
+            if (typeof window !== 'undefined') {
+                (window as any).dataLayer = (window as any).dataLayer || [];
+                (window as any).dataLayer.push({
+                    event: 'generate_lead',
+                    lead_type: 'rental_inquiry',
+                    form_id: 'rental_inquiry_form',
+                    brand: config.id,
+                    lead_details: {
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone || undefined,
+                        preferred_contact: formData.preferredContact,
+                    },
+                    vehicle_details: {
+                        vehicle_id: vehicle.id,
+                        make: vehicle.make,
+                        model: vehicle.model,
+                        version: vehicle.version,
+                        year: vehicle.productionYear,
+                    },
+                    rental_details: rentalData ? {
+                        monthly_rate: rentalData.monthlyRate,
+                        annual_mileage: rentalData.annualMileageKm,
+                        contract_months: rentalData.contractMonths,
+                        initial_payment_pct: rentalData.initialPaymentPct,
+                        initial_payment_amount_net: rentalData.initialPaymentAmountNet,
+                        initial_payment_amount_gross: rentalData.initialPaymentAmountGross,
+                        offer_type: rentalData.offerType,
+                    } : undefined
+                });
+            }
+
             setStatus('success');
         } catch {
             setStatus('error');
@@ -426,6 +465,8 @@ export default function RentalLeadFormPage() {
                                         <p className="text-[10px] text-red-500 font-bold uppercase ml-7">Pole wymagane</p>
                                     )}
                                 </div>
+
+                                <Turnstile onVerify={setTurnstileToken} />
 
                                 {status === 'error' && (
                                     <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium">

@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import jwt from '@fastify/jwt';
 import { PrismaClient } from '@prisma/client';
@@ -171,6 +172,10 @@ export async function buildApp(): Promise<FastifyInstance> {
         credentials: true
     });
 
+    await fastify.register(helmet, {
+        contentSecurityPolicy: false, // Disabled to prevent blocking external vehicle images and CDNs
+    });
+
     await fastify.register(multipart, {
         limits: {
             fileSize: 500 * 1024 * 1024,
@@ -178,8 +183,17 @@ export async function buildApp(): Promise<FastifyInstance> {
         }
     });
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+        if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+            throw new Error('FATAL: JWT_SECRET environment variable is required in production and staging environments.');
+        } else {
+            fastify.log.warn('JWT_SECRET environment variable not set! Using insecure fallback key for development.');
+        }
+    }
+
     await fastify.register(jwt, {
-        secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+        secret: jwtSecret || 'your-secret-key-change-in-production'
     });
 
     // Decorate fastify

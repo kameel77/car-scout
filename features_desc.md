@@ -339,3 +339,17 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Bezpieczny fallback**: W przypadku braku wybranego użytkownika (wartość domyślna) lub gdy wybrany użytkownik zostanie usunięty/dezaktywowany, system automatycznie wysyła powiadomienie na ogólny adres e-mail zdefiniowany w konfiguracji SMTP (`smtpRecipientEmail`).
 - **Ograniczenia dostępu**:
   - Wybór odbiorcy leada jest całkowicie ukryty przed użytkownikami o niższych rolach (np. Dealer Admin, Dealer Employee, Platform Manager). Opcja ta jest widoczna i modyfikowalna wyłącznie dla roli `SUPERADMIN_PLATFORM`.
+
+## 27. Śledzenie konwersji i leadów (GTM i GA4)
+- **Cel**: automatyczne informowanie Google Tag Manager oraz Google Analytics 4 o każdym udanym przesłaniu leada ze strony, z podziałem na typ formularza oraz dynamiczne dane pojazdu i finansowania.
+- **Zdarzenie w dataLayer**:
+  - Każde udane przesłanie formularza rejestruje w tablicy `window.dataLayer` ujednolicone zdarzenie `generate_lead`.
+- **Parametry zdarzenia**:
+  - `lead_type`: typ leada (np. `offer_inquiry` - formularz ofertowy, `negotiation` - negocjacja ceny, `rental_inquiry` - zapytanie o najem, `general_contact` - formularz kontaktowy, `quick_callback` - prośba o telefon).
+  - `form_id`: identyfikator formularza (np. `offer_inquiry_form`, `negotiation_form`, `rental_inquiry_form`, `contact_page_form`, `callback_form`, `home_page_cta_form`).
+  - `brand`: identyfikator marki (np. `motolia` lub `carsalon`), pobierany dynamicznie z kontekstu marki.
+  - `lead_details`: dane leada, takie jak imię, e-mail (jeśli podane), a w przypadku negocjacji kwota propozycji.
+  - `vehicle_details`: szczegółowe dane pojazdu (np. `listing_id`, `make`, `model`, `version`, `year`, `price`, `financing_type`).
+  - `financing_details` / `rental_details`: parametry kalkulatora wybrane przez klienta (np. rata miesięczna, okres, wpłata wstępna, roczny przebieg).
+- **Zalety**:
+  - Ułatwia bezpośrednie wdrożenie konwersji w GTM i GA4 bez konieczności parsowania DOM-u ani nasłuchiwania na adresy URL podziękowań.
