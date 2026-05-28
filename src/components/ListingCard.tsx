@@ -17,6 +17,7 @@ import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
+import { useBrand } from '@/contexts/BrandContext';
 
 interface ListingCardProps {
   listing: Listing;
@@ -118,6 +119,8 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
   const { data: settings } = useAppSettings();
   const { priceType } = usePriceSettings();
   const { discount, hasSpecialOffer } = useSpecialOffer();
+  const { config } = useBrand();
+  const isMotolia = config.id === 'motolia';
 
   // Use explicit prop, or read user's cached preference (defaults to 'kredyt')
   const effectiveFinancingType = financingType || getPreferredFinancingType();
@@ -230,17 +233,19 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             </div>
           )}
 
-          {/* Price Badge */}
-          <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md flex flex-col md:flex-row md:items-baseline md:gap-2 items-end md:items-baseline">
-            <span className="font-heading text-lg font-bold text-foreground">
-              {priceInfo.primaryLabel}
-            </span>
-            {priceInfo.secondaryLabel && (
-              <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
-                {priceInfo.secondaryLabel}
+          {/* Price Badge — hidden for Motolia (price shown as tag in spec pills) */}
+          {!isMotolia && (
+            <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md flex flex-col md:flex-row md:items-baseline md:gap-2 items-end md:items-baseline">
+              <span className="font-heading text-lg font-bold text-foreground">
+                {priceInfo.primaryLabel}
               </span>
-            )}
-          </div>
+              {priceInfo.secondaryLabel && (
+                <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+                  {priceInfo.secondaryLabel}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -301,6 +306,13 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
                 {listing.engine_power_hp} {t('listing.hp')}
+              </span>
+            )}
+
+            {/* Price tag — Motolia only: show price as a small inline tag */}
+            {isMotolia && priceInfo.primaryLabel && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+                {priceInfo.primaryLabel}
               </span>
             )}
           </div>

@@ -28,6 +28,10 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 
 > **OBOWIĄZKOWA LEKTURA**: Przed jakimikolwiek zmianami w Docker Compose, Nginx, sieci lub ENV przeczytaj [DEPLOYMENT_ARCHITECTURE.md](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/.agents/DEPLOYMENT_ARCHITECTURE.md).
 
+- **Instancje Coolify**:
+    - **coolify-motolia-prod**: `http://89.167.100.82:8000/` (motolia.pl i staging.motolia.pl)
+    - **coolify-finarena**: `http://204.168.226.1:8000/` (m.in. dev.motolia.pl)
+    - **coolify-staging**: lokalna instancja deweloperska
 - **Separacja Środowisk**: Każde środowisko (prod, staging, dev) na Coolify jest w pełni izolowane. Rozróżnia je `COMPOSE_PROJECT_NAME` (`carscout-prod`, `carscout-staging`, `carscout-dev`).
 - **Bazy danych**: Usługi **Postgres** oraz **Redis** są zainstalowane jako osobne serwisy w ramach danego środowiska na Coolify. Nie są częścią głównego `docker-compose`.
 - **Wymagana zgoda**: Agent nie może wprowadzać zmian w konfiguracji `docker-compose`, backendzie ani API, które wpływałyby na separację środowisk lub wymagałyby zmian w zmiennych środowiskowych (ENV) bez wyraźnej zgody użytkownika.

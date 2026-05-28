@@ -49,6 +49,8 @@ import { Footer } from '@/components/Footer';
 import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
+import { CustomerTypeToggle } from '@/components/CustomerTypeToggle';
+import { useBrand } from '@/contexts/BrandContext';
 
 import { MetaHead } from '@/components/seo/MetaHead';
 import { Helmet } from 'react-helmet-async';
@@ -78,6 +80,8 @@ export default function ListingDetailPage() {
   const { priceType } = usePriceSettings();
   const { discount, initialPayment, hasSpecialOffer } = useSpecialOffer();
   const listing = data?.listing;
+  const { config } = useBrand();
+  const isMotolia = config.id === 'motolia';
 
   // Store search parameters for return navigation
   const [searchParams, setSearchParams] = React.useState<string>('');
@@ -520,30 +524,55 @@ export default function ListingDetailPage() {
             {/* Title & Price - Mobile */}
             <div className="lg:hidden">
               <div role="heading" aria-level={2} className="font-heading text-2xl font-bold text-foreground">{baseTitle}</div>
-              <div className="flex items-center gap-3 mt-2">
-                <div className="flex flex-col md:flex-row md:items-baseline md:gap-3 mt-2">
-                  <span className="font-heading text-3xl font-bold text-accent">
-                    {priceInfo.primaryLabel}
+              {isMotolia ? (
+                /* Motolia mobile: minimized price */
+                <div className="mt-2">
+                  <span className="text-sm text-muted-foreground">
+                    Cena pojazdu: {priceInfo.primaryLabel}
                   </span>
                   {priceInfo.secondaryLabel && (
-                    <span className="text-sm text-muted-foreground font-medium">
+                    <span className="text-xs text-muted-foreground ml-2">
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
                   {hasSpecialOffer && (
-                    <SpecialOfferTag className="mt-2 md:mt-0" />
+                    <div className="flex items-center gap-2 mt-1">
+                      <SpecialOfferTag className="" />
+                      <span className="text-xs text-muted-foreground">
+                        (rabat: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
+                      </span>
+                    </div>
                   )}
                 </div>
-              </div>
-              {hasSpecialOffer && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  (rabat specjalny: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
-                </div>
-              )}
-              {initialPayment != null && (
-                <div className="text-xs text-muted-foreground mt-1 mb-4">
-                  (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
-                </div>
+              ) : (
+                /* Carsalon mobile: original prominent price */
+                <>
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="flex flex-col md:flex-row md:items-baseline md:gap-3 mt-2">
+                      <span className="font-heading text-3xl font-bold text-accent">
+                        {priceInfo.primaryLabel}
+                      </span>
+                      {priceInfo.secondaryLabel && (
+                        <span className="text-sm text-muted-foreground font-medium">
+                          {priceInfo.secondaryLabel}
+                        </span>
+                      )}
+                      {hasSpecialOffer && (
+                        <SpecialOfferTag className="mt-2 md:mt-0" />
+                      )}
+                    </div>
+                  </div>
+                  {hasSpecialOffer && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      (rabat specjalny: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
+                    </div>
+                  )}
+                  {initialPayment != null && (
+                    <div className="text-xs text-muted-foreground mt-1 mb-4">
+                      (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -766,57 +795,90 @@ export default function ListingDetailPage() {
 
           {/* Sidebar */}
           <div className="hidden lg:block">
-            <div className="sticky top-20 space-y-6">
-              {/* Price Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card rounded-xl shadow-card p-6 space-y-4"
-              >
-                <div role="heading" aria-level={2} className="font-heading text-xl font-bold text-foreground">{baseTitle}</div>
-                <div className="flex flex-col gap-1 items-start">
-                  <div className="flex items-center gap-2">
-                    <span className="font-heading text-3xl font-bold text-accent">
-                      {priceInfo.primaryLabel}
-                    </span>
-                    {hasSpecialOffer && (
-                      <SpecialOfferTag />
-                    )}
-                  </div>
-                  {priceInfo.secondaryLabel && (
-                    <span className="text-sm text-muted-foreground font-medium">
-                      {priceInfo.secondaryLabel}
-                    </span>
-                  )}
-                  {hasSpecialOffer && (
-                    <span className="text-xs text-muted-foreground mt-0.5">
-                      (rabat specjalny: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
-                    </span>
-                  )}
-                  {initialPayment != null && (
-                    <span className="text-xs text-muted-foreground mt-0.5">
-                      (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
-                    </span>
-                  )}
-                </div>
+            {/* Motolia: toggle scrolls with page, not sticky */}
+            {isMotolia && (
+              <CustomerTypeToggle className="w-full mb-6" />
+            )}
+            <div className={cn("sticky space-y-6", isMotolia ? "top-24" : "top-20")}>
 
-                <div className="space-y-3 pt-2">
-                  <Button asChild variant="hero" className="w-full" size="lg">
-                    <Link to={`${getListingUrlPath({
-                      id: listing.listing_id,
-                      make: listing.make,
-                      model: listing.model,
-                      version: listing.version,
-                      productionYear: listing.production_year,
-                      bodyType: listing.body_type,
-                      fuelType: listing.fuel_type
-                    }, financingType)}/lead`}>
-                      <MessageSquare className="h-5 w-5" />
-                      {t('detail.askAbout')}
-                    </Link>
-                  </Button>
-                  {settings?.negotiatePriceEnabled !== false && (
-                    <Button asChild variant="secondary" className="w-full btn-negotiate" size="lg">
+              {/* Motolia sidebar: Calculator-first layout */}
+              {isMotolia && (
+                <>
+
+                  {/* Financing Calculator — primary element with price inside */}
+                  {(settings?.financingCalculatorEnabled ?? true) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <FinancingCalculator
+                        listingId={listing.listing_id}
+                        price={
+                          priceType === 'net'
+                            ? Math.round(
+                                applySpecialOfferDiscount(
+                                  getFinancingBasePrice({
+                                    pricePln: listing.price_pln,
+                                    brokerPricePln: listing.broker_price_pln,
+                                    financingPriceBase: listing.financingPriceBase,
+                                  }),
+                                  discount
+                                ) / 1.23
+                              )
+                            : applySpecialOfferDiscount(
+                                getFinancingBasePrice({
+                                  pricePln: listing.price_pln,
+                                  brokerPricePln: listing.broker_price_pln,
+                                  financingPriceBase: listing.financingPriceBase,
+                                }),
+                                discount
+                              )
+                        }
+                        priceIsNet={priceType === 'net'}
+                        currency={settings?.displayCurrency || 'PLN'}
+                        manufacturingYear={listing.production_year}
+                        mileageKm={listing.mileage_km}
+                        offerInitialPayment={initialPayment ?? undefined}
+                        financingType={financingType}
+                        onFinancingTypeChange={handleFinancingTypeChange}
+                        motoliaMode={true}
+                        priceSlot={
+                          <div className="pt-2 border-t border-slate-200 mt-2">
+                            <div className="flex items-baseline justify-between">
+                              <span className="text-xs text-muted-foreground">Cena pojazdu:</span>
+                              <span className="text-sm text-muted-foreground font-medium">
+                                {priceInfo.primaryLabel}
+                              </span>
+                            </div>
+                            {priceInfo.secondaryLabel && (
+                              <div className="text-right">
+                                <span className="text-xs text-muted-foreground">
+                                  {priceInfo.secondaryLabel}
+                                </span>
+                              </div>
+                            )}
+                            {hasSpecialOffer && (
+                              <div className="flex items-center justify-end gap-1.5 mt-1">
+                                <SpecialOfferTag />
+                                <span className="text-xs text-muted-foreground">
+                                  (rabat: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        }
+                      />
+                    </motion.div>
+                  )}
+
+                  {/* Secondary CTA — commented out, may be needed in the future */}
+                  {/* <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-card rounded-xl shadow-card p-6 space-y-3"
+                  >
+                    <Button asChild variant="hero" className="w-full" size="lg">
                       <Link to={`${getListingUrlPath({
                         id: listing.listing_id,
                         make: listing.make,
@@ -825,31 +887,137 @@ export default function ListingDetailPage() {
                         productionYear: listing.production_year,
                         bodyType: listing.body_type,
                         fuelType: listing.fuel_type
-                      }, financingType)}/negotiate`}>
-                        <HandCoins className="h-5 w-5" />
-                        {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
+                      }, financingType)}/lead`}>
+                        <MessageSquare className="h-5 w-5" />
+                        {t('detail.askAbout')}
                       </Link>
                     </Button>
-                  )}
-                </div>
+                    {settings?.negotiatePriceEnabled !== false && (
+                      <Button asChild variant="secondary" className="w-full btn-negotiate" size="lg">
+                        <Link to={`${getListingUrlPath({
+                          id: listing.listing_id,
+                          make: listing.make,
+                          model: listing.model,
+                          version: listing.version,
+                          productionYear: listing.production_year,
+                          bodyType: listing.body_type,
+                          fuelType: listing.fuel_type
+                        }, financingType)}/negotiate`}>
+                          <HandCoins className="h-5 w-5" />
+                          {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
+                        </Link>
+                      </Button>
+                    )}
+                  </motion.div> */}
 
-                {canManage && (
-                  <div className="pt-2 border-t mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-2 text-xs"
-                      onClick={handleRefreshImages}
-                      disabled={refreshing}
+                  {canManage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="bg-card rounded-xl shadow-card p-4"
                     >
-                      <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
-                      {refreshing ? 'Odświeżanie...' : 'Odśwież zdjęcia (Admin)'}
-                    </Button>
-                  </div>
-                )}
-              </motion.div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-2 text-xs"
+                        onClick={handleRefreshImages}
+                        disabled={refreshing}
+                      >
+                        <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+                        {refreshing ? 'Odświeżanie...' : 'Odśwież zdjęcia (Admin)'}
+                      </Button>
+                    </motion.div>
+                  )}
+                </>
+              )}
 
-              {/* Financing Calculator - Sidebar Widget */}
+              {/* Carsalon sidebar: Original price-first layout */}
+              {!isMotolia && (
+                <>
+                  {/* Price Card */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-card rounded-xl shadow-card p-6 space-y-4"
+                  >
+                  <div role="heading" aria-level={2} className="font-heading text-xl font-bold text-foreground">{baseTitle}</div>
+                  <div className="flex flex-col gap-1 items-start">
+                    <div className="flex items-center gap-2">
+                      <span className="font-heading text-3xl font-bold text-accent">
+                        {priceInfo.primaryLabel}
+                      </span>
+                      {hasSpecialOffer && (
+                        <SpecialOfferTag />
+                      )}
+                    </div>
+                    {priceInfo.secondaryLabel && (
+                      <span className="text-sm text-muted-foreground font-medium">
+                        {priceInfo.secondaryLabel}
+                      </span>
+                    )}
+                    {hasSpecialOffer && (
+                      <span className="text-xs text-muted-foreground mt-0.5">
+                        (rabat specjalny: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
+                      </span>
+                    )}
+                    {initialPayment != null && (
+                      <span className="text-xs text-muted-foreground mt-0.5">
+                        (pierwsza wpłata: {formatPrice(initialPayment, settings?.displayCurrency || 'PLN')})
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 pt-2">
+                    <Button asChild variant="hero" className="w-full" size="lg">
+                      <Link to={`${getListingUrlPath({
+                        id: listing.listing_id,
+                        make: listing.make,
+                        model: listing.model,
+                        version: listing.version,
+                        productionYear: listing.production_year,
+                        bodyType: listing.body_type,
+                        fuelType: listing.fuel_type
+                      }, financingType)}/lead`}>
+                        <MessageSquare className="h-5 w-5" />
+                        {t('detail.askAbout')}
+                      </Link>
+                    </Button>
+                    {settings?.negotiatePriceEnabled !== false && (
+                      <Button asChild variant="secondary" className="w-full btn-negotiate" size="lg">
+                        <Link to={`${getListingUrlPath({
+                          id: listing.listing_id,
+                          make: listing.make,
+                          model: listing.model,
+                          version: listing.version,
+                          productionYear: listing.production_year,
+                          bodyType: listing.body_type,
+                          fuelType: listing.fuel_type
+                        }, financingType)}/negotiate`}>
+                          <HandCoins className="h-5 w-5" />
+                          {t('detail.negotiatePrice', 'Zaproponuj swoją cenę')}
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+
+                  {canManage && (
+                    <div className="pt-2 border-t mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-2 text-xs"
+                        onClick={handleRefreshImages}
+                        disabled={refreshing}
+                      >
+                        <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+                        {refreshing ? 'Odświeżanie...' : 'Odśwież zdjęcia (Admin)'}
+                      </Button>
+                    </div>
+                  )}
+                </motion.div>
+
+              {/* Financing Calculator - Sidebar Widget (Carsalon) */}
               {(settings?.financingCalculatorEnabled ?? true) && settings?.financingCalculatorLocation === 'sidebar' && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -889,6 +1057,8 @@ export default function ListingDetailPage() {
                     isDuplicateHeading={true}
                   />
                 </motion.div>
+              )}
+                </>
               )}
 
               {/* Sidebar Ad Placement */}
