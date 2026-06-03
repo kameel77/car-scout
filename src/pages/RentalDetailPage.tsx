@@ -25,6 +25,8 @@ import {
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
     User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { translateTechnicalValue } from '@/utils/i18n-utils';
 import { useBrand } from '@/contexts/BrandContext';
 import { normalizeRentalImageUrl } from '@/lib/utils';
 import { formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
@@ -34,6 +36,7 @@ import { GearboxIcon } from '@/components/icons/GearboxIcon';
 type OfferType = 'business' | 'consumer';
 
 export default function RentalDetailPage() {
+    const { t } = useTranslation();
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const { token } = useAuth();
@@ -171,11 +174,11 @@ export default function RentalDetailPage() {
     const specs = [
         { label: 'Rok produkcji', value: vehicle.productionYear, icon: Calendar },
         { label: 'Moc', value: vehicle.enginePowerHp ? `${vehicle.enginePowerHp} KM` : null, icon: Gauge },
-        { label: 'Paliwo', value: vehicle.fuelType, icon: Fuel },
-        { label: 'Skrzynia biegów', value: vehicle.transmission, icon: GearboxIcon },
-        { label: 'Napęd', value: vehicle.drive, icon: Cog },
+        { label: 'Paliwo', value: translateTechnicalValue('fuel', vehicle.fuelType, t), icon: Fuel },
+        { label: 'Skrzynia biegów', value: translateTechnicalValue('transmission', vehicle.transmission, t), icon: GearboxIcon },
+        { label: 'Napęd', value: translateTechnicalValue('drive', vehicle.drive, t), icon: Cog },
         { label: 'Pojemność', value: vehicle.engineCapacityCm3 ? `${vehicle.engineCapacityCm3} cm³` : null, icon: Hash },
-        { label: 'Nadwozie', value: vehicle.bodyType, icon: Car },
+        { label: 'Nadwozie', value: translateTechnicalValue('body', vehicle.bodyType, t), icon: Car },
         { label: 'Kolor', value: vehicle.color, icon: Palette },
         { label: 'Drzwi', value: vehicle.doors, icon: DoorOpen },
         { label: 'Miejsca', value: vehicle.seats, icon: Armchair },
