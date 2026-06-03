@@ -74,10 +74,10 @@ function optionsFromFacet(
 ): { value: string; label: string }[] {
   const keys = new Set<string>();
   if (labelMap) {
-    Object.keys(labelMap).forEach((k) => keys.add(k));
+    Object.keys(labelMap).forEach((k) => keys.add(k.toLowerCase()));
   }
   if (facet) {
-    Object.keys(facet).forEach((k) => keys.add(k));
+    Object.keys(facet).forEach((k) => keys.add(k.toLowerCase()));
   }
   return Array.from(keys).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
@@ -106,13 +106,13 @@ const DRIVE_LABEL_MAP: Record<string, string> = {
 };
 
 const BODY_TYPE_LABEL_MAP: Record<string, string> = {
-  sedan: 'bodyType.sedan',
-  hatchback: 'bodyType.hatchback',
-  suv: 'bodyType.suv',
-  kombi: 'bodyType.kombi',
-  coupe: 'bodyType.coupe',
-  cabrio: 'bodyType.cabrio',
-  minivan: 'bodyType.minivan',
+  sedan: 'body.sedan',
+  hatchback: 'body.hatchback',
+  suv: 'body.suv',
+  kombi: 'body.kombi',
+  coupe: 'body.coupe',
+  cabrio: 'body.cabrio',
+  minivan: 'body.minivan',
 };
 
 const statusOptions = [

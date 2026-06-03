@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Search, Calendar, Gauge, Fuel, ChevronLeft, ChevronRight,
-  Car, Building2, User, ChevronDown, ArrowUpDown, Check, SlidersHorizontal, X
+  Car, Building2, User, ChevronDown, ChevronUp, ArrowUpDown, Check, SlidersHorizontal, X
 } from 'lucide-react';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
 import { getTransmissionShortLabel, translateTechnicalValue } from '@/utils/i18n-utils';
@@ -26,6 +26,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Separator } from '@/components/ui/separator';
 
 /* ── Helpers ── */
 
@@ -171,10 +173,10 @@ function optionsFromFacet(
 ): { value: string; label: string }[] {
   const keys = new Set<string>();
   if (labelMap) {
-    Object.keys(labelMap).forEach((k) => keys.add(k));
+    Object.keys(labelMap).forEach((k) => keys.add(k.toLowerCase()));
   }
   if (facet) {
-    Object.keys(facet).forEach((k) => keys.add(k));
+    Object.keys(facet).forEach((k) => keys.add(k.toLowerCase()));
   }
   return Array.from(keys).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
@@ -203,14 +205,42 @@ const DRIVE_LABEL_MAP: Record<string, string> = {
 };
 
 const BODY_TYPE_LABEL_MAP: Record<string, string> = {
-  sedan: 'bodyType.sedan',
-  hatchback: 'bodyType.hatchback',
-  suv: 'bodyType.suv',
-  kombi: 'bodyType.kombi',
-  coupe: 'bodyType.coupe',
-  cabrio: 'bodyType.cabrio',
-  minivan: 'bodyType.minivan',
+  sedan: 'body.sedan',
+  hatchback: 'body.hatchback',
+  suv: 'body.suv',
+  kombi: 'body.kombi',
+  coupe: 'body.coupe',
+  cabrio: 'body.cabrio',
+  minivan: 'body.minivan',
 };
+
+interface FilterSectionProps {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}
+
+function FilterSection({ title, defaultOpen = false, children }: FilterSectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger asChild>
+        <button className="flex w-full items-center justify-between py-2 text-sm font-medium hover:text-primary transition-colors text-left">
+          {title}
+          {isOpen ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-2 pb-3 animate-in fade-in slide-in-from-top-1 duration-200">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 /* ── Sort options ── */
 
@@ -409,81 +439,102 @@ export default function RentalSearchPage() {
               </div>
             </div>
             {/* Marka */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.make')}</label>
+            <FilterSection title={t('filters.make')} defaultOpen={true}>
               <MultiCheck options={makeOptions} selected={makes} onChange={v => { setMakes(v); if (v.length === 0) setModels([]); setPage(1); }} searchable searchPlaceholder={t('filters.selectMake')} counts={data?.facets?.make} />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Model */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.model')}</label>
+            <FilterSection title={t('filters.model')} defaultOpen={makes.length > 0}>
               {makes.length > 0
                 ? <MultiCheck options={modelOptions} selected={models} onChange={v => { setModels(v); setPage(1); }} searchable searchPlaceholder={t('filters.selectModel')} counts={data?.facets?.model} />
                 : <p className="text-sm text-muted-foreground">{t('filters.selectMake')}</p>}
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Typ nadwozia */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.bodyType')}</label>
+            <FilterSection title={t('filters.bodyType')} defaultOpen={bodyTypes.length > 0}>
               <MultiCheck options={optionsFromFacet(data?.facets?.bodyType, BODY_TYPE_LABEL_MAP)} selected={bodyTypes} onChange={v => { setBodyTypes(v); setPage(1); }} counts={data?.facets?.bodyType} />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Paliwo */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.fuelType')}</label>
+            <FilterSection title={t('filters.fuelType')} defaultOpen={fuelTypes.length > 0}>
               <MultiCheck options={optionsFromFacet(data?.facets?.fuelType, FUEL_LABEL_MAP)} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Skrzynia */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.transmission')}</label>
+            <FilterSection title={t('filters.transmission')} defaultOpen={transmissions.length > 0}>
               <MultiCheck
                 options={optionsFromFacet(data?.facets?.transmission, TRANSMISSION_LABEL_MAP)}
                 selected={transmissions}
                 onChange={v => { setTransmissions(v); setPage(1); }}
                 counts={data?.facets?.transmission}
               />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Napęd */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.drive')}</label>
+            <FilterSection title={t('filters.drive')} defaultOpen={drives.length > 0}>
               <MultiCheck
                 options={optionsFromFacet(data?.facets?.drive, DRIVE_LABEL_MAP)}
                 selected={drives}
                 onChange={v => { setDrives(v); setPage(1); }}
                 counts={data?.facets?.drive}
               />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Rata (od-do) */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Rata miesięczna</label>
+            <FilterSection title="Rata miesięczna" defaultOpen={priceFrom !== '' || priceTo !== ''}>
               <RangePopover fromValue={priceFrom} toValue={priceTo} onFromChange={v => { setPriceFrom(v); setPage(1); }} onToChange={v => { setPriceTo(v); setPage(1); }} fromPh="Rata od (zł)" toPh="Rata do (zł)" />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Rok produkcji (od-do) */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.productionYear')}</label>
+            <FilterSection title={t('filters.productionYear')} defaultOpen={yearFrom !== '' || yearTo !== ''}>
               <RangePopover fromValue={yearFrom} toValue={yearTo} onFromChange={v => { setYearFrom(v); setPage(1); }} onToChange={v => { setYearTo(v); setPage(1); }} fromPh={t('filters.yearFrom')} toPh={t('filters.yearTo')} />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Przebieg (od-do) */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.mileage')}</label>
+            <FilterSection title={t('filters.mileage')} defaultOpen={mileageFrom !== '' || mileageTo !== ''}>
               <RangePopover fromValue={mileageFrom} toValue={mileageTo} onFromChange={v => { setMileageFrom(v); setPage(1); }} onToChange={v => { setMileageTo(v); setPage(1); }} fromPh="0 km" toPh="300 000 km" />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Moc silnika (od-do) */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.power')}</label>
+            <FilterSection title={t('filters.power')} defaultOpen={powerFrom !== '' || powerTo !== ''}>
               <RangePopover fromValue={powerFrom} toValue={powerTo} onFromChange={v => { setPowerFrom(v); setPage(1); }} onToChange={v => { setPowerTo(v); setPage(1); }} fromPh="50 KM" toPh="500 KM" />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Pojemność silnika (od-do) */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.engineCapacity')}</label>
+            <FilterSection title={t('filters.engineCapacity')} defaultOpen={capacityFrom !== '' || capacityTo !== ''}>
               <RangePopover fromValue={capacityFrom} toValue={capacityTo} onFromChange={v => { setCapacityFrom(v); setPage(1); }} onToChange={v => { setCapacityTo(v); setPage(1); }} fromPh="800 cm³" toPh="6000 cm³" />
-            </div>
+            </FilterSection>
+
+            <Separator />
+
             {/* Stan (Nowy / Używany) */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Stan pojazdu</label>
-              <div className="flex gap-2">
+            <FilterSection title="Stan pojazdu" defaultOpen={condition.length > 0}>
+              <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => { setCondition([]); setPage(1); }} className={cn('px-4 py-2 rounded-lg text-sm font-medium border transition-colors', isAll ? 'bg-accent text-foreground border-accent' : 'bg-background border-border hover:bg-secondary/50')}>Wszystkie</button>
                 <button type="button" onClick={() => { setCondition(['NEW']); setPage(1); }} className={cn('px-4 py-2 rounded-lg text-sm font-medium border transition-colors', isNew ? 'bg-accent text-foreground border-accent' : 'bg-background border-border hover:bg-secondary/50')}>Nowy</button>
                 <button type="button" onClick={() => { setCondition(['USED']); setPage(1); }} className={cn('px-4 py-2 rounded-lg text-sm font-medium border transition-colors', isUsed ? 'bg-accent text-foreground border-accent' : 'bg-background border-border hover:bg-secondary/50')}>Używany</button>
               </div>
-            </div>
+            </FilterSection>
           </div>
           <div className="px-6 py-3 border-t bg-background shrink-0 flex flex-col gap-2">
             <Button
