@@ -40,6 +40,9 @@ function buildRentalImageList(v: any): string[] {
   };
   push(v.primaryImageUrl);
   for (const u of v.imageUrls || []) push(u);
+  if (out.length === 0) {
+    return ['/motolia-placeholder.png'];
+  }
   return out;
 }
 
@@ -702,7 +705,7 @@ export default function RentalSearchPage() {
             {vehicles.map((v: any) => (
               <Link key={v.id} to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <div className="relative">
-                  <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center"><Car className="w-16 h-16 text-gray-300" /></div>} />
+                  <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" fallback={<img src="/motolia-placeholder.png" className="w-full h-full object-cover" alt="Placeholder" />} />
                   {v.rentalCompanyCount > 1 && <div className="absolute top-3 right-3 bg-card/95 backdrop-blur-sm text-xs font-medium px-2 py-1 rounded-full z-10">{v.rentalCompanyCount} oferty</div>}
                 </div>
                 <div className="p-4 space-y-3 flex-1 flex flex-col">
