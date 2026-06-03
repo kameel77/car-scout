@@ -86,8 +86,13 @@ export default function SearchPage() {
 
   // Initialize from URL
   const [filters, setFilters] = React.useState<FilterState>(() => {
+    const isLeasingPath = window.location.pathname.startsWith('/leasing');
+    const isKredytPath = window.location.pathname.startsWith('/kredyt');
+
     const rt = searchParams.get('rateType');
     const rb = searchParams.get('rateBasis');
+    const searchText = searchParams.get('SearchText') || searchParams.get('q') || '';
+
     return {
       makes: parseArray(searchParams.get('make')),
       models: parseArray(searchParams.get('model')),
@@ -109,10 +114,10 @@ export default function SearchPage() {
       capacityTo: searchParams.get('capacityMax') || '',
       rateFrom: searchParams.get('rateMin') || '',
       rateTo: searchParams.get('rateMax') || '',
-      rateType: rt === 'lease' ? 'lease' : 'credit',
-      rateBasis: rb === 'net' ? 'net' : 'gross',
+      rateType: rt ? (rt === 'lease' ? 'lease' : 'credit') : (isLeasingPath ? 'lease' : 'credit'),
+      rateBasis: rb ? (rb === 'net' ? 'net' : 'gross') : (isLeasingPath ? 'net' : 'gross'),
 
-      query: searchParams.get('q') || '',
+      query: searchText,
     };
   });
 
@@ -273,12 +278,13 @@ export default function SearchPage() {
     }
   })();
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-search', rentalCondition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
+    queryKey: ['rental-search', rentalCondition, filters.makes, filters.models, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
       search: filters.query || undefined,
       make: filters.makes.length ? filters.makes.join(',') : undefined,
+      model: filters.models.length ? filters.models.join(',') : undefined,
       fuelType: filters.fuelTypes.length ? filters.fuelTypes.join(',') : undefined,
       bodyType: filters.bodyTypes.length ? filters.bodyTypes.join(',') : undefined,
       yearFrom: filters.yearFrom || undefined,

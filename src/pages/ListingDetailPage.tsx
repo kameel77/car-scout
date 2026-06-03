@@ -31,7 +31,7 @@ import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { formatPrice } from '@/utils/formatters';
+import { formatPrice, formatPhoneForTelLink } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
@@ -1141,7 +1141,7 @@ export default function ListingDetailPage() {
         <div className="flex gap-3 items-center">
           {/* Phone CTA — replaces the mobile-only Thulium chat widget on small screens */}
           <a
-            href={`tel:${listing.contact_phone}`}
+            href={`tel:${formatPhoneForTelLink(listing.contact_phone)}`}
             aria-label="Kontakt telefoniczny"
             className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
           >

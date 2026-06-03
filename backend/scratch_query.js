@@ -2,11 +2,18 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log("Searching for listing by VIN...");
-    const listing = await prisma.listing.findFirst({
-        where: { vin: "TMBJH7NPXN7039429" }
+    console.log("Fetching rental vehicles...");
+    const vehicles = await prisma.rentalVehicle.findMany({
+        take: 10,
+        select: {
+            id: true,
+            make: true,
+            model: true,
+            primaryImageUrl: true,
+            imageUrls: true
+        }
     });
-    console.log("Result:", JSON.stringify(listing, null, 2));
+    console.log("Result:", JSON.stringify(vehicles, null, 2));
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

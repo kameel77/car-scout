@@ -16,6 +16,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
 import { usePersonalOffer } from '@/contexts/PersonalOfferContext';
 import { useBrand } from '@/contexts/BrandContext';
+import { formatPhoneForTelLink } from '@/utils/formatters';
 
 const ALL_LANGUAGES = [
   { code: 'pl', label: 'Polski', flag: '🇵🇱' },
@@ -208,7 +209,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
             {/* Phone Button */}
             {phoneForSales && (
               <a
-                href={`tel:${phoneForSales}`}
+                href={`tel:${formatPhoneForTelLink(phoneForSales)}`}
                 aria-label="Zadzwoń do nas"
                 className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 hover:shadow-md hover:shadow-accent/20 active:scale-95"
               >
@@ -231,7 +232,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           {/* Phone circle - mobile */}
           {phoneForSales && (
             <a
-              href={`tel:${phoneForSales}`}
+              href={`tel:${formatPhoneForTelLink(phoneForSales)}`}
               aria-label="Zadzwoń do nas"
               className="flex items-center justify-center w-9 h-9 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 active:scale-95"
             >

@@ -4,6 +4,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { formatPhoneForTelLink } from '@/utils/formatters';
 import './home-page.css';
 
 export default function CarsalonContactPage() {
@@ -23,7 +24,7 @@ export default function CarsalonContactPage() {
               {config.contactPage.subtitle}
             </p>
             <div className="home-hero__actions" style={{ justifyContent: 'center' }}>
-              <a href={`tel:${salesPhone.replace(/\s+/g, '')}`} className="home-btn-secondary">
+              <a href={`tel:${formatPhoneForTelLink(salesPhone)}`} className="home-btn-secondary">
                 <Phone size={18} />&nbsp; {salesPhone}
               </a>
               <a href={`mailto:${config.contactInfo.email}`} className="home-btn-secondary">

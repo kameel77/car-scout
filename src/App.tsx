@@ -84,6 +84,8 @@ const App = () => (
                       <Route path="/faq" element={<PublicFaqPage />} />
 
                       {/* SEO financing-type routes */}
+                      <Route path="/leasing" element={<SearchPage />} />
+                      <Route path="/kredyt" element={<SearchPage />} />
                       <Route path="/leasing/:slug" element={<ListingDetailPage />} />
                       <Route path="/leasing/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/leasing/:slug/negotiate" element={<LeadFormPage />} />

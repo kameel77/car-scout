@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useBrand } from '@/contexts/BrandContext';
 import { normalizeRentalImageUrl } from '@/lib/utils';
-import { formatNumber } from '@/utils/formatters';
+import { formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
 import { RentalFinancingContent } from '@/components/RentalFinancingContent';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 
@@ -550,7 +550,7 @@ export default function RentalDetailPage() {
                     {config.contactInfo.phone && (
                         <button
                             className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm"
-                            onClick={() => window.open(`tel:${config.contactInfo.phone}`)}
+                            onClick={() => window.open(`tel:${formatPhoneForTelLink(config.contactInfo.phone)}`)}
                         >
                             <Phone className="h-4 w-4" />
                             Kontakt

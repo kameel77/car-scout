@@ -18,6 +18,7 @@ import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { leadsApi } from '@/services/api';
+import { formatPhoneForTelLink } from '@/utils/formatters';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ export default function MotoliaContactPage() {
             {/* Direct contact buttons */}
             <FadeIn delay={0.3} className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
               <a
-                href={`tel:${salesPhone.replace(/\s+/g, '')}`}
+                href={`tel:${formatPhoneForTelLink(salesPhone)}`}
                 className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
                 style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}50` }}
                 onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
@@ -282,7 +283,7 @@ export default function MotoliaContactPage() {
 
                   {/* Phone — sales */}
                   <a
-                    href={`tel:${salesPhone.replace(/\s+/g, '')}`}
+                    href={`tel:${formatPhoneForTelLink(salesPhone)}`}
                     className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
                   >
                     <div
@@ -300,7 +301,7 @@ export default function MotoliaContactPage() {
                   {/* Phone — legal/general */}
                   {settings?.legalContactPhone && (
                     <a
-                      href={`tel:${settings.legalContactPhone.replace(/\s+/g, '')}`}
+                      href={`tel:${formatPhoneForTelLink(settings.legalContactPhone)}`}
                       className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
                     >
                       <div

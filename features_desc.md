@@ -353,3 +353,14 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - `financing_details` / `rental_details`: parametry kalkulatora wybrane przez klienta (np. rata miesięczna, okres, wpłata wstępna, roczny przebieg).
 - **Zalety**:
   - Ułatwia bezpośrednie wdrożenie konwersji w GTM i GA4 bez konieczności parsowania DOM-u ani nasłuchiwania na adresy URL podziękowań.
+
+## 28. Automatyczne formatowanie linków telefonicznych (tel:) dla połączeń międzynarodowych
+- **Cel**: ułatwienie połączeń telefonicznych z zagranicy oraz eliminacja błędów wybierania numeru na urządzeniach mobilnych.
+- **Problem**: numery telefonów zapisywane w systemie (np. 445 445 485 lub +48 445 445 485) zawierają spacje, które blokują lub psują obsługę połączeń na smartfonach (iOS/Android). Dodatkowo, brak kodu kraju uniemożliwia dodzwonienie się z zagranicy.
+- **Rozwiązanie**:
+  - Wprowadzono globalny pomocnik `formatPhoneForTelLink`, który automatycznie oczyszcza każdy numer telefonu przekazywany do linku `tel:` z wszelkich znaków niebędących cyframi lub znakiem plus.
+  - Pomocnik automatycznie wykrywa polskie numery bez prefiksu międzynarodowego (w tym 9-cyfrowe numery komórkowe i stacjonarne) i automatycznie dodaje przedrostek `+48`.
+  - Normalizuje prefiksy `00` na standard międzynarodowy `+`.
+  - Zabezpiecza i zachowuje numery zagraniczne (np. z Niemiec) posiadające już własne prefiksy.
+  - Zastosowano formatowanie dla wszystkich miejsc w aplikacji renderujących linki telefoniczne (nagłówek, stopka, karta oferty, FAQ, strona kontaktu, detal najmu).
+
