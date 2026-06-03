@@ -3,6 +3,16 @@ import type { CSVRow } from '../types/csv.types.js';
 import { getMarketplaceFromUrl } from '../utils/url-utils.js';
 
 export function mapCSVToListing(row: CSVRow, dealerId?: string, importSource?: string): Prisma.ListingCreateInput {
+    const mileageVal = safeInt(row.mileage_km);
+    let condition: 'NEW' | 'USED' = 'USED';
+    const rowAsAny = row as any;
+    if (rowAsAny.condition) {
+        const condStr = String(rowAsAny.condition).toUpperCase();
+        condition = (condStr === 'NEW' || condStr === 'NOWY' || condStr === 'NOWE') ? 'NEW' : 'USED';
+    } else if (mileageVal !== undefined) {
+        condition = (mileageVal >= 0 && mileageVal < 100) ? 'NEW' : 'USED';
+    }
+
     return {
         listingId: row.listing_id || undefined,
         listingUrl: row.listing_url || undefined,
@@ -22,7 +32,7 @@ export function mapCSVToListing(row: CSVRow, dealerId?: string, importSource?: s
         omnibusText: row.omnibus_text || undefined,
 
         productionYear: safeInt(row.production_year) || 0,
-        mileageKm: safeInt(row.mileage_km) || 0,
+        mileageKm: mileageVal || 0,
         fuelType: row.fuel_type,
         transmission: row.transmission,
         enginePowerHp: safeInt(row.engine_power_hp),
@@ -49,6 +59,7 @@ export function mapCSVToListing(row: CSVRow, dealerId?: string, importSource?: s
         additionalInfoHeader: row.additional_info_header || undefined,
         additionalInfoContent: row.additional_info_content || undefined,
         specsJson: safeJsonParse(row.specs_json),
+        condition,
 
         dealer: dealerId ? { connect: { id: dealerId } } : undefined,
     };

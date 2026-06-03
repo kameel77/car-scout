@@ -135,7 +135,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         }
 
-        const isImported = existing.entrySource === 'CSV' || existing.entrySource === 'CSFLOW';
+        const isImported = existing.entrySource === 'CSFLOW';
 
         let updateData: any;
         if (isImported) {
