@@ -127,7 +127,9 @@ export default function RentalDetailPage() {
     const vehicleId = vehicle?.id;
     const images = (vehicle?.imageUrls || []).map((u: string) => normalizeRentalImageUrl(u, vehicleId) ?? u);
     const galleryImages = images.length > 0 ? images : (
-        vehicle?.primaryImageUrl ? [normalizeRentalImageUrl(vehicle.primaryImageUrl, vehicleId) ?? vehicle.primaryImageUrl] : []
+        vehicle?.primaryImageUrl
+            ? [normalizeRentalImageUrl(vehicle.primaryImageUrl, vehicleId) ?? vehicle.primaryImageUrl]
+            : ['/motolia-placeholder.png']
     );
 
     // Build rental state for lead form

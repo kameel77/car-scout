@@ -264,16 +264,18 @@ export default function RentalLeadFormPage() {
                                 </h2>
 
                                 <div className="relative aspect-video rounded-xl overflow-hidden mb-4 group">
-                                    {vehicle.primaryImageUrl ? (
+                                    {vehicle.primaryImageUrl && vehicle.primaryImageUrl !== '' ? (
                                         <img
                                             src={vehicle.primaryImageUrl}
                                             alt={`${vehicle.make} ${vehicle.model}`}
                                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         />
                                     ) : (
-                                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                            <Car className="w-12 h-12 text-gray-300" />
-                                        </div>
+                                        <img
+                                            src="/motolia-placeholder.png"
+                                            alt="Placeholder"
+                                            className="w-full h-full object-cover"
+                                        />
                                     )}
                                     <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold shadow-sm border">
                                         {vehicle.productionYear}

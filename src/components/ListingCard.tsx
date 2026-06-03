@@ -47,6 +47,9 @@ function dedupImages(primary: string | undefined, all: string[] | undefined): st
       out.push(url);
     }
   }
+  if (out.length === 0) {
+    return ['/motolia-placeholder.png'];
+  }
   return out;
 }
 

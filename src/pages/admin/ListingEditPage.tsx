@@ -42,7 +42,7 @@ export default function ListingEditPage() {
         enabled: !!token,
     });
 
-    const isImported = listing?.entrySource === 'CSV' || listing?.entrySource === 'CSFLOW';
+    const isImported = listing?.entrySource === 'CSFLOW';
 
     const handleSave = async (data: any) => {
         if (!token || !id) return;
