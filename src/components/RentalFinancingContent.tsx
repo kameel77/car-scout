@@ -151,11 +151,19 @@ export const RentalFinancingContent: React.FC<RentalFinancingContentProps> = ({ 
             {getT('rental.crosslink.desc', 'Jeśli najem nie wydaje się Twoją domeną, ponieważ preferujesz dorobek majątku trwałego przez spłacany regularnie instrument finansowy z odliczanym VAT-em - zapoznaj się z propozycją leasingową naszej sieci.', 'Dla wielu podmiotów i przedsiębiorstw obciążanie kwot wykupu operacyjnego może być cenniejszą drogą pozyskania auta na zawsze. Zachęcamy zapoznania się ze standardami klasycznego leasingu w Carsalon.')}
           </p>
         </div>
-        <Button asChild variant="outline" className="shrink-0 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground">
-          <Link to={`/leasing?SearchText=${encodeURIComponent(make + ' ' + model)}`}>
-            {getT('rental.crosslink.button', 'Zobacz ten model w leasingu', 'Odkryj oferty leasingu dla tego wózka')}
+        <div className="flex flex-col items-center gap-2 shrink-0 w-full sm:w-auto">
+          <Button asChild variant="outline" className="w-full sm:w-auto border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground">
+            <Link to={`/leasing?SearchText=${encodeURIComponent(make + ' ' + model)}`}>
+              {getT('rental.crosslink.button', 'Zobacz ten model w leasingu', 'Odkryj oferty leasingu dla tego wózka')}
+            </Link>
+          </Button>
+          <Link 
+            to={`/nowe?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`}
+            className="text-xs text-muted-foreground hover:text-primary underline transition-colors"
+          >
+            {getT('rental.crosslink.newCars', `Zobacz nowe samochody ${make} ${model}`, `Zobacz nowe modele ${make} ${model}`)}
           </Link>
-        </Button>
+        </div>
       </div>
     </div>
   );

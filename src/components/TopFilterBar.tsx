@@ -15,8 +15,14 @@ function optionsFromFacet(
   facet?: Record<string, number>,
   labelMap?: Record<string, string>,
 ): { value: string; label: string }[] {
-  if (!facet) return [];
-  return Object.keys(facet).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
+  const keys = new Set<string>();
+  if (labelMap) {
+    Object.keys(labelMap).forEach((k) => keys.add(k));
+  }
+  if (facet) {
+    Object.keys(facet).forEach((k) => keys.add(k));
+  }
+  return Array.from(keys).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
 
 const FUEL_LABEL_MAP: Record<string, string> = {
@@ -28,6 +34,23 @@ const FUEL_LABEL_MAP: Record<string, string> = {
   electric: 'fuel.electric',
   lpg: 'fuel.lpg',
   cng: 'fuel.cng',
+};
+
+const DRIVE_LABEL_MAP: Record<string, string> = {
+  fwd: 'drive.fwd',
+  rwd: 'drive.rwd',
+  awd: 'drive.awd',
+  '4x4': 'drive.4x4',
+};
+
+const BODY_TYPE_LABEL_MAP: Record<string, string> = {
+  sedan: 'bodyType.sedan',
+  hatchback: 'bodyType.hatchback',
+  suv: 'bodyType.suv',
+  kombi: 'bodyType.kombi',
+  coupe: 'bodyType.coupe',
+  cabrio: 'bodyType.cabrio',
+  minivan: 'bodyType.minivan',
 };
 
 interface FilterPillProps {
@@ -271,7 +294,7 @@ export function TopFilterBar({
 
       <FilterPill label={t('filters.bodyType')} activeCount={filters.bodyTypes.length}>
         <MultiCheck
-          options={optionsFromFacet(facets?.bodyType)}
+          options={optionsFromFacet(facets?.bodyType, BODY_TYPE_LABEL_MAP)}
           selected={filters.bodyTypes}
           onChange={(v) => update('bodyTypes', v)}
           counts={facets?.bodyType}

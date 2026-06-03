@@ -326,12 +326,13 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
     }
   })();
   const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-condition', condition, filters.makes, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
+    queryKey: ['rental-condition', condition, filters.makes, filters.models, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
     queryFn: () => rentalPublicApi.listVehicles({
       page: '1',
       limit: '50',
       search: filters.query || undefined,
       make: filters.makes.length ? filters.makes.join(',') : undefined,
+      model: filters.models.length ? filters.models.join(',') : undefined,
       fuelType: filters.fuelTypes.length ? filters.fuelTypes.join(',') : undefined,
       bodyType: filters.bodyTypes.length ? filters.bodyTypes.join(',') : undefined,
       yearFrom: filters.yearFrom || undefined,
