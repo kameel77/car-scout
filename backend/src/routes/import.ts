@@ -275,7 +275,22 @@ export async function importRoutes(fastify: FastifyInstance) {
 
     // OPCJA B: JSON API
     fastify.post('/api/import/csv-data', {
-        preHandler: [fastify.authenticate],
+        preHandler: async (request: any, reply: any) => {
+            const authHeader = request.headers.authorization;
+            const staticKey = process.env.IMPORT_API_KEY;
+            
+            // Allow if valid static key is provided
+            if (staticKey && authHeader === `Bearer ${staticKey}`) {
+                return;
+            }
+            
+            // Otherwise fallback to standard JWT auth
+            try {
+                await request.jwtVerify();
+            } catch (err) {
+                reply.code(401).send({ error: 'Unauthorized' });
+            }
+        },
         schema: {
             body: {
                 type: 'object',
@@ -286,37 +301,68 @@ export async function importRoutes(fastify: FastifyInstance) {
                         items: { type: 'object' }
                     },
                     source: { type: 'string' },
-                    mode: { type: 'string', enum: ['replace', 'merge'], default: 'replace' }
+                    mode: { type: 'string', enum: ['replace', 'merge'], default: 'replace' },
+                    dealerId: { type: 'string' }
                 }
             }
         }
     }, async (request, reply) => {
         try {
-            const { data, source, mode } = request.body as {
+            const { data, source, mode, dealerId: bodyDealerId } = request.body as {
                 data: CSVRow[];
                 source?: string;
                 mode?: ImportMode;
+                dealerId?: string;
             };
             const importMode = parseImportMode(mode);
 
+            const isStaticKey = process.env.IMPORT_API_KEY && request.headers.authorization === `Bearer ${process.env.IMPORT_API_KEY}`;
+
             // Resolve active context for dealer assignment
-            const scope = await resolveScope(fastify, request);
-            const contextDealerId = scope.activeContext.scopeType === 'DEALER'
-                ? scope.activeContext.scopeId
-                : undefined;
+            let contextDealerId = bodyDealerId || (request.query as any).dealerId;
+
+            if (!contextDealerId && !isStaticKey) {
+                const scope = await resolveScope(fastify, request);
+                contextDealerId = scope.activeContext.scopeType === 'DEALER'
+                    ? scope.activeContext.scopeId
+                    : undefined;
+            }
+
+            // Verify dealer exists if specified
+            if (contextDealerId) {
+                const dealer = await fastify.prisma.dealer.findUnique({ where: { id: contextDealerId } });
+                if (!dealer) {
+                    return reply.code(400).send({ error: `Dealer not found: "${contextDealerId}"` });
+                }
+            }
 
             if (!data || data.length === 0) {
                 return reply.code(400).send({ error: 'Data array is empty' });
+            }
+
+            // Resolve user ID for import log
+            let userId = request.user?.userId;
+            if (!userId) {
+                const adminUser = await fastify.prisma.user.findFirst({
+                    where: { role: 'admin', isActive: true }
+                }) || await fastify.prisma.user.findFirst({
+                    where: { isActive: true }
+                });
+
+                if (!adminUser) {
+                    return reply.code(400).send({ error: 'No active user found to assign the import log to' });
+                }
+                userId = adminUser.id;
             }
 
             // Start import process
             const result = await syncListingsFromCSV(
                 fastify.prisma,
                 data,
-                request.user!.userId,
+                userId,
                 source || 'api-json-upload',
                 importMode,
-                contextDealerId   // scope: assign dealer if in dealer context
+                contextDealerId   // scope: assign dealer if in dealer context or passed in body
             );
 
             fastify.log.info({
