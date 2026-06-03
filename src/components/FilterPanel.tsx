@@ -72,8 +72,14 @@ function optionsFromFacet(
   facet?: Record<string, number>,
   labelMap?: Record<string, string>,
 ): { value: string; label: string }[] {
-  if (!facet) return [];
-  return Object.keys(facet).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
+  const keys = new Set<string>();
+  if (labelMap) {
+    Object.keys(labelMap).forEach((k) => keys.add(k));
+  }
+  if (facet) {
+    Object.keys(facet).forEach((k) => keys.add(k));
+  }
+  return Array.from(keys).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
 
 const TRANSMISSION_LABEL_MAP: Record<string, string> = {
@@ -90,6 +96,23 @@ const FUEL_LABEL_MAP: Record<string, string> = {
   electric: 'fuel.electric',
   lpg: 'fuel.lpg',
   cng: 'fuel.cng',
+};
+
+const DRIVE_LABEL_MAP: Record<string, string> = {
+  fwd: 'drive.fwd',
+  rwd: 'drive.rwd',
+  awd: 'drive.awd',
+  '4x4': 'drive.4x4',
+};
+
+const BODY_TYPE_LABEL_MAP: Record<string, string> = {
+  sedan: 'bodyType.sedan',
+  hatchback: 'bodyType.hatchback',
+  suv: 'bodyType.suv',
+  kombi: 'bodyType.kombi',
+  coupe: 'bodyType.coupe',
+  cabrio: 'bodyType.cabrio',
+  minivan: 'bodyType.minivan',
 };
 
 const statusOptions = [
@@ -118,16 +141,8 @@ function FilterSection({ title, defaultOpen = false, children }: FilterSectionPr
           )}
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pb-3">
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+      <CollapsibleContent className="pb-3 animate-in fade-in slide-in-from-top-1 duration-200">
+        {children}
       </CollapsibleContent>
     </Collapsible>
   );
@@ -338,8 +353,18 @@ export function FilterPanel({
         )}
       </div>
 
-
       <Separator className="mb-4" />
+
+      {/* Text Search Input */}
+      <div className="mb-4 relative">
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder={t('search.placeholder', 'Szukaj marki, modelu...')}
+          value={filters.query}
+          onChange={(e) => updateFilter('query', e.target.value)}
+          className="pl-9 h-10 text-sm"
+        />
+      </div>
 
       <div className="space-y-1 overflow-y-auto flex-1 pr-3 min-h-0 -mr-1">
         {/* Status (new / used) */}
@@ -526,7 +551,7 @@ export function FilterPanel({
         {/* Drive */}
         <FilterSection title={t('filters.drive')}>
           <MultiSelect
-            options={optionsFromFacet(facets?.drive)}
+            options={optionsFromFacet(facets?.drive, DRIVE_LABEL_MAP)}
             selected={filters.drives}
             onChange={(v) => updateFilter('drives', v)}
             counts={facets?.drive}
@@ -566,7 +591,7 @@ export function FilterPanel({
         {/* Body Type */}
         <FilterSection title={t('filters.bodyType')}>
           <MultiSelect
-            options={optionsFromFacet(facets?.bodyType)}
+            options={optionsFromFacet(facets?.bodyType, BODY_TYPE_LABEL_MAP)}
             selected={filters.bodyTypes}
             onChange={(v) => updateFilter('bodyTypes', v)}
             counts={facets?.bodyType}

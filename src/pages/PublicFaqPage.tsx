@@ -8,6 +8,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { Search, Loader2, HelpCircle, ChevronDown, MessageSquare, Phone } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { formatPhoneForTelLink } from '@/utils/formatters';
 import './home-page.css';
 
 // ─── Brand accent helper ──────────────────────────────────────────────────────
@@ -263,7 +264,7 @@ export default function PublicFaqPage() {
                   Napisz do nas
                 </a>
                 <a
-                  href={`tel:${config.contactInfo.phone.replace(/\s+/g, '')}`}
+                  href={`tel:${formatPhoneForTelLink(config.contactInfo.phone)}`}
                   className="flex items-center justify-center gap-2 h-14 px-8 rounded-2xl font-bold transition-all hover:-translate-y-0.5"
                   style={{
                     background: accent,

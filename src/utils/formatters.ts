@@ -16,3 +16,31 @@ export const formatNumber = (value: number): string => {
 export const formatPrice = (price: number, currency: string): string => {
     return `${formatNumber(price)} ${currency}`;
 };
+
+/**
+ * Formats a phone number string to be safe and functional for tel: links.
+ * Strips all whitespaces, hyphens, and other non-digit/non-plus characters.
+ * Prepends +48 for Polish numbers when no international prefix is present.
+ */
+export const formatPhoneForTelLink = (phone?: string): string => {
+    if (!phone) return '';
+    
+    // Remove all characters except digits and '+'
+    const cleaned = phone.replace(/[^0-9+]/g, '');
+    
+    if (cleaned.startsWith('+')) {
+        return cleaned;
+    }
+    
+    if (cleaned.startsWith('00')) {
+        return `+${cleaned.slice(2)}`;
+    }
+    
+    // If it starts with '48' and is 11 digits long, it already has the Poland country code.
+    if (cleaned.startsWith('48') && cleaned.length === 11) {
+        return `+${cleaned}`;
+    }
+    
+    return `+48${cleaned}`;
+};
+

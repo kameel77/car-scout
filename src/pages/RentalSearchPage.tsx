@@ -169,8 +169,14 @@ function optionsFromFacet(
   facet?: Record<string, number>,
   labelMap?: Record<string, string>,
 ): { value: string; label: string }[] {
-  if (!facet) return [];
-  return Object.keys(facet).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
+  const keys = new Set<string>();
+  if (labelMap) {
+    Object.keys(labelMap).forEach((k) => keys.add(k));
+  }
+  if (facet) {
+    Object.keys(facet).forEach((k) => keys.add(k));
+  }
+  return Array.from(keys).map((k) => ({ value: k, label: labelMap?.[k] ?? k }));
 }
 
 const TRANSMISSION_LABEL_MAP: Record<string, string> = {
@@ -187,6 +193,23 @@ const FUEL_LABEL_MAP: Record<string, string> = {
   electric: 'fuel.electric',
   lpg: 'fuel.lpg',
   cng: 'fuel.cng',
+};
+
+const DRIVE_LABEL_MAP: Record<string, string> = {
+  fwd: 'drive.fwd',
+  rwd: 'drive.rwd',
+  awd: 'drive.awd',
+  '4x4': 'drive.4x4',
+};
+
+const BODY_TYPE_LABEL_MAP: Record<string, string> = {
+  sedan: 'bodyType.sedan',
+  hatchback: 'bodyType.hatchback',
+  suv: 'bodyType.suv',
+  kombi: 'bodyType.kombi',
+  coupe: 'bodyType.coupe',
+  cabrio: 'bodyType.cabrio',
+  minivan: 'bodyType.minivan',
 };
 
 /* ── Sort options ── */
@@ -372,6 +395,19 @@ export default function RentalSearchPage() {
             <SheetTitle>{t('filters.title')}</SheetTitle>
           </SheetHeader>
           <div className="px-6 pb-3 overflow-y-auto flex-1 min-h-0 space-y-5">
+            {/* Wyszukiwarka tekstowa */}
+            <div className="pt-2">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('common.search', 'Szukaj')}</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Szukaj: marka, model..."
+                  className="pl-10 h-9 text-sm"
+                />
+              </div>
+            </div>
             {/* Marka */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.make')}</label>
@@ -387,7 +423,7 @@ export default function RentalSearchPage() {
             {/* Typ nadwozia */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.bodyType')}</label>
-              <MultiCheck options={bodyTypeOptions} selected={bodyTypes} onChange={v => { setBodyTypes(v); setPage(1); }} counts={data?.facets?.bodyType} />
+              <MultiCheck options={optionsFromFacet(data?.facets?.bodyType, BODY_TYPE_LABEL_MAP)} selected={bodyTypes} onChange={v => { setBodyTypes(v); setPage(1); }} counts={data?.facets?.bodyType} />
             </div>
             {/* Paliwo */}
             <div>
@@ -408,7 +444,7 @@ export default function RentalSearchPage() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">{t('filters.drive')}</label>
               <MultiCheck
-                options={optionsFromFacet(data?.facets?.drive)}
+                options={optionsFromFacet(data?.facets?.drive, DRIVE_LABEL_MAP)}
                 selected={drives}
                 onChange={v => { setDrives(v); setPage(1); }}
                 counts={data?.facets?.drive}
@@ -449,18 +485,28 @@ export default function RentalSearchPage() {
               </div>
             </div>
           </div>
-          {hasActiveFilters && (
-            <div className="px-6 py-3 border-t bg-background shrink-0">
+          <div className="px-6 py-3 border-t bg-background shrink-0 flex flex-col gap-2">
+            <Button
+              className="w-full"
+              onClick={() => setAllFiltersOpen(false)}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              {t('filters.showResults', 'Pokaż oferty')}
+              {typeof totalCount === 'number' && totalCount >= 0 && (
+                <span className="ml-1 opacity-80">({totalCount})</span>
+              )}
+            </Button>
+            {hasActiveFilters && (
               <Button
                 variant="outline"
-                className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive animate-in fade-in duration-200"
                 onClick={() => { clearAllFilters(); setAllFiltersOpen(false); }}
               >
                 <X className="h-4 w-4 mr-2" />
                 {t('common.clearAllFilters', 'Wyczyść wszystkie filtry')}
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -526,8 +572,17 @@ export default function RentalSearchPage() {
               <MultiCheck options={optionsFromFacet(data?.facets?.fuelType, FUEL_LABEL_MAP)} selected={fuelTypes} onChange={v => { setFuelTypes(v); setPage(1); }} counts={data?.facets?.fuelType} />
             </FilterPill>
             <FilterPill label={t('filters.bodyType')} activeCount={bodyTypes.length}>
-              <MultiCheck options={bodyTypeOptions} selected={bodyTypes} onChange={v => { setBodyTypes(v); setPage(1); }} counts={data?.facets?.bodyType} />
+              <MultiCheck options={optionsFromFacet(data?.facets?.bodyType, BODY_TYPE_LABEL_MAP)} selected={bodyTypes} onChange={v => { setBodyTypes(v); setPage(1); }} counts={data?.facets?.bodyType} />
             </FilterPill>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAllFiltersOpen(true)}
+              className="h-9 rounded-full gap-1.5 ml-auto text-xs"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              {t('filters.title')}
+            </Button>
           </div>
         </div>
 

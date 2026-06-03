@@ -5,6 +5,7 @@ import { openConsentSettings } from '@/components/consent/ConsentBanner';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
 import { useBrand } from '@/contexts/BrandContext';
+import { formatPhoneForTelLink } from '@/utils/formatters';
 
 type LegalDocKey = 'imprint' | 'privacyPolicy' | 'terms' | 'cookies';
 
@@ -177,7 +178,7 @@ export function Footer() {
               )}
               {settings?.legalContactPhone && (
                 <a
-                  href={`tel:${settings.legalContactPhone}`}
+                  href={`tel:${formatPhoneForTelLink(settings.legalContactPhone)}`}
                   className="flex items-center gap-2 transition-colors hover:text-white"
                   style={isMotolia ? { color: '#F5C518' } : {}}
                 >
