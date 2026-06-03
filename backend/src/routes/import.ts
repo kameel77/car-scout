@@ -330,10 +330,22 @@ export async function importRoutes(fastify: FastifyInstance) {
 
             // Verify dealer exists if specified
             if (contextDealerId) {
-                const dealer = await fastify.prisma.dealer.findUnique({ where: { id: contextDealerId } });
+                let dealer = await fastify.prisma.dealer.findUnique({ where: { id: contextDealerId } });
+                if (!dealer) {
+                    // Try to search by name (case-insensitive)
+                    dealer = await fastify.prisma.dealer.findFirst({
+                        where: {
+                            name: {
+                                equals: contextDealerId,
+                                mode: 'insensitive'
+                            }
+                        }
+                    });
+                }
                 if (!dealer) {
                     return reply.code(400).send({ error: `Dealer not found: "${contextDealerId}"` });
                 }
+                contextDealerId = dealer.id;
             }
 
             if (!data || data.length === 0) {
