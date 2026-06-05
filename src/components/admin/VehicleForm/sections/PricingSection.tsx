@@ -23,10 +23,8 @@ export function PricingSection({ form, setField, mode, isImported }: SectionProp
                 {mode === 'sale' && (
                     <>
                         <div className="space-y-2">
-                            <fieldset disabled={isImported} className={isImported ? 'opacity-60' : ''}>
-                                <label className="text-sm font-medium text-gray-700">Cena w finansowaniu (PLN) *</label>
-                                <Input type="number" value={form.pricePln} onChange={e => setField('pricePln', e.target.value)} required />
-                            </fieldset>
+                            <label className="text-sm font-medium text-gray-700">Cena w finansowaniu (PLN) *</label>
+                            <Input type="number" value={form.pricePln} onChange={e => setField('pricePln', e.target.value)} disabled={isImported} required />
                         </div>
 
                         <div className="space-y-2">

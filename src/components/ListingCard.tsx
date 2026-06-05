@@ -15,6 +15,7 @@ import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
+import { getDisplaySalePrice } from '@/utils/listingPrice';
 import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
 import { useBrand } from '@/contexts/BrandContext';
@@ -137,11 +138,11 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     const currency = settings?.displayCurrency || 'PLN';
     let basePrice = 0;
 
-    // Cena główna = cena w finansowaniu (price_pln) dla PLN. EUR pozostaje na broker_price_eur (osobny follow-up).
+    // Cena główna = cena sprzedaży (gotówkowa) = price_pln + rabat Motolia, dla PLN. EUR pozostaje na broker_price_eur (osobny follow-up).
     if (currency === 'EUR') {
       basePrice = listing.broker_price_eur || 0;
     } else if (listing.price_pln) {
-      basePrice = listing.price_pln;
+      basePrice = getDisplaySalePrice(listing);
     }
 
     if (basePrice > 0) {
@@ -250,10 +251,21 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             </div>
           )}
 
-          {/* Rabat Motolia badge — pokazywany gdy operator włączył go dla pojazdu */}
+          {/* Rabat Motolia badge — pokazywany gdy operator włączył go dla pojazdu; tooltip wyjaśnia warunek finansowania */}
           {showMotolia && (
-            <div className="absolute bottom-3 left-3 px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
-              {t('listing.motoliaDiscount')}: {formatNumber(motoliaDiscount)} zł
+            <div className="absolute bottom-3 left-3">
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                    <span className="inline-flex items-center px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md cursor-help">
+                      {t('listing.motoliaDiscount')}: {formatNumber(motoliaDiscount)} zł
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[260px] text-xs">
+                    Wartość dodatkowego rabatu: {formatNumber(motoliaDiscount)} zł. Rabat dostępny tylko dla klientów, którzy skorzystają z finansowania pojazdu w Motolia.pl
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
         </div>

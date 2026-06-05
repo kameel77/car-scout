@@ -23,6 +23,7 @@ import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
+import { getDisplaySalePrice } from '@/utils/listingPrice';
 import { getListingUrlPath, getFinancingTypeFromPath } from '@/utils/url-utils';
 import { Footer } from '@/components/Footer';
 import { leadsApi } from '@/services/api';
@@ -82,11 +83,11 @@ export default function LeadFormPage() {
     const currency = settingsData?.displayCurrency || 'PLN';
     let basePrice = 0;
 
-    // Cena = cena w finansowaniu (price_pln) dla PLN. EUR pozostaje na broker_price_eur (osobny follow-up).
+    // Cena = cena sprzedaży (gotówkowa) = price_pln + rabat Motolia, dla PLN. EUR pozostaje na broker_price_eur (osobny follow-up).
     if (currency === 'EUR') {
       basePrice = listing.broker_price_eur || 0;
     } else if (listing.price_pln) {
-      basePrice = listing.price_pln;
+      basePrice = getDisplaySalePrice(listing);
     }
 
     if (basePrice > 0) {

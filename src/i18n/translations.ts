@@ -170,6 +170,7 @@ export const translations = {
         statusUsed: "UŻYWANY",
         specialOffer: "Oferta dla Ciebie",
         salePrice: "Cena gotówkowa",
+        catalogPrice: "Cena katalogowa",
         motoliaDiscount: "Rabat Motolia",
       },
 
@@ -578,6 +579,7 @@ export const translations = {
         statusUsed: "USED",
         specialOffer: "Your special offer",
         salePrice: "Cash price",
+        catalogPrice: "Catalog price",
         motoliaDiscount: "Motolia discount",
       },
 
@@ -982,6 +984,7 @@ export const translations = {
         statusUsed: "GEBRAUCHT",
         specialOffer: "Angebot für dich",
         salePrice: "Barpreis",
+        catalogPrice: "Katalogpreis",
         motoliaDiscount: "Motolia-Rabatt",
       },
 
