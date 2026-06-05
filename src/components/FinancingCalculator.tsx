@@ -564,12 +564,12 @@ export function FinancingCalculator({
                                         </div>
                                     )}
                                     <div className="text-[10px] text-muted-foreground text-center pt-1.5 border-t border-slate-100">
-                                        Rata wyliczana na podstawie kalkulacji partnera.
+                                        Rata wyliczana na podstawie kalkulacji partnera. Kalkulacja ma charakter poglądowy, nie stanowi oferty i może zależeć od oceny zdolności kredytowej klienta.
                                     </div>
                                 </div>
                             ) : selectedProduct.provider !== 'OWN' ? (
                                 <div className="mt-4 pt-3 border-t border-slate-200 text-xs text-muted-foreground text-center">
-                                    Rata wyliczana na podstawie kalkulacji partnera.
+                                    Rata wyliczana na podstawie kalkulacji partnera. Kalkulacja ma charakter poglądowy, nie stanowi oferty i może zależeć od oceny zdolności kredytowej klienta.
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-slate-200">
@@ -589,13 +589,6 @@ export function FinancingCalculator({
                                     W kalkulacji założono pierwszą wpłatę na poziomie {formatPrice(offerInitialPayment, currency)}. Możesz dokonać wyższej wpłaty zmieniając kwotę suwakiem kalkulatora.
                                 </div>
                             )}
-                        </div>
-
-                        <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-blue-50/50 p-2.5 rounded text-blue-800">
-                            <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                            <p>
-                                Kalkulacja ma charakter poglądowy i nie stanowi oferty.
-                            </p>
                         </div>
 
                         {/* Optional price slot (used by Motolia to show minimized price here) */}

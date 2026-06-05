@@ -1,8 +1,10 @@
-import type { Listing } from '@/data/mockData';
+export function getFinancingBasePrice(listing: { pricePln: number }): number {
+    return listing.pricePln;
+}
 
-export function getFinancingBasePrice(listing: Pick<Listing, 'pricePln' | 'brokerPricePln' | 'financingPriceBase'>): number {
-    if (listing.financingPriceBase === 'PRICE_PLN') {
-        return listing.pricePln;
-    }
-    return listing.brokerPricePln ?? listing.pricePln;
+// Cena widoczna klientowi jako główna ("Cena pojazdu" / cena na karcie).
+// Per-pojazd flaga displaySalePrice decyduje: true → cena w finansowaniu + rabat Motolia (cena sprzedaży),
+// false (domyślnie) → sama cena w finansowaniu. Kalkulator rat zawsze liczy z price_pln.
+export function getDisplayPrice(listing: { price_pln: number; motoliaDiscountPln?: number | null; displaySalePrice?: boolean }): number {
+    return listing.price_pln + (listing.displaySalePrice ? (listing.motoliaDiscountPln ?? 0) : 0);
 }
