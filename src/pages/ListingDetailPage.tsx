@@ -622,6 +622,39 @@ export default function ListingDetailPage() {
               )}
             </div>
 
+            {/* Financing Calculator — on mobile shown above key parameters (desktop sidebar config hides it here) */}
+            {(settings?.financingCalculatorEnabled ?? true) && (
+              <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
+                <FinancingCalculator
+                  listingId={listing.listing_id}
+                  price={
+                    priceType === 'net'
+                      ? Math.round(
+                          applySpecialOfferDiscount(
+                            getFinancingBasePrice({
+                              pricePln: listing.price_pln,
+                            }),
+                            discount
+                          ) / 1.23
+                        )
+                      : applySpecialOfferDiscount(
+                          getFinancingBasePrice({
+                            pricePln: listing.price_pln,
+                          }),
+                          discount
+                        )
+                  }
+                  priceIsNet={priceType === 'net'}
+                  currency={settings?.displayCurrency || 'PLN'}
+                  manufacturingYear={listing.production_year}
+                  mileageKm={listing.mileage_km}
+                  offerInitialPayment={initialPayment ?? undefined}
+                  financingType={financingType}
+                  onFinancingTypeChange={handleFinancingTypeChange}
+                />
+              </section>
+            )}
+
             {/* Key Parameters */}
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.keyParameters')}</h2>
@@ -673,39 +706,6 @@ export default function ListingDetailPage() {
             )}
 
             <Separator />
-
-            {/* Financing Calculator - Main Content area (Always visible on mobile, conditional on desktop) */}
-            {(settings?.financingCalculatorEnabled ?? true) && (
-              <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
-                <FinancingCalculator
-                  listingId={listing.listing_id}
-                  price={
-                    priceType === 'net'
-                      ? Math.round(
-                          applySpecialOfferDiscount(
-                            getFinancingBasePrice({
-                              pricePln: listing.price_pln,
-                            }),
-                            discount
-                          ) / 1.23
-                        )
-                      : applySpecialOfferDiscount(
-                          getFinancingBasePrice({
-                            pricePln: listing.price_pln,
-                          }),
-                          discount
-                        )
-                  }
-                  priceIsNet={priceType === 'net'}
-                  currency={settings?.displayCurrency || 'PLN'}
-                  manufacturingYear={listing.production_year}
-                  mileageKm={listing.mileage_km}
-                  offerInitialPayment={initialPayment ?? undefined}
-                  financingType={financingType}
-                  onFinancingTypeChange={handleFinancingTypeChange}
-                />
-              </section>
-            )}
 
             {/* Mobile Partner Ad */}
             <div className="lg:hidden">
@@ -882,7 +882,7 @@ export default function ListingDetailPage() {
                         motoliaMode={true}
                         priceSlot={
                           <div className="pt-2 border-t border-slate-200 mt-2">
-                            {catalogLine}
+                            {catalogLine && <div className="flex justify-end">{catalogLine}</div>}
                             <div className="flex items-baseline justify-between">
                               <span className="text-xs text-muted-foreground">Cena pojazdu:</span>
                               <span className="text-sm text-muted-foreground font-medium">
@@ -985,7 +985,7 @@ export default function ListingDetailPage() {
                   >
                   <div role="heading" aria-level={2} className="font-heading text-xl font-bold text-foreground">{baseTitle}</div>
                   <div className="flex flex-col gap-1 items-start">
-                    {catalogLine}
+                    {catalogLine && <div className="w-full flex justify-end">{catalogLine}</div>}
                     <div className="flex items-center gap-2">
                       <span className="font-heading text-3xl font-bold text-accent">
                         {priceInfo.primaryLabel}
