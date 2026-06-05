@@ -130,17 +130,17 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
   const brandColor = getBrandColor(listing.make);
 
+  const motoliaDiscount = listing.motoliaDiscountPln ?? 0;
+  const showMotolia = !!listing.showMotoliaDiscount && motoliaDiscount > 0;
+
   const priceInfo = React.useMemo(() => {
     const currency = settings?.displayCurrency || 'PLN';
     let basePrice = 0;
 
-    if (currency === 'EUR' && listing.broker_price_eur) {
-      basePrice = listing.broker_price_eur;
-    } else if (listing.broker_price_pln) {
-      basePrice = listing.broker_price_pln;
-    }
-
-    if (basePrice === 0 && currency === 'PLN' && listing.price_pln) {
+    // Cena główna = cena w finansowaniu (price_pln) dla PLN. EUR pozostaje na broker_price_eur (osobny follow-up).
+    if (currency === 'EUR') {
+      basePrice = listing.broker_price_eur || 0;
+    } else if (listing.price_pln) {
       basePrice = listing.price_pln;
     }
 
@@ -166,7 +166,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     const currency = settings?.displayCurrency || 'PLN';
     if (currency !== 'PLN') return null;
     const grossPln = applySpecialOfferDiscount(
-      listing.broker_price_pln || listing.price_pln || 0,
+      listing.price_pln || 0,
       discount
     );
     if (!grossPln || grossPln <= 0) return null;
@@ -247,6 +247,13 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                   {priceInfo.secondaryLabel}
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Rabat Motolia badge — pokazywany gdy operator włączył go dla pojazdu */}
+          {showMotolia && (
+            <div className="absolute bottom-3 left-3 px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
+              {t('listing.motoliaDiscount')}: {formatNumber(motoliaDiscount)} zł
             </div>
           )}
         </div>

@@ -4,6 +4,11 @@ import type { SectionProps } from '../types';
 export function PricingSection({ form, setField, mode, isImported }: SectionProps) {
     const technicalDisabled = isImported;
 
+    // Cena sprzedaży (gotówka) jest pochodną: cena w finansowaniu + rabat Motolia (źródło prawdy).
+    const fin = parseInt(form.pricePln || '0');
+    const disc = parseInt(form.motoliaDiscountPln || '0');
+    const saleDisplay = form.motoliaDiscountPln ? String(fin + disc) : '';
+
     return (
         <div>
             {/* Catalog price + main price always editable for sale (catalogPrice whitelisted) */}
@@ -16,12 +21,35 @@ export function PricingSection({ form, setField, mode, isImported }: SectionProp
                 </div>
 
                 {mode === 'sale' && (
-                    <div className="space-y-2">
-                        <fieldset disabled={isImported} className={isImported ? 'opacity-60' : ''}>
-                            <label className="text-sm font-medium text-gray-700">Cena sprzedaży brutto (PLN) *</label>
-                            <Input type="number" value={form.pricePln} onChange={e => setField('pricePln', e.target.value)} required />
-                        </fieldset>
-                    </div>
+                    <>
+                        <div className="space-y-2">
+                            <fieldset disabled={isImported} className={isImported ? 'opacity-60' : ''}>
+                                <label className="text-sm font-medium text-gray-700">Cena w finansowaniu (PLN) *</label>
+                                <Input type="number" value={form.pricePln} onChange={e => setField('pricePln', e.target.value)} required />
+                            </fieldset>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Cena sprzedaży (PLN)</label>
+                            <Input
+                                type="number"
+                                value={saleDisplay}
+                                onChange={e => {
+                                    const saleNum = parseInt(e.target.value || '0');
+                                    setField('motoliaDiscountPln', e.target.value && saleNum >= fin ? String(saleNum - fin) : '');
+                                }}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Rabat Motolia (zł)</label>
+                            <Input
+                                type="number"
+                                value={form.motoliaDiscountPln}
+                                onChange={e => setField('motoliaDiscountPln', e.target.value)}
+                            />
+                        </div>
+                    </>
                 )}
 
                 {mode === 'rental' && (

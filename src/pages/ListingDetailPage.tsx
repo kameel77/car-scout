@@ -31,7 +31,7 @@ import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { formatPrice, formatPhoneForTelLink } from '@/utils/formatters';
+import { formatPrice, formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
@@ -198,13 +198,10 @@ export default function ListingDetailPage() {
     const currency = settings?.displayCurrency || 'PLN';
     let basePrice = 0;
 
-    if (currency === 'EUR' && listing.broker_price_eur) {
-      basePrice = listing.broker_price_eur;
-    } else if (listing.broker_price_pln) {
-      basePrice = listing.broker_price_pln;
-    }
-
-    if (basePrice === 0 && currency === 'PLN' && listing.price_pln) {
+    // Cena główna = cena w finansowaniu (price_pln) dla PLN. EUR pozostaje na broker_price_eur (osobny follow-up).
+    if (currency === 'EUR') {
+      basePrice = listing.broker_price_eur || 0;
+    } else if (listing.price_pln) {
       basePrice = listing.price_pln;
     }
 
@@ -297,6 +294,45 @@ export default function ListingDetailPage() {
   const title = financingType !== 'gotowka' && financingSeoLabel ? `${financingSeoLabel}: ${baseTitle}` : baseTitle;
   const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
   const formattedPrice = formatPrice(discountedListingPrice, settings?.displayCurrency || 'PLN');
+
+  // --- Trzy ceny: katalogowa (przekreślona + pill -%), w finansowaniu (główna), sprzedaży (gotówka) ---
+  // Ceny katalogowa/rabat/sprzedaży są w PLN; przy walucie EUR pomijamy te dodatki (osobny follow-up).
+  const currencyCode = settings?.displayCurrency || 'PLN';
+  const isPln = currencyCode === 'PLN';
+  const toDisplayPrice = (grossPln: number) => (priceType === 'net' ? Math.round(grossPln / 1.23) : grossPln);
+  const catalogPriceVal = listing.catalogPrice ?? 0;
+  const showCatalogStrike = isPln && catalogPriceVal > listing.price_pln;
+  const catalogDiscountPct = showCatalogStrike
+    ? Math.round(((catalogPriceVal - listing.price_pln) / catalogPriceVal) * 100)
+    : 0;
+  const motoliaDiscountVal = listing.motoliaDiscountPln ?? 0;
+  const showMotolia = isPln && !!listing.showMotoliaDiscount && motoliaDiscountVal > 0;
+  const cashSalePrice = listing.price_pln + motoliaDiscountVal;
+
+  const priceExtras = (showCatalogStrike || showMotolia) ? (
+    <div className="flex flex-col gap-1 mt-1">
+      {showCatalogStrike && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground line-through">
+            {formatPrice(toDisplayPrice(catalogPriceVal), currencyCode)}
+          </span>
+          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-xs font-bold">
+            -{catalogDiscountPct}%
+          </span>
+        </div>
+      )}
+      {showMotolia && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {t('listing.salePrice')}: {formatPrice(toDisplayPrice(cashSalePrice), currencyCode)}
+          </span>
+          <span className="px-2 py-0.5 rounded bg-green-600 text-white text-xs font-bold">
+            {t('listing.motoliaDiscount')}: {formatNumber(motoliaDiscountVal)} zł
+          </span>
+        </div>
+      )}
+    </div>
+  ) : null;
 
   // Financing type detection from URL
   const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
@@ -535,6 +571,7 @@ export default function ListingDetailPage() {
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
+                  {priceExtras}
                   {hasSpecialOffer && (
                     <div className="flex items-center gap-2 mt-1">
                       <SpecialOfferTag className="" />
@@ -562,6 +599,7 @@ export default function ListingDetailPage() {
                       )}
                     </div>
                   </div>
+                  {priceExtras}
                   {hasSpecialOffer && (
                     <div className="text-xs text-muted-foreground mt-1">
                       (rabat specjalny: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
@@ -639,8 +677,6 @@ export default function ListingDetailPage() {
                           applySpecialOfferDiscount(
                             getFinancingBasePrice({
                               pricePln: listing.price_pln,
-                              brokerPricePln: listing.broker_price_pln,
-                              financingPriceBase: listing.financingPriceBase,
                             }),
                             discount
                           ) / 1.23
@@ -648,8 +684,6 @@ export default function ListingDetailPage() {
                       : applySpecialOfferDiscount(
                           getFinancingBasePrice({
                             pricePln: listing.price_pln,
-                            brokerPricePln: listing.broker_price_pln,
-                            financingPriceBase: listing.financingPriceBase,
                           }),
                           discount
                         )
@@ -819,8 +853,6 @@ export default function ListingDetailPage() {
                                 applySpecialOfferDiscount(
                                   getFinancingBasePrice({
                                     pricePln: listing.price_pln,
-                                    brokerPricePln: listing.broker_price_pln,
-                                    financingPriceBase: listing.financingPriceBase,
                                   }),
                                   discount
                                 ) / 1.23
@@ -828,8 +860,6 @@ export default function ListingDetailPage() {
                             : applySpecialOfferDiscount(
                                 getFinancingBasePrice({
                                   pricePln: listing.price_pln,
-                                  brokerPricePln: listing.broker_price_pln,
-                                  financingPriceBase: listing.financingPriceBase,
                                 }),
                                 discount
                               )
@@ -856,6 +886,9 @@ export default function ListingDetailPage() {
                                   {priceInfo.secondaryLabel}
                                 </span>
                               </div>
+                            )}
+                            {priceExtras && (
+                              <div className="flex justify-end">{priceExtras}</div>
                             )}
                             {hasSpecialOffer && (
                               <div className="flex items-center justify-end gap-1.5 mt-1">
@@ -956,6 +989,7 @@ export default function ListingDetailPage() {
                         {priceInfo.secondaryLabel}
                       </span>
                     )}
+                    {priceExtras}
                     {hasSpecialOffer && (
                       <span className="text-xs text-muted-foreground mt-0.5">
                         (rabat specjalny: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
@@ -1032,8 +1066,6 @@ export default function ListingDetailPage() {
                             applySpecialOfferDiscount(
                               getFinancingBasePrice({
                                 pricePln: listing.price_pln,
-                                brokerPricePln: listing.broker_price_pln,
-                                financingPriceBase: listing.financingPriceBase,
                               }),
                               discount
                             ) / 1.23
@@ -1041,8 +1073,6 @@ export default function ListingDetailPage() {
                         : applySpecialOfferDiscount(
                             getFinancingBasePrice({
                               pricePln: listing.price_pln,
-                              brokerPricePln: listing.broker_price_pln,
-                              financingPriceBase: listing.financingPriceBase,
                             }),
                             discount
                           )
