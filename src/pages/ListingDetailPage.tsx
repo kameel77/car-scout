@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins } from 'lucide-react';
+import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
@@ -26,7 +26,7 @@ import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import { FinancingCalculator } from '@/components/FinancingCalculator';
-import { getFinancingBasePrice } from '@/utils/listingPrice';
+import { getFinancingBasePrice, getDisplayPrice } from '@/utils/listingPrice';
 import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -55,6 +55,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { Helmet } from 'react-helmet-async';
 import { useSeoConfig } from '@/components/seo/SeoManager';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function ListingDetailPage() {
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
@@ -198,14 +199,11 @@ export default function ListingDetailPage() {
     const currency = settings?.displayCurrency || 'PLN';
     let basePrice = 0;
 
-    if (currency === 'EUR' && listing.broker_price_eur) {
-      basePrice = listing.broker_price_eur;
-    } else if (listing.broker_price_pln) {
-      basePrice = listing.broker_price_pln;
-    }
-
-    if (basePrice === 0 && currency === 'PLN' && listing.price_pln) {
-      basePrice = listing.price_pln;
+    // Cena główna ("Cena pojazdu") = cena sprzedaży (gotówkowa) = price_pln + rabat Motolia, dla PLN. EUR pozostaje na broker_price_eur (osobny follow-up).
+    if (currency === 'EUR') {
+      basePrice = listing.broker_price_eur || 0;
+    } else if (listing.price_pln) {
+      basePrice = getDisplayPrice(listing);
     }
 
     if (basePrice > 0) {
@@ -295,8 +293,62 @@ export default function ListingDetailPage() {
   const baseTitle = `${listing.make} ${listing.model} ${listing.version}`;
   const financingSeoLabel = getFinancingSeoLabel(financingType, i18n.language);   // full: "Kredyt samochodowy"
   const title = financingType !== 'gotowka' && financingSeoLabel ? `${financingSeoLabel}: ${baseTitle}` : baseTitle;
-  const discountedListingPrice = applySpecialOfferDiscount(listing.price_pln, discount);
+  const discountedListingPrice = applySpecialOfferDiscount(getDisplayPrice(listing), discount);
   const formattedPrice = formatPrice(discountedListingPrice, settings?.displayCurrency || 'PLN');
+
+  // --- Trzy ceny: katalogowa (przekreślona + pill -%), w finansowaniu (główna), sprzedaży (gotówka) ---
+  // Ceny katalogowa/rabat/sprzedaży są w PLN; przy walucie EUR pomijamy te dodatki (osobny follow-up).
+  const currencyCode = settings?.displayCurrency || 'PLN';
+  const isPln = currencyCode === 'PLN';
+  const toDisplayPrice = (grossPln: number) => (priceType === 'net' ? Math.round(grossPln / 1.23) : grossPln);
+  const catalogPriceVal = listing.catalogPrice ?? 0;
+  const motoliaDiscountVal = listing.motoliaDiscountPln ?? 0;
+  const showMotolia = isPln && !!listing.showMotoliaDiscount && motoliaDiscountVal > 0;
+  // "Cena pojazdu" zależna od flagi displaySalePrice (per pojazd). Pill katalogowy liczony względem niej.
+  const displayPriceVal = getDisplayPrice(listing);
+  const showCatalogStrike = isPln && catalogPriceVal > displayPriceVal;
+  const catalogDiscountPct = showCatalogStrike
+    ? Math.round(((catalogPriceVal - displayPriceVal) / catalogPriceVal) * 100)
+    : 0;
+
+  // Blok katalogowy — "Cena specjalna Motolia.pl" + linia (etykieta / przekreślona wartość + pill), układ justify-between
+  const catalogLine = showCatalogStrike ? (
+    <div className="w-full">
+      <div className="text-xs font-semibold text-emerald-700">Cena specjalna Motolia.pl</div>
+      <div className="flex items-baseline justify-between">
+        <span className="text-xs text-muted-foreground">{t('listing.catalogPrice')}</span>
+        <span className="flex items-baseline gap-2">
+          <span className="text-sm text-muted-foreground line-through">
+            {formatPrice(toDisplayPrice(catalogPriceVal), currencyCode)}
+          </span>
+          <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-xs font-bold">
+            -{catalogDiscountPct}%
+          </span>
+        </span>
+      </div>
+    </div>
+  ) : null;
+
+  // Tag "Rabat Motolia" (bez wartości) na zdjęciu galerii — gdy operator włączył checkbox
+  const motoliaPhotoTag = showMotolia ? (
+    <div className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
+      {t('listing.motoliaDiscount')}
+    </div>
+  ) : null;
+
+  // Tooltip "i" przy cenie pojazdu — gdy pokazujemy cenę po rabacie (tryb B = finansowanie) i pojazd ma rabat
+  const priceRabatInfo = (showMotolia && !listing.displaySalePrice) ? (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+          <Info className="h-3.5 w-3.5 text-muted-foreground/70 cursor-help shrink-0" />
+        </TooltipTrigger>
+        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[280px] text-xs">
+          Rabat dostępny tylko dla klientów, którzy skorzystają z finansowania na Motolia.pl. W innym przypadku (zakup za gotówkę lub w innym finansowaniu) wysokość dostępnego rabatu może być niższa.
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ) : null;
 
   // Financing type detection from URL
   const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
@@ -519,7 +571,10 @@ export default function ListingDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Gallery */}
-            <ImageGallery images={listing.image_urls} title={title} />
+            <div className="relative">
+              {motoliaPhotoTag}
+              <ImageGallery images={listing.image_urls} title={title} />
+            </div>
 
             {/* Title & Price - Mobile */}
             <div className="lg:hidden">
@@ -527,8 +582,10 @@ export default function ListingDetailPage() {
               {isMotolia ? (
                 /* Motolia mobile: minimized price */
                 <div className="mt-2">
-                  <span className="text-sm text-muted-foreground">
+                  {catalogLine}
+                  <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                     Cena pojazdu: {priceInfo.primaryLabel}
+                    {priceRabatInfo}
                   </span>
                   {priceInfo.secondaryLabel && (
                     <span className="text-xs text-muted-foreground ml-2">
@@ -547,10 +604,12 @@ export default function ListingDetailPage() {
               ) : (
                 /* Carsalon mobile: original prominent price */
                 <>
+                  {catalogLine && <div className="mt-2">{catalogLine}</div>}
                   <div className="flex items-center gap-3 mt-2">
                     <div className="flex flex-col md:flex-row md:items-baseline md:gap-3 mt-2">
-                      <span className="font-heading text-3xl font-bold text-accent">
+                      <span className="font-heading text-3xl font-bold text-accent inline-flex items-center gap-1.5">
                         {priceInfo.primaryLabel}
+                        {priceRabatInfo}
                       </span>
                       {priceInfo.secondaryLabel && (
                         <span className="text-sm text-muted-foreground font-medium">
@@ -575,6 +634,40 @@ export default function ListingDetailPage() {
                 </>
               )}
             </div>
+
+            {/* Financing Calculator — on mobile shown above key parameters (desktop sidebar config hides it here) */}
+            {(settings?.financingCalculatorEnabled ?? true) && (
+              <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
+                {isMotolia && <CustomerTypeToggle className="w-full mb-4 lg:hidden" />}
+                <FinancingCalculator
+                  listingId={listing.listing_id}
+                  price={
+                    priceType === 'net'
+                      ? Math.round(
+                          applySpecialOfferDiscount(
+                            getFinancingBasePrice({
+                              pricePln: listing.price_pln,
+                            }),
+                            discount
+                          ) / 1.23
+                        )
+                      : applySpecialOfferDiscount(
+                          getFinancingBasePrice({
+                            pricePln: listing.price_pln,
+                          }),
+                          discount
+                        )
+                  }
+                  priceIsNet={priceType === 'net'}
+                  currency={settings?.displayCurrency || 'PLN'}
+                  manufacturingYear={listing.production_year}
+                  mileageKm={listing.mileage_km}
+                  offerInitialPayment={initialPayment ?? undefined}
+                  financingType={financingType}
+                  onFinancingTypeChange={handleFinancingTypeChange}
+                />
+              </section>
+            )}
 
             {/* Key Parameters */}
             <section>
@@ -627,43 +720,6 @@ export default function ListingDetailPage() {
             )}
 
             <Separator />
-
-            {/* Financing Calculator - Main Content area (Always visible on mobile, conditional on desktop) */}
-            {(settings?.financingCalculatorEnabled ?? true) && (
-              <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
-                <FinancingCalculator
-                  listingId={listing.listing_id}
-                  price={
-                    priceType === 'net'
-                      ? Math.round(
-                          applySpecialOfferDiscount(
-                            getFinancingBasePrice({
-                              pricePln: listing.price_pln,
-                              brokerPricePln: listing.broker_price_pln,
-                              financingPriceBase: listing.financingPriceBase,
-                            }),
-                            discount
-                          ) / 1.23
-                        )
-                      : applySpecialOfferDiscount(
-                          getFinancingBasePrice({
-                            pricePln: listing.price_pln,
-                            brokerPricePln: listing.broker_price_pln,
-                            financingPriceBase: listing.financingPriceBase,
-                          }),
-                          discount
-                        )
-                  }
-                  priceIsNet={priceType === 'net'}
-                  currency={settings?.displayCurrency || 'PLN'}
-                  manufacturingYear={listing.production_year}
-                  mileageKm={listing.mileage_km}
-                  offerInitialPayment={initialPayment ?? undefined}
-                  financingType={financingType}
-                  onFinancingTypeChange={handleFinancingTypeChange}
-                />
-              </section>
-            )}
 
             {/* Mobile Partner Ad */}
             <div className="lg:hidden">
@@ -819,8 +875,6 @@ export default function ListingDetailPage() {
                                 applySpecialOfferDiscount(
                                   getFinancingBasePrice({
                                     pricePln: listing.price_pln,
-                                    brokerPricePln: listing.broker_price_pln,
-                                    financingPriceBase: listing.financingPriceBase,
                                   }),
                                   discount
                                 ) / 1.23
@@ -828,8 +882,6 @@ export default function ListingDetailPage() {
                             : applySpecialOfferDiscount(
                                 getFinancingBasePrice({
                                   pricePln: listing.price_pln,
-                                  brokerPricePln: listing.broker_price_pln,
-                                  financingPriceBase: listing.financingPriceBase,
                                 }),
                                 discount
                               )
@@ -844,10 +896,12 @@ export default function ListingDetailPage() {
                         motoliaMode={true}
                         priceSlot={
                           <div className="pt-2 border-t border-slate-200 mt-2">
+                            {catalogLine}
                             <div className="flex items-baseline justify-between">
                               <span className="text-xs text-muted-foreground">Cena pojazdu:</span>
-                              <span className="text-sm text-muted-foreground font-medium">
+                              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground font-medium">
                                 {priceInfo.primaryLabel}
+                                {priceRabatInfo}
                               </span>
                             </div>
                             {priceInfo.secondaryLabel && (
@@ -943,9 +997,11 @@ export default function ListingDetailPage() {
                   >
                   <div role="heading" aria-level={2} className="font-heading text-xl font-bold text-foreground">{baseTitle}</div>
                   <div className="flex flex-col gap-1 items-start">
+                    {catalogLine && <div className="w-full">{catalogLine}</div>}
                     <div className="flex items-center gap-2">
-                      <span className="font-heading text-3xl font-bold text-accent">
+                      <span className="font-heading text-3xl font-bold text-accent inline-flex items-center gap-1.5">
                         {priceInfo.primaryLabel}
+                        {priceRabatInfo}
                       </span>
                       {hasSpecialOffer && (
                         <SpecialOfferTag />
@@ -1032,8 +1088,6 @@ export default function ListingDetailPage() {
                             applySpecialOfferDiscount(
                               getFinancingBasePrice({
                                 pricePln: listing.price_pln,
-                                brokerPricePln: listing.broker_price_pln,
-                                financingPriceBase: listing.financingPriceBase,
                               }),
                               discount
                             ) / 1.23
@@ -1041,8 +1095,6 @@ export default function ListingDetailPage() {
                         : applySpecialOfferDiscount(
                             getFinancingBasePrice({
                               pricePln: listing.price_pln,
-                              brokerPricePln: listing.broker_price_pln,
-                              financingPriceBase: listing.financingPriceBase,
                             }),
                             discount
                           )

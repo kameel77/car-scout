@@ -2,6 +2,9 @@ import { Prisma } from '@prisma/client';
 
 export const CSV_EDITABLE_FIELDS = [
     'catalogPrice',
+    'motoliaDiscountPln',
+    'showMotoliaDiscount',
+    'displaySalePrice',
     'financingPriceBase',
     'isChineseBrand',
     'isFeatured',
@@ -47,6 +50,11 @@ export function validateListingPayload(body: any): ListingValidationError[] {
     if (body.financingPriceBase && body.financingPriceBase !== 'PRICE_PLN' && body.financingPriceBase !== 'BROKER_PRICE_PLN') {
         errors.push({ field: 'financingPriceBase', message: 'Invalid financingPriceBase value' });
     }
+    if (body.motoliaDiscountPln !== undefined && body.motoliaDiscountPln !== null) {
+        if (typeof body.motoliaDiscountPln !== 'number' || body.motoliaDiscountPln < 0 || body.motoliaDiscountPln > 10_000_000) {
+            errors.push({ field: 'motoliaDiscountPln', message: 'Motolia discount must be a non-negative number up to 10,000,000' });
+        }
+    }
 
     return errors;
 }
@@ -61,6 +69,9 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
         mileageKm: body.mileageKm,
         pricePln: body.pricePln,
         catalogPrice: body.catalogPrice ?? undefined,
+        motoliaDiscountPln: body.motoliaDiscountPln ?? undefined,
+        showMotoliaDiscount: body.showMotoliaDiscount ?? false,
+        displaySalePrice: body.displaySalePrice ?? false,
         condition: body.condition,
         financingPriceBase: body.financingPriceBase || 'BROKER_PRICE_PLN',
         isChineseBrand: body.isChineseBrand ?? false,

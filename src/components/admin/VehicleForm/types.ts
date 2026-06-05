@@ -22,7 +22,9 @@ export interface VehicleFormState {
     paintType: string;
 
     // Pricing — sale
-    pricePln: string;                  // sale only
+    pricePln: string;                  // sale only — cena w finansowaniu
+    motoliaDiscountPln: string;        // sale only — rabat Motolia (źródło prawdy; cena sprzedaży = pricePln + rabat)
+    displaySalePrice: boolean;         // sale only — true: "Cena pojazdu" = finansowanie + rabat; false (domyślnie): finansowanie
     catalogPrice: string;
     sellingPrice: string;              // rental only
     mileageKm: string;                 // sale only
@@ -32,6 +34,7 @@ export interface VehicleFormState {
     // Flags — sale
     isChineseBrand: boolean;           // sale only
     isFeatured: boolean;
+    showMotoliaDiscount: boolean;      // sale only — pokaż rabat Motolia na froncie
     financingPriceBase: 'PRICE_PLN' | 'BROKER_PRICE_PLN'; // sale only
 
     // Description

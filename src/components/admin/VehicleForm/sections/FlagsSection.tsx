@@ -25,26 +25,14 @@ export function FlagsSection({ form, setField, mode }: SectionProps) {
                         <label htmlFor="isChineseBrand" className="text-sm">Marka chińska</label>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Baza ceny do raty finansowania</label>
-                        <div className="flex gap-4">
-                            <label className="flex items-center gap-2">
-                                <input
-                                    type="radio"
-                                    checked={form.financingPriceBase === 'BROKER_PRICE_PLN'}
-                                    onChange={() => setField('financingPriceBase', 'BROKER_PRICE_PLN')}
-                                />
-                                <span className="text-sm">Cena brokera (z markupem)</span>
-                            </label>
-                            <label className="flex items-center gap-2">
-                                <input
-                                    type="radio"
-                                    checked={form.financingPriceBase === 'PRICE_PLN'}
-                                    onChange={() => setField('financingPriceBase', 'PRICE_PLN')}
-                                />
-                                <span className="text-sm">Cena sprzedaży brutto</span>
-                            </label>
-                        </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            id="showMotoliaDiscount"
+                            type="checkbox"
+                            checked={form.showMotoliaDiscount}
+                            onChange={e => setField('showMotoliaDiscount', e.target.checked)}
+                        />
+                        <label htmlFor="showMotoliaDiscount" className="text-sm">Rabat Motolia (tag na zdjęciu)</label>
                     </div>
                 </>
             )}
