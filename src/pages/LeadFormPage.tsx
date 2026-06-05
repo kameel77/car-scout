@@ -23,7 +23,7 @@ import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
-import { getDisplaySalePrice } from '@/utils/listingPrice';
+import { getDisplayPrice } from '@/utils/listingPrice';
 import { getListingUrlPath, getFinancingTypeFromPath } from '@/utils/url-utils';
 import { Footer } from '@/components/Footer';
 import { leadsApi } from '@/services/api';
@@ -87,7 +87,7 @@ export default function LeadFormPage() {
     if (currency === 'EUR') {
       basePrice = listing.broker_price_eur || 0;
     } else if (listing.price_pln) {
-      basePrice = getDisplaySalePrice(listing);
+      basePrice = getDisplayPrice(listing);
     }
 
     if (basePrice > 0) {

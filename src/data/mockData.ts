@@ -48,6 +48,7 @@ export interface Listing {
   catalogPrice?: number | null;
   motoliaDiscountPln?: number | null;
   showMotoliaDiscount?: boolean;
+  displaySalePrice?: boolean;
   condition: 'NEW' | 'USED';
   financingPriceBase: 'PRICE_PLN' | 'BROKER_PRICE_PLN';
   isChineseBrand: boolean;

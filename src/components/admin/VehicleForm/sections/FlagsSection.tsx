@@ -32,7 +32,7 @@ export function FlagsSection({ form, setField, mode }: SectionProps) {
                             checked={form.showMotoliaDiscount}
                             onChange={e => setField('showMotoliaDiscount', e.target.checked)}
                         />
-                        <label htmlFor="showMotoliaDiscount" className="text-sm">Pokaż Rabat Motolia na froncie</label>
+                        <label htmlFor="showMotoliaDiscount" className="text-sm">Rabat Motolia (tag na zdjęciu)</label>
                     </div>
                 </>
             )}

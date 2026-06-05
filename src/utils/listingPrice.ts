@@ -2,8 +2,9 @@ export function getFinancingBasePrice(listing: { pricePln: number }): number {
     return listing.pricePln;
 }
 
-// Cena widoczna klientowi jako główna ("Cena pojazdu" / cena na karcie) = cena sprzedaży (gotówkowa)
-// = cena w finansowaniu (price_pln) + rabat Motolia. Cena w finansowaniu pozostaje bazą kalkulatora rat.
-export function getDisplaySalePrice(listing: { price_pln: number; motoliaDiscountPln?: number | null }): number {
-    return listing.price_pln + (listing.motoliaDiscountPln ?? 0);
+// Cena widoczna klientowi jako główna ("Cena pojazdu" / cena na karcie).
+// Per-pojazd flaga displaySalePrice decyduje: true → cena w finansowaniu + rabat Motolia (cena sprzedaży),
+// false (domyślnie) → sama cena w finansowaniu. Kalkulator rat zawsze liczy z price_pln.
+export function getDisplayPrice(listing: { price_pln: number; motoliaDiscountPln?: number | null; displaySalePrice?: boolean }): number {
+    return listing.price_pln + (listing.displaySalePrice ? (listing.motoliaDiscountPln ?? 0) : 0);
 }

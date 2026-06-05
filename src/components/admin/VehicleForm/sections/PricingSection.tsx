@@ -47,6 +47,28 @@ export function PricingSection({ form, setField, mode, isImported }: SectionProp
                                 onChange={e => setField('motoliaDiscountPln', e.target.value)}
                             />
                         </div>
+
+                        <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                            <label className="text-sm font-medium text-gray-700">Cena pojazdu wyświetlana jako</label>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        checked={form.displaySalePrice === false}
+                                        onChange={() => setField('displaySalePrice', false)}
+                                    />
+                                    <span className="text-sm">Cena w finansowaniu</span>
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        checked={form.displaySalePrice === true}
+                                        onChange={() => setField('displaySalePrice', true)}
+                                    />
+                                    <span className="text-sm">Cena w finansowaniu + Rabat Motolia</span>
+                                </label>
+                            </div>
+                        </div>
                     </>
                 )}
 

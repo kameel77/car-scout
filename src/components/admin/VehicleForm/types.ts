@@ -24,6 +24,7 @@ export interface VehicleFormState {
     // Pricing — sale
     pricePln: string;                  // sale only — cena w finansowaniu
     motoliaDiscountPln: string;        // sale only — rabat Motolia (źródło prawdy; cena sprzedaży = pricePln + rabat)
+    displaySalePrice: boolean;         // sale only — true: "Cena pojazdu" = finansowanie + rabat; false (domyślnie): finansowanie
     catalogPrice: string;
     sellingPrice: string;              // rental only
     mileageKm: string;                 // sale only
