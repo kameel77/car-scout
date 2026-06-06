@@ -236,7 +236,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
               {hasSpecialOffer && <SpecialOfferTag onClick={handleSpecialOfferClick} />}
               {showMotolia && (
                 <div className="px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
-                  {t('listing.motoliaDiscount')}
+                  {t('listing.motoliaDiscount')}: {Math.round(motoliaDiscount / (listing.price_pln + motoliaDiscount) * 100)}%
                 </div>
               )}
             </div>
