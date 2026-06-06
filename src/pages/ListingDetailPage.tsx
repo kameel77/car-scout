@@ -332,7 +332,7 @@ export default function ListingDetailPage() {
   // Tag "Rabat Motolia" (bez wartości) na zdjęciu galerii — gdy operator włączył checkbox
   const motoliaPhotoTag = showMotolia ? (
     <div className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
-      {t('listing.motoliaDiscount')}: {Math.round(motoliaDiscountVal / (listing.price_pln + motoliaDiscountVal) * 100)}%
+      {t('listing.motoliaDiscount')}: {catalogPriceVal ? Math.round((catalogPriceVal - listing.price_pln) / catalogPriceVal * 100) : 0}%
     </div>
   ) : null;
 
