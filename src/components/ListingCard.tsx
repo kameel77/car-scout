@@ -231,9 +231,14 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-          {hasSpecialOffer && (
-            <div className="absolute top-3 left-3">
-              <SpecialOfferTag onClick={handleSpecialOfferClick} />
+          {(hasSpecialOffer || showMotolia) && (
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+              {hasSpecialOffer && <SpecialOfferTag onClick={handleSpecialOfferClick} />}
+              {showMotolia && (
+                <div className="px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
+                  {t('listing.motoliaDiscount')}
+                </div>
+              )}
             </div>
           )}
 
@@ -248,13 +253,6 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                   {priceInfo.secondaryLabel}
                 </span>
               )}
-            </div>
-          )}
-
-          {/* Rabat Motolia — tag na zdjęciu (gdy operator włączył checkbox dla pojazdu) */}
-          {showMotolia && (
-            <div className="absolute bottom-3 left-3 px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
-              {t('listing.motoliaDiscount')}
             </div>
           )}
         </div>
