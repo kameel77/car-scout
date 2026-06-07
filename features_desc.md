@@ -364,3 +364,9 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Zabezpiecza i zachowuje numery zagraniczne (np. z Niemiec) posiadające już własne prefiksy.
   - Zastosowano formatowanie dla wszystkich miejsc w aplikacji renderujących linki telefoniczne (nagłówek, stopka, karta oferty, FAQ, strona kontaktu, detal najmu).
 
+## 29. Usprawnienia w panelu administratora: ID dealera i wyszukiwarka tekstowa
+- **Cel**: Ułatwienie zarządzania dealerami oraz szybkiego kopiowania ich ID w konfiguracjach systemowych (szczególnie przydatne dla integracji i logów).
+- **Zachowanie**:
+  - Kopiowanie ID: Na listingu dealerów (`/admin/dealers`), pod warunkiem, że aktywna marka to Motolia (`brand=motolia`), obok nazwy każdego dealera wyświetla się jego ID z przyciskiem do szybkiego kopiowania. Kliknięcie kopiuje pełny identyfikator UUID dealera do schowka z wizualnym potwierdzeniem (checkmark).
+  - Wyszukiwarka tekstowa: Dodano pole wyszukiwania tekstowego obok dropdownu 'Wszyscy'. Umożliwia ono dynamiczne, natychmiastowe filtrowanie listy dealerów po nazwie, ID, mieście, adresie e-mail, telefonie kontaktowym oraz przypisanej grupie dealerskiej.
+
