@@ -377,3 +377,9 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Zastąpiono tradycyjne kontrolki `<select>` w sekcji dostawców/dealerów (`ProviderSection.tsx`) nowoczesnym, wyszukiwalnym komponentem typu Combobox (zbudowanym w oparciu o Radix Popover oraz Input).
   - Wyszukiwarka pozwala na dynamiczne filtrowanie opcji w locie po wpisaniu nazwy, ID lub miasta.
 
+## 31. Poprawna interpretacja pakietów usług w matrycach rentalowych (Masterlease)
+- **Cel**: Wyeliminowanie błędu, przez który usługi (ubezpieczenie, opony) były oznaczane jako wliczone w cenę najmu, mimo braku oznaczenia 'I' (Included) w matrycy.
+- **Zachowanie**:
+  - Poprawiono funkcję `parseServiceFlags` w parserze CSV (`rental-csv-mapper.ts`). Usunięto automatyczne zaliczanie kosztów numerycznych jako włączonych.
+  - Usługi są teraz uznawane za wliczone w cenę najmu wyłącznie przy obecności jawnych znaczników tekstowych (np. `I`, `true`, `yes`, `1`, `tak`). Jeśli w kolumnie znajduje się konkretny koszt (liczba), usługa nie jest oznaczana jako wliczona w ratę podstawową najmu.
+
