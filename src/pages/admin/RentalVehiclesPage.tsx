@@ -540,22 +540,16 @@ export default function RentalVehiclesPage() {
         enabled: !!token
     });
 
-    // For dealer list, use a simple fetch
+    // For dealer list, fetch all dealers
     const dealersQuery = useQuery({
         queryKey: ['dealers-simple'],
         queryFn: async () => {
-            const res = await fetch(`/api/rental-vehicles?limit=1`, { headers: { Authorization: `Bearer ${token}` } });
-            // Fallback: fetch dealers from existing listings endpoint
-            const listingsRes = await fetch(`/api/listings?perPage=1`, {});
-            const data = await listingsRes.json();
-            // Extract unique dealers
-            const dealerMap = new Map<string, any>();
-            if (data?.listings) {
-                data.listings.forEach((l: any) => {
-                    if (l.dealer) dealerMap.set(l.dealer.id, l.dealer);
-                });
-            }
-            return Array.from(dealerMap.values());
+            const res = await fetch(`/api/admin/dealers`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to load dealers');
+            const data = await res.json();
+            return data.dealers || [];
         },
         enabled: !!token
     });
