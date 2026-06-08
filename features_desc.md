@@ -370,3 +370,10 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Kopiowanie ID: Na listingu dealerów (`/admin/dealers`), pod warunkiem, że aktywna marka to Motolia (`brand=motolia`), obok nazwy każdego dealera wyświetla się jego ID z przyciskiem do szybkiego kopiowania. Kliknięcie kopiuje pełny identyfikator UUID dealera do schowka z wizualnym potwierdzeniem (checkmark).
   - Wyszukiwarka tekstowa: Dodano pole wyszukiwania tekstowego obok dropdownu 'Wszyscy'. Umożliwia ono dynamiczne, natychmiastowe filtrowanie listy dealerów po nazwie, ID, mieście, adresie e-mail, telefonie kontaktowym oraz przypisanej grupie dealerskiej.
 
+## 30. Wyszukiwalny wybór dostawcy/dealera w formularzu pojazdu
+- **Cel**: Ułatwienie przypisywania dealerów i dostawców do pojazdów (zarówno w modelu sprzedaży, jak i najmu) poprzez usunięcie ograniczeń wczytywania dealerów oraz dodanie wyszukiwarki.
+- **Zachowanie**:
+  - Poprawiono pobieranie dealerów w `RentalVehiclesPage.tsx` - system pobiera teraz wszystkich aktywnych dealerów z dedykowanej końcówki administracyjnej (`/api/admin/dealers`).
+  - Zastąpiono tradycyjne kontrolki `<select>` w sekcji dostawców/dealerów (`ProviderSection.tsx`) nowoczesnym, wyszukiwalnym komponentem typu Combobox (zbudowanym w oparciu o Radix Popover oraz Input).
+  - Wyszukiwarka pozwala na dynamiczne filtrowanie opcji w locie po wpisaniu nazwy, ID lub miasta.
+
