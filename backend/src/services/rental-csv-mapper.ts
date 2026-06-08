@@ -134,11 +134,7 @@ function parseServiceFlags(row: ProviderCSVRow): string[] {
     const isIncluded = (val: string | undefined): boolean => {
         if (!val) return false;
         const strVal = val.toString().trim().toUpperCase();
-        if (['I', 'TRUE', 'YES', '1', 'TAK'].includes(strVal)) return true;
-        
-        // If it's a numeric cost, treat it as included if > 0
-        const numVal = parseFloat(strVal);
-        return !isNaN(numVal) && numVal > 0;
+        return ['I', 'TRUE', 'YES', '1', 'TAK'].includes(strVal);
     };
 
     if (isIncluded(row.insurance_net)) services.push('insurance');

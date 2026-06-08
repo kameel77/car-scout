@@ -1,5 +1,4 @@
-import { describe, it } from 'node:test';
-import * as assert from 'node:assert';
+import { describe, it, expect } from 'vitest';
 import { mapCSVRowToMatrixEntry, mapProviderCSVRow, RentalMatrixCSVRow, ProviderCSVRow } from '../rental-csv-mapper.js';
 
 describe('rental-csv-mapper', () => {
@@ -17,9 +16,9 @@ describe('rental-csv-mapper', () => {
             };
 
             const result = mapCSVRowToMatrixEntry(row, 1);
-            assert.strictEqual(result.error, null);
-            assert.strictEqual(result.data?.initialPaymentAmountGross, 1230);
-            assert.strictEqual(result.data?.initialPaymentAmountNet, 1000);
+            expect(result.error).toBe(null);
+            expect(result.data?.initialPaymentAmountGross).toBe(1230);
+            expect(result.data?.initialPaymentAmountNet).toBe(1000);
         });
 
         it('should correctly calculate net and gross initial payments when amounts_type is net', () => {
@@ -35,9 +34,9 @@ describe('rental-csv-mapper', () => {
             };
 
             const result = mapCSVRowToMatrixEntry(row, 1);
-            assert.strictEqual(result.error, null);
-            assert.strictEqual(result.data?.initialPaymentAmountGross, 1230);
-            assert.strictEqual(result.data?.initialPaymentAmountNet, 1000);
+            expect(result.error).toBe(null);
+            expect(result.data?.initialPaymentAmountGross).toBe(1230);
+            expect(result.data?.initialPaymentAmountNet).toBe(1000);
         });
 
         it('should default to net when amounts_type is not provided', () => {
@@ -52,9 +51,9 @@ describe('rental-csv-mapper', () => {
             };
 
             const result = mapCSVRowToMatrixEntry(row, 1);
-            assert.strictEqual(result.error, null);
-            assert.strictEqual(result.data?.initialPaymentAmountGross, 1230);
-            assert.strictEqual(result.data?.initialPaymentAmountNet, 1000);
+            expect(result.error).toBe(null);
+            expect(result.data?.initialPaymentAmountGross).toBe(1230);
+            expect(result.data?.initialPaymentAmountNet).toBe(1000);
         });
         
         it('should handle missing initial payment amount gracefully', () => {
@@ -68,9 +67,9 @@ describe('rental-csv-mapper', () => {
             };
 
             const result = mapCSVRowToMatrixEntry(row, 1);
-            assert.strictEqual(result.error, null);
-            assert.strictEqual(result.data?.initialPaymentAmountGross, 0);
-            assert.strictEqual(result.data?.initialPaymentAmountNet, 0);
+            expect(result.error).toBe(null);
+            expect(result.data?.initialPaymentAmountGross).toBe(0);
+            expect(result.data?.initialPaymentAmountNet).toBe(0);
         });
     });
 
@@ -86,9 +85,9 @@ describe('rental-csv-mapper', () => {
             };
 
             const result = mapProviderCSVRow(row, 1);
-            assert.strictEqual(result.error, null);
-            assert.strictEqual(result.entries[0].initialPaymentAmountGross, 1230);
-            assert.strictEqual(result.entries[0].initialPaymentAmountNet, 1000);
+            expect(result.error).toBe(null);
+            expect(result.entries[0].initialPaymentAmountGross).toBe(1230);
+            expect(result.entries[0].initialPaymentAmountNet).toBe(1000);
         });
 
         it('should correctly calculate net and gross initial payments when amounts_type is net', () => {
@@ -102,9 +101,9 @@ describe('rental-csv-mapper', () => {
             };
 
             const result = mapProviderCSVRow(row, 1);
-            assert.strictEqual(result.error, null);
-            assert.strictEqual(result.entries[0].initialPaymentAmountGross, 1230);
-            assert.strictEqual(result.entries[0].initialPaymentAmountNet, 1000);
+            expect(result.error).toBe(null);
+            expect(result.entries[0].initialPaymentAmountGross).toBe(1230);
+            expect(result.entries[0].initialPaymentAmountNet).toBe(1000);
         });
 
         it('should default to net when amounts_type is not provided', () => {
@@ -117,9 +116,26 @@ describe('rental-csv-mapper', () => {
             };
 
             const result = mapProviderCSVRow(row, 1);
-            assert.strictEqual(result.error, null);
-            assert.strictEqual(result.entries[0].initialPaymentAmountGross, 1230);
-            assert.strictEqual(result.entries[0].initialPaymentAmountNet, 1000);
+            expect(result.error).toBe(null);
+            expect(result.entries[0].initialPaymentAmountGross).toBe(1230);
+            expect(result.entries[0].initialPaymentAmountNet).toBe(1000);
+        });
+
+        it('should only include services that have explicit inclusion strings, not numeric values', () => {
+            const row: ProviderCSVRow = {
+                car_id: '123',
+                term_months: '36',
+                mileage_yearly: '10000',
+                monthly_cost_net: '1000',
+                insurance_net: '382.08',
+                tires_net: '172.00',
+                service_net: 'I',
+                other_cost_net: 'tak'
+            };
+
+            const result = mapProviderCSVRow(row, 1);
+            expect(result.error).toBe(null);
+            expect(result.entries[0].servicesIncluded).toEqual(['service', 'other']);
         });
     });
 });
