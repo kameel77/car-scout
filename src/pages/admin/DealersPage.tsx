@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBrand } from '@/contexts/BrandContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Store, Plus, Edit2, Trash2, Network, AlertTriangle, UserCheck, X, Save, Loader2, Car, ChevronDown } from 'lucide-react';
+import { Store, Plus, Edit2, Trash2, Network, AlertTriangle, UserCheck, X, Save, Loader2, Car, ChevronDown, Copy, Check, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/api\/?$/, '');
@@ -150,14 +151,40 @@ function InlineEditForm({
     );
 }
 
+/* ─── Copyable ID ─── */
+function CopyableId({ id }: { id: string }) {
+    const [copied, setCopied] = useState(false);
+    const short = id.length > 8 ? `${id.slice(0, 8)}…` : id;
+
+    const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(id);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+        <button
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-50 hover:bg-blue-50 text-[11px] font-mono text-gray-500 hover:text-blue-600 transition-colors border border-gray-200/50"
+            title={`Kliknij, aby skopiować ID: ${id}`}
+        >
+            <span>ID: {short}</span>
+            {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
+        </button>
+    );
+}
+
 export default function DealersPage() {
     const { token } = useAuth();
+    const { config } = useBrand();
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [showCreate, setShowCreate] = useState(false);
     const [filter, setFilter] = useState<'all' | 'unassigned'>('all');
     const [groupFilter, setGroupFilter] = useState<string>('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [createForm, setCreateForm] = useState({
         name: '', addressLine1: '', city: '', contactPhone: '',
@@ -267,7 +294,18 @@ export default function DealersPage() {
         },
     });
 
-    const dealers = dealersData?.dealers || [];
+    const dealers = (dealersData?.dealers || []).filter(d => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            d.name.toLowerCase().includes(q) ||
+            d.id.toLowerCase().includes(q) ||
+            (d.city && d.city.toLowerCase().includes(q)) ||
+            (d.contactEmail && d.contactEmail.toLowerCase().includes(q)) ||
+            (d.contactPhone && d.contactPhone.toLowerCase().includes(q)) ||
+            (d.dealerGroup?.name && d.dealerGroup.name.toLowerCase().includes(q))
+        );
+    });
     const groups = groupsData?.groups || [];
 
     return (
@@ -299,9 +337,9 @@ export default function DealersPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center flex-wrap">
                 <Select value={filter} onValueChange={(v: 'all' | 'unassigned') => setFilter(v)}>
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-[200px] bg-white">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -310,9 +348,27 @@ export default function DealersPage() {
                     </SelectContent>
                 </Select>
 
+                <div className="relative w-[250px] shrink-0">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Szukaj po nazwie, ID..."
+                        className="pl-9 bg-white"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+
                 {filter === 'all' && groups.length > 0 && (
                     <Select value={groupFilter} onValueChange={setGroupFilter}>
-                        <SelectTrigger className="w-[250px]">
+                        <SelectTrigger className="w-[250px] bg-white">
                             <SelectValue placeholder="Filtruj po grupie" />
                         </SelectTrigger>
                         <SelectContent>
@@ -396,6 +452,10 @@ export default function DealersPage() {
                                         <div>
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <h3 className="font-semibold text-gray-900">{dealer.name}</h3>
+
+                                                {config.id === 'motolia' && (
+                                                    <CopyableId id={dealer.id} />
+                                                )}
 
                                                 {!dealer.isAssignedToGroup && (
                                                     <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 gap-1">
