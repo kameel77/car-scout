@@ -148,6 +148,7 @@ export const sendLeadEmail = async (
         await transporter.sendMail({
             from: `"${siteName} Powiadomienia" <${settings.smtpFromEmail || settings.smtpUser}>`,
             to: recipientEmail,
+            replyTo: lead.email ? `"${lead.name}" <${lead.email}>` : undefined,
             subject,
             html: htmlContent
         });
