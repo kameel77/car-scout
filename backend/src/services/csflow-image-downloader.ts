@@ -104,3 +104,73 @@ export async function removeCachedImages(listingId: string): Promise<void> {
         // Ignore
     }
 }
+
+interface QueueTask {
+    listingId: string;
+    externalUrls: string[];
+    prisma: any;
+}
+
+let activeDownloads = 0;
+const queue: QueueTask[] = [];
+const activeAndQueuedListingIds = new Set<string>();
+
+const MAX_CONCURRENT_LISTINGS = 3;
+
+async function processQueue() {
+    if (activeDownloads >= MAX_CONCURRENT_LISTINGS || queue.length === 0) {
+        return;
+    }
+
+    const task = queue.shift();
+    if (!task) return;
+
+    activeDownloads++;
+
+    // Run the download process asynchronously
+    (async () => {
+        try {
+            console.log(`[CSFlow Image Queue] Rozpoczynanie pobierania dla ${task.listingId}. Pozostało w kolejce: ${queue.length}`);
+            const localPhotos = await downloadAndCacheImages(task.listingId, task.externalUrls);
+            const localPrimary = localPhotos.length > 0 ? localPhotos[0] : null;
+
+            await task.prisma.listing.update({
+                where: { listingId: task.listingId },
+                data: {
+                    primaryImageUrl: localPrimary,
+                    imageUrls: localPhotos,
+                    imageCount: localPhotos.length
+                }
+            });
+            console.log(`[CSFlow Image Queue] Zakończono pobieranie i zapis w DB dla ${task.listingId}`);
+        } catch (err: any) {
+            console.error(`[CSFlow Image Queue] Błąd pobierania zdjęć dla ${task.listingId}:`, err.message);
+        } finally {
+            activeDownloads--;
+            activeAndQueuedListingIds.delete(task.listingId);
+            // Process the next task in queue
+            processQueue();
+        }
+    })();
+
+    // Attempt to process another one in parallel
+    processQueue();
+}
+
+/**
+ * Dodaje pobieranie zdjęć dla danego listingu do kolejki w tle.
+ * Zapobiega duplikatom, jeśli ten sam listing jest już w kolejce/pobierany.
+ */
+export function queueListingImagesDownload(
+    listingId: string,
+    externalUrls: string[],
+    prisma: any
+) {
+    if (activeAndQueuedListingIds.has(listingId)) {
+        return;
+    }
+    activeAndQueuedListingIds.add(listingId);
+    queue.push({ listingId, externalUrls, prisma });
+    processQueue();
+}
+
