@@ -337,6 +337,7 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Wybór jest zapisywany w globalnych ustawieniach aplikacji w polu `leadRecipientUserId`.
   - Po zapisaniu, każde nowe zapytanie (formularz sprzedaży, leasingu, najmu czy prośba o szybki kontakt) automatycznie ustala adres e-mail wybranego użytkownika jako głównego odbiorcę.
   - **Bezpieczny fallback**: W przypadku braku wybranego użytkownika (wartość domyślna) lub gdy wybrany użytkownik zostanie usunięty/dezaktywowany, system automatycznie wysyła powiadomienie na ogólny adres e-mail zdefiniowany w konfiguracji SMTP (`smtpRecipientEmail`).
+  - **Integracja z CRM (Thulium)**: System CRM (Thulium) odbiera leady poprzez integrację typu *mail-to-ticket*. Każda wysyłana z poziomu aplikacji wiadomość e-mail (wysyłana poprzez serwer SMTP nadawcy, np. `kontakt@motolia.pl`) trafia na adres docelowy powiadomień (wybrany `leadRecipientUserId` lub fallback `smtpRecipientEmail`, zazwyczaj `lead@motolia.pl`). System Thulium cyklicznie odpytuje tę skrzynkę pocztową i na podstawie zawartości wiadomości e-mail automatycznie generuje nowe zgłoszenia (tickety) w panelu CRM.
 - **Ograniczenia dostępu**:
   - Wybór odbiorcy leada jest całkowicie ukryty przed użytkownikami o niższych rolach (np. Dealer Admin, Dealer Employee, Platform Manager). Opcja ta jest widoczna i modyfikowalna wyłącznie dla roli `SUPERADMIN_PLATFORM`.
 
