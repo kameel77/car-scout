@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { getCSFlowCars, getCSFlowCarDetails } from '../utils/csflow-client.js';
 import { generateListingSlug } from '../utils/url-utils.js';
-import { downloadAndCacheImages } from './csflow-image-downloader.js';
+import { downloadAndCacheImages, queueListingImagesDownload } from './csflow-image-downloader.js';
 import cron from 'node-cron';
 
 // Pomocnicza funkcja mapowania CSFlow -> Prisma
@@ -84,18 +84,34 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
         // Do śledzenia historii cen z transaction
         const priceHistoryEntries: any[] = [];
         
-        const i = 1;
-        // Pętla odpytująca dokładnie każde auto - optymalizujemy: używamy Promise.all dla max 5 na raz.
-        // Jednak na potrzeby stabilności po prostu iterujemy asynchronicznie.
-        for (const basicCar of carsData) {
+        // Pobieramy szczegóły wszystkich aut w równoległych paczkach (po 15)
+        const fullCars: any[] = [];
+        const BATCH_SIZE = 15;
+        console.log(`[CSFlow] Pobieranie szczegółów dla ${carsData.length} pojazdów w paczkach po ${BATCH_SIZE}...`);
+        
+        for (let idx = 0; idx < carsData.length; idx += BATCH_SIZE) {
+            const batch = carsData.slice(idx, idx + BATCH_SIZE);
+            const details = await Promise.all(
+                batch.map(async (basicCar) => {
+                    try {
+                        const car = await getCSFlowCarDetails(basicCar.id);
+                        return car;
+                    } catch (err: any) {
+                        console.error(`[CSFlow] Błąd pobierania szczegółów dla ID ${basicCar.id}: ${err.message}`);
+                        result.failed++;
+                        return null;
+                    }
+                })
+            );
+            fullCars.push(...details.filter(Boolean));
+        }
+        console.log(`[CSFlow] Pomyślnie pobrano szczegóły dla ${fullCars.length}/${carsData.length} pojazdów.`);
+
+        for (const car of fullCars) {
             try {
-                const listingId = `csflow-${basicCar.id}`;
+                const listingId = `csflow-${car.id}`;
                 currentApiIds.add(listingId);
                 
-                // Fetch full details
-                const car = await getCSFlowCarDetails(basicCar.id);
-                if (!car) continue;
-
                 // 1. Zapis Dealera — pre-check zamiast try-catch (brak P2002, brak pisma:error spam)
                 let currentDealerId: string | undefined;
                 if (car.dealer) {
@@ -197,10 +213,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                     ? car.photos_lg
                     : (Array.isArray(car.photos) ? car.photos : []);
 
-                // Pobierz i zcachuj zdjęcia lokalnie (idempotentne — pomija istniejące pliki)
-                const photos = await downloadAndCacheImages(listingId, externalPhotos);
-                    
-                const primaryImage = photos.length > 0 ? photos[0] : null;
+                // Początkowo przypisujemy zewnętrzne URL zdjęć, a pobieranie lokalne zlecamy w tle
+                const primaryImage = externalPhotos.length > 0 ? externalPhotos[0] : null;
 
                 const make = car.brand_name || car.brand?.name || 'Inne';
                 const model = car.model_name || car.model?.name || 'Inne';
@@ -230,8 +244,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                     color: car.color || null,
                     paintType: car.laquer || null,
                     primaryImageUrl: primaryImage,
-                    imageUrls: photos,
-                    imageCount: photos.length,
+                    imageUrls: externalPhotos,
+                    imageCount: externalPhotos.length,
                     dealerId: currentDealerId,
                     equipmentAudioMultimedia: mappedEq.audio,
                     equipmentSafety: mappedEq.safety,
@@ -280,8 +294,13 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                     // Dodaj VIN do mapy, żeby duplikaty w tym samym batchu też były wykryte
                     if (car.vin) allVinToListingId.set(car.vin, listingId);
                 }
+
+                // Dodaj pobieranie i zcachowanie zdjęć do kolejki w tle
+                if (externalPhotos.length > 0) {
+                    queueListingImagesDownload(listingId, externalPhotos, prisma);
+                }
             } catch (err: any) {
-                console.error(`[CSFlow] Błąd zapisu ID ${basicCar.id}: ${err.message}`);
+                console.error(`[CSFlow] Błąd zapisu ID ${car.id}: ${err.message}`);
                 result.failed++;
             }
         }
