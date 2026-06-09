@@ -179,92 +179,132 @@ export async function settingsRoutes(fastify: FastifyInstance) {
         const data = request.body as SettingsPayload;
 
         try {
-            const legalDocuments = normalizeLegalDocuments(data.legalDocuments || (data as any).legal_documents);
-            const enabledLanguages = (data.enabledLanguages && data.enabledLanguages.length > 0)
-                ? data.enabledLanguages
-                : ['pl'];
-
-            const eurExRate = toNumberOrFallback(data.eurExRate, 4.30);
-            const brokerFeePctPln = toNumberOrFallback(data.brokerFeePctPln, 3.5);
-            const brokerFeePctEur = toNumberOrFallback(data.brokerFeePctEur, 3.5);
-
             const oldSettings = await fastify.prisma.appSettings.findUnique({
                 where: { id: 'default' }
             });
 
-            let smtpPassword = oldSettings?.smtpPassword || null;
+            const update: any = {};
+
+            if (data.enabledLanguages !== undefined) {
+                update.enabledLanguages = (data.enabledLanguages && data.enabledLanguages.length > 0)
+                    ? data.enabledLanguages
+                    : ['pl'];
+            }
+            if (data.displayCurrency !== undefined) {
+                update.displayCurrency = data.displayCurrency || 'PLN';
+            }
+            if (data.eurExRate !== undefined) {
+                update.eurExRate = toNumberOrFallback(data.eurExRate, 4.30);
+            }
+            if (data.brokerFeePctPln !== undefined) {
+                update.brokerFeePctPln = toNumberOrFallback(data.brokerFeePctPln, 3.5);
+            }
+            if (data.brokerFeePctEur !== undefined) {
+                update.brokerFeePctEur = toNumberOrFallback(data.brokerFeePctEur, 3.5);
+            }
+            if (data.autoRefreshImages !== undefined) {
+                update.autoRefreshImages = Boolean(data.autoRefreshImages);
+            }
+            if (data.legalDocuments !== undefined || (data as any).legal_documents !== undefined) {
+                update.legalDocuments = normalizeLegalDocuments(data.legalDocuments || (data as any).legal_documents);
+            }
+            if (data.legalCompanyName !== undefined) update.legalCompanyName = data.legalCompanyName || null;
+            if (data.legalAddress !== undefined) update.legalAddress = data.legalAddress || null;
+            if (data.legalContactEmail !== undefined) update.legalContactEmail = data.legalContactEmail || null;
+            if (data.legalContactPhone !== undefined) update.legalContactPhone = data.legalContactPhone || null;
+            if (data.salesContactPhone !== undefined) update.salesContactPhone = data.salesContactPhone || null;
+            if (data.legalVatId !== undefined) update.legalVatId = data.legalVatId || null;
+            if (data.legalRegisterNumber !== undefined) update.legalRegisterNumber = data.legalRegisterNumber || null;
+            if (data.legalRepresentative !== undefined) update.legalRepresentative = data.legalRepresentative || null;
+            if (data.headerLogoUrl !== undefined) update.headerLogoUrl = data.headerLogoUrl || null;
+            if (data.headerLogoTextPl !== undefined) update.headerLogoTextPl = data.headerLogoTextPl || null;
+            if (data.headerLogoTextEn !== undefined) update.headerLogoTextEn = data.headerLogoTextEn || null;
+            if (data.headerLogoTextDe !== undefined) update.headerLogoTextDe = data.headerLogoTextDe || null;
+            if (data.footerLogoUrl !== undefined) update.footerLogoUrl = data.footerLogoUrl || null;
+            if (data.legalSloganPl !== undefined) update.legalSloganPl = data.legalSloganPl || null;
+            if (data.legalSloganEn !== undefined) update.legalSloganEn = data.legalSloganEn || null;
+            if (data.legalSloganDe !== undefined) update.legalSloganDe = data.legalSloganDe || null;
+            if (data.siteNamePl !== undefined) update.siteNamePl = data.siteNamePl || null;
+            if (data.siteNameEn !== undefined) update.siteNameEn = data.siteNameEn || null;
+            if (data.siteNameDe !== undefined) update.siteNameDe = data.siteNameDe || null;
+
+            if (data.financingCalculatorEnabled !== undefined) {
+                update.financingCalculatorEnabled = Boolean(data.financingCalculatorEnabled);
+            }
+            if (data.financingCalculatorLocation !== undefined) {
+                update.financingCalculatorLocation = data.financingCalculatorLocation;
+            }
+            if (data.defaultOgTitle !== undefined) update.defaultOgTitle = data.defaultOgTitle || null;
+            if (data.defaultOgDescription !== undefined) update.defaultOgDescription = data.defaultOgDescription || null;
+            if (data.defaultOgImage !== undefined) update.defaultOgImage = data.defaultOgImage || null;
+
+            if (data.smtpHost !== undefined) update.smtpHost = data.smtpHost || null;
+            if (data.smtpPort !== undefined) {
+                update.smtpPort = data.smtpPort ? toNumberOrFallback(data.smtpPort, 465) : null;
+            }
+            if (data.smtpUser !== undefined) update.smtpUser = data.smtpUser || null;
+
+            if (data.smtpPassword !== undefined) {
+                let smtpPassword = oldSettings?.smtpPassword || null;
+                if (data.smtpPassword === '') {
+                    smtpPassword = null;
+                } else if (data.smtpPassword && data.smtpPassword !== '••••••••') {
+                    smtpPassword = data.smtpPassword;
+                }
+                update.smtpPassword = smtpPassword;
+            }
+
+            if (data.smtpFromEmail !== undefined) update.smtpFromEmail = data.smtpFromEmail || null;
+            if (data.smtpRecipientEmail !== undefined) update.smtpRecipientEmail = data.smtpRecipientEmail || null;
+            if (data.leadRecipientUserId !== undefined) update.leadRecipientUserId = data.leadRecipientUserId || null;
+
+            if (data.navItemsVisibility !== undefined) {
+                update.navItemsVisibility = Array.isArray(data.navItemsVisibility)
+                    ? data.navItemsVisibility
+                    : ['samochody', 'wynajem'];
+            }
+            if (data.featuredModulesVisibility !== undefined) {
+                update.featuredModulesVisibility = Array.isArray(data.featuredModulesVisibility)
+                    ? data.featuredModulesVisibility
+                    : ['nowe', 'uzywane', 'wynajem'];
+            }
+            if (data.negotiatePriceEnabled !== undefined) {
+                update.negotiatePriceEnabled = Boolean(data.negotiatePriceEnabled);
+            }
+            if (data.csflowEnabled !== undefined) {
+                update.csflowEnabled = Boolean(data.csflowEnabled);
+            }
+            if (data.defaultSortCars !== undefined) {
+                update.defaultSortCars = data.defaultSortCars || 'price_asc';
+            }
+            if (data.defaultSortRental !== undefined) {
+                update.defaultSortRental = data.defaultSortRental || 'minMonthlyRateNet_asc';
+            }
+            if (data.searchGridColumns !== undefined) {
+                update.searchGridColumns = toNumberOrFallback(data.searchGridColumns, 4);
+            }
+            if (data.splitNewUsed !== undefined) {
+                update.splitNewUsed = Boolean(data.splitNewUsed);
+            }
+
+            // Fallback parsing for create block (standard upsert syntax)
+            const legalDocuments = normalizeLegalDocuments(data.legalDocuments || (data as any).legal_documents);
+            const enabledLanguages = (data.enabledLanguages && data.enabledLanguages.length > 0)
+                ? data.enabledLanguages
+                : ['pl'];
+            const eurExRate = toNumberOrFallback(data.eurExRate, 4.30);
+            const brokerFeePctPln = toNumberOrFallback(data.brokerFeePctPln, 3.5);
+            const brokerFeePctEur = toNumberOrFallback(data.brokerFeePctEur, 3.5);
+            let smtpPasswordCreate = oldSettings?.smtpPassword || null;
             if (data.smtpPassword === '') {
-                smtpPassword = null;
+                smtpPasswordCreate = null;
             } else if (data.smtpPassword && data.smtpPassword !== '••••••••') {
-                smtpPassword = data.smtpPassword;
+                smtpPasswordCreate = data.smtpPassword;
             }
 
             const settings = await fastify.prisma.appSettings.upsert({
                 where: { id: 'default' },
-                update: {
-                    enabledLanguages,
-                    displayCurrency: data.displayCurrency || 'PLN',
-                    eurExRate,
-                    brokerFeePctPln,
-                    brokerFeePctEur,
-                    autoRefreshImages: Boolean(data.autoRefreshImages),
-                    legalDocuments,
-                    legalCompanyName: data.legalCompanyName || null,
-                    legalAddress: data.legalAddress || null,
-                    legalContactEmail: data.legalContactEmail || null,
-                    legalContactPhone: data.legalContactPhone || null,
-                    salesContactPhone: data.salesContactPhone || null,
-                    legalVatId: data.legalVatId || null,
-                    legalRegisterNumber: data.legalRegisterNumber || null,
-                    legalRepresentative: data.legalRepresentative || null,
-                    headerLogoUrl: data.headerLogoUrl || null,
-                    headerLogoTextPl: data.headerLogoTextPl || null,
-                    headerLogoTextEn: data.headerLogoTextEn || null,
-                    headerLogoTextDe: data.headerLogoTextDe || null,
-                    footerLogoUrl: data.footerLogoUrl || null,
-                    legalSloganPl: data.legalSloganPl || null,
-                    legalSloganEn: data.legalSloganEn || null,
-                    legalSloganDe: data.legalSloganDe || null,
-                    siteNamePl: data.siteNamePl || null,
-                    siteNameEn: data.siteNameEn || null,
-                    siteNameDe: data.siteNameDe || null,
-
-                    financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined
-                        ? Boolean(data.financingCalculatorEnabled)
-                        : undefined,
-                    financingCalculatorLocation: data.financingCalculatorLocation,
-                    defaultOgTitle: data.defaultOgTitle || null,
-                    defaultOgDescription: data.defaultOgDescription || null,
-                    defaultOgImage: data.defaultOgImage || null,
-
-                    smtpHost: data.smtpHost || null,
-                    smtpPort: data.smtpPort ? toNumberOrFallback(data.smtpPort, 465) : null,
-                    smtpUser: data.smtpUser || null,
-                    smtpPassword,
-                    smtpFromEmail: data.smtpFromEmail || null,
-                    smtpRecipientEmail: data.smtpRecipientEmail || null,
-                    leadRecipientUserId: data.leadRecipientUserId || null,
-                    navItemsVisibility: Array.isArray(data.navItemsVisibility)
-                        ? data.navItemsVisibility
-                        : ['samochody', 'wynajem'],
-                    featuredModulesVisibility: Array.isArray(data.featuredModulesVisibility)
-                        ? data.featuredModulesVisibility
-                        : ['nowe', 'uzywane', 'wynajem'],
-                    negotiatePriceEnabled: data.negotiatePriceEnabled !== undefined
-                        ? Boolean(data.negotiatePriceEnabled)
-                        : undefined,
-                    csflowEnabled: data.csflowEnabled !== undefined
-                        ? Boolean(data.csflowEnabled)
-                        : undefined,
-                    defaultSortCars: data.defaultSortCars || 'price_asc',
-                    defaultSortRental: data.defaultSortRental || 'minMonthlyRateNet_asc',
-                    searchGridColumns: data.searchGridColumns
-                        ? toNumberOrFallback(data.searchGridColumns, 4)
-                        : undefined,
-                    splitNewUsed: data.splitNewUsed !== undefined
-                        ? Boolean(data.splitNewUsed)
-                        : undefined,
-                },
+                update,
                 create: {
                     id: 'default',
                     enabledLanguages,
@@ -305,7 +345,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     smtpHost: data.smtpHost || null,
                     smtpPort: data.smtpPort ? toNumberOrFallback(data.smtpPort, 465) : null,
                     smtpUser: data.smtpUser || null,
-                    smtpPassword,
+                    smtpPassword: smtpPasswordCreate,
                     smtpFromEmail: data.smtpFromEmail || null,
                     smtpRecipientEmail: data.smtpRecipientEmail || null,
                     leadRecipientUserId: data.leadRecipientUserId || null,
@@ -323,8 +363,12 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                         : true,
                     defaultSortCars: data.defaultSortCars || 'price_asc',
                     defaultSortRental: data.defaultSortRental || 'minMonthlyRateNet_asc',
-                    searchGridColumns: toNumberOrFallback(data.searchGridColumns, 4),
-                    splitNewUsed: Boolean(data.splitNewUsed),
+                    searchGridColumns: data.searchGridColumns
+                        ? toNumberOrFallback(data.searchGridColumns, 4)
+                        : 4,
+                    splitNewUsed: data.splitNewUsed !== undefined
+                        ? Boolean(data.splitNewUsed)
+                        : false,
                 }
             });
 
