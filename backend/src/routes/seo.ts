@@ -74,8 +74,11 @@ export async function seoRoutes(fastify: FastifyInstance) {
         const staticPages = [
             { path: '', priority: '1.0' },
             { path: '/samochody', priority: '0.9' },
+            { path: '/nowe', priority: '0.8' },
+            { path: '/uzywane', priority: '0.8' },
             { path: '/wynajem-dlugoterminowy', priority: '0.9' },
             { path: '/dla-ciebie', priority: '0.8' },
+            { path: '/dla-firm', priority: '0.6' },
             { path: '/faq', priority: '0.5' },
             { path: '/kontakt', priority: '0.5' }
         ];
@@ -139,16 +142,11 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         listings.forEach(listing => {
             const slug = generateListingSlug(listing);
-            const lastmod = formatDate(listing.updatedAt);
-            
-            // For each listing, generate 3 URLs (oferta, kredyt, leasing) as they are self-canonical in frontend
-            ['/oferta', '/kredyt', '/leasing'].forEach(prefix => {
-                urls.push({
-                    loc: `${baseUrl}${prefix}/${slug}`,
-                    lastmod,
-                    changefreq: 'weekly',
-                    priority: '0.8'
-                });
+            urls.push({
+                loc: `${baseUrl}/oferta/${slug}`,
+                lastmod: formatDate(listing.updatedAt),
+                changefreq: 'weekly',
+                priority: '0.8'
             });
         });
 
@@ -185,5 +183,60 @@ export async function seoRoutes(fastify: FastifyInstance) {
         xml += `</urlset>`;
 
         return reply.header('Content-Type', 'application/xml').send(xml);
+    });
+
+    // robots.txt — served via nginx proxy at /robots.txt (brand-aware Sitemap line)
+    fastify.get('/api/robots.txt', async (_request, reply) => {
+        const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://carsalon.pl';
+        const body = `User-agent: Googlebot
+Allow: /
+Allow: /api/sitemap.xml
+Disallow: /login
+Disallow: /api/
+Disallow: /nowy/podglad/
+Disallow: /storage/
+
+User-agent: Bingbot
+Allow: /
+Allow: /api/sitemap.xml
+Disallow: /login
+Disallow: /api/
+Disallow: /nowy/podglad/
+Disallow: /storage/
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: YandexBot
+Disallow: /
+
+User-agent: SemrushBot
+Crawl-delay: 10
+Allow: /
+Allow: /api/sitemap.xml
+Disallow: /login
+Disallow: /api/
+Disallow: /nowy/podglad/
+Disallow: /storage/
+
+User-agent: *
+Allow: /
+Allow: /api/sitemap.xml
+Disallow: /login
+Disallow: /api/
+Disallow: /nowy/podglad/
+Disallow: /storage/
+Disallow: /wordpress/
+Disallow: /backup/
+Disallow: /wp/
+Disallow: /old/
+Disallow: /new/
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+        return reply.header('Content-Type', 'text/plain; charset=utf-8').send(body);
     });
 }
