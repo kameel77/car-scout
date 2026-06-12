@@ -37,15 +37,15 @@ describe('resolveBrandCtx', () => {
         const c = resolveBrandCtx();
         expect(c.brandName).toBe('Motolia');
         expect(c.baseUrl).toBe('https://dev.motolia.pl'); // trailing slash stripped
-        process.env.BRAND = prev.BRAND;
-        process.env.FRONTEND_URL = prev.FRONTEND_URL;
+        if (prev.BRAND === undefined) delete process.env.BRAND; else process.env.BRAND = prev.BRAND;
+        if (prev.FRONTEND_URL === undefined) delete process.env.FRONTEND_URL; else process.env.FRONTEND_URL = prev.FRONTEND_URL;
     });
 
     it('defaults to carsalon', () => {
         const prev = process.env.BRAND;
         delete process.env.BRAND;
         expect(resolveBrandCtx().brandName).toBe('CarSalon');
-        process.env.BRAND = prev;
+        if (prev === undefined) delete process.env.BRAND; else process.env.BRAND = prev;
     });
 });
 
@@ -132,5 +132,18 @@ describe('injectHead', () => {
         const m = buildListingMeta({ ...LISTING, version: '</script><b>' }, 's-abc123', 'oferta', ctx);
         const html = injectHead(TEMPLATE, m);
         expect(html).not.toContain('</script><b>');
+    });
+
+    it('does not interpret $-patterns in vehicle data', () => {
+        const m = buildListingMeta({ ...LISTING, version: 'GT $& $1 $$' }, 's-abc123', 'oferta', ctx);
+        const html = injectHead(TEMPLATE, m);
+        expect(html).toContain('GT $&amp; $1 $$');
+        expect(html).not.toContain('OLDD');
+    });
+
+    it('keeps escaped JSON-LD when data contains </script>', () => {
+        const m = buildListingMeta({ ...LISTING, version: '</script><b>' }, 's-abc123', 'oferta', ctx);
+        const html = injectHead(TEMPLATE, m);
+        expect(html).toContain('\\u003c/script>');
     });
 });

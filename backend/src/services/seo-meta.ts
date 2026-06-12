@@ -146,7 +146,6 @@ interface StaticRoute {
     title: (brand: string) => string;
     description: string;
     canonicalPath?: string; // default: own path
-    organization?: boolean;
 }
 
 const STATIC_ROUTES: Record<string, StaticRoute> = {
@@ -249,17 +248,18 @@ export function injectHead(template: string, meta: PageMeta): string {
     const title = escapeAttr(meta.title);
     const description = escapeAttr(meta.description);
     let html = template
-        .replace(/<title>.*?<\/title>/, `<title>${title}</title>`)
-        .replace(/(<meta name="description" content=").*?(")/, `$1${description}$2`)
-        .replace(/(<meta property="og:title"[^>]*content=").*?(")/, `$1${title}$2`)
-        .replace(/(<meta property="og:description"[^>]*content=").*?(")/, `$1${description}$2`)
-        .replace(/(<meta name="twitter:title"[^>]*content=").*?(")/, `$1${title}$2`)
-        .replace(/(<meta name="twitter:description"[^>]*content=").*?(")/, `$1${description}$2`);
+        .replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`)
+        .replace(/(<meta name="description" content=").*?(")/, (_m, p1, p2) => `${p1}${description}${p2}`)
+        .replace(/(<meta property="og:title"[^>]*content=").*?(")/, (_m, p1, p2) => `${p1}${title}${p2}`)
+        .replace(/(<meta property="og:description"[^>]*content=").*?(")/, (_m, p1, p2) => `${p1}${description}${p2}`)
+        .replace(/(<meta name="twitter:title"[^>]*content=").*?(")/, (_m, p1, p2) => `${p1}${title}${p2}`)
+        .replace(/(<meta name="twitter:description"[^>]*content=").*?(")/, (_m, p1, p2) => `${p1}${description}${p2}`);
 
     if (meta.canonical) {
+        const canonical = escapeAttr(meta.canonical);
         html = html.replace(
             /(<meta property="og:url"[^>]*content=").*?(")/,
-            `$1${escapeAttr(meta.canonical)}$2`
+            (_m, p1, p2) => `${p1}${canonical}${p2}`
         );
     }
 
@@ -272,7 +272,7 @@ export function injectHead(template: string, meta: PageMeta): string {
         extra.push(`<script type="application/ld+json">${json}</script>`);
     }
     if (extra.length) {
-        html = html.replace('</head>', `${extra.join('\n')}\n</head>`);
+        html = html.replace('</head>', () => `${extra.join('\n')}\n</head>`);
     }
     return html;
 }
