@@ -1144,9 +1144,24 @@ Zastąp blok `location /` (sekcja "SPA Routing"):
         try_files $uri @render;
     }
 
+    # Homepage: try_files would match the root directory and serve the static
+    # shell — route it to the backend render explicitly
+    location = / {
+        limit_req zone=general burst=20 nodelay;
+        limit_req zone=scanner burst=5 nodelay;
+
+        limit_except GET HEAD {
+            deny all;
+        }
+
+        try_files /__nonexistent @render;
+    }
+
     # SEO meta-injection: backend renders index.html with per-URL head tags
     location @render {
-        proxy_pass $backend_addr/api/render?path=$uri;
+        # $request_uri stays percent-encoded (prevents request splitting);
+        # the backend strips the query part itself
+        proxy_pass $backend_addr/api/render?path=$request_uri;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $rate_limit_key;
@@ -1177,6 +1192,8 @@ Obok istniejącego bloku `location = /sitemap.xml` dodaj:
         proxy_pass $backend_addr/api/robots.txt;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $rate_limit_key;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 ```
