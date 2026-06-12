@@ -353,8 +353,7 @@ export default function ListingDetailPage() {
   // Financing type detection from URL
   const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
 
-  // Self-canonical: each financing variant (/kredyt/, /leasing/, /oferta/) is its own canonical
-  // All 3 variants are in the sitemap — Google should index each as a distinct page
+  // Financing variants (/kredyt/, /leasing/) canonicalize to /oferta/ ('gotowka' prefix)
   const canonicalPath = getListingUrlPath({
     id: listing.listing_id,
     make: listing.make,
@@ -363,7 +362,7 @@ export default function ListingDetailPage() {
     productionYear: listing.production_year,
     bodyType: listing.body_type,
     fuelType: listing.fuel_type
-  }, financingType);
+  }, 'gotowka');
 
   // Handle financing type switch from calculator tabs — updates URL without page reload
   const handleFinancingTypeChange = (newType: FinancingType) => {
