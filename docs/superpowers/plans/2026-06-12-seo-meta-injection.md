@@ -511,15 +511,19 @@ git commit -m "feat(seo): add per-URL meta builders and head injection service"
 Create `backend/src/routes/__tests__/render.test.ts`:
 
 ```ts
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
 import { __resetRenderCache } from '../render';
+import { generateListingSlug } from '../../utils/url-utils.js';
 
 const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"></div></body></html>`;
 
 describe('GET /api/render', () => {
     let app: FastifyInstance;
+    let prevBrand: string | undefined;
+    let prevFrontendUrl: string | undefined;
+    let prevInternalFrontendUrl: string | undefined;
 
     beforeAll(async () => {
         app = await buildApp();
@@ -533,6 +537,9 @@ describe('GET /api/render', () => {
 
     beforeEach(async () => {
         __resetRenderCache();
+        prevBrand = process.env.BRAND;
+        prevFrontendUrl = process.env.FRONTEND_URL;
+        prevInternalFrontendUrl = process.env.INTERNAL_FRONTEND_URL;
         process.env.BRAND = 'motolia';
         process.env.FRONTEND_URL = 'https://dev.motolia.pl';
         vi.stubGlobal(
@@ -540,6 +547,15 @@ describe('GET /api/render', () => {
             vi.fn(async () => new Response(TEMPLATE, { status: 200 }))
         );
         await app.prisma.listing.deleteMany({ where: { make: 'TEST_RENDER' } });
+    });
+
+    afterEach(async () => {
+        if (prevBrand === undefined) delete process.env.BRAND;
+        else process.env.BRAND = prevBrand;
+        if (prevFrontendUrl === undefined) delete process.env.FRONTEND_URL;
+        else process.env.FRONTEND_URL = prevFrontendUrl;
+        if (prevInternalFrontendUrl === undefined) delete process.env.INTERNAL_FRONTEND_URL;
+        else process.env.INTERNAL_FRONTEND_URL = prevInternalFrontendUrl;
     });
 
     async function createListing() {
@@ -560,7 +576,7 @@ describe('GET /api/render', () => {
 
     it('oferta: 200 with vehicle title, self-canonical and JSON-LD', async () => {
         const l = await createListing();
-        const slug = `test-render-modelo-2024-${l.id}`;
+        const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
         const res = await app.inject({ method: 'GET', url: `/api/render?path=/oferta/${slug}` });
         expect(res.statusCode).toBe(200);
         expect(res.headers['content-type']).toContain('text/html');
@@ -571,7 +587,7 @@ describe('GET /api/render', () => {
 
     it('leasing variant canonicalizes to /oferta', async () => {
         const l = await createListing();
-        const slug = `test-render-modelo-2024-${l.id}`;
+        const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
         const res = await app.inject({ method: 'GET', url: `/api/render?path=/leasing/${slug}` });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain(`rel="canonical" href="https://dev.motolia.pl/oferta/${slug}"`);
@@ -590,9 +606,10 @@ describe('GET /api/render', () => {
     it('archived listing returns 404', async () => {
         const l = await createListing();
         await app.prisma.listing.update({ where: { id: l.id }, data: { isArchived: true } });
+        const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
         const res = await app.inject({
             method: 'GET',
-            url: `/api/render?path=/oferta/test-render-modelo-2024-${l.id}`,
+            url: `/api/render?path=/oferta/${slug}`,
         });
         expect(res.statusCode).toBe(404);
     });
@@ -622,6 +639,35 @@ describe('GET /api/render', () => {
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(res.statusCode).toBe(503);
     });
+
+    it('bogus slug canonicalizes to true slug', async () => {
+        const l = await createListing();
+        const trueSlug = generateListingSlug(
+            l.make,
+            l.model,
+            l.version,
+            l.productionYear,
+            l.bodyType,
+            l.fuelType,
+            l.id
+        );
+        const bogusSlug = `totally-fake-slug-${l.id}`;
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=/oferta/${bogusSlug}` });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain(`rel="canonical" href="https://dev.motolia.pl/oferta/${trueSlug}"`);
+        expect(res.body).not.toContain('totally-fake-slug');
+    });
+
+    it('duplicate path params do not crash', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/uzywane&path=/faq' });
+        expect(res.statusCode).toBe(200);
+    });
+
+    it('trailing slash normalization', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/uzywane/' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('używane');
+    });
 });
 ```
 
@@ -636,7 +682,7 @@ Create `backend/src/routes/render.ts`:
 
 ```ts
 import { FastifyInstance } from 'fastify';
-import { extractListingIdFromSlug } from '../utils/url-utils.js';
+import { extractListingIdFromSlug, generateListingSlug } from '../utils/url-utils.js';
 import {
     buildListingMeta,
     buildRentalMeta,
@@ -653,6 +699,7 @@ const TEMPLATE_TTL_MS = 5 * 60 * 1000;
 const PAGE_TTL_MS = 60 * 1000;
 const PAGE_CACHE_MAX = 5000;
 
+// Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
 const pageCache = new Map<string, { html: string; status: number; at: number }>();
 
@@ -705,8 +752,18 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
                   },
               })
             : null;
-        if (!listing) return defaultMeta(ctx, { noindex: true, status: 404 });
-        return buildListingMeta(listing, lm[2], lm[1] as ListingVariant, ctx);
+        if (!id || !listing) return defaultMeta(ctx, { noindex: true, status: 404 });
+        // Slug z URL bywa zmanipulowany — canonical liczymy z danych, nie z requestu
+        const canonicalSlug = generateListingSlug(
+            listing.make,
+            listing.model,
+            listing.version,
+            listing.productionYear,
+            listing.bodyType,
+            listing.fuelType,
+            id
+        );
+        return buildListingMeta(listing, canonicalSlug, lm[1] as ListingVariant, ctx);
     }
 
     const rm = path.match(RENTAL_RE);
@@ -730,8 +787,10 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
 
 export async function renderRoutes(fastify: FastifyInstance) {
     fastify.get('/api/render', async (request, reply) => {
-        const rawPath = (request.query as { path?: string }).path || '/';
-        const path = rawPath.split('?')[0];
+        const q = (request.query as { path?: unknown }).path;
+        const rawPath = typeof q === 'string' && q ? q : '/';
+        let path = rawPath.split('?')[0];
+        if (path.length > 1 && path.endsWith('/')) path = path.replace(/\/+$/, '') || '/';
 
         const cached = pageCache.get(path);
         if (cached && Date.now() - cached.at < PAGE_TTL_MS) {

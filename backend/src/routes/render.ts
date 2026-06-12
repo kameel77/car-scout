@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { extractListingIdFromSlug } from '../utils/url-utils.js';
+import { extractListingIdFromSlug, generateListingSlug } from '../utils/url-utils.js';
 import {
     buildListingMeta,
     buildRentalMeta,
@@ -16,6 +16,7 @@ const TEMPLATE_TTL_MS = 5 * 60 * 1000;
 const PAGE_TTL_MS = 60 * 1000;
 const PAGE_CACHE_MAX = 5000;
 
+// Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
 const pageCache = new Map<string, { html: string; status: number; at: number }>();
 
@@ -68,8 +69,18 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
                   },
               })
             : null;
-        if (!listing) return defaultMeta(ctx, { noindex: true, status: 404 });
-        return buildListingMeta(listing, lm[2], lm[1] as ListingVariant, ctx);
+        if (!id || !listing) return defaultMeta(ctx, { noindex: true, status: 404 });
+        // Slug z URL bywa zmanipulowany — canonical liczymy z danych, nie z requestu
+        const canonicalSlug = generateListingSlug(
+            listing.make,
+            listing.model,
+            listing.version,
+            listing.productionYear,
+            listing.bodyType,
+            listing.fuelType,
+            id
+        );
+        return buildListingMeta(listing, canonicalSlug, lm[1] as ListingVariant, ctx);
     }
 
     const rm = path.match(RENTAL_RE);
@@ -93,8 +104,10 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
 
 export async function renderRoutes(fastify: FastifyInstance) {
     fastify.get('/api/render', async (request, reply) => {
-        const rawPath = (request.query as { path?: string }).path || '/';
-        const path = rawPath.split('?')[0];
+        const q = (request.query as { path?: unknown }).path;
+        const rawPath = typeof q === 'string' && q ? q : '/';
+        let path = rawPath.split('?')[0];
+        if (path.length > 1 && path.endsWith('/')) path = path.replace(/\/+$/, '') || '/';
 
         const cached = pageCache.get(path);
         if (cached && Date.now() - cached.at < PAGE_TTL_MS) {
