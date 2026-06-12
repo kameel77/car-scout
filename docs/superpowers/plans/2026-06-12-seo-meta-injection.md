@@ -874,6 +874,7 @@ describe('SEO routes', () => {
     });
 
     afterAll(async () => {
+        await app.prisma.listing.deleteMany({ where: { make: 'TEST_SITEMAP' } });
         await app.close();
     });
 
@@ -896,7 +897,7 @@ describe('SEO routes', () => {
         const res = await app.inject({ method: 'GET', url: '/api/sitemap.xml' });
         expect(res.statusCode).toBe(200);
         // sanitizeForSlug strips '_' → 'TEST_SITEMAP' becomes 'testsitemap'
-        expect(res.body).toContain('/oferta/testsitemap-x-2024-');
+        expect(res.body).toContain('<loc>https://dev.motolia.pl/oferta/testsitemap-x-2024-');
         expect(res.body).not.toContain('<loc>https://dev.motolia.pl/leasing/');
         expect(res.body).not.toContain('<loc>https://dev.motolia.pl/kredyt/');
         expect(res.body).toContain('<loc>https://dev.motolia.pl/uzywane</loc>');
