@@ -22,6 +22,7 @@ import { faqRoutes } from './routes/faq.js';
 import { leadRoutes } from './routes/leads.js';
 import { financingRoutes } from './routes/financing.js';
 import { seoRoutes } from './routes/seo.js';
+import { renderRoutes } from './routes/render.js';
 import { crmTrackingRoutes } from './routes/crmTracking.js';
 import { partnerAdsRoutes } from './routes/partnerAds.js';
 import { otomotoEmulatorRoutes } from './routes/otomotoEmulator.js';
@@ -266,6 +267,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(leadRoutes);
     await fastify.register(financingRoutes);
     await fastify.register(seoRoutes);
+    await fastify.register(renderRoutes);
     await fastify.register(crmTrackingRoutes);
     await fastify.register(partnerAdsRoutes);
     await fastify.register(otomotoEmulatorRoutes);
