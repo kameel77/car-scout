@@ -8,6 +8,7 @@ type BrandId = 'carsalon' | 'motolia';
 const brandMeta: Record<BrandId, {
   title: string;
   description: string;
+  author: string;
   favicon: string;
   ogTitle: string;
   ogDescription: string;
@@ -16,6 +17,7 @@ const brandMeta: Record<BrandId, {
 }> = {
   carsalon: {
     title: 'CarSalon - auta nowe i używane z gwarancją',
+    author: 'CarSalon',
     description: 'Setki ofert od sprawdzonych dealerów. Nowe i używane samochody z gwarancją.',
     favicon: '/brands/carsalon/favicon.png',
     ogTitle: 'CarSalon - auta nowe i używane z gwarancją',
@@ -25,6 +27,7 @@ const brandMeta: Record<BrandId, {
   },
   motolia: {
     title: 'Motolia - leasing, kredyt i wynajem samochodów',
+    author: 'Motolia',
     description: 'Szeroki wybór aut. Proste finansowanie. Leasing, kredyt i wynajem długoterminowy.',
     favicon: '/brands/motolia/favicon.png',
     ogTitle: 'Motolia - szeroki wybór aut, proste finansowanie',
@@ -65,6 +68,7 @@ export default defineConfig(({ mode }) => {
           return html
             .replace(/<title>.*?<\/title>/, `<title>${meta.title}</title>`)
             .replace(/(<meta name="description" content=").*?(")/,  `$1${meta.description}$2`)
+            .replace(/(<meta name="author" content=").*?(")/,        `$1${meta.author}$2`)
             .replace(/(<link rel="icon"[^>]*href=").*?(")/,         `$1${meta.favicon}$2`)
             .replace(/(<link rel="apple-touch-icon"[^>]*href=").*?(")/,`$1${meta.favicon}$2`)
             .replace(/(<meta property="og:title"[^>]*content=").*?(")/,       `$1${meta.ogTitle}$2`)
