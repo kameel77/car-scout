@@ -37,9 +37,10 @@ async function getTemplate(): Promise<string | null> {
         templateCache = { html, fetchedAt: Date.now() };
         return html;
     } catch (e) {
-        // stale-if-error: Use stale cache ONLY if it's less than 1 hour old, 
-        // to prevent getting stuck with a permanently broken template.
-        if (templateCache && Date.now() - templateCache.fetchedAt < 60 * 60 * 1000) {
+        // stale-if-error: Use stale cache ONLY for a few seconds during brief network blips
+        // to prevent serving an old index.html (which points to missing chunks) for a long time.
+        // If frontend is down longer, returning null will cause a 503, triggering Nginx @spa_fallback
+        if (templateCache && Date.now() - templateCache.fetchedAt < 10 * 1000) {
             return templateCache.html;
         }
         return null;
