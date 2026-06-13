@@ -64,10 +64,10 @@ services:
     pull_policy: always
     container_name: "${COMPOSE_PROJECT_NAME}-frontend"
     environment:
-      # Use Docker Compose service name — always resolves deterministically on carscout-private network.
-      # Network aliases (like "backend") are non-deterministic when container is on multiple networks (coolify + private).
-      # The service name "carscout-api" is unique per project and never causes DNS collisions.
-      BACKEND_URL: "http://carscout-api:3000"
+      # Use the unique alias defined on the coolify network to prevent DNS collisions
+      # across multiple environments. Do NOT use the compose service name "carscout-api"
+      # because it is shared across all environments on the coolify network.
+      BACKEND_URL: "http://${COMPOSE_PROJECT_NAME}-backend:3000"
     restart: unless-stopped
     expose:
       - "80"
