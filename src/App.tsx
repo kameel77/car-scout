@@ -20,11 +20,12 @@ import { SeoManager } from '@/components/seo/SeoManager';
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
 import './i18n';
 
-import SearchPage from "./pages/SearchPage";
-import ListingDetailPage from "./pages/ListingDetailPage";
-import LeadFormPage from "./pages/LeadFormPage";
 import HomePage from "./pages/HomePage";
-import NotFound from "./pages/NotFound";
+
+const SearchPage = lazy(() => import("./pages/SearchPage"));
+const ListingDetailPage = lazy(() => import("./pages/ListingDetailPage"));
+const LeadFormPage = lazy(() => import("./pages/LeadFormPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Lazy load non-critical page components to enable code splitting
 const ContactPage = lazy(() => import("./pages/ContactPage"));
