@@ -30,7 +30,14 @@ async function getTemplate(): Promise<string | null> {
         return templateCache.html;
     }
     try {
-        const base = (process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80').replace(/\/$/, '');
+        // Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
+        // which might resolve to dangling old frontend containers.
+        // Fallback to INTERNAL_FRONTEND_URL or http://frontend:80.
+        let base = process.env.SERVICE_URL_FRONTEND || process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80';
+        if (base === 'http://frontend:80' && process.env.INTERNAL_FRONTEND_URL && process.env.INTERNAL_FRONTEND_URL !== 'http://frontend:80') {
+            base = process.env.INTERNAL_FRONTEND_URL;
+        }
+        base = base.replace(/\/$/, '');
         const res = await fetch(`${base}/index.html`);
         if (!res.ok) throw new Error(`template fetch status ${res.status}`);
         const html = await res.text();
