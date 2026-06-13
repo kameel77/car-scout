@@ -17,6 +17,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import { ConsentBanner } from "./components/consent/ConsentBanner";
 import { HelmetProvider } from 'react-helmet-async';
 import { SeoManager } from '@/components/seo/SeoManager';
+import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
 import './i18n';
 
 import SearchPage from "./pages/SearchPage";
@@ -76,10 +77,11 @@ const App = () => (
                 <SpecialOfferProvider>
                   <CrmTrackingProvider>
                   <PersonalOfferProvider>
-                    <Suspense fallback={null}>
-                      <Routes>
-                      {/* Public routes */}
-                      <Route path="/" element={<HomePage />} />
+                    <ChunkErrorBoundary>
+                      <Suspense fallback={null}>
+                        <Routes>
+                        {/* Public routes */}
+                        <Route path="/" element={<HomePage />} />
                       <Route path="/samochody" element={<SearchPage />} />
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/nowe" element={<ConditionPage condition="NEW" />} />
@@ -277,6 +279,7 @@ const App = () => (
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                     </Suspense>
+                    </ChunkErrorBoundary>
                     <ConsentBanner />
                   </PersonalOfferProvider>
                 </CrmTrackingProvider>

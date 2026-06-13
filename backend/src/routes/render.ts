@@ -36,9 +36,13 @@ async function getTemplate(): Promise<string | null> {
         const html = await res.text();
         templateCache = { html, fetchedAt: Date.now() };
         return html;
-    } catch {
-        // stale-if-error: lepszy stary szablon niż brak strony
-        return templateCache?.html ?? null;
+    } catch (e) {
+        // stale-if-error: Use stale cache ONLY if it's less than 1 hour old, 
+        // to prevent getting stuck with a permanently broken template.
+        if (templateCache && Date.now() - templateCache.fetchedAt < 60 * 60 * 1000) {
+            return templateCache.html;
+        }
+        return null;
     }
 }
 
