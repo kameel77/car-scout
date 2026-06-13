@@ -67,8 +67,8 @@ services:
     pull_policy: always
     container_name: "${COMPOSE_PROJECT_NAME}-frontend"
     environment:
-      # Force internal backend URL to prevent proxy loops if user sets external URL in Coolify
-      BACKEND_URL: "http://backend:3000"
+      # Force internal backend URL using container name and dynamic port to prevent loops and connection refused
+      BACKEND_URL: "http://${COMPOSE_PROJECT_NAME}-api:${PORT:-3000}"
     restart: unless-stopped
     expose:
       - "80"
