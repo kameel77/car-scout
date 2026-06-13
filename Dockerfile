@@ -24,6 +24,7 @@ FROM nginx:alpine
 
 # Runtime backend proxy target (override via env)
 ENV BACKEND_URL=http://backend:3000
+ENV VITE_TURNSTILE_SITE_KEY=""
 
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -33,10 +34,6 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Copy rate limiting config (http-level directives, not templated)
 COPY nginx-rate-limit.conf /etc/nginx/conf.d/rate-limit.conf
-
-# Copy dynamic turnstile site key replacement script
-COPY replace-turnstile-key.sh /docker-entrypoint.d/30-replace-turnstile-key.sh
-RUN chmod +x /docker-entrypoint.d/30-replace-turnstile-key.sh
 
 EXPOSE 80
 
