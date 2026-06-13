@@ -520,7 +520,7 @@ export default function SearchPage() {
                   <ListingCardSkeleton key={i} />
                 ))
               ) : (
-                listings.map((listing, index) => {
+                listings.flatMap((listing, index) => {
                   const elements = [];
 
                   // Add the listing card
@@ -537,7 +537,7 @@ export default function SearchPage() {
                     if (ad) {
                       elements.push(
                         <PartnerAdCard
-                          key={`ad-${index}`}
+                          key={`ad-${listing.listing_id}-${index}`}
                           index={index + 1}
                           title={(ad as any)[`title${suffix}`] || ad.title}
                           description={(ad as any)[`description${suffix}`] || ad.description || ''}

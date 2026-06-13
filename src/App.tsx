@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,50 +11,54 @@ import { CrmTrackingProvider } from "@/contexts/CrmTrackingContext";
 import { PersonalOfferProvider } from "@/contexts/PersonalOfferContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BrandProvider } from "@/contexts/BrandContext";
-import SearchPage from "./pages/SearchPage";
-import ListingDetailPage from "./pages/ListingDetailPage";
-import LeadFormPage from "./pages/LeadFormPage";
-import HomePage from "./pages/HomePage";
-import ContactPage from "./pages/ContactPage";
-import PublicFaqPage from "./pages/PublicFaqPage";
-import LoginPage from "./pages/admin/LoginPage";
-import AdminDashboard from "./pages/admin/DashboardPage";
-import TranslationsPage from "./pages/admin/TranslationsPage";
-import UsersPage from "./pages/admin/UsersPage";
-import FaqPage from "./pages/admin/FaqPage";
-import FeatureTilesPage from "./pages/admin/FeatureTilesPage";
-import FinancingPage from "./pages/admin/FinancingPage";
-import ImportPage from "./pages/admin/ImportPage";
-import PriceAnalyticsPage from "./pages/admin/PriceAnalyticsPage";
-import ListingManagementPage from "./pages/admin/ListingManagementPage";
-import ListingNewPage from "./pages/admin/ListingNewPage";
-import ListingEditPage from "./pages/admin/ListingEditPage";
-import NotFound from "./pages/NotFound";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
-import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/admin/ResetPasswordPage";
-import './i18n';
-
+import AdminLayout from "./components/admin/AdminLayout";
+import { ConsentBanner } from "./components/consent/ConsentBanner";
 import { HelmetProvider } from 'react-helmet-async';
 import { SeoManager } from '@/components/seo/SeoManager';
-import SeoPage from "./pages/admin/SeoPage";
-import AdminLayout from "./components/admin/AdminLayout";
-import AdminPartnersPage from "./pages/admin/PartnersPage";
-import RentalVehiclesPage from "./pages/admin/RentalVehiclesPage";
-import RentalCompaniesPage from "./pages/admin/RentalCompaniesPage";
-import RentalMatrixPage from "./pages/admin/RentalMatrixPage";
-import PersonalOfferPage from "./pages/PersonalOfferPage";
-import B2BOnepagerPage from "./pages/B2BOnepagerPage";
-import RentalSearchPage from "./pages/RentalSearchPage";
-import RentalDetailPage from "./pages/RentalDetailPage";
-import ConditionPage from "./pages/ConditionPage";
-import RentalLeadFormPage from "./pages/RentalLeadFormPage";
-import DealerGroupsPage from "./pages/admin/DealerGroupsPage";
-import DealersPage from "./pages/admin/DealersPage";
-import WidgetsPage from "./pages/admin/WidgetsPage";
-import WidgetEmbedPage from "./pages/WidgetEmbedPage";
-import { ConsentBanner } from "./components/consent/ConsentBanner";
+import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
+import './i18n';
+
+import HomePage from "./pages/HomePage";
+
+const SearchPage = lazy(() => import("./pages/SearchPage"));
+const ListingDetailPage = lazy(() => import("./pages/ListingDetailPage"));
+const LeadFormPage = lazy(() => import("./pages/LeadFormPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Lazy load non-critical page components to enable code splitting
+const ContactPage = lazy(() => import("./pages/ContactPage"));
+const PublicFaqPage = lazy(() => import("./pages/PublicFaqPage"));
+const LoginPage = lazy(() => import("./pages/admin/LoginPage"));
+const AdminDashboard = lazy(() => import("./pages/admin/DashboardPage"));
+const TranslationsPage = lazy(() => import("./pages/admin/TranslationsPage"));
+const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
+const FaqPage = lazy(() => import("./pages/admin/FaqPage"));
+const FeatureTilesPage = lazy(() => import("./pages/admin/FeatureTilesPage"));
+const FinancingPage = lazy(() => import("./pages/admin/FinancingPage"));
+const ImportPage = lazy(() => import("./pages/admin/ImportPage"));
+const PriceAnalyticsPage = lazy(() => import("./pages/admin/PriceAnalyticsPage"));
+const ListingManagementPage = lazy(() => import("./pages/admin/ListingManagementPage"));
+const ListingNewPage = lazy(() => import("./pages/admin/ListingNewPage"));
+const ListingEditPage = lazy(() => import("./pages/admin/ListingEditPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/admin/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/admin/ResetPasswordPage"));
+const SeoPage = lazy(() => import("./pages/admin/SeoPage"));
+const AdminPartnersPage = lazy(() => import("./pages/admin/PartnersPage"));
+const RentalVehiclesPage = lazy(() => import("./pages/admin/RentalVehiclesPage"));
+const RentalCompaniesPage = lazy(() => import("./pages/admin/RentalCompaniesPage"));
+const RentalMatrixPage = lazy(() => import("./pages/admin/RentalMatrixPage"));
+const PersonalOfferPage = lazy(() => import("./pages/PersonalOfferPage"));
+const B2BOnepagerPage = lazy(() => import("./pages/B2BOnepagerPage"));
+const RentalSearchPage = lazy(() => import("./pages/RentalSearchPage"));
+const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
+const ConditionPage = lazy(() => import("./pages/ConditionPage"));
+const RentalLeadFormPage = lazy(() => import("./pages/RentalLeadFormPage"));
+const DealerGroupsPage = lazy(() => import("./pages/admin/DealerGroupsPage"));
+const DealersPage = lazy(() => import("./pages/admin/DealersPage"));
+const WidgetsPage = lazy(() => import("./pages/admin/WidgetsPage"));
+const WidgetEmbedPage = lazy(() => import("./pages/WidgetEmbedPage"));
 
 const queryClient = new QueryClient();
 
@@ -73,9 +78,11 @@ const App = () => (
                 <SpecialOfferProvider>
                   <CrmTrackingProvider>
                   <PersonalOfferProvider>
-                    <Routes>
-                      {/* Public routes */}
-                      <Route path="/" element={<HomePage />} />
+                    <ChunkErrorBoundary>
+                      <Suspense fallback={null}>
+                        <Routes>
+                        {/* Public routes */}
+                        <Route path="/" element={<HomePage />} />
                       <Route path="/samochody" element={<SearchPage />} />
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/nowe" element={<ConditionPage condition="NEW" />} />
@@ -272,6 +279,8 @@ const App = () => (
 
                       <Route path="*" element={<NotFound />} />
                     </Routes>
+                    </Suspense>
+                    </ChunkErrorBoundary>
                     <ConsentBanner />
                   </PersonalOfferProvider>
                 </CrmTrackingProvider>

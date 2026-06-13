@@ -29,8 +29,8 @@ export function Turnstile({ onVerify, onExpire, onError }: TurnstileProps) {
     const containerRef = React.useRef<HTMLDivElement | null>(null);
     const widgetIdRef = React.useRef<string | null>(null);
 
-    // Turnstile Site Key from environment or official Cloudflare testing key (always passes)
-    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
+    // Turnstile Site Key from dynamic config (window.ENV), environment, or official Cloudflare testing key (always passes)
+    const siteKey = (window as any).ENV?.TURNSTILE_SITE_KEY || import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
 
     React.useEffect(() => {
         // 1. Define callback for script load

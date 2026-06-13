@@ -80,10 +80,37 @@ export default defineConfig(({ mode }) => {
             .replace(/(<meta name="twitter:image"[^>]*content=").*?(")/,        `$1${meta.ogImage}$2`);
         },
       },
+      {
+        name: 'inline-css',
+        enforce: 'post',
+        generateBundle(options, bundle) {
+          const htmlChunk = bundle['index.html'];
+          if (!htmlChunk || htmlChunk.type !== 'asset') return;
+
+          let html = htmlChunk.source.toString();
+
+          for (const key in bundle) {
+            if (key.endsWith('.css')) {
+              const cssChunk = bundle[key];
+              if (cssChunk.type === 'asset') {
+                const cssContent = cssChunk.source.toString();
+                const linkRegex = new RegExp(`<link[^>]*href="[^"]*${key}"[^>]*>`);
+                if (linkRegex.test(html)) {
+                  html = html.replace(linkRegex, `<style>${cssContent}</style>`);
+                  delete bundle[key]; // Do not emit the css file anymore since it's fully inlined
+                }
+              }
+            }
+          }
+          htmlChunk.source = html;
+        }
+      },
     ].filter(Boolean),
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        "@brand-home": path.resolve(__dirname, `./src/pages/${brand === 'motolia' ? 'MotoliaHomePage' : 'CarsalonHomePage'}.tsx`),
+        "@brand-contact": path.resolve(__dirname, `./src/pages/${brand === 'motolia' ? 'MotoliaContactPage' : 'CarsalonContactPage'}.tsx`),
       },
     },
   };
