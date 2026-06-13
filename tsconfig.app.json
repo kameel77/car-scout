@@ -23,7 +23,9 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@brand-home": ["./src/pages/CarsalonHomePage"],
+      "@brand-contact": ["./src/pages/CarsalonContactPage"]
     }
   },
   "include": ["src"]

@@ -25,23 +25,23 @@ services:
     container_name: "${COMPOSE_PROJECT_NAME}-api"
     restart: unless-stopped
     expose:
-      - "${PORT:-3000}"
+      - "3000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      PORT: ${PORT:-3000}
+      PORT: "3000"
       NODE_ENV: production
       FRONTEND_URL: ${FRONTEND_URL}
       ANALYTICS_DEFAULT_DAYS: ${ANALYTICS_DEFAULT_DAYS:-30}
       ANALYTICS_MAX_DAYS: ${ANALYTICS_MAX_DAYS:-365}
       ANALYTICS_CACHE_TTL: ${ANALYTICS_CACHE_TTL:-300}
       CORS_ORIGINS: ${CORS_ORIGINS}
-      INTERNAL_FRONTEND_URL: ${INTERNAL_FRONTEND_URL:-http://frontend:80}
+      INTERNAL_FRONTEND_URL: ${INTERNAL_FRONTEND_URL:-http://${COMPOSE_PROJECT_NAME}-frontend:80}
       BRAND: ${BRAND:-carsalon}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3000}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -64,7 +64,10 @@ services:
     pull_policy: always
     container_name: "${COMPOSE_PROJECT_NAME}-frontend"
     environment:
-      BACKEND_URL: ${BACKEND_URL:-http://backend:3000}
+      # Use Docker Compose service name — always resolves deterministically on carscout-private network.
+      # Network aliases (like "backend") are non-deterministic when container is on multiple networks (coolify + private).
+      # The service name "carscout-api" is unique per project and never causes DNS collisions.
+      BACKEND_URL: "http://carscout-api:3000"
     restart: unless-stopped
     expose:
       - "80"
@@ -79,7 +82,9 @@ services:
       carscout-private:
         aliases:
           - frontend
-      coolify: {}
+      coolify:
+        aliases:
+          - "${COMPOSE_PROJECT_NAME}-frontend"
 
 # No named volumes - using bind mount (see carscout-api volumes above).
 # Host path /srv/carscout-prod-uploads must exist before deploy.

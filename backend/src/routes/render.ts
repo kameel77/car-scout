@@ -30,15 +30,27 @@ async function getTemplate(): Promise<string | null> {
         return templateCache.html;
     }
     try {
-        const base = (process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80').replace(/\/$/, '');
+        // Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
+        // which might resolve to dangling old frontend containers.
+        // Fallback to INTERNAL_FRONTEND_URL or http://frontend:80.
+        let base = process.env.SERVICE_URL_FRONTEND || process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80';
+        if (base === 'http://frontend:80' && process.env.INTERNAL_FRONTEND_URL && process.env.INTERNAL_FRONTEND_URL !== 'http://frontend:80') {
+            base = process.env.INTERNAL_FRONTEND_URL;
+        }
+        base = base.replace(/\/$/, '');
         const res = await fetch(`${base}/index.html`);
         if (!res.ok) throw new Error(`template fetch status ${res.status}`);
         const html = await res.text();
         templateCache = { html, fetchedAt: Date.now() };
         return html;
-    } catch {
-        // stale-if-error: lepszy stary szablon niż brak strony
-        return templateCache?.html ?? null;
+    } catch (e) {
+        // stale-if-error: Use stale cache ONLY for a few seconds during brief network blips
+        // to prevent serving an old index.html (which points to missing chunks) for a long time.
+        // If frontend is down longer, returning null will cause a 503, triggering Nginx @spa_fallback
+        if (templateCache && Date.now() - templateCache.fetchedAt < 10 * 1000) {
+            return templateCache.html;
+        }
+        return null;
     }
 }
 

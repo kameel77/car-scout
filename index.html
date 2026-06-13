@@ -7,6 +7,19 @@
     <meta name="description" content="Setki ofert od sprawdzonych dealerów. Nowe i używane samochody z gwarancją." />
     <meta name="author" content="CarSalon" />
 
+    <!-- Resource hints for external LCP images -->
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link rel="preconnect" href="https://krqwvegfxnlwdhgjuflh.supabase.co" />
+
+    <!-- Preload critical API data to avoid network waterfall -->
+    <link rel="preload" href="/api/settings" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/seo" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/feature-tiles/public" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/listings/options" as="fetch" crossorigin="anonymous" />
+
+    <!-- Dynamic Environment Config (Turnstile Site Key) -->
+    <script src="/config.js"></script>
+
     <link rel="icon" type="image/png" href="/brands/carsalon/favicon.png" />
     <link rel="apple-touch-icon" href="/brands/carsalon/favicon.png" />
 

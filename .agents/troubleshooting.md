@@ -238,10 +238,11 @@ docker exec <frontend_container> wget -qO- http://<backend_ip>:3000/api/settings
 |---|---|---|---|
 | 2026-02-23 | Pętla 502 requestów kalkulatora | Debounce 500ms + max 3 retry + logi InBank | staging |
 | 2026-02-23 | Max wpłata = 0% powoduje złe filtrowanie | Zmieniono na 50% w admin panelu | n/a (DB) |
-| 2026-03-18 | 504 Gateway Timeout — DNS collision | Zmieniono `BACKEND_URL` na `${APP_UUID}-backend:3000` | n/a (Coolify ENV) |
+| 2026-03-18 | 504 Gateway Timeout - DNS collision | Zmieniono `BACKEND_URL` na `${APP_UUID}-backend:3000` | n/a (Coolify ENV) |
 | 2026-03-18 | Traefik stracił routing po restartach | `docker restart coolify-proxy` | n/a (serwer) |
 | 2026-03-24 | Cykliczne DOWN/UP + agresywne boty | Hardening nginx + robots.txt | dev |
-| 2026-04-11 | 504/502 — Traefik Docker provider wrong network | Dodano `--providers.docker.network=coolify` do compose proxy + stop privacy4cars container | n/a (serwer) |
+| 2026-04-11 | 504/502 - Traefik Docker provider wrong network | Dodano `--providers.docker.network=coolify` do compose proxy + stop privacy4cars container | n/a (serwer) |
+| 2026-06-13 | Biały screen na motolia.pl - DNS collision | Dodano unikalny alias frontendu na sieci coolify i zaktualizowano INTERNAL_FRONTEND_URL | dev |
 
 ---
 
@@ -306,9 +307,35 @@ ssh izzy-apps 'docker inspect coolify-proxy --format "{{.Args}}" | grep -o "prov
 ssh izzy-apps 'docker logs coolify-proxy --since 60s 2>&1 | grep -i "error\|502\|eof\|dial\|refused" | tail -10'
 
 # 7. Po naprawie: zweryfikuj WSZYSTKIE środowiska
-for domain in carsalon.pl staging.carsalon.pl askauto.de staging.askauto.de crm.carsalon.pl; do
+for domain in carsalon.pl staging.carsalon.pl askauto.de staging.askauto.de crm.carsalon.pl motolia.pl; do
   echo -n "$domain: "
   curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Mozilla/5.0" "https://$domain/"
   echo
 done
 ```
+
+---
+
+### #8: DNS Collision on Shared Network - frontend Template Mismatch (2026-06-13)
+
+**Objawy**:
+- Biały screen na stronie głównej `motolia.pl` (lub innych podstronach).
+- HTML ładuje się poprawnie (status 200), ale zwraca stare/nieistniejące nazwy plików JS/CSS (np. `/assets/index-BEPF2Ruj.js` zwracający 404).
+- Nowo zbudowany i uruchomiony kontener frontend ma w rzeczywistości inne nazwy plików w `/usr/share/nginx/html/assets/` (np. `index-DwB2pNyS.js`).
+
+**Przyczyna**:
+1. Backend w `render.ts` pobiera `index.html` z kontenera frontend przy użyciu zmiennej `INTERNAL_FRONTEND_URL` (domyślnie `http://frontend:80`).
+2. Ponieważ kontener backendu jest podłączony zarówno do prywatnej sieci, jak i do współdzielonej sieci `coolify`, Docker DNS rozwiązuje nazwę hosta `frontend` niejednoznacznie.
+3. Obie instancje (staging i production) rejestrują nazwę usługi `frontend` jako alias na sieci `coolify`.
+4. W efekcie backend produkcyjny pobrał i zapisał w pamięci cache szablon `index.html` z kontenera stagingowego (który odwoływał się do starych plików JS/CSS). Klient pobierając stronę dostawał stary HTML, ale jego zapytania o pliki statyczne trafiały do produkcyjnego Nginxa, który ich nie posiadał (stąd błąd 404 i biały ekran).
+
+**FIX**:
+1. W `docker-compose.coolify.yml` dodano unikalny alias dla frontendu na sieci `coolify`:
+   ```yaml
+         coolify:
+           aliases:
+             - "${COMPOSE_PROJECT_NAME}-frontend"
+   ```
+2. Zaktualizowano domyślną wartość `INTERNAL_FRONTEND_URL` w `docker-compose.coolify.yml` na `http://${COMPOSE_PROJECT_NAME}-frontend:80`.
+3. Na serwerze `hetzner-motolia` zaktualizowano plik compose i `.env` w `/data/coolify/applications/b78hl34lxvjq5m2fqhm3amy0/`, ustawiając `INTERNAL_FRONTEND_URL=http://b78hl34lxvjq5m2fqhm3amy0-frontend:80` oraz dodając alias sieciowy.
+4. Wykonano `docker compose up -d --force-recreate` w katalogu aplikacji produkcyjnej.

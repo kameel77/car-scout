@@ -111,7 +111,18 @@ export default function CarsalonHomePage() {
             </div>
           </div>
           <div className="home-hero__visual">
-            <img src={config.homePage.hero.image} alt={`${config.name} - auta`} />
+            <img 
+              src={config.homePage.hero.image.includes('unsplash.com') 
+                ? `${config.homePage.hero.image.split('?')[0]}?q=80&w=1200&fm=webp&auto=format&fit=crop` 
+                : config.homePage.hero.image} 
+              srcSet={config.homePage.hero.image.includes('unsplash.com')
+                ? `${config.homePage.hero.image.split('?')[0]}?q=80&w=600&fm=webp&auto=format&fit=crop 600w, ${config.homePage.hero.image.split('?')[0]}?q=80&w=1200&fm=webp&auto=format&fit=crop 1200w, ${config.homePage.hero.image.split('?')[0]}?q=80&w=2000&fm=webp&auto=format&fit=crop 2000w`
+                : undefined}
+              sizes="(max-width: 768px) 100vw, 50vw"
+              fetchPriority="high" 
+              loading="eager"
+              alt={`${config.name} - auta`} 
+            />
             <div className="home-hero__stat home-hero__stat--left">
               <strong>{config.homePage.hero.stats[0].value}</strong>
               <small>{config.homePage.hero.stats[0].label}</small>
