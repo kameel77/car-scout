@@ -62,9 +62,16 @@ async function optimizeUrl(url: string | null): Promise<string | null> {
     } catch {
         console.warn(`[WARN] File not found on disk, trying to fetch from production: ${url}`);
         try {
-            const prodUrl = `https://motolia.pl${url}`;
-            const response = await fetch(prodUrl);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            let prodUrl = `https://motolia.pl${url}`;
+            let response = await fetch(prodUrl);
+            if (!response.ok) {
+                // Try dev.motolia.pl as fallback in case Cloudflare has it cached there
+                prodUrl = `https://dev.motolia.pl${url}`;
+                response = await fetch(prodUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            }
             buffer = await response.buffer();
             // Save the downloaded file to disk so we have a local copy before optimizing
             await fs.mkdir(path.dirname(fullPath), { recursive: true });
