@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Car } from 'lucide-react';
 import { featureTilesApi } from '@/services/api';
+import { OptimizedImage } from '@/components/OptimizedImage';
 
 interface FeatureTilesSectionProps {
     heading?: string;
@@ -54,9 +55,13 @@ export function FeatureTilesSection({ heading, className }: FeatureTilesSectionP
                                 className="group relative aspect-[4/5] rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow bg-slate-900"
                             >
                                 {tile.imageUrl ? (
-                                    <img
+                                    <OptimizedImage
                                         src={tile.imageUrl}
                                         alt={tile.title}
+                                        width="400"
+                                        height="500"
+                                        loading="lazy"
+                                        forceThumbnail={true}
                                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     />
                                 ) : (
@@ -66,9 +71,9 @@ export function FeatureTilesSection({ heading, className }: FeatureTilesSectionP
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/70" />
                                 <div className="relative h-full flex flex-col justify-between p-4">
-                                    <h3 className="text-white text-base sm:text-lg font-bold text-center leading-tight drop-shadow">
+                                    <div className="text-white text-base sm:text-lg font-bold text-center leading-tight drop-shadow">
                                         {tile.title}
-                                    </h3>
+                                    </div>
                                     {typeof tile.vehicleCount === 'number' && (
                                         <div className="bg-white rounded-full px-4 py-2 flex items-center justify-between gap-2 shadow-sm">
                                             <span className="text-sm font-semibold text-foreground">

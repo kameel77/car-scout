@@ -271,7 +271,7 @@ export default function MotoliaHomePage() {
                   {item.icon === 'FileText'   && <FileText    size={26} style={{ color: YELLOW_DARK }} />}
                   {item.icon === 'Phone'      && <Clock       size={26} style={{ color: YELLOW_DARK }} />}
                 </div>
-                <h3 className="text-gray-800 font-bold text-base leading-snug">{item.label}</h3>
+                <div className="text-gray-800 font-bold text-base leading-snug">{item.label}</div>
               </FadeIn>
             ))}
           </div>

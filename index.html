@@ -7,14 +7,14 @@
     <meta name="description" content="Setki ofert od sprawdzonych dealerów. Nowe i używane samochody z gwarancją." />
     <meta name="author" content="CarSalon" />
 
-    <!-- Resource hints for external LCP images -->
-    <link rel="preconnect" href="https://images.unsplash.com" />
-    <link rel="preconnect" href="https://krqwvegfxnlwdhgjuflh.supabase.co" />
-
     <!-- Preload critical API data to avoid network waterfall -->
     <link rel="preload" href="/api/settings" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/seo" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/translations" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/widgets/render?placement=HOME" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/faq?page=home" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/feature-tiles/public" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/geo" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/listings/options" as="fetch" crossorigin="anonymous" />
 
     <!-- Dynamic Environment Config (Turnstile Site Key) -->

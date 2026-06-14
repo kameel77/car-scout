@@ -107,11 +107,9 @@ export async function buildApp(): Promise<FastifyInstance> {
         maxRetriesPerRequest: 1,
         lazyConnect: true, // Don't connect immediately
         retryStrategy: (times) => {
-            if (times > 3) {
-                console.log('❌ Redis: Max retries reached, giving up.');
-                return null;
-            }
-            return Math.min(times * 200, 1000);
+            // Reconnect indefinitely, increasing delay up to 5 seconds
+            console.log(`⚠️ Redis: Attempting to reconnect (try ${times})...`);
+            return Math.min(times * 500, 5000);
         }
     });
 
@@ -341,6 +339,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         'regulamin',
         'polityka-cookies',
         'feature-tiles',
+        'migrated-images',
     ]);
     fastify.get('/uploads/:slug/:file', async (request, reply) => {
         const { slug, file } = request.params as { slug: string; file: string };

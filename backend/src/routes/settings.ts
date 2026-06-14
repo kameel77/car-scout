@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import crypto from 'crypto';
+import sharp from 'sharp';
 
 const LEGAL_LANGUAGES = ['pl', 'en', 'de'] as const;
 const LEGAL_DOC_KEYS = ['imprint', 'privacyPolicy', 'terms', 'cookies'] as const;
@@ -430,12 +431,17 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Invalid file type. Use png/jpg/svg/webp.' });
         }
 
-        const buffer = await file.toBuffer();
-        const mimeType = ext === '.svg' ? 'image/svg+xml'
-            : ext === '.png' ? 'image/png'
-                : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
-                    : ext === '.webp' ? 'image/webp'
-                        : 'image/png'; // fallback
+        let buffer = await file.toBuffer();
+        let mimeType = 'image/webp';
+
+        if (ext === '.svg') {
+            mimeType = 'image/svg+xml';
+        } else {
+            buffer = await sharp(buffer)
+                .resize({ width: 800, withoutEnlargement: true }) // ograniczenie wielkości logotypu
+                .webp({ quality: 90 }) // konwersja do lekkiego formatu
+                .toBuffer();
+        }
 
         const base64 = buffer.toString('base64');
         const url = `data:${mimeType};base64,${base64}`;

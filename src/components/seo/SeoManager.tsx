@@ -84,19 +84,37 @@ export function SeoManager() {
             }
             pushConsentDefault(analytics, marketing);
 
-            // Google Tag Manager — pushes gtm.start after consent default so gtag.js boots with correct state
-            (function (w: any, d: any, s: any, l: any, i: any) {
-                w[l] = w[l] || []; w[l].push({
-                    'gtm.start':
-                        new Date().getTime(), event: 'gtm.js'
-                });
-                const f = d.getElementsByTagName(s)[0];
-                const j = d.createElement(s);
-                const dl = l != 'dataLayer' ? '&l=' + l : '';
-                j.async = true;
-                j.src =
-                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-            })(window, document, 'script', 'dataLayer', gtmId);
+            // Lazy Load GTM on user interaction to drastically improve PageSpeed
+            const injectGTM = () => {
+                if (cancelled || (window as any)._gtmLoaded) return;
+                (window as any)._gtmLoaded = true;
+                
+                (function (w: any, d: any, s: any, l: any, i: any) {
+                    w[l] = w[l] || []; w[l].push({
+                        'gtm.start':
+                            new Date().getTime(), event: 'gtm.js'
+                    });
+                    const f = d.getElementsByTagName(s)[0];
+                    const j = d.createElement(s);
+                    const dl = l != 'dataLayer' ? '&l=' + l : '';
+                    j.async = true;
+                    j.src =
+                        'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+                })(window, document, 'script', 'dataLayer', gtmId);
+            };
+
+            const interactionEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
+            
+            const handleInteraction = () => {
+                injectGTM();
+                interactionEvents.forEach(e => window.removeEventListener(e, handleInteraction));
+                if (fallbackTimeout) clearTimeout(fallbackTimeout);
+            };
+
+            interactionEvents.forEach(e => window.addEventListener(e, handleInteraction, { once: true, passive: true }));
+            
+            // Fallback timeout in case user doesn't interact but we still want tracking
+            const fallbackTimeout = setTimeout(handleInteraction, 5000);
         })();
 
         return () => { cancelled = true; };

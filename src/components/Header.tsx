@@ -126,12 +126,12 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0">
           {headerLogoSrc ? (
-            <img
-              src={buildAssetUrl(headerLogoSrc)}
-              alt={siteName}
-              className="h-14 md:h-16 w-auto max-w-[240px] object-contain"
-              loading="lazy"
-            />
+              <img
+                src={buildAssetUrl(headerLogoSrc)}
+                alt={siteName}
+                className="h-14 md:h-16 w-auto max-w-[240px] object-contain"
+                fetchPriority="high"
+              />
           ) : (
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
               <span className="text-[#2D3142]">{part1}</span>
@@ -241,7 +241,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           )}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-[#2D3142]">
+              <Button variant="ghost" size="icon" className="text-[#2D3142]" aria-label="Menu główne">
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
