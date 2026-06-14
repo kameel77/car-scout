@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { optimizeAndSaveImage } from './image-optimizer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,8 +43,8 @@ export async function downloadAndCacheImages(
         await Promise.all(
             batch.map(async (url, batchIdx) => {
                 const globalIdx = i + batchIdx;
-                const localPath = `/uploads/csflow-images/${safeId}/${globalIdx}.jpg`;
-                const filePath = path.join(targetDir, `${globalIdx}.jpg`);
+                const localPath = `/uploads/csflow-images/${safeId}/${globalIdx}.webp`;
+                const filePath = path.join(targetDir, `${globalIdx}.webp`);
 
                 // Sprawdź czy plik już istnieje
                 try {
@@ -77,8 +78,12 @@ export async function downloadAndCacheImages(
                     }
 
                     const buffer = await response.buffer();
-                    await fs.writeFile(filePath, buffer);
-                    results[globalIdx] = localPath;
+                    const { largeFilename } = await optimizeAndSaveImage(buffer, {
+                        targetDir,
+                        baseFilename: globalIdx.toString()
+                    });
+                    
+                    results[globalIdx] = `/uploads/csflow-images/${safeId}/${largeFilename}`;
                 } catch (err: any) {
                     const reason = err?.name === 'AbortError' ? 'timeout' : err?.message;
                     console.warn(`[CSFlow Images] Błąd pobierania [${globalIdx}] ${url}: ${reason} — zachowuję oryginalny URL`);

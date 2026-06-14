@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Car } from 'lucide-react';
 import { featureTilesApi } from '@/services/api';
+import { OptimizedImage } from '@/components/OptimizedImage';
 
 interface FeatureTilesSectionProps {
     heading?: string;
@@ -54,9 +55,10 @@ export function FeatureTilesSection({ heading, className }: FeatureTilesSectionP
                                 className="group relative aspect-[4/5] rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow bg-slate-900"
                             >
                                 {tile.imageUrl ? (
-                                    <img
+                                    <OptimizedImage
                                         src={tile.imageUrl}
                                         alt={tile.title}
+                                        forceThumbnail={true}
                                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     />
                                 ) : (

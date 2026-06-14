@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import crypto from 'crypto';
+import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +24,11 @@ function generateFilename(originalName: string): string {
     const ext = path.extname(originalName).toLowerCase();
     const hash = crypto.randomBytes(8).toString('hex');
     return `${Date.now()}-${hash}${ext}`;
+}
+
+function generateBaseFilename(): string {
+    const hash = crypto.randomBytes(8).toString('hex');
+    return `${Date.now()}-${hash}`;
 }
 
 export async function rentalUploadRoutes(fastify: FastifyInstance) {
@@ -65,21 +71,20 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
                 });
             }
 
-            const filename = generateFilename(part.filename);
-            const filePath = path.join(vehicleDir, filename);
-
-            // Stream file to disk
-            await pipeline(part.file, createWriteStream(filePath));
-
-            // Check if file was truncated (exceeded size limit)
-            if (part.file.truncated) {
-                await fs.unlink(filePath);
+            const buffer = await part.toBuffer();
+            if (buffer.length > MAX_FILE_SIZE) {
                 return reply.code(400).send({
                     error: `File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
                 });
             }
 
-            const imageUrl = `/uploads/rental-images/${id}/${filename}`;
+            const baseFilename = generateBaseFilename();
+            const { largeFilename } = await optimizeAndSaveImage(buffer, {
+                targetDir: vehicleDir,
+                baseFilename,
+            });
+
+            const imageUrl = `/uploads/rental-images/${id}/${largeFilename}`;
             uploadedUrls.push(imageUrl);
         }
 
@@ -148,7 +153,9 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
         try {
             const relativePath = imageUrl.replace('/uploads/', '');
             const filePath = path.join(uploadsRoot, relativePath);
+            const thumbPath = filePath.replace('.webp', '-thumb.webp');
             await fs.unlink(filePath);
+            await fs.unlink(thumbPath).catch(() => {});
         } catch {
             // File might not exist on disk, that's ok
         }
