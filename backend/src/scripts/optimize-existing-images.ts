@@ -23,7 +23,8 @@ async function optimizeUrl(url: string | null): Promise<string | null> {
                 console.warn(`[WARN] Failed to fetch external image HTTP ${res.status}: ${url}`);
                 return url;
             }
-            const buffer = await res.buffer();
+            const arrayBuffer = await res.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
             const urlObj = new URL(url);
             const ext = path.extname(urlObj.pathname) || '.jpg';
             // Extract the original filename without extension, add a unique suffix to avoid collisions
@@ -72,7 +73,8 @@ async function optimizeUrl(url: string | null): Promise<string | null> {
                     throw new Error(`HTTP ${response.status}`);
                 }
             }
-            buffer = await response.buffer();
+            const arrayBuffer = await response.arrayBuffer();
+            buffer = Buffer.from(arrayBuffer);
             // Save the downloaded file to disk so we have a local copy before optimizing
             await fs.mkdir(path.dirname(fullPath), { recursive: true });
             await fs.writeFile(fullPath, buffer);
