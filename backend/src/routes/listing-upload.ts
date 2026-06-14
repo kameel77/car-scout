@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import crypto from 'crypto';
+import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +19,11 @@ function generateFilename(originalName: string): string {
     const ext = path.extname(originalName).toLowerCase();
     const hash = crypto.randomBytes(8).toString('hex');
     return `${Date.now()}-${hash}${ext}`;
+}
+
+function generateBaseFilename(): string {
+    const hash = crypto.randomBytes(8).toString('hex');
+    return `${Date.now()}-${hash}`;
 }
 
 export async function listingUploadRoutes(fastify: FastifyInstance) {
@@ -49,17 +55,18 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
                 return reply.code(400).send({ error: `Unsupported MIME: ${part.mimetype}` });
             }
 
-            const filename = generateFilename(part.filename);
-            const filepath = path.join(listingDir, filename);
-            await pipeline(part.file, createWriteStream(filepath));
-
-            const stats = await fs.stat(filepath);
-            if (stats.size > MAX_FILE_SIZE) {
-                await fs.unlink(filepath);
+            const buffer = await part.toBuffer();
+            if (buffer.length > MAX_FILE_SIZE) {
                 return reply.code(413).send({ error: 'File too large (max 10MB)' });
             }
 
-            uploadedUrls.push(`/uploads/listing-images/${id}/${filename}`);
+            const baseFilename = generateBaseFilename();
+            const { largeFilename } = await optimizeAndSaveImage(buffer, {
+                targetDir: listingDir,
+                baseFilename,
+            });
+
+            uploadedUrls.push(`/uploads/listing-images/${id}/${largeFilename}`);
         }
 
         const newImageUrls = [...(listing.imageUrls || []), ...uploadedUrls];
@@ -100,8 +107,10 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
 
         if (url.startsWith('/uploads/listing-images/')) {
             const filepath = path.join(uploadsRoot, url.replace('/uploads/', ''));
+            const thumbPath = filepath.replace('.webp', '-thumb.webp'); // Usuwamy też miniaturę, jeśli istnieje
             try {
                 await fs.unlink(filepath);
+                await fs.unlink(thumbPath).catch(() => {});
             } catch {
                 // file already gone — ignore
             }

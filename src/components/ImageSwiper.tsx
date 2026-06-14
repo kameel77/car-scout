@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSwipe } from '@/hooks/useSwipe';
+import { OptimizedImage } from '@/components/OptimizedImage';
 
 interface ImageSwiperProps {
     images: string[];
@@ -59,10 +60,9 @@ export function ImageSwiper({
             className={cn('relative overflow-hidden bg-muted touch-pan-y select-none', aspectClassName)}
             {...swipe}
         >
-            <img
+            <OptimizedImage
                 src={images[index]}
                 alt={alt}
-                loading="lazy"
                 draggable={false}
                 className={cn('h-full w-full object-cover transition-transform duration-500', imgClassName)}
             />

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useSwipe } from '@/hooks/useSwipe';
+import { OptimizedImage } from '@/components/OptimizedImage';
 
 interface ImageGalleryProps {
   images: string[];
@@ -75,16 +76,20 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
           {...mainSwipe}
         >
           <AnimatePresence mode="wait">
-            <motion.img
+            <motion.div
               key={selectedIndex}
-              src={images[selectedIndex]}
-              alt={`${title} - ${selectedIndex + 1}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="h-full w-full object-cover"
-            />
+              className="absolute inset-0"
+            >
+              <OptimizedImage
+                src={images[selectedIndex]}
+                alt={`${title} - ${selectedIndex + 1}`}
+                className="h-full w-full object-cover"
+              />
+            </motion.div>
           </AnimatePresence>
 
           {/* Navigation Arrows */}
@@ -142,9 +147,10 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                     selectedIndex === index && 'active'
                   )}
                 >
-                  <img
+                  <OptimizedImage
                     src={image}
                     alt={`${title} thumbnail ${index + 1}`}
+                    forceThumbnail={true}
                     className="h-full w-full object-cover"
                   />
                 </button>
@@ -191,16 +197,20 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
             </Button>
 
             <AnimatePresence mode="wait">
-              <motion.img
+              <motion.div
                 key={selectedIndex}
-                src={images[selectedIndex]}
-                alt={`${title} - ${selectedIndex + 1}`}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.2 }}
-                className="max-h-full max-w-full object-contain"
-              />
+                className="w-full h-full flex items-center justify-center"
+              >
+                <OptimizedImage
+                  src={images[selectedIndex]}
+                  alt={`${title} - ${selectedIndex + 1}`}
+                  className="max-h-full max-w-full object-contain"
+                />
+              </motion.div>
             </AnimatePresence>
 
             {images.length > 1 && (

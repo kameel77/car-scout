@@ -5,6 +5,7 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import crypto from 'crypto';
 import { authorizeRoles } from '../middleware/authorize.js';
+import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 const TILES_DIR = path.join(UPLOADS_DIR, 'feature-tiles');
@@ -259,7 +260,11 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
         if (!tile) return reply.code(404).send({ error: 'Tile not found' });
         if (tile.imageUrl?.startsWith('/uploads/feature-tiles/')) {
             const oldPath = path.join(process.cwd(), tile.imageUrl.replace(/^\//, ''));
-            try { await fs.unlink(oldPath); } catch { /* ignore */ }
+            const thumbPath = oldPath.replace('.webp', '-thumb.webp');
+            try {
+                await fs.unlink(oldPath);
+                await fs.unlink(thumbPath).catch(() => {});
+            } catch { /* ignore */ }
         }
         await fastify.prisma.featureTile.delete({ where: { id } });
         return { success: true };
@@ -299,26 +304,35 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
         }
 
         await fs.mkdir(TILES_DIR, { recursive: true });
-        const ext = file.mimetype === 'image/svg+xml' ? '.svg'
-            : file.mimetype === 'image/png' ? '.png'
-                : file.mimetype === 'image/webp' ? '.webp'
-                    : '.jpg';
-        const filename = `${id}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`;
-        const filepath = path.join(TILES_DIR, filename);
-        await pipeline(file.file, createWriteStream(filepath));
-
-        const stats = await fs.stat(filepath);
-        if (stats.size > MAX_TILE_IMAGE_SIZE) {
-            await fs.unlink(filepath);
+        
+        const buffer = await file.toBuffer();
+        if (buffer.length > MAX_TILE_IMAGE_SIZE) {
             return reply.code(413).send({ error: 'File too large (max 5MB)' });
         }
 
-        const url = `/uploads/feature-tiles/${filename}`;
+        let url: string;
+        if (file.mimetype === 'image/svg+xml') {
+            const filename = `${id}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.svg`;
+            const filepath = path.join(TILES_DIR, filename);
+            await fs.writeFile(filepath, buffer);
+            url = `/uploads/feature-tiles/${filename}`;
+        } else {
+            const baseFilename = `${id}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+            const { largeFilename } = await optimizeAndSaveImage(buffer, {
+                targetDir: TILES_DIR,
+                baseFilename,
+            });
+            url = `/uploads/feature-tiles/${largeFilename}`;
+        }
 
         // Delete previous image file
         if (tile.imageUrl?.startsWith('/uploads/feature-tiles/')) {
             const oldPath = path.join(process.cwd(), tile.imageUrl.replace(/^\//, ''));
-            try { await fs.unlink(oldPath); } catch { /* ignore */ }
+            const thumbPath = oldPath.replace('.webp', '-thumb.webp');
+            try {
+                await fs.unlink(oldPath);
+                await fs.unlink(thumbPath).catch(() => {});
+            } catch { /* ignore */ }
         }
 
         const updated = await fastify.prisma.featureTile.update({
