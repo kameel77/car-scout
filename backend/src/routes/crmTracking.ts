@@ -30,6 +30,12 @@ export async function crmTrackingRoutes(fastify: FastifyInstance) {
                     properties: {
                         success: { type: 'boolean' }
                     }
+                },
+                400: {
+                    type: 'object',
+                    properties: {
+                        error: { type: 'string' }
+                    }
                 }
             }
         }
