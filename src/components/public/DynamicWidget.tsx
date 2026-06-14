@@ -146,15 +146,15 @@ export function DynamicWidget({
                           {v.installment ? (
                             <>
                               {v.price && (
-                                <span className="text-xs text-gray-400 font-medium tracking-wide">
+                                <span className="text-xs text-gray-600 font-medium tracking-wide">
                                   Cena katalogowa: {formatNumber(v.price)} PLN
                                 </span>
                               )}
                               <div className="flex items-baseline gap-2 mt-1">
-                                <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-accent text-white shadow-sm">
+                                <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-accent text-gray-900 shadow-sm">
                                   {formatNumber(Math.round(v.installment))} zł
                                 </span>
-                                <span className="text-xs font-medium text-gray-500">brutto / mies.</span>
+                                <span className="text-xs font-medium text-gray-600">brutto / mies.</span>
                               </div>
                             </>
                           ) : (
@@ -179,7 +179,7 @@ export function DynamicWidget({
             <div className="mt-6 md:hidden">
               <Link 
                 to={viewAllLink} 
-                className="flex w-full items-center justify-center bg-accent text-white font-medium py-3 rounded-lg hover:bg-accent/90 transition-colors"
+                className="flex w-full items-center justify-center bg-accent text-gray-900 font-medium py-3 rounded-lg hover:bg-accent/90 transition-colors"
                 target={placement === 'EXTERNAL' ? '_parent' : '_self'}
               >
                 Zobacz wszystkie oferty

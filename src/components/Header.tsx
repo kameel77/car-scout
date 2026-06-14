@@ -241,7 +241,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           )}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-[#2D3142]">
+              <Button variant="ghost" size="icon" className="text-[#2D3142]" aria-label="Menu główne">
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
