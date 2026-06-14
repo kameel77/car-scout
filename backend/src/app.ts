@@ -341,6 +341,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         'regulamin',
         'polityka-cookies',
         'feature-tiles',
+        'migrated-images',
     ]);
     fastify.get('/uploads/:slug/:file', async (request, reply) => {
         const { slug, file } = request.params as { slug: string; file: string };
