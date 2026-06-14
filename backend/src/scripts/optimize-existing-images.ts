@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,6 +13,41 @@ const prisma = new PrismaClient();
 
 async function optimizeUrl(url: string | null): Promise<string | null> {
     if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        try {
+            console.log(`[DOWNLOAD] Fetching external image: ${url}`);
+            const res = await fetch(url, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CarScout/1.0)' }
+            });
+            if (!res.ok) {
+                console.warn(`[WARN] Failed to fetch external image HTTP ${res.status}: ${url}`);
+                return url;
+            }
+            const buffer = await res.buffer();
+            const urlObj = new URL(url);
+            const ext = path.extname(urlObj.pathname) || '.jpg';
+            // Extract the original filename without extension, add a unique suffix to avoid collisions
+            let baseFilename = path.basename(urlObj.pathname, ext);
+            if (!baseFilename || baseFilename === '') {
+                baseFilename = `migrated-${Date.now()}`;
+            }
+
+            const targetDir = path.join(uploadsRoot, 'migrated-images');
+            await fs.mkdir(targetDir, { recursive: true });
+
+            const { largeFilename } = await optimizeAndSaveImage(buffer, {
+                targetDir,
+                baseFilename,
+                generateThumbnail: true
+            });
+
+            return `/uploads/migrated-images/${largeFilename}`;
+        } catch (err: any) {
+            console.error(`[ERROR] Failed to download and optimize external URL ${url}:`, err.message);
+            return url;
+        }
+    }
+
     if (!url.startsWith('/uploads/')) return url;
     if (url.endsWith('.webp')) return url; // Already optimized
     if (url.endsWith('.svg')) return url; // Skip svg
