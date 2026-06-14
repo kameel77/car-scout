@@ -92,6 +92,9 @@ export function DynamicWidget({
                         <OptimizedImage 
                           src={v.imageUrl} 
                           alt={v.title}
+                          width="800"
+                          height="500"
+                          loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
