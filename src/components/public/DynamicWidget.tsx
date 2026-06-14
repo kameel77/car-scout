@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatNumber } from '@/utils/formatters';
+import { OptimizedImage } from '@/components/OptimizedImage';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 // Normalize URL
@@ -88,7 +89,7 @@ export function DynamicWidget({
                   <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col cursor-pointer">
                     <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
                       {v.imageUrl ? (
-                        <img 
+                        <OptimizedImage 
                           src={v.imageUrl} 
                           alt={v.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
