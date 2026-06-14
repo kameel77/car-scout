@@ -55,15 +55,27 @@ async function optimizeUrl(url: string | null): Promise<string | null> {
     const relativePath = url.replace('/uploads/', '');
     const fullPath = path.join(uploadsRoot, relativePath);
 
+    let buffer: Buffer;
     try {
         await fs.access(fullPath);
+        buffer = await fs.readFile(fullPath);
     } catch {
-        console.warn(`[WARN] File not found on disk, skipping: ${fullPath}`);
-        return url; // Cannot optimize if not on disk, return original
+        console.warn(`[WARN] File not found on disk, trying to fetch from production: ${url}`);
+        try {
+            const prodUrl = `https://motolia.pl${url}`;
+            const response = await fetch(prodUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            buffer = await response.buffer();
+            // Save the downloaded file to disk so we have a local copy before optimizing
+            await fs.mkdir(path.dirname(fullPath), { recursive: true });
+            await fs.writeFile(fullPath, buffer);
+        } catch (fetchErr: any) {
+            console.error(`[ERROR] Failed to fetch from production: ${fetchErr.message}`);
+            return url;
+        }
     }
 
     try {
-        const buffer = await fs.readFile(fullPath);
         const ext = path.extname(fullPath);
         const baseFilename = path.basename(fullPath, ext);
         const targetDir = path.dirname(fullPath);
