@@ -14,7 +14,6 @@ export async function partnerAuth(request: FastifyRequest, reply: FastifyReply) 
 
     const token = authHeader.replace('Bearer ', '').trim();
 
-    // @ts-ignore - fastify.prisma is available at runtime
     const prisma = request.server.prisma;
 
     const partner = await prisma.partner.findUnique({

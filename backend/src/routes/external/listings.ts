@@ -36,6 +36,9 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
                     id: Type.String(),
                     vin: Type.String(),
                     status: Type.String()
+                }),
+                403: Type.Object({
+                    error: Type.String()
                 })
             }
         }
@@ -135,6 +138,12 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
                 200: Type.Object({
                     vin: Type.String(),
                     status: Type.String()
+                }),
+                403: Type.Object({
+                    error: Type.String()
+                }),
+                404: Type.Object({
+                    error: Type.String()
                 })
             }
         }
