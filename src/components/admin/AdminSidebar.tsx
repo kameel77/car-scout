@@ -83,7 +83,8 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/admin/financing', label: 'Finansowanie', icon: Banknote, visibleTo: PLATFORM_ONLY },
     { href: '/admin/seo', label: 'SEO', icon: Search, visibleTo: PLATFORM_ONLY },
     { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/partners', label: 'Partnerzy', icon: Handshake, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/partners', label: 'Reklamy partnerskie', icon: Handshake, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/api-partners', label: 'Klucze API', icon: Network, visibleTo: PLATFORM_ONLY },
     { href: '/admin/widgets', label: 'Widgety', icon: Blocks, visibleTo: PLATFORM_ONLY },
     { href: '/admin/feature-tiles', label: 'Kafle home', icon: LayoutGrid, visibleTo: PLATFORM_ONLY },
 ];

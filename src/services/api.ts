@@ -11,6 +11,21 @@ import type { SeoConfig } from '@/components/seo/SeoManager';
 import type { CrmTrackingVisit, CrmTrackingResponse } from '@/types/crmTracking';
 import type { PartnerAd, PartnerAdPayload } from '@/types/partnerAds';
 
+export interface PartnerApiIntegration {
+    id: string;
+    name: string;
+    apiKey: string;
+    nip?: string | null;
+    contactPerson?: string | null;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
+    dealerId?: string | null;
+    dealer?: { name: string } | null;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
 type ImportMode = 'replace' | 'merge';
 
 // Default: dev hits same origin (proxy), prod uses current origin relative path if not specified.
@@ -1366,5 +1381,45 @@ export const api = {
             if (!response.ok) throw new Error('Failed to delete widget');
             return response.json();
         }
+    }
+};
+
+// Partner Management (API Keys)
+export const partnerManagementApi = {
+    list: async (token: string): Promise<{ partners: PartnerApiIntegration[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/partners`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch partners');
+        return response.json();
+    },
+    create: async (data: Partial<PartnerApiIntegration>, token: string): Promise<{ partner: PartnerApiIntegration }> => {
+        const response = await fetch(`${API_BASE_URL}/api/partners`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'Failed to create partner');
+        return json;
+    },
+    update: async (id: string, data: Partial<PartnerApiIntegration>, token: string): Promise<{ partner: PartnerApiIntegration }> => {
+        const response = await fetch(`${API_BASE_URL}/api/partners/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'Failed to update partner');
+        return json;
+    },
+    regenerateKey: async (id: string, token: string): Promise<{ partner: PartnerApiIntegration }> => {
+        const response = await fetch(`${API_BASE_URL}/api/partners/${id}/regenerate-key`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'Failed to regenerate key');
+        return json;
     }
 };
