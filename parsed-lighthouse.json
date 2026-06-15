@@ -1,0 +1,95 @@
+{
+  "score": 0.84,
+  "audits": [
+    {
+      "id": "first-contentful-paint",
+      "title": "First Contentful Paint",
+      "displayValue": "2.8 s",
+      "score": 0.57
+    },
+    {
+      "id": "largest-contentful-paint",
+      "title": "Largest Contentful Paint",
+      "displayValue": "3.7 s",
+      "score": 0.57
+    },
+    {
+      "id": "speed-index",
+      "title": "Speed Index",
+      "displayValue": "2.8 s",
+      "score": 0.96
+    },
+    {
+      "id": "total-blocking-time",
+      "title": "Total Blocking Time",
+      "displayValue": "90 ms",
+      "score": 0.98
+    },
+    {
+      "id": "max-potential-fid",
+      "title": "Max Potential First Input Delay",
+      "displayValue": "130 ms",
+      "score": 0.9
+    },
+    {
+      "id": "interactive",
+      "title": "Time to Interactive",
+      "displayValue": "3.8 s",
+      "score": 0.9
+    },
+    {
+      "id": "unsized-images",
+      "title": "Image elements do not have explicit `width` and `height`",
+      "displayValue": null,
+      "score": 0.5
+    },
+    {
+      "id": "valid-source-maps",
+      "title": "Missing source maps for large first-party JavaScript",
+      "displayValue": null,
+      "score": 0
+    },
+    {
+      "id": "heading-order",
+      "title": "Heading elements are not in a sequentially-descending order",
+      "displayValue": null,
+      "score": 0
+    },
+    {
+      "id": "unused-css-rules",
+      "title": "Reduce unused CSS",
+      "displayValue": "Est savings of 20 KiB",
+      "score": 0.5
+    },
+    {
+      "id": "unused-javascript",
+      "title": "Reduce unused JavaScript",
+      "displayValue": "Est savings of 114 KiB",
+      "score": 0
+    },
+    {
+      "id": "llms-txt",
+      "title": "llms.txt does not follow recommendations",
+      "displayValue": null,
+      "score": 0
+    },
+    {
+      "id": "cache-insight",
+      "title": "Use efficient cache lifetimes",
+      "displayValue": "Est savings of 2 KiB",
+      "score": 0.5
+    },
+    {
+      "id": "network-dependency-tree-insight",
+      "title": "Network dependency tree",
+      "displayValue": null,
+      "score": 0
+    },
+    {
+      "id": "render-blocking-insight",
+      "title": "Render-blocking requests",
+      "displayValue": null,
+      "score": 0.5
+    }
+  ]
+}

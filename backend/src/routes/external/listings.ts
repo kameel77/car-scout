@@ -8,6 +8,7 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
     fastify.addHook('preHandler', partnerAuth);
 
     const ListingSchema = Type.Object({
+        externalDealerId: Type.String(),
         vin: Type.String(),
         make: Type.String(),
         model: Type.String(),
@@ -47,11 +48,18 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
         const partner = partnerReq.partner;
         const body = request.body as any;
 
+        const mapping = partner.mappings.find(m => m.externalId === body.externalDealerId);
+        if (!mapping) {
+            return reply.code(403).send({ error: `Forbidden. externalDealerId '${body.externalDealerId}' is not authorized for this API key.` });
+        }
+
+        const internalDealerId = mapping.dealerId;
+
         const existingListing = await fastify.prisma.listing.findUnique({
             where: { vin: body.vin }
         });
 
-        if (existingListing && existingListing.dealerId !== partner.dealerId) {
+        if (existingListing && existingListing.dealerId !== internalDealerId) {
             return reply.code(403).send({ error: 'Forbidden. Listing with this VIN belongs to another dealer.' });
         }
 
@@ -114,7 +122,7 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
                 imageCount: imageUrls.length,
                 slug,
                 marketplace: 'partner_api',
-                dealerId: partner.dealerId,
+                dealerId: internalDealerId,
                 isArchived: false
             }
         });
@@ -160,7 +168,8 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Listing not found' });
         }
 
-        if (listing.dealerId !== partner.dealerId) {
+        const authorizedDealerIds = partner.mappings.map(m => m.dealerId);
+        if (!listing.dealerId || !authorizedDealerIds.includes(listing.dealerId)) {
             return reply.code(403).send({ error: 'Forbidden. You do not own this listing.' });
         }
 

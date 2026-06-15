@@ -19,8 +19,11 @@ export interface PartnerApiIntegration {
     contactPerson?: string | null;
     contactEmail?: string | null;
     contactPhone?: string | null;
-    dealerId?: string | null;
-    dealer?: { name: string } | null;
+    mappings?: {
+        externalId: string;
+        dealerId: string;
+        dealer?: { name: string };
+    }[];
     isActive: boolean;
     createdAt: string;
     updatedAt: string;

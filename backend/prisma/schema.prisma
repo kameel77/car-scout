@@ -205,7 +205,7 @@ model Dealer {
   listings            Listing[]
   rentalVehicles      RentalVehicle[]
   settings            DealerSettings?
-  partners            Partner[]
+  partnerMappings     PartnerDealerMapping[]
 
   @@unique([name, addressLine1])
   @@index([dealerGroupId])
@@ -569,16 +569,28 @@ model Partner {
   contactEmail  String?  @map("contact_email")
   contactPhone  String?  @map("contact_phone")
   isActive      Boolean  @default(true) @map("is_active")
-  dealerId      String?  @map("dealer_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  dealer Dealer? @relation(fields: [dealerId], references: [id])
+  mappings PartnerDealerMapping[]
 
   @@index([apiKey])
   @@index([isActive])
-  @@index([dealerId])
   @@map("partners")
+}
+
+model PartnerDealerMapping {
+  id         String @id @default(cuid())
+  partnerId  String @map("partner_id")
+  dealerId   String @map("dealer_id")
+  externalId String @map("external_id")
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  dealer  Dealer  @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, dealerId])
+  @@unique([partnerId, externalId])
+  @@map("partner_dealer_mappings")
 }
 
 model RentalVehicle {

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { partnerManagementApi, PartnerApiIntegration } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus, KeyRound, Copy, Check, Loader2, Info, Building2, UserCircle2 } from 'lucide-react';
+import { Plus, KeyRound, Copy, Check, Loader2, Info, Building2, UserCircle2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     Dialog,
@@ -21,12 +21,28 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+interface MappingState {
+    externalId: string;
+    dealerId: string;
+}
+
 export default function ApiPartnersPage() {
     const { token } = useAuth();
     const queryClient = useQueryClient();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingPartner, setEditingPartner] = useState<PartnerApiIntegration | null>(null);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
+    
+    // Controlled state for mappings
+    const [mappings, setMappings] = useState<MappingState[]>([]);
+
+    useEffect(() => {
+        if (editingPartner) {
+            setMappings(editingPartner.mappings ? [...editingPartner.mappings] : []);
+        } else {
+            setMappings([]);
+        }
+    }, [editingPartner, isDialogOpen]);
 
     const { data: dealersData } = useQuery({
         queryKey: ['admin-dealers'],
@@ -80,7 +96,12 @@ export default function ApiPartnersPage() {
     const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-        const dealerIdVal = formData.get('dealerId') as string;
+
+        // Validate mappings: all must have externalId and dealerId
+        if (mappings.some(m => !m.externalId || !m.dealerId)) {
+            toast.error("Wszystkie mapowania muszą mieć wpisane ID z systemu zewnętrznego i przypisanego Dealera.");
+            return;
+        }
 
         const partnerData = {
             name: formData.get('name') as string,
@@ -88,7 +109,7 @@ export default function ApiPartnersPage() {
             contactPerson: formData.get('contactPerson') as string,
             contactEmail: formData.get('contactEmail') as string,
             contactPhone: formData.get('contactPhone') as string,
-            dealerId: dealerIdVal === 'none' ? null : dealerIdVal,
+            mappings,
             isActive: formData.get('isActive') === 'on'
         };
 
@@ -104,6 +125,22 @@ export default function ApiPartnersPage() {
         setCopiedKey(text);
         toast.success("Skopiowano klucz API");
         setTimeout(() => setCopiedKey(null), 2000);
+    };
+
+    const addMapping = () => {
+        setMappings([...mappings, { externalId: '', dealerId: '' }]);
+    };
+
+    const updateMapping = (index: number, field: keyof MappingState, value: string) => {
+        const newMappings = [...mappings];
+        newMappings[index] = { ...newMappings[index], [field]: value };
+        setMappings(newMappings);
+    };
+
+    const removeMapping = (index: number) => {
+        const newMappings = [...mappings];
+        newMappings.splice(index, 1);
+        setMappings(newMappings);
     };
 
     if (isLoading) {
@@ -122,7 +159,7 @@ export default function ApiPartnersPage() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Klucze API (Integracje)</h1>
-                    <p className="text-muted-foreground">Zarządzaj dostępem dla systemów zewnętrznych i dealerów (zewnętrzne API v1).</p>
+                    <p className="text-muted-foreground">Zarządzaj dostępem dla systemów zewnętrznych DMS do publikacji u wielu Dealerów.</p>
                 </div>
                 <Button onClick={() => { setEditingPartner(null); setIsDialogOpen(true); }} className="gap-2">
                     <Plus className="h-4 w-4" /> Nowy Partner
@@ -171,11 +208,20 @@ export default function ApiPartnersPage() {
                             
                             <div className="space-y-1 pt-2 border-t">
                                 <div className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                    <Building2 className="h-3 w-3" /> Przypisany Dealer
+                                    <Building2 className="h-3 w-3" /> Przypisani Dealerzy ({partner.mappings?.length || 0})
                                 </div>
-                                <div className="text-sm font-medium">
-                                    {partner.dealer ? partner.dealer.name : <span className="text-muted-foreground">Brak przypisania (Dostęp globalny / Zablokowany)</span>}
-                                </div>
+                                {partner.mappings && partner.mappings.length > 0 ? (
+                                    <div className="space-y-2 mt-2">
+                                        {partner.mappings.map((m, idx) => (
+                                            <div key={idx} className="flex flex-col text-sm bg-muted/30 p-2 rounded">
+                                                <span className="font-medium">{m.dealer?.name || 'Nieznany dealer'}</span>
+                                                <span className="text-xs text-muted-foreground">ID z DMS: <code className="font-mono">{m.externalId}</code></span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-muted-foreground">Brak przypisania (Tylko odczyt globalny / Zablokowany)</div>
+                                )}
                             </div>
 
                             {(partner.contactPerson || partner.contactEmail || partner.contactPhone) && (
@@ -191,7 +237,7 @@ export default function ApiPartnersPage() {
                                 </div>
                             )}
 
-                            <div className="pt-4 flex justify-end">
+                            <div className="pt-4 flex justify-end mt-auto">
                                 <Button 
                                     variant="outline" 
                                     size="sm" 
@@ -211,37 +257,83 @@ export default function ApiPartnersPage() {
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <form onSubmit={handleSave}>
                         <DialogHeader>
                             <DialogTitle>{editingPartner ? 'Edytuj Partnera API' : 'Nowy Partner API'}</DialogTitle>
                             <DialogDescription>
-                                System automatycznie wygeneruje nowy, bezpieczny token po utworzeniu partnera.
+                                System automatycznie wygeneruje nowy, bezpieczny token po utworzeniu partnera. Możesz przypisać tu wielu Dealerów mapując ich ID z systemu zewnętrznego partnera (DMS).
                             </DialogDescription>
                         </DialogHeader>
 
                         <div className="grid gap-4 py-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Nazwa Partnera (Firmy / Systemu) *</Label>
+                                <Label htmlFor="name">Nazwa Partnera (Firmy / Systemu DMS) *</Label>
                                 <Input id="name" name="name" defaultValue={editingPartner?.name} required placeholder="np. Auto CRM Sp. z o.o." />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="dealerId">Przypisz Dealera (Dla kogo działa to API?)</Label>
-                                <Select name="dealerId" defaultValue={editingPartner?.dealerId || 'none'}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Wybierz dealera..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">Brak (Uwaga! Zablokuje modyfikację aut na frontendzie, tylko GET)</SelectItem>
-                                        {dealers.map((d: any) => (
-                                            <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                            <div className="space-y-3 pt-4 border-t">
+                                <div className="flex items-center justify-between">
+                                    <Label>Mapowanie Dealerów (Integracja N:M)</Label>
+                                    <Button type="button" variant="outline" size="sm" onClick={addMapping}>
+                                        <Plus className="h-4 w-4 mr-1" /> Dodaj Dealera
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Klucz API pozwala na wprowadzanie aut tylko dla tych dealerów. Musisz zdefiniować jakie identyfikatory ten partner wysyła w payloadzie (externalDealerId) i na jakiego dealera wewnętrznego ma to być zmapowane.
+                                </p>
+                                
+                                {mappings.length === 0 ? (
+                                    <Alert className="py-2">
+                                        <AlertDescription className="text-xs">
+                                            Brak dealerów. Klucz będzie miał uprawnienia tylko do odczytu danych publicznych.
+                                        </AlertDescription>
+                                    </Alert>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {mappings.map((mapping, idx) => (
+                                            <div key={idx} className="flex gap-2 items-end bg-muted/20 p-3 rounded border">
+                                                <div className="flex-1 space-y-1">
+                                                    <Label className="text-xs">ID w systemie DMS (External ID) *</Label>
+                                                    <Input 
+                                                        value={mapping.externalId} 
+                                                        onChange={(e) => updateMapping(idx, 'externalId', e.target.value)} 
+                                                        placeholder="np. DMS-WAW-12"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="flex-1 space-y-1">
+                                                    <Label className="text-xs">Wewnętrzny Dealer (Motolia) *</Label>
+                                                    <Select 
+                                                        value={mapping.dealerId} 
+                                                        onValueChange={(val) => updateMapping(idx, 'dealerId', val)}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Wybierz..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {dealers.map((d: any) => (
+                                                                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="text-destructive"
+                                                    onClick={() => removeMapping(idx)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         ))}
-                                    </SelectContent>
-                                </Select>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                 <div className="space-y-2">
                                     <Label htmlFor="nip">NIP (opcjonalnie)</Label>
                                     <Input id="nip" name="nip" defaultValue={editingPartner?.nip || ''} />

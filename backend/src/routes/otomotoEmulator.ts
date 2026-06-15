@@ -73,13 +73,17 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
             where: { vin: vin }
         });
 
-        if (existingListing && existingListing.dealerId !== partner.dealerId) {
+        const authorizedDealerIds = partner.mappings.map(m => m.dealerId);
+
+        if (existingListing && existingListing.dealerId && !authorizedDealerIds.includes(existingListing.dealerId)) {
             return reply.code(403).send({ error: 'Forbidden. You cannot update a listing that belongs to another dealer.' });
         }
 
         const { randomBytes } = await import('crypto');
         const tempListingId = existingListing?.id || randomBytes(12).toString('hex');
         const slug = generateListingSlug(make, model, version, productionYear, bodyType, fuelType, tempListingId);
+        
+        const internalDealerId = existingListing?.dealerId || partner.mappings[0].dealerId;
 
         try {
             const listing = await fastify.prisma.listing.upsert({
@@ -131,7 +135,7 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
                     imageUrls: imageUrls,
                     imageCount: imageUrls.length,
                     specsJson: body,
-                    dealerId: partner.dealerId
+                    dealerId: internalDealerId
                 }
             });
 
@@ -173,7 +177,8 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
                 return reply.code(404).send({ error: 'Advert not found' });
             }
 
-            if (listing.dealerId !== partner.dealerId) {
+            const authorizedDealerIds = partner.mappings.map(m => m.dealerId);
+            if (listing.dealerId && !authorizedDealerIds.includes(listing.dealerId)) {
                 return reply.code(403).send({ error: 'Forbidden. You cannot update a listing that belongs to another dealer.' });
             }
 

@@ -1,0 +1,4 @@
+{
+  "build_pack": "dockercompose",
+  "name": "car-scout-api"
+}
