@@ -46,6 +46,11 @@ enum EntrySource {
   MANUAL
 }
 
+enum LeadRouting {
+  MOTOLIA
+  DEALER
+}
+
 model Listing {
   id                       String             @id @default(cuid())
   listingId                String?            @unique @map("listing_id")
@@ -200,6 +205,7 @@ model Dealer {
   listings            Listing[]
   rentalVehicles      RentalVehicle[]
   settings            DealerSettings?
+  partners            Partner[]
 
   @@unique([name, addressLine1])
   @@index([dealerGroupId])
@@ -539,6 +545,7 @@ model DealerSettings {
   smtpPassword       String? @map("smtp_password")
   smtpFromEmail      String? @map("smtp_from_email")
   smtpRecipientEmail String? @map("smtp_recipient_email")
+  leadRouting        LeadRouting @default(MOTOLIA) @map("lead_routing")
 
   dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
 
@@ -562,11 +569,15 @@ model Partner {
   contactEmail  String?  @map("contact_email")
   contactPhone  String?  @map("contact_phone")
   isActive      Boolean  @default(true) @map("is_active")
+  dealerId      String?  @map("dealer_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
+  dealer Dealer? @relation(fields: [dealerId], references: [id])
+
   @@index([apiKey])
   @@index([isActive])
+  @@index([dealerId])
   @@map("partners")
 }
 

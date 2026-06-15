@@ -1,34 +1,15 @@
 import { FastifyInstance } from 'fastify';
 import { generateListingSlug } from '../utils/url-utils.js';
-import { randomBytes } from 'crypto';
+import { partnerAuth, PartnerRequest } from '../middleware/partnerAuth.js';
 
 export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
     // Middleware for basic API Key authentication
-    fastify.addHook('preHandler', async (request, reply) => {
-        const authHeader = request.headers.authorization;
-        
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return reply.code(401).send({ error: 'Unauthorized. Invalid or missing Bearer token.' });
-        }
-
-        const token = authHeader.replace('Bearer ', '').trim();
-
-        // Sprawdź w bazie czy istnieje aktywny partner z tym API Key
-        const partner = await fastify.prisma.partner.findUnique({
-            where: { apiKey: token, isActive: true }
-        });
-
-        if (!partner) {
-            fastify.log.warn(`Otomoto Emulator: Nieudana próba dostępu z tokenem: ${token.substring(0, 5)}...`);
-            return reply.code(401).send({ error: 'Unauthorized. Invalid API Key or Partner is inactive.' });
-        }
-
-        // Dodaj partnera do żądania na wypadek, gdybyśmy potrzebowali NIP / kontakt w handlerze
-        (request as any).partner = partner;
-    });
+    fastify.addHook('preHandler', partnerAuth);
 
     // Create or update advert (Upsert by VIN or ID)
     fastify.post('/api/otomoto/open/account/adverts', async (request, reply) => {
+        const partnerReq = request as PartnerRequest;
+        const partner = partnerReq.partner;
         const body = request.body as any;
         
         // Extract standard Otomoto format parameters
@@ -92,6 +73,11 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
             where: { vin: vin }
         });
 
+        if (existingListing && existingListing.dealerId !== partner.dealerId) {
+            return reply.code(403).send({ error: 'Forbidden. You cannot update a listing that belongs to another dealer.' });
+        }
+
+        const { randomBytes } = await import('crypto');
         const tempListingId = existingListing?.id || randomBytes(12).toString('hex');
         const slug = generateListingSlug(make, model, version, productionYear, bodyType, fuelType, tempListingId);
 
@@ -144,7 +130,8 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
                     primaryImageUrl: primaryImageUrl || null,
                     imageUrls: imageUrls,
                     imageCount: imageUrls.length,
-                    specsJson: body
+                    specsJson: body,
+                    dealerId: partner.dealerId
                 }
             });
 
@@ -163,6 +150,8 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
 
     // Archive / Status update advert
     fastify.put('/api/otomoto/open/account/adverts/:id/status', async (request, reply) => {
+        const partnerReq = request as PartnerRequest;
+        const partner = partnerReq.partner;
         const { id } = request.params as { id: string };
         const body = request.body as any;
         const status = body.status; // expected e.g., 'active', 'inactive', 'finished', 'archived'
@@ -182,6 +171,10 @@ export async function otomotoEmulatorRoutes(fastify: FastifyInstance) {
 
             if (!listing) {
                 return reply.code(404).send({ error: 'Advert not found' });
+            }
+
+            if (listing.dealerId !== partner.dealerId) {
+                return reply.code(403).send({ error: 'Forbidden. You cannot update a listing that belongs to another dealer.' });
             }
 
             listing = await fastify.prisma.listing.update({

@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import jwt from '@fastify/jwt';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 import path from 'path';
@@ -41,6 +43,7 @@ import { widgetRoutes } from './routes/widgets.js';
 import { onepagerRoutes } from './routes/onepager.js';
 import { featureTileRoutes } from './routes/feature-tiles.js';
 import { consentRoutes } from './routes/consent.js';
+import { externalListingsRoutes } from './routes/external/listings.js';
 import { closeBrowser } from './services/puppeteer.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -182,6 +185,33 @@ export async function buildApp(): Promise<FastifyInstance> {
         }
     });
 
+    await fastify.register(swagger, {
+        openapi: {
+            info: {
+                title: 'Car Scout Partner API',
+                description: 'Open API for external partners to manage stock',
+                version: '1.0.0'
+            },
+            components: {
+                securitySchemes: {
+                    bearerAuth: {
+                        type: 'http',
+                        scheme: 'bearer',
+                        bearerFormat: 'API Key'
+                    }
+                }
+            }
+        }
+    });
+
+    await fastify.register(swaggerUi, {
+        routePrefix: '/api/v1/external/docs',
+        uiConfig: {
+            docExpansion: 'list',
+            deepLinking: false
+        }
+    });
+
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
         if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
@@ -284,6 +314,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(onepagerRoutes);
     await fastify.register(featureTileRoutes);
     await fastify.register(consentRoutes);
+    await fastify.register(externalListingsRoutes);
 
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {
