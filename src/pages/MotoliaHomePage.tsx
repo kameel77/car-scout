@@ -178,7 +178,7 @@ export default function MotoliaHomePage() {
       <Header />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-14 pb-16 lg:pt-40 lg:pb-28 overflow-hidden bg-[#FAFAF8]">
+      <section className={`relative overflow-hidden bg-[#FAFAF8] ${hasHeroBanners ? 'pt-6 pb-8 lg:pt-10 lg:pb-12' : 'pt-14 pb-16 lg:pt-40 lg:pb-28'}`}>
         {/* Subtle yellow glow */}
         <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none"
           style={{ background: `radial-gradient(circle, ${YELLOW}18 0%, transparent 70%)` }} />
@@ -189,13 +189,11 @@ export default function MotoliaHomePage() {
           {hasHeroBanners ? (
             <div className="relative">
               <HeroBannerCarousel />
-              {/* Floating search card (superauto layout) */}
-              <FadeIn
-                delay={0.2}
-                className="mt-6 lg:mt-0 lg:absolute lg:top-1/2 lg:right-6 xl:right-10 lg:-translate-y-1/2 lg:w-[400px] lg:z-20"
-              >
+              {/* Floating search card (superauto layout) — plain div so the
+                  -translate-y-1/2 centering isn't overridden by framer-motion's transform */}
+              <div className="mt-6 lg:mt-0 lg:absolute lg:top-1/2 lg:right-6 xl:right-10 lg:-translate-y-1/2 lg:w-[400px] lg:z-20">
                 <HeroVehicleFilter />
-              </FadeIn>
+              </div>
             </div>
           ) : (
             <div className="grid lg:grid-cols-[1.5fr_1fr] gap-16 items-center">

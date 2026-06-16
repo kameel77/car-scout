@@ -75,20 +75,23 @@ export function HeroBannerCarousel() {
 
                                 {b.buttonLabel && b.buttonUrl && (
                                     <>
-                                        {/* Desktop: button at configurable vertical position */}
-                                        <div
-                                            className={`hidden md:flex absolute left-0 right-0 px-10 lg:px-16 ${ALIGN_CLASS[b.buttonAlign] ?? 'justify-start'}`}
-                                            style={{ top: `${b.buttonPositionYPct}%`, transform: 'translateY(-50%)' }}
-                                        >
-                                            <Link
-                                                to={b.buttonUrl}
-                                                className="inline-flex items-center justify-center px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
-                                                style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}60` }}
-                                                onMouseEnter={(e) => (e.currentTarget.style.background = YELLOW_DARK)}
-                                                onMouseLeave={(e) => (e.currentTarget.style.background = YELLOW)}
+                                        {/* Desktop: button along a vertical track inset 24px from top/bottom;
+                                            translateY(-pct%) keeps it fully inside (0% = flush to top padding, 100% = bottom). */}
+                                        <div className="hidden md:block absolute inset-x-0" style={{ top: '24px', bottom: '24px' }}>
+                                            <div
+                                                className={`absolute inset-x-0 px-10 lg:px-16 flex ${ALIGN_CLASS[b.buttonAlign] ?? 'justify-start'}`}
+                                                style={{ top: `${b.buttonPositionYPct}%`, transform: `translateY(-${b.buttonPositionYPct}%)` }}
                                             >
-                                                {b.buttonLabel}
-                                            </Link>
+                                                <Link
+                                                    to={b.buttonUrl}
+                                                    className="inline-flex items-center justify-center px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
+                                                    style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}60` }}
+                                                    onMouseEnter={(e) => (e.currentTarget.style.background = YELLOW_DARK)}
+                                                    onMouseLeave={(e) => (e.currentTarget.style.background = YELLOW)}
+                                                >
+                                                    {b.buttonLabel}
+                                                </Link>
+                                            </div>
                                         </div>
                                         {/* Mobile: button anchored near bottom */}
                                         <div className="flex md:hidden absolute bottom-6 left-0 right-0 px-6 justify-center">
