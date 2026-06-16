@@ -146,6 +146,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 ...body,
             });
             if (errors.length > 0) {
+                fastify.log.error({ msg: 'Listing validation errors', errors });
                 return reply.code(400).send({ errors });
             }
             updateData = mapManualPayloadToListingUpdate(body);

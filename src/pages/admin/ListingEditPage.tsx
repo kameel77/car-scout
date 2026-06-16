@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { VehicleDataForm } from '@/components/admin/VehicleForm/VehicleDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { listingsApi } from '@/services/api';
@@ -44,11 +44,16 @@ export default function ListingEditPage() {
 
     const isImported = listing?.entrySource === 'CSFLOW';
 
+    const queryClient = useQueryClient();
+
     const handleSave = async (data: any) => {
         if (!token || !id) return;
         setIsSaving(true);
         try {
             await listingsApi.updateListing(id, data, token);
+            queryClient.invalidateQueries({ queryKey: ['admin-listing-raw', id] });
+            queryClient.invalidateQueries({ queryKey: ['listings'] });
+            queryClient.invalidateQueries({ queryKey: ['financing-products'] });
             toast({ title: 'Zapisano zmiany' });
             navigate('/admin/listings');
         } catch (e: any) {
