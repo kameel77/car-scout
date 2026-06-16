@@ -312,7 +312,7 @@ export default function ListingDetailPage() {
     ? listing.availableForPrivate !== false
     : listing.availableForCompany !== false;
 
-  const showCalculator = isFinancingAvailable && isCustomerTypeAvailable && (settings?.financingCalculatorEnabled ?? true);
+  const showCalculator = isCustomerTypeAvailable && (settings?.financingCalculatorEnabled ?? true);
 
   // --- Trzy ceny: katalogowa (przekreślona + pill -%), w finansowaniu (główna), sprzedaży (gotówka) ---
   // Ceny katalogowa/rabat/sprzedaży są w PLN; przy walucie EUR pomijamy te dodatki (osobny follow-up).
@@ -660,12 +660,10 @@ export default function ListingDetailPage() {
                 <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
                   {t('financing.notAvailableForCustomerType', 'Ta oferta nie jest dostępna dla wybranego typu klienta (Prywatnie / Firma).')}
                 </div>
-              ) : !isFinancingAvailable ? (
-                <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
-                  {t('financing.notAvailableForFinancingType', 'Ten rodzaj finansowania nie jest dostępny dla tego pojazdu.')}
-                </div>
               ) : showCalculator ? (
                 <FinancingCalculator
+                  creditAvailable={listing.creditAvailable !== false}
+                  leasingAvailable={listing.leasingAvailable !== false}
                   forcedProductId={forcedProductId}
                   listingId={listing.listing_id}
                   price={
@@ -902,16 +900,14 @@ export default function ListingDetailPage() {
                       <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
                         {t('financing.notAvailableForCustomerType', 'Ta oferta nie jest dostępna dla wybranego typu klienta (Prywatnie / Firma).')}
                       </div>
-                    ) : !isFinancingAvailable ? (
-                      <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
-                        {t('financing.notAvailableForFinancingType', 'Ten rodzaj finansowania nie jest dostępny dla tego pojazdu.')}
-                      </div>
                     ) : showCalculator ? (
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
                         <FinancingCalculator
+                          creditAvailable={listing.creditAvailable !== false}
+                          leasingAvailable={listing.leasingAvailable !== false}
                           forcedProductId={forcedProductId}
                           listingId={listing.listing_id}
                           price={
@@ -1135,12 +1131,10 @@ export default function ListingDetailPage() {
                     <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
                       {t('financing.notAvailableForCustomerType', 'Ta oferta nie jest dostępna dla wybranego typu klienta (Prywatnie / Firma).')}
                     </div>
-                  ) : !isFinancingAvailable ? (
-                    <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
-                      {t('financing.notAvailableForFinancingType', 'Ten rodzaj finansowania nie jest dostępny dla tego pojazdu.')}
-                    </div>
                   ) : showCalculator ? (
                     <FinancingCalculator
+                      creditAvailable={listing.creditAvailable !== false}
+                      leasingAvailable={listing.leasingAvailable !== false}
                       forcedProductId={forcedProductId}
                       listingId={listing.listing_id}
                       price={
