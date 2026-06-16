@@ -66,12 +66,14 @@ function SortableRow({
                 {uploadingKey === `${banner.id}:desktop` ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                 Desktop
                 <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" className="hidden"
+                    disabled={uploadingKey === `${banner.id}:desktop`}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(banner.id, 'desktop', f); e.target.value = ''; }} />
             </label>
             <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                 {uploadingKey === `${banner.id}:mobile` ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                 Mobile
                 <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" className="hidden"
+                    disabled={uploadingKey === `${banner.id}:mobile`}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(banner.id, 'mobile', f); e.target.value = ''; }} />
             </label>
             <Button variant="outline" size="sm" onClick={() => onEdit(banner)}>Edytuj</Button>
