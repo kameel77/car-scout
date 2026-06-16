@@ -5,7 +5,7 @@ import type { SectionProps } from '../types';
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/api\/?$/, '');
 
 async function fetchFinancingProducts() {
-    const res = await fetch(`${API_BASE_URL}/api/financing/products`);
+    const res = await fetch(`${API_BASE_URL}/api/financing/calculator`);
     if (!res.ok) throw new Error('Failed to load products');
     const data = await res.json();
     return data.products || [];

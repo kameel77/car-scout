@@ -593,7 +593,10 @@ export const listingsApi = {
             body: JSON.stringify(data),
         });
         const body = await response.json();
-        if (!response.ok) throw new Error(body.error || 'Create failed');
+        if (!response.ok) {
+            const errorMsg = body.error || (body.errors && Array.isArray(body.errors) ? body.errors.map((e: any) => e.message).join(', ') : 'Create failed');
+            throw new Error(errorMsg);
+        }
         return body;
     },
 
@@ -604,7 +607,10 @@ export const listingsApi = {
             body: JSON.stringify(data),
         });
         const body = await response.json();
-        if (!response.ok) throw new Error(body.error || 'Update failed');
+        if (!response.ok) {
+            const errorMsg = body.error || (body.errors && Array.isArray(body.errors) ? body.errors.map((e: any) => e.message).join(', ') : 'Update failed');
+            throw new Error(errorMsg);
+        }
         return body;
     },
 
