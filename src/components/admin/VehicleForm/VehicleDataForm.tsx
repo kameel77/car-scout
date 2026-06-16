@@ -9,6 +9,7 @@ import { DescriptionSection } from './sections/DescriptionSection';
 import { ImagesSection } from './sections/ImagesSection';
 import { SpecificationSection } from './sections/SpecificationSection';
 import { ProviderSection } from './sections/ProviderSection';
+import { FinancingAvailabilitySection } from './sections/FinancingAvailabilitySection';
 import type { VehicleFormMode, VehicleFormState } from './types';
 
 interface VehicleDataFormProps {
@@ -70,6 +71,16 @@ function buildInitialState(mode: VehicleFormMode, vehicle?: any): VehicleFormSta
         equipmentComfortExtras: arrayToText(vehicle?.equipmentComfortExtras),
         equipmentOther: arrayToText(vehicle?.equipmentOther),
         providerId: defaultProvider,
+        availableForPrivate: vehicle?.availableForPrivate ?? true,
+        availableForCompany: vehicle?.availableForCompany ?? true,
+        creditAvailable: vehicle?.creditAvailable ?? true,
+        leasingAvailable: vehicle?.leasingAvailable ?? true,
+        creditProductId: vehicle?.creditProductId || '',
+        leasingProductId: vehicle?.leasingProductId || '',
+        pricePrivateCreditPln: vehicle?.pricePrivateCreditPln?.toString() || '',
+        pricePrivateLeasingPln: vehicle?.pricePrivateLeasingPln?.toString() || '',
+        priceCompanyCreditPln: vehicle?.priceCompanyCreditPln?.toString() || '',
+        priceCompanyLeasingPln: vehicle?.priceCompanyLeasingPln?.toString() || '',
     };
 }
 
@@ -135,6 +146,16 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
                 condition: form.condition,
                 financingPriceBase: form.financingPriceBase,
                 isChineseBrand: form.isChineseBrand,
+                availableForPrivate: form.availableForPrivate,
+                availableForCompany: form.availableForCompany,
+                creditAvailable: form.creditAvailable,
+                leasingAvailable: form.leasingAvailable,
+                creditProductId: form.creditProductId || null,
+                leasingProductId: form.leasingProductId || null,
+                pricePrivateCreditPln: form.pricePrivateCreditPln ? parseInt(form.pricePrivateCreditPln) : null,
+                pricePrivateLeasingPln: form.pricePrivateLeasingPln ? parseInt(form.pricePrivateLeasingPln) : null,
+                priceCompanyCreditPln: form.priceCompanyCreditPln ? parseInt(form.priceCompanyCreditPln) : null,
+                priceCompanyLeasingPln: form.priceCompanyLeasingPln ? parseInt(form.priceCompanyLeasingPln) : null,
                 dealerId,
             });
         } else {
@@ -177,6 +198,11 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
             <Section title="Flagi">
                 <FlagsSection form={form} setField={setField} mode={mode} />
             </Section>
+            {mode === 'sale' && (
+                <Section title="Dostępność Finansowania">
+                    <FinancingAvailabilitySection form={form} setField={setField} mode={mode} />
+                </Section>
+            )}
             <Section title="Opis dodatkowy">
                 <DescriptionSection form={form} setField={setField} mode={mode} />
             </Section>

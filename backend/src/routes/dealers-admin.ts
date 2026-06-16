@@ -249,6 +249,8 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
                 smtpPassword,
                 smtpFromEmail: settings.smtpFromEmail,
                 smtpRecipientEmail: settings.smtpRecipientEmail,
+                defaultCreditProductId: settings.defaultCreditProductId || null,
+                defaultLeasingProductId: settings.defaultLeasingProductId || null,
             },
             create: {
                 dealerId: id,
@@ -260,6 +262,8 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
                 smtpPassword,
                 smtpFromEmail: settings.smtpFromEmail,
                 smtpRecipientEmail: settings.smtpRecipientEmail,
+                defaultCreditProductId: settings.defaultCreditProductId || null,
+                defaultLeasingProductId: settings.defaultLeasingProductId || null,
             },
         });
 

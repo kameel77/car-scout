@@ -10,6 +10,16 @@ export const CSV_EDITABLE_FIELDS = [
     'isFeatured',
     'additionalInfoHeader',
     'additionalInfoContent',
+    'availableForPrivate',
+    'availableForCompany',
+    'creditAvailable',
+    'leasingAvailable',
+    'creditProductId',
+    'leasingProductId',
+    'pricePrivateCreditPln',
+    'pricePrivateLeasingPln',
+    'priceCompanyCreditPln',
+    'priceCompanyLeasingPln',
 ] as const;
 
 export type ListingValidationError = { field: string; message: string };
@@ -94,6 +104,16 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
         additionalInfoHeader: body.additionalInfoHeader || undefined,
         additionalInfoContent: body.additionalInfoContent || undefined,
         isFeatured: body.isFeatured ?? false,
+        availableForPrivate: body.availableForPrivate ?? true,
+        availableForCompany: body.availableForCompany ?? true,
+        creditAvailable: body.creditAvailable ?? true,
+        leasingAvailable: body.leasingAvailable ?? true,
+        creditProduct: body.creditProductId ? { connect: { id: body.creditProductId } } : undefined,
+        leasingProduct: body.leasingProductId ? { connect: { id: body.leasingProductId } } : undefined,
+        pricePrivateCreditPln: body.pricePrivateCreditPln ?? undefined,
+        pricePrivateLeasingPln: body.pricePrivateLeasingPln ?? undefined,
+        priceCompanyCreditPln: body.priceCompanyCreditPln ?? undefined,
+        priceCompanyLeasingPln: body.priceCompanyLeasingPln ?? undefined,
         dealer: { connect: { id: dealerId } },
     };
 }

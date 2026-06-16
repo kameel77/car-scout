@@ -562,7 +562,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
         let listing = await fastify.prisma.listing.findUnique({
             where: { slug },
             include: {
-                dealer: true,
+                dealer: {
+                    include: { settings: true }
+                },
+                creditProduct: true,
+                leasingProduct: true,
                 priceHistory: {
                     orderBy: { changedAt: 'desc' },
                     take: 30
@@ -577,7 +581,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 listing = await fastify.prisma.listing.findUnique({
                     where: { id: idFromSlug },
                     include: {
-                        dealer: true,
+                        dealer: {
+                            include: { settings: true }
+                        },
+                        creditProduct: true,
+                        leasingProduct: true,
                         priceHistory: {
                             orderBy: { changedAt: 'desc' },
                             take: 30
@@ -601,7 +609,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const listing = await fastify.prisma.listing.findUnique({
             where: { id },
             include: {
-                dealer: true,
+                dealer: {
+                    include: { settings: true }
+                },
+                creditProduct: true,
+                leasingProduct: true,
                 priceHistory: {
                     orderBy: { changedAt: 'desc' },
                     take: 30

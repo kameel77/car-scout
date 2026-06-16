@@ -117,9 +117,23 @@ model Listing {
   isChineseBrand           Boolean            @default(false) @map("is_chinese_brand")
   lastManualEditAt         DateTime?          @map("last_manual_edit_at")
   entrySource              EntrySource?       @map("entry_source")
+
+  availableForPrivate      Boolean            @default(true) @map("available_for_private")
+  availableForCompany      Boolean            @default(true) @map("available_for_company")
+  creditAvailable          Boolean            @default(true) @map("credit_available")
+  leasingAvailable         Boolean            @default(true) @map("leasing_available")
+  creditProductId          String?            @map("credit_product_id")
+  leasingProductId         String?            @map("leasing_product_id")
+  pricePrivateCreditPln    Int?               @map("price_private_credit_pln")
+  pricePrivateLeasingPln   Int?               @map("price_private_leasing_pln")
+  priceCompanyCreditPln    Int?               @map("price_company_credit_pln")
+  priceCompanyLeasingPln   Int?               @map("price_company_leasing_pln")
+
   leads                    Lead[]
   dealer                   Dealer?            @relation(fields: [dealerId], references: [id])
   ownerUser                User?              @relation("ListingOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  creditProduct            FinancingProduct?  @relation("ListingCreditProduct", fields: [creditProductId], references: [id])
+  leasingProduct           FinancingProduct?  @relation("ListingLeasingProduct", fields: [leasingProductId], references: [id])
   priceHistory             PriceHistory[]
 
   @@index([make, model])
@@ -372,6 +386,10 @@ model FinancingProduct {
   providerConfig    Json?    @map("provider_config")
   hasBalloonPayment Boolean  @default(true) @map("has_balloon_payment")
   leads             Lead[]
+  creditListings    Listing[] @relation("ListingCreditProduct")
+  leasingListings   Listing[] @relation("ListingLeasingProduct")
+  dealerCreditDefaults DealerSettings[] @relation("DealerDefaultCreditProduct")
+  dealerLeasingDefaults DealerSettings[] @relation("DealerDefaultLeasingProduct")
 
   @@index([category])
   @@index([isDefault])
@@ -547,7 +565,12 @@ model DealerSettings {
   smtpRecipientEmail String? @map("smtp_recipient_email")
   leadRouting        LeadRouting @default(MOTOLIA) @map("lead_routing")
 
+  defaultCreditProductId  String? @map("default_credit_product_id")
+  defaultLeasingProductId String? @map("default_leasing_product_id")
+
   dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  defaultCreditProduct    FinancingProduct? @relation("DealerDefaultCreditProduct", fields: [defaultCreditProductId], references: [id])
+  defaultLeasingProduct   FinancingProduct? @relation("DealerDefaultLeasingProduct", fields: [defaultLeasingProductId], references: [id])
 
   @@map("dealer_settings")
 }

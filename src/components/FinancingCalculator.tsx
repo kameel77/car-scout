@@ -33,6 +33,8 @@ interface FinancingCalculatorProps {
     priceSlot?: React.ReactNode;
     /** When true, changes CTA button text to "Zapytaj o ofertę" */
     motoliaMode?: boolean;
+    /** Jeśli przekazane, ten produkt będzie wymuszony niezależnie od innych priorytetów */
+    forcedProductId?: string;
 }
 
 /** Maps URL financing type to product category */
@@ -56,6 +58,7 @@ export function FinancingCalculator({
     isDuplicateHeading,
     priceSlot,
     motoliaMode,
+    forcedProductId,
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
 
@@ -147,18 +150,26 @@ export function FinancingCalculator({
     const finalPaymentAmount = Math.round(price * finalPaymentPct / 100);
     const amountToFinance = price - initialPaymentAmount;
 
-    const candidateProduct = React.useMemo(() => {
+        const candidateProduct = React.useMemo(() => {
         // Step 1: Filter products by category, failed status, and amount
         const eligibleProducts = products.filter(p => {
             if (p.category !== activeCategory) return false;
             if (failedProducts.has(p.id)) return false;
 
-            // Priority is given to amount range
-            if (p.minAmount != null && amountToFinance < p.minAmount) return false;
-            if (p.maxAmount != null && amountToFinance > p.maxAmount) return false;
+            // Priority is given to amount range (unless forced)
+            if (forcedProductId !== p.id) {
+                if (p.minAmount != null && amountToFinance < p.minAmount) return false;
+                if (p.maxAmount != null && amountToFinance > p.maxAmount) return false;
+            }
 
             return true;
         });
+
+        // Step 1.5: If there is a forced product and it is eligible, pick it immediately
+        if (forcedProductId) {
+            const forced = eligibleProducts.find(p => p.id === forcedProductId);
+            if (forced) return forced;
+        }
 
         // Step 2: Sort by priority (desc), then isDefault (desc)
         const sorted = [...eligibleProducts].sort((a, b) => {
@@ -186,7 +197,7 @@ export function FinancingCalculator({
         }
 
         return sorted[0] || null;
-    }, [activeCategory, amountToFinance, failedProducts, products]);
+    }, [activeCategory, amountToFinance, failedProducts, products, forcedProductId]);
 
     React.useEffect(() => {
         setSelectedProduct(prev => (prev?.id === candidateProduct?.id ? prev : candidateProduct));
