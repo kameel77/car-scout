@@ -808,6 +808,108 @@ export const featureTilesApi = {
     },
 };
 
+// Hero Banners API
+export interface HeroBanner {
+    id: string;
+    imageUrlDesktop: string | null;
+    imageUrlMobile: string | null;
+    altText: string;
+    buttonLabel: string;
+    buttonUrl: string;
+    buttonPositionYPct: number;
+    buttonAlign: string;
+    isActive: boolean;
+    sortOrder: number;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface PublicHeroBanner {
+    id: string;
+    imageUrlDesktop: string | null;
+    imageUrlMobile: string | null;
+    altText: string;
+    buttonLabel: string;
+    buttonUrl: string;
+    buttonPositionYPct: number;
+    buttonAlign: string;
+}
+
+export type HeroBannerInput = Pick<
+    HeroBanner,
+    'altText' | 'buttonLabel' | 'buttonUrl' | 'buttonPositionYPct' | 'buttonAlign' | 'isActive'
+>;
+
+export const heroBannersApi = {
+    listPublic: async (): Promise<{ banners: PublicHeroBanner[] }> => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/public`);
+        if (!r.ok) throw new Error('Failed to fetch hero banners');
+        return r.json();
+    },
+    listAdmin: async (token: string): Promise<{ banners: HeroBanner[] }> => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) throw new Error('Failed to fetch hero banners');
+        return r.json();
+    },
+    create: async (data: Partial<HeroBannerInput>, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(data),
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to create banner');
+        return json as { banner: HeroBanner };
+    },
+    update: async (id: string, data: Partial<HeroBannerInput>, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(data),
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to update banner');
+        return json as { banner: HeroBanner };
+    },
+    remove: async (id: string, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || 'Failed to delete banner');
+        }
+        return true;
+    },
+    reorder: async (order: string[], token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ order }),
+        });
+        if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || 'Failed to reorder');
+        }
+        return true;
+    },
+    uploadImage: async (id: string, file: File, slot: 'desktop' | 'mobile', token: string) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/${id}/image?slot=${slot}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to upload image');
+        return json as { banner: HeroBanner; url: string };
+    },
+};
+
 // Translations API
 export const translationsApi = {
     list: async (

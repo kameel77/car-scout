@@ -42,6 +42,7 @@ import { featuredRoutes } from './routes/featured.js';
 import { widgetRoutes } from './routes/widgets.js';
 import { onepagerRoutes } from './routes/onepager.js';
 import { featureTileRoutes } from './routes/feature-tiles.js';
+import { heroBannerRoutes } from './routes/hero-banners.js';
 import { consentRoutes } from './routes/consent.js';
 import { externalListingsRoutes } from './routes/external/listings.js';
 import { closeBrowser } from './services/puppeteer.js';
@@ -313,6 +314,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(widgetRoutes);
     await fastify.register(onepagerRoutes);
     await fastify.register(featureTileRoutes);
+    await fastify.register(heroBannerRoutes);
     await fastify.register(consentRoutes);
     await fastify.register(externalListingsRoutes);
 
@@ -370,6 +372,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         'regulamin',
         'polityka-cookies',
         'feature-tiles',
+        'hero-banners',
         'migrated-images',
     ]);
     fastify.get('/uploads/:slug/:file', async (request, reply) => {

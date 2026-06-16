@@ -36,6 +36,7 @@ const TranslationsPage = lazy(() => import("./pages/admin/TranslationsPage"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
 const FaqPage = lazy(() => import("./pages/admin/FaqPage"));
 const AdminFeatureTilesPage = lazy(() => import("./pages/admin/FeatureTilesPage"));
+const AdminHeroBannersPage = lazy(() => import("./pages/admin/HeroBannersPage"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/PartnersPage"));
 const AdminApiPartnersPage = lazy(() => import("./pages/admin/ApiPartnersPage"));
 const FinancingPage = lazy(() => import("./pages/admin/FinancingPage"));
@@ -185,6 +186,14 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <AdminFeatureTilesPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/hero-banners"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <AdminHeroBannersPage />
                             </ProtectedRoute>
                           }
                         />
