@@ -87,6 +87,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/admin/api-partners', label: 'Klucze API', icon: Network, visibleTo: PLATFORM_ONLY },
     { href: '/admin/widgets', label: 'Widgety', icon: Blocks, visibleTo: PLATFORM_ONLY },
     { href: '/admin/feature-tiles', label: 'Kafle home', icon: LayoutGrid, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/hero-banners', label: 'Banery hero', icon: LayoutGrid, visibleTo: PLATFORM_ONLY },
 ];
 
 export function AdminSidebar() {
