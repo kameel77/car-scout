@@ -25,6 +25,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { DynamicWidget } from '@/components/public/DynamicWidget';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import HeroVehicleFilter from '@/components/HeroVehicleFilter';
+import { HeroBannerCarousel, useHeroBanners } from '@/components/HeroBannerCarousel';
 import { FeatureTilesSection } from '@/components/FeatureTilesSection';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -137,6 +138,8 @@ const CAR_BRANDS_CN = ['BYD', 'Chery', 'MG', 'Geely', 'Omoda', 'Jaecoo', 'Leapmo
 
 export default function MotoliaHomePage() {
   const { config } = useBrand();
+  const { data: heroBannerData } = useHeroBanners();
+  const hasHeroBanners = (heroBannerData?.banners?.length ?? 0) > 0;
   const [openFaq, setOpenFaq] = React.useState<number | null>(0);
   const { i18n } = useTranslation();
 
@@ -183,75 +186,88 @@ export default function MotoliaHomePage() {
           style={{ background: `radial-gradient(circle, ${YELLOW}10 0%, transparent 70%)` }} />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="grid lg:grid-cols-[1.5fr_1fr] gap-16 items-center">
-
-            {/* Left col */}
-            <div className="max-w-2xl">
-              <FadeIn>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8"
-                  style={{ background: `${YELLOW}20`, borderColor: `${YELLOW}60`, color: BLACK }}>
-                  <span style={{ color: YELLOW_DARK }}>◆</span>
-                  {config.homePage.hero.badge}
-                </div>
-              </FadeIn>
-
-              <FadeIn delay={0.1}>
-                <h1
-                  className="text-5xl lg:text-7xl font-outfit font-bold tracking-tight mb-6 leading-[1.08] text-[#1A1A1A]"
-                  dangerouslySetInnerHTML={{
-                    __html: config.homePage.hero.title.replace(
-                      '<span>',
-                      `<span style="color:${YELLOW_DARK}">`,
-                    ),
-                  }}
-                />
-              </FadeIn>
-
-              <FadeIn delay={0.2}>
-                <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light">
-                  {config.homePage.hero.subtitle}
-                </p>
-              </FadeIn>
-
-              <FadeIn delay={0.3} className="flex flex-col sm:flex-row gap-4 mb-12">
-                <Link
-                  to="/samochody"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
-                  style={{
-                    background: YELLOW,
-                    color: BLACK,
-                    boxShadow: `0 4px 24px ${YELLOW}60`,
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
-                  onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
-                >
-                  {config.homePage.hero.ctaLabel}
-                  <ArrowRight size={20} />
-                </Link>
-                <a
-                  href="#jak-to-dziala"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-gray-200 text-gray-700 hover:border-gray-400 hover:text-gray-900 transition-all duration-200"
-                >
-                  Jak to działa?
-                </a>
-              </FadeIn>
-
-              <FadeIn delay={0.4} className="flex flex-wrap gap-x-8 gap-y-3">
-                {config.homePage.hero.trustBadges.map((badge, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-gray-600 text-sm font-medium">
-                    <CheckCircle2 size={17} style={{ color: YELLOW_DARK }} />
-                    {badge}
-                  </div>
-                ))}
+          {hasHeroBanners ? (
+            <div className="relative">
+              <HeroBannerCarousel />
+              {/* Floating search card (superauto layout) */}
+              <FadeIn
+                delay={0.2}
+                className="mt-6 lg:mt-0 lg:absolute lg:top-1/2 lg:right-6 xl:right-10 lg:-translate-y-1/2 lg:w-[400px] lg:z-20"
+              >
+                <HeroVehicleFilter />
               </FadeIn>
             </div>
+          ) : (
+            <div className="grid lg:grid-cols-[1.5fr_1fr] gap-16 items-center">
 
-            {/* Right col — vehicle filter widget */}
-            <FadeIn delay={0.4} className="relative">
-              <HeroVehicleFilter />
-            </FadeIn>
+              {/* Left col */}
+              <div className="max-w-2xl">
+                <FadeIn>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8"
+                    style={{ background: `${YELLOW}20`, borderColor: `${YELLOW}60`, color: BLACK }}>
+                    <span style={{ color: YELLOW_DARK }}>◆</span>
+                    {config.homePage.hero.badge}
+                  </div>
+                </FadeIn>
 
-          </div>
+                <FadeIn delay={0.1}>
+                  <h1
+                    className="text-5xl lg:text-7xl font-outfit font-bold tracking-tight mb-6 leading-[1.08] text-[#1A1A1A]"
+                    dangerouslySetInnerHTML={{
+                      __html: config.homePage.hero.title.replace(
+                        '<span>',
+                        `<span style="color:${YELLOW_DARK}">`,
+                      ),
+                    }}
+                  />
+                </FadeIn>
+
+                <FadeIn delay={0.2}>
+                  <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light">
+                    {config.homePage.hero.subtitle}
+                  </p>
+                </FadeIn>
+
+                <FadeIn delay={0.3} className="flex flex-col sm:flex-row gap-4 mb-12">
+                  <Link
+                    to="/samochody"
+                    className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                    style={{
+                      background: YELLOW,
+                      color: BLACK,
+                      boxShadow: `0 4px 24px ${YELLOW}60`,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
+                    onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
+                  >
+                    {config.homePage.hero.ctaLabel}
+                    <ArrowRight size={20} />
+                  </Link>
+                  <a
+                    href="#jak-to-dziala"
+                    className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-gray-200 text-gray-700 hover:border-gray-400 hover:text-gray-900 transition-all duration-200"
+                  >
+                    Jak to działa?
+                  </a>
+                </FadeIn>
+
+                <FadeIn delay={0.4} className="flex flex-wrap gap-x-8 gap-y-3">
+                  {config.homePage.hero.trustBadges.map((badge, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-gray-600 text-sm font-medium">
+                      <CheckCircle2 size={17} style={{ color: YELLOW_DARK }} />
+                      {badge}
+                    </div>
+                  ))}
+                </FadeIn>
+              </div>
+
+              {/* Right col — vehicle filter widget */}
+              <FadeIn delay={0.4} className="relative">
+                <HeroVehicleFilter />
+              </FadeIn>
+
+            </div>
+          )}
         </div>
       </section>
 
