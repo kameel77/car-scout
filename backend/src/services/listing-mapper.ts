@@ -14,8 +14,6 @@ export const CSV_EDITABLE_FIELDS = [
     'availableForCompany',
     'creditAvailable',
     'leasingAvailable',
-    'creditProductId',
-    'leasingProductId',
     'pricePrivateCreditPln',
     'pricePrivateLeasingPln',
     'priceCompanyCreditPln',
@@ -120,6 +118,15 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
 
 export function mapManualPayloadToListingUpdate(body: any): Prisma.ListingUpdateInput {
     const { dealer, ...rest } = mapManualPayloadToListing(body, 'placeholder') as any;
+    
+    // Explicitly handle disconnect for relations when updating manually
+    if (body.creditProductId === null) {
+        rest.creditProduct = { disconnect: true };
+    }
+    if (body.leasingProductId === null) {
+        rest.leasingProduct = { disconnect: true };
+    }
+
     return rest;
 }
 
@@ -130,5 +137,23 @@ export function pickCsvEditableFields(body: any): Prisma.ListingUpdateInput {
             result[field] = body[field];
         }
     }
+    
+    // Explicitly handle relations for CSV/imported vehicles
+    if (body.creditProductId !== undefined) {
+        if (body.creditProductId === null) {
+            result.creditProduct = { disconnect: true };
+        } else {
+            result.creditProduct = { connect: { id: body.creditProductId } };
+        }
+    }
+    
+    if (body.leasingProductId !== undefined) {
+        if (body.leasingProductId === null) {
+            result.leasingProduct = { disconnect: true };
+        } else {
+            result.leasingProduct = { connect: { id: body.leasingProductId } };
+        }
+    }
+
     return result;
 }
