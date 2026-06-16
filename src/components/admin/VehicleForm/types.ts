@@ -69,4 +69,5 @@ export interface SectionProps {
     mode: VehicleFormMode;
     /** When true, immutable identification/technical/equipment fields disabled (CSV/CSFLOW guard) */
     isImported?: boolean;
+    errors?: Record<string, string>;
 }

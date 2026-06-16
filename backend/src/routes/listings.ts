@@ -152,10 +152,21 @@ export async function listingRoutes(fastify: FastifyInstance) {
             updateData = mapManualPayloadToListingUpdate(body);
         }
 
-        if (!isImported && body.pricePln !== undefined && body.pricePln !== existing.pricePln) {
-            const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
-            const brokerFeePct = settings?.brokerFeePctPln ?? 3.5;
-            updateData.brokerPricePln = Math.round(body.pricePln * (1 + brokerFeePct / 100));
+        if (!isImported) {
+            if (body.pricePln !== undefined && body.pricePln !== existing.pricePln) {
+                const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
+                const brokerFeePct = settings?.brokerFeePctPln ?? 3.5;
+                updateData.brokerPricePln = Math.round(body.pricePln * (1 + brokerFeePct / 100));
+            }
+            
+            const finalPricePln = updateData.pricePln !== undefined ? updateData.pricePln : existing.pricePln;
+            const finalDiscount = updateData.motoliaDiscountPln !== undefined ? updateData.motoliaDiscountPln : existing.motoliaDiscountPln;
+            const finalDisplaySalePrice = updateData.displaySalePrice !== undefined ? updateData.displaySalePrice : existing.displaySalePrice;
+            
+            if (finalPricePln != null) {
+                const total = finalDisplaySalePrice && finalDiscount ? finalPricePln + finalDiscount : finalPricePln;
+                updateData.priceDisplay = total.toLocaleString('pl-PL') + ' PLN';
+            }
         }
 
         updateData.lastManualEditAt = new Date();

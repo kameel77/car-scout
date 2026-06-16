@@ -44,11 +44,13 @@ export default function ListingEditPage() {
 
     const isImported = listing?.entrySource === 'CSFLOW';
 
+    const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
     const queryClient = useQueryClient();
 
     const handleSave = async (data: any) => {
         if (!token || !id) return;
         setIsSaving(true);
+        setServerErrors({});
         try {
             await listingsApi.updateListing(id, data, token);
             queryClient.invalidateQueries({ queryKey: ['admin-listing-raw', id] });
@@ -58,6 +60,13 @@ export default function ListingEditPage() {
             navigate('/admin/listings');
         } catch (e: any) {
             toast({ title: 'Błąd', description: e.message, variant: 'destructive' });
+            if (e.errors) {
+                const errMap: Record<string, string> = {};
+                e.errors.forEach((err: any) => {
+                    errMap[err.field] = err.message;
+                });
+                setServerErrors(errMap);
+            }
         } finally {
             setIsSaving(false);
         }
@@ -82,6 +91,7 @@ export default function ListingEditPage() {
                 onSave={handleSave}
                 onCancel={() => navigate('/admin/listings')}
                 isSaving={isSaving}
+                serverErrors={serverErrors}
             />
         </div>
     );

@@ -609,7 +609,11 @@ export const listingsApi = {
         const body = await response.json();
         if (!response.ok) {
             const errorMsg = body.error || (body.errors && Array.isArray(body.errors) ? body.errors.map((e: any) => e.message).join(', ') : 'Update failed');
-            throw new Error(errorMsg);
+            const err = new Error(errorMsg) as any;
+            if (body.errors && Array.isArray(body.errors)) {
+                err.errors = body.errors;
+            }
+            throw err;
         }
         return body;
     },

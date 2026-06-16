@@ -23,6 +23,7 @@ interface VehicleDataFormProps {
     isSaving: boolean;
     externalButtons?: boolean;
     formId?: string;
+    serverErrors?: Record<string, string>;
 }
 
 const arrayToText = (arr?: string[] | null): string => (arr || []).join('\n');
@@ -84,7 +85,7 @@ function buildInitialState(mode: VehicleFormMode, vehicle?: any): VehicleFormSta
     };
 }
 
-export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported, onSave, onCancel, isSaving, externalButtons, formId }: VehicleDataFormProps) {
+export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported, onSave, onCancel, isSaving, externalButtons, formId, serverErrors }: VehicleDataFormProps) {
     const [form, setForm] = useState<VehicleFormState>(() => buildInitialState(mode, vehicle));
     const [images, setImages] = useState<{ primaryImageUrl: string | null; imageUrls: string[] }>({
         primaryImageUrl: vehicle?.primaryImageUrl ?? null,
@@ -181,7 +182,7 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
     return (
         <form id={formId} onSubmit={handleSubmit} className="space-y-8">
             <Section title="Identyfikacja">
-                <IdentificationSection form={form} setField={setField} mode={mode} isImported={isImported} />
+                <IdentificationSection form={form} setField={setField} mode={mode} isImported={isImported} errors={serverErrors} />
             </Section>
             <Section title={mode === 'sale' ? 'Dealer' : 'Dostawca'}>
                 <ProviderSection form={form} setField={setField} mode={mode} dealers={dealers} companies={companies} />
@@ -193,7 +194,7 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
                 <EquipmentSection form={form} setField={setField} mode={mode} isImported={isImported} />
             </Section>
             <Section title="Ceny i stan">
-                <PricingSection form={form} setField={setField} mode={mode} isImported={isImported} />
+                <PricingSection form={form} setField={setField} mode={mode} isImported={isImported} errors={serverErrors} />
             </Section>
             <Section title="Flagi">
                 <FlagsSection form={form} setField={setField} mode={mode} />
