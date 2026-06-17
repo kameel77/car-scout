@@ -9,6 +9,7 @@ import { DescriptionSection } from './sections/DescriptionSection';
 import { ImagesSection } from './sections/ImagesSection';
 import { SpecificationSection } from './sections/SpecificationSection';
 import { ProviderSection } from './sections/ProviderSection';
+import { FinancingAvailabilitySection } from './sections/FinancingAvailabilitySection';
 import type { VehicleFormMode, VehicleFormState } from './types';
 
 interface VehicleDataFormProps {
@@ -22,6 +23,7 @@ interface VehicleDataFormProps {
     isSaving: boolean;
     externalButtons?: boolean;
     formId?: string;
+    serverErrors?: Record<string, string>;
 }
 
 const arrayToText = (arr?: string[] | null): string => (arr || []).join('\n');
@@ -70,10 +72,20 @@ function buildInitialState(mode: VehicleFormMode, vehicle?: any): VehicleFormSta
         equipmentComfortExtras: arrayToText(vehicle?.equipmentComfortExtras),
         equipmentOther: arrayToText(vehicle?.equipmentOther),
         providerId: defaultProvider,
+        availableForPrivate: vehicle?.availableForPrivate ?? true,
+        availableForCompany: vehicle?.availableForCompany ?? true,
+        creditAvailable: vehicle?.creditAvailable ?? true,
+        leasingAvailable: vehicle?.leasingAvailable ?? true,
+        creditProductId: vehicle?.creditProductId || '',
+        leasingProductId: vehicle?.leasingProductId || '',
+        pricePrivateCreditPln: vehicle?.pricePrivateCreditPln?.toString() || '',
+        pricePrivateLeasingPln: vehicle?.pricePrivateLeasingPln?.toString() || '',
+        priceCompanyCreditPln: vehicle?.priceCompanyCreditPln?.toString() || '',
+        priceCompanyLeasingPln: vehicle?.priceCompanyLeasingPln?.toString() || '',
     };
 }
 
-export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported, onSave, onCancel, isSaving, externalButtons, formId }: VehicleDataFormProps) {
+export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported, onSave, onCancel, isSaving, externalButtons, formId, serverErrors }: VehicleDataFormProps) {
     const [form, setForm] = useState<VehicleFormState>(() => buildInitialState(mode, vehicle));
     const [images, setImages] = useState<{ primaryImageUrl: string | null; imageUrls: string[] }>({
         primaryImageUrl: vehicle?.primaryImageUrl ?? null,
@@ -135,6 +147,16 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
                 condition: form.condition,
                 financingPriceBase: form.financingPriceBase,
                 isChineseBrand: form.isChineseBrand,
+                availableForPrivate: form.availableForPrivate,
+                availableForCompany: form.availableForCompany,
+                creditAvailable: form.creditAvailable,
+                leasingAvailable: form.leasingAvailable,
+                creditProductId: form.creditProductId || null,
+                leasingProductId: form.leasingProductId || null,
+                pricePrivateCreditPln: form.pricePrivateCreditPln ? parseInt(form.pricePrivateCreditPln) : null,
+                pricePrivateLeasingPln: form.pricePrivateLeasingPln ? parseInt(form.pricePrivateLeasingPln) : null,
+                priceCompanyCreditPln: form.priceCompanyCreditPln ? parseInt(form.priceCompanyCreditPln) : null,
+                priceCompanyLeasingPln: form.priceCompanyLeasingPln ? parseInt(form.priceCompanyLeasingPln) : null,
                 dealerId,
             });
         } else {
@@ -160,7 +182,7 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
     return (
         <form id={formId} onSubmit={handleSubmit} className="space-y-8">
             <Section title="Identyfikacja">
-                <IdentificationSection form={form} setField={setField} mode={mode} isImported={isImported} />
+                <IdentificationSection form={form} setField={setField} mode={mode} isImported={isImported} errors={serverErrors} />
             </Section>
             <Section title={mode === 'sale' ? 'Dealer' : 'Dostawca'}>
                 <ProviderSection form={form} setField={setField} mode={mode} dealers={dealers} companies={companies} />
@@ -172,11 +194,16 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
                 <EquipmentSection form={form} setField={setField} mode={mode} isImported={isImported} />
             </Section>
             <Section title="Ceny i stan">
-                <PricingSection form={form} setField={setField} mode={mode} isImported={isImported} />
+                <PricingSection form={form} setField={setField} mode={mode} isImported={isImported} errors={serverErrors} />
             </Section>
             <Section title="Flagi">
                 <FlagsSection form={form} setField={setField} mode={mode} />
             </Section>
+            {mode === 'sale' && (
+                <Section title="Dostępność Finansowania">
+                    <FinancingAvailabilitySection form={form} setField={setField} mode={mode} />
+                </Section>
+            )}
             <Section title="Opis dodatkowy">
                 <DescriptionSection form={form} setField={setField} mode={mode} />
             </Section>

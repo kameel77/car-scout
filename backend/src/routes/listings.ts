@@ -146,15 +146,27 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 ...body,
             });
             if (errors.length > 0) {
+                fastify.log.error({ msg: 'Listing validation errors', errors });
                 return reply.code(400).send({ errors });
             }
             updateData = mapManualPayloadToListingUpdate(body);
         }
 
-        if (!isImported && body.pricePln !== undefined && body.pricePln !== existing.pricePln) {
-            const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
-            const brokerFeePct = settings?.brokerFeePctPln ?? 3.5;
-            updateData.brokerPricePln = Math.round(body.pricePln * (1 + brokerFeePct / 100));
+        if (!isImported) {
+            if (body.pricePln !== undefined && body.pricePln !== existing.pricePln) {
+                const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
+                const brokerFeePct = settings?.brokerFeePctPln ?? 3.5;
+                updateData.brokerPricePln = Math.round(body.pricePln * (1 + brokerFeePct / 100));
+            }
+            
+            const finalPricePln = updateData.pricePln !== undefined ? updateData.pricePln : existing.pricePln;
+            const finalDiscount = updateData.motoliaDiscountPln !== undefined ? updateData.motoliaDiscountPln : existing.motoliaDiscountPln;
+            const finalDisplaySalePrice = updateData.displaySalePrice !== undefined ? updateData.displaySalePrice : existing.displaySalePrice;
+            
+            if (finalPricePln != null) {
+                const total = finalDisplaySalePrice && finalDiscount ? finalPricePln + finalDiscount : finalPricePln;
+                updateData.priceDisplay = total.toLocaleString('pl-PL') + ' PLN';
+            }
         }
 
         updateData.lastManualEditAt = new Date();
@@ -562,7 +574,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
         let listing = await fastify.prisma.listing.findUnique({
             where: { slug },
             include: {
-                dealer: true,
+                dealer: {
+                    include: { settings: true }
+                },
+                creditProduct: true,
+                leasingProduct: true,
                 priceHistory: {
                     orderBy: { changedAt: 'desc' },
                     take: 30
@@ -577,7 +593,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 listing = await fastify.prisma.listing.findUnique({
                     where: { id: idFromSlug },
                     include: {
-                        dealer: true,
+                        dealer: {
+                            include: { settings: true }
+                        },
+                        creditProduct: true,
+                        leasingProduct: true,
                         priceHistory: {
                             orderBy: { changedAt: 'desc' },
                             take: 30
@@ -601,7 +621,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const listing = await fastify.prisma.listing.findUnique({
             where: { id },
             include: {
-                dealer: true,
+                dealer: {
+                    include: { settings: true }
+                },
+                creditProduct: true,
+                leasingProduct: true,
                 priceHistory: {
                     orderBy: { changedAt: 'desc' },
                     take: 30

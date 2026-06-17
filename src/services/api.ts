@@ -11,6 +11,24 @@ import type { SeoConfig } from '@/components/seo/SeoManager';
 import type { CrmTrackingVisit, CrmTrackingResponse } from '@/types/crmTracking';
 import type { PartnerAd, PartnerAdPayload } from '@/types/partnerAds';
 
+export interface PartnerApiIntegration {
+    id: string;
+    name: string;
+    apiKey: string;
+    nip?: string | null;
+    contactPerson?: string | null;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
+    mappings?: {
+        externalId: string;
+        dealerId: string;
+        dealer?: { name: string };
+    }[];
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
 type ImportMode = 'replace' | 'merge';
 
 // Default: dev hits same origin (proxy), prod uses current origin relative path if not specified.
@@ -575,7 +593,10 @@ export const listingsApi = {
             body: JSON.stringify(data),
         });
         const body = await response.json();
-        if (!response.ok) throw new Error(body.error || 'Create failed');
+        if (!response.ok) {
+            const errorMsg = body.error || (body.errors && Array.isArray(body.errors) ? body.errors.map((e: any) => e.message).join(', ') : 'Create failed');
+            throw new Error(errorMsg);
+        }
         return body;
     },
 
@@ -586,7 +607,14 @@ export const listingsApi = {
             body: JSON.stringify(data),
         });
         const body = await response.json();
-        if (!response.ok) throw new Error(body.error || 'Update failed');
+        if (!response.ok) {
+            const errorMsg = body.error || (body.errors && Array.isArray(body.errors) ? body.errors.map((e: any) => e.message).join(', ') : 'Update failed');
+            const err = new Error(errorMsg) as any;
+            if (body.errors && Array.isArray(body.errors)) {
+                err.errors = body.errors;
+            }
+            throw err;
+        }
         return body;
     },
 
@@ -777,6 +805,108 @@ export const featureTilesApi = {
         const json = await r.json();
         if (!r.ok) throw new Error(json.error || 'Failed to upload image');
         return json as { tile: FeatureTile; url: string };
+    },
+};
+
+// Hero Banners API
+export interface HeroBanner {
+    id: string;
+    imageUrlDesktop: string | null;
+    imageUrlMobile: string | null;
+    altText: string;
+    buttonLabel: string;
+    buttonUrl: string;
+    buttonPositionYPct: number;
+    buttonAlign: string;
+    isActive: boolean;
+    sortOrder: number;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface PublicHeroBanner {
+    id: string;
+    imageUrlDesktop: string | null;
+    imageUrlMobile: string | null;
+    altText: string;
+    buttonLabel: string;
+    buttonUrl: string;
+    buttonPositionYPct: number;
+    buttonAlign: string;
+}
+
+export type HeroBannerInput = Pick<
+    HeroBanner,
+    'altText' | 'buttonLabel' | 'buttonUrl' | 'buttonPositionYPct' | 'buttonAlign' | 'isActive'
+>;
+
+export const heroBannersApi = {
+    listPublic: async (): Promise<{ banners: PublicHeroBanner[] }> => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/public`);
+        if (!r.ok) throw new Error('Failed to fetch hero banners');
+        return r.json();
+    },
+    listAdmin: async (token: string): Promise<{ banners: HeroBanner[] }> => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) throw new Error('Failed to fetch hero banners');
+        return r.json();
+    },
+    create: async (data: Partial<HeroBannerInput>, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(data),
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to create banner');
+        return json as { banner: HeroBanner };
+    },
+    update: async (id: string, data: Partial<HeroBannerInput>, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(data),
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to update banner');
+        return json as { banner: HeroBanner };
+    },
+    remove: async (id: string, token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || 'Failed to delete banner');
+        }
+        return true;
+    },
+    reorder: async (order: string[], token: string) => {
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ order }),
+        });
+        if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || 'Failed to reorder');
+        }
+        return true;
+    },
+    uploadImage: async (id: string, file: File, slot: 'desktop' | 'mobile', token: string) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch(`${API_BASE_URL}/api/hero-banners/${id}/image?slot=${slot}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Failed to upload image');
+        return json as { banner: HeroBanner; url: string };
     },
 };
 
@@ -1366,5 +1496,45 @@ export const api = {
             if (!response.ok) throw new Error('Failed to delete widget');
             return response.json();
         }
+    }
+};
+
+// Partner Management (API Keys)
+export const partnerManagementApi = {
+    list: async (token: string): Promise<{ partners: PartnerApiIntegration[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/partners`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch partners');
+        return response.json();
+    },
+    create: async (data: Partial<PartnerApiIntegration>, token: string): Promise<{ partner: PartnerApiIntegration }> => {
+        const response = await fetch(`${API_BASE_URL}/api/partners`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'Failed to create partner');
+        return json;
+    },
+    update: async (id: string, data: Partial<PartnerApiIntegration>, token: string): Promise<{ partner: PartnerApiIntegration }> => {
+        const response = await fetch(`${API_BASE_URL}/api/partners/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'Failed to update partner');
+        return json;
+    },
+    regenerateKey: async (id: string, token: string): Promise<{ partner: PartnerApiIntegration }> => {
+        const response = await fetch(`${API_BASE_URL}/api/partners/${id}/regenerate-key`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'Failed to regenerate key');
+        return json;
     }
 };

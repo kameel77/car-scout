@@ -25,6 +25,7 @@ import {
     Shield,
     Blocks,
     LayoutGrid,
+    Images,
 } from 'lucide-react';
 import { useAuth, MemberRole, ROLE_LABELS } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -83,9 +84,11 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/admin/financing', label: 'Finansowanie', icon: Banknote, visibleTo: PLATFORM_ONLY },
     { href: '/admin/seo', label: 'SEO', icon: Search, visibleTo: PLATFORM_ONLY },
     { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/partners', label: 'Partnerzy', icon: Handshake, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/partners', label: 'Reklamy partnerskie', icon: Handshake, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/api-partners', label: 'Klucze API', icon: Network, visibleTo: PLATFORM_ONLY },
     { href: '/admin/widgets', label: 'Widgety', icon: Blocks, visibleTo: PLATFORM_ONLY },
     { href: '/admin/feature-tiles', label: 'Kafle home', icon: LayoutGrid, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/hero-banners', label: 'Banery hero', icon: Images, visibleTo: PLATFORM_ONLY },
 ];
 
 export function AdminSidebar() {

@@ -24,7 +24,15 @@ export function PricingSection({ form, setField, mode, isImported }: SectionProp
                     <>
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700">Cena w finansowaniu (PLN) *</label>
-                            <Input type="number" value={form.pricePln} onChange={e => setField('pricePln', e.target.value)} disabled={isImported} required />
+                            <Input 
+                                type="number" 
+                                value={form.pricePln} 
+                                onChange={e => setField('pricePln', e.target.value)} 
+                                disabled={isImported} 
+                                required 
+                                className={errors?.pricePln ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                            />
+                            {errors?.pricePln && <p className="text-xs text-red-600">{errors.pricePln}</p>}
                         </div>
 
                         <div className="space-y-2">
@@ -86,7 +94,14 @@ export function PricingSection({ form, setField, mode, isImported }: SectionProp
                         <label className="text-sm font-medium text-gray-700">
                             Przebieg (km) {mode === 'sale' ? (form.condition === 'NEW' ? '(< 100)' : '*') : ''}
                         </label>
-                        <Input type="number" value={form.mileageKm} onChange={e => setField('mileageKm', e.target.value)} required={mode === 'sale'} />
+                        <Input 
+                            type="number" 
+                            value={form.mileageKm} 
+                            onChange={e => setField('mileageKm', e.target.value)} 
+                            required={mode === 'sale'} 
+                            className={errors?.mileageKm ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                        />
+                        {errors?.mileageKm && <p className="text-xs text-red-600">{errors.mileageKm}</p>}
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Data pierwszej rejestracji</label>

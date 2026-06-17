@@ -296,6 +296,24 @@ export default function ListingDetailPage() {
   const discountedListingPrice = applySpecialOfferDiscount(getDisplayPrice(listing), discount);
   const formattedPrice = formatPrice(discountedListingPrice, settings?.displayCurrency || 'PLN');
 
+  const forcedProductId = financingType === 'kredyt'
+    ? listing.creditProductId || listing.dealerSettings?.defaultCreditProductId || undefined
+    : financingType === 'leasing'
+    ? listing.leasingProductId || listing.dealerSettings?.defaultLeasingProductId || undefined
+    : undefined;
+
+  const isFinancingAvailable = financingType === 'kredyt'
+    ? listing.creditAvailable !== false
+    : financingType === 'leasing'
+    ? listing.leasingAvailable !== false
+    : true;
+
+  const isCustomerTypeAvailable = priceType === 'gross'
+    ? listing.availableForPrivate !== false
+    : listing.availableForCompany !== false;
+
+  const showCalculator = isCustomerTypeAvailable && (settings?.financingCalculatorEnabled ?? true);
+
   // --- Trzy ceny: katalogowa (przekreślona + pill -%), w finansowaniu (główna), sprzedaży (gotówka) ---
   // Ceny katalogowa/rabat/sprzedaży są w PLN; przy walucie EUR pomijamy te dodatki (osobny follow-up).
   const currencyCode = settings?.displayCurrency || 'PLN';
@@ -635,25 +653,37 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Financing Calculator — on mobile shown above key parameters (desktop sidebar config hides it here) */}
-            {(settings?.financingCalculatorEnabled ?? true) && (
-              <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
-                {isMotolia && <CustomerTypeToggle className="w-full mb-4 lg:hidden" />}
+            <section className={cn(settings?.financingCalculatorLocation === 'sidebar' && "lg:hidden")}>
+              {isMotolia && <CustomerTypeToggle className="w-full mb-4 lg:hidden" />}
+              
+              {!isCustomerTypeAvailable ? (
+                <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
+                  {t('financing.notAvailableForCustomerType', 'Ta oferta nie jest dostępna dla wybranego typu klienta (Prywatnie / Firma).')}
+                </div>
+              ) : showCalculator ? (
                 <FinancingCalculator
+                  creditAvailable={listing.creditAvailable !== false}
+                  leasingAvailable={listing.leasingAvailable !== false}
+                  forcedProductId={forcedProductId}
                   listingId={listing.listing_id}
                   price={
                     priceType === 'net'
                       ? Math.round(
                           applySpecialOfferDiscount(
-                            getFinancingBasePrice({
-                              pricePln: listing.price_pln,
-                            }),
+                            getFinancingBasePrice(
+                              listing as any,
+                              financingType,
+                              priceType
+                            ),
                             discount
                           ) / 1.23
                         )
                       : applySpecialOfferDiscount(
-                          getFinancingBasePrice({
-                            pricePln: listing.price_pln,
-                          }),
+                          getFinancingBasePrice(
+                            listing as any,
+                            financingType,
+                            priceType
+                          ),
                           discount
                         )
                   }
@@ -665,8 +695,8 @@ export default function ListingDetailPage() {
                   financingType={financingType}
                   onFinancingTypeChange={handleFinancingTypeChange}
                 />
-              </section>
-            )}
+              ) : null}
+            </section>
 
             {/* Key Parameters */}
             <section>
@@ -744,20 +774,24 @@ export default function ListingDetailPage() {
             {/* Purchase Process Steps */}
             <PurchaseProcessStepper variant="compact" />
 
-            <Separator />
-            <DynamicFinancingContent
-              financingType={financingType}
-              listing={{
-                listing_id: listing.listing_id,
-                make: listing.make,
-                model: listing.model,
-                production_year: listing.production_year,
-                body_type: listing.body_type,
-                fuel_type: listing.fuel_type,
-                transmission: listing.transmission,
-                engine_power_hp: listing.engine_power_hp
-              }}
-            />
+            {showCalculator && (
+              <>
+                <Separator />
+                <DynamicFinancingContent
+                  financingType={financingType}
+                  listing={{
+                    listing_id: listing.listing_id,
+                    make: listing.make,
+                    model: listing.model,
+                    production_year: listing.production_year,
+                    body_type: listing.body_type,
+                    fuel_type: listing.fuel_type,
+                    transmission: listing.transmission,
+                    engine_power_hp: listing.engine_power_hp
+                  }}
+                />
+              </>
+            )}
 
             {/* Why Us */}
             <section className="rounded-2xl border border-border bg-card/60 p-6 shadow-card space-y-4">
@@ -862,66 +896,80 @@ export default function ListingDetailPage() {
 
                   {/* Financing Calculator — primary element with price inside */}
                   {(settings?.financingCalculatorEnabled ?? true) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <FinancingCalculator
-                        listingId={listing.listing_id}
-                        price={
-                          priceType === 'net'
-                            ? Math.round(
-                                applySpecialOfferDiscount(
-                                  getFinancingBasePrice({
-                                    pricePln: listing.price_pln,
-                                  }),
+                    !isCustomerTypeAvailable ? (
+                      <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
+                        {t('financing.notAvailableForCustomerType', 'Ta oferta nie jest dostępna dla wybranego typu klienta (Prywatnie / Firma).')}
+                      </div>
+                    ) : showCalculator ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <FinancingCalculator
+                          creditAvailable={listing.creditAvailable !== false}
+                          leasingAvailable={listing.leasingAvailable !== false}
+                          forcedProductId={forcedProductId}
+                          listingId={listing.listing_id}
+                          price={
+                            priceType === 'net'
+                              ? Math.round(
+                                  applySpecialOfferDiscount(
+                                    getFinancingBasePrice(
+                                      listing as any,
+                                      financingType,
+                                      priceType
+                                    ),
+                                    discount
+                                  ) / 1.23
+                                )
+                              : applySpecialOfferDiscount(
+                                  getFinancingBasePrice(
+                                    listing as any,
+                                    financingType,
+                                    priceType
+                                  ),
                                   discount
-                                ) / 1.23
-                              )
-                            : applySpecialOfferDiscount(
-                                getFinancingBasePrice({
-                                  pricePln: listing.price_pln,
-                                }),
-                                discount
-                              )
-                        }
-                        priceIsNet={priceType === 'net'}
-                        currency={settings?.displayCurrency || 'PLN'}
-                        manufacturingYear={listing.production_year}
-                        mileageKm={listing.mileage_km}
-                        offerInitialPayment={initialPayment ?? undefined}
-                        financingType={financingType}
-                        onFinancingTypeChange={handleFinancingTypeChange}
-                        motoliaMode={true}
-                        priceSlot={
-                          <div className="pt-2 border-t border-slate-200 mt-2">
-                            {catalogLine}
-                            <div className="flex items-baseline justify-between">
-                              <span className="text-xs text-muted-foreground">Cena pojazdu:</span>
-                              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground font-medium">
-                                {priceInfo.primaryLabel}
-                                {priceRabatInfo}
-                              </span>
+                                )
+                          }
+                          priceIsNet={priceType === 'net'}
+                          currency={settings?.displayCurrency || 'PLN'}
+                          manufacturingYear={listing.production_year}
+                          mileageKm={listing.mileage_km}
+                          offerInitialPayment={initialPayment ?? undefined}
+                          financingType={financingType}
+                          onFinancingTypeChange={handleFinancingTypeChange}
+                          motoliaMode={true}
+                          isDuplicateHeading={false}
+                          priceSlot={
+                            <div className="pt-2 border-t border-slate-200 mt-2">
+                              {catalogLine}
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-xs text-muted-foreground">Cena pojazdu:</span>
+                                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground font-medium">
+                                  {priceInfo.primaryLabel}
+                                  {priceRabatInfo}
+                                </span>
+                              </div>
+                              {priceInfo.secondaryLabel && (
+                                <div className="text-right">
+                                  <span className="text-xs text-muted-foreground">
+                                    {priceInfo.secondaryLabel}
+                                  </span>
+                                </div>
+                              )}
+                              {hasSpecialOffer && (
+                                <div className="flex items-center justify-end gap-1.5 mt-1">
+                                  <SpecialOfferTag />
+                                  <span className="text-xs text-muted-foreground">
+                                    (rabat: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            {priceInfo.secondaryLabel && (
-                              <div className="text-right">
-                                <span className="text-xs text-muted-foreground">
-                                  {priceInfo.secondaryLabel}
-                                </span>
-                              </div>
-                            )}
-                            {hasSpecialOffer && (
-                              <div className="flex items-center justify-end gap-1.5 mt-1">
-                                <SpecialOfferTag />
-                                <span className="text-xs text-muted-foreground">
-                                  (rabat: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        }
-                      />
-                    </motion.div>
+                          }
+                        />
+                      </motion.div>
+                    ) : null
                   )}
 
                   {/* Secondary CTA — commented out, may be needed in the future */}
@@ -1079,22 +1127,34 @@ export default function ListingDetailPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
                 >
-                  <FinancingCalculator
-                    listingId={listing.listing_id}
-                    price={
-                      priceType === 'net'
+                  {!isCustomerTypeAvailable ? (
+                    <div className="bg-secondary/50 rounded-xl p-6 text-center text-muted-foreground">
+                      {t('financing.notAvailableForCustomerType', 'Ta oferta nie jest dostępna dla wybranego typu klienta (Prywatnie / Firma).')}
+                    </div>
+                  ) : showCalculator ? (
+                    <FinancingCalculator
+                      creditAvailable={listing.creditAvailable !== false}
+                      leasingAvailable={listing.leasingAvailable !== false}
+                      forcedProductId={forcedProductId}
+                      listingId={listing.listing_id}
+                      price={
+                        priceType === 'net'
                         ? Math.round(
                             applySpecialOfferDiscount(
-                              getFinancingBasePrice({
-                                pricePln: listing.price_pln,
-                              }),
+                              getFinancingBasePrice(
+                                listing as any,
+                                financingType,
+                                priceType
+                              ),
                               discount
                             ) / 1.23
                           )
                         : applySpecialOfferDiscount(
-                            getFinancingBasePrice({
-                              pricePln: listing.price_pln,
-                            }),
+                            getFinancingBasePrice(
+                              listing as any,
+                              financingType,
+                              priceType
+                            ),
                             discount
                           )
                     }
@@ -1107,6 +1167,7 @@ export default function ListingDetailPage() {
                     onFinancingTypeChange={handleFinancingTypeChange}
                     isDuplicateHeading={true}
                   />
+                  ) : null}
                 </motion.div>
               )}
                 </>

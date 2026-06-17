@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { VehicleDataForm } from '@/components/admin/VehicleForm/VehicleDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { listingsApi } from '@/services/api';
@@ -28,11 +28,14 @@ export default function ListingNewPage() {
         enabled: !!token,
     });
 
+    const queryClient = useQueryClient();
+
     const handleSave = async (data: any) => {
         if (!token) return;
         setIsSaving(true);
         try {
             const result = await listingsApi.createListing(data, token);
+            queryClient.invalidateQueries({ queryKey: ['listings'] });
             toast({ title: 'Pojazd dodany' });
             navigate(`/admin/listings/${result.listing.id}/edit`);
         } catch (e: any) {

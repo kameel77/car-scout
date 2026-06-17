@@ -28,7 +28,14 @@ export function IdentificationSection({ form, setField, mode, isImported }: Sect
                 </div>
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">VIN</label>
-                    <Input value={form.vin} onChange={e => setField('vin', e.target.value.toUpperCase())} placeholder="17 znaków" maxLength={17} />
+                    <Input 
+                        value={form.vin} 
+                        onChange={e => setField('vin', e.target.value.toUpperCase())} 
+                        placeholder="17 znaków" 
+                        maxLength={17} 
+                        className={errors?.vin ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                    />
+                    {errors?.vin && <p className="text-xs text-red-600">{errors.vin}</p>}
                 </div>
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Stan *</label>

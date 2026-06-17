@@ -37,6 +37,18 @@ export interface VehicleFormState {
     showMotoliaDiscount: boolean;      // sale only — pokaż rabat Motolia na froncie
     financingPriceBase: 'PRICE_PLN' | 'BROKER_PRICE_PLN'; // sale only
 
+    // Dostępność per klient i produkt — sale
+    availableForPrivate: boolean;
+    availableForCompany: boolean;
+    creditAvailable: boolean;
+    leasingAvailable: boolean;
+    creditProductId: string;
+    leasingProductId: string;
+    pricePrivateCreditPln: string;
+    pricePrivateLeasingPln: string;
+    priceCompanyCreditPln: string;
+    priceCompanyLeasingPln: string;
+
     // Description
     additionalInfoHeader: string;
     additionalInfoContent: string;
@@ -57,4 +69,5 @@ export interface SectionProps {
     mode: VehicleFormMode;
     /** When true, immutable identification/technical/equipment fields disabled (CSV/CSFLOW guard) */
     isImported?: boolean;
+    errors?: Record<string, string>;
 }

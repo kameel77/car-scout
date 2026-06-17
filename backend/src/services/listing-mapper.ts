@@ -10,6 +10,14 @@ export const CSV_EDITABLE_FIELDS = [
     'isFeatured',
     'additionalInfoHeader',
     'additionalInfoContent',
+    'availableForPrivate',
+    'availableForCompany',
+    'creditAvailable',
+    'leasingAvailable',
+    'pricePrivateCreditPln',
+    'pricePrivateLeasingPln',
+    'priceCompanyCreditPln',
+    'priceCompanyLeasingPln',
 ] as const;
 
 export type ListingValidationError = { field: string; message: string };
@@ -94,12 +102,31 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
         additionalInfoHeader: body.additionalInfoHeader || undefined,
         additionalInfoContent: body.additionalInfoContent || undefined,
         isFeatured: body.isFeatured ?? false,
+        availableForPrivate: body.availableForPrivate ?? true,
+        availableForCompany: body.availableForCompany ?? true,
+        creditAvailable: body.creditAvailable ?? true,
+        leasingAvailable: body.leasingAvailable ?? true,
+        creditProduct: body.creditProductId ? { connect: { id: body.creditProductId } } : undefined,
+        leasingProduct: body.leasingProductId ? { connect: { id: body.leasingProductId } } : undefined,
+        pricePrivateCreditPln: body.pricePrivateCreditPln ?? undefined,
+        pricePrivateLeasingPln: body.pricePrivateLeasingPln ?? undefined,
+        priceCompanyCreditPln: body.priceCompanyCreditPln ?? undefined,
+        priceCompanyLeasingPln: body.priceCompanyLeasingPln ?? undefined,
         dealer: { connect: { id: dealerId } },
     };
 }
 
 export function mapManualPayloadToListingUpdate(body: any): Prisma.ListingUpdateInput {
     const { dealer, ...rest } = mapManualPayloadToListing(body, 'placeholder') as any;
+    
+    // Explicitly handle disconnect for relations when updating manually
+    if (body.creditProductId === null) {
+        rest.creditProduct = { disconnect: true };
+    }
+    if (body.leasingProductId === null) {
+        rest.leasingProduct = { disconnect: true };
+    }
+
     return rest;
 }
 
@@ -110,5 +137,23 @@ export function pickCsvEditableFields(body: any): Prisma.ListingUpdateInput {
             result[field] = body[field];
         }
     }
+    
+    // Explicitly handle relations for CSV/imported vehicles
+    if (body.creditProductId !== undefined) {
+        if (body.creditProductId === null) {
+            result.creditProduct = { disconnect: true };
+        } else {
+            result.creditProduct = { connect: { id: body.creditProductId } };
+        }
+    }
+    
+    if (body.leasingProductId !== undefined) {
+        if (body.leasingProductId === null) {
+            result.leasingProduct = { disconnect: true };
+        } else {
+            result.leasingProduct = { connect: { id: body.leasingProductId } };
+        }
+    }
+
     return result;
 }
