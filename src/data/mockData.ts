@@ -12,6 +12,10 @@ export interface Listing {
   dealer_price_net_eur?: number;
   broker_price_pln?: number;
   broker_price_eur?: number;
+  price_private_credit_pln?: number | null;
+  price_private_leasing_pln?: number | null;
+  price_company_credit_pln?: number | null;
+  price_company_leasing_pln?: number | null;
   price_display: string;
   production_year: number;
   mileage_km: number;
@@ -52,6 +56,16 @@ export interface Listing {
   condition: 'NEW' | 'USED';
   financingPriceBase: 'PRICE_PLN' | 'BROKER_PRICE_PLN';
   isChineseBrand: boolean;
+  availableForPrivate?: boolean;
+  availableForCompany?: boolean;
+  creditAvailable?: boolean;
+  leasingAvailable?: boolean;
+  creditProductId?: string | null;
+  leasingProductId?: string | null;
+  dealerSettings?: {
+    defaultCreditProductId?: string | null;
+    defaultLeasingProductId?: string | null;
+  } | null;
   lastManualEditAt?: string | null;
   entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL' | null;
 }

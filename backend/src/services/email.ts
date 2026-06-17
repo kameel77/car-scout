@@ -1,10 +1,10 @@
 import nodemailer from 'nodemailer';
-import { Lead, Listing, FinancingProduct, PrismaClient } from '@prisma/client';
+import { Lead, Listing, FinancingProduct, PrismaClient, RentalVehicle } from '@prisma/client';
 import { FastifyInstance } from 'fastify';
 
 export const sendLeadEmail = async (
     fastify: FastifyInstance,
-    lead: Lead & { listing?: Listing | null, financingProduct?: FinancingProduct | null },
+    lead: Lead & { listing?: Listing | null, financingProduct?: FinancingProduct | null, rentalVehicle?: RentalVehicle | null },
     baseUrl?: string
 ) => {
     // Determine frontend URL dynamically
@@ -39,6 +39,30 @@ export const sendLeadEmail = async (
             fastify.log.info({ leadRecipientUserId: settings.leadRecipientUserId, email: recipientEmail }, 'Using designated platform user for lead email notification');
         } else {
             fastify.log.warn({ leadRecipientUserId: settings.leadRecipientUserId }, 'Designated lead recipient user not found or has no email. Falling back to default SMTP recipient.');
+        }
+    }
+
+    // Lead routing logic (Motolia vs Dealer)
+    const dealerId = lead.listing?.dealerId || lead.rentalVehicle?.dealerId;
+    if (dealerId) {
+        const dealerSettings = await fastify.prisma.dealerSettings.findUnique({
+            where: { dealerId }
+        });
+        
+        if (dealerSettings?.leadRouting === 'DEALER') {
+            const dealer = await fastify.prisma.dealer.findUnique({
+                where: { id: dealerId },
+                select: { contactEmail: true, contactEmailService: true }
+            });
+            
+            const targetDealerEmail = dealerSettings.smtpRecipientEmail || dealer?.contactEmailService || dealer?.contactEmail;
+            
+            if (targetDealerEmail) {
+                recipientEmail = targetDealerEmail;
+                fastify.log.info({ dealerId, email: recipientEmail }, 'Lead routing set to DEALER. Routing lead to dealer email.');
+            } else {
+                fastify.log.warn({ dealerId }, 'Lead routing set to DEALER, but dealer has no contact email. Falling back to default.');
+            }
         }
     }
 

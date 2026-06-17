@@ -22,23 +22,6 @@
   z-index: 20;
 }
 
-/* Header */
-.hvf__header {
-  margin-bottom: 20px;
-}
-
-.hvf__title {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 20px;
-  color: var(--hvf-black);
-  margin: 0;
-}
-
-.hvf__title strong {
-  color: var(--hvf-accent-dark);
-}
-
 /* ─── Toggle Group ──────────────────────────────────────────────────────── */
 
 .hvf__toggle-group {
@@ -254,7 +237,7 @@
 }
 
 .hvf__advanced-link {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--hvf-text-muted);
   text-decoration: none;
@@ -274,7 +257,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 28px;
+  padding: 12px 12px;
   border: none;
   border-radius: var(--hvf-radius-sm);
   background: var(--hvf-accent);

@@ -12,6 +12,7 @@ import { Calculator, Info, MessageSquare, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { FinancingType } from '@/utils/url-utils';
 import { setPreferredFinancingType } from '@/utils/url-utils';
 
@@ -33,6 +34,10 @@ interface FinancingCalculatorProps {
     priceSlot?: React.ReactNode;
     /** When true, changes CTA button text to "Zapytaj o ofertę" */
     motoliaMode?: boolean;
+    /** Jeśli przekazane, ten produkt będzie wymuszony niezależnie od innych priorytetów */
+    forcedProductId?: string;
+    creditAvailable?: boolean;
+    leasingAvailable?: boolean;
 }
 
 /** Maps URL financing type to product category */
@@ -56,6 +61,9 @@ export function FinancingCalculator({
     isDuplicateHeading,
     priceSlot,
     motoliaMode,
+    forcedProductId,
+    creditAvailable = true,
+    leasingAvailable = true,
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
 
@@ -147,18 +155,31 @@ export function FinancingCalculator({
     const finalPaymentAmount = Math.round(price * finalPaymentPct / 100);
     const amountToFinance = price - initialPaymentAmount;
 
-    const candidateProduct = React.useMemo(() => {
+        const candidateProduct = React.useMemo(() => {
         // Step 1: Filter products by category, failed status, and amount
         const eligibleProducts = products.filter(p => {
             if (p.category !== activeCategory) return false;
+            
+            // Check listing specific availability flags
+            if (p.category === 'CREDIT' && !creditAvailable) return false;
+            if (p.category === 'LEASING' && !leasingAvailable) return false;
+
             if (failedProducts.has(p.id)) return false;
 
-            // Priority is given to amount range
-            if (p.minAmount != null && amountToFinance < p.minAmount) return false;
-            if (p.maxAmount != null && amountToFinance > p.maxAmount) return false;
+            // Priority is given to amount range (unless forced)
+            if (forcedProductId !== p.id) {
+                if (p.minAmount != null && amountToFinance < p.minAmount) return false;
+                if (p.maxAmount != null && amountToFinance > p.maxAmount) return false;
+            }
 
             return true;
         });
+
+        // Step 1.5: If there is a forced product and it is eligible, pick it immediately
+        if (forcedProductId) {
+            const forced = eligibleProducts.find(p => p.id === forcedProductId);
+            if (forced) return forced;
+        }
 
         // Step 2: Sort by priority (desc), then isDefault (desc)
         const sorted = [...eligibleProducts].sort((a, b) => {
@@ -186,7 +207,7 @@ export function FinancingCalculator({
         }
 
         return sorted[0] || null;
-    }, [activeCategory, amountToFinance, failedProducts, products]);
+    }, [activeCategory, amountToFinance, failedProducts, products, forcedProductId]);
 
     React.useEffect(() => {
         setSelectedProduct(prev => (prev?.id === candidateProduct?.id ? prev : candidateProduct));
@@ -391,11 +412,36 @@ export function FinancingCalculator({
                     }
                 }} className="w-full">
                     <TabsList className="w-full justify-start grid grid-cols-3 h-9">
-                        {categories.map(cat => (
-                            <TabsTrigger key={cat} value={cat} className="text-xs py-1">
-                                {cat === 'CREDIT' ? 'Kredyt' : cat === 'LEASING' ? 'Leasing' : 'Najem'}
-                            </TabsTrigger>
-                        ))}
+                        {categories.map(cat => {
+                            const isAvailable = cat === 'CREDIT' 
+                                ? creditAvailable 
+                                : cat === 'LEASING' 
+                                    ? leasingAvailable 
+                                    : true;
+
+                            return (
+                                <TooltipProvider key={cat} delayDuration={0}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="flex-1">
+                                                <TabsTrigger 
+                                                    value={cat} 
+                                                    disabled={!isAvailable}
+                                                    className={cn("text-xs py-1 w-full", !isAvailable && "opacity-50 cursor-not-allowed")}
+                                                >
+                                                    {cat === 'CREDIT' ? 'Kredyt' : cat === 'LEASING' ? 'Leasing' : 'Najem'}
+                                                </TabsTrigger>
+                                            </div>
+                                        </TooltipTrigger>
+                                        {!isAvailable && (
+                                            <TooltipContent>
+                                                <p>Ten rodzaj finansowania nie jest dostępny dla tego pojazdu.</p>
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </TooltipProvider>
+                            );
+                        })}
                     </TabsList>
                 </Tabs>
 

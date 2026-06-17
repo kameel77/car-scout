@@ -49,6 +49,22 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             broker_price_pln: backendListing.brokerPricePln,
             broker_price_eur: backendListing.brokerPriceEur,
 
+            // Overrides Ceny i Dostępność Finansowania
+            price_private_credit_pln: backendListing.pricePrivateCreditPln,
+            price_private_leasing_pln: backendListing.pricePrivateLeasingPln,
+            price_company_credit_pln: backendListing.priceCompanyCreditPln,
+            price_company_leasing_pln: backendListing.priceCompanyLeasingPln,
+            availableForPrivate: backendListing.availableForPrivate ?? true,
+            availableForCompany: backendListing.availableForCompany ?? true,
+            creditAvailable: backendListing.creditAvailable ?? true,
+            leasingAvailable: backendListing.leasingAvailable ?? true,
+            creditProductId: backendListing.creditProductId,
+            leasingProductId: backendListing.leasingProductId,
+            dealerSettings: backendListing.dealer?.settings ? {
+                defaultCreditProductId: backendListing.dealer.settings.defaultCreditProductId,
+                defaultLeasingProductId: backendListing.dealer.settings.defaultLeasingProductId,
+            } : null,
+
             // Flatten Dealer Info
             dealer_name: backendListing.dealer?.name || '',
             dealer_address_line1: backendListing.dealer?.addressLine1 || '',

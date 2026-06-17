@@ -243,13 +243,6 @@ export default function HeroVehicleFilter() {
 
   return (
     <div className="hvf">
-      {/* Header */}
-      <div className="hvf__header">
-        <h2 className="hvf__title">
-          Znajdź auto dla siebie<strong>!</strong>
-        </h2>
-      </div>
-
       {/* Client type toggle */}
       <div className="hvf__toggle-group">
         <button

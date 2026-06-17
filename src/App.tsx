@@ -35,7 +35,10 @@ const AdminDashboard = lazy(() => import("./pages/admin/DashboardPage"));
 const TranslationsPage = lazy(() => import("./pages/admin/TranslationsPage"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
 const FaqPage = lazy(() => import("./pages/admin/FaqPage"));
-const FeatureTilesPage = lazy(() => import("./pages/admin/FeatureTilesPage"));
+const AdminFeatureTilesPage = lazy(() => import("./pages/admin/FeatureTilesPage"));
+const AdminHeroBannersPage = lazy(() => import("./pages/admin/HeroBannersPage"));
+const AdminPartnersPage = lazy(() => import("./pages/admin/PartnersPage"));
+const AdminApiPartnersPage = lazy(() => import("./pages/admin/ApiPartnersPage"));
 const FinancingPage = lazy(() => import("./pages/admin/FinancingPage"));
 const ImportPage = lazy(() => import("./pages/admin/ImportPage"));
 const PriceAnalyticsPage = lazy(() => import("./pages/admin/PriceAnalyticsPage"));
@@ -45,7 +48,6 @@ const ListingEditPage = lazy(() => import("./pages/admin/ListingEditPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/admin/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/admin/ResetPasswordPage"));
 const SeoPage = lazy(() => import("./pages/admin/SeoPage"));
-const AdminPartnersPage = lazy(() => import("./pages/admin/PartnersPage"));
 const RentalVehiclesPage = lazy(() => import("./pages/admin/RentalVehiclesPage"));
 const RentalCompaniesPage = lazy(() => import("./pages/admin/RentalCompaniesPage"));
 const RentalMatrixPage = lazy(() => import("./pages/admin/RentalMatrixPage"));
@@ -183,7 +185,15 @@ const App = () => (
                           path="/admin/feature-tiles"
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                              <FeatureTilesPage />
+                              <AdminFeatureTilesPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/hero-banners"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <AdminHeroBannersPage />
                             </ProtectedRoute>
                           }
                         />
@@ -192,6 +202,14 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <AdminPartnersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/api-partners"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <AdminApiPartnersPage />
                             </ProtectedRoute>
                           }
                         />

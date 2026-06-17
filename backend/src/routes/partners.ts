@@ -10,6 +10,13 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
     fastify.get('/api/partners', async (request, reply) => {
         try {
             const partners = await fastify.prisma.partner.findMany({
+                include: {
+                    mappings: {
+                        include: {
+                            dealer: { select: { name: true } }
+                        }
+                    }
+                },
                 orderBy: { createdAt: 'desc' }
             });
             return { partners };
@@ -22,7 +29,7 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
     // POST /api/partners - create a new partner
     fastify.post('/api/partners', async (request, reply) => {
         const body = request.body as any;
-        const { name, nip, contactPerson, contactEmail, contactPhone } = body;
+        const { name, nip, contactPerson, contactEmail, contactPhone, mappings } = body;
 
         if (!name) {
             return reply.code(400).send({ error: 'Name is required' });
@@ -40,6 +47,12 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
                     contactPerson,
                     contactEmail,
                     contactPhone,
+                    mappings: mappings && mappings.length > 0 ? {
+                        create: mappings.map((m: any) => ({
+                            externalId: m.externalId,
+                            dealerId: m.dealerId
+                        }))
+                    } : undefined,
                     isActive: true
                 }
             });
@@ -54,7 +67,7 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
     fastify.put('/api/partners/:id', async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as any;
-        const { name, nip, contactPerson, contactEmail, contactPhone, isActive } = body;
+        const { name, nip, contactPerson, contactEmail, contactPhone, mappings, isActive } = body;
 
         try {
             const partner = await fastify.prisma.partner.update({
@@ -65,6 +78,13 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
                     contactPerson,
                     contactEmail,
                     contactPhone,
+                    mappings: mappings !== undefined ? {
+                        deleteMany: {},
+                        create: mappings.map((m: any) => ({
+                            externalId: m.externalId,
+                            dealerId: m.dealerId
+                        }))
+                    } : undefined,
                     isActive: isActive !== undefined ? isActive : undefined
                 }
             });
