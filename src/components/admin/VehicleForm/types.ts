@@ -22,6 +22,7 @@ export interface VehicleFormState {
     paintType: string;
 
     // Pricing — sale
+    vatMargin: boolean;                // sale only — fv vat marża
     pricePln: string;                  // sale only — cena w finansowaniu
     motoliaDiscountPln: string;        // sale only — rabat Motolia (źródło prawdy; cena sprzedaży = pricePln + rabat)
     displaySalePrice: boolean;         // sale only — true: "Cena pojazdu" = finansowanie + rabat; false (domyślnie): finansowanie

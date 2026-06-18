@@ -112,6 +112,7 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
         pricePrivateLeasingPln: body.pricePrivateLeasingPln ?? undefined,
         priceCompanyCreditPln: body.priceCompanyCreditPln ?? undefined,
         priceCompanyLeasingPln: body.priceCompanyLeasingPln ?? undefined,
+        vatMargin: body.vatMargin ?? false,
         dealer: { connect: { id: dealerId } },
     };
 }
