@@ -134,6 +134,7 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             isChineseBrand: backendListing.isChineseBrand ?? false,
             lastManualEditAt: backendListing.lastManualEditAt ?? null,
             entrySource: backendListing.entrySource ?? null,
+            vatMargin: backendListing.vatMargin ?? false,
         };
     } catch (error) {
         console.error('Failed to map backend listing to frontend:', error, backendListing);
