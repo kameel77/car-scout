@@ -231,13 +231,13 @@ export async function syncListingsFromCSV(
             await tx.$executeRaw`
                 UPDATE "listings"
                 SET
-                    "dealer_price_net_pln" = "price_pln" / 1.23,
-                    "dealer_price_net_eur" = "price_pln" / 1.23 / ${settings.eurExRate}::float,
+                    "dealer_price_net_pln" = CASE WHEN "vat_margin" = true THEN "price_pln" ELSE "price_pln" / 1.23 END,
+                    "dealer_price_net_eur" = CASE WHEN "vat_margin" = true THEN "price_pln" / ${settings.eurExRate}::float ELSE "price_pln" / 1.23 / ${settings.eurExRate}::float END,
                     "broker_price_pln"     = ROUND(
-                        ("price_pln" / 1.23 * (1 + ${settings.brokerFeePctPln}::float / 100) * 1.23) / 10
+                        ("price_pln" * (1 + ${settings.brokerFeePctPln}::float / 100)) / 10
                     ) * 10,
                     "broker_price_eur"     = CEIL(
-                        ("price_pln" / 1.23 / ${settings.eurExRate}::float * (1 + ${settings.brokerFeePctEur}::float / 100) * 1.23) / 10
+                        ("price_pln" / ${settings.eurExRate}::float * (1 + ${settings.brokerFeePctEur}::float / 100)) / 10
                     ) * 10
                 WHERE "is_archived" = false
             `;

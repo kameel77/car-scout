@@ -124,9 +124,42 @@ export async function buildApp(): Promise<FastifyInstance> {
     const fastify = Fastify({
         bodyLimit: 500 * 1024 * 1024,
         maxParamLength: 500,
+        trustProxy: true,
+        disableRequestLogging: true,
         logger: {
             level: process.env.NODE_ENV === 'production' ? 'info' : 'debug'
         }
+    });
+
+    fastify.addHook('onRequest', (request, reply, done) => {
+        request.log.info(
+            {
+                reqId: request.id,
+                method: request.method,
+                url: request.url,
+                ip: request.ip,
+                userAgent: request.headers['user-agent'],
+                referer: request.headers['referer']
+            },
+            'incoming request'
+        );
+        done();
+    });
+
+    fastify.addHook('onResponse', (request, reply, done) => {
+        request.log.info(
+            {
+                reqId: request.id,
+                method: request.method,
+                url: request.url,
+                statusCode: reply.statusCode,
+                rt: reply.elapsedTime,
+                ip: request.ip,
+                userAgent: request.headers['user-agent']
+            },
+            'request completed'
+        );
+        done();
     });
 
     // Register plugins

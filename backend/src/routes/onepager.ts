@@ -17,7 +17,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
     if (ids) {
       const idList = ids.split(',');
       const found = await fastify.prisma.listing.findMany({
-        where: { id: { in: idList }, isArchived: false },
+        where: { id: { in: idList }, isArchived: false, pricePln: { gt: 0 } },
         include: { dealer: true },
       });
       const byId = new Map(found.map((l) => [l.id, l]));
@@ -26,7 +26,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
     }
 
     const featured = await fastify.prisma.listing.findMany({
-      where: { isFeatured: true, isArchived: false },
+      where: { isFeatured: true, isArchived: false, pricePln: { gt: 0 } },
       take: OFFERS_LIMIT,
       orderBy: { createdAt: 'desc' },
       include: { dealer: true },
@@ -40,6 +40,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
     const filler = await fastify.prisma.listing.findMany({
       where: {
         isArchived: false,
+        pricePln: { gt: 0 },
         id: { notIn: featured.map((f) => f.id) },
       },
       take: fillCount,

@@ -185,11 +185,13 @@ export async function listingRoutes(fastify: FastifyInstance) {
         // Optionally resolve scope if user is authenticated
         let scopeDealerFilter: Record<string, any> = {};
         const authHeader = request.headers.authorization;
+        let isAuthenticated = false;
         if (authHeader && authHeader.startsWith('Bearer ')) {
             try {
                 await request.jwtVerify();
                 const scope = await resolveScope(fastify, request);
                 scopeDealerFilter = scope.dealerFilter;
+                isAuthenticated = true;
             } catch {
                 // Not authenticated or invalid token — ignore, serve public
             }
@@ -399,6 +401,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 : undefined,
             // Apply scope-based dealerId filter (if authenticated with scoped context)
             ...scopeDealerFilter,
+            ...(isAuthenticated ? {} : { pricePln: { gt: 0 } }),
         };
 
         // For per-dimension facets, count vehicles grouped by that dimension IGNORING

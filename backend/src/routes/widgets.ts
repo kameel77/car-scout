@@ -100,6 +100,7 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              where: {
                isFeatured: true,
                isArchived: false,
+               pricePln: { gt: 0 }
              },
              take: 12
           });
@@ -167,11 +168,9 @@ export async function widgetRoutes(fastify: FastifyInstance) {
           if (params.bodyType && params.bodyType.length > 0) listingWhere.bodyType = { in: params.bodyType };
           if (params.brand && params.brand.length > 0) listingWhere.make = { in: params.brand };
           // if (params.category && params.category.length > 0) listingWhere.category = { in: params.category }; // Listing doesn't have category
-          if (params.minPrice || params.maxPrice) {
-            listingWhere.pricePln = {};
-            if (params.minPrice) listingWhere.pricePln.gte = Number(params.minPrice);
-            if (params.maxPrice) listingWhere.pricePln.lte = Number(params.maxPrice);
-          }
+          listingWhere.pricePln = { gt: 0 };
+          if (params.minPrice) listingWhere.pricePln.gte = Math.max(1, Number(params.minPrice));
+          if (params.maxPrice) listingWhere.pricePln.lte = Number(params.maxPrice);
           if (params.minYear) listingWhere.productionYear = { gte: Number(params.minYear) };
 
           const listings = await fastify.prisma.listing.findMany({
