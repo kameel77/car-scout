@@ -31,7 +31,7 @@ const start = async () => {
         }
 
         const port = parseInt(process.env.PORT || '3000');
-        await app.listen({ port, host: process.env.HOST || '0.0.0.0' });
+        await app.listen({ port, host: process.env.HOST || '::' });
         console.log(`🚀 Server listening on port ${port}`);
 
         // Data Migration to fix importSource and accidental archives

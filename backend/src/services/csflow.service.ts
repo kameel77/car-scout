@@ -254,7 +254,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                     additionalInfoHeader: car.description_header,
                     additionalInfoContent: car.description_footer,
                     marketplace: 'csflow', // Można oznaczyć jako specyficzne źródło
-                    vatMargin: Number(car.tax_type_id) === 5,
+                    vatMargin: Number(car.invoice_vat) === 0 || Number(car.tax_type_id) !== 1,
                     // slug: generated below
                 };
 
