@@ -209,8 +209,8 @@ export default function ListingDetailPage() {
     if (basePrice > 0) {
       const discountedPrice = applySpecialOfferDiscount(basePrice, discount);
       const isNetPrimary = priceType === 'net';
-      const primaryPrice = isNetPrimary ? (listing.vat_margin ? discountedPrice : Math.round(discountedPrice / 1.23)) : discountedPrice;
-      const secondaryPrice = isNetPrimary ? discountedPrice : (listing.vat_margin ? discountedPrice : Math.round(discountedPrice / 1.23));
+      const primaryPrice = isNetPrimary ? (listing.vatMargin ? discountedPrice : Math.round(discountedPrice / 1.23)) : discountedPrice;
+      const secondaryPrice = isNetPrimary ? discountedPrice : (listing.vatMargin ? discountedPrice : Math.round(discountedPrice / 1.23));
 
       const primaryLabel = formatPrice(primaryPrice, currency);
       // user requested to hide net price in special offer context if it was "wrong"
@@ -318,7 +318,7 @@ export default function ListingDetailPage() {
   // Ceny katalogowa/rabat/sprzedaży są w PLN; przy walucie EUR pomijamy te dodatki (osobny follow-up).
   const currencyCode = settings?.displayCurrency || 'PLN';
   const isPln = currencyCode === 'PLN';
-  const toDisplayPrice = (grossPln: number) => (priceType === 'net' ? (listing.vat_margin ? grossPln : Math.round(grossPln / 1.23)) : grossPln);
+  const toDisplayPrice = (grossPln: number) => (priceType === 'net' ? (listing.vatMargin ? grossPln : Math.round(grossPln / 1.23)) : grossPln);
   const catalogPriceVal = listing.catalogPrice ?? 0;
   const motoliaDiscountVal = listing.motoliaDiscountPln ?? 0;
   const showMotolia = isPln && !!listing.showMotoliaDiscount && motoliaDiscountVal > 0;
@@ -591,7 +591,7 @@ export default function ListingDetailPage() {
             <div className="relative">
               {motoliaPhotoTag}
               <div className="absolute top-3 right-3 z-10 px-2.5 py-1 bg-white/90 backdrop-blur-sm border text-slate-800 text-xs font-bold rounded-lg shadow-sm pointer-events-none">
-                {listing.vat_margin ? 'VAT Marża' : 'Faktura VAT 23%'}
+                {listing.vatMargin ? 'VAT Marża' : 'Faktura VAT 23%'}
               </div>
               <ImageGallery images={listing.image_urls} title={title} />
             </div>
