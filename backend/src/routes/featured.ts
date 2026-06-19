@@ -14,13 +14,13 @@ export async function featuredRoutes(fastify: FastifyInstance) {
             // We distinguish New vs Used using mileage (<= 100km is NEW).
             const [featuredNewCars, featuredUsedCars, featuredRentals] = await Promise.all([
                 fastify.prisma.listing.findMany({
-                    where: { isFeatured: true, isArchived: false, mileageKm: { lte: 100 } },
+                    where: { isFeatured: true, isArchived: false, mileageKm: { lte: 100 }, pricePln: { gt: 0 } },
                     take: 12,
                     orderBy: { createdAt: 'desc' },
                     include: { dealer: true }
                 }),
                 fastify.prisma.listing.findMany({
-                    where: { isFeatured: true, isArchived: false, mileageKm: { gt: 100 } },
+                    where: { isFeatured: true, isArchived: false, mileageKm: { gt: 100 }, pricePln: { gt: 0 } },
                     take: 12,
                     orderBy: { createdAt: 'desc' },
                     include: { dealer: true }

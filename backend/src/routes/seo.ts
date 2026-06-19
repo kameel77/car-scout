@@ -127,7 +127,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         // 2. Dynamic Pages: Listings
         const listings = await fastify.prisma.listing.findMany({
-            where: { isArchived: false },
+            where: { isArchived: false, pricePln: { gt: 0 } },
             select: {
                 id: true,
                 make: true,

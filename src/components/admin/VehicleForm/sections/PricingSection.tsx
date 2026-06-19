@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import type { SectionProps } from '../types';
 
-export function PricingSection({ form, setField, mode, isImported }: SectionProps) {
+export function PricingSection({ form, setField, mode, isImported, errors }: SectionProps) {
     const technicalDisabled = isImported;
 
     // Cena sprzedaży (gotówka) jest pochodną: cena w finansowaniu + rabat Motolia (źródło prawdy).
@@ -22,6 +22,28 @@ export function PricingSection({ form, setField, mode, isImported }: SectionProp
 
                 {mode === 'sale' && (
                     <>
+                        <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                            <label className="text-sm font-medium text-gray-700">Forma sprzedaży (VAT)</label>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        checked={form.vatMargin === false}
+                                        onChange={() => setField('vatMargin', false)}
+                                    />
+                                    <span className="text-sm">Faktura VAT 23%</span>
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        checked={form.vatMargin === true}
+                                        onChange={() => setField('vatMargin', true)}
+                                    />
+                                    <span className="text-sm">Faktura VAT Marża</span>
+                                </label>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700">Cena w finansowaniu (PLN) *</label>
                             <Input 

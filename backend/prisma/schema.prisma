@@ -117,6 +117,7 @@ model Listing {
   isChineseBrand           Boolean            @default(false) @map("is_chinese_brand")
   lastManualEditAt         DateTime?          @map("last_manual_edit_at")
   entrySource              EntrySource?       @map("entry_source")
+  vatMargin                Boolean            @default(false) @map("vat_margin")
 
   availableForPrivate      Boolean            @default(true) @map("available_for_private")
   availableForCompany      Boolean            @default(true) @map("available_for_company")

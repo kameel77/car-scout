@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import type { SectionProps } from '../types';
 
-export function IdentificationSection({ form, setField, mode, isImported }: SectionProps) {
+export function IdentificationSection({ form, setField, mode, isImported, errors }: SectionProps) {
     return (
         <fieldset disabled={isImported} className={isImported ? 'opacity-60' : ''}>
             {isImported && (

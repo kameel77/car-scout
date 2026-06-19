@@ -48,7 +48,7 @@ export function EquipmentDisplay({ equipment }: EquipmentDisplayProps) {
   if (activeSections.length === 0) return null;
 
   return (
-    <Accordion type="multiple" defaultValue={[activeSections[0].key]} className="w-full">
+    <Accordion type="multiple" className="w-full">
       {activeSections.map((section) => {
         const Icon = section.icon;
         const items = equipment[section.key];
