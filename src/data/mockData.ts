@@ -58,7 +58,7 @@ export interface Listing {
   isChineseBrand: boolean;
   availableForPrivate?: boolean;
   availableForCompany?: boolean;
-  vat_margin?: boolean;
+  vatMargin?: boolean;
   creditAvailable?: boolean;
   leasingAvailable?: boolean;
   creditProductId?: string | null;
