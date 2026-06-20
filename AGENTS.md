@@ -76,3 +76,13 @@ Przed każdym deploymentem lub zmianą w Docker/Traefik/Nginx:
 - [ ] Po deployu: test HTTPS z browser UA (`curl -H "User-Agent: Mozilla/5.0" https://DOMAIN/`)
 - [ ] Zweryfikuj **WSZYSTKIE** środowiska (prod + staging + dev), nie tylko zmieniane
 - [ ] Sprawdź logi proxy: `docker logs coolify-proxy --since 60s 2>&1 | grep -i error`
+
+## 7. Security Audit Handoff
+
+- Gdy agent ma wprowadzać poprawki z audytu bezpieczeństwa, **pierwszy dokument to `security/fixes.md`** — tam jest uporządkowana lista zmian po priorytetach.
+- Do zrozumienia kontekstu używa **`security/report.md`** — tam są uzasadnienia severity i odniesienia do kodu.
+- Zmiany w backendzie wykonuj tylko w zakresie wskazanym w `security/fixes.md`.
+- Każda zmiana behavior, która modyfikuje autoryzację, widoczność lub format odpowiedzi, powinna być odnotowana w `features_desc.md`.
+- Nie zmieniaj deploymentu, Coolify, Nginx ani ENV w ramach passu poprawkującego bez osobnej, wyraźnej zgody.
+- Nie loguj sekretów ani tokenów.
+- Po zmianach uruchom testy backendu z `backend/` i sprawdź, czy istotne trasy nadal działają.

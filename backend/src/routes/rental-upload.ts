@@ -6,6 +6,8 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import crypto from 'crypto';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
+import { resolveScope } from '../utils/scope-resolver.js';
+import { getSafeFilePath } from '../utils/path-helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,8 +16,7 @@ const uploadsRoot = path.resolve(__dirname, '../../uploads');
 const ALLOWED_MIME_TYPES = [
     'image/jpeg',
     'image/png',
-    'image/webp',
-    'image/svg+xml'
+    'image/webp'
 ];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per image
@@ -39,8 +40,8 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
 
         // Verify vehicle exists
-        const vehicle = await fastify.prisma.rentalVehicle.findUnique({
-            where: { id }
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({
+            where: { id, ...(await resolveScope(fastify, request)).dealerFilter }
         });
 
         if (!vehicle) {
@@ -124,8 +125,8 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const { imageUrl } = request.body as { imageUrl: string };
 
-        const vehicle = await fastify.prisma.rentalVehicle.findUnique({
-            where: { id }
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({
+            where: { id, ...(await resolveScope(fastify, request)).dealerFilter }
         });
 
         if (!vehicle) {
@@ -150,14 +151,20 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
         });
 
         // Try to delete file from disk
-        try {
-            const relativePath = imageUrl.replace('/uploads/', '');
-            const filePath = path.join(uploadsRoot, relativePath);
-            const thumbPath = filePath.replace('.webp', '-thumb.webp');
-            await fs.unlink(filePath);
-            await fs.unlink(thumbPath).catch(() => {});
-        } catch {
-            // File might not exist on disk, that's ok
+        if (imageUrl.startsWith('/uploads/rental-images/')) {
+            const baseDir = path.join(uploadsRoot, 'rental-images');
+            const relativePath = imageUrl.replace('/uploads/rental-images/', '');
+            const filePath = getSafeFilePath(baseDir, relativePath);
+            
+            if (filePath) {
+                try {
+                    const thumbPath = filePath.replace('.webp', '-thumb.webp');
+                    await fs.unlink(filePath);
+                    await fs.unlink(thumbPath).catch(() => {});
+                } catch {
+                    // File might not exist on disk, that's ok
+                }
+            }
         }
 
         return { success: true, remainingImages: updatedUrls.length };
@@ -170,8 +177,8 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const { imageUrl } = request.body as { imageUrl: string };
 
-        const vehicle = await fastify.prisma.rentalVehicle.findUnique({
-            where: { id }
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({
+            where: { id, ...(await resolveScope(fastify, request)).dealerFilter }
         });
 
         if (!vehicle) {
@@ -199,7 +206,7 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
 
         if (!url) return reply.code(400).send({ error: 'url is required' });
 
-        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!vehicle) return reply.code(404).send({ error: 'Rental vehicle not found' });
 
         const newUrls = [...(vehicle.imageUrls || []), url];
@@ -222,7 +229,7 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
 
         if (!Array.isArray(imageUrls)) return reply.code(400).send({ error: 'imageUrls must be an array' });
 
-        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!vehicle) return reply.code(404).send({ error: 'Rental vehicle not found' });
 
         await fastify.prisma.rentalVehicle.update({
@@ -239,8 +246,8 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
-        const vehicle = await fastify.prisma.rentalVehicle.findUnique({
-            where: { id }
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({
+            where: { id, ...(await resolveScope(fastify, request)).dealerFilter }
         });
 
         if (!vehicle) {
@@ -284,11 +291,14 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
         }
 
         // Delete old spec file if exists and is local
-        if (vehicle.specificationUrl && vehicle.specificationUrl.startsWith('/uploads/')) {
+        if (vehicle.specificationUrl && vehicle.specificationUrl.startsWith('/uploads/rental-specs/')) {
             try {
-                const relativePath = vehicle.specificationUrl.replace('/uploads/', '');
-                const filePath = path.join(uploadsRoot, relativePath);
-                await fs.unlink(filePath);
+                const baseDir = path.join(uploadsRoot, 'rental-specs');
+                const relativePath = vehicle.specificationUrl.replace('/uploads/rental-specs/', '');
+                const filePath = getSafeFilePath(baseDir, relativePath);
+                if (filePath) {
+                    await fs.unlink(filePath);
+                }
             } catch {
                 // Ignore
             }

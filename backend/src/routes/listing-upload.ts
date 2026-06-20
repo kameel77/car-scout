@@ -6,12 +6,14 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import crypto from 'crypto';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
+import { resolveScope } from '../utils/scope-resolver.js';
+import { getSafeFilePath } from '../utils/path-helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadsRoot = path.resolve(__dirname, '../../uploads');
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_PDF_MIME = ['application/pdf'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -30,7 +32,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
     fastify.post('/api/listings/:id/images', { preHandler: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
-        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!listing) {
             return reply.code(404).send({ error: 'Listing not found' });
         }
@@ -95,7 +97,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'url is required' });
         }
 
-        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!listing) {
             return reply.code(404).send({ error: 'Listing not found' });
         }
@@ -106,13 +108,16 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
             : listing.primaryImageUrl;
 
         if (url.startsWith('/uploads/listing-images/')) {
-            const filepath = path.join(uploadsRoot, url.replace('/uploads/', ''));
-            const thumbPath = filepath.replace('.webp', '-thumb.webp'); // Usuwamy też miniaturę, jeśli istnieje
-            try {
-                await fs.unlink(filepath);
-                await fs.unlink(thumbPath).catch(() => {});
-            } catch {
-                // file already gone — ignore
+            const baseDir = path.join(uploadsRoot, 'listing-images');
+            const filepath = getSafeFilePath(baseDir, url.replace('/uploads/listing-images/', ''));
+            if (filepath) {
+                const thumbPath = filepath.replace('.webp', '-thumb.webp'); // Usuwamy też miniaturę, jeśli istnieje
+                try {
+                    await fs.unlink(filepath);
+                    await fs.unlink(thumbPath).catch(() => {});
+                } catch {
+                    // file already gone — ignore
+                }
             }
         }
 
@@ -136,7 +141,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
 
         if (!url) return reply.code(400).send({ error: 'url is required' });
 
-        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!listing) return reply.code(404).send({ error: 'Listing not found' });
 
         if (!(listing.imageUrls || []).includes(url)) {
@@ -158,7 +163,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
 
         if (!url) return reply.code(400).send({ error: 'url is required' });
 
-        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!listing) return reply.code(404).send({ error: 'Listing not found' });
 
         const newUrls = [...(listing.imageUrls || []), url];
@@ -184,7 +189,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
 
         if (!Array.isArray(imageUrls)) return reply.code(400).send({ error: 'imageUrls must be an array' });
 
-        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!listing) return reply.code(404).send({ error: 'Listing not found' });
 
         const updated = await fastify.prisma.listing.update({
@@ -203,7 +208,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
     fastify.post('/api/listings/:id/specs', { preHandler: [fastify.authenticate] }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
-        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!listing) return reply.code(404).send({ error: 'Listing not found' });
 
         const parts = request.parts();
@@ -231,8 +236,11 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
 
             // Remove old spec file if it was uploaded
             if (listing.specificationUrl?.startsWith('/uploads/listing-specs/')) {
-                const oldPath = path.join(uploadsRoot, listing.specificationUrl.replace('/uploads/', ''));
-                try { await fs.unlink(oldPath); } catch { /* ignore */ }
+                const baseDir = path.join(uploadsRoot, 'listing-specs');
+                const oldPath = getSafeFilePath(baseDir, listing.specificationUrl.replace('/uploads/listing-specs/', ''));
+                if (oldPath) {
+                    try { await fs.unlink(oldPath); } catch { /* ignore */ }
+                }
             }
 
             uploadedUrl = `/uploads/listing-specs/${id}/${filename}`;
@@ -256,13 +264,16 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const { specificationUrl } = request.body as { specificationUrl: string | null };
 
-        const listing = await fastify.prisma.listing.findUnique({ where: { id } });
+        const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
         if (!listing) return reply.code(404).send({ error: 'Listing not found' });
 
         // If clearing and old file was uploaded — delete it
         if (!specificationUrl && listing.specificationUrl?.startsWith('/uploads/listing-specs/')) {
-            const oldPath = path.join(uploadsRoot, listing.specificationUrl.replace('/uploads/', ''));
-            try { await fs.unlink(oldPath); } catch { /* ignore */ }
+            const baseDir = path.join(uploadsRoot, 'listing-specs');
+            const oldPath = getSafeFilePath(baseDir, listing.specificationUrl.replace('/uploads/listing-specs/', ''));
+            if (oldPath) {
+                try { await fs.unlink(oldPath); } catch { /* ignore */ }
+            }
         }
 
         const updated = await fastify.prisma.listing.update({
