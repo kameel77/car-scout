@@ -82,8 +82,8 @@ export const sendLeadEmail = async (
         connectionTimeout: 10000, // 10s
         socketTimeout: 15000,     // 15s
         greetingTimeout: 5000,    // 5s
-        logger: true,
-        debug: true
+        logger: process.env.NODE_ENV !== 'production',
+        debug: process.env.NODE_ENV !== 'production'
     });
 
     const isPriceNegotiation = lead.leadType === 'price_negotiation';
@@ -179,5 +179,57 @@ export const sendLeadEmail = async (
         fastify.log.info(`Email notification sent for lead ${lead.id} to ${recipientEmail}`);
     } catch (error) {
         fastify.log.error(error, 'Failed to send email notification in email.ts');
+    }
+};
+
+export const sendPasswordResetEmail = async (
+    fastify: FastifyInstance,
+    email: string,
+    resetLink: string
+) => {
+    const settings = await fastify.prisma.appSettings.findFirst({
+        where: { id: 'default' }
+    });
+
+    if (!settings || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
+        fastify.log.warn('Email SMTP configuration missing in AppSettings. Cannot send password reset email.');
+        return;
+    }
+
+    const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: settings.smtpPort === 465,
+        auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPassword
+        },
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+        greetingTimeout: 5000,
+        logger: process.env.NODE_ENV !== 'production',
+        debug: process.env.NODE_ENV !== 'production'
+    });
+
+    const htmlContent = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2>Resetowanie hasła</h2>
+            <p>Otrzymaliśmy prośbę o zresetowanie hasła dla Twojego konta.</p>
+            <p>Aby zresetować hasło, kliknij w poniższy link:</p>
+            <p><a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 5px;">Zresetuj hasło</a></p>
+            <p>Link jest ważny przez 1 godzinę. Jeśli to nie Ty prosiłeś o reset hasła, po prostu zignoruj tę wiadomość.</p>
+        </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"Powiadomienia" <${settings.smtpFromEmail || settings.smtpUser}>`,
+            to: email,
+            subject: 'Resetowanie hasła',
+            html: htmlContent
+        });
+        fastify.log.info(`Password reset email sent to ${email}`);
+    } catch (error) {
+        fastify.log.error(error, 'Failed to send password reset email');
     }
 };

@@ -83,6 +83,17 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, requirePermission('dealers:read')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
+        const user = request.user as any;
+        const memberships: MembershipInfo[] = user.memberships || [];
+        const activeContext: ActiveContext = user.activeContext || {
+            scopeType: ScopeType.PLATFORM,
+            scopeId: 'PLATFORM',
+        };
+
+        const isPlatform = memberships.some(m =>
+            m.scopeType === ScopeType.PLATFORM &&
+            (m.role === MemberRole.SUPERADMIN_PLATFORM || m.role === MemberRole.PLATFORM_MANAGER)
+        );
 
         const dealer = await fastify.prisma.dealer.findUnique({
             where: { id },
@@ -95,6 +106,16 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
 
         if (!dealer) {
             return reply.code(404).send({ error: 'Dealer not found' });
+        }
+
+        // Scope isolation: non-platform users can only access their own dealer(s)
+        if (!isPlatform) {
+            if (activeContext.scopeType === ScopeType.DEALER && activeContext.scopeId !== id) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+            if (activeContext.scopeType === ScopeType.DEALER_GROUP && dealer.dealerGroupId !== activeContext.scopeId) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
         }
 
         // Get members (users assigned to this dealer)
@@ -177,6 +198,29 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as any;
+        const user = request.user as any;
+        const memberships: MembershipInfo[] = user.memberships || [];
+        const activeContext: ActiveContext = user.activeContext || {
+            scopeType: ScopeType.PLATFORM,
+            scopeId: 'PLATFORM',
+        };
+
+        const isPlatform = memberships.some(m =>
+            m.scopeType === ScopeType.PLATFORM &&
+            (m.role === MemberRole.SUPERADMIN_PLATFORM || m.role === MemberRole.PLATFORM_MANAGER)
+        );
+
+        // Scope isolation: verify caller can modify this dealer
+        if (!isPlatform) {
+            const existing = await fastify.prisma.dealer.findUnique({ where: { id }, select: { dealerGroupId: true } });
+            if (!existing) return reply.code(404).send({ error: 'Dealer not found' });
+            if (activeContext.scopeType === ScopeType.DEALER && activeContext.scopeId !== id) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+            if (activeContext.scopeType === ScopeType.DEALER_GROUP && existing.dealerGroupId !== activeContext.scopeId) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+        }
 
         // Validate dealerGroupId if provided
         if (body.dealerGroupId) {
@@ -221,10 +265,31 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const settings = request.body as any;
+        const user = request.user as any;
+        const memberships: MembershipInfo[] = user.memberships || [];
+        const activeContext: ActiveContext = user.activeContext || {
+            scopeType: ScopeType.PLATFORM,
+            scopeId: 'PLATFORM',
+        };
+
+        const isPlatform = memberships.some(m =>
+            m.scopeType === ScopeType.PLATFORM &&
+            (m.role === MemberRole.SUPERADMIN_PLATFORM || m.role === MemberRole.PLATFORM_MANAGER)
+        );
 
         const dealer = await fastify.prisma.dealer.findUnique({ where: { id } });
         if (!dealer) {
             return reply.code(404).send({ error: 'Dealer not found' });
+        }
+
+        // Scope isolation: verify caller can modify this dealer's settings
+        if (!isPlatform) {
+            if (activeContext.scopeType === ScopeType.DEALER && activeContext.scopeId !== id) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+            if (activeContext.scopeType === ScopeType.DEALER_GROUP && dealer.dealerGroupId !== activeContext.scopeId) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
         }
 
         const oldSettings = await fastify.prisma.dealerSettings.findUnique({
@@ -280,6 +345,29 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, requirePermission('dealers:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
+        const user = request.user as any;
+        const memberships: MembershipInfo[] = user.memberships || [];
+        const activeContext: ActiveContext = user.activeContext || {
+            scopeType: ScopeType.PLATFORM,
+            scopeId: 'PLATFORM',
+        };
+
+        const isPlatform = memberships.some(m =>
+            m.scopeType === ScopeType.PLATFORM &&
+            (m.role === MemberRole.SUPERADMIN_PLATFORM || m.role === MemberRole.PLATFORM_MANAGER)
+        );
+
+        // Scope isolation: verify caller can delete this dealer
+        if (!isPlatform) {
+            const existing = await fastify.prisma.dealer.findUnique({ where: { id }, select: { dealerGroupId: true } });
+            if (!existing) return reply.code(404).send({ error: 'Dealer not found' });
+            if (activeContext.scopeType === ScopeType.DEALER && activeContext.scopeId !== id) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+            if (activeContext.scopeType === ScopeType.DEALER_GROUP && existing.dealerGroupId !== activeContext.scopeId) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+        }
 
         const listingCount = await fastify.prisma.listing.count({
             where: { dealerId: id },

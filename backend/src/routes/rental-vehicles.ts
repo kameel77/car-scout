@@ -255,6 +255,14 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Rental vehicle not found' });
         }
 
+        // Scope isolation: verify caller can modify this vehicle
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform && existing.dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && existing.dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(existing.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
+
         // Build update data — only include provided fields
         const updateData: any = {};
         const stringFields = ['make', 'model', 'version', 'bodyType', 'fuelType', 'transmission',
@@ -309,6 +317,14 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Rental vehicle not found' });
         }
 
+        // Scope isolation
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform && vehicle.dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && vehicle.dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(vehicle.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
+
         await fastify.prisma.rentalVehicle.update({
             where: { id },
             data: { isActive: false }
@@ -322,6 +338,19 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
+
+        const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        // Scope isolation
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform && vehicle.dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && vehicle.dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(vehicle.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
 
         await fastify.prisma.rentalVehicle.update({
             where: { id },
@@ -340,6 +369,14 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
         if (!vehicle) {
             return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        // Scope isolation
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform && vehicle.dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && vehicle.dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(vehicle.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
         }
 
         await fastify.prisma.rentalVehicle.delete({ where: { id } });
@@ -370,6 +407,14 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
         if (!vehicle) return reply.code(404).send({ error: 'Rental vehicle not found' });
         if (!company) return reply.code(404).send({ error: 'Rental company not found' });
+
+        // Scope isolation: verify caller can modify this vehicle
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform && vehicle.dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && vehicle.dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(vehicle.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
+        }
 
         // Check if assignment already exists
         const existing = await fastify.prisma.vehicleRentalAssignment.findUnique({
@@ -602,6 +647,14 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         
         if (!vehicle) {
             return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        // Scope isolation
+        const scope = await resolveScope(fastify, request);
+        if (!scope.isPlatform && vehicle.dealerId) {
+            const allowed = scope.dealerFilter.dealerId;
+            if (typeof allowed === 'string' && vehicle.dealerId !== allowed) return reply.code(403).send({ error: 'Forbidden' });
+            if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(vehicle.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
         }
 
         const newVehicle = await fastify.prisma.rentalVehicle.create({

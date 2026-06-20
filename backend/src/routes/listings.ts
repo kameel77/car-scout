@@ -614,6 +614,27 @@ export async function listingRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Listing not found' });
         }
 
+        // Check visibility
+        let hasAccess = false;
+        const authHeader = request.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                await request.jwtVerify();
+                const scope = await resolveScope(fastify, request);
+                if (scope.isPlatform) {
+                    hasAccess = true;
+                } else if (listing.dealerId) {
+                    const allowed = scope.dealerFilter.dealerId;
+                    if (typeof allowed === 'string' && listing.dealerId === allowed) hasAccess = true;
+                    if (allowed && typeof allowed === 'object' && 'in' in allowed && allowed.in.includes(listing.dealerId)) hasAccess = true;
+                }
+            } catch { /* ignore */ }
+        }
+
+        if (!hasAccess && (listing.isArchived || (listing.pricePln ?? 0) <= 0)) {
+            return reply.code(404).send({ error: 'Listing not found' });
+        }
+
         return { listing };
     });
 
@@ -637,6 +658,27 @@ export async function listingRoutes(fastify: FastifyInstance) {
         });
 
         if (!listing) {
+            return reply.code(404).send({ error: 'Listing not found' });
+        }
+
+        // Check visibility
+        let hasAccess = false;
+        const authHeader = request.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                await request.jwtVerify();
+                const scope = await resolveScope(fastify, request);
+                if (scope.isPlatform) {
+                    hasAccess = true;
+                } else if (listing.dealerId) {
+                    const allowed = scope.dealerFilter.dealerId;
+                    if (typeof allowed === 'string' && listing.dealerId === allowed) hasAccess = true;
+                    if (allowed && typeof allowed === 'object' && 'in' in allowed && allowed.in.includes(listing.dealerId)) hasAccess = true;
+                }
+            } catch { /* ignore */ }
+        }
+
+        if (!hasAccess && (listing.isArchived || (listing.pricePln ?? 0) <= 0)) {
             return reply.code(404).send({ error: 'Listing not found' });
         }
 
@@ -950,8 +992,14 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
 
         // Check if user is authenticated (for manual refresh)
+        let isAuthenticated = false;
         const authHeader = request.headers.authorization;
-        const isAuthenticated = authHeader && authHeader.startsWith('Bearer ');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                await request.jwtVerify();
+                isAuthenticated = true;
+            } catch { /* invalid token */ }
+        }
 
         if (!isAuthenticated) {
             // For auto-refresh, check if autoRefreshImages setting is enabled
