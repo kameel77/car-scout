@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -11,6 +12,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import { createReadStream } from 'fs';
+import { getSafeFilePath } from './utils/path-helpers.js';
 
 // Routes
 import { authRoutes } from './routes/auth.js';
@@ -122,7 +124,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
 
     const fastify = Fastify({
-        bodyLimit: 500 * 1024 * 1024,
+        bodyLimit: 2 * 1024 * 1024, // Reduced from 500MB to 2MB for JSON APIs. Multipart handles large files.
         maxParamLength: 500,
         trustProxy: true,
         disableRequestLogging: true,
@@ -219,6 +221,18 @@ export async function buildApp(): Promise<FastifyInstance> {
         }
     });
 
+    await fastify.register(rateLimit, {
+        global: false,
+        redis: redis,
+        errorResponseBuilder: function (request, context) {
+            return {
+                statusCode: 429,
+                error: 'Too Many Requests',
+                message: `Rate limit exceeded, retry in ${context.after}`
+            };
+        }
+    });
+
     await fastify.register(swagger, {
         openapi: {
             info: {
@@ -266,6 +280,14 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.decorate('authenticate', async function (request: any, reply: any) {
         try {
             await request.jwtVerify();
+            const authHeader = request.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.substring(7);
+                const isBlacklisted = await fastify.redis.get(`blacklist:${token}`);
+                if (isBlacklisted) {
+                    throw new Error('Token is revoked');
+                }
+            }
         } catch (err) {
             reply.code(401).send({ error: 'Unauthorized' });
         }
@@ -373,28 +395,36 @@ export async function buildApp(): Promise<FastifyInstance> {
     // Static files — logos
     fastify.get('/uploads/logos/:file', async (request, reply) => {
         const { file } = request.params as { file: string };
-        const filePath = path.join(uploadsRoot, 'logos', file);
+        const baseDir = path.join(uploadsRoot, 'logos');
+        const filePath = getSafeFilePath(baseDir, file);
+        if (!filePath) return reply.code(400).send({ error: 'Invalid path' });
         return serveStaticFile(filePath, reply);
     });
 
     // Static files — rental vehicle images
     fastify.get('/uploads/rental-images/:vehicleId/:file', async (request, reply) => {
         const { vehicleId, file } = request.params as { vehicleId: string; file: string };
-        const filePath = path.join(uploadsRoot, 'rental-images', vehicleId, file);
+        const baseDir = path.join(uploadsRoot, 'rental-images', vehicleId);
+        const filePath = getSafeFilePath(baseDir, file);
+        if (!filePath) return reply.code(400).send({ error: 'Invalid path' });
         return serveStaticFile(filePath, reply);
     });
 
     // Static files — listing images
     fastify.get('/uploads/listing-images/:listingId/:file', async (request, reply) => {
         const { listingId, file } = request.params as { listingId: string; file: string };
-        const filePath = path.join(uploadsRoot, 'listing-images', listingId, file);
+        const baseDir = path.join(uploadsRoot, 'listing-images', listingId);
+        const filePath = getSafeFilePath(baseDir, file);
+        if (!filePath) return reply.code(400).send({ error: 'Invalid path' });
         return serveStaticFile(filePath, reply);
     });
 
     // Static files — CSFlow cached vehicle images
     fastify.get('/uploads/csflow-images/:listingId/:file', async (request, reply) => {
         const { listingId, file } = request.params as { listingId: string; file: string };
-        const filePath = path.join(uploadsRoot, 'csflow-images', listingId, file);
+        const baseDir = path.join(uploadsRoot, 'csflow-images', listingId);
+        const filePath = getSafeFilePath(baseDir, file);
+        if (!filePath) return reply.code(400).send({ error: 'Invalid path' });
         return serveStaticFile(filePath, reply);
     });
 
@@ -413,7 +443,9 @@ export async function buildApp(): Promise<FastifyInstance> {
         if (!PUBLIC_SLUGS.has(slug)) {
             return reply.code(404).send({ error: 'Not found' });
         }
-        const filePath = path.join(uploadsRoot, slug, file);
+        const baseDir = path.join(uploadsRoot, slug);
+        const filePath = getSafeFilePath(baseDir, file);
+        if (!filePath) return reply.code(400).send({ error: 'Invalid path' });
         return serveStaticFile(filePath, reply);
     });
 

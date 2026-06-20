@@ -1,11 +1,20 @@
 import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { ScopeType, MemberRole } from '@prisma/client';
 import type { ActiveContext, MembershipInfo } from '../middleware/permissions.js';
+import { sendPasswordResetEmail } from '../services/email.js';
 
 export async function authRoutes(fastify: FastifyInstance) {
     // Login
-    fastify.post('/api/auth/login', async (request, reply) => {
+    fastify.post('/api/auth/login', {
+        config: {
+            rateLimit: {
+                max: 5,
+                timeWindow: '1 minute'
+            }
+        }
+    }, async (request, reply) => {
         try {
             const { email, password } = request.body as {
                 email: string;
@@ -228,16 +237,28 @@ export async function authRoutes(fastify: FastifyInstance) {
         return { token, activeContext };
     });
 
-    // Logout (optional - for future token blacklist)
+    // Logout
     fastify.post('/api/auth/logout', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
-        // TODO: Implement token blacklist in Redis if needed
+        const authHeader = request.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.substring(7);
+            // Blacklist the token in Redis for 7 days (max JWT TTL)
+            await fastify.redis.set(`blacklist:${token}`, 'true', 'EX', 7 * 24 * 60 * 60);
+        }
         return { message: 'Logged out successfully' };
     });
 
     // Request password reset
-    fastify.post('/api/auth/reset-password-request', async (request, reply) => {
+    fastify.post('/api/auth/reset-password-request', {
+        config: {
+            rateLimit: {
+                max: 3,
+                timeWindow: '15 minutes'
+            }
+        }
+    }, async (request, reply) => {
         const { email } = request.body as { email: string };
 
         if (!email) {
@@ -250,37 +271,37 @@ export async function authRoutes(fastify: FastifyInstance) {
 
         if (!user) {
             // Return success even if user not found for security (prevent email enumeration)
-            // But log the attempt for debugging
-            fastify.log.warn(`Password reset requested for non-existent email: ${email}`);
             return { message: 'If an account with that email exists, a reset link has been generated.' };
         }
 
-        // Generate a random token
-        const crypto = await import('crypto');
-        const token = crypto.randomBytes(32).toString('hex');
+        // Generate a random token and its hash
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
         const expires = new Date(Date.now() + 3600000); // 1 hour from now
 
         await fastify.prisma.user.update({
             where: { id: user.id },
             data: {
-                resetPasswordToken: token,
+                resetPasswordToken: hashedToken,
                 resetPasswordExpires: expires
             }
         });
 
-        // Log the reset link to console
-        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
-        console.log('------------------------------------------');
-        console.log('PASSWORD RESET REQUESTED');
-        console.log(`User: ${email}`);
-        console.log(`Reset Link: ${resetLink}`);
-        console.log('------------------------------------------');
+        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${rawToken}`;
+        await sendPasswordResetEmail(fastify, email, resetLink);
 
         return { message: 'If an account with that email exists, a reset link has been generated.' };
     });
 
     // Reset password using token
-    fastify.post('/api/auth/reset-password', async (request, reply) => {
+    fastify.post('/api/auth/reset-password', {
+        config: {
+            rateLimit: {
+                max: 10,
+                timeWindow: '15 minutes'
+            }
+        }
+    }, async (request, reply) => {
         const { token, newPassword } = request.body as {
             token: string;
             newPassword: string
@@ -292,9 +313,11 @@ export async function authRoutes(fastify: FastifyInstance) {
             });
         }
 
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
         const user = await fastify.prisma.user.findFirst({
             where: {
-                resetPasswordToken: token,
+                resetPasswordToken: hashedToken,
                 resetPasswordExpires: {
                     gt: new Date()
                 }

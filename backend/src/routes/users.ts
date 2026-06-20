@@ -12,6 +12,28 @@ const ASSIGNABLE_ROLES: Record<ScopeType, MemberRole[]> = {
     DEALER: [MemberRole.DEALER_ADMIN, MemberRole.DEALER_EMPLOYEE],
 };
 
+async function validateAssignmentScope(fastify: FastifyInstance, callerMemberships: MembershipInfo[], targetScopeType: ScopeType, targetScopeId: string): Promise<boolean> {
+    const isPlatform = callerMemberships.some(m => m.scopeType === ScopeType.PLATFORM);
+    if (isPlatform) return true;
+
+    if (targetScopeType === ScopeType.PLATFORM) return false;
+
+    if (targetScopeType === ScopeType.DEALER_GROUP) {
+        return callerMemberships.some(m => m.scopeType === ScopeType.DEALER_GROUP && m.scopeId === targetScopeId);
+    }
+
+    if (targetScopeType === ScopeType.DEALER) {
+        if (callerMemberships.some(m => m.scopeType === ScopeType.DEALER && m.scopeId === targetScopeId)) {
+            return true;
+        }
+        const dealer = await fastify.prisma.dealer.findUnique({ where: { id: targetScopeId } });
+        if (dealer?.dealerGroupId) {
+            return callerMemberships.some(m => m.scopeType === ScopeType.DEALER_GROUP && m.scopeId === dealer.dealerGroupId);
+        }
+    }
+    return false;
+}
+
 export async function userRoutes(fastify: FastifyInstance) {
     // List users (scope-aware)
     fastify.get('/api/users', {
@@ -134,6 +156,13 @@ export async function userRoutes(fastify: FastifyInstance) {
             if (!dealer) return reply.code(400).send({ error: 'Dealer not found' });
         }
 
+        // Validate: caller authority
+        const callerMemberships = (request.user as any)?.memberships || [];
+        const hasAuthority = await validateAssignmentScope(fastify, callerMemberships, scopeType, scopeId);
+        if (!hasAuthority) {
+            return reply.code(403).send({ error: 'You do not have permission to assign a membership in this scope' });
+        }
+
         // Determine legacy role for backward compat
         const legacyRole = role === MemberRole.SUPERADMIN_PLATFORM ? 'admin' : 'manager';
 
@@ -200,6 +229,22 @@ export async function userRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({
                 error: `Role ${role} is not valid for scope ${scopeType}`,
             });
+        }
+
+        // Validate: scope target exists
+        if (scopeType === ScopeType.DEALER_GROUP) {
+            const group = await fastify.prisma.dealerGroup.findUnique({ where: { id: scopeId } });
+            if (!group) return reply.code(400).send({ error: 'Dealer group not found' });
+        } else if (scopeType === ScopeType.DEALER) {
+            const dealer = await fastify.prisma.dealer.findUnique({ where: { id: scopeId } });
+            if (!dealer) return reply.code(400).send({ error: 'Dealer not found' });
+        }
+
+        // Validate: caller authority
+        const callerMemberships = (request.user as any)?.memberships || [];
+        const hasAuthority = await validateAssignmentScope(fastify, callerMemberships, scopeType, scopeId);
+        if (!hasAuthority) {
+            return reply.code(403).send({ error: 'You do not have permission to assign a membership in this scope' });
         }
 
         try {
