@@ -1,5 +1,25 @@
 import { FastifyInstance } from 'fastify';
 
+const calculateRatesWithInsurance = (entry: any, assignment: any) => {
+    const insuranceAddMode = assignment.insuranceAddModeOverride || assignment.rentalCompany?.insuranceAddMode || 'INSURANCE_23';
+    const servicesIncluded = (assignment.includedServicesOverride && assignment.includedServicesOverride.length > 0)
+        ? assignment.includedServicesOverride
+        : (assignment.rentalCompany?.includedServices || []);
+
+    let finalNet = entry.monthlyRateNet;
+    let finalGross = entry.monthlyRateGross;
+    if (entry.insuranceNet) {
+        if (insuranceAddMode === 'INSURANCE_23') {
+            finalNet += entry.insuranceNet;
+            finalGross += (entry.insuranceNet * 1.23);
+        } else if (insuranceAddMode === 'INSURANCE_0') {
+            finalNet += entry.insuranceNet;
+            finalGross += entry.insuranceNet;
+        }
+    }
+    return { ...entry, monthlyRateNet: finalNet, monthlyRateGross: finalGross, servicesIncluded };
+};
+
 export async function rentalPublicRoutes(fastify: FastifyInstance) {
     // Public: List active rental vehicles with minimum rates
     fastify.get('/api/rental/vehicles', async (request, reply) => {
@@ -209,7 +229,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 where: { isActive: true },
                 include: {
                     rentalCompany: {
-                        select: { id: true, name: true, slug: true, logoUrl: true }
+                        select: { id: true, name: true, slug: true, logoUrl: true, includedServices: true, insuranceAddMode: true }
                     },
                     matrixEntries: {
                         where: matrixEntryFilter,
@@ -226,7 +246,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                             contractMonths: true,
                             annualMileageKm: true,
                             initialPaymentAmountNet: true,
-                            servicesIncluded: true
+                            servicesIncluded: true,
+                            insuranceNet: true
                         }
                     }
                 }
@@ -250,6 +271,14 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     rentalAssignments: {
                         where: { isActive: true },
                         select: {
+                            includedServicesOverride: true,
+                            insuranceAddModeOverride: true,
+                            rentalCompany: {
+                                select: {
+                                    includedServices: true,
+                                    insuranceAddMode: true
+                                }
+                            },
                             matrixEntries: {
                                 where: matrixEntryFilter,
                                 select: {
@@ -257,7 +286,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                     monthlyRateGross: true,
                                     contractMonths: true,
                                     annualMileageKm: true,
-                                    initialPaymentAmountNet: true
+                                    initialPaymentAmountNet: true,
+                                    insuranceNet: true
                                 }
                             }
                         }
@@ -269,7 +299,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             let mapped = (allVehiclesMinimal as any[]).map(v => {
                 let bestRateEntry: any = null;
                 for (const a of v.rentalAssignments || []) {
-                    for (const m of a.matrixEntries || []) {
+                    for (const mRaw of a.matrixEntries || []) {
+                        const m = calculateRatesWithInsurance(mRaw, a);
                         if (!bestRateEntry) {
                             bestRateEntry = m;
                         } else {
@@ -356,11 +387,10 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             total = totalCount;
         }
 
-        // Transform to include minRate
         const vehiclesWithRates = vehicles.map((v) => {
             const allMinRates = v.rentalAssignments
                 .flatMap((a: any) => a.matrixEntries.map((e: any) => ({
-                    ...e,
+                    ...calculateRatesWithInsurance(e, a),
                     companyName: a.rentalCompany.name,
                     companySlug: a.rentalCompany.slug
                 })));
@@ -510,9 +540,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 sellingPrice: true,
                 rentalAssignments: {
                     where: { isActive: true },
-                    include: {
+                    select: {
+                        includedServicesOverride: true,
+                        insuranceAddModeOverride: true,
                         rentalCompany: {
-                            select: { id: true, name: true, slug: true, logoUrl: true }
+                            select: { id: true, name: true, slug: true, logoUrl: true, includedServices: true, insuranceAddMode: true }
                         },
                         matrixEntries: {
                             where: {
@@ -537,16 +569,19 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
         // Build offers from each company
         const offers = vehicle.rentalAssignments
-            .filter(a => a.matrixEntries.length > 0)
-            .map(a => ({
-                company: a.rentalCompany,
-                monthlyRateNet: Math.ceil(a.matrixEntries[0].monthlyRateNet),
-                monthlyRateGross: Math.ceil(a.matrixEntries[0].monthlyRateGross),
-                servicesIncluded: a.matrixEntries[0].servicesIncluded,
-                initialPaymentAmountNet: a.matrixEntries[0].initialPaymentAmountNet,
-                initialPaymentAmountGross: a.matrixEntries[0].initialPaymentAmountGross
-            }))
-            .sort((a, b) => a.monthlyRateGross - b.monthlyRateGross);
+            .filter((a: any) => a.matrixEntries.length > 0)
+            .map((a: any) => {
+                const calculatedEntry = calculateRatesWithInsurance(a.matrixEntries[0], a);
+                return {
+                    company: a.rentalCompany,
+                    monthlyRateNet: Math.ceil(calculatedEntry.monthlyRateNet),
+                    monthlyRateGross: Math.ceil(calculatedEntry.monthlyRateGross),
+                    servicesIncluded: calculatedEntry.servicesIncluded,
+                    initialPaymentAmountNet: calculatedEntry.initialPaymentAmountNet,
+                    initialPaymentAmountGross: calculatedEntry.initialPaymentAmountGross
+                };
+            })
+            .sort((a: any, b: any) => a.monthlyRateGross - b.monthlyRateGross);
 
         return {
             vehicleId: vehicle.id,

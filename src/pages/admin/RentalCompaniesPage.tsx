@@ -14,7 +14,26 @@ export default function RentalCompaniesPage() {
     const { toast } = useToast();
     const [showAdd, setShowAdd] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [form, setForm] = useState({ name: '', contactEmail: '', contactPhone: '' });
+    const [form, setForm] = useState<{
+        name: string;
+        contactEmail: string;
+        contactPhone: string;
+        includedServices: string[];
+        insuranceAddMode: 'INSURANCE_23' | 'INSURANCE_0';
+    }>({ 
+        name: '', 
+        contactEmail: '', 
+        contactPhone: '',
+        includedServices: [],
+        insuranceAddMode: 'INSURANCE_23'
+    });
+
+    const SERVICE_OPTIONS = [
+        { id: 'insurance', label: 'Ubezpieczenie' },
+        { id: 'service', label: 'Serwis' },
+        { id: 'tires', label: 'Opony' },
+        { id: 'other', label: 'Inne' }
+    ];
 
     const { data, isLoading } = useQuery({
         queryKey: ['rental-companies'],
@@ -53,14 +72,16 @@ export default function RentalCompaniesPage() {
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
     });
 
-    const resetForm = () => setForm({ name: '', contactEmail: '', contactPhone: '' });
+    const resetForm = () => setForm({ name: '', contactEmail: '', contactPhone: '', includedServices: [], insuranceAddMode: 'INSURANCE_23' });
 
     const startEdit = (company: RentalCompany) => {
         setEditingId(company.id);
         setForm({
             name: company.name,
             contactEmail: company.contactEmail || '',
-            contactPhone: company.contactPhone || ''
+            contactPhone: company.contactPhone || '',
+            includedServices: company.includedServices || [],
+            insuranceAddMode: company.insuranceAddMode || 'INSURANCE_23'
         });
     };
 
@@ -83,6 +104,41 @@ export default function RentalCompaniesPage() {
                         <Input placeholder="Nazwa firmy *" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
                         <Input placeholder="Email kontaktowy" type="email" value={form.contactEmail} onChange={e => setForm(p => ({ ...p, contactEmail: e.target.value }))} />
                         <Input placeholder="Telefon" value={form.contactPhone} onChange={e => setForm(p => ({ ...p, contactPhone: e.target.value }))} />
+                        
+                        <div className="space-y-1 col-span-full md:col-span-2">
+                            <label className="text-sm font-medium">Sposób doliczania ubezpieczenia</label>
+                            <select
+                                value={form.insuranceAddMode}
+                                onChange={e => setForm(p => ({ ...p, insuranceAddMode: e.target.value as any }))}
+                                className="w-full h-10 px-3 rounded-md border text-sm"
+                            >
+                                <option value="INSURANCE_23">23% (doliczane do netto, VAT naliczany od całości)</option>
+                                <option value="INSURANCE_0">0% (stała kwota z matrycy osobno na fakturze bez VAT)</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-1 col-span-full">
+                            <label className="text-sm font-medium">Domyślne usługi wliczone w ratę</label>
+                            <div className="flex flex-wrap gap-4 mt-2">
+                                {SERVICE_OPTIONS.map(svc => (
+                                    <label key={svc.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-gray-300"
+                                            checked={form.includedServices.includes(svc.id)}
+                                            onChange={e => {
+                                                if (e.target.checked) {
+                                                    setForm(p => ({ ...p, includedServices: [...p.includedServices, svc.id] }));
+                                                } else {
+                                                    setForm(p => ({ ...p, includedServices: p.includedServices.filter(x => x !== svc.id) }));
+                                                }
+                                            }}
+                                        />
+                                        {svc.label}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                     <div className="flex gap-2">
                         <Button size="sm" onClick={() => createMutation.mutate(form)} disabled={!form.name || createMutation.isPending}>
@@ -104,6 +160,41 @@ export default function RentalCompaniesPage() {
                                     <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
                                     <Input value={form.contactEmail} onChange={e => setForm(p => ({ ...p, contactEmail: e.target.value }))} />
                                     <Input value={form.contactPhone} onChange={e => setForm(p => ({ ...p, contactPhone: e.target.value }))} />
+                                    
+                                    <div className="space-y-1 col-span-full md:col-span-2">
+                                        <label className="text-sm font-medium text-gray-700">Sposób doliczania ubezpieczenia</label>
+                                        <select
+                                            value={form.insuranceAddMode}
+                                            onChange={e => setForm(p => ({ ...p, insuranceAddMode: e.target.value as any }))}
+                                            className="w-full h-10 px-3 rounded-md border text-sm"
+                                        >
+                                            <option value="INSURANCE_23">23% (doliczane do netto, VAT naliczany od całości)</option>
+                                            <option value="INSURANCE_0">0% (stała kwota z matrycy osobno na fakturze bez VAT)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1 col-span-full">
+                                        <label className="text-sm font-medium text-gray-700">Domyślne usługi wliczone w ratę</label>
+                                        <div className="flex flex-wrap gap-4 mt-1">
+                                            {SERVICE_OPTIONS.map(svc => (
+                                                <label key={svc.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300"
+                                                        checked={form.includedServices.includes(svc.id)}
+                                                        onChange={e => {
+                                                            if (e.target.checked) {
+                                                                setForm(p => ({ ...p, includedServices: [...p.includedServices, svc.id] }));
+                                                            } else {
+                                                                setForm(p => ({ ...p, includedServices: p.includedServices.filter(x => x !== svc.id) }));
+                                                            }
+                                                        }}
+                                                    />
+                                                    {svc.label}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button size="sm" onClick={() => updateMutation.mutate({ id: c.id, data: form })} disabled={updateMutation.isPending}>

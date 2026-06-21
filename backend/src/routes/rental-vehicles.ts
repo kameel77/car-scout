@@ -389,10 +389,12 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
-        const { rentalCompanyId, externalVehicleId, calculationId } = request.body as {
+        const { rentalCompanyId, externalVehicleId, calculationId, includedServicesOverride, insuranceAddModeOverride } = request.body as {
             rentalCompanyId: string;
             externalVehicleId?: string;
             calculationId?: string;
+            includedServicesOverride?: string[] | null;
+            insuranceAddModeOverride?: 'INSURANCE_23' | 'INSURANCE_0' | null;
         };
 
         if (!rentalCompanyId) {
@@ -430,7 +432,9 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                 vehicleId: id,
                 rentalCompanyId,
                 externalVehicleId: externalVehicleId || null,
-                calculationId: calculationId || null
+                calculationId: calculationId || null,
+                includedServicesOverride: includedServicesOverride || [],
+                insuranceAddModeOverride: insuranceAddModeOverride || null
             },
             include: {
                 rentalCompany: { select: { id: true, name: true } }
@@ -449,6 +453,8 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             externalVehicleId?: string;
             calculationId?: string;
             isActive?: boolean;
+            includedServicesOverride?: string[] | null;
+            insuranceAddModeOverride?: 'INSURANCE_23' | 'INSURANCE_0' | null;
         };
 
         const assignment = await fastify.prisma.vehicleRentalAssignment.findUnique({
@@ -464,7 +470,9 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             data: {
                 ...(body.externalVehicleId !== undefined && { externalVehicleId: body.externalVehicleId }),
                 ...(body.calculationId !== undefined && { calculationId: body.calculationId }),
-                ...(body.isActive !== undefined && { isActive: body.isActive })
+                ...(body.isActive !== undefined && { isActive: body.isActive }),
+                ...(body.includedServicesOverride !== undefined && { includedServicesOverride: body.includedServicesOverride || [] }),
+                ...(body.insuranceAddModeOverride !== undefined && { insuranceAddModeOverride: body.insuranceAddModeOverride })
             },
             include: {
                 rentalCompany: { select: { id: true, name: true } }
