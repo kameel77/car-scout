@@ -51,6 +51,11 @@ enum LeadRouting {
   DEALER
 }
 
+enum InsuranceAddMode {
+  INSURANCE_23
+  INSURANCE_0
+}
+
 model Listing {
   id                       String             @id @default(cuid())
   listingId                String?            @unique @map("listing_id")
@@ -688,6 +693,9 @@ model RentalCompany {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  includedServices String[]          @default([]) @map("included_services")
+  insuranceAddMode InsuranceAddMode? @default(INSURANCE_23) @map("insurance_add_mode")
+
   vehicleAssignments VehicleRentalAssignment[]
   ownedVehicles      RentalVehicle[]           @relation("VehicleOwnerCompany")
 
@@ -703,6 +711,9 @@ model VehicleRentalAssignment {
   isActive          Boolean  @default(true) @map("is_active")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
+
+  includedServicesOverride String[]          @map("included_services_override")
+  insuranceAddModeOverride InsuranceAddMode? @map("insurance_add_mode_override")
 
   vehicle       RentalVehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   rentalCompany RentalCompany       @relation(fields: [rentalCompanyId], references: [id])
@@ -727,6 +738,7 @@ model RentalMatrixEntry {
   monthlyRateGross     Float    @map("monthly_rate_gross")
   servicesIncluded     String[] @map("services_included")
   overMileageCost      Float?   @map("over_mileage_cost")
+  insuranceNet         Float?   @map("insurance_net")
   insuranceExcess500   Float?   @map("insurance_excess_500")
   insuranceNoLimit     Float?   @map("insurance_no_limit")
   tiresNoLimit         Float?   @map("tires_no_limit")

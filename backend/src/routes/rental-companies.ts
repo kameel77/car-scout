@@ -63,11 +63,13 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
     fastify.post('/api/rental-companies', {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
-        const { name, contactEmail, contactPhone, logoUrl } = request.body as {
+        const { name, contactEmail, contactPhone, logoUrl, includedServices, insuranceAddMode } = request.body as {
             name: string;
             contactEmail?: string;
             contactPhone?: string;
             logoUrl?: string;
+            includedServices?: string[];
+            insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0';
         };
 
         if (!name) {
@@ -82,7 +84,9 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
                 slug,
                 contactEmail: contactEmail || null,
                 contactPhone: contactPhone || null,
-                logoUrl: logoUrl || null
+                logoUrl: logoUrl || null,
+                includedServices: includedServices || [],
+                insuranceAddMode: insuranceAddMode || 'INSURANCE_23'
             }
         });
 
@@ -100,6 +104,8 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
             contactPhone?: string;
             logoUrl?: string;
             isActive?: boolean;
+            includedServices?: string[];
+            insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0';
         };
 
         const existing = await fastify.prisma.rentalCompany.findUnique({ where: { id } });
@@ -116,6 +122,8 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
         if (body.contactPhone !== undefined) updateData.contactPhone = body.contactPhone;
         if (body.logoUrl !== undefined) updateData.logoUrl = body.logoUrl;
         if (body.isActive !== undefined) updateData.isActive = body.isActive;
+        if (body.includedServices !== undefined) updateData.includedServices = body.includedServices;
+        if (body.insuranceAddMode !== undefined) updateData.insuranceAddMode = body.insuranceAddMode;
 
         const company = await fastify.prisma.rentalCompany.update({
             where: { id },
