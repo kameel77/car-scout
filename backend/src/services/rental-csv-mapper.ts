@@ -162,6 +162,7 @@ export interface MappedMatrixEntry {
     insuranceExcess500: number | null;
     insuranceNoLimit: number | null;
     tiresNoLimit: number | null;
+    insuranceNet: number | null;
     // Provider-only vehicle metadata (used to update vehicle record optionally)
     vehicleMeta?: {
         carClass: string | null;
@@ -262,7 +263,8 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
             overMileageCost: null,
             insuranceExcess500: null,
             insuranceNoLimit: null,
-            tiresNoLimit: null
+            tiresNoLimit: null,
+            insuranceNet: null
         },
         error: null
     };
@@ -339,6 +341,7 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
     const insuranceExcess500 = safeFloat(row.insurance_500);
     const insuranceNoLimit = safeFloat(row.insurance_nolim);
     const tiresNoLimit = safeFloat(row.tires_nolim);
+    const insuranceNet = safeFloat(row.insurance_net);
 
     // Vehicle metadata
     const vehicleMeta = {
@@ -365,6 +368,7 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
         insuranceExcess500,
         insuranceNoLimit,
         tiresNoLimit,
+        insuranceNet,
         vehicleMeta
     }));
 

@@ -198,6 +198,7 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             insuranceExcess500: number | null;
             insuranceNoLimit: number | null;
             tiresNoLimit: number | null;
+            insuranceNet: number | null;
         }> = [];
 
         // Track vehicle metadata updates (provider format only)
@@ -239,7 +240,8 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
                     overMileageCost: entry.overMileageCost,
                     insuranceExcess500: entry.insuranceExcess500,
                     insuranceNoLimit: entry.insuranceNoLimit,
-                    tiresNoLimit: entry.tiresNoLimit
+                    tiresNoLimit: entry.tiresNoLimit,
+                    insuranceNet: entry.insuranceNet
                 });
 
                 // Collect vehicle metadata updates

@@ -58,7 +58,20 @@ function AssignmentSection({ vehicleId, assignments, companies }: AssignmentSect
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const [showAdd, setShowAdd] = useState(false);
-    const [newAssignment, setNewAssignment] = useState({ rentalCompanyId: '', externalVehicleId: '', calculationId: '' });
+    const [newAssignment, setNewAssignment] = useState<{
+        rentalCompanyId: string;
+        externalVehicleId: string;
+        calculationId: string;
+        includedServicesOverride: string[] | null;
+        insuranceAddModeOverride: 'INSURANCE_23' | 'INSURANCE_0' | null;
+    }>({ rentalCompanyId: '', externalVehicleId: '', calculationId: '', includedServicesOverride: null, insuranceAddModeOverride: null });
+
+    const SERVICE_OPTIONS = [
+        { id: 'insurance', label: 'Ubezpieczenie' },
+        { id: 'service', label: 'Serwis' },
+        { id: 'tires', label: 'Opony' },
+        { id: 'other', label: 'Inne' }
+    ];
 
     const assignedCompanyIds = new Set(assignments.map((a: any) => a.rentalCompanyId));
     const availableCompanies = companies.filter(c => !assignedCompanyIds.has(c.id));
@@ -68,7 +81,7 @@ function AssignmentSection({ vehicleId, assignments, companies }: AssignmentSect
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
             setShowAdd(false);
-            setNewAssignment({ rentalCompanyId: '', externalVehicleId: '', calculationId: '' });
+            setNewAssignment({ rentalCompanyId: '', externalVehicleId: '', calculationId: '', includedServicesOverride: null, insuranceAddModeOverride: null });
             toast({ title: 'Przypisano firmę' });
         },
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
@@ -121,7 +134,55 @@ function AssignmentSection({ vehicleId, assignments, companies }: AssignmentSect
                         onChange={e => setNewAssignment(p => ({ ...p, calculationId: e.target.value }))}
                         className="h-9 text-sm"
                     />
-                    <div className="flex gap-2">
+
+                    <div className="pt-2 border-t mt-2">
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Nadpisanie: Sposób doliczania ubezpieczenia</label>
+                        <select
+                            value={newAssignment.insuranceAddModeOverride || ''}
+                            onChange={e => setNewAssignment(p => ({ ...p, insuranceAddModeOverride: e.target.value ? e.target.value as any : null }))}
+                            className="w-full h-9 px-3 rounded border text-sm"
+                        >
+                            <option value="">-- domyślnie z ustawień firmy --</option>
+                            <option value="INSURANCE_23">23% (do netto, VAT od całości)</option>
+                            <option value="INSURANCE_0">0% (stała kwota do netto/brutto bez VAT)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium text-gray-500 block mb-1">Nadpisanie: Usługi wliczone</label>
+                            <button
+                                type="button"
+                                className="text-[10px] text-blue-600 underline"
+                                onClick={() => setNewAssignment(p => ({ ...p, includedServicesOverride: p.includedServicesOverride === null ? [] : null }))}
+                            >
+                                {newAssignment.includedServicesOverride === null ? 'Włącz nadpisywanie' : 'Wyłącz nadpisywanie'}
+                            </button>
+                        </div>
+                        {newAssignment.includedServicesOverride !== null && (
+                            <div className="flex flex-wrap gap-3 mt-1 bg-gray-50 p-2 border rounded">
+                                {SERVICE_OPTIONS.map(svc => (
+                                    <label key={svc.id} className="flex items-center gap-1 text-xs cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-gray-300 w-3 h-3"
+                                            checked={newAssignment.includedServicesOverride!.includes(svc.id)}
+                                            onChange={e => {
+                                                if (e.target.checked) {
+                                                    setNewAssignment(p => ({ ...p, includedServicesOverride: [...(p.includedServicesOverride || []), svc.id] }));
+                                                } else {
+                                                    setNewAssignment(p => ({ ...p, includedServicesOverride: p.includedServicesOverride!.filter(x => x !== svc.id) }));
+                                                }
+                                            }}
+                                        />
+                                        {svc.label}
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
                         <Button size="sm" onClick={() => createMutation.mutate()} disabled={!newAssignment.rentalCompanyId || createMutation.isPending}>
                             Przypisz
                         </Button>
@@ -142,11 +203,22 @@ function AssignmentRow({ assignment: a, vehicleId, onDelete }: { assignment: any
     const [editing, setEditing] = useState(false);
     const [extId, setExtId] = useState(a.externalVehicleId || '');
     const [calcId, setCalcId] = useState(a.calculationId || '');
+    const [includedServicesOverride, setIncludedServicesOverride] = useState<string[] | null>(a.includedServicesOverride ?? null);
+    const [insuranceAddModeOverride, setInsuranceAddModeOverride] = useState<'INSURANCE_23' | 'INSURANCE_0' | null>(a.insuranceAddModeOverride ?? null);
+
+    const SERVICE_OPTIONS = [
+        { id: 'insurance', label: 'Ubezpieczenie' },
+        { id: 'service', label: 'Serwis' },
+        { id: 'tires', label: 'Opony' },
+        { id: 'other', label: 'Inne' }
+    ];
 
     const updateMutation = useMutation({
         mutationFn: () => rentalVehiclesApi.updateAssignment(vehicleId, a.id, {
             externalVehicleId: extId || null,
-            calculationId: calcId || null
+            calculationId: calcId || null,
+            includedServicesOverride,
+            insuranceAddModeOverride
         }, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
@@ -171,7 +243,54 @@ function AssignmentRow({ assignment: a, vehicleId, onDelete }: { assignment: any
                         <Input value={calcId} onChange={e => setCalcId(e.target.value)} className="h-8 text-sm" placeholder="np. CALC-001" />
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2 border-t pt-2">
+                    <div className="col-span-full">
+                        <label className="text-xs text-gray-500 block mb-1">Nadpisanie ubezpieczenia</label>
+                        <select
+                            value={insuranceAddModeOverride || ''}
+                            onChange={e => setInsuranceAddModeOverride(e.target.value ? e.target.value as any : null)}
+                            className="w-full h-8 px-2 rounded border text-xs"
+                        >
+                            <option value="">-- brak (z firmy) --</option>
+                            <option value="INSURANCE_23">23% (do netto, VAT całościowy)</option>
+                            <option value="INSURANCE_0">0% (stała kwota, bez VAT)</option>
+                        </select>
+                    </div>
+                    <div className="col-span-full">
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs text-gray-500">Nadpisanie wliczonych usług</label>
+                            <button
+                                type="button"
+                                className="text-[10px] text-blue-600 underline"
+                                onClick={() => setIncludedServicesOverride(prev => prev === null ? [] : null)}
+                            >
+                                {includedServicesOverride === null ? 'Włącz nadpisanie' : 'Wyłącz nadpisanie'}
+                            </button>
+                        </div>
+                        {includedServicesOverride !== null && (
+                            <div className="flex flex-wrap gap-2 mt-1 bg-gray-50 p-2 border rounded">
+                                {SERVICE_OPTIONS.map(svc => (
+                                    <label key={svc.id} className="flex items-center gap-1 text-xs cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-gray-300 w-3 h-3"
+                                            checked={includedServicesOverride.includes(svc.id)}
+                                            onChange={e => {
+                                                if (e.target.checked) {
+                                                    setIncludedServicesOverride(p => [...(p || []), svc.id]);
+                                                } else {
+                                                    setIncludedServicesOverride(p => (p || []).filter(x => x !== svc.id));
+                                                }
+                                            }}
+                                        />
+                                        {svc.label}
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="flex gap-2 pt-2">
                     <Button size="sm" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>Zapisz</Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Anuluj</Button>
                 </div>

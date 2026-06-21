@@ -55,6 +55,8 @@ export interface RentalCompany {
     contactEmail: string | null;
     contactPhone: string | null;
     isActive: boolean;
+    includedServices?: string[];
+    insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0';
     _count?: { vehicleAssignments: number };
 }
 
@@ -65,6 +67,8 @@ export interface VehicleRentalAssignment {
     externalVehicleId: string | null;
     calculationId: string | null;
     isActive: boolean;
+    includedServicesOverride?: string[] | null;
+    insuranceAddModeOverride?: 'INSURANCE_23' | 'INSURANCE_0' | null;
     rentalCompany?: { id: string; name: string; slug?: string | null };
     _count?: { matrixEntries: number };
     matrixEntries?: RentalMatrixEntry[];
@@ -85,6 +89,7 @@ export interface RentalMatrixEntry {
     insuranceExcess500: number | null;
     insuranceNoLimit: number | null;
     tiresNoLimit: number | null;
+    insuranceNet?: number | null;
     offerType?: string;
 }
 
