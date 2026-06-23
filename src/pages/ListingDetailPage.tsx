@@ -705,7 +705,7 @@ export default function ListingDetailPage() {
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.keyParameters')}</h2>
               <SpecsGrid
-                year={(listing.specification?.manufacturingYear || listing.production_year).toString()}
+                year={listing.specification?.manufacturingYear || listing.production_year || undefined}
                 mileage={listing.mileage_km}
                 fuelType={listing.specification?.fuelType || listing.fuel_type}
                 transmission={listing.specification?.transmission || listing.transmission}
@@ -885,7 +885,7 @@ export default function ListingDetailPage() {
                   {lang === 'pl' ? (
                     financingType === 'leasing' ? `FAQ: ${listing.make} ${listing.model} w leasingu na ${window.location.hostname.replace('www.', '')}` :
                     financingType === 'kredyt' ? `FAQ: ${listing.make} ${listing.model} w kredycie na ${window.location.hostname.replace('www.', '')}` :
-                    financingType === 'wynajem-dlugoterminowy' ? `FAQ: ${listing.make} ${listing.model} w wynajmie długoterminowym na ${window.location.hostname.replace('www.', '')}` :
+                    financingType === 'wynajem' ? `FAQ: ${listing.make} ${listing.model} w wynajmie długoterminowym na ${window.location.hostname.replace('www.', '')}` :
                     `FAQ: ${listing.make} ${listing.model} na ${window.location.hostname.replace('www.', '')}`
                   ) : (
                     t('nav.faq', 'FAQ')

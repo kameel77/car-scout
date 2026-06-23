@@ -35,6 +35,7 @@ type SettingsPayload = {
     footerLogoUrl?: string | null;
     legalSloganPl?: string | null;
     legalSloganEn?: string | null;
+    legalSloganDe?: string | null;
     siteNamePl?: string | null;
     siteNameEn?: string | null;
     siteNameDe?: string | null;
@@ -341,7 +342,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     siteNamePl: data.siteNamePl || null,
                     siteNameEn: data.siteNameEn || null,
                     siteNameDe: data.siteNameDe || null,
-                    pdfParserLlmModel: data.pdfParserLlmModel || null,
+                    pdfParserLlmModel: data.pdfParserLlmModel || undefined,
                     pdfParserSystemPrompt: data.pdfParserSystemPrompt || null,
 
                     financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined

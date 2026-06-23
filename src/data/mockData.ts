@@ -54,6 +54,15 @@ export interface Listing {
     equipmentOther: string[] | any;
     technicalSpecification?: string | null;
     specificationPdfUrl?: string | null;
+    stockCount: number;
+    displayMode: string;
+    manufacturingYear?: number | null;
+    fuelType?: string | null;
+    transmission?: string | null;
+    drive?: string | null;
+    enginePowerHp?: number | null;
+    engineCapacityCm3?: number | null;
+    bodyType?: string | null;
   } | null;
   is_archived?: boolean;
   is_featured?: boolean;
@@ -77,11 +86,6 @@ export interface Listing {
   } | null;
   lastManualEditAt?: string | null;
   entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL' | null;
-  specification?: {
-    stockCount: number;
-    displayMode: string;
-    specificationPdfUrl?: string | null;
-  } | null;
 }
 
 export interface Lead {

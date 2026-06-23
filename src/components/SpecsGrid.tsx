@@ -15,14 +15,14 @@ import { translateTechnicalValue } from '@/utils/i18n-utils';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 
 interface SpecsGridProps {
-  year: number;
-  mileage: number;
-  fuelType: string;
-  transmission: string;
-  drive: string;
-  power: number;
-  capacity: number;
-  bodyType: string;
+  year?: number | string | null;
+  mileage?: number | string | null;
+  fuelType?: string | null;
+  transmission?: string | null;
+  drive?: string | null;
+  power?: number | string | null;
+  capacity?: number | string | null;
+  bodyType?: string | null;
 }
 
 export function SpecsGrid(props: SpecsGridProps) {

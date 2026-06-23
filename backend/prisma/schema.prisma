@@ -74,6 +74,9 @@ model VehicleSpecification {
   drive                    String?
   bodyType                 String?          @map("body_type")
   
+  catalogPrice             Int?             @map("catalog_price")
+  discountedPrice          Int?             @map("discounted_price")
+
   imageUrls                String[]         @map("image_urls")
   specificationPdfUrl      String?          @map("specification_pdf_url")
   equipmentAudioMultimedia String[]         @map("equipment_audio_multimedia")

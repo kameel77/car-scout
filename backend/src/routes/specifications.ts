@@ -8,12 +8,13 @@ export async function specificationRoutes(fastify: FastifyInstance) {
     fastify.post('/api/specifications', {
         onRequest: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
     }, async (request, reply) => {
+        const data = (request.body as any) || {};
         const spec = await fastify.prisma.vehicleSpecification.create({
             data: {
-                brand: 'Nowa Marka',
-                model: 'Nowy Model',
-                version: 'Wersja',
-                condition: 'NEW',
+                brand: data.brand || 'Nowa Marka',
+                model: data.model || 'Nowy Model',
+                version: data.version || 'Wersja',
+                condition: data.condition || 'NEW',
             }
         });
         return { specification: spec };
@@ -71,6 +72,19 @@ export async function specificationRoutes(fastify: FastifyInstance) {
                 where: { id },
                 data: {
                     displayMode: data.displayMode,
+                    brand: data.brand,
+                    model: data.model,
+                    version: data.version,
+                    color: data.color,
+                    manufacturingYear: data.manufacturingYear,
+                    enginePowerHp: data.enginePowerHp,
+                    engineCapacityCm3: data.engineCapacityCm3,
+                    fuelType: data.fuelType,
+                    transmission: data.transmission,
+                    drive: data.drive,
+                    bodyType: data.bodyType,
+                    catalogPrice: data.catalogPrice,
+                    discountedPrice: data.discountedPrice,
                     equipmentAudioMultimedia: data.equipmentAudioMultimedia,
                     equipmentSafety: data.equipmentSafety,
                     equipmentComfortExtras: data.equipmentComfortExtras,
@@ -119,16 +133,34 @@ Oto zawartość pliku PDF z wyceną pojazdu (przekonwertowana do Markdown):
 {{MARKDOWN_CONTENT}}
 
 Zadanie:
-Wyciągnij wyposażenie z tego dokumentu i uporządkuj w strukturalny format JSON.
-Klucze w JSON muszą nazywać się dokładnie tak jak poniżej i zawierać tablice stringów:
+Wyciągnij dane pojazdu i wyposażenie z tego dokumentu. Uporządkuj je w strukturalny format JSON.
+Zwróć uwagę na sekcje techniczne oraz cenniki.
+
+Klucze w JSON muszą nazywać się dokładnie tak jak poniżej:
 {
+  "brand": "Marka (np. Toyota, Ford)",
+  "model": "Model (np. Camry, Kuga)",
+  "version": "Wersja wyposażenia / Trim (np. Executive, ST-Line)",
+  "color": "Kolor nadwozia (jeśli podano)",
+  "manufacturingYear": 2021,
+  "enginePowerHp": 150,
+  "engineCapacityCm3": 1498,
+  "fuelType": "Benzyna / Diesel / Hybryda / Elektryczny",
+  "transmission": "Automatyczna / Manualna",
+  "drive": "FWD / RWD / AWD / 4x4",
+  "bodyType": "Sedan / SUV / Kombi / Hatchback / Coupe / itp",
+  "catalogPrice": 120000,
+  "discountedPrice": 110000,
   "equipmentAudioMultimedia": ["Element 1", "Element 2"],
   "equipmentSafety": ["Element 1", "Element 2"],
   "equipmentComfortExtras": ["Element 1", "Element 2"],
   "equipmentOther": ["Element 1", "Element 2"]
 }
-Pomiń informacje niebędące wyposażeniem (np. adres dealera, cenę, numer VIN).
-Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\`\`json.
+Uwagi:
+- catalogPrice: cena katalogowa (liczba całkowita, np. 150000). Jeśli brak, zwróć null.
+- discountedPrice: cena po rabacie / cena do finansowania (liczba całkowita). Jeśli brak, zwróć null.
+- Wartości liczbowe (rok, moc, pojemność, ceny) muszą być typem Number.
+- Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\`\`json.
 `;
 
             const promptTemplate = appSettings?.pdfParserSystemPrompt || defaultPrompt;
@@ -165,17 +197,17 @@ Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\
 
             content = content.replace(/^```json\n?/g, '').replace(/```$/g, '').trim();
 
-            let parsedEquipment;
+            let parsedData;
             try {
-                parsedEquipment = JSON.parse(content);
+                parsedData = JSON.parse(content);
             } catch (e) {
                 fastify.log.error('Failed to parse LLM JSON output: ' + content);
-                parsedEquipment = { equipmentOther: [content] };
+                parsedData = { equipmentOther: [content] };
             }
 
             return {
                 message: 'Parsed successfully',
-                equipment: parsedEquipment,
+                data: parsedData,
                 rawMarkdown: process.env.NODE_ENV === 'development' ? markdown : undefined
             };
 
