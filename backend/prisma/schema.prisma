@@ -345,6 +345,8 @@ model AppSettings {
   legalRepresentative         String?  @map("legal_representative")
   headerLogoUrl               String?  @map("header_logo_url")
   footerLogoUrl               String?  @map("footer_logo_url")
+  pdfParserLlmModel           String   @default("deepseek/deepseek-v4-flash") @map("pdf_parser_llm_model")
+  pdfParserSystemPrompt       String?  @map("pdf_parser_system_prompt") @db.Text
   legalSloganPl               String?  @map("legal_slogan_pl")
   legalSloganEn               String?  @map("legal_slogan_en")
   legalSloganDe               String?  @map("legal_slogan_de")

@@ -23,6 +23,7 @@ import {
     Store,
     Settings,
     Shield,
+    FileText,
     Blocks,
     LayoutGrid,
     Images,
@@ -64,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
 
     // Stock management – everyone with stock access
     { href: '/admin/listings', label: 'Pojazdy', icon: Car, visibleTo: STOCK_ACCESS },
+    { href: '/admin/specifications', label: 'Specyfikacje', icon: FileText, visibleTo: STOCK_ACCESS },
     { href: '/admin/import', label: 'Import', icon: Upload, visibleTo: STOCK_ACCESS },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, visibleTo: PLATFORM_ONLY },
 

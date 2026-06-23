@@ -47,6 +47,14 @@ export interface Listing {
     driverAssist: string[];
     other: string[];
   };
+  specification?: {
+    equipmentAudioMultimedia: string[] | any;
+    equipmentSafety: string[] | any;
+    equipmentComfortExtras: string[] | any;
+    equipmentOther: string[] | any;
+    technicalSpecification?: string | null;
+    specificationPdfUrl?: string | null;
+  } | null;
   is_archived?: boolean;
   is_featured?: boolean;
   catalogPrice?: number | null;

@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import yaml from "@rollup/plugin-yaml";
 
 type BrandId = 'carsalon' | 'motolia';
 
@@ -61,6 +62,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
+      yaml(),
       mode === "development" && componentTagger(),
       {
         name: 'brand-html-transform',

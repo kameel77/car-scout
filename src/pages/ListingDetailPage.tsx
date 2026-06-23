@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info } from 'lucide-react';
+import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info, FileDown } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
@@ -705,14 +705,14 @@ export default function ListingDetailPage() {
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.keyParameters')}</h2>
               <SpecsGrid
-                year={listing.production_year}
+                year={(listing.specification?.manufacturingYear || listing.production_year).toString()}
                 mileage={listing.mileage_km}
-                fuelType={listing.fuel_type}
-                transmission={listing.transmission}
-                drive={listing.drive}
-                power={listing.engine_power_hp}
-                capacity={listing.engine_capacity_cm3}
-                bodyType={listing.body_type}
+                fuelType={listing.specification?.fuelType || listing.fuel_type}
+                transmission={listing.specification?.transmission || listing.transmission}
+                drive={listing.specification?.drive || listing.drive}
+                power={listing.specification?.enginePowerHp || listing.engine_power_hp}
+                capacity={listing.specification?.engineCapacityCm3 || listing.engine_capacity_cm3}
+                bodyType={listing.specification?.bodyType || listing.body_type}
               />
             </section>
 
@@ -724,10 +724,39 @@ export default function ListingDetailPage() {
               <SpecificationsTable specifications={listing.specifications} />
             </section>
 
+            {/* Technical Specification PDF */}
+            {listing.specification?.specificationPdfUrl && (
+              <>
+                <Separator />
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-heading text-xl font-semibold">Dokumentacja</h2>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={listing.specification.specificationPdfUrl} target="_blank" rel="noopener noreferrer">
+                        <FileDown className="w-4 h-4 mr-2" />
+                        Pobierz specyfikację (PDF)
+                      </a>
+                    </Button>
+                  </div>
+                </section>
+              </>
+            )}
+
             {/* Equipment */}
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.equipment')}</h2>
-              <EquipmentDisplay equipment={listing.equipment} />
+              <EquipmentDisplay 
+                equipment={
+                  listing.specification ? {
+                    audioMultimedia: (listing.specification.equipmentAudioMultimedia as string[]) || [],
+                    safety: (listing.specification.equipmentSafety as string[]) || [],
+                    comfort: (listing.specification.equipmentComfortExtras as string[]) || [],
+                    performance: [],
+                    driverAssist: [],
+                    other: (listing.specification.equipmentOther as string[]) || []
+                  } : listing.equipment
+                } 
+              />
             </section>
 
             {/* Below Equipment Ads */}

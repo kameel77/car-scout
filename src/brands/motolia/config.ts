@@ -1,4 +1,5 @@
 import { BrandConfig } from '../../types/brand';
+import features from './features.yml';
 
 export const motoliaConfig: BrandConfig = {
   id: 'motolia',
@@ -70,4 +71,5 @@ export const motoliaConfig: BrandConfig = {
       ],
     },
   },
+  features,
 };
