@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { RefreshCw, Save, ArrowLeft, UploadCloud, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImagesSection } from '@/components/admin/VehicleForm/sections/ImagesSection';
 
 export default function SpecificationEditPage() {
     const { id } = useParams<{ id: string }>();
@@ -49,6 +50,15 @@ export default function SpecificationEditPage() {
         }
     });
 
+    const parseNumber = (val: any) => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+            const parsed = parseInt(val.replace(/\s/g, ''), 10);
+            return isNaN(parsed) ? null : parsed;
+        }
+        return null;
+    };
+
     const handleSave = () => {
         if (!formData) return;
         updateMutation.mutate({
@@ -57,15 +67,15 @@ export default function SpecificationEditPage() {
             model: formData.model,
             version: formData.version,
             color: formData.color,
-            manufacturingYear: formData.manufacturingYear ? parseInt(formData.manufacturingYear, 10) : null,
-            enginePowerHp: formData.enginePowerHp ? parseInt(formData.enginePowerHp, 10) : null,
-            engineCapacityCm3: formData.engineCapacityCm3 ? parseInt(formData.engineCapacityCm3, 10) : null,
+            manufacturingYear: parseNumber(formData.manufacturingYear),
+            enginePowerHp: parseNumber(formData.enginePowerHp),
+            engineCapacityCm3: parseNumber(formData.engineCapacityCm3),
             fuelType: formData.fuelType,
             transmission: formData.transmission,
             drive: formData.drive,
             bodyType: formData.bodyType,
-            catalogPrice: formData.catalogPrice ? parseInt(formData.catalogPrice, 10) : null,
-            discountedPrice: formData.discountedPrice ? parseInt(formData.discountedPrice, 10) : null,
+            catalogPrice: parseNumber(formData.catalogPrice),
+            discountedPrice: parseNumber(formData.discountedPrice),
             equipmentAudioMultimedia: typeof formData.equipmentAudioMultimedia === 'string' 
                 ? formData.equipmentAudioMultimedia.split('\n').filter(Boolean) 
                 : formData.equipmentAudioMultimedia,
@@ -193,13 +203,21 @@ export default function SpecificationEditPage() {
                                     />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <Label>Wersja (Trim)</Label>
                                     <Input 
                                         value={formData.version || ''} 
                                         onChange={(e) => setFormData({ ...formData, version: e.target.value })} 
                                         placeholder="np. ST-Line"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Kolor nadwozia</Label>
+                                    <Input 
+                                        value={formData.color || ''} 
+                                        onChange={(e) => setFormData({ ...formData, color: e.target.value })} 
+                                        placeholder="np. Biały"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -386,6 +404,22 @@ export default function SpecificationEditPage() {
                                     placeholder="np. 135000"
                                 />
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-4 border-b">
+                            <CardTitle className="text-lg">Zdjęcia i Galeria</CardTitle>
+                            <CardDescription>Zdjęcia poglądowe dla tej specyfikacji</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-6">
+                            <ImagesSection
+                                mode="specification"
+                                vehicleId={id}
+                                imageUrls={formData.imageUrls || []}
+                                primaryImageUrl={null}
+                                onUpdated={({ imageUrls }) => setFormData({ ...formData, imageUrls })}
+                            />
                         </CardContent>
                     </Card>
 

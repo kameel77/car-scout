@@ -1,4 +1,4 @@
-export type VehicleFormMode = 'sale' | 'rental';
+export type VehicleFormMode = 'sale' | 'rental' | 'specification';
 
 export interface VehicleFormState {
     // Identification

@@ -1,7 +1,20 @@
 import { FastifyInstance } from 'fastify';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
+import { createWriteStream } from 'fs';
+import { pipeline } from 'stream/promises';
+import { optimizeAndSaveImage } from '../services/image-optimizer.js';
+import { getSafeFilePath } from '../utils/path-helpers.js';
 import { authorizeRoles } from '../middleware/authorize.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { LiteParse } from '@llamaindex/liteparse';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsRoot = path.resolve(__dirname, '../../uploads');
+
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export async function specificationRoutes(fastify: FastifyInstance) {
 
@@ -215,6 +228,157 @@ Uwagi:
             fastify.log.error(error);
             return reply.status(500).send({ error: 'Failed to process PDF' });
         }
+    });
+
+    // 5. Upload images for specification
+    fastify.post('/api/specifications/:id/images', {
+        preValidation: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const parts = request.parts();
+        const uploadedUrls: string[] = [];
+
+        const spec = await fastify.prisma.vehicleSpecification.findUnique({
+            where: { id }
+        });
+
+        if (!spec) {
+            return reply.code(404).send({ error: 'Specification not found' });
+        }
+
+        const imagesDir = path.join(uploadsRoot, 'specification-images', id);
+        await fs.mkdir(imagesDir, { recursive: true });
+
+        for await (const part of parts) {
+            if (part.type !== 'file') continue;
+
+            if (!ALLOWED_MIME_TYPES.includes(part.mimetype)) {
+                return reply.code(400).send({
+                    error: `Invalid file type: ${part.mimetype}. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`
+                });
+            }
+
+            const buffer = await part.toBuffer();
+            if (buffer.length > 5 * 1024 * 1024) {
+                return reply.code(400).send({
+                    error: `File too large. Maximum size: 5MB`
+                });
+            }
+
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const baseFilename = `img-${uniqueSuffix}`;
+
+            const optimizedResult = await optimizeAndSaveImage(buffer, {
+                targetDir: imagesDir,
+                baseFilename,
+                largeWidth: 1920,
+                quality: 85,
+                generateThumbnail: true,
+                thumbWidth: 400
+            });
+
+            uploadedUrls.push(`/uploads/specification-images/${id}/${optimizedResult.largeFilename}`);
+        }
+
+        if (uploadedUrls.length === 0) {
+            return reply.code(400).send({ error: 'No images uploaded' });
+        }
+
+        const existingUrls = spec.imageUrls || [];
+        const allUrls = [...existingUrls, ...uploadedUrls];
+
+        await fastify.prisma.vehicleSpecification.update({
+            where: { id },
+            data: { imageUrls: allUrls }
+        });
+
+        return {
+            uploaded: uploadedUrls.length,
+            urls: uploadedUrls,
+        };
+    });
+
+    // 6. Delete a specific image from specification
+    fastify.delete('/api/specifications/:id/images', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { imageUrl } = request.body as { imageUrl: string };
+
+        const spec = await fastify.prisma.vehicleSpecification.findUnique({
+            where: { id }
+        });
+
+        if (!spec) {
+            return reply.code(404).send({ error: 'Specification not found' });
+        }
+
+        const updatedUrls = spec.imageUrls.filter((url: string) => url !== imageUrl);
+
+        await fastify.prisma.vehicleSpecification.update({
+            where: { id },
+            data: { imageUrls: updatedUrls }
+        });
+
+        if (imageUrl.startsWith('/uploads/specification-images/')) {
+            const baseDir = path.join(uploadsRoot, 'specification-images');
+            const relativePath = imageUrl.replace('/uploads/specification-images/', '');
+            const filePath = getSafeFilePath(baseDir, relativePath);
+            
+            if (filePath) {
+                try {
+                    const thumbPath = filePath.replace('.webp', '-thumb.webp');
+                    await fs.unlink(filePath);
+                    await fs.unlink(thumbPath).catch(() => {});
+                } catch {
+                    // Ignore missing files
+                }
+            }
+        }
+
+        return { success: true, remainingImages: updatedUrls.length };
+    });
+
+    // 7. Reorder images
+    fastify.patch('/api/specifications/:id/images/reorder', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { imageUrls } = request.body as { imageUrls: string[] };
+
+        if (!Array.isArray(imageUrls)) return reply.code(400).send({ error: 'imageUrls must be an array' });
+
+        const spec = await fastify.prisma.vehicleSpecification.findUnique({ where: { id } });
+        if (!spec) return reply.code(404).send({ error: 'Specification not found' });
+
+        await fastify.prisma.vehicleSpecification.update({
+            where: { id },
+            data: { imageUrls },
+        });
+
+        return reply.send({ success: true, imageUrls });
+    });
+
+    // 8. Add image by URL
+    fastify.post('/api/specifications/:id/images/url', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { url } = request.body as { url: string };
+
+        if (!url) return reply.code(400).send({ error: 'url is required' });
+
+        const spec = await fastify.prisma.vehicleSpecification.findUnique({ where: { id } });
+        if (!spec) return reply.code(404).send({ error: 'Specification not found' });
+
+        const newUrls = [...(spec.imageUrls || []), url];
+
+        await fastify.prisma.vehicleSpecification.update({
+            where: { id },
+            data: { imageUrls: newUrls },
+        });
+
+        return reply.send({ success: true, imageUrls: newUrls });
     });
 
 }
