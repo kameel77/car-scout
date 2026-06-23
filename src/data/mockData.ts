@@ -69,6 +69,11 @@ export interface Listing {
   } | null;
   lastManualEditAt?: string | null;
   entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL' | null;
+  specification?: {
+    stockCount: number;
+    displayMode: string;
+    specificationPdfUrl?: string | null;
+  } | null;
 }
 
 export interface Lead {

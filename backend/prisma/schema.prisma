@@ -56,6 +56,44 @@ enum InsuranceAddMode {
   INSURANCE_0
 }
 
+model VehicleSpecification {
+  id                       String           @id @default(cuid())
+  dealerId                 String?          @map("dealer_id")
+  condition                ListingCondition
+  
+  brand                    String
+  model                    String
+  version                  String
+  color                    String?
+  manufacturingYear        Int?             @map("manufacturing_year")
+  
+  enginePowerHp            Int?             @map("engine_power_hp")
+  engineCapacityCm3        Int?             @map("engine_capacity_cm3")
+  fuelType                 String?          @map("fuel_type")
+  transmission             String?
+  drive                    String?
+  bodyType                 String?          @map("body_type")
+  
+  imageUrls                String[]         @map("image_urls")
+  specificationPdfUrl      String?          @map("specification_pdf_url")
+  equipmentAudioMultimedia String[]         @map("equipment_audio_multimedia")
+  equipmentSafety          String[]         @map("equipment_safety")
+  equipmentComfortExtras   String[]         @map("equipment_comfort_extras")
+  equipmentOther           String[]         @map("equipment_other")
+
+  displayMode              String           @default("ALL") @map("display_mode")
+  stockCount               Int              @default(0) @map("stock_count")
+
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
+
+  listings                 Listing[]
+
+  @@index([dealerId])
+  @@index([brand, model, version, color, manufacturingYear])
+  @@map("vehicle_specifications")
+}
+
 model Listing {
   id                       String             @id @default(cuid())
   listingId                String?            @unique @map("listing_id")
@@ -141,6 +179,10 @@ model Listing {
   creditProduct            FinancingProduct?  @relation("ListingCreditProduct", fields: [creditProductId], references: [id])
   leasingProduct           FinancingProduct?  @relation("ListingLeasingProduct", fields: [leasingProductId], references: [id])
   priceHistory             PriceHistory[]
+  
+  specificationId          String?            @map("specification_id")
+  specification            VehicleSpecification? @relation(fields: [specificationId], references: [id])
+  isRepresentative         Boolean            @default(true) @map("is_representative")
 
   @@index([make, model])
   @@index([pricePln])

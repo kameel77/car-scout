@@ -261,13 +261,20 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
         <div className="p-4 space-y-3 flex-1 flex flex-col">
           {/* Status label + Title */}
           <div>
-            <span
-              className={`text-[10px] font-bold tracking-wider ${
-                listing.condition === 'NEW' ? 'text-accent' : 'text-muted-foreground'
-              }`}
-            >
-              {listing.condition === 'NEW' ? t('listing.statusNew') : t('listing.statusUsed')}
-            </span>
+            <div className="flex items-center justify-between">
+              <span
+                className={`text-[10px] font-bold tracking-wider ${
+                  listing.condition === 'NEW' ? 'text-accent' : 'text-muted-foreground'
+                }`}
+              >
+                {listing.condition === 'NEW' ? t('listing.statusNew') : t('listing.statusUsed')}
+              </span>
+              {listing.specification && listing.specification.stockCount > 1 && listing.specification.displayMode === 'GROUPED' && (
+                <span className="text-[10px] font-bold text-accent px-1.5 py-0.5 bg-accent/10 rounded-full">
+                  Dostępne: {listing.specification.stockCount} szt.
+                </span>
+              )}
+            </div>
             {/* Make + Model — larger font */}
             <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
               {listing.make} {listing.model}

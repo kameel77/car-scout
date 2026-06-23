@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { parse } from 'csv-parse/sync';
 import { syncListingsFromCSV } from '../services/sync.service.js';
+import { importVehisCSV } from '../services/vehis-import.service.js';
 import type { CSVRow, ImportMode } from '../types/csv.types.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import fs from 'fs/promises';
@@ -446,5 +447,42 @@ export async function importRoutes(fastify: FastifyInstance) {
         }
 
         return { log };
+    });
+
+    fastify.post('/api/dealers/:dealerId/import-vehis-csv', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        try {
+            const { dealerId } = request.params as { dealerId: string };
+            const resolvedScope = await resolveScope(fastify, request);
+            const scopeId = resolvedScope.activeContext?.scopeId;
+            const scopeType = resolvedScope.activeContext?.scopeType;
+
+            // Access check
+            if (scopeType === 'DEALER' && scopeId !== dealerId) {
+                return reply.code(403).send({ error: 'Forbidden' });
+            }
+
+            const data = await request.file();
+            if (!data) {
+                return reply.code(400).send({ error: 'No file uploaded' });
+            }
+
+            const buffer = await data.toBuffer();
+            const csvContent = buffer.toString('utf-8');
+
+            const result = await importVehisCSV(
+                fastify.prisma,
+                dealerId,
+                request.user.userId,
+                csvContent,
+                data.filename
+            );
+
+            return reply.send({ success: true, result });
+        } catch (error: any) {
+            fastify.log.error(error);
+            return reply.code(500).send({ error: error.message || 'Failed to process Vehis CSV import' });
+        }
     });
 }
