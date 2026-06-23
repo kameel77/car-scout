@@ -6,7 +6,7 @@ import { LiteParse } from '@llamaindex/liteparse';
 export async function specificationRoutes(fastify: FastifyInstance) {
 
     fastify.post('/api/specifications', {
-        onRequest: [fastify.authenticate, authorizeRoles(['ADMIN', 'MANAGER'])]
+        onRequest: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
     }, async (request, reply) => {
         const spec = await fastify.prisma.vehicleSpecification.create({
             data: {
