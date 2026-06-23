@@ -116,7 +116,7 @@ Pomiń informacje niebędące wyposażeniem (np. adres dealera, cenę, numer VIN
 Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\`\`json.
 `;
 
-            let promptTemplate = appSettings?.pdfParserSystemPrompt || defaultPrompt;
+            const promptTemplate = appSettings?.pdfParserSystemPrompt || defaultPrompt;
             const prompt = promptTemplate.replace('{{MARKDOWN_CONTENT}}', markdown.substring(0, 30000));
 
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
