@@ -105,7 +105,7 @@ export async function specificationRoutes(fastify: FastifyInstance) {
 
             // 2. OpenRouter: Extract equipment
             const appSettings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
-            const llmModel = appSettings?.pdfParserLlmModel || 'deepseek/deepseek-v4-flash';
+            const llmModel = appSettings?.pdfParserLlmModel || 'google/gemini-2.5-flash';
             const openRouterKey = process.env.OPENROUTER_API_KEY;
 
             if (!openRouterKey) {
