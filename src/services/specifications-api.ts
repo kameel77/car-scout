@@ -12,7 +12,7 @@ export const specificationsApi = {
     },
 
     createSpecification: async (token: string) => {
-        const res = await fetch(`${API_BASE_URL}/api/specifications`, {
+        const res = await fetch(`${API_URL}/specifications`, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${token}`
