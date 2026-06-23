@@ -11,6 +11,17 @@ export const specificationsApi = {
         return res.json();
     },
 
+    createSpecification: async (token: string) => {
+        const res = await fetch(`${API_BASE_URL}/api/specifications`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        if (!res.ok) throw new Error('Failed to create specification');
+        return res.json();
+    },
+
     getSpecification: async (id: string, token: string) => {
         const res = await fetch(`${API_URL}/specifications/${id}`, {
             headers: {

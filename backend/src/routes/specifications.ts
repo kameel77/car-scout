@@ -4,6 +4,20 @@ import { LiteParse } from '@llamaindex/liteparse';
 
 export async function specificationRoutes(fastify: FastifyInstance) {
 
+    fastify.post('/api/specifications', {
+        onRequest: [fastify.authenticate, requireAdminOrManager]
+    }, async (request, reply) => {
+        const spec = await fastify.prisma.vehicleSpecification.create({
+            data: {
+                brand: 'Nowa Marka',
+                model: 'Nowy Model',
+                version: 'Wersja',
+                condition: 'NEW',
+            }
+        });
+        return { specification: spec };
+    });
+
     // 1. Get specifications list (with filters)
     fastify.get('/api/specifications', {
         preValidation: [fastify.authenticate]

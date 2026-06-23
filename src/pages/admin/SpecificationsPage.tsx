@@ -8,9 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { RefreshCw, Settings2, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function SpecificationsPage() {
     const { token } = useAuth();
+    const navigate = useNavigate();
+    const [isCreating, setIsCreating] = React.useState(false);
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['specifications'],
@@ -35,6 +40,24 @@ export default function SpecificationsPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Specyfikacje Pojazdów</h1>
                     <p className="text-muted-foreground mt-1">Zarządzaj modelami, rocznikami i wyposażeniem</p>
                 </div>
+                <Button 
+                    onClick={async () => {
+                        setIsCreating(true);
+                        try {
+                            const res = await specificationsApi.createSpecification(token!);
+                            navigate(`/admin/specifications/${res.specification.id}/edit`);
+                        } catch(e) {
+                            toast.error('Nie udało się utworzyć nowej specyfikacji.');
+                        } finally {
+                            setIsCreating(false);
+                        }
+                    }}
+                    disabled={isCreating}
+                    className="bg-blue-600 hover:bg-blue-700"
+                >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Dodaj specyfikację
+                </Button>
             </div>
 
             <Card className="shadow-sm border-slate-200">
