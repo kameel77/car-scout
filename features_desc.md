@@ -383,4 +383,8 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Zachowanie**:
   - Poprawiono funkcję `parseServiceFlags` w parserze CSV (`rental-csv-mapper.ts`). Usunięto automatyczne zaliczanie kosztów numerycznych jako włączonych.
   - Usługi są teraz uznawane za wliczone w cenę najmu wyłącznie przy obecności jawnych znaczników tekstowych (np. `I`, `true`, `yes`, `1`, `tak`). Jeśli w kolumnie znajduje się konkretny koszt (liczba), usługa nie jest oznaczana jako wliczona w ratę podstawową najmu.
-
+## 32. Poprawki kalkulatora, wyświetlania danych pojazdu oraz etykiet netto/brutto (Motolia)
+- **Kalkulacja rabatu Motolia**: Wyeliminowano błąd powodujący wyświetlanie ujemnego lub olbrzymiego rabatu (np. -650%) oraz brak sekcji ceny katalogowej pod kalkulatorem w przypadku pustej lub zaniżonej ceny katalogowej pojazdu. Jeśli w bazie danych cena katalogowa jest mniejsza lub równa cenie pojazdu, system automatycznie wylicza wirtualną cenę katalogową jako sumę ceny pojazdu i rabatu Motolia, co pozwala na poprawne wyliczenie procentu rabatu i wyświetlenie kompletnych informacji.
+- **Nazwa i parametry pojazdu w ofercie**: Dodano brakujący nagłówek z marką, modelem i wersją pojazdu w widoku stacjonarnym (desktop) na stronie oferty Motolia, dzięki czemu dane te są widoczne bezpośrednio nad galerią zdjęć.
+- **Etykiety netto i brutto**: W sekcji kalkulatora finansowania etykiety "Cena katalogowa" oraz "Cena pojazdu" automatycznie otrzymują dopisek "netto:" lub "brutto:" w zależności od wybranego profilu klienta (odpowiednio: "Na firmę" lub "Prywatnie").
+- **Opis rabatu w tooltipie**: Zaktualizowano i uproszczono tekst tooltipu "i" obok ceny pojazdu na: "Cena pojazdu zawiera dodatkowy rabat z tytułu finansowania pojazdu z Motolia."

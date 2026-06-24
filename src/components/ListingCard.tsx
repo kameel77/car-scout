@@ -236,7 +236,15 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
               {hasSpecialOffer && <SpecialOfferTag onClick={handleSpecialOfferClick} />}
               {showMotolia && (
                 <div className="px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
-                  {t('listing.motoliaDiscount')}: {listing.catalogPrice ? Math.round((listing.catalogPrice - listing.price_pln) / listing.catalogPrice * 100) : 0}%
+                  {t('listing.motoliaDiscount')}: {
+                    (() => {
+                      const displayPrice = getDisplayPrice(listing);
+                      const catalogPriceVal = listing.catalogPrice && listing.catalogPrice > displayPrice
+                        ? listing.catalogPrice
+                        : (motoliaDiscount > 0 ? displayPrice + motoliaDiscount : 0);
+                      return catalogPriceVal ? Math.round((catalogPriceVal - listing.price_pln) / catalogPriceVal * 100) : 0;
+                    })()
+                  }%
                 </div>
               )}
             </div>

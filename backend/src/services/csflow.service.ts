@@ -206,7 +206,45 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                 }
 
                 // Przygotuj format pliku (mapowanie na pola Listing Prisma)
-                const price = Number(car.price || 0);
+                const apiPrice = Number(car.price || 0);
+
+                // Sprawdź czy to pojazd dostawczy / ciężarowy lub cena jest netto w opisie:
+                const categoryLower = String(car.category || '').toLowerCase();
+                const bodyLower = String(car.body || '').toLowerCase();
+                const versionLower = String(car.version || '').toLowerCase();
+                const descLower = String(car.description || '').toLowerCase();
+                const seatsCount = Number(car.seats || 0);
+
+                const isCommercial =
+                    categoryLower === 'dostawcze' ||
+                    categoryLower === 'ciężarowe' ||
+                    bodyLower === 'furgon' ||
+                    bodyLower.includes('skrzynia') ||
+                    bodyLower.includes('plandeka') ||
+                    bodyLower.includes('kontener') ||
+                    versionLower.includes('furgon') ||
+                    versionLower.includes('l4h2') ||
+                    versionLower.includes('l3h2') ||
+                    versionLower.includes('l2h2') ||
+                    (seatsCount > 0 && seatsCount <= 3 && !bodyLower.includes('coupe') && !bodyLower.includes('kabriolet') && !bodyLower.includes('sportowy'));
+
+                const hasNettoInDescription =
+                    descLower.includes('kwota netto') ||
+                    descLower.includes('wartość to kwota netto') ||
+                    descLower.includes('cena prezentowanego modelu netto') ||
+                    descLower.includes('cena netto') ||
+                    descLower.includes('podana w ogłoszeniu wartość to kwota netto');
+
+                // W systemie CSFlow dla pojazdów dostawczych i ciężarowych przy pełnej fakturze VAT 23%
+                // (invoice_vat === 1 oraz tax_type_id === 1) cena w API jest ceną netto.
+                // Podobnie gdy w opisie jawnie wskazano, że cena jest netto.
+                // Ponieważ w bazie danych pole pricePln przechowuje cenę brutto, musimy ją przeliczyć.
+                const isCommercialNetPrice =
+                    (Number(car.invoice_vat) === 1 && Number(car.tax_type_id) === 1) &&
+                    (isCommercial || hasNettoInDescription);
+
+                const price = isCommercialNetPrice ? Math.round(apiPrice * 1.23) : apiPrice;
+
                 
                 // Pobierz zewnętrzne URL-e zdjęć
                 const externalPhotos = Array.isArray(car.photos_lg) && car.photos_lg.length > 0
