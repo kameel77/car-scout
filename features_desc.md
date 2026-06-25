@@ -388,3 +388,5 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Nazwa i parametry pojazdu w ofercie**: Dodano brakujący nagłówek z marką, modelem i wersją pojazdu w widoku stacjonarnym (desktop) na stronie oferty Motolia, dzięki czemu dane te są widoczne bezpośrednio nad galerią zdjęć.
 - **Etykiety netto i brutto**: W sekcji kalkulatora finansowania etykiety "Cena katalogowa" oraz "Cena pojazdu" automatycznie otrzymują dopisek "netto:" lub "brutto:" w zależności od wybranego profilu klienta (odpowiednio: "Na firmę" lub "Prywatnie").
 - **Opis rabatu w tooltipie**: Zaktualizowano i uproszczono tekst tooltipu "i" obok ceny pojazdu na: "Cena pojazdu zawiera dodatkowy rabat z tytułu finansowania pojazdu z Motolia."
+- **Domyślny URL integracji CSFlow**: Ustawiono, że w przypadku marki "motolia" system automatycznie korzysta z produkcyjnego API Grupy Bemo (https://webapi.grupabemo.csflow.pl) jako domyślnego, zamiast środowiska testowego (demo). Dzięki temu po wdrożeniu na serwer import pobiera rzeczywistą bazę ofert (ponad 580 pojazdów, w tym samochody dostawcze jak Sprintery) bez konieczności wprowadzania dodatkowej konfiguracji w panelu Coolify.
+
