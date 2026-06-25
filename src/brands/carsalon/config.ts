@@ -1,4 +1,5 @@
 import { BrandConfig } from '../../types/brand';
+import features from './features.yml';
 
 export const carsalonConfig: BrandConfig = {
   id: 'carsalon',
@@ -58,5 +59,6 @@ export const carsalonConfig: BrandConfig = {
         { title: 'Odbierz kluczyki', description: 'Formalności ogarniamy za Ciebie, Ty odbierasz gotowe auto.' },
       ]
     }
-  }
+  },
+  features
 };

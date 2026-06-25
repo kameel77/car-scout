@@ -1,4 +1,4 @@
-export type VehicleFormMode = 'sale' | 'rental';
+export type VehicleFormMode = 'sale' | 'rental' | 'specification';
 
 export interface VehicleFormState {
     // Identification
@@ -8,6 +8,7 @@ export interface VehicleFormState {
     vin: string;                       // sale only
     productionYear: string;
     condition: 'NEW' | 'USED';         // sale only
+    specificationId?: string;
 
     // Technical
     bodyType: string;

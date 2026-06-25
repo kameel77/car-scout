@@ -91,6 +91,23 @@ export function SettingsModule() {
             ? Boolean(data.csflowEnabled)
             : true,
         searchGridColumns: Number(data?.searchGridColumns) === 3 ? 3 : 4,
+        pdfParserLlmModel: data?.pdfParserLlmModel || 'deepseek/deepseek-v4-flash',
+        pdfParserSystemPrompt: data?.pdfParserSystemPrompt || `Jesteś asystentem dealera samochodowego. 
+Oto zawartość pliku PDF z wyceną pojazdu (przekonwertowana do Markdown):
+
+{{MARKDOWN_CONTENT}}
+
+Zadanie:
+Wyciągnij wyposażenie z tego dokumentu i uporządkuj w strukturalny format JSON.
+Klucze w JSON muszą nazywać się dokładnie tak jak poniżej i zawierać tablice stringów:
+{
+  "equipmentAudioMultimedia": ["Element 1", "Element 2"],
+  "equipmentSafety": ["Element 1", "Element 2"],
+  "equipmentComfortExtras": ["Element 1", "Element 2"],
+  "equipmentOther": ["Element 1", "Element 2"]
+}
+Pomiń informacje niebędące wyposażeniem (np. adres dealera, cenę, numer VIN).
+Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\`\`json.`,
     });
 
     const fetchSettings = React.useCallback(async () => {
@@ -1036,6 +1053,56 @@ export function SettingsModule() {
                         >
                             {saving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                             Zapisz ustawienia SMTP
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* AI Settings */}
+            <Card className="shadow-sm border-slate-200 md:col-span-2">
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        Sztuczna Inteligencja / Parser PDF
+                    </CardTitle>
+                    <CardDescription>Skonfiguruj parametry połączenia z OpenRouter dla automatycznego parsowania wycen w formacie PDF.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="llm-model" className="text-sm font-bold">Model OpenRouter</Label>
+                                <Input
+                                    id="llm-model"
+                                    value={settings.pdfParserLlmModel || ''}
+                                    onChange={(e) => setSettings({ ...settings, pdfParserLlmModel: e.target.value })}
+                                    placeholder="deepseek/deepseek-v4-flash"
+                                    className="bg-white"
+                                />
+                                <p className="text-xs text-slate-500">Wpisz identyfikator modelu. Zalecany: <code>deepseek/deepseek-v4-flash</code> lub <code>openai/gpt-4o-mini</code>.</p>
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="llm-prompt" className="text-sm font-bold">Prompt Systemowy (Instrukcja)</Label>
+                                <Textarea
+                                    id="llm-prompt"
+                                    value={settings.pdfParserSystemPrompt || ''}
+                                    onChange={(e) => setSettings({ ...settings, pdfParserSystemPrompt: e.target.value })}
+                                    className="bg-white font-mono text-xs min-h-[300px]"
+                                />
+                                <p className="text-xs text-slate-500">
+                                    Instrukcja wysyłana do modelu AI. Pamiętaj, by zostawić tag <code>{`{{MARKDOWN_CONTENT}}`}</code> w miejscu, gdzie aplikacja ma wstawić treść odczytaną z PDF oraz aby wymagać czystego zwrotu JSON ze zdefiniowanymi kluczami kategorii.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                        <Button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            {saving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Zapisz ustawienia AI
                         </Button>
                     </div>
                 </CardContent>

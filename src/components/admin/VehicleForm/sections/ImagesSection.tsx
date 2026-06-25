@@ -14,10 +14,11 @@ interface ImagesSectionProps {
     onUpdated: (data: { primaryImageUrl: string | null; imageUrls: string[] }) => void;
 }
 
-const BASE = (mode: VehicleFormMode, id: string) =>
-    mode === 'sale'
-        ? `/api/listings/${id}/images`
-        : `/api/rental-vehicles/${id}/images`;
+const BASE = (mode: VehicleFormMode, id: string) => {
+    if (mode === 'sale') return `/api/listings/${id}/images`;
+    if (mode === 'specification') return `/api/specifications/${id}/images`;
+    return `/api/rental-vehicles/${id}/images`;
+};
 
 /**
  * Extracts {primaryImageUrl, imageUrls} from API responses regardless of shape.
@@ -33,6 +34,13 @@ function extractImages(data: any, mode: VehicleFormMode, fallback: { primaryImag
         return {
             primaryImageUrl: l?.primaryImageUrl ?? fallback.primaryImageUrl,
             imageUrls: l?.imageUrls ?? fallback.imageUrls,
+        };
+    }
+    if (mode === 'specification') {
+        const s = data?.specification || data;
+        return {
+            primaryImageUrl: null,
+            imageUrls: s?.imageUrls ?? (data?.urls ? [...(fallback.imageUrls), ...(data.urls)] : fallback.imageUrls),
         };
     }
     // rental - various shapes
@@ -149,9 +157,9 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
             const next = extractImages(data, mode, { primaryImageUrl: primaryImageUrl ?? null, imageUrls });
 
             // Rental DELETE returns remainingImages count - recompute from local state
-            if (mode === 'rental') {
+            if (mode === 'rental' || mode === 'specification') {
                 const remaining = imageUrls.filter(u => u !== url);
-                const newPrimary = primaryImageUrl === url ? (remaining[0] ?? null) : (primaryImageUrl ?? null);
+                const newPrimary = mode === 'specification' ? null : (primaryImageUrl === url ? (remaining[0] ?? null) : (primaryImageUrl ?? null));
                 onUpdated({ primaryImageUrl: newPrimary, imageUrls: remaining });
             } else {
                 onUpdated(next);
@@ -209,7 +217,7 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
                             <img src={url} alt={`Zdjęcie ${i + 1}`} className="w-full h-full object-cover" />
 
                             {/* "Główne" badge */}
-                            {url === primaryImageUrl && (
+                            {url === primaryImageUrl && mode !== 'specification' && (
                                 <span className="absolute top-0 left-0 right-0 bg-blue-500/85 text-white text-[10px] font-bold py-0.5 text-center uppercase tracking-wider backdrop-blur-sm select-none">
                                     Główne
                                 </span>
@@ -241,7 +249,7 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
                                     </div>
                                     {/* Star + Delete */}
                                     <div className="flex">
-                                        {url !== primaryImageUrl && (
+                                        {url !== primaryImageUrl && mode !== 'specification' && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleSetPrimary(url)}

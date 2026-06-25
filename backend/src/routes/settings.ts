@@ -36,10 +36,12 @@ type SettingsPayload = {
     legalSloganPl?: string | null;
     legalSloganEn?: string | null;
     legalSloganDe?: string | null;
-
     siteNamePl?: string | null;
     siteNameEn?: string | null;
     siteNameDe?: string | null;
+
+    pdfParserLlmModel?: string | null;
+    pdfParserSystemPrompt?: string | null;
 
     financingCalculatorEnabled?: boolean;
     financingCalculatorLocation?: string;
@@ -287,6 +289,12 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             if (data.splitNewUsed !== undefined) {
                 update.splitNewUsed = Boolean(data.splitNewUsed);
             }
+            if (data.pdfParserLlmModel !== undefined) {
+                update.pdfParserLlmModel = data.pdfParserLlmModel || null;
+            }
+            if (data.pdfParserSystemPrompt !== undefined) {
+                update.pdfParserSystemPrompt = data.pdfParserSystemPrompt || null;
+            }
 
             // Fallback parsing for create block (standard upsert syntax)
             const legalDocuments = normalizeLegalDocuments(data.legalDocuments || (data as any).legal_documents);
@@ -334,6 +342,8 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     siteNamePl: data.siteNamePl || null,
                     siteNameEn: data.siteNameEn || null,
                     siteNameDe: data.siteNameDe || null,
+                    pdfParserLlmModel: data.pdfParserLlmModel || undefined,
+                    pdfParserSystemPrompt: data.pdfParserSystemPrompt || null,
 
                     financingCalculatorEnabled: data.financingCalculatorEnabled !== undefined
                         ? Boolean(data.financingCalculatorEnabled)

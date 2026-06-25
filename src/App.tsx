@@ -38,6 +38,8 @@ const FaqPage = lazy(() => import("./pages/admin/FaqPage"));
 const AdminFeatureTilesPage = lazy(() => import("./pages/admin/FeatureTilesPage"));
 const AdminHeroBannersPage = lazy(() => import("./pages/admin/HeroBannersPage"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/PartnersPage"));
+const SpecificationsPage = lazy(() => import("./pages/admin/SpecificationsPage"));
+const SpecificationEditPage = lazy(() => import("./pages/admin/SpecificationEditPage"));
 const AdminApiPartnersPage = lazy(() => import("./pages/admin/ApiPartnersPage"));
 const FinancingPage = lazy(() => import("./pages/admin/FinancingPage"));
 const ImportPage = lazy(() => import("./pages/admin/ImportPage"));
@@ -282,6 +284,22 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <DealersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/specifications"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <SpecificationsPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/specifications/:id/edit"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <SpecificationEditPage />
                             </ProtectedRoute>
                           }
                         />

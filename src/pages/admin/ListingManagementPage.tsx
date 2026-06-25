@@ -46,7 +46,11 @@ const initialFilters: FilterState = {
     statuses: [],
     priceFrom: '',
     priceTo: '',
-    query: ''
+    query: '',
+    rateFrom: '',
+    rateTo: '',
+    rateType: undefined,
+    rateBasis: undefined,
 };
 
 export default function ListingManagementPage() {

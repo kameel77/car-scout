@@ -47,6 +47,23 @@ export interface Listing {
     driverAssist: string[];
     other: string[];
   };
+  specification?: {
+    equipmentAudioMultimedia: string[] | any;
+    equipmentSafety: string[] | any;
+    equipmentComfortExtras: string[] | any;
+    equipmentOther: string[] | any;
+    technicalSpecification?: string | null;
+    specificationPdfUrl?: string | null;
+    stockCount: number;
+    displayMode: string;
+    manufacturingYear?: number | null;
+    fuelType?: string | null;
+    transmission?: string | null;
+    drive?: string | null;
+    enginePowerHp?: number | null;
+    engineCapacityCm3?: number | null;
+    bodyType?: string | null;
+  } | null;
   is_archived?: boolean;
   is_featured?: boolean;
   catalogPrice?: number | null;
