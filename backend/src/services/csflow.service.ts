@@ -215,6 +215,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                 const descLower = String(car.description || '').toLowerCase();
                 const seatsCount = Number(car.seats || 0);
 
+                const titleLower = String(car.title || '').toLowerCase();
+
                 const isCommercial =
                     categoryLower === 'dostawcze' ||
                     categoryLower === 'ciężarowe' ||
@@ -229,19 +231,16 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                     (seatsCount > 0 && seatsCount <= 3 && !bodyLower.includes('coupe') && !bodyLower.includes('kabriolet') && !bodyLower.includes('sportowy'));
 
                 const hasNettoInDescription =
-                    descLower.includes('kwota netto') ||
-                    descLower.includes('wartość to kwota netto') ||
-                    descLower.includes('cena prezentowanego modelu netto') ||
-                    descLower.includes('cena netto') ||
-                    descLower.includes('podana w ogłoszeniu wartość to kwota netto');
+                    descLower.includes('netto') ||
+                    titleLower.includes('netto');
 
                 // W systemie CSFlow dla pojazdów dostawczych i ciężarowych przy pełnej fakturze VAT 23%
-                // (invoice_vat === 1 oraz tax_type_id === 1) cena w API jest ceną netto.
-                // Podobnie gdy w opisie jawnie wskazano, że cena jest netto.
+                // (invoice_vat === 1 oraz tax_type_id === 1) cena w API jest ceną netto pod warunkiem,
+                // że opis lub tytuł ogłoszenia jawnie wskazuje, że cena jest netto.
                 // Ponieważ w bazie danych pole pricePln przechowuje cenę brutto, musimy ją przeliczyć.
                 const isCommercialNetPrice =
                     (Number(car.invoice_vat) === 1 && Number(car.tax_type_id) === 1) &&
-                    (isCommercial || hasNettoInDescription);
+                    hasNettoInDescription;
 
                 const price = isCommercialNetPrice ? Math.round(apiPrice * 1.23) : apiPrice;
 
