@@ -1,6 +1,9 @@
 import fetch from 'node-fetch';
 
-const CSFLOW_API_URL = process.env.CSFLOW_API_URL || 'https://webapi.demo.csflow.pl';
+const CSFLOW_API_URL = process.env.CSFLOW_API_URL || 
+    (process.env.BRAND === 'motolia' 
+        ? 'https://webapi.grupabemo.csflow.pl' 
+        : 'https://webapi.demo.csflow.pl');
 const FETCH_TIMEOUT_MS = 15000;
 
 async function fetchWithTimeout(url: string, options: any = {}) {
