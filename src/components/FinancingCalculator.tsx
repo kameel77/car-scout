@@ -44,7 +44,7 @@ interface FinancingCalculatorProps {
 const FINANCING_TO_CATEGORY: Record<string, FinancingProduct['category']> = {
     'kredyt': 'CREDIT',
     'leasing': 'LEASING',
-    'wynajem': 'RENTAL',
+    'wynajem': 'RENT',
     'gotowka': 'CREDIT', // /oferta/ defaults to credit tab
 };
 

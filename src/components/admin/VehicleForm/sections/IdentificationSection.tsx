@@ -1,7 +1,19 @@
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { specificationsApi } from '@/services/specifications-api';
+import { useAuth } from '@/contexts/AuthContext';
 import type { SectionProps } from '../types';
 
 export function IdentificationSection({ form, setField, mode, isImported, errors }: SectionProps) {
+    const { token } = useAuth();
+    const { data } = useQuery({
+        queryKey: ['specifications'],
+        queryFn: () => specificationsApi.getSpecifications(token!),
+        enabled: !!token
+    });
+
+    const specifications = data?.specifications || [];
     return (
         <fieldset disabled={isImported} className={isImported ? 'opacity-60' : ''}>
             {isImported && (
@@ -9,6 +21,25 @@ export function IdentificationSection({ form, setField, mode, isImported, errors
                     Pola pochodzą z importu CSV/CSFlow i są zarządzane automatycznie.
                 </p>
             )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                    <label className="text-sm font-medium text-gray-700">Wybierz Specyfikację (Opcjonalnie)</label>
+                    <p className="text-xs text-gray-500 mb-1">Połączenie oferty ze specyfikacją pobierze do niej zdjęcia wyposażenie wg. PDF.</p>
+                    <Select value={form.specificationId || 'none'} onValueChange={v => setField('specificationId', v === 'none' ? undefined : v)}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Brak przypisanej specyfikacji" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">Brak przypisanej specyfikacji</SelectItem>
+                            {specifications.map((s: any) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                    {s.brand} {s.model} {s.version} ({s.manufacturingYear}) - {s.enginePowerHp}KM
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Marka *</label>

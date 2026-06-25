@@ -81,11 +81,11 @@ export function ImportHistory() {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
                                             {log.status === 'success' ? (
-                                                <CheckCircle className="w-4 h-4 text-green-600" title="Import zakończony sukcesem" />
+                                                <div title="Import zakończony sukcesem"><CheckCircle className="w-4 h-4 text-green-600" /></div>
                                             ) : log.status === 'partial' ? (
-                                                <AlertCircle className="w-4 h-4 text-yellow-500" title="Import częściowy - niektóre pozycje pominięte" />
+                                                <div title="Import częściowy - niektóre pozycje pominięte"><AlertCircle className="w-4 h-4 text-yellow-500" /></div>
                                             ) : (
-                                                <XCircle className="w-4 h-4 text-red-600" title="Import nieudany" />
+                                                <div title="Import nieudany"><XCircle className="w-4 h-4 text-red-600" /></div>
                                             )}
                                             <span className="font-semibold">{log.fileName}</span>
                                         </div>

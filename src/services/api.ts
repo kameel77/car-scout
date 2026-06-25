@@ -1102,7 +1102,7 @@ export const leadsApi = {
 
         return response.json();
     },
-    submitQuickLead: async (data: { phone: string; name?: string; turnstileToken?: string; }) => {
+    submitQuickLead: async (data: { phone: string; name?: string; message?: string; turnstileToken?: string; }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads/quick`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1130,7 +1130,8 @@ export const leadsApi = {
         rentalAnnualMileageKm?: number;
         rentalContractMonths?: number;
         rentalInitialPaymentPct?: number;
-        rentalInitialPaymentAmount?: number;
+        rentalInitialPaymentAmountNet?: number;
+        rentalInitialPaymentAmountGross?: number;
         rentalMonthlyRate?: number;
         turnstileToken?: string;
     }) => {

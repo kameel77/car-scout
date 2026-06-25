@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info } from 'lucide-react';
+import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info, FileDown } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
@@ -319,11 +319,17 @@ export default function ListingDetailPage() {
   const currencyCode = settings?.displayCurrency || 'PLN';
   const isPln = currencyCode === 'PLN';
   const toDisplayPrice = (grossPln: number) => (priceType === 'net' ? (listing.vatMargin ? grossPln : Math.round(grossPln / 1.23)) : grossPln);
-  const catalogPriceVal = listing.catalogPrice ?? 0;
   const motoliaDiscountVal = listing.motoliaDiscountPln ?? 0;
   const showMotolia = isPln && !!listing.showMotoliaDiscount && motoliaDiscountVal > 0;
   // "Cena pojazdu" zależna od flagi displaySalePrice (per pojazd). Pill katalogowy liczony względem niej.
   const displayPriceVal = getDisplayPrice(listing);
+
+  // If the catalog price is empty or invalid (not greater than the display price),
+  // but we have a Motolia discount, we can calculate a virtual catalog price before discount
+  const catalogPriceVal = listing.catalogPrice && listing.catalogPrice > displayPriceVal
+    ? listing.catalogPrice
+    : (motoliaDiscountVal > 0 ? displayPriceVal + motoliaDiscountVal : 0);
+
   const showCatalogStrike = isPln && catalogPriceVal > displayPriceVal;
   const catalogDiscountPct = showCatalogStrike
     ? Math.round(((catalogPriceVal - displayPriceVal) / catalogPriceVal) * 100)
@@ -334,7 +340,9 @@ export default function ListingDetailPage() {
     <div className="w-full">
       <div className="text-xs font-semibold text-emerald-700">Cena specjalna Motolia.pl</div>
       <div className="flex items-baseline justify-between">
-        <span className="text-xs text-muted-foreground">{t('listing.catalogPrice')}</span>
+        <span className="text-xs text-muted-foreground">
+          {t('listing.catalogPrice')} {priceType === 'net' ? 'netto:' : 'brutto:'}
+        </span>
         <span className="flex items-baseline gap-2">
           <span className="text-sm text-muted-foreground line-through">
             {formatPrice(toDisplayPrice(catalogPriceVal), currencyCode)}
@@ -362,7 +370,7 @@ export default function ListingDetailPage() {
           <Info className="h-3.5 w-3.5 text-muted-foreground/70 cursor-help shrink-0" />
         </TooltipTrigger>
         <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[280px] text-xs">
-          Rabat dostępny tylko dla klientów, którzy skorzystają z finansowania na Motolia.pl. W innym przypadku (zakup za gotówkę lub w innym finansowaniu) wysokość dostępnego rabatu może być niższa.
+          Cena pojazdu zawiera dodatkowy rabat z tytułu finansowania pojazdu z Motolia.
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -584,6 +592,15 @@ export default function ListingDetailPage() {
           <span className="text-foreground">{listing.version}</span>
         </nav>
 
+        {/* Title for Motolia (Desktop only, since mobile has it below gallery) */}
+        {isMotolia && (
+          <div className="hidden lg:block mb-6">
+            <h1 className="text-3xl font-bold font-heading text-foreground tracking-tight">
+              {baseTitle}
+            </h1>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
@@ -604,7 +621,7 @@ export default function ListingDetailPage() {
                 <div className="mt-2">
                   {catalogLine}
                   <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                    Cena pojazdu: {priceInfo.primaryLabel}
+                    Cena pojazdu {priceType === 'net' ? 'netto:' : 'brutto:'} {priceInfo.primaryLabel}
                     {priceRabatInfo}
                   </span>
                   {priceInfo.secondaryLabel && (
@@ -705,14 +722,14 @@ export default function ListingDetailPage() {
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.keyParameters')}</h2>
               <SpecsGrid
-                year={listing.production_year}
+                year={listing.specification?.manufacturingYear || listing.production_year || undefined}
                 mileage={listing.mileage_km}
-                fuelType={listing.fuel_type}
-                transmission={listing.transmission}
-                drive={listing.drive}
-                power={listing.engine_power_hp}
-                capacity={listing.engine_capacity_cm3}
-                bodyType={listing.body_type}
+                fuelType={listing.specification?.fuelType || listing.fuel_type}
+                transmission={listing.specification?.transmission || listing.transmission}
+                drive={listing.specification?.drive || listing.drive}
+                power={listing.specification?.enginePowerHp || listing.engine_power_hp}
+                capacity={listing.specification?.engineCapacityCm3 || listing.engine_capacity_cm3}
+                bodyType={listing.specification?.bodyType || listing.body_type}
               />
             </section>
 
@@ -724,10 +741,39 @@ export default function ListingDetailPage() {
               <SpecificationsTable specifications={listing.specifications} />
             </section>
 
+            {/* Technical Specification PDF */}
+            {listing.specification?.specificationPdfUrl && (
+              <>
+                <Separator />
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-heading text-xl font-semibold">Dokumentacja</h2>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={listing.specification.specificationPdfUrl} target="_blank" rel="noopener noreferrer">
+                        <FileDown className="w-4 h-4 mr-2" />
+                        Pobierz specyfikację (PDF)
+                      </a>
+                    </Button>
+                  </div>
+                </section>
+              </>
+            )}
+
             {/* Equipment */}
             <section>
               <h2 className="font-heading text-xl font-semibold mb-4">{t('detail.equipment')}</h2>
-              <EquipmentDisplay equipment={listing.equipment} />
+              <EquipmentDisplay 
+                equipment={
+                  listing.specification ? {
+                    audioMultimedia: (listing.specification.equipmentAudioMultimedia as string[]) || [],
+                    safety: (listing.specification.equipmentSafety as string[]) || [],
+                    comfort: (listing.specification.equipmentComfortExtras as string[]) || [],
+                    performance: [],
+                    driverAssist: [],
+                    other: (listing.specification.equipmentOther as string[]) || []
+                  } : listing.equipment
+                } 
+              />
             </section>
 
             {/* Below Equipment Ads */}
@@ -856,7 +902,7 @@ export default function ListingDetailPage() {
                   {lang === 'pl' ? (
                     financingType === 'leasing' ? `FAQ: ${listing.make} ${listing.model} w leasingu na ${window.location.hostname.replace('www.', '')}` :
                     financingType === 'kredyt' ? `FAQ: ${listing.make} ${listing.model} w kredycie na ${window.location.hostname.replace('www.', '')}` :
-                    financingType === 'wynajem-dlugoterminowy' ? `FAQ: ${listing.make} ${listing.model} w wynajmie długoterminowym na ${window.location.hostname.replace('www.', '')}` :
+                    financingType === 'wynajem' ? `FAQ: ${listing.make} ${listing.model} w wynajmie długoterminowym na ${window.location.hostname.replace('www.', '')}` :
                     `FAQ: ${listing.make} ${listing.model} na ${window.location.hostname.replace('www.', '')}`
                   ) : (
                     t('nav.faq', 'FAQ')
@@ -950,7 +996,9 @@ export default function ListingDetailPage() {
                             <div className="pt-2 border-t border-slate-200 mt-2">
                               {catalogLine}
                               <div className="flex items-baseline justify-between">
-                                <span className="text-xs text-muted-foreground">Cena pojazdu:</span>
+                                <span className="text-xs text-muted-foreground">
+                                  Cena pojazdu {priceType === 'net' ? 'netto:' : 'brutto:'}
+                                </span>
                                 <span className="inline-flex items-center gap-1 text-sm text-muted-foreground font-medium">
                                   {priceInfo.primaryLabel}
                                   {priceRabatInfo}

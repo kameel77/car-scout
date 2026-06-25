@@ -236,7 +236,15 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
               {hasSpecialOffer && <SpecialOfferTag onClick={handleSpecialOfferClick} />}
               {showMotolia && (
                 <div className="px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
-                  {t('listing.motoliaDiscount')}: {listing.catalogPrice ? Math.round((listing.catalogPrice - listing.price_pln) / listing.catalogPrice * 100) : 0}%
+                  {t('listing.motoliaDiscount')}: {
+                    (() => {
+                      const displayPrice = getDisplayPrice(listing);
+                      const catalogPriceVal = listing.catalogPrice && listing.catalogPrice > displayPrice
+                        ? listing.catalogPrice
+                        : (motoliaDiscount > 0 ? displayPrice + motoliaDiscount : 0);
+                      return catalogPriceVal ? Math.round((catalogPriceVal - listing.price_pln) / catalogPriceVal * 100) : 0;
+                    })()
+                  }%
                 </div>
               )}
             </div>
@@ -261,13 +269,20 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
         <div className="p-4 space-y-3 flex-1 flex flex-col">
           {/* Status label + Title */}
           <div>
-            <span
-              className={`text-[10px] font-bold tracking-wider ${
-                listing.condition === 'NEW' ? 'text-accent' : 'text-muted-foreground'
-              }`}
-            >
-              {listing.condition === 'NEW' ? t('listing.statusNew') : t('listing.statusUsed')}
-            </span>
+            <div className="flex items-center justify-between">
+              <span
+                className={`text-[10px] font-bold tracking-wider ${
+                  listing.condition === 'NEW' ? 'text-accent' : 'text-muted-foreground'
+                }`}
+              >
+                {listing.condition === 'NEW' ? t('listing.statusNew') : t('listing.statusUsed')}
+              </span>
+              {listing.specification && listing.specification.stockCount > 1 && listing.specification.displayMode === 'GROUPED' && (
+                <span className="text-[10px] font-bold text-accent px-1.5 py-0.5 bg-accent/10 rounded-full">
+                  Dostępne: {listing.specification.stockCount} szt.
+                </span>
+              )}
+            </div>
             {/* Make + Model — larger font */}
             <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
               {listing.make} {listing.model}

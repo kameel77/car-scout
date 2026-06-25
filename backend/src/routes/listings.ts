@@ -402,6 +402,13 @@ export async function listingRoutes(fastify: FastifyInstance) {
             // Apply scope-based dealerId filter (if authenticated with scoped context)
             ...scopeDealerFilter,
             ...(isAuthenticated ? {} : { pricePln: { gt: 0 } }),
+            
+            // Display Mode logic
+            OR: [
+                { specificationId: null },
+                { specification: { displayMode: 'ALL' } },
+                { AND: [{ specification: { displayMode: 'GROUPED' } }, { isRepresentative: true }] }
+            ]
         };
 
         // For per-dimension facets, count vehicles grouped by that dimension IGNORING
@@ -429,7 +436,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
             fastify.prisma.listing.findMany({
                 where,
                 include: {
-                    dealer: true
+                    dealer: true,
+                    specification: true
                 },
                 orderBy,
                 skip: (page - 1) * perPage,
@@ -562,7 +570,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 isArchived: false
             },
             include: {
-                dealer: true
+                dealer: true,
+                specification: true
             }
         });
 
@@ -580,6 +589,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 dealer: {
                     include: { settings: true }
                 },
+                specification: true,
                 creditProduct: true,
                 leasingProduct: true,
                 priceHistory: {
@@ -599,6 +609,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                         dealer: {
                             include: { settings: true }
                         },
+                        specification: true,
                         creditProduct: true,
                         leasingProduct: true,
                         priceHistory: {
@@ -648,6 +659,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 dealer: {
                     include: { settings: true }
                 },
+                specification: true,
                 creditProduct: true,
                 leasingProduct: true,
                 priceHistory: {

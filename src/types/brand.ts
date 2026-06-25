@@ -64,4 +64,5 @@ export interface BrandConfig {
     steps: StepsSection;
   };
   contactPage: ContactPageConfig;
+  features: Record<string, boolean>;
 }
