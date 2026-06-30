@@ -75,14 +75,6 @@ export default function SpecificationsPage() {
         }
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
-            </div>
-        );
-    }
-
     const specifications = data?.specifications || [];
 
     const filteredSpecifications = React.useMemo(() => {
@@ -106,6 +98,14 @@ export default function SpecificationsPage() {
 
         return result;
     }, [specifications, searchQuery, sortBy]);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
