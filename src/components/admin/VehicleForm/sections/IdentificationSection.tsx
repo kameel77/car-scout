@@ -31,6 +31,23 @@ export function IdentificationSection({ form, setField, mode, isImported, errors
                 if (!form.model) setField('model', spec.model || '');
                 if (!form.version) setField('version', spec.version || '');
                 if (!form.productionYear) setField('productionYear', String(spec.manufacturingYear || ''));
+                
+                setField('condition', spec.condition || 'NEW');
+
+                if (!form.bodyType && spec.bodyType) setField('bodyType', spec.bodyType);
+                if (!form.fuelType && spec.fuelType) setField('fuelType', spec.fuelType);
+                if (!form.transmission && spec.transmission) setField('transmission', spec.transmission);
+                if (!form.enginePowerHp && spec.enginePowerHp) setField('enginePowerHp', String(spec.enginePowerHp));
+                if (!form.engineCapacityCm3 && spec.engineCapacityCm3) setField('engineCapacityCm3', String(spec.engineCapacityCm3));
+                if (!form.drive && spec.drive) setField('drive', spec.drive);
+                if (!form.color && spec.color) setField('color', spec.color);
+                
+                if (!form.catalogPrice && spec.catalogPrice) setField('catalogPrice', String(spec.catalogPrice));
+
+                if (!form.equipmentAudioMultimedia && Array.isArray(spec.equipmentAudioMultimedia) && spec.equipmentAudioMultimedia.length) setField('equipmentAudioMultimedia', spec.equipmentAudioMultimedia.join('\n'));
+                if (!form.equipmentSafety && Array.isArray(spec.equipmentSafety) && spec.equipmentSafety.length) setField('equipmentSafety', spec.equipmentSafety.join('\n'));
+                if (!form.equipmentComfortExtras && Array.isArray(spec.equipmentComfortExtras) && spec.equipmentComfortExtras.length) setField('equipmentComfortExtras', spec.equipmentComfortExtras.join('\n'));
+                if (!form.equipmentOther && Array.isArray(spec.equipmentOther) && spec.equipmentOther.length) setField('equipmentOther', spec.equipmentOther.join('\n'));
             }
         }
         setOpen(false);
