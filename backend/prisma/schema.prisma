@@ -86,6 +86,7 @@ model VehicleSpecification {
 
   displayMode              String           @default("ALL") @map("display_mode")
   stockCount               Int              @default(0) @map("stock_count")
+  isArchived               Boolean          @default(false) @map("is_archived")
 
   createdAt                DateTime         @default(now()) @map("created_at")
   updatedAt                DateTime         @updatedAt @map("updated_at")
@@ -93,6 +94,7 @@ model VehicleSpecification {
   listings                 Listing[]
 
   @@index([dealerId])
+  @@index([isArchived])
   @@index([brand, model, version, color, manufacturingYear])
   @@map("vehicle_specifications")
 }
