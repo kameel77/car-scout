@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+let API_BASE_URL = import.meta.env.VITE_API_URL || '';
+if (API_BASE_URL.endsWith('/api')) API_BASE_URL = API_BASE_URL.slice(0, -4);
+if (API_BASE_URL.endsWith('/api/')) API_BASE_URL = API_BASE_URL.slice(0, -5);
 
 export const specificationsApi = {
     getSpecifications: async (token: string) => {
