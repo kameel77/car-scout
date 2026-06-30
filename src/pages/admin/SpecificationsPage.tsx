@@ -18,11 +18,22 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export default function SpecificationsPage() {
     const { token } = useAuth();
     const navigate = useNavigate();
     const [isCreating, setIsCreating] = React.useState(false);
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [sortBy, setSortBy] = React.useState('newest');
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['specifications'],
@@ -74,6 +85,28 @@ export default function SpecificationsPage() {
 
     const specifications = data?.specifications || [];
 
+    const filteredSpecifications = React.useMemo(() => {
+        let result = specifications;
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter((spec: any) => 
+                spec.brand?.toLowerCase().includes(query) ||
+                spec.model?.toLowerCase().includes(query) ||
+                spec.version?.toLowerCase().includes(query)
+            );
+        }
+
+        if (sortBy === 'brand_asc') {
+            result = [...result].sort((a: any, b: any) => (a.brand || '').localeCompare(b.brand || '') || (a.model || '').localeCompare(b.model || ''));
+        } else if (sortBy === 'brand_desc') {
+            result = [...result].sort((a: any, b: any) => (b.brand || '').localeCompare(a.brand || '') || (b.model || '').localeCompare(a.model || ''));
+        } else if (sortBy === 'newest') {
+            result = [...result].sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        }
+
+        return result;
+    }, [specifications, searchQuery, sortBy]);
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -101,12 +134,36 @@ export default function SpecificationsPage() {
                 </Button>
             </div>
 
+            <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl border shadow-sm">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                        placeholder="Szukaj po marce, modelu lub wersji..."
+                        className="pl-10 h-10"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+                <div className="flex gap-2">
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-[200px] h-10">
+                            <SelectValue placeholder="Sortuj" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Najnowsze</SelectItem>
+                            <SelectItem value="brand_asc">Marka i model (A-Z)</SelectItem>
+                            <SelectItem value="brand_desc">Marka i model (Z-A)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
             <Card className="shadow-sm border-slate-200">
                 <CardHeader className="pb-3 border-b bg-slate-50/50">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <Settings2 className="w-5 h-5 text-blue-500" />
-                            Baza specyfikacji ({specifications.length})
+                            Baza specyfikacji ({filteredSpecifications.length})
                         </CardTitle>
                         <Button variant="outline" size="sm" onClick={() => refetch()}>
                             <RefreshCw className="w-4 h-4 mr-2" />
@@ -127,14 +184,14 @@ export default function SpecificationsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {specifications.length === 0 ? (
+                            {filteredSpecifications.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                                        Brak specyfikacji w bazie. Pojawią się one automatycznie po imporcie z plików zewnętrznych.
+                                        Brak specyfikacji spełniających kryteria.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                specifications.map((spec: any) => (
+                                filteredSpecifications.map((spec: any) => (
                                     <TableRow key={spec.id} className={`hover:bg-slate-50/50 transition-colors ${spec.isArchived ? 'opacity-60 bg-gray-50' : ''}`}>
                                         <TableCell>
                                             <div className="font-medium text-slate-900">
