@@ -1,8 +1,8 @@
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const specificationsApi = {
     getSpecifications: async (token: string) => {
-        const res = await fetch(`${API_URL}/specifications`, {
+        const res = await fetch(`${API_BASE_URL}/api/specifications`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -12,7 +12,7 @@ export const specificationsApi = {
     },
 
     createSpecification: async (token: string) => {
-        const res = await fetch(`${API_URL}/specifications`, {
+        const res = await fetch(`${API_BASE_URL}/api/specifications`, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${token}`
@@ -23,7 +23,7 @@ export const specificationsApi = {
     },
 
     getSpecification: async (id: string, token: string) => {
-        const res = await fetch(`${API_URL}/specifications/${id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/specifications/${id}`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -33,7 +33,7 @@ export const specificationsApi = {
     },
 
     updateSpecification: async (id: string, data: any, token: string) => {
-        const res = await fetch(`${API_URL}/specifications/${id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/specifications/${id}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -49,7 +49,7 @@ export const specificationsApi = {
         const formData = new FormData();
         formData.append('file', file);
 
-        const res = await fetch(`${API_URL}/specifications/parse-pdf`, {
+        const res = await fetch(`${API_BASE_URL}/api/specifications/parse-pdf`, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${token}`
