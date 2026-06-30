@@ -5,12 +5,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { RefreshCw, Settings2, ExternalLink } from 'lucide-react';
+import { RefreshCw, Settings2, ExternalLink, MoreVertical, CopyPlus, Archive, Trash2, Pencil } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function SpecificationsPage() {
     const { token } = useAuth();
@@ -22,6 +29,40 @@ export default function SpecificationsPage() {
         queryFn: () => specificationsApi.getSpecifications(token!),
         enabled: !!token
     });
+
+    const handleDuplicate = async (id: string) => {
+        try {
+            const res = await specificationsApi.duplicateSpecification(id, token!);
+            toast.success('Pomyślnie zduplikowano specyfikację');
+            refetch();
+            if (res?.specification?.id) {
+                navigate(`/admin/specifications/${res.specification.id}/edit`);
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Błąd podczas duplikowania');
+        }
+    };
+
+    const handleArchiveToggle = async (id: string, isArchived: boolean) => {
+        try {
+            await specificationsApi.archiveSpecification(id, isArchived, token!);
+            toast.success(isArchived ? 'Zarchiwizowano specyfikację' : 'Przywrócono specyfikację');
+            refetch();
+        } catch (error: any) {
+            toast.error('Błąd podczas zmiany statusu archiwum');
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Czy na pewno chcesz usunąć tę specyfikację?')) return;
+        try {
+            await specificationsApi.deleteSpecification(id, token!);
+            toast.success('Pomyślnie usunięto specyfikację');
+            refetch();
+        } catch (error: any) {
+            toast.error('Błąd podczas usuwania. Być może jest powiązana z ogłoszeniami.');
+        }
+    };
 
     if (isLoading) {
         return (
@@ -94,9 +135,12 @@ export default function SpecificationsPage() {
                                 </TableRow>
                             ) : (
                                 specifications.map((spec: any) => (
-                                    <TableRow key={spec.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <TableRow key={spec.id} className={`hover:bg-slate-50/50 transition-colors ${spec.isArchived ? 'opacity-60 bg-gray-50' : ''}`}>
                                         <TableCell>
-                                            <div className="font-medium text-slate-900">{spec.brand} {spec.model}</div>
+                                            <div className="font-medium text-slate-900">
+                                                {spec.brand} {spec.model}
+                                                {spec.isArchived && <Badge variant="secondary" className="ml-2 text-[10px]">Archiwalna</Badge>}
+                                            </div>
                                             <div className="text-xs text-slate-500">{spec.manufacturingYear} • {spec.bodyType}</div>
                                         </TableCell>
                                         <TableCell className="text-slate-600">{spec.version}</TableCell>
@@ -115,11 +159,44 @@ export default function SpecificationsPage() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" asChild>
-                                                <Link to={`/admin/specifications/${spec.id}/edit`}>
-                                                    Edytuj <ExternalLink className="w-4 h-4 ml-2" />
-                                                </Link>
-                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:bg-slate-100 rounded-full">
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuItem onClick={() => handleDuplicate(spec.id)}>
+                                                        <CopyPlus className="w-4 h-4 mr-2 text-slate-500" />
+                                                        <span>Duplikuj</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem asChild>
+                                                        <Link to={`/admin/specifications/${spec.id}/edit`} className="flex items-center">
+                                                            <Pencil className="w-4 h-4 mr-2 text-slate-500" />
+                                                            <span>Edytuj</span>
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    {spec.isArchived ? (
+                                                        <DropdownMenuItem onClick={() => handleArchiveToggle(spec.id, false)} className="text-green-600 focus:text-green-600">
+                                                            <Archive className="w-4 h-4 mr-2" />
+                                                            <span>Przywróć</span>
+                                                        </DropdownMenuItem>
+                                                    ) : (
+                                                        <DropdownMenuItem onClick={() => handleArchiveToggle(spec.id, true)} className="text-orange-600 focus:text-orange-600">
+                                                            <Archive className="w-4 h-4 mr-2" />
+                                                            <span>Archiwizuj</span>
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem 
+                                                        onClick={() => handleDelete(spec.id)} 
+                                                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                        <span>Usuń definitywnie</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 ))
