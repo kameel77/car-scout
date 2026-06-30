@@ -1,5 +1,10 @@
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Button } from '@/components/ui/button';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { specificationsApi } from '@/services/specifications-api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +12,7 @@ import type { SectionProps } from '../types';
 
 export function IdentificationSection({ form, setField, mode, isImported, errors }: SectionProps) {
     const { token } = useAuth();
+    const [open, setOpen] = useState(false);
     const { data } = useQuery({
         queryKey: ['specifications'],
         queryFn: () => specificationsApi.getSpecifications(token!),
@@ -14,6 +20,22 @@ export function IdentificationSection({ form, setField, mode, isImported, errors
     });
 
     const specifications = data?.specifications || [];
+
+    const handleSpecChange = (specId: string) => {
+        setField('specificationId', specId === 'none' ? undefined : specId);
+        
+        if (specId !== 'none') {
+            const spec = specifications.find((s: any) => s.id === specId);
+            if (spec) {
+                if (!form.make) setField('make', spec.brand || '');
+                if (!form.model) setField('model', spec.model || '');
+                if (!form.version) setField('version', spec.version || '');
+                if (!form.productionYear) setField('productionYear', String(spec.manufacturingYear || ''));
+            }
+        }
+        setOpen(false);
+    };
+
     return (
         <fieldset disabled={isImported} className={isImported ? 'opacity-60' : ''}>
             {isImported && (
@@ -25,19 +47,61 @@ export function IdentificationSection({ form, setField, mode, isImported, errors
                 <div className="space-y-2 md:col-span-2 lg:col-span-3">
                     <label className="text-sm font-medium text-gray-700">Wybierz Specyfikację (Opcjonalnie)</label>
                     <p className="text-xs text-gray-500 mb-1">Połączenie oferty ze specyfikacją pobierze do niej zdjęcia wyposażenie wg. PDF.</p>
-                    <Select value={form.specificationId || 'none'} onValueChange={v => setField('specificationId', v === 'none' ? undefined : v)}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Brak przypisanej specyfikacji" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">Brak przypisanej specyfikacji</SelectItem>
-                            {specifications.map((s: any) => (
-                                <SelectItem key={s.id} value={s.id}>
-                                    {s.brand} {s.model} {s.version} ({s.manufacturingYear}) - {s.enginePowerHp}KM
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={open}
+                                className="w-full justify-between font-normal text-left px-3"
+                            >
+                                {form.specificationId
+                                    ? (() => {
+                                          const s = specifications.find((s: any) => s.id === form.specificationId);
+                                          return s ? `${s.brand} ${s.model} ${s.version} (${s.manufacturingYear}) - ${s.enginePowerHp}KM` : "Brak przypisanej specyfikacji";
+                                      })()
+                                    : "Brak przypisanej specyfikacji"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                            <Command>
+                                <CommandInput placeholder="Szukaj specyfikacji..." />
+                                <CommandList>
+                                    <CommandEmpty>Nie znaleziono specyfikacji.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="none"
+                                            onSelect={() => handleSpecChange('none')}
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    !form.specificationId ? "opacity-100" : "opacity-0"
+                                                )}
+                                            />
+                                            Brak przypisanej specyfikacji
+                                        </CommandItem>
+                                        {specifications.map((s: any) => (
+                                            <CommandItem
+                                                key={s.id}
+                                                value={`${s.brand} ${s.model} ${s.version} ${s.manufacturingYear} ${s.enginePowerHp}KM`}
+                                                onSelect={() => handleSpecChange(s.id)}
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        form.specificationId === s.id ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                />
+                                                {s.brand} {s.model} {s.version} ({s.manufacturingYear}) - {s.enginePowerHp}KM
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
