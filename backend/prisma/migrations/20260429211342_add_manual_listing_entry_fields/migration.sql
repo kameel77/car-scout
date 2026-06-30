@@ -25,5 +25,5 @@ CREATE INDEX IF NOT EXISTS "listings_is_chinese_brand_idx" ON "listings"("is_chi
 CREATE INDEX IF NOT EXISTS "listings_last_manual_edit_at_idx" ON "listings"("last_manual_edit_at");
 
 -- Backfill entry_source from existing import_source
-UPDATE "listings" SET "entry_source" = 'CSFLOW' WHERE "import_source" = 'csflow';
-UPDATE "listings" SET "entry_source" = 'CSV' WHERE "entry_source" IS NULL;
+-- UPDATE "listings" SET "entry_source" = 'CSFLOW' WHERE "import_source" = 'csflow';
+-- UPDATE "listings" SET "entry_source" = 'CSV' WHERE "entry_source" IS NULL;
