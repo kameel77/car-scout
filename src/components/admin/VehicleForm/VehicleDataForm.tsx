@@ -91,11 +91,13 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
     const [form, setForm] = useState<VehicleFormState>(() => buildInitialState(mode, vehicle));
     const [images, setImages] = useState<{ primaryImageUrl: string | null; imageUrls: string[] }>({
         primaryImageUrl: vehicle?.primaryImageUrl 
-            ? vehicle.primaryImageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')
+            ? vehicle.primaryImageUrl.startsWith('/uploads/')
+                ? vehicle.primaryImageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')
+                : vehicle.primaryImageUrl
             : null,
-        imageUrls: vehicle?.imageUrls 
-            ? vehicle.imageUrls.map((url: string) => url.replace(/\.(jpg|jpeg|png)$/i, '.webp'))
-            : [],
+        imageUrls: vehicle?.imageUrls && vehicle.imageUrls.length > 0
+            ? vehicle.imageUrls.map((url: string) => url.startsWith('/uploads/') ? url.replace(/\.(jpg|jpeg|png)$/i, '.webp') : url)
+            : []
     });
     const [specificationUrl, setSpecificationUrl] = useState<string | null>(vehicle?.specificationUrl ?? null);
 

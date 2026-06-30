@@ -37,10 +37,12 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             first_registration_date: backendListing.firstRegistrationDate || '',
             registration_number: backendListing.registrationNumber || '',
             primary_image_url: backendListing.primaryImageUrl
-                ? backendListing.primaryImageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')
+                ? backendListing.primaryImageUrl.startsWith('/uploads/')
+                    ? backendListing.primaryImageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')
+                    : backendListing.primaryImageUrl
                 : '/motolia-placeholder.png',
             image_urls: backendListing.imageUrls && backendListing.imageUrls.length > 0
-                ? backendListing.imageUrls.map((url: string) => url.replace(/\.(jpg|jpeg|png)$/i, '.webp'))
+                ? backendListing.imageUrls.map((url: string) => url.startsWith('/uploads/') ? url.replace(/\.(jpg|jpeg|png)$/i, '.webp') : url)
                 : ['/motolia-placeholder.png'],
             is_archived: backendListing.isArchived || false,
             is_featured: backendListing.isFeatured || false,
