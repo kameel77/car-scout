@@ -64,5 +64,40 @@ export const specificationsApi = {
             throw new Error(err.error || 'Failed to parse PDF');
         }
         return res.json();
+    },
+
+    deleteSpecification: async (id: string, token: string) => {
+        const res = await fetch(`${API_BASE_URL}/api/specifications/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        if (!res.ok) throw new Error('Failed to delete specification');
+        return res.json();
+    },
+
+    archiveSpecification: async (id: string, isArchived: boolean, token: string) => {
+        const res = await fetch(`${API_BASE_URL}/api/specifications/${id}/archive`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ isArchived })
+        });
+        if (!res.ok) throw new Error('Failed to archive specification');
+        return res.json();
+    },
+
+    duplicateSpecification: async (id: string, token: string) => {
+        const res = await fetch(`${API_BASE_URL}/api/specifications/${id}/duplicate`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        if (!res.ok) throw new Error('Failed to duplicate specification');
+        return res.json();
     }
 };

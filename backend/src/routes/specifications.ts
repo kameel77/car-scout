@@ -381,4 +381,60 @@ Uwagi:
         return reply.send({ success: true, imageUrls: newUrls });
     });
 
+    // 9. Delete specification
+    fastify.delete('/api/specifications/:id', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        try {
+            await fastify.prisma.vehicleSpecification.delete({ where: { id } });
+            return reply.send({ success: true });
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Failed to delete specification. It may be in use.' });
+        }
+    });
+
+    // 10. Archive / Restore specification
+    fastify.patch('/api/specifications/:id/archive', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { isArchived } = request.body as { isArchived: boolean };
+        try {
+            const spec = await fastify.prisma.vehicleSpecification.update({
+                where: { id },
+                data: { isArchived }
+            });
+            return reply.send({ specification: spec });
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Failed to update specification archive status.' });
+        }
+    });
+
+    // 11. Duplicate specification
+    fastify.post('/api/specifications/:id/duplicate', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        try {
+            const spec = await fastify.prisma.vehicleSpecification.findUnique({ where: { id } });
+            if (!spec) return reply.code(404).send({ error: 'Specification not found' });
+
+            const { id: _, createdAt, updatedAt, ...specData } = spec;
+
+            const newSpec = await fastify.prisma.vehicleSpecification.create({
+                data: {
+                    ...specData,
+                    brand: `${specData.brand} (Kopia)`
+                }
+            });
+            return reply.send({ specification: newSpec });
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Failed to duplicate specification.' });
+        }
+    });
+
 }
