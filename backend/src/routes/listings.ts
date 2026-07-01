@@ -10,6 +10,30 @@ import {
 } from '../services/listing-mapper.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
+    // Sanitization helper for dealer data
+    const sanitizeListing = (listing: any, isAuthenticated: boolean) => {
+        if (isAuthenticated) return listing;
+        if (!listing.dealer) return listing;
+
+        // Strip sensitive info for unauthenticated users
+        const {
+            addressLine1,
+            addressLine2,
+            addressLine3,
+            postalCode,
+            contactPhone,
+            contactEmail,
+            nip,
+            settings,
+            ...safeDealer
+        } = listing.dealer;
+
+        return {
+            ...listing,
+            dealer: safeDealer
+        };
+    };
+
     // Get filter options (makes and models) - only active listings
     fastify.get('/api/listings/options', async (request, reply) => {
         // fetch distinct makes from non-archived listings
@@ -36,11 +60,20 @@ export async function listingRoutes(fastify: FastifyInstance) {
             orderBy: { bodyType: 'asc' }
         });
 
+        // fetch distinct cities from non-archived listings
+        const citiesRaw = await fastify.prisma.listing.findMany({
+            where: { isArchived: false, dealer: { city: { not: null } } },
+            select: { dealer: { select: { city: true } } },
+            distinct: ['dealerId'],
+            orderBy: { dealer: { city: 'asc' } }
+        });
+
         const makes = makesRaw.map(m => m.make).filter(Boolean);
         const models = modelsRaw.map(m => ({ make: m.make, model: m.model })).filter(m => m.make && m.model);
         const bodyTypes = bodyTypesRaw.map(b => b.bodyType).filter(Boolean) as string[];
+        const cities = [...new Set(citiesRaw.map(c => c.dealer?.city).filter(Boolean))] as string[];
 
-        return { makes, models, bodyTypes };
+        return { makes, models, bodyTypes, cities };
     });
 
     fastify.post('/api/listings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
@@ -216,6 +249,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             lastManualEditBefore,
             // Rate filter (translated to price filter on the fly)
             rateMin, rateMax, rateType, rateBasis,
+            city,
         } = request.query as any;
 
         // Helper to parse comma-separated lists into array or undefined
@@ -231,6 +265,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const drives = toArray(drive);
         const makes = toArray(make);
         const models = toArray(model);
+        const cities = toArray(city);
 
         // Canonical fuel buckets. Order matters in the if-chain below.
         const FUEL_CANONICALS = new Set(['petrol', 'diesel', 'hybrid', 'hybrid_plugin', 'petrol_lpg', 'electric', 'lpg', 'cng']);
@@ -399,6 +434,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             lastManualEditAt: lastManualEditBefore
                 ? { lt: new Date(String(lastManualEditBefore)) }
                 : undefined,
+            dealer: cities ? { city: { in: cities, mode: 'insensitive' as const } } : undefined,
             // Apply scope-based dealerId filter (if authenticated with scoped context)
             ...scopeDealerFilter,
             ...(isAuthenticated ? {} : { pricePln: { gt: 0 } }),
@@ -421,6 +457,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const { transmission: _transmissionFilter, ...whereWithoutTransmission } = where;
         const { bodyType: _bodyFilter, ...whereWithoutBody } = where;
         const { drive: _driveFilter, ...whereWithoutDrive } = where;
+        const { dealer: _cityFilter, ...whereWithoutCity } = where;
 
         const [
             listings,
@@ -432,6 +469,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             byTransmissionRaw,
             byBodyRaw,
             byDriveRaw,
+            byCityRaw,
         ] = await Promise.all([
             fastify.prisma.listing.findMany({
                 where,
@@ -478,6 +516,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 by: ['drive'],
                 where: whereWithoutDrive,
                 _count: { _all: true },
+            }),
+            fastify.prisma.listing.findMany({
+                where: whereWithoutCity,
+                select: { dealer: { select: { city: true } } },
             }),
         ]);
 
@@ -534,10 +576,18 @@ export async function listingRoutes(fastify: FastifyInstance) {
             transmission: toFacetMap(byTransmissionRaw, 'transmission'),
             bodyType: toFacetMap(byBodyRaw, 'bodyType'),
             drive: toFacetMap(byDriveRaw, 'drive'),
+            city: (() => {
+                const out: Record<string, number> = {};
+                for (const r of byCityRaw) {
+                    const c = r.dealer?.city;
+                    if (c) out[c] = (out[c] || 0) + 1;
+                }
+                return out;
+            })(),
         };
 
         return {
-            listings,
+            listings: listings.map(l => sanitizeListing(l, isAuthenticated)),
             count: totalCount,
             byCondition,
             facets,
@@ -575,7 +625,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         });
 
-        return { listings };
+        return { listings: listings.map(l => sanitizeListing(l, isAuthenticated)) };
     });
 
     // Get single listing by slug with price history
@@ -646,7 +696,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Listing not found' });
         }
 
-        return { listing };
+        return { listing: sanitizeListing(listing, hasAccess) };
     });
 
     // Get single listing by ID with price history (for backward compatibility)
@@ -694,7 +744,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Listing not found' });
         }
 
-        return { listing };
+        return { listing: sanitizeListing(listing, hasAccess) };
     });
 
     // Archive listing (admin only, scope-aware)
@@ -752,7 +802,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         });
 
-        return { listing };
+        return { listing: sanitizeListing(listing, true) };
     });
 
     // Delete listing permanently (admin only, scope-aware)

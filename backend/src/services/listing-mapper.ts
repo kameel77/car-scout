@@ -114,6 +114,10 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
         priceCompanyLeasingPln: body.priceCompanyLeasingPln ?? undefined,
         vatMargin: body.vatMargin ?? false,
         dealer: { connect: { id: dealerId } },
+        specification: body.specificationId ? { connect: { id: body.specificationId } } : undefined,
+        primaryImageUrl: body.primaryImageUrl || undefined,
+        imageUrls: Array.isArray(body.imageUrls) ? body.imageUrls : [],
+        specificationPdfUrl: body.specificationPdfUrl || undefined,
     };
 }
 
@@ -126,6 +130,9 @@ export function mapManualPayloadToListingUpdate(body: any): Prisma.ListingUpdate
     }
     if (body.leasingProductId === null) {
         rest.leasingProduct = { disconnect: true };
+    }
+    if (body.specificationId === null) {
+        rest.specification = { disconnect: true };
     }
 
     return rest;

@@ -1,0 +1,755 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// Multi-tenant enums
+// ==========================================
+
+enum ScopeType {
+  PLATFORM
+  DEALER_GROUP
+  DEALER
+}
+
+enum MemberRole {
+  SUPERADMIN_PLATFORM
+  PLATFORM_MANAGER
+  DEALER_GROUP_ADMIN
+  DEALER_ADMIN
+  DEALER_EMPLOYEE
+}
+
+enum ContactMode {
+  DEALER_GENERIC
+  DEALER_EMPLOYEE
+}
+
+enum FinancingPriceBase {
+  PRICE_PLN
+  BROKER_PRICE_PLN
+}
+
+enum ListingCondition {
+  NEW
+  USED
+}
+
+enum EntrySource {
+  CSV
+  CSFLOW
+  MANUAL
+}
+
+model Listing {
+  id                       String             @id @default(cuid())
+  listingId                String?            @unique @map("listing_id")
+  listingUrl               String?            @map("listing_url")
+  scrapedAt                DateTime?          @map("scraped_at")
+  make                     String
+  model                    String
+  version                  String?
+  vin                      String?            @unique
+  pricePln                 Int                @map("price_pln")
+  priceDisplay             String?            @map("price_display")
+  omnibusLowest30dPln      Int?               @map("omnibus_lowest_30d_pln")
+  omnibusText              String?            @map("omnibus_text")
+  productionYear           Int                @map("production_year")
+  mileageKm                Int                @map("mileage_km")
+  fuelType                 String?            @map("fuel_type")
+  transmission             String?
+  enginePowerHp            Int?               @map("engine_power_hp")
+  engineCapacityCm3        Int?               @map("engine_capacity_cm3")
+  drive                    String?
+  bodyType                 String?            @map("body_type")
+  doors                    Int?
+  seats                    Int?
+  color                    String?
+  paintType                String?            @map("paint_type")
+  registrationNumber       String?            @map("registration_number")
+  firstRegistrationDate    String?            @map("first_registration_date")
+  primaryImageUrl          String?            @map("primary_image_url")
+  imageCount               Int?               @map("image_count")
+  imageUrls                String[]           @map("image_urls")
+  dealerId                 String?            @map("dealer_id")
+  ownerUserId              String?            @map("owner_user_id")
+  contactMode              ContactMode        @default(DEALER_GENERIC) @map("contact_mode")
+  contactName              String?            @map("contact_name")
+  contactPhoneSnapshot     String?            @map("contact_phone_snapshot")
+  contactEmail             String?            @map("contact_email")
+  equipmentAudioMultimedia String[]           @map("equipment_audio_multimedia")
+  equipmentSafety          String[]           @map("equipment_safety")
+  equipmentComfortExtras   String[]           @map("equipment_comfort_extras")
+  equipmentOther           String[]           @map("equipment_other")
+  additionalInfoHeader     String?            @map("additional_info_header")
+  additionalInfoContent    String?            @map("additional_info_content")
+  specsJson                Json?              @map("specs_json")
+  specificationUrl         String?            @map("specification_url")
+  isFeatured               Boolean            @default(false) @map("is_featured")
+  isArchived               Boolean            @default(false) @map("is_archived")
+  archivedAt               DateTime?          @map("archived_at")
+  archivedReason           String?            @map("archived_reason")
+  createdAt                DateTime           @default(now()) @map("created_at")
+  updatedAt                DateTime           @updatedAt @map("updated_at")
+  brokerPriceEur           Int?               @map("broker_price_eur")
+  brokerPricePln           Int?               @map("broker_price_pln")
+  dealerPriceNetEur        Float?             @map("dealer_price_net_eur")
+  dealerPriceNetPln        Float?             @map("dealer_price_net_pln")
+  marketplace              String?            @map("marketplace")
+  importSource             String?            @map("import_source")
+  slug                     String?            @unique @map("slug")
+  catalogPrice             Int?               @map("catalog_price")
+  motoliaDiscountPln       Int?               @map("motolia_discount_pln")
+  showMotoliaDiscount      Boolean            @default(false) @map("show_motolia_discount")
+  displaySalePrice         Boolean            @default(false) @map("display_sale_price")
+  condition                ListingCondition   @default(USED)
+  financingPriceBase       FinancingPriceBase @default(BROKER_PRICE_PLN) @map("financing_price_base")
+  isChineseBrand           Boolean            @default(false) @map("is_chinese_brand")
+  lastManualEditAt         DateTime?          @map("last_manual_edit_at")
+  entrySource              EntrySource?       @map("entry_source")
+  leads                    Lead[]
+  dealer                   Dealer?            @relation(fields: [dealerId], references: [id])
+  ownerUser                User?              @relation("ListingOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  priceHistory             PriceHistory[]
+
+  @@index([make, model])
+  @@index([pricePln])
+  @@index([productionYear])
+  @@index([isArchived])
+  @@index([vin])
+  @@index([listingId])
+  @@index([marketplace])
+  @@index([slug])
+  @@index([ownerUserId])
+  @@index([isFeatured])
+  @@index([condition])
+  @@index([isChineseBrand])
+  @@index([lastManualEditAt])
+  @@index([dealerId, isArchived, createdAt])
+  @@map("listings")
+}
+
+model Lead {
+  id                      String    @id @default(cuid())
+  leadType                String    @default("sale") @map("lead_type") // sale | rental | quick_contact
+  listingId               String?   @map("listing_id")
+  rentalVehicleId         String?   @map("rental_vehicle_id")
+  name                    String
+  email                   String
+  phone                   String?
+  preferredContact        String    @default("email") @map("preferred_contact")
+  message                 String
+  status                  String    @default("new")
+  referenceNumber         String    @unique @map("reference_number")
+  consentMarketingAt      DateTime? @map("consent_marketing_at")
+  consentPrivacyAt        DateTime? @map("consent_privacy_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  externalId              String?   @map("external_id")
+  externalStatus          String?   @map("external_status")
+  financingAmount         Float?    @map("financing_amount")
+  financingDownPayment    Float?    @map("financing_down_payment")
+  financingInstallment    Float?    @map("financing_installment")
+  financingFinalPayment   Float?    @map("financing_final_payment")
+  financingPeriod         Int?      @map("financing_period")
+  financingProductId      String?   @map("financing_product_id")
+  // Rental-specific fields
+  rentalCompanyName       String?   @map("rental_company_name")
+  rentalAnnualMileageKm   Int?      @map("rental_annual_mileage_km")
+  rentalContractMonths    Int?      @map("rental_contract_months")
+  rentalInitialPaymentPct Float?    @map("rental_initial_payment_pct")
+  rentalInitialPaymentAmountNet Float? @map("rental_initial_payment_amount_net")
+  rentalInitialPaymentAmountGross Float? @map("rental_initial_payment_amount_gross")
+  rentalMonthlyRate       Float?    @map("rental_monthly_rate")
+
+  financingProduct FinancingProduct? @relation(fields: [financingProductId], references: [id])
+  listing          Listing?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  rentalVehicle    RentalVehicle?    @relation(fields: [rentalVehicleId], references: [id], onDelete: SetNull)
+
+  @@index([listingId])
+  @@index([financingProductId])
+  @@index([rentalVehicleId])
+  @@index([leadType])
+  @@map("leads")
+}
+
+model Dealer {
+  id                  String          @id @default(cuid())
+  csflowDealerId      Int?            @unique @map("csflow_dealer_id")
+  name                String
+  addressLine1        String          @map("address_line1")
+  addressLine2        String?         @map("address_line2")
+  addressLine3        String?         @map("address_line3")
+  city                String?
+  postalCode          String?         @map("postal_code")
+  contactPhone        String?         @map("contact_phone")
+  contactEmail        String?         @map("contact_email")
+  contactEmailService String?         @map("contact_email_service")
+  dealerGroupId       String?         @map("dealer_group_id")
+  googleRating        Float?          @map("google_rating")
+  googleReviewCount   Int?            @map("google_review_count")
+  googleLink          String?         @map("google_link")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  dealerGroup         DealerGroup?    @relation(fields: [dealerGroupId], references: [id])
+  listings            Listing[]
+  rentalVehicles      RentalVehicle[]
+  settings            DealerSettings?
+
+  @@unique([name, addressLine1])
+  @@index([dealerGroupId])
+  @@map("dealers")
+}
+
+model PriceHistory {
+  id        String   @id @default(cuid())
+  listingId String   @map("listing_id")
+  pricePln  Int      @map("price_pln")
+  changedAt DateTime @default(now()) @map("changed_at")
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, changedAt])
+  @@map("price_history")
+}
+
+model ImportLog {
+  id         String   @id @default(cuid())
+  importedBy String   @map("imported_by")
+  fileName   String?  @map("file_name")
+  totalRows  Int      @map("total_rows")
+  inserted   Int
+  updated    Int
+  archived   Int
+  failed     Int      @default(0)
+  status     String
+  errorLog   Json?    @map("error_log")
+  importedAt DateTime @default(now()) @map("imported_at")
+  duration   Int?
+  user       User     @relation(fields: [importedBy], references: [id])
+
+  @@index([importedBy])
+  @@index([importedAt])
+  @@map("import_logs")
+}
+
+model User {
+  id                   String       @id @default(cuid())
+  email                String       @unique
+  password             String
+  name                 String?
+  role                 String       @default("admin") // legacy — fallback until Etap 5
+  isActive             Boolean      @default(true) @map("is_active")
+  lastLogin            DateTime?    @map("last_login")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+  resetPasswordExpires DateTime?    @map("reset_password_expires")
+  resetPasswordToken   String?      @map("reset_password_token")
+  importLogs           ImportLog[]
+  memberships          Membership[]
+  ownedListings        Listing[]    @relation("ListingOwner")
+
+  @@map("users")
+}
+
+model AppSettings {
+  id                          String   @id @default("default")
+  enabledLanguages            String[] @default(["pl"]) @map("enabled_languages")
+  displayCurrency             String   @default("PLN") @map("display_currency")
+  eurExRate                   Float    @default(4.30) @map("eur_ex_rate")
+  brokerFeePctPln             Float    @default(3.5) @map("broker_fee_pct_pln")
+  brokerFeePctEur             Float    @default(3.5) @map("broker_fee_pct_eur")
+  updatedAt                   DateTime @updatedAt @map("updated_at")
+  financingCalculatorEnabled  Boolean  @default(true) @map("financing_calculator_enabled")
+  financingCalculatorLocation String   @default("main") @map("financing_calculator_location")
+  legalDocuments              Json?    @map("legal_documents")
+  legalCompanyName            String?  @map("legal_company_name")
+  legalAddress                String?  @map("legal_address")
+  legalContactEmail           String?  @map("legal_contact_email")
+  legalContactPhone           String?  @map("legal_contact_phone")
+  salesContactPhone           String?  @map("sales_contact_phone")
+  legalVatId                  String?  @map("legal_vat_id")
+  legalRegisterNumber         String?  @map("legal_register_number")
+  legalRepresentative         String?  @map("legal_representative")
+  headerLogoUrl               String?  @map("header_logo_url")
+  footerLogoUrl               String?  @map("footer_logo_url")
+  legalSloganPl               String?  @map("legal_slogan_pl")
+  legalSloganEn               String?  @map("legal_slogan_en")
+  legalSloganDe               String?  @map("legal_slogan_de")
+  autoRefreshImages           Boolean  @default(false) @map("auto_refresh_images")
+  headerLogoTextPl            String?  @map("header_logo_text_pl")
+  headerLogoTextEn            String?  @map("header_logo_text_en")
+  headerLogoTextDe            String?  @map("header_logo_text_de")
+  siteNameDe                  String?  @map("site_name_de")
+  siteNameEn                  String?  @map("site_name_en")
+  siteNamePl                  String?  @map("site_name_pl")
+  defaultOgTitle              String?  @map("default_og_title")
+  defaultOgDescription        String?  @map("default_og_description")
+  defaultOgImage              String?  @map("default_og_image")
+  smtpHost                    String?  @map("smtp_host")
+  smtpPort                    Int?     @map("smtp_port")
+  smtpUser                    String?  @map("smtp_user")
+  smtpPassword                String?  @map("smtp_password")
+  smtpFromEmail               String?  @map("smtp_from_email")
+  smtpRecipientEmail          String?  @map("smtp_recipient_email")
+  leadRecipientUserId         String?  @map("lead_recipient_user_id")
+  navItemsVisibility          String[] @default(["samochody", "wynajem"]) @map("nav_items_visibility")
+  featuredModulesVisibility   String[] @default(["nowe", "uzywane", "wynajem"]) @map("featured_modules_visibility")
+  negotiatePriceEnabled       Boolean  @default(true) @map("negotiate_price_enabled")
+  negotiatePricePosition      String   @default("both") @map("negotiate_price_position")
+  csflowEnabled               Boolean  @default(true) @map("csflow_enabled")
+  defaultSortCars             String   @default("price_asc") @map("default_sort_cars")
+  defaultSortRental           String   @default("minMonthlyRateNet_asc") @map("default_sort_rental")
+  searchGridColumns           Int      @default(4) @map("search_grid_columns")
+  splitNewUsed                Boolean  @default(false) @map("split_new_used")
+
+  @@map("app_settings")
+}
+
+model Translation {
+  id          String   @id @default(cuid())
+  category    String
+  sourceValue String   @unique @map("source_value")
+  pl          String?
+  en          String?
+  de          String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("translations")
+}
+
+model FaqEntry {
+  id            String   @id @default(cuid())
+  page          FaqPage
+  pageContext   String   @default("all") @map("page_context")
+  financingType String?  @map("financing_type")
+  sortOrder     Int      @default(0) @map("sort_order")
+  questionPl    String   @map("question_pl")
+  answerPl      String   @map("answer_pl")
+  questionEn    String   @map("question_en")
+  answerEn      String   @map("answer_en")
+  questionDe    String   @map("question_de")
+  answerDe      String   @map("answer_de")
+  isPublished   Boolean  @default(true) @map("is_published")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([page, sortOrder])
+  @@map("faq_entries")
+}
+
+model FinancingProduct {
+  id                String   @id @default(cuid())
+  category          String
+  name              String?
+  currency          String   @default("PLN")
+  referenceRate     Float    @map("reference_rate")
+  margin            Float
+  commission        Float
+  maxInitialPayment Float    @map("max_initial_payment")
+  maxFinalPayment   Float    @map("max_final_payment")
+  minInstallments   Int      @map("min_installments")
+  maxInstallments   Int      @map("max_installments")
+  isDefault         Boolean  @default(false) @map("is_default")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  provider          String   @default("OWN")
+  priority          Int      @default(0)
+  minAmount         Float?   @map("min_amount")
+  maxAmount         Float?   @map("max_amount")
+  providerConfig    Json?    @map("provider_config")
+  hasBalloonPayment Boolean  @default(true) @map("has_balloon_payment")
+  leads             Lead[]
+
+  @@index([category])
+  @@index([isDefault])
+  @@map("financing_products")
+}
+
+model FinancingProviderConnection {
+  id         String   @id @default(cuid())
+  provider   String
+  name       String
+  apiBaseUrl String   @map("api_base_url")
+  apiKey     String   @map("api_key")
+  apiSecret  String?  @map("api_secret")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  shopUuid   String?  @map("shop_uuid")
+
+  @@index([provider])
+  @@index([provider, isActive])
+  @@map("financing_provider_connections")
+}
+
+model CrmTrackingSession {
+  id         String             @id
+  uuid       String
+  lastSeenAt DateTime           @map("last_seen_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+  visits     CrmTrackingVisit[]
+
+  @@index([uuid])
+  @@index([uuid, lastSeenAt])
+  @@map("crm_tracking_sessions")
+}
+
+model CrmTrackingVisit {
+  id        String             @id @default(cuid())
+  sessionId String             @map("session_id")
+  url       String
+  visitedAt DateTime           @map("visited_at")
+  createdAt DateTime           @default(now()) @map("created_at")
+  session   CrmTrackingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, visitedAt])
+  @@map("crm_tracking_visits")
+}
+
+model SeoConfig {
+  id                   String   @id @default("default")
+  gtmId                String?  @map("gtm_id")
+  homeTitle            String?  @map("home_title")
+  homeDescription      String?  @map("home_description")
+  homeOgImage          String?  @map("home_og_image")
+  listingTitle         String?  @map("listing_title")
+  listingDescription   String?  @map("listing_description")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  homeDescriptionDe    String?  @map("home_description_de")
+  homeDescriptionEn    String?  @map("home_description_en")
+  homeTitleDe          String?  @map("home_title_de")
+  homeTitleEn          String?  @map("home_title_en")
+  listingDescriptionDe String?  @map("listing_description_de")
+  listingDescriptionEn String?  @map("listing_description_en")
+  listingTitleDe       String?  @map("listing_title_de")
+  listingTitleEn       String?  @map("listing_title_en")
+
+  @@map("seo_config")
+}
+
+model PartnerAd {
+  id             String   @id @default(cuid())
+  placement      String
+  pageContext    String   @default("all") @map("page_context")
+  title          String?
+  description    String?
+  subtitle       String?
+  ctaText        String?  @map("cta_text")
+  url            String
+  imageUrl       String?  @map("image_url")
+  brandName      String?  @map("brand_name")
+  features       String[] @default([])
+  priority       Int      @default(0)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  overlayOpacity Float    @default(0.9) @map("overlay_opacity")
+  ctaTextDe      String?  @map("cta_text_de")
+  ctaTextEn      String?  @map("cta_text_en")
+  descriptionDe  String?  @map("description_de")
+  descriptionEn  String?  @map("description_en")
+  subtitleDe     String?  @map("subtitle_de")
+  subtitleEn     String?  @map("subtitle_en")
+  titleDe        String?  @map("title_de")
+  titleEn        String?  @map("title_en")
+  hideUiElements Boolean  @default(false) @map("hide_ui_elements")
+  mobileImageUrl String?  @map("mobile_image_url")
+
+  @@index([placement])
+  @@index([isActive])
+  @@map("partner_ads")
+}
+
+// ==========================================
+// Multi-tenant: DealerGroup + Membership + Settings
+// ==========================================
+
+model DealerGroup {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String   @unique
+  contactName  String?  @map("contact_name")
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  addressLine1 String?  @map("address_line1")
+  city         String?
+  nip          String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  dealers  Dealer[]
+  settings DealerGroupSettings?
+
+  @@map("dealer_groups")
+}
+
+model Membership {
+  id               String     @id @default(cuid())
+  userId           String     @map("user_id")
+  scopeType        ScopeType  @map("scope_type")
+  scopeId          String     @map("scope_id")
+  role             MemberRole
+  isDefaultContext Boolean    @default(false) @map("is_default_context")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scopeType, scopeId, role])
+  @@index([userId, scopeType, scopeId])
+  @@index([scopeType, scopeId])
+  @@map("memberships")
+}
+
+model DealerGroupSettings {
+  id                 String  @id @default(cuid())
+  dealerGroupId      String  @unique @map("dealer_group_id")
+  headerLogoUrl      String? @map("header_logo_url")
+  footerLogoUrl      String? @map("footer_logo_url")
+  smtpHost           String? @map("smtp_host")
+  smtpPort           Int?    @map("smtp_port")
+  smtpUser           String? @map("smtp_user")
+  smtpPassword       String? @map("smtp_password")
+  smtpFromEmail      String? @map("smtp_from_email")
+  smtpRecipientEmail String? @map("smtp_recipient_email")
+
+  dealerGroup DealerGroup @relation(fields: [dealerGroupId], references: [id], onDelete: Cascade)
+
+  @@map("dealer_group_settings")
+}
+
+model DealerSettings {
+  id                 String  @id @default(cuid())
+  dealerId           String  @unique @map("dealer_id")
+  headerLogoUrl      String? @map("header_logo_url")
+  footerLogoUrl      String? @map("footer_logo_url")
+  smtpHost           String? @map("smtp_host")
+  smtpPort           Int?    @map("smtp_port")
+  smtpUser           String? @map("smtp_user")
+  smtpPassword       String? @map("smtp_password")
+  smtpFromEmail      String? @map("smtp_from_email")
+  smtpRecipientEmail String? @map("smtp_recipient_email")
+
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@map("dealer_settings")
+}
+
+enum FaqPage {
+  home
+  offers
+  contact
+  faq
+  rental
+}
+
+model Partner {
+  id            String   @id @default(cuid())
+  name          String
+  apiKey        String   @unique @map("api_key")
+  nip           String?
+  contactPerson String?  @map("contact_person")
+  contactEmail  String?  @map("contact_email")
+  contactPhone  String?  @map("contact_phone")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([apiKey])
+  @@index([isActive])
+  @@map("partners")
+}
+
+model RentalVehicle {
+  id                       String   @id @default(cuid())
+  dealerId                 String?  @map("dealer_id")
+  ownerRentalCompanyId     String?  @map("owner_rental_company_id")
+  make                     String
+  model                    String
+  version                  String?
+  bodyType                 String?  @map("body_type")
+  fuelType                 String?  @map("fuel_type")
+  transmission             String?
+  enginePowerHp            Int?     @map("engine_power_hp")
+  engineCapacityCm3        Int?     @map("engine_capacity_cm3")
+  productionYear           Int?     @map("production_year")
+  color                    String?
+  paintType                String?  @map("paint_type")
+  doors                    Int?
+  seats                    Int?
+  drive                    String?
+  catalogPrice             Int?     @map("catalog_price")
+  sellingPrice             Int?     @map("selling_price")
+  primaryImageUrl          String?  @map("primary_image_url")
+  imageUrls                String[] @map("image_urls")
+  equipmentAudioMultimedia String[] @map("equipment_audio_multimedia")
+  equipmentSafety          String[] @map("equipment_safety")
+  equipmentComfortExtras   String[] @map("equipment_comfort_extras")
+  equipmentOther           String[] @map("equipment_other")
+  additionalInfoHeader     String?  @map("additional_info_header")
+  additionalInfoContent    String?  @map("additional_info_content")
+  specsJson                Json?    @map("specs_json")
+  specificationUrl         String?  @map("specification_url")
+  carClass                 String?  @map("car_class")
+  modelCode                String?  @map("model_code")
+  slug                     String?  @unique
+  vin                      String?  @map("vin")
+  mileageKm                Int?     @map("mileage_km")
+  firstRegistrationDate    String?  @map("first_registration_date")
+  registrationNumber       String?  @map("registration_number")
+  isFeatured               Boolean          @default(false) @map("is_featured")
+  isActive                 Boolean          @default(true) @map("is_active")
+  isPublished              Boolean          @default(true) @map("is_published")
+  condition                ListingCondition @default(NEW) @map("condition")
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
+
+  dealer             Dealer?                   @relation(fields: [dealerId], references: [id])
+  ownerRentalCompany RentalCompany?            @relation("VehicleOwnerCompany", fields: [ownerRentalCompanyId], references: [id])
+  rentalAssignments  VehicleRentalAssignment[]
+  leads              Lead[]
+
+  @@index([dealerId])
+  @@index([ownerRentalCompanyId])
+  @@index([make, model])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([isPublished])
+  @@index([condition])
+  @@index([slug])
+  @@map("rental_vehicles")
+}
+
+model RentalCompany {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String?  @unique
+  logoUrl      String?  @map("logo_url")
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  vehicleAssignments VehicleRentalAssignment[]
+  ownedVehicles      RentalVehicle[]           @relation("VehicleOwnerCompany")
+
+  @@map("rental_companies")
+}
+
+model VehicleRentalAssignment {
+  id                String   @id @default(cuid())
+  vehicleId         String   @map("vehicle_id")
+  rentalCompanyId   String   @map("rental_company_id")
+  externalVehicleId String?  @map("external_vehicle_id")
+  calculationId     String?  @map("calculation_id")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  vehicle       RentalVehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  rentalCompany RentalCompany       @relation(fields: [rentalCompanyId], references: [id])
+  matrixEntries RentalMatrixEntry[]
+
+  @@unique([vehicleId, rentalCompanyId])
+  @@index([vehicleId])
+  @@index([rentalCompanyId])
+  @@map("vehicle_rental_assignments")
+}
+
+model RentalMatrixEntry {
+  id                   String   @id @default(cuid())
+  assignmentId         String   @map("assignment_id")
+  annualMileageKm      Int      @map("annual_mileage_km")
+  contractMonths       Int      @map("contract_months")
+  initialPaymentPct    Float    @map("initial_payment_pct")
+  initialPaymentAmountNet Float @default(0) @map("initial_payment_amount_net")
+  initialPaymentAmountGross Float @default(0) @map("initial_payment_amount_gross")
+  offerType            String   @default("all") @map("offer_type") // "business" | "consumer" | "all"
+  monthlyRateNet       Float    @map("monthly_rate_net")
+  monthlyRateGross     Float    @map("monthly_rate_gross")
+  servicesIncluded     String[] @map("services_included")
+  overMileageCost      Float?   @map("over_mileage_cost")
+  insuranceExcess500   Float?   @map("insurance_excess_500")
+  insuranceNoLimit     Float?   @map("insurance_no_limit")
+  tiresNoLimit         Float?   @map("tires_no_limit")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  assignment VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct, initialPaymentAmountNet, initialPaymentAmountGross, offerType])
+  @@index([assignmentId])
+  @@index([monthlyRateGross])
+  @@index([assignmentId, monthlyRateGross])
+  @@map("rental_matrix_entries")
+}
+
+enum WidgetPlacement {
+  HOME
+  OFFER
+  RENTAL
+  STATIC
+  EXTERNAL
+}
+
+enum SelectionMode {
+  FEATURED
+  FILTERED
+}
+
+model Widget {
+  id       String  @id @default(cuid())
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+
+  placement      WidgetPlacement
+  vehicleSources String[]
+
+  selectionMode SelectionMode @map("selection_mode")
+  filterParams  Json?         @map("filter_params")
+
+  layoutStyle String @default("carousel") @map("layout_style")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("widgets")
+}
+
+model FeatureTile {
+  id        String   @id @default(cuid())
+  title     String
+  imageUrl  String?  @map("image_url")
+  targetUrl String   @map("target_url")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, sortOrder])
+  @@map("feature_tiles")
+}
+
+model ConsentRecord {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now()) @map("created_at")
+  brandId       String?  @map("brand_id")
+  ipHash        String   @map("ip_hash")
+  userAgent     String   @map("user_agent")
+  country       String?
+  choice        Json
+  bannerVersion String   @map("banner_version")
+
+  @@index([createdAt])
+  @@map("consent_records")
+}

@@ -353,7 +353,7 @@ export const listingsApi = {
         if (!response.ok) {
             throw new Error('Failed to fetch listing options');
         }
-        return response.json() as Promise<{ makes: string[]; models: { make: string; model: string }[]; bodyTypes: string[] }>;
+        return response.json() as Promise<{ makes: string[]; models: { make: string; model: string }[]; bodyTypes: string[]; cities: string[] }>;
     },
 
     getListings: async (filters?: any, token?: string | null) => {
@@ -370,6 +370,7 @@ export const listingsApi = {
 
             appendArray('make', filters.makes);
             appendArray('model', filters.models);
+            appendArray('city', filters.cities);
 
             if (filters.priceFrom) params.append('priceMin', filters.priceFrom.toString());
             if (filters.priceTo) params.append('priceMax', filters.priceTo.toString());
@@ -638,6 +639,18 @@ export const listingsApi = {
             body: JSON.stringify({ url }),
         });
         if (!response.ok) throw new Error('Delete failed');
+        return response.json();
+    },
+
+    uploadSpecificationPdf: async (id: string, file: File, token: string) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        const response = await fetch(`${API_BASE_URL}/api/listings/${id}/specs`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd,
+        });
+        if (!response.ok) throw new Error('PDF upload failed');
         return response.json();
     },
 };

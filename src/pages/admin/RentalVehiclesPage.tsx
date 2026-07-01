@@ -680,7 +680,19 @@ export default function RentalVehiclesPage() {
     });
 
     const createMutation = useMutation({
-        mutationFn: (data: any) => rentalVehiclesApi.create(data, token!),
+        mutationFn: async (data: any) => {
+            const result = await rentalVehiclesApi.create(data, token!);
+            const vehicleId = result.vehicle.id;
+            
+            if (data.pendingImageFiles && data.pendingImageFiles.length > 0) {
+                const setPrimary = !data.imageUrls || data.imageUrls.length === 0;
+                await rentalVehiclesApi.uploadImages(vehicleId, data.pendingImageFiles, setPrimary, token!);
+            }
+            if (data.pendingPdfFile) {
+                await rentalVehiclesApi.uploadSpecification(vehicleId, data.pendingPdfFile, token!);
+            }
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
             setView('list');

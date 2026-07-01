@@ -42,6 +42,17 @@ function buildInitialState(mode: VehicleFormMode, vehicle?: any): VehicleFormSta
         version: vehicle?.version || '',
         vin: vehicle?.vin || '',
         specificationId: vehicle?.specificationId || undefined,
+        primaryImageUrl: vehicle?.primaryImageUrl 
+            ? vehicle.primaryImageUrl.startsWith('/uploads/')
+                ? vehicle.primaryImageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')
+                : vehicle.primaryImageUrl
+            : null,
+        imageUrls: vehicle?.imageUrls && vehicle.imageUrls.length > 0
+            ? vehicle.imageUrls.map((url: string) => url.startsWith('/uploads/') ? url.replace(/\.(jpg|jpeg|png)$/i, '.webp') : url)
+            : [],
+        specificationPdfUrl: vehicle?.specificationUrl ?? null,
+        pendingImageFiles: [],
+        pendingPdfFile: null,
         productionYear: vehicle?.productionYear?.toString() || new Date().getFullYear().toString(),
         condition: vehicle?.condition || (mode === 'rental' ? 'NEW' : 'USED'),
         bodyType: vehicle?.bodyType || '',
@@ -89,17 +100,6 @@ function buildInitialState(mode: VehicleFormMode, vehicle?: any): VehicleFormSta
 
 export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported, onSave, onCancel, isSaving, externalButtons, formId, serverErrors }: VehicleDataFormProps) {
     const [form, setForm] = useState<VehicleFormState>(() => buildInitialState(mode, vehicle));
-    const [images, setImages] = useState<{ primaryImageUrl: string | null; imageUrls: string[] }>({
-        primaryImageUrl: vehicle?.primaryImageUrl 
-            ? vehicle.primaryImageUrl.startsWith('/uploads/')
-                ? vehicle.primaryImageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')
-                : vehicle.primaryImageUrl
-            : null,
-        imageUrls: vehicle?.imageUrls && vehicle.imageUrls.length > 0
-            ? vehicle.imageUrls.map((url: string) => url.startsWith('/uploads/') ? url.replace(/\.(jpg|jpeg|png)$/i, '.webp') : url)
-            : []
-    });
-    const [specificationUrl, setSpecificationUrl] = useState<string | null>(vehicle?.specificationUrl ?? null);
 
     const setField = (field: keyof VehicleFormState, value: any) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -137,6 +137,11 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
             equipmentSafety: textToArray(form.equipmentSafety),
             equipmentComfortExtras: textToArray(form.equipmentComfortExtras),
             equipmentOther: textToArray(form.equipmentOther),
+            primaryImageUrl: form.primaryImageUrl || null,
+            imageUrls: form.imageUrls || [],
+            specificationPdfUrl: form.specificationPdfUrl || null,
+            pendingImageFiles: form.pendingImageFiles || [],
+            pendingPdfFile: form.pendingPdfFile || null,
         };
 
         if (mode === 'sale') {
@@ -221,17 +226,24 @@ export function VehicleDataForm({ mode, vehicle, dealers, companies, isImported,
                 <ImagesSection
                     mode={mode}
                     vehicleId={vehicle?.id}
-                    primaryImageUrl={images.primaryImageUrl}
-                    imageUrls={images.imageUrls}
-                    onUpdated={setImages}
+                    primaryImageUrl={form.primaryImageUrl}
+                    imageUrls={form.imageUrls}
+                    onUpdated={data => {
+                        setField('primaryImageUrl', data.primaryImageUrl);
+                        setField('imageUrls', data.imageUrls);
+                    }}
+                    pendingImageFiles={form.pendingImageFiles}
+                    onUpdatePendingFiles={files => setField('pendingImageFiles', files)}
                 />
             </Section>
             <Section title="Specyfikacja">
                 <SpecificationSection
                     mode={mode}
                     vehicleId={vehicle?.id}
-                    specificationUrl={specificationUrl}
-                    onUpdated={setSpecificationUrl}
+                    specificationUrl={form.specificationPdfUrl}
+                    onUpdated={url => setField('specificationPdfUrl', url)}
+                    pendingPdfFile={form.pendingPdfFile}
+                    onUpdatePendingFile={file => setField('pendingPdfFile', file)}
                 />
             </Section>
 

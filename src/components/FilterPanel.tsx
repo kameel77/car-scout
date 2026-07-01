@@ -40,6 +40,7 @@ export interface FilterState {
   rateType: 'credit' | 'lease';
   rateBasis: 'gross' | 'net';
   query: string;
+  cities: string[];
 }
 
 export interface ListingFacets {
@@ -49,6 +50,7 @@ export interface ListingFacets {
   transmission: Record<string, number>;
   bodyType: Record<string, number>;
   drive: Record<string, number>;
+  city: Record<string, number>;
 }
 
 interface FilterPanelProps {
@@ -324,6 +326,10 @@ export function FilterPanel({
     .map((m) => ({ value: m, label: m }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
+  const cityOptions = (facets?.city ? Object.keys(facets.city) : [])
+    .map((c) => ({ value: c, label: c }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
   const filteredModels = filters.makes.length
     ? allModels.filter((m) => filters.makes.includes(m.make))
     : [];
@@ -595,6 +601,20 @@ export function FilterPanel({
             selected={filters.bodyTypes}
             onChange={(v) => updateFilter('bodyTypes', v)}
             counts={facets?.bodyType}
+          />
+        </FilterSection>
+
+        <Separator />
+
+        {/* Location (City) */}
+        <FilterSection title={t('filters.location', 'Lokalizacja')}>
+          <MultiSelect
+            options={cityOptions}
+            selected={filters.cities}
+            onChange={(v) => updateFilter('cities', v)}
+            searchable
+            searchPlaceholder={t('filters.selectCity', 'Wybierz miasto')}
+            counts={facets?.city}
           />
         </FilterSection>
       </div>
