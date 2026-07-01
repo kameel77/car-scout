@@ -50,8 +50,12 @@ export function IdentificationSection({ form, setField, mode, isImported, errors
                 if (!form.equipmentOther && Array.isArray(spec.equipmentOther) && spec.equipmentOther.length) setField('equipmentOther', spec.equipmentOther.join('\n'));
 
                 // Images and PDF
-                if (spec.primaryImageUrl) setField('primaryImageUrl', spec.primaryImageUrl);
-                if (Array.isArray(spec.imageUrls) && spec.imageUrls.length) setField('imageUrls', spec.imageUrls);
+                if (Array.isArray(spec.imageUrls) && spec.imageUrls.length) {
+                    setField('imageUrls', spec.imageUrls);
+                    if (!form.primaryImageUrl) {
+                        setField('primaryImageUrl', spec.imageUrls[0]);
+                    }
+                }
                 if (spec.specificationPdfUrl) setField('specificationPdfUrl', spec.specificationPdfUrl);
             }
         }
