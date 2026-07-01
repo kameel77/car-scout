@@ -624,6 +624,15 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 specification: true
             }
         });
+        let isAuthenticated = false;
+        try {
+            if (request.headers.authorization) {
+                await request.jwtVerify();
+                isAuthenticated = true;
+            }
+        } catch (e) {
+            // Ignore token errors for public view
+        }
 
         return { listings: listings.map(l => sanitizeListing(l, isAuthenticated)) };
     });
