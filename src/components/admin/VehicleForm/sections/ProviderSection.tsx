@@ -28,23 +28,33 @@ export function ProviderSection({ form, setField, mode, dealers, companies = [] 
             <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 block">Dealer *</label>
                 <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={open}
-                            className="w-full justify-between font-normal text-left h-10 px-3 bg-white hover:bg-white border-input"
-                        >
-                            <span className="truncate">
-                                {selectedDealer 
-                                    ? `${selectedDealer.name}${selectedDealer.city ? ` (${selectedDealer.city})` : ''}`
-                                    : "Wybierz dealera..."
-                                }
-                            </span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
+                    <div className="relative w-full">
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={open}
+                                className="w-full justify-between font-normal text-left h-10 px-3 bg-white hover:bg-white border-input"
+                            >
+                                <span className="truncate">
+                                    {selectedDealer 
+                                        ? `${selectedDealer.name}${selectedDealer.city ? ` (${selectedDealer.city})` : ''}`
+                                        : "Wybierz dealera..."
+                                    }
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <input
+                            type="text"
+                            value={dealerId}
+                            onChange={() => {}}
+                            required
+                            className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+                            tabIndex={-1}
+                        />
+                    </div>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
                         <div className="flex items-center border-b px-3 bg-white">
                             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
@@ -115,18 +125,28 @@ export function ProviderSection({ form, setField, mode, dealers, companies = [] 
         <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 block">Dostawca *</label>
             <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={open}
-                        className="w-full justify-between font-normal text-left h-10 px-3 bg-white hover:bg-white border-input"
-                    >
-                        <span className="truncate">{selectedLabel}</span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
+                <div className="relative w-full">
+                    <PopoverTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={open}
+                            className="w-full justify-between font-normal text-left h-10 px-3 bg-white hover:bg-white border-input"
+                        >
+                            <span className="truncate">{selectedLabel}</span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <input
+                        type="text"
+                        value={form.providerId || ''}
+                        onChange={() => {}}
+                        required
+                        className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+                        tabIndex={-1}
+                    />
+                </div>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
                     <div className="flex items-center border-b px-3 bg-white">
                         <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
