@@ -43,6 +43,11 @@ export function IdentificationSection({ form, setField, mode, isImported, errors
                 if (!form.color && spec.color) setField('color', spec.color);
                 
                 if (!form.catalogPrice && spec.catalogPrice) setField('catalogPrice', String(spec.catalogPrice));
+                
+                if (!form.pricePln && spec.discountedPrice) setField('pricePln', String(spec.discountedPrice));
+                else if (!form.pricePln && spec.catalogPrice) setField('pricePln', String(spec.catalogPrice));
+                
+                if (!form.providerId && spec.dealerId) setField('providerId', `dealer_${spec.dealerId}`);
 
                 if (!form.equipmentAudioMultimedia && Array.isArray(spec.equipmentAudioMultimedia) && spec.equipmentAudioMultimedia.length) setField('equipmentAudioMultimedia', spec.equipmentAudioMultimedia.join('\n'));
                 if (!form.equipmentSafety && Array.isArray(spec.equipmentSafety) && spec.equipmentSafety.length) setField('equipmentSafety', spec.equipmentSafety.join('\n'));
@@ -111,7 +116,7 @@ export function IdentificationSection({ form, setField, mode, isImported, errors
                                         {specifications.map((s: any) => (
                                             <CommandItem
                                                 key={s.id}
-                                                value={`${s.brand} ${s.model} ${s.version} ${s.manufacturingYear} ${s.enginePowerHp}KM`}
+                                                value={`${s.brand} ${s.model} ${s.version} (${s.manufacturingYear}) - ${s.enginePowerHp}KM`}
                                                 onSelect={() => handleSpecChange(s.id)}
                                             >
                                                 <Check
