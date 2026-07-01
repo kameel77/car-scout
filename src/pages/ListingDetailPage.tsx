@@ -1245,47 +1245,49 @@ export default function ListingDetailPage() {
               ))}
 
               {/* Dealer Card */}
-              {canManage && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="bg-card rounded-xl shadow-card p-6 space-y-4"
-                >
-                  <h3 className="font-heading font-semibold">{t('detail.dealerInfo')}</h3>
-                  <div>
-                    <p className="font-medium text-foreground">{listing.dealer_name}</p>
-                    <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                      <span>
-                        {(() => {
-                          const parts: string[] = [];
-                          if (listing.dealer_address_line1) parts.push(listing.dealer_address_line1);
-                          if (listing.dealer_address_line2) parts.push(listing.dealer_address_line2);
-                          if (listing.dealer_address_line3) parts.push(listing.dealer_address_line3);
-                          // Dla dealerów CSFlow: city i postalCode są osobnymi polami
-                          if (!listing.dealer_address_line2) {
-                            const postalCity = [listing.dealer_postal_code, listing.dealer_city].filter(Boolean).join(' ');
-                            if (postalCity) parts.push(postalCity);
-                          }
-                          return parts.join(', ') || '—';
-                        })()}
-                      </span>
-                    </div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-card rounded-xl shadow-card p-6 space-y-4"
+              >
+                <h3 className="font-heading font-semibold">{t('detail.dealerInfo')}</h3>
+                <div>
+                  <p className="font-medium text-foreground">{listing.dealer_name}</p>
+                  <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                    <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>
+                      {(() => {
+                        if (!user) return listing.dealer_city || '—';
+
+                        const parts: string[] = [];
+                        if (listing.dealer_address_line1) parts.push(listing.dealer_address_line1);
+                        if (listing.dealer_address_line2) parts.push(listing.dealer_address_line2);
+                        if (listing.dealer_address_line3) parts.push(listing.dealer_address_line3);
+                        // Dla dealerów CSFlow: city i postalCode są osobnymi polami
+                        if (!listing.dealer_address_line2) {
+                          const postalCity = [listing.dealer_postal_code, listing.dealer_city].filter(Boolean).join(' ');
+                          if (postalCity) parts.push(postalCity);
+                        } else if (listing.dealer_city && !parts.some(p => p.includes(listing.dealer_city!))) {
+                          parts.push(listing.dealer_city);
+                        }
+                        return parts.join(', ') || '—';
+                      })()}
+                    </span>
                   </div>
-                  {listing.google_rating && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 text-warning">
-                        <Star className="h-4 w-4 fill-current" />
-                        <span className="font-medium">{listing.google_rating}</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        ({listing.google_reviews_count} opinii)
-                      </span>
+                </div>
+                {listing.google_rating && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-warning">
+                      <Star className="h-4 w-4 fill-current" />
+                      <span className="font-medium">{listing.google_rating}</span>
                     </div>
-                  )}
-                </motion.div>
-              )}
+                    <span className="text-sm text-muted-foreground">
+                      ({listing.google_reviews_count} opinii)
+                    </span>
+                  </div>
+                )}
+              </motion.div>
             </div>
           </div>
         </div>

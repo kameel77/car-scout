@@ -9,6 +9,11 @@ export interface VehicleFormState {
     productionYear: string;
     condition: 'NEW' | 'USED';         // sale only
     specificationId?: string;
+    imageUrls?: string[];              // from specification or URLs
+    primaryImageUrl?: string;          // from specification
+    specificationPdfUrl?: string;      // from specification
+    pendingImageFiles?: File[];        // local files waiting to be uploaded
+    pendingPdfFile?: File | null;      // local file waiting to be uploaded
 
     // Technical
     bodyType: string;

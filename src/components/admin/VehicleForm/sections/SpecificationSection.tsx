@@ -11,6 +11,8 @@ interface SpecificationSectionProps {
     vehicleId?: string;
     specificationUrl?: string | null;
     onUpdated: (specificationUrl: string | null) => void;
+    pendingPdfFile?: File | null;
+    onUpdatePendingFile?: (file: File | null) => void;
 }
 
 /**
@@ -24,7 +26,7 @@ function specBase(mode: VehicleFormMode, id: string) {
         : `/api/rental-vehicles/${id}/specs`;
 }
 
-export function SpecificationSection({ mode, vehicleId, specificationUrl, onUpdated }: SpecificationSectionProps) {
+export function SpecificationSection({ mode, vehicleId, specificationUrl, onUpdated, pendingPdfFile, onUpdatePendingFile }: SpecificationSectionProps) {
     const { token } = useAuth();
     const { toast } = useToast();
     const [urlInput, setUrlInput] = useState('');
@@ -33,9 +35,6 @@ export function SpecificationSection({ mode, vehicleId, specificationUrl, onUpda
     const [clearing, setClearing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    if (!vehicleId) {
-        return <p className="text-sm text-gray-500">Specyfikację będzie można dodać po zapisaniu pojazdu.</p>;
-    }
 
     const auth = { Authorization: `Bearer ${token}` };
     const base = specBase(mode, vehicleId);
@@ -44,6 +43,13 @@ export function SpecificationSection({ mode, vehicleId, specificationUrl, onUpda
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        if (!vehicleId) {
+            if (onUpdatePendingFile) onUpdatePendingFile(file);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            toast({ title: 'PDF dodany', description: 'Zostanie wgrany po zapisaniu.' });
+            return;
+        }
 
         const formData = new FormData();
         formData.append('file', file);
@@ -71,6 +77,14 @@ export function SpecificationSection({ mode, vehicleId, specificationUrl, onUpda
     // ── Save URL ──────────────────────────────────────────────────────────────
     const handleSaveUrl = async () => {
         if (!urlInput.trim()) return;
+
+        if (!vehicleId) {
+            onUpdated(urlInput.trim());
+            setUrlInput('');
+            toast({ title: 'Link dodany' });
+            return;
+        }
+
         setSavingUrl(true);
         try {
             let url: string | null = null;
@@ -108,6 +122,14 @@ export function SpecificationSection({ mode, vehicleId, specificationUrl, onUpda
     // ── Clear ─────────────────────────────────────────────────────────────────
     const handleClear = async () => {
         if (!confirm('Usunąć specyfikację?')) return;
+
+        if (!vehicleId) {
+            onUpdated(null);
+            if (onUpdatePendingFile) onUpdatePendingFile(null);
+            toast({ title: 'Specyfikacja usunięta' });
+            return;
+        }
+
         setClearing(true);
         try {
             if (mode === 'sale') {
@@ -156,6 +178,26 @@ export function SpecificationSection({ mode, vehicleId, specificationUrl, onUpda
                         onClick={handleClear}
                         disabled={clearing}
                         title="Usuń specyfikację"
+                    >
+                        <X className="w-3 h-3" />
+                    </Button>
+                </div>
+            )}
+            
+            {/* Pending PDF display */}
+            {pendingPdfFile && (
+                <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm">
+                    <FileText className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                    <span className="text-yellow-700 truncate flex-1">
+                        Do wgrania: {pendingPdfFile.name}
+                    </span>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700 flex-shrink-0"
+                        onClick={() => onUpdatePendingFile && onUpdatePendingFile(null)}
+                        title="Usuń plik z kolejki"
                     >
                         <X className="w-3 h-3" />
                     </Button>
