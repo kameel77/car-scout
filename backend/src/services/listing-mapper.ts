@@ -117,7 +117,7 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
         specification: body.specificationId ? { connect: { id: body.specificationId } } : undefined,
         primaryImageUrl: body.primaryImageUrl || undefined,
         imageUrls: Array.isArray(body.imageUrls) ? body.imageUrls : [],
-        specificationPdfUrl: body.specificationPdfUrl || undefined,
+        specificationUrl: body.specificationPdfUrl || undefined,
     };
 }
 
