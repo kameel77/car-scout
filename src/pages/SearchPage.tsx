@@ -57,6 +57,7 @@ const emptyFilters: FilterState = {
   rateType: 'credit',
   rateBasis: 'gross',
   query: '',
+  cities: [],
 };
 
 // Helper to parse arrays from URL
@@ -118,6 +119,7 @@ export default function SearchPage() {
       rateBasis: rb ? (rb === 'net' ? 'net' : 'gross') : (isLeasingPath ? 'net' : 'gross'),
 
       query: searchText,
+      cities: parseArray(searchParams.get('city')),
     };
   });
 
@@ -219,6 +221,7 @@ export default function SearchPage() {
       if ((filters.rateFrom || filters.rateTo) && filters.rateBasis !== 'gross') params.set('rateBasis', filters.rateBasis);
 
       if (filters.query) params.set('q', filters.query);
+      if (filters.cities.length) params.set('city', filters.cities.join(','));
       if (sortBy !== defaultSortCars) params.set('sortBy', sortBy);
       if (page > 1) params.set('page', page.toString());
       if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());

@@ -12,6 +12,8 @@ interface ImagesSectionProps {
     primaryImageUrl?: string | null;
     imageUrls?: string[];
     onUpdated: (data: { primaryImageUrl: string | null; imageUrls: string[] }) => void;
+    pendingImageFiles?: File[];
+    onUpdatePendingFiles?: (files: File[]) => void;
 }
 
 const BASE = (mode: VehicleFormMode, id: string) => {
@@ -50,7 +52,7 @@ function extractImages(data: any, mode: VehicleFormMode, fallback: { primaryImag
     };
 }
 
-export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = [], onUpdated }: ImagesSectionProps) {
+export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = [], onUpdated, pendingImageFiles = [], onUpdatePendingFiles }: ImagesSectionProps) {
     const { token } = useAuth();
     const { toast } = useToast();
     const [uploading, setUploading] = useState(false);
@@ -65,12 +67,17 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
 
     // ── Upload from disk ──────────────────────────────────────────────────────
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!vehicleId) {
-            toast({ title: 'Najpierw zapisz pojazd', description: 'Zdjęcia można dodać po utworzeniu rekordu.' });
-            return;
-        }
         const files = e.target.files;
         if (!files || files.length === 0) return;
+
+        if (!vehicleId) {
+            if (onUpdatePendingFiles) {
+                onUpdatePendingFiles([...pendingImageFiles, ...Array.from(files)]);
+            }
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            toast({ title: 'Zdjęcie dodane do kolejki', description: 'Zostanie wgrane po zapisaniu.' });
+            return;
+        }
 
         const formData = new FormData();
         for (const f of Array.from(files)) formData.append('files', f);
@@ -93,7 +100,15 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
 
     // ── Add by URL ────────────────────────────────────────────────────────────
     const handleAddUrl = async () => {
-        if (!vehicleId || !urlInput.trim()) return;
+        if (!urlInput.trim()) return;
+
+        if (!vehicleId) {
+            onUpdated({ primaryImageUrl: primaryImageUrl ?? null, imageUrls: [...imageUrls, urlInput.trim()] });
+            setUrlInput('');
+            toast({ title: 'Link dodany' });
+            return;
+        }
+
         setAddingUrl(true);
         try {
             const res = await fetch(`${baseUrl}/url`, {
@@ -115,7 +130,10 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
 
     // ── Set primary ───────────────────────────────────────────────────────────
     const handleSetPrimary = async (url: string) => {
-        if (!vehicleId) return;
+        if (!vehicleId) {
+            onUpdated({ primaryImageUrl: url, imageUrls });
+            return;
+        }
 
         const endpoint = mode === 'sale'
             ? `${baseUrl}/primary`
@@ -142,7 +160,12 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
 
     // ── Delete ────────────────────────────────────────────────────────────────
     const handleDelete = async (url: string) => {
-        if (!vehicleId) return;
+        if (!vehicleId) {
+            const nextUrls = imageUrls.filter(u => u !== url);
+            onUpdated({ primaryImageUrl: primaryImageUrl === url ? (nextUrls[0] || null) : primaryImageUrl, imageUrls: nextUrls });
+            return;
+        }
+
         setDeletingUrl(url);
         try {
             // Listing uses body.url, rental uses body.imageUrl
@@ -174,12 +197,16 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
 
     // ── Reorder ───────────────────────────────────────────────────────────────
     const handleMove = async (index: number, direction: 'left' | 'right') => {
-        if (!vehicleId) return;
         const newIndex = direction === 'left' ? index - 1 : index + 1;
         if (newIndex < 0 || newIndex >= imageUrls.length) return;
 
         const newUrls = [...imageUrls];
         [newUrls[index], newUrls[newIndex]] = [newUrls[newIndex], newUrls[index]];
+
+        if (!vehicleId) {
+            onUpdated({ primaryImageUrl: primaryImageUrl ?? null, imageUrls: newUrls });
+            return;
+        }
 
         setMoving(true);
         try {
@@ -199,15 +226,20 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
         }
     };
 
-    // ── Not-yet-saved state ───────────────────────────────────────────────────
-    if (!vehicleId) {
-        return <p className="text-sm text-gray-500">Zdjęcia będzie można dodać po zapisaniu pojazdu.</p>;
-    }
+    const handleRemovePending = (index: number) => {
+        if (onUpdatePendingFiles) {
+            const arr = [...pendingImageFiles];
+            arr.splice(index, 1);
+            onUpdatePendingFiles(arr);
+        }
+    };
+
+    const totalImagesCount = imageUrls.length + pendingImageFiles.length;
 
     return (
         <div className="space-y-4">
             {/* Preview grid */}
-            {imageUrls.length > 0 && (
+            {totalImagesCount > 0 && (
                 <div className="flex gap-4 flex-wrap">
                     {imageUrls.map((url, i) => (
                         <div
@@ -271,6 +303,26 @@ export function ImagesSection({ mode, vehicleId, primaryImageUrl, imageUrls = []
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {pendingImageFiles.map((file, i) => (
+                        <div key={`pending-${i}`} className="group relative w-32 h-32 rounded-lg overflow-hidden border-2 border-dashed border-gray-300">
+                            <img src={URL.createObjectURL(file)} alt="Oczekujące zdjęcie" className="w-full h-full object-cover opacity-80" />
+                            <span className="absolute top-0 left-0 right-0 bg-gray-500/85 text-white text-[10px] font-bold py-0.5 text-center uppercase tracking-wider backdrop-blur-sm select-none">
+                                Do wgrania
+                            </span>
+                            <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-1">
+                                <div className="flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemovePending(i)}
+                                        className="p-1 hover:bg-red-500/60 rounded text-red-300 transition-colors"
+                                        title="Usuń z kolejki"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                         </div>

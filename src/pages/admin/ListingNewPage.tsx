@@ -35,9 +35,22 @@ export default function ListingNewPage() {
         setIsSaving(true);
         try {
             const result = await listingsApi.createListing(data, token);
+            const listingId = result.listing.id;
+
+            // Upload pending images if any
+            if (data.pendingImageFiles && data.pendingImageFiles.length > 0) {
+                const setPrimary = !data.imageUrls || data.imageUrls.length === 0;
+                await listingsApi.uploadImages(listingId, data.pendingImageFiles, setPrimary, token);
+            }
+
+            // Upload pending PDF if any
+            if (data.pendingPdfFile) {
+                await listingsApi.uploadSpecificationPdf(listingId, data.pendingPdfFile, token);
+            }
+
             queryClient.invalidateQueries({ queryKey: ['listings'] });
             toast({ title: 'Pojazd dodany' });
-            navigate(`/admin/listings/${result.listing.id}/edit`);
+            navigate(`/admin/listings/${listingId}/edit`);
         } catch (e: any) {
             toast({ title: 'Błąd', description: e.message, variant: 'destructive' });
         } finally {
