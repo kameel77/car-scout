@@ -132,7 +132,11 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
   const brandColor = getBrandColor(listing.make);
 
   const motoliaDiscount = listing.motoliaDiscountPln ?? 0;
-  const showMotolia = !!listing.showMotoliaDiscount && motoliaDiscount > 0;
+  const displayPrice = getDisplayPrice(listing);
+  const showMotolia = !!listing.showMotoliaDiscount && (
+    motoliaDiscount > 0 || 
+    (!!listing.catalogPrice && listing.catalogPrice > displayPrice)
+  );
 
   const priceInfo = React.useMemo(() => {
     const currency = settings?.displayCurrency || 'PLN';

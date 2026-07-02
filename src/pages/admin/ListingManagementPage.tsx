@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useListings } from '@/hooks/useListings';
 import { AdminListingList } from '@/components/admin/ListingManagement/AdminListingList';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const initialFilters: FilterState = {
     makes: [],
@@ -65,6 +74,10 @@ export default function ListingManagementPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [page]);
 
     const filters = useMemo(() => ({
         ...initialFilters,
@@ -273,6 +286,71 @@ export default function ListingManagementPage() {
         setSelectedIds([]);
     };
 
+    const renderPaginationItems = () => {
+        const totalPages = data?.totalPages || 1;
+        const items = [];
+        const maxVisible = 5;
+
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) {
+                items.push(
+                    <PaginationItem key={i}>
+                        <PaginationLink 
+                            onClick={(e) => { e.preventDefault(); setPage(i); }} 
+                            isActive={page === i}
+                            className="cursor-pointer"
+                        >
+                            {i}
+                        </PaginationLink>
+                    </PaginationItem>
+                );
+            }
+        } else {
+            // Complex pagination with ellipsis
+            const showStart = page > 3;
+            const showEnd = page < totalPages - 2;
+
+            if (showStart) {
+                items.push(
+                    <PaginationItem key={1}>
+                        <PaginationLink onClick={(e) => { e.preventDefault(); setPage(1); }} className="cursor-pointer">1</PaginationLink>
+                    </PaginationItem>
+                );
+                items.push(<PaginationEllipsis key="start-ellipsis" />);
+            }
+
+            const start = Math.max(1, showStart ? page - 1 : 1);
+            const end = Math.min(totalPages, showEnd ? page + 1 : totalPages);
+
+            for (let i = start; i <= end; i++) {
+                if (i === 1 && showStart) continue;
+                if (i === totalPages && showEnd) continue;
+                items.push(
+                    <PaginationItem key={i}>
+                        <PaginationLink 
+                            onClick={(e) => { e.preventDefault(); setPage(i); }} 
+                            isActive={page === i}
+                            className="cursor-pointer"
+                        >
+                            {i}
+                        </PaginationLink>
+                    </PaginationItem>
+                );
+            }
+
+            if (showEnd) {
+                items.push(<PaginationEllipsis key="end-ellipsis" />);
+                items.push(
+                    <PaginationItem key={totalPages}>
+                        <PaginationLink onClick={(e) => { e.preventDefault(); setPage(totalPages); }} className="cursor-pointer">{totalPages}</PaginationLink>
+                    </PaginationItem>
+                );
+            }
+        }
+
+        return items;
+    };
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -410,11 +488,31 @@ export default function ListingManagementPage() {
                 onDuplicateOffer={handleDuplicateOffer}
             />
 
-            {/* Pagination placeholder */}
+            {/* Pagination */}
             {data?.totalPages && data.totalPages > 1 && (
-                <div className="flex justify-center mt-8">
-                    {/* We can add Pagination component here later if needed */}
-                    <p className="text-sm text-gray-500">Strona {page} z {data.totalPages}</p>
+                <div className="mt-8">
+                    <Pagination>
+                        <PaginationContent>
+                            <PaginationItem>
+                                <PaginationPrevious 
+                                    onClick={(e) => { e.preventDefault(); if (page > 1) setPage(page - 1); }}
+                                    className={cn("cursor-pointer", page === 1 && "opacity-50 pointer-events-none")}
+                                />
+                            </PaginationItem>
+                            
+                            {renderPaginationItems()}
+
+                            <PaginationItem>
+                                <PaginationNext 
+                                    onClick={(e) => { e.preventDefault(); if (page < data.totalPages) setPage(page + 1); }}
+                                    className={cn("cursor-pointer", page === data.totalPages && "opacity-50 pointer-events-none")}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                    <p className="text-center text-xs text-gray-400 mt-2">
+                        Strona {page} z {data.totalPages}
+                    </p>
                 </div>
             )}
 
