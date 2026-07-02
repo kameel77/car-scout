@@ -77,6 +77,13 @@ export async function downloadAndCacheImages(
                         return;
                     }
 
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('image')) {
+                        console.warn(`[CSFlow Images] Nieprawidłowy Content-Type (${contentType}) dla ${url} — zachowuję oryginalny URL`);
+                        results[globalIdx] = url;
+                        return;
+                    }
+
                     const buffer = await response.buffer();
                     const { largeFilename } = await optimizeAndSaveImage(buffer, {
                         targetDir,
