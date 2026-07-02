@@ -310,13 +310,12 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
             return reply.code(413).send({ error: 'File too large (max 5MB)' });
         }
 
-        let url: string;
         const baseFilename = `${id}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
         const { largeFilename } = await optimizeAndSaveImage(buffer, {
             targetDir: TILES_DIR,
             baseFilename,
         });
-        url = `/uploads/feature-tiles/${largeFilename}`;
+        const url = `/uploads/feature-tiles/${largeFilename}`;
 
         // Delete previous image file
         if (tile.imageUrl?.startsWith('/uploads/feature-tiles/')) {

@@ -441,10 +441,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Invalid file type. Use png/jpg/webp.' });
         }
 
-        let buffer = await file.toBuffer();
-        let mimeType = 'image/webp';
+        const mimeType = 'image/webp';
 
-        buffer = await sharp(buffer)
+        const buffer = await sharp(await file.toBuffer())
             .resize({ width: 800, withoutEnlargement: true }) // ograniczenie wielkości logotypu
             .webp({ quality: 90 }) // konwersja do lekkiego formatu
             .toBuffer();

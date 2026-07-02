@@ -166,10 +166,9 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
       return reply.code(413).send({ error: 'File too large (max 8MB)' });
     }
 
-    let url: string;
     const baseFilename = `${id}-${slot ?? 'desktop'}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
     const { largeFilename } = await optimizeAndSaveImage(buffer, { targetDir: BANNERS_DIR, baseFilename });
-    url = `/uploads/hero-banners/${largeFilename}`;
+    const url = `/uploads/hero-banners/${largeFilename}`;
 
     const prevUrl = isMobile ? banner.imageUrlMobile : banner.imageUrlDesktop;
     await unlinkBannerImage(prevUrl);
