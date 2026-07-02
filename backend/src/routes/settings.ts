@@ -73,7 +73,7 @@ const toNumberOrFallback = (value: unknown, fallback: number) => {
 };
 
 const LOGO_DIR = path.resolve(process.cwd(), 'uploads', 'logos');
-const ALLOWED_LOGO_EXT = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
+const ALLOWED_LOGO_EXT = ['.png', '.jpg', '.jpeg', '.webp'];
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 const LEGAL_URL_SLUGS: Record<LegalDocKey, string> = {
@@ -438,20 +438,16 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
         const ext = path.extname(file.filename).toLowerCase();
         if (!ALLOWED_LOGO_EXT.includes(ext)) {
-            return reply.code(400).send({ error: 'Invalid file type. Use png/jpg/svg/webp.' });
+            return reply.code(400).send({ error: 'Invalid file type. Use png/jpg/webp.' });
         }
 
         let buffer = await file.toBuffer();
         let mimeType = 'image/webp';
 
-        if (ext === '.svg') {
-            mimeType = 'image/svg+xml';
-        } else {
-            buffer = await sharp(buffer)
-                .resize({ width: 800, withoutEnlargement: true }) // ograniczenie wielkości logotypu
-                .webp({ quality: 90 }) // konwersja do lekkiego formatu
-                .toBuffer();
-        }
+        buffer = await sharp(buffer)
+            .resize({ width: 800, withoutEnlargement: true }) // ograniczenie wielkości logotypu
+            .webp({ quality: 90 }) // konwersja do lekkiego formatu
+            .toBuffer();
 
         const base64 = buffer.toString('base64');
         const url = `data:${mimeType};base64,${base64}`;
