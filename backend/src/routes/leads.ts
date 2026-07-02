@@ -110,7 +110,9 @@ const generateReference = () => {
 
 export async function leadRoutes(fastify: FastifyInstance) {
     // Create new lead from public form (sale)
-    fastify.post('/api/leads', async (request, reply) => {
+    fastify.post('/api/leads', {
+        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+    }, async (request, reply) => {
         const data = request.body as LeadPayload & { turnstileToken?: string };
 
         const isTokenValid = await verifyTurnstile(data.turnstileToken, request.ip, fastify.log);
@@ -169,7 +171,9 @@ export async function leadRoutes(fastify: FastifyInstance) {
     });
 
     // Create new negotiation lead from listing page
-    fastify.post('/api/leads/negotiation', async (request, reply) => {
+    fastify.post('/api/leads/negotiation', {
+        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+    }, async (request, reply) => {
         const data = request.body as NegotiationLeadPayload & { turnstileToken?: string };
 
         const isTokenValid = await verifyTurnstile(data.turnstileToken, request.ip, fastify.log);
@@ -265,7 +269,9 @@ export async function leadRoutes(fastify: FastifyInstance) {
     });
 
     // Create new rental lead from calculator page
-    fastify.post('/api/leads/rental', async (request, reply) => {
+    fastify.post('/api/leads/rental', {
+        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+    }, async (request, reply) => {
         const data = request.body as RentalLeadPayload & { turnstileToken?: string };
 
         const isTokenValid = await verifyTurnstile(data.turnstileToken, request.ip, fastify.log);
@@ -324,7 +330,9 @@ export async function leadRoutes(fastify: FastifyInstance) {
     });
 
     // Create new quick contact lead from CTA
-    fastify.post('/api/leads/quick', async (request, reply) => {
+    fastify.post('/api/leads/quick', {
+        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+    }, async (request, reply) => {
         const body = request.body as any;
         const phone = body.phone;
         const name = body.name || 'Szybki Kontakt';
