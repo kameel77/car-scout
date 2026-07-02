@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { useListings } from '@/hooks/useListings';
 import { AdminListingList } from '@/components/admin/ListingManagement/AdminListingList';
 import { Input } from '@/components/ui/input';
