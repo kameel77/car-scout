@@ -111,6 +111,22 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
             slug: generateListingSlug(r.make, r.model, r.version, r.productionYear, r.bodyType, r.fuelType, r.id)
         }));
 
+        const variant = lm[1] as ListingVariant;
+
+        // FAQ sprofilowane pod wariant finansowania — ten sam filtr co GET /api/faq
+        const variantFaq = variant !== 'oferta'
+            ? await fastify.prisma.faqEntry.findMany({
+                  where: {
+                      isPublished: true,
+                      page: 'offers',
+                      pageContext: { in: ['all', 'offers'] },
+                      OR: [{ financingType: variant }, { financingType: null }, { financingType: 'all' }],
+                  },
+                  orderBy: { sortOrder: 'asc' },
+                  select: { questionPl: true, answerPl: true },
+              })
+            : [];
+
         // Slug z URL bywa zmanipulowany — canonical liczymy z danych, nie z requestu
         const canonicalSlug = generateListingSlug(
             listing.make,
@@ -121,7 +137,7 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
             listing.fuelType,
             id
         );
-        return buildListingMeta(listing, canonicalSlug, lm[1] as ListingVariant, ctx, related);
+        return buildListingMeta(listing, canonicalSlug, variant, ctx, related, variantFaq);
     }
 
     const rm = path.match(RENTAL_RE);

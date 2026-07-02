@@ -84,12 +84,28 @@ export interface RelatedListing {
     slug: string;
 }
 
+export interface FaqItem {
+    questionPl: string;
+    answerPl: string;
+}
+
+// Widoczne FAQ (bez FAQPage JSON-LD — strona kanonikalizuje do /oferta, schema byłaby ignorowana)
+function faqSectionHtml(faq: FaqItem[], heading: string): string {
+    if (!faq.length) return '';
+    return `
+  <section>
+    <h2>${escapeHtml(heading)}</h2>
+    ${faq.map(f => `<h3>${escapeHtml(f.questionPl)}</h3>\n<p>${htmlToText(f.answerPl)}</p>`).join('\n')}
+  </section>`;
+}
+
 export function buildListingMeta(
     l: ListingMetaInput,
     slug: string,
     variant: ListingVariant,
     ctx: BrandCtx,
-    related: RelatedListing[] = []
+    related: RelatedListing[] = [],
+    faq: FaqItem[] = []
 ): PageMeta {
     const name = [l.make, l.model, l.version, String(l.productionYear)].filter(Boolean).join(' ');
     const price = l.pricePln.toLocaleString('pl-PL');
@@ -132,6 +148,27 @@ export function buildListingMeta(
     </tbody>
   </table>
   ${l.additionalInfoContent ? `<div class="description">${htmlToText(l.additionalInfoContent)}</div>` : ''}
+  ${variant === 'kredyt' ? `
+  <section>
+    <h2>Kredyt samochodowy na ten pojazd</h2>
+    <p>${safeName} w cenie ${price} zł możesz sfinansować kredytem samochodowym przez ${escapeHtml(ctx.brandName)} — wniosek online, decyzja bez wizyty w banku, auto dostępne od ręki u dealera.</p>
+    <ol>
+      <li>Wybierz okres finansowania i wysokość wpłaty własnej w kalkulatorze przy ofercie.</li>
+      <li>Zostaw kontakt — doradca przygotuje ofertę kredytową dopasowaną do Twoich potrzeb.</li>
+      <li>Podpisz umowę i odbierz samochód u dealera.</li>
+    </ol>
+  </section>` : ''}
+  ${variant === 'leasing' ? `
+  <section>
+    <h2>Leasing tego pojazdu</h2>
+    <p>${safeName} w cenie ${price} zł dostępny w leasingu przez ${escapeHtml(ctx.brandName)} — minimum formalności, decyzja online, auto od ręki u dealera. Oferta dla firm i przedsiębiorców.</p>
+    <ol>
+      <li>Wybierz okres leasingu, wpłatę wstępną i wykup w kalkulatorze przy ofercie.</li>
+      <li>Zostaw kontakt — doradca przygotuje ofertę leasingową dopasowaną do Twojej firmy.</li>
+      <li>Podpisz umowę i odbierz samochód u dealera.</li>
+    </ol>
+  </section>` : ''}
+  ${faqSectionHtml(faq, variant === 'kredyt' ? 'Najczęstsze pytania o kredyt' : variant === 'leasing' ? 'Najczęstsze pytania o leasing' : 'Najczęstsze pytania')}
   ${related.length > 0 ? `
   <section>
     <h2>Podobne oferty</h2>

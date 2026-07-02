@@ -83,6 +83,26 @@ describe('buildListingMeta', () => {
         expect(m.title).toContain('— leasing');
         expect(m.canonical).toBe('https://dev.motolia.pl/oferta/ford-puma-abc123');
         expect((m.jsonLd as any)['@type']).toBe('BreadcrumbList');
+        expect(m.bodyHtml).toContain('<h2>Leasing tego pojazdu</h2>');
+    });
+
+    it('kredyt variant: financing section and escaped FAQ in bodyHtml, no FAQPage JSON-LD', () => {
+        const faq = [
+            { questionPl: 'Jaki wkład własny?', answerPl: '<p>Od <b>0%</b> wartości auta.</p>' },
+        ];
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'kredyt', ctx, [], faq);
+        expect(m.bodyHtml).toContain('<h2>Kredyt samochodowy na ten pojazd</h2>');
+        expect(m.bodyHtml).toContain('<h2>Najczęstsze pytania o kredyt</h2>');
+        expect(m.bodyHtml).toContain('<h3>Jaki wkład własny?</h3>');
+        expect(m.bodyHtml).toContain('Od 0% wartości auta.');
+        expect(m.bodyHtml).not.toContain('<b>0%</b>');
+        expect(JSON.stringify(m.jsonLd)).not.toContain('FAQPage');
+    });
+
+    it('oferta variant: no financing section', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        expect(m.bodyHtml).not.toContain('Kredyt samochodowy na ten pojazd');
+        expect(m.bodyHtml).not.toContain('Leasing tego pojazdu');
     });
 });
 

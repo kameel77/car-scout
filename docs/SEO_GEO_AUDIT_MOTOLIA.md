@@ -2,6 +2,8 @@
 
 Kontekst: GSC pokazuje ~3,09 tys. znanych stron i tylko **7 zindeksowanych** (stan na 12.06.2026 — ten sam dzień, w którym wdrożono `/api/render`, commit `9bf7ba0`).
 
+> **Status wdrożenia (2026-07-02):** Fazy 1–3 wdrożone na `dev` (commit `d7920df` + treść finansowa na wariantach). Cloudflare: blokada AI crawlers wyłączona na produkcji. Do zrobienia: promocja dev → staging → main, resubmit sitemapy w GSC. Plan średnioterminowy: sekcja 6 poniżej.
+
 ---
 
 ## 1. Co już działa dobrze (nie ruszać)
@@ -135,6 +137,56 @@ Zasada: zadania mechaniczne i dobrze wyspecyfikowane → tańszy/szybszy model (
 - Po Fazie 1: resubmit sitemap w GSC + „Poproś o zindeksowanie" dla strony głównej i kategorii.
 - Tygodniowo: raport indeksowania GSC (cel: >50% ofert w 6–8 tygodni), statystyki crawl (429/5xx = 0).
 - GEO smoke-test: zapytać ChatGPT/Perplexity/Claude o „leasing [model] dostępny od ręki" i sprawdzić, czy motolia.pl pojawia się w źródłach (realnie 4–8 tygodni po odblokowaniu).
+
+## 6. Plan strategiczny — średni termin (07.2026 → 01.2027)
+
+Kontekst decyzji: warianty `/kredyt/:slug` i `/leasing/:slug` kanonikalizują do `/oferta/:slug` — Google traktuje je jako duplikaty i nie indeksuje osobno. To celowa ochrona świeżej domeny przed ~3× duplikacją. Treść finansowa i FAQ wstrzykiwane na tych wariantach (Opcja A, wdrożona) pracują wyłącznie na GEO — crawlery LLM czytają treść niezależnie od canonical.
+
+### Horyzont 0–1 mies. (07.2026) — fundament i pomiar
+
+- [ ] Promocja `dev` → `staging` → `main`; po deployu resubmit sitemapy w GSC + test wyrenderowanej strony (Sprawdzenie URL).
+- [ ] Cotygodniowy przegląd GSC: liczba zindeksowanych `/oferta`, rozkład „przyczyn niezindeksowania" (soft 404 powinny zniknąć), Statystyki indeksowania (429/5xx = 0).
+- [ ] GEO smoke-test co 2 tyg.: zapytania typu „kredyt na [marka model] dostępny od ręki", „leasing [model] bez wkładu" w ChatGPT/Perplexity/Claude — czy motolia.pl pojawia się w źródłach.
+- [ ] Uzupełnić FAQ w CMS dla `page=offers` z podziałem na `financingType` (kredyt/leasing) — treść wstrzykiwana na wariantach jest tak dobra, jak wpisy w bazie.
+
+### Horyzont 2–3 mies. (09–10.2026) — decyzja o usamodzielnieniu wariantów (Opcja B)
+
+Cel: strony `/leasing/:slug` jako samodzielnie indeksowalne landingi pod frazy „leasing [marka model]" — rdzeń biznesu Motolii.
+
+**Kryteria wejścia (wszystkie muszą być spełnione — inaczej czekamy):**
+- ≥50% stron `/oferta` zindeksowanych w GSC,
+- zero soft 404 / błędów renderowania w GSC,
+- pierwsze wejścia organiczne na `/oferta` widoczne w Skuteczności.
+
+**Zasady pilotażu:**
+1. Tylko jeden wariant na start (leasing — wyższa wartość biznesowa, mniejsza konkurencja SERP niż kredyt).
+2. Pilot na 50–100 ofertach (np. najpopularniejsze modele), nie na całym katalogu.
+3. Warunek konieczny: treść **faktycznie odrębna** od `/oferta` — tytuł/opis/h1 pod leasing, sekcja rat i warunków (z kalkulatora — realne liczby produktu finansowego, nie kopia specyfikacji), FAQ leasingowe, Offer JSON-LD z ratą. Jeśli nie umiemy wygenerować odrębnej treści → nie zdejmujemy canonical.
+4. Zmiany techniczne: self-canonical na pilotowych URL-ach, dodanie ich do sitemapy, osobny segment w GSC do pomiaru.
+5. Pomiar 4–6 tyg.: indeksacja pilotowych stron, kanibalizacja (czy `/oferta` nie traci pozycji), CTR/konwersja leadów.
+6. Rollback = przywrócenie canonical do `/oferta` (odwracalne w jednym deployu).
+
+**Ryzyko do pilnowania:** płytka, szablonowa treść na tysiącach stron = wzorzec doorway pages; karą jest spadek zaufania do całej domeny. Lepiej 100 dobrych landingów niż 3000 szablonów.
+
+### Horyzont 3–6 mies. (10.2026–01.2027) — autorytet tematyczny i treść
+
+- [ ] Topical map dla klastra „finansowanie samochodu" (leasing konsumencki vs firmowy, kredyt vs leasing, najem długoterminowy — porównania, koszty, podatki) — do zbudowania skillami `sseo-project` → `sseo-topical-map` → `sseo-brief` → `sseo-writer`.
+- [ ] Sekcja poradnikowa (blog) linkująca wewnętrznie do stron kategorii i ofert — to buduje autorytet domeny, którego teraz brakuje najbardziej.
+- [ ] E-E-A-T: strona „O nas", dane firmy w stopce spójne z Organization JSON-LD, `sameAs` (profile społecznościowe) w schemacie Organization.
+- [ ] llms-full.txt: monitorować limit `take: 2000` przy wzroście katalogu; rozważyć paginację.
+- [ ] Po ustabilizowaniu indeksacji: hreflang + wersje EN/DE (pola w SeoConfig już istnieją), jeśli ekspansja poza PL jest w planach biznesowych.
+
+### KPI (przegląd co miesiąc)
+
+| Wskaźnik | Stan startowy (06.2026) | Cel 3 mies. | Cel 6 mies. |
+|---|---|---|---|
+| Zindeksowane strony (GSC) | 7 | >500 | >1500 |
+| Kliknięcia organiczne / tydz. | ~0 | >100 | >500 |
+| Cytowania w AI (smoke-test 10 zapytań) | 0/10 | 2/10 | 4/10 |
+| Soft 404 / błędy renderu | dominują | 0 | 0 |
+| Landingi leasingowe (pilot Opcji B) | — | decyzja go/no-go | 50–100 zindeksowanych |
+
+---
 
 ### Wskazówki dla modelu wykonującego (wkleić do promptu zadania)
 
