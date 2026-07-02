@@ -1,6 +1,8 @@
 
 import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
+import { resolveBrandCtx } from '../services/seo-meta.js';
+import { generateListingSlug as buildListingSlug } from '../utils/url-utils.js';
 
 export async function seoRoutes(fastify: FastifyInstance) {
     // Get SEO Config
@@ -68,27 +70,18 @@ export async function seoRoutes(fastify: FastifyInstance) {
         const formatDate = (date: Date) => date.toISOString().split('T')[0];
         const today = formatDate(new Date());
 
-        const urls: { loc: string; lastmod: string; changefreq: string; priority: string }[] = [];
+        const urls: { loc: string; lastmod: string; image?: { loc: string } }[] = [];
 
         // 1. Static Pages
         const staticPages = [
-            { path: '', priority: '1.0' },
-            { path: '/samochody', priority: '0.9' },
-            { path: '/nowe', priority: '0.8' },
-            { path: '/uzywane', priority: '0.8' },
-            { path: '/wynajem-dlugoterminowy', priority: '0.9' },
-            { path: '/dla-ciebie', priority: '0.8' },
-            { path: '/dla-firm', priority: '0.6' },
-            { path: '/faq', priority: '0.5' },
-            { path: '/kontakt', priority: '0.5' }
+            '', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
+            '/dla-ciebie', '/dla-firm', '/faq', '/kontakt'
         ];
 
-        staticPages.forEach(page => {
+        staticPages.forEach(path => {
             urls.push({
-                loc: `${baseUrl}${page.path}`,
-                lastmod: today,
-                changefreq: 'daily',
-                priority: page.priority
+                loc: `${baseUrl}${path}`,
+                lastmod: today
             });
         });
 
@@ -136,17 +129,21 @@ export async function seoRoutes(fastify: FastifyInstance) {
                 productionYear: true,
                 bodyType: true,
                 fuelType: true,
+                primaryImageUrl: true,
                 updatedAt: true
             }
         });
+
+        // image:loc musi być absolutnym URL-em; & itp. escapujemy przy budowie XML
+        const toAbsolute = (url: string) =>
+            url.startsWith('http') ? url : `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 
         listings.forEach(listing => {
             const slug = generateListingSlug(listing);
             urls.push({
                 loc: `${baseUrl}/oferta/${slug}`,
                 lastmod: formatDate(listing.updatedAt),
-                changefreq: 'weekly',
-                priority: '0.8'
+                image: listing.primaryImageUrl ? { loc: toAbsolute(listing.primaryImageUrl) } : undefined
             });
         });
 
@@ -160,23 +157,25 @@ export async function seoRoutes(fastify: FastifyInstance) {
             if (rental.slug) {
                 urls.push({
                     loc: `${baseUrl}/wynajem-dlugoterminowy/${rental.slug}`,
-                    lastmod: formatDate(rental.updatedAt),
-                    changefreq: 'weekly',
-                    priority: '0.8'
+                    lastmod: formatDate(rental.updatedAt)
                 });
             }
         });
 
         // Build XML
         let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-        xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+        xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
         
         urls.forEach(url => {
             xml += `  <url>\n`;
             xml += `    <loc>${url.loc}</loc>\n`;
             xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
-            xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
-            xml += `    <priority>${url.priority}</priority>\n`;
+            if (url.image) {
+                const imageLoc = url.image.loc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                xml += `    <image:image>\n`;
+                xml += `      <image:loc>${imageLoc}</image:loc>\n`;
+                xml += `    </image:image>\n`;
+            }
             xml += `  </url>\n`;
         });
         
@@ -188,8 +187,20 @@ export async function seoRoutes(fastify: FastifyInstance) {
     // robots.txt — served via nginx proxy at /robots.txt (brand-aware Sitemap line)
     fastify.get('/api/robots.txt', async (_request, reply) => {
         const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://carsalon.pl';
-        const body = `User-agent: Googlebot
+        const body = `User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+User-agent: Googlebot
 Allow: /
+Allow: /api/settings
+Allow: /api/seo
+Allow: /api/translations
+Allow: /api/listings
+Allow: /api/widgets/render
+Allow: /api/faq
+Allow: /api/feature-tiles
+Allow: /api/geo
+Allow: /api/rental-public
 Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
@@ -198,6 +209,15 @@ Disallow: /storage/
 
 User-agent: Bingbot
 Allow: /
+Allow: /api/settings
+Allow: /api/seo
+Allow: /api/translations
+Allow: /api/listings
+Allow: /api/widgets/render
+Allow: /api/faq
+Allow: /api/feature-tiles
+Allow: /api/geo
+Allow: /api/rental-public
 Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
@@ -216,6 +236,15 @@ Disallow: /
 User-agent: SemrushBot
 Crawl-delay: 10
 Allow: /
+Allow: /api/settings
+Allow: /api/seo
+Allow: /api/translations
+Allow: /api/listings
+Allow: /api/widgets/render
+Allow: /api/faq
+Allow: /api/feature-tiles
+Allow: /api/geo
+Allow: /api/rental-public
 Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
@@ -224,6 +253,15 @@ Disallow: /storage/
 
 User-agent: *
 Allow: /
+Allow: /api/settings
+Allow: /api/seo
+Allow: /api/translations
+Allow: /api/listings
+Allow: /api/widgets/render
+Allow: /api/faq
+Allow: /api/feature-tiles
+Allow: /api/geo
+Allow: /api/rental-public
 Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
@@ -237,6 +275,69 @@ Disallow: /new/
 
 Sitemap: ${baseUrl}/sitemap.xml
 `;
-        return reply.header('Content-Type', 'text/plain; charset=utf-8').send(body);
+        return reply.type('text/plain').send(body);
+    });
+
+    fastify.get('/api/llms.txt', async (request, reply) => {
+        const ctx = resolveBrandCtx();
+        const listingsCount = await fastify.prisma.listing.count({ where: { isArchived: false, pricePln: { gt: 0 } } });
+
+        const body = `
+# ${ctx.brandName} - Motoryzacyjny Marketplace
+
+> Twoje źródło najlepszych ofert samochodów osobowych, leasingu i wynajmu długoterminowego.
+
+## Podstawowe informacje
+- **URL:** ${ctx.baseUrl}
+- **Oferty:** ~${listingsCount} aktywnych ogłoszeń
+- **Sitemap:** ${ctx.baseUrl}/sitemap.xml
+
+## Główne sekcje
+- [Wszystkie samochody](${ctx.baseUrl}/samochody)
+- [Wynajem długoterminowy](${ctx.baseUrl}/wynajem-dlugoterminowy)
+- [Leasing](${ctx.baseUrl}/leasing)
+- [Kredyt](${ctx.baseUrl}/kredyt)
+- [Kontakt](${ctx.baseUrl}/kontakt)
+
+## Pełna lista ofert (dla AI)
+Pełny spis wszystkich aktualnych ofert znajduje się pod adresem: [${ctx.baseUrl}/llms-full.txt](${ctx.baseUrl}/llms-full.txt)
+`.trim();
+
+        return reply.type('text/plain').send(body);
+    });
+
+    fastify.get('/api/llms-full.txt', async (request, reply) => {
+        const ctx = resolveBrandCtx();
+        const listings = await fastify.prisma.listing.findMany({
+            where: { isArchived: false, pricePln: { gt: 0 } },
+            take: 2000, // Limit for sanity, though standard says no strict limit
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                make: true,
+                model: true,
+                version: true,
+                productionYear: true,
+                pricePln: true,
+                bodyType: true,
+                fuelType: true,
+            }
+        });
+
+        const lines = listings.map(l => {
+            const name = [l.make, l.model, l.version, `(${l.productionYear})`].filter(Boolean).join(' ');
+            const slug = buildListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+            return `- [${name}](${ctx.baseUrl}/oferta/${slug}) - ${l.pricePln.toLocaleString('pl-PL')} PLN`;
+        });
+
+        const body = `
+# Pełna lista ofert ${ctx.brandName}
+
+Ostatnia aktualizacja: ${new Date().toISOString()}
+
+${lines.join('\n')}
+`.trim();
+
+        return reply.type('text/plain').send(body);
     });
 }

@@ -108,9 +108,9 @@ describe('GET /api/render', () => {
         expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/uzywane"');
     });
 
-    it('unknown path: 200 + noindex + brand default title', async () => {
+    it('unknown path: 404 + noindex + brand default title', async () => {
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/xyz-nie-istnieje' });
-        expect(res.statusCode).toBe(200);
+        expect(res.statusCode).toBe(404);
         expect(res.body).toContain('noindex');
         expect(res.body).toContain('Motolia');
     });

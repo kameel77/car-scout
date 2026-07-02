@@ -5,11 +5,13 @@ import {
     buildRentalMeta,
     buildStaticMeta,
     defaultMeta,
+    hasStaticRoute,
     injectHead,
     resolveBrandCtx,
     BrandCtx,
     ListingVariant,
     PageMeta,
+    RelatedListing,
 } from '../services/seo-meta.js';
 
 const TEMPLATE_TTL_MS = 5 * 60 * 1000;
@@ -56,7 +58,7 @@ async function getTemplate(): Promise<string | null> {
 
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
-const NOINDEX_RE = /^\/(admin|login|embed)(\/|$)|\/(lead|negotiate|zapytanie)$/;
+const NOINDEX_RE = /^\/(admin|login|embed|listing)(\/|$)|\/(lead|negotiate|zapytanie)$/;
 
 async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx): Promise<PageMeta> {
     if (NOINDEX_RE.test(path)) {
@@ -76,12 +78,39 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
                       productionYear: true,
                       pricePln: true,
                       mileageKm: true,
+                      condition: true,
                       fuelType: true,
                       bodyType: true,
+                      transmission: true,
+                      primaryImageUrl: true,
+                      additionalInfoContent: true,
                   },
               })
             : null;
         if (!id || !listing) return defaultMeta(ctx, { noindex: true, status: 404 });
+
+        // Fetch related listings (same make or just latest)
+        const relatedRaw = await fastify.prisma.listing.findMany({
+            where: { isArchived: false, NOT: { id } },
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                make: true,
+                model: true,
+                version: true,
+                productionYear: true,
+                pricePln: true,
+                bodyType: true,
+                fuelType: true,
+            },
+        });
+
+        const related: RelatedListing[] = relatedRaw.map(r => ({
+            ...r,
+            slug: generateListingSlug(r.make, r.model, r.version, r.productionYear, r.bodyType, r.fuelType, r.id)
+        }));
+
         // Slug z URL bywa zmanipulowany — canonical liczymy z danych, nie z requestu
         const canonicalSlug = generateListingSlug(
             listing.make,
@@ -92,7 +121,7 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
             listing.fuelType,
             id
         );
-        return buildListingMeta(listing, canonicalSlug, lm[1] as ListingVariant, ctx);
+        return buildListingMeta(listing, canonicalSlug, lm[1] as ListingVariant, ctx, related);
     }
 
     const rm = path.match(RENTAL_RE);
@@ -105,13 +134,48 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
                 version: true,
                 productionYear: true,
                 sellingPrice: true,
+                primaryImageUrl: true,
             },
         });
         if (!rental) return defaultMeta(ctx, { noindex: true, status: 404 });
         return buildRentalMeta(rental, rm[1], ctx);
     }
 
-    return buildStaticMeta(path, ctx) ?? defaultMeta(ctx, { noindex: true, status: 200 });
+    // Nieznane ścieżki (m.in. probe'y skanerów) odrzucamy przed zapytaniami do bazy
+    if (!hasStaticRoute(path)) {
+        return defaultMeta(ctx, { noindex: true, status: 404 });
+    }
+
+    const listingsRaw = await fastify.prisma.listing.findMany({
+        where: { isArchived: false },
+        take: 20,
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true,
+            make: true,
+            model: true,
+            version: true,
+            productionYear: true,
+            pricePln: true,
+            bodyType: true,
+            fuelType: true,
+        },
+    });
+
+    const listings: RelatedListing[] = listingsRaw.map(l => ({
+        ...l,
+        slug: generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id)
+    }));
+
+    let faq: any[] = [];
+    if (path === '/faq') {
+        faq = await fastify.prisma.faqEntry.findMany({
+            where: { isPublished: true },
+            orderBy: { sortOrder: 'asc' },
+        });
+    }
+
+    return buildStaticMeta(path, ctx, listings, faq) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 }
 
 export async function renderRoutes(fastify: FastifyInstance) {

@@ -4,6 +4,8 @@ export interface PageMeta {
     canonical?: string; // absolute URL
     jsonLd?: object;
     noindex?: boolean;
+    bodyHtml?: string;
+    ogImage?: string;
     status: number;
 }
 
@@ -12,6 +14,7 @@ export interface BrandCtx {
     brandName: string;
     defaultTitle: string;
     defaultDescription: string;
+    logoUrl: string;
 }
 
 export type ListingVariant = 'oferta' | 'leasing' | 'kredyt';
@@ -32,12 +35,28 @@ const BRAND_DEFAULTS: Record<string, { name: string; title: string; description:
 export function resolveBrandCtx(): BrandCtx {
     const brand = process.env.BRAND === 'motolia' ? 'motolia' : 'carsalon';
     const d = BRAND_DEFAULTS[brand];
+    const baseUrl = (process.env.FRONTEND_URL || 'https://carsalon.pl').replace(/\/$/, '');
     return {
-        baseUrl: (process.env.FRONTEND_URL || 'https://carsalon.pl').replace(/\/$/, ''),
+        baseUrl,
         brandName: d.name,
         defaultTitle: d.title,
         defaultDescription: d.description,
+        logoUrl: `${baseUrl}/brands/${brand}/logo.png`,
     };
+}
+
+function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Rich-text z importów/od dealerów może zawierać HTML — do bodyHtml trafia sam tekst
+function htmlToText(s: string): string {
+    return escapeHtml(s.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
+}
+
+// og:image, JSON-LD image i image-sitemap wymagają absolutnych URL-i
+function absoluteUrl(url: string, baseUrl: string): string {
+    return url.startsWith('http') ? url : `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
 export interface ListingMetaInput {
@@ -47,15 +66,30 @@ export interface ListingMetaInput {
     productionYear: number;
     pricePln: number;
     mileageKm: number;
+    condition: string;
     fuelType: string | null;
     bodyType: string | null;
+    transmission: string | null;
+    primaryImageUrl: string | null;
+    additionalInfoContent: string | null;
+}
+
+export interface RelatedListing {
+    id: string;
+    make: string;
+    model: string;
+    version: string | null;
+    productionYear: number;
+    pricePln: number;
+    slug: string;
 }
 
 export function buildListingMeta(
     l: ListingMetaInput,
     slug: string,
     variant: ListingVariant,
-    ctx: BrandCtx
+    ctx: BrandCtx,
+    related: RelatedListing[] = []
 ): PageMeta {
     const name = [l.make, l.model, l.version, String(l.productionYear)].filter(Boolean).join(' ');
     const price = l.pricePln.toLocaleString('pl-PL');
@@ -70,35 +104,94 @@ export function buildListingMeta(
         .filter(Boolean)
         .join(', ');
 
+    const safeName = escapeHtml(name);
+    const imageUrl = l.primaryImageUrl ? absoluteUrl(l.primaryImageUrl, ctx.baseUrl) : null;
+
+    const bodyHtml = `
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Strona główna</a></li>
+    <li><a href="/samochody">Samochody</a></li>
+    <li>${safeName}</li>
+  </ol>
+</nav>
+<article>
+  <h1>${safeName}${variantLabel}</h1>
+  ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${safeName}" style="max-width:100%;height:auto;"/>` : ''}
+  <table>
+    <tbody>
+      <tr><td>Marka</td><td>${escapeHtml(l.make)}</td></tr>
+      <tr><td>Model</td><td>${escapeHtml(l.model)}</td></tr>
+      ${l.version ? `<tr><td>Wersja</td><td>${escapeHtml(l.version)}</td></tr>` : ''}
+      <tr><td>Rocznik</td><td>${l.productionYear}</td></tr>
+      <tr><td>Przebieg</td><td>${l.mileageKm.toLocaleString('pl-PL')} km</td></tr>
+      <tr><td>Cena</td><td>${price} zł</td></tr>
+      ${l.fuelType ? `<tr><td>Paliwo</td><td>${escapeHtml(l.fuelType)}</td></tr>` : ''}
+      ${l.bodyType ? `<tr><td>Nadwozie</td><td>${escapeHtml(l.bodyType)}</td></tr>` : ''}
+      ${l.transmission ? `<tr><td>Skrzynia</td><td>${escapeHtml(l.transmission)}</td></tr>` : ''}
+    </tbody>
+  </table>
+  ${l.additionalInfoContent ? `<div class="description">${htmlToText(l.additionalInfoContent)}</div>` : ''}
+  ${related.length > 0 ? `
+  <section>
+    <h2>Podobne oferty</h2>
+    <ul>
+      ${related.map(r => `<li><a href="/oferta/${r.slug}">${escapeHtml(`${r.make} ${r.model}`)} (${r.productionYear}) — ${r.pricePln.toLocaleString('pl-PL')} zł</a></li>`).join('\n')}
+    </ul>
+  </section>` : ''}
+</article>`.trim();
+
+    const schemaCondition =
+        l.condition === 'NEW' ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition';
+
+    const jsonLd: any[] = [];
+    if (variant === 'oferta') {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'Vehicle',
+            name,
+            brand: { '@type': 'Brand', name: l.make },
+            model: l.model,
+            vehicleModelDate: String(l.productionYear),
+            mileageFromOdometer: {
+                '@type': 'QuantitativeValue',
+                value: l.mileageKm,
+                unitCode: 'KMT',
+            },
+            ...(imageUrl ? { image: imageUrl } : {}),
+            ...(l.transmission ? { vehicleTransmission: l.transmission } : {}),
+            ...(l.fuelType ? { fuelType: l.fuelType } : {}),
+            ...(l.bodyType ? { bodyType: l.bodyType } : {}),
+            itemCondition: schemaCondition,
+            offers: {
+                '@type': 'Offer',
+                price: l.pricePln,
+                priceCurrency: 'PLN',
+                availability: 'https://schema.org/InStock',
+                url: canonical,
+                itemCondition: schemaCondition,
+            },
+            url: canonical
+        });
+    }
+
+    jsonLd.push({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Strona główna', item: ctx.baseUrl },
+            { '@type': 'ListItem', position: 2, name: 'Samochody', item: `${ctx.baseUrl}/samochody` },
+            { '@type': 'ListItem', position: 3, name: name, item: canonical }
+        ]
+    });
+
     return {
         title: `${name}${variantLabel} — ${price} zł | ${ctx.brandName}`,
         description: `${name}: ${detale}. Samochód dostępny od ręki u dealera — sprawdź finansowanie: leasing, kredyt lub najem.`,
         canonical,
-        jsonLd:
-            variant === 'oferta'
-                ? {
-                      '@context': 'https://schema.org',
-                      '@type': 'Vehicle',
-                      name,
-                      brand: { '@type': 'Brand', name: l.make },
-                      model: l.model,
-                      vehicleModelDate: String(l.productionYear),
-                      mileageFromOdometer: {
-                          '@type': 'QuantitativeValue',
-                          value: l.mileageKm,
-                          unitCode: 'KMT',
-                      },
-                      ...(l.fuelType ? { fuelType: l.fuelType } : {}),
-                      ...(l.bodyType ? { bodyType: l.bodyType } : {}),
-                      offers: {
-                          '@type': 'Offer',
-                          price: l.pricePln,
-                          priceCurrency: 'PLN',
-                          availability: 'https://schema.org/InStock',
-                          url: canonical,
-                      },
-                  }
-                : undefined,
+        ogImage: imageUrl || undefined,
+        bodyHtml,
+        jsonLd: jsonLd.length === 1 ? jsonLd[0] : jsonLd,
         status: 200,
     };
 }
@@ -109,6 +202,7 @@ export interface RentalMetaInput {
     version: string | null;
     productionYear: number | null;
     sellingPrice?: number | null;
+    primaryImageUrl?: string | null;
 }
 
 export function buildRentalMeta(r: RentalMetaInput, slug: string, ctx: BrandCtx): PageMeta {
@@ -116,10 +210,28 @@ export function buildRentalMeta(r: RentalMetaInput, slug: string, ctx: BrandCtx)
         .filter(Boolean)
         .join(' ');
     const canonical = `${ctx.baseUrl}/wynajem-dlugoterminowy/${slug}`;
+    const safeName = escapeHtml(name);
+    const imageUrl = r.primaryImageUrl ? absoluteUrl(r.primaryImageUrl, ctx.baseUrl) : null;
+    const bodyHtml = `
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Strona główna</a></li>
+    <li><a href="/wynajem-dlugoterminowy">Wynajem długoterminowy</a></li>
+    <li>${safeName}</li>
+  </ol>
+</nav>
+<article>
+  <h1>${safeName} — wynajem długoterminowy</h1>
+  ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${safeName}" style="max-width:100%;height:auto;"/>` : ''}
+  <p>${safeName} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.</p>
+</article>`.trim();
+
     return {
         title: `${name} — najem długoterminowy | ${ctx.brandName}`,
         description: `${name} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.`,
         canonical,
+        ogImage: imageUrl || undefined,
+        bodyHtml,
         jsonLd: {
             '@context': 'https://schema.org',
             '@type': 'Vehicle',
@@ -206,27 +318,89 @@ const STATIC_ROUTES: Record<string, StaticRoute> = {
     },
 };
 
-export function buildStaticMeta(path: string, ctx: BrandCtx): PageMeta | null {
+// Pozwala renderowi odrzucić nieznane ścieżki (404) bez odpytywania bazy
+export function hasStaticRoute(path: string): boolean {
+    return path === '/' || path in STATIC_ROUTES;
+}
+
+export function buildStaticMeta(path: string, ctx: BrandCtx, listings: RelatedListing[] = [], faq: any[] = []): PageMeta | null {
     if (path === '/') {
+        const bodyHtml = `
+<h1>${ctx.defaultTitle}</h1>
+<p>${ctx.defaultDescription}</p>
+${listings.length > 0 ? `
+<section>
+  <h2>Najnowsze oferty</h2>
+  <ul>
+    ${listings.map(l => `<li><a href="/oferta/${l.slug}">${escapeHtml(`${l.make} ${l.model}`)} (${l.productionYear}) — ${l.pricePln.toLocaleString('pl-PL')} zł</a></li>`).join('\n')}
+  </ul>
+  <p><a href="/samochody">Zobacz wszystkie samochody</a></p>
+</section>` : ''}`.trim();
+
         return {
             title: ctx.defaultTitle,
             description: ctx.defaultDescription,
             canonical: `${ctx.baseUrl}/`,
+            bodyHtml,
             jsonLd: {
                 '@context': 'https://schema.org',
                 '@type': 'Organization',
                 name: ctx.brandName,
                 url: `${ctx.baseUrl}/`,
+                logo: ctx.logoUrl,
             },
             status: 200,
         };
     }
     const route = STATIC_ROUTES[path];
     if (!route) return null;
+
+    const title = route.title(ctx.brandName);
+    const bodyHtml = `
+<h1>${title}</h1>
+<p>${route.description}</p>
+${listings.length > 0 ? `
+<section>
+  <h2>Oferty</h2>
+  <ul>
+    ${listings.map(l => `<li><a href="/oferta/${l.slug}">${escapeHtml(`${l.make} ${l.model}`)} (${l.productionYear}) — ${l.pricePln.toLocaleString('pl-PL')} zł</a></li>`).join('\n')}
+  </ul>
+</section>` : ''}`.trim();
+
+    const jsonLd: any[] = [];
+    if (listings.length > 0) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            itemListElement: listings.map((l, i) => ({
+                '@type': 'ListItem',
+                position: i + 1,
+                url: `${ctx.baseUrl}/oferta/${l.slug}`
+            }))
+        });
+    }
+
+    if (faq.length > 0) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faq.map(f => ({
+                '@type': 'Question',
+                name: f.questionPl,
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: f.answerPl
+                }
+            }))
+        });
+    }
+
     return {
-        title: route.title(ctx.brandName),
+        title,
         description: route.description,
         canonical: `${ctx.baseUrl}${route.canonicalPath ?? path}`,
+        bodyHtml,
+        jsonLd: jsonLd.length === 1 ? jsonLd[0] : jsonLd.length > 1 ? jsonLd : undefined,
         status: 200,
     };
 }
@@ -263,6 +437,17 @@ export function injectHead(template: string, meta: PageMeta): string {
         );
     }
 
+    if (meta.ogImage) {
+        const ogImage = escapeAttr(meta.ogImage);
+        html = html.replace(
+            /(<meta property="og:image"[^>]*content=").*?(")/,
+            (_m, p1, p2) => `${p1}${ogImage}${p2}`
+        ).replace(
+            /(<meta name="twitter:image"[^>]*content=").*?(")/,
+            (_m, p1, p2) => `${p1}${ogImage}${p2}`
+        );
+    }
+
     const extra: string[] = [];
     if (meta.canonical) extra.push(`<link rel="canonical" href="${escapeAttr(meta.canonical)}" />`);
     if (meta.noindex) extra.push(`<meta name="robots" content="noindex" />`);
@@ -274,5 +459,13 @@ export function injectHead(template: string, meta: PageMeta): string {
     if (extra.length) {
         html = html.replace('</head>', () => `${extra.join('\n')}\n</head>`);
     }
+
+    if (meta.bodyHtml) {
+        html = html.replace(
+            /<div id="root"><\/div>/,
+            () => `<div id="root">${meta.bodyHtml}</div>`
+        );
+    }
+
     return html;
 }

@@ -14,6 +14,7 @@ const ctx: BrandCtx = {
     brandName: 'Motolia',
     defaultTitle: 'Motolia - leasing, kredyt i wynajem samochodów',
     defaultDescription: 'Szeroki wybór aut. Proste finansowanie. Leasing, kredyt i wynajem długoterminowy.',
+    logoUrl: 'https://dev.motolia.pl/brands/motolia/logo.png',
 };
 
 const LISTING = {
@@ -23,8 +24,12 @@ const LISTING = {
     productionYear: 2024,
     pricePln: 99900,
     mileageKm: 10,
+    condition: 'NEW',
     fuelType: 'benzyna',
     bodyType: 'suv',
+    transmission: 'manualna',
+    primaryImageUrl: '/uploads/listings/puma.webp',
+    additionalInfoContent: '<p>Bogate <b>wyposażenie</b></p>',
 };
 
 const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"></div></body></html>`;
@@ -50,21 +55,34 @@ describe('resolveBrandCtx', () => {
 });
 
 describe('buildListingMeta', () => {
-    it('oferta: self-canonical, Vehicle JSON-LD, price in title', () => {
+    it('oferta: self-canonical, Vehicle + BreadcrumbList JSON-LD, price in title', () => {
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
         expect(m.title).toContain('Ford Puma 1.0 EcoBoost 2024');
         expect(m.title).toContain('| Motolia');
         expect(m.canonical).toBe('https://dev.motolia.pl/oferta/ford-puma-abc123');
         expect(m.status).toBe(200);
-        expect((m.jsonLd as any)['@type']).toBe('Vehicle');
-        expect((m.jsonLd as any).offers.price).toBe(99900);
+        const ld = m.jsonLd as any[];
+        expect(ld[0]['@type']).toBe('Vehicle');
+        expect(ld[0].offers.price).toBe(99900);
+        expect(ld[0].itemCondition).toBe('https://schema.org/NewCondition');
+        expect(ld[0].image).toBe('https://dev.motolia.pl/uploads/listings/puma.webp');
+        expect(ld[1]['@type']).toBe('BreadcrumbList');
     });
 
-    it('leasing variant: canonical points to /oferta, variant in title, no JSON-LD', () => {
+    it('oferta: bodyHtml has h1, spec table, absolute image and stripped description', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        expect(m.bodyHtml).toContain('<h1>Ford Puma 1.0 EcoBoost 2024</h1>');
+        expect(m.bodyHtml).toContain('src="https://dev.motolia.pl/uploads/listings/puma.webp"');
+        expect(m.bodyHtml).toContain('Bogate wyposażenie');
+        expect(m.bodyHtml).not.toContain('<b>');
+        expect(m.ogImage).toBe('https://dev.motolia.pl/uploads/listings/puma.webp');
+    });
+
+    it('leasing variant: canonical points to /oferta, variant in title, breadcrumb-only JSON-LD', () => {
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'leasing', ctx);
         expect(m.title).toContain('— leasing');
         expect(m.canonical).toBe('https://dev.motolia.pl/oferta/ford-puma-abc123');
-        expect(m.jsonLd).toBeUndefined();
+        expect((m.jsonLd as any)['@type']).toBe('BreadcrumbList');
     });
 });
 
