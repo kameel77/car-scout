@@ -63,7 +63,7 @@ export default function ListingDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { user, token } = useAuth();
+  const { user, token, isPlatformUser } = useAuth();
   const canManage = user?.role === 'admin' || user?.role === 'manager';
 
   const financingType = getFinancingTypeFromPath(location.pathname);
@@ -1254,32 +1254,39 @@ export default function ListingDetailPage() {
                 transition={{ delay: 0.1 }}
                 className="bg-card rounded-xl shadow-card p-6 space-y-4"
               >
-                <h3 className="font-heading font-semibold">{t('detail.dealerInfo')}</h3>
-                <div>
-                  <p className="font-medium text-foreground">{listing.dealer_name}</p>
-                  <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
-                    <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                    <span>
-                      {(() => {
-                        if (!user) return listing.dealer_city || '—';
-
-                        const parts: string[] = [];
-                        if (listing.dealer_address_line1) parts.push(listing.dealer_address_line1);
-                        if (listing.dealer_address_line2) parts.push(listing.dealer_address_line2);
-                        if (listing.dealer_address_line3) parts.push(listing.dealer_address_line3);
-                        // Dla dealerów CSFlow: city i postalCode są osobnymi polami
-                        if (!listing.dealer_address_line2) {
-                          const postalCity = [listing.dealer_postal_code, listing.dealer_city].filter(Boolean).join(' ');
-                          if (postalCity) parts.push(postalCity);
-                        } else if (listing.dealer_city && !parts.some(p => p.includes(listing.dealer_city!))) {
-                          parts.push(listing.dealer_city);
-                        }
-                        return parts.join(', ') || '—';
-                      })()}
-                    </span>
+                <h3 className="font-heading font-semibold">
+                  {isPlatformUser ? t('detail.dealerInfo') : t('detail.vehicleLocation')}
+                </h3>
+                {isPlatformUser ? (
+                  <div>
+                    <p className="font-medium text-foreground">{listing.dealer_name}</p>
+                    <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>
+                        {(() => {
+                          const parts: string[] = [];
+                          if (listing.dealer_address_line1) parts.push(listing.dealer_address_line1);
+                          if (listing.dealer_address_line2) parts.push(listing.dealer_address_line2);
+                          if (listing.dealer_address_line3) parts.push(listing.dealer_address_line3);
+                          // Dla dealerów CSFlow: city i postalCode są osobnymi polami
+                          if (!listing.dealer_address_line2) {
+                            const postalCity = [listing.dealer_postal_code, listing.dealer_city].filter(Boolean).join(' ');
+                            if (postalCity) parts.push(postalCity);
+                          } else if (listing.dealer_city && !parts.some(p => p.includes(listing.dealer_city!))) {
+                            parts.push(listing.dealer_city);
+                          }
+                          return parts.join(', ') || '—';
+                        })()}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                {listing.google_rating && (
+                ) : (
+                  <div className="flex items-center gap-1 text-foreground font-medium">
+                    <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span>{listing.dealer_city || '—'}</span>
+                  </div>
+                )}
+                {isPlatformUser && listing.google_rating && (
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 text-warning">
                       <Star className="h-4 w-4 fill-current" />

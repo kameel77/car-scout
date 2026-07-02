@@ -61,6 +61,7 @@ const initialFilters: FilterState = {
     rateTo: '',
     rateType: undefined,
     rateBasis: undefined,
+    cities: [],
 };
 
 export default function ListingManagementPage() {

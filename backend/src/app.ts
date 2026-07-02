@@ -199,9 +199,6 @@ export async function buildApp(): Promise<FastifyInstance> {
             }
 
             const normalizedOrigin = originOnly(origin);
-            if (/^https?:\/\/[a-zA-Z0-9.-]+\.sslip\.io$/.test(normalizedOrigin)) {
-                return cb(null, true);
-            }
             if (allowedOrigins.includes(normalizedOrigin)) {
                 return cb(null, true);
             }
@@ -212,7 +209,14 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
 
     await fastify.register(helmet, {
-        contentSecurityPolicy: false, // Disabled to prevent blocking external vehicle images and CDNs
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", "data:", "validator.swagger.io", "*"],
+            },
+        },
     });
 
     await fastify.register(multipart, {

@@ -1,12 +1,13 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { authorizeRoles } from '../middleware/authorize.js';
 
 export async function widgetRoutes(fastify: FastifyInstance) {
   // --- Admin Routes ---
   
   fastify.get('/api/admin/widgets', {
-    preValidation: [fastify.authenticate]
+    preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
   }, async (request, reply) => {
     const widgets = await fastify.prisma.widget.findMany({
       orderBy: { createdAt: 'desc' }
@@ -15,7 +16,7 @@ export async function widgetRoutes(fastify: FastifyInstance) {
   });
 
   fastify.post('/api/admin/widgets', {
-    preValidation: [fastify.authenticate]
+    preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
   }, async (request, reply) => {
     const schema = z.object({
       name: z.string(),
@@ -32,7 +33,7 @@ export async function widgetRoutes(fastify: FastifyInstance) {
   });
 
   fastify.put('/api/admin/widgets/:id', {
-    preValidation: [fastify.authenticate]
+    preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const schema = z.object({
@@ -53,7 +54,7 @@ export async function widgetRoutes(fastify: FastifyInstance) {
   });
 
   fastify.delete('/api/admin/widgets/:id', {
-    preValidation: [fastify.authenticate]
+    preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     await fastify.prisma.widget.delete({ where: { id } });

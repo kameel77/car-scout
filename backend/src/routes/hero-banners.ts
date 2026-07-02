@@ -7,7 +7,7 @@ import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 const BANNERS_DIR = path.join(UPLOADS_DIR, 'hero-banners');
-const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_BANNER_IMAGE_SIZE = 8 * 1024 * 1024;
 const ALIGN_VALUES = new Set(['left', 'center', 'right']);
 
@@ -166,16 +166,9 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
       return reply.code(413).send({ error: 'File too large (max 8MB)' });
     }
 
-    let url: string;
-    if (file.mimetype === 'image/svg+xml') {
-      const filename = `${id}-${slot ?? 'desktop'}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.svg`;
-      await fs.writeFile(path.join(BANNERS_DIR, filename), buffer);
-      url = `/uploads/hero-banners/${filename}`;
-    } else {
-      const baseFilename = `${id}-${slot ?? 'desktop'}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
-      const { largeFilename } = await optimizeAndSaveImage(buffer, { targetDir: BANNERS_DIR, baseFilename });
-      url = `/uploads/hero-banners/${largeFilename}`;
-    }
+    const baseFilename = `${id}-${slot ?? 'desktop'}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const { largeFilename } = await optimizeAndSaveImage(buffer, { targetDir: BANNERS_DIR, baseFilename });
+    const url = `/uploads/hero-banners/${largeFilename}`;
 
     const prevUrl = isMobile ? banner.imageUrlMobile : banner.imageUrlDesktop;
     await unlinkBannerImage(prevUrl);

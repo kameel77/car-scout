@@ -9,7 +9,7 @@ import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 const TILES_DIR = path.join(UPLOADS_DIR, 'feature-tiles');
-const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_TILE_IMAGE_SIZE = 5 * 1024 * 1024;
 
 // ── URL parser + vehicle count ──────────────────────────────────────────────
@@ -310,20 +310,12 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
             return reply.code(413).send({ error: 'File too large (max 5MB)' });
         }
 
-        let url: string;
-        if (file.mimetype === 'image/svg+xml') {
-            const filename = `${id}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.svg`;
-            const filepath = path.join(TILES_DIR, filename);
-            await fs.writeFile(filepath, buffer);
-            url = `/uploads/feature-tiles/${filename}`;
-        } else {
-            const baseFilename = `${id}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
-            const { largeFilename } = await optimizeAndSaveImage(buffer, {
-                targetDir: TILES_DIR,
-                baseFilename,
-            });
-            url = `/uploads/feature-tiles/${largeFilename}`;
-        }
+        const baseFilename = `${id}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+        const { largeFilename } = await optimizeAndSaveImage(buffer, {
+            targetDir: TILES_DIR,
+            baseFilename,
+        });
+        const url = `/uploads/feature-tiles/${largeFilename}`;
 
         // Delete previous image file
         if (tile.imageUrl?.startsWith('/uploads/feature-tiles/')) {
