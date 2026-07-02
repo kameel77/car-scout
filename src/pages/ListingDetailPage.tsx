@@ -320,9 +320,12 @@ export default function ListingDetailPage() {
   const isPln = currencyCode === 'PLN';
   const toDisplayPrice = (grossPln: number) => (priceType === 'net' ? (listing.vatMargin ? grossPln : Math.round(grossPln / 1.23)) : grossPln);
   const motoliaDiscountVal = listing.motoliaDiscountPln ?? 0;
-  const showMotolia = isPln && !!listing.showMotoliaDiscount && motoliaDiscountVal > 0;
-  // "Cena pojazdu" zależna od flagi displaySalePrice (per pojazd). Pill katalogowy liczony względem niej.
   const displayPriceVal = getDisplayPrice(listing);
+  const showMotolia = isPln && !!listing.showMotoliaDiscount && (
+    motoliaDiscountVal > 0 || 
+    (!!listing.catalogPrice && listing.catalogPrice > displayPriceVal)
+  );
+  // "Cena pojazdu" zależna od flagi displaySalePrice (per pojazd). Pill katalogowy liczony względem niej.
 
   // If the catalog price is empty or invalid (not greater than the display price),
   // but we have a Motolia discount, we can calculate a virtual catalog price before discount
