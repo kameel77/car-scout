@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { authorizeRoles } from '../middleware/authorize.js';
 
 export async function partnerAdsRoutes(fastify: FastifyInstance) {
     // Schema for Ad validation
@@ -51,7 +52,7 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
 
     // Admin: List all ads (including inactive)
     fastify.get('/api/admin/partner-ads', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         const ads = await fastify.prisma.partnerAd.findMany({
             orderBy: [
@@ -64,7 +65,7 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
 
     // Admin: Create new ad
     fastify.post('/api/admin/partner-ads', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         try {
             const data = adSchema.parse(request.body);
@@ -88,7 +89,7 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
 
     // Admin: Update ad
     fastify.patch('/api/admin/partner-ads/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
@@ -117,7 +118,7 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
 
     // Admin: Delete ad
     fastify.delete('/api/admin/partner-ads/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 

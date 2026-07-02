@@ -31,6 +31,7 @@ node_modules/
 .env*
 .agent*
 docs_other/
+security/
 
 # Local git worktrees (isolated workspaces for parallel work)
 .worktrees/

@@ -80,8 +80,6 @@ const getVehisToken = async (connection: { apiBaseUrl: string; apiKey: string; a
         password: connection.apiSecret || process.env.VEHIS_PASSWORD || ''
     });
 
-    console.log('--- VEHIS LOGIN REQUEST ---');
-    console.log('URL:', loginUrl);
 
     const response = await fetchWithTimeout(loginUrl, {
         method: 'POST',
@@ -177,12 +175,6 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
                 const url = `${baseUrl}/partner/v2/shops/${shopUuid}/calculations`;
 
-                console.log('--- INBANK CALCULATE REQUEST ---');
-                console.log('URL:', url);
-                console.log('Payload:', JSON.stringify(payload));
-                console.log('API Key (first 8 chars):', apiKey?.substring(0, 8) + '...');
-                console.log('Shop UUID:', shopUuid);
-                console.log('Product Code:', config.productCode);
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -195,18 +187,13 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
                 const responseText = await response.text();
 
-                console.log('--- INBANK CALCULATE RESPONSE ---');
-                console.log('Status:', response.status);
-                console.log('Body:', responseText);
-                console.log('---------------------------------');
 
                 if (!response.ok) {
                     let errorData: any = {};
                     try { errorData = JSON.parse(responseText); } catch { /* non-JSON response */ }
+                    fastify.log.error({ provider: 'INBANK', status: response.status }, 'INBANK provider error');
                     return reply.code(502).send({
-                        error: 'Provider request failed',
-                        details: errorData?.message || errorData?.error || responseText || 'Unknown provider error',
-                        statusCode: response.status
+                        error: 'Provider request failed'
                     });
                 }
 
@@ -224,9 +211,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 );
 
                 if (!Number.isFinite(monthlyInstallment)) {
-                    console.log('--- INBANK: Could not extract monthly installment from response ---');
-                    console.log('Parsed result keys:', Object.keys(result));
-                    return reply.code(502).send({ error: 'Invalid provider response', details: result });
+                    fastify.log.error({ provider: 'INBANK', resultKeys: Object.keys(result) }, 'INBANK invalid response format');
+                    return reply.code(502).send({ error: 'Invalid provider response' });
                 }
 
                 // Parse additional fields for RRSO and representative example calculation
@@ -358,9 +344,6 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 });
 
                 const vehisUrl = `${connection.apiBaseUrl.replace(/\/$/, '')}/broker/calculate`;
-                console.log('--- VEHIS CALCULATE REQUEST ---');
-                console.log('URL:', vehisUrl);
-                console.log('Payload:', JSON.stringify(vehisPayload, null, 2));
 
                 const response = await fetchWithTimeout(vehisUrl, {
                     method: 'POST',
@@ -373,16 +356,13 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
                 const responseText = await response.text();
 
-                console.log('--- VEHIS RESPONSE ---');
-                console.log('Status:', response.status);
-                console.log('Body:', responseText);
 
                 if (!response.ok) {
                     let errorData: any = {};
                     try { errorData = JSON.parse(responseText); } catch { /* non-JSON response */ }
+                    fastify.log.error({ provider: 'VEHIS', status: response.status }, 'VEHIS provider error');
                     return reply.code(502).send({
-                        error: 'Provider request failed',
-                        details: errorData?.message || errorData?.error || responseText || 'Unknown provider error'
+                        error: 'Provider request failed'
                     });
                 }
 
@@ -395,7 +375,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 // No conversion needed — just pass through.
                 const monthlyInstallment = Number((result as any)?.cars?.[0]?.installment);
                 if (!Number.isFinite(monthlyInstallment)) {
-                    return reply.code(502).send({ error: 'Invalid provider response', details: result });
+                    fastify.log.error({ provider: 'VEHIS', resultKeys: Object.keys(result) }, 'VEHIS invalid response format');
+                    return reply.code(502).send({ error: 'Invalid provider response' });
                 }
 
                 const isConsumer = clientType === 'consumer';

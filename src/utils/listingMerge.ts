@@ -57,5 +57,6 @@ export function mergeFacets(
     bodyType: sumMap(sale?.bodyType, rental?.bodyType),
     transmission: sumMap(sale?.transmission, rental?.transmission),
     drive: sumMap(sale?.drive, rental?.drive),
+    city: sumMap(sale?.city, rental?.city),
   };
 }

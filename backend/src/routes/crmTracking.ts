@@ -11,6 +11,7 @@ const VisitSchema = z.object({
 export async function crmTrackingRoutes(fastify: FastifyInstance) {
     // Public endpoint for tracking visits
     fastify.post('/api/crm-tracking/visit', {
+        config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
         schema: {
             description: 'Track a user visit for CRM analytics',
             tags: ['CRM Tracking'],

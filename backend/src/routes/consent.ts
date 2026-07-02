@@ -53,7 +53,9 @@ export async function consentRoutes(fastify: FastifyInstance) {
         };
     });
 
-    fastify.post('/api/consent', async (request, reply) => {
+    fastify.post('/api/consent', {
+        config: { rateLimit: { max: 30, timeWindow: '1 minute' } }
+    }, async (request, reply) => {
         const body = (request.body || {}) as ConsentChoiceBody;
         const analytics = Boolean(body.analytics);
         const marketing = Boolean(body.marketing);

@@ -50,6 +50,7 @@ const emptyFilters: FilterState = {
   bodyTypes: [], statuses: [], priceFrom: '', priceTo: '',
   rateFrom: '', rateTo: '', rateType: 'credit', rateBasis: 'gross',
   query: '',
+  cities: [],
 };
 
 const parseArray = (param: string | null) => param ? param.split(',') : [];
@@ -204,6 +205,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       rateType: rt === 'lease' ? 'lease' : 'credit',
       rateBasis: rb === 'net' ? 'net' : 'gross',
       query: searchParams.get('q') || '',
+      cities: parseArray(searchParams.get('city')),
     };
   });
 
@@ -281,6 +283,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       if ((filters.rateFrom || filters.rateTo) && filters.rateType !== 'credit') params.set('rateType', filters.rateType);
       if ((filters.rateFrom || filters.rateTo) && filters.rateBasis !== 'gross') params.set('rateBasis', filters.rateBasis);
       if (filters.query) params.set('q', filters.query);
+      if (filters.cities.length) params.set('city', filters.cities.join(','));
       if (sortBy !== defaultSortCars) params.set('sortBy', sortBy);
       if (page > 1) params.set('page', page.toString());
       if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
@@ -409,6 +412,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
         params.set('rateBasis', updatedFilters.rateBasis);
       }
       if (updatedFilters.query) params.set('q', updatedFilters.query);
+      if (updatedFilters.cities.length) params.set('city', updatedFilters.cities.join(','));
       // Preserve the "Wszystkie filtry" sheet across the redirect when the user
       // changed Stan while the sheet was open — SearchPage re-opens it from this URL param.
       if (allFiltersOpen) params.set('openFilters', 'true');
