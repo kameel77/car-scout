@@ -30,6 +30,10 @@ const LISTING = {
     transmission: 'manualna',
     primaryImageUrl: '/uploads/listings/puma.webp',
     additionalInfoContent: '<p>Bogate <b>wyposażenie</b></p>',
+    equipmentSafety: ['ABS', 'Czujniki parkowania <tył>'],
+    equipmentAudioMultimedia: ['Apple CarPlay'],
+    equipmentComfortExtras: [],
+    equipmentOther: [],
 };
 
 const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"></div></body></html>`;
@@ -99,10 +103,16 @@ describe('buildListingMeta', () => {
         expect(JSON.stringify(m.jsonLd)).not.toContain('FAQPage');
     });
 
-    it('oferta variant: no financing section', () => {
+    it('oferta variant: no financing section, has purchase process and equipment', () => {
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
         expect(m.bodyHtml).not.toContain('Kredyt samochodowy na ten pojazd');
         expect(m.bodyHtml).not.toContain('Leasing tego pojazdu');
+        expect(m.bodyHtml).toContain('<h2>Jak kupić ten samochód?</h2>');
+        expect(m.bodyHtml).toContain('<h2>Wyposażenie</h2>');
+        expect(m.bodyHtml).toContain('<h3>Bezpieczeństwo</h3>');
+        expect(m.bodyHtml).toContain('<li>Czujniki parkowania &lt;tył&gt;</li>');
+        expect(m.bodyHtml).toContain('<li>Apple CarPlay</li>');
+        expect(m.bodyHtml).not.toContain('<h3>Komfort i dodatki</h3>');
     });
 });
 
@@ -130,6 +140,48 @@ describe('buildRentalMeta', () => {
         expect(m.bodyHtml).toContain('<h3>Jaki limit kilometrów?</h3>');
         expect(m.bodyHtml).toContain('Od 10 000 km rocznie.');
         expect(m.bodyHtml).not.toContain('<b>10 000</b>');
+    });
+
+    it('full Vehicle + LeaseOut offer + BreadcrumbList + FAQPage JSON-LD, rate in body', () => {
+        const faq = [{ questionPl: 'Co zawiera rata?', answerPl: 'Finansowanie i **ubezpieczenie**.' }];
+        const m = buildRentalMeta(
+            {
+                make: 'Toyota',
+                model: 'Corolla',
+                version: 'Comfort',
+                productionYear: 2026,
+                primaryImageUrl: '/uploads/rental/corolla.webp',
+                bodyType: 'sedan',
+                fuelType: 'hybryda',
+                transmission: 'automatyczna',
+                enginePowerHp: 140,
+                doors: 4,
+                seats: 5,
+                color: 'czarny',
+                mileageKm: 0,
+                condition: 'NEW',
+                equipmentSafety: ['ABS'],
+            },
+            'toyota-corolla-x1',
+            ctx,
+            faq,
+            1899.5
+        );
+        const ld = m.jsonLd as any[];
+        expect(ld[0]['@type']).toBe('Vehicle');
+        expect(ld[0].image).toBe('https://dev.motolia.pl/uploads/rental/corolla.webp');
+        expect(ld[0].itemCondition).toBe('https://schema.org/NewCondition');
+        expect(ld[0].vehicleTransmission).toBe('automatyczna');
+        expect(ld[0].offers.businessFunction).toBe('http://purl.org/goodrelations/v1#LeaseOut');
+        expect(ld[0].offers.priceSpecification.minPrice).toBe(1900);
+        expect(ld[0].offers.seller.name).toBe('Motolia');
+        expect(ld[1]['@type']).toBe('BreadcrumbList');
+        expect(ld[2]['@type']).toBe('FAQPage');
+        expect(ld[2].mainEntity[0].acceptedAnswer.text).toBe('Finansowanie i **ubezpieczenie**.');
+        expect(m.bodyHtml).toContain(`Rata najmu od ${(1900).toLocaleString('pl-PL')} zł brutto miesięcznie.`);
+        expect(m.bodyHtml).toContain('<h2>Wyposażenie</h2>');
+        expect(m.bodyHtml).toContain('<tr><td>Moc</td><td>140 KM</td></tr>');
+        expect(m.ogImage).toBe('https://dev.motolia.pl/uploads/rental/corolla.webp');
     });
 });
 

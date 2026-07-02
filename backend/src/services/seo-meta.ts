@@ -72,6 +72,38 @@ export interface ListingMetaInput {
     transmission: string | null;
     primaryImageUrl: string | null;
     additionalInfoContent: string | null;
+    equipmentSafety?: string[];
+    equipmentAudioMultimedia?: string[];
+    equipmentComfortExtras?: string[];
+    equipmentOther?: string[];
+}
+
+interface EquipmentGroups {
+    equipmentSafety?: string[];
+    equipmentAudioMultimedia?: string[];
+    equipmentComfortExtras?: string[];
+    equipmentOther?: string[];
+}
+
+// Unikalna per pojazd treść — kluczowa przeciw thin content
+function equipmentSectionHtml(e: EquipmentGroups): string {
+    const groups = [
+        { label: 'Bezpieczeństwo', items: e.equipmentSafety },
+        { label: 'Audio i multimedia', items: e.equipmentAudioMultimedia },
+        { label: 'Komfort i dodatki', items: e.equipmentComfortExtras },
+        { label: 'Pozostałe', items: e.equipmentOther },
+    ].filter(g => g.items && g.items.length > 0);
+    if (!groups.length) return '';
+    return `
+  <section>
+    <h2>Wyposażenie</h2>
+    ${groups.map(g => `<h3>${g.label}</h3>\n<ul>\n${g.items!.map(i => `<li>${escapeHtml(i)}</li>`).join('\n')}\n</ul>`).join('\n')}
+  </section>`;
+}
+
+// Do JSON-LD (JSON.stringify sam escapuje) — tylko zdjęcie tagów/nadmiaru białych znaków
+function stripTags(s: string): string {
+    return s.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 export interface RelatedListing {
@@ -148,6 +180,16 @@ export function buildListingMeta(
     </tbody>
   </table>
   ${l.additionalInfoContent ? `<div class="description">${htmlToText(l.additionalInfoContent)}</div>` : ''}
+  ${equipmentSectionHtml(l)}
+  ${variant === 'oferta' ? `
+  <section>
+    <h2>Jak kupić ten samochód?</h2>
+    <ol>
+      <li>Sprawdź szczegóły oferty i wybierz formę finansowania — gotówka, kredyt, leasing lub najem.</li>
+      <li>Zostaw kontakt przez formularz — doradca ${escapeHtml(ctx.brandName)} potwierdzi dostępność auta u dealera.</li>
+      <li>Podpisz umowę i odbierz samochód u dealera.</li>
+    </ol>
+  </section>` : ''}
   ${variant === 'kredyt' ? `
   <section>
     <h2>Kredyt samochodowy na ten pojazd</h2>
@@ -240,15 +282,35 @@ export interface RentalMetaInput {
     productionYear: number | null;
     sellingPrice?: number | null;
     primaryImageUrl?: string | null;
+    bodyType?: string | null;
+    fuelType?: string | null;
+    transmission?: string | null;
+    enginePowerHp?: number | null;
+    doors?: number | null;
+    seats?: number | null;
+    color?: string | null;
+    mileageKm?: number | null;
+    condition?: string;
+    equipmentSafety?: string[];
+    equipmentAudioMultimedia?: string[];
+    equipmentComfortExtras?: string[];
+    equipmentOther?: string[];
 }
 
-export function buildRentalMeta(r: RentalMetaInput, slug: string, ctx: BrandCtx, faq: FaqItem[] = []): PageMeta {
+export function buildRentalMeta(
+    r: RentalMetaInput,
+    slug: string,
+    ctx: BrandCtx,
+    faq: FaqItem[] = [],
+    monthlyRateFrom: number | null = null
+): PageMeta {
     const name = [r.make, r.model, r.version, r.productionYear ? String(r.productionYear) : null]
         .filter(Boolean)
         .join(' ');
     const canonical = `${ctx.baseUrl}/wynajem-dlugoterminowy/${slug}`;
     const safeName = escapeHtml(name);
     const imageUrl = r.primaryImageUrl ? absoluteUrl(r.primaryImageUrl, ctx.baseUrl) : null;
+    const rateFrom = monthlyRateFrom ? Math.round(monthlyRateFrom).toLocaleString('pl-PL') : null;
     const bodyHtml = `
 <nav aria-label="Breadcrumb">
   <ol>
@@ -261,6 +323,21 @@ export function buildRentalMeta(r: RentalMetaInput, slug: string, ctx: BrandCtx,
   <h1>${safeName} — wynajem długoterminowy</h1>
   ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${safeName}" style="max-width:100%;height:auto;"/>` : ''}
   <p>${safeName} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.</p>
+  ${rateFrom ? `<p>Rata najmu od ${rateFrom} zł brutto miesięcznie.</p>` : ''}
+  <table>
+    <tbody>
+      <tr><td>Marka</td><td>${escapeHtml(r.make)}</td></tr>
+      <tr><td>Model</td><td>${escapeHtml(r.model)}</td></tr>
+      ${r.version ? `<tr><td>Wersja</td><td>${escapeHtml(r.version)}</td></tr>` : ''}
+      ${r.productionYear ? `<tr><td>Rocznik</td><td>${r.productionYear}</td></tr>` : ''}
+      ${r.fuelType ? `<tr><td>Paliwo</td><td>${escapeHtml(r.fuelType)}</td></tr>` : ''}
+      ${r.bodyType ? `<tr><td>Nadwozie</td><td>${escapeHtml(r.bodyType)}</td></tr>` : ''}
+      ${r.transmission ? `<tr><td>Skrzynia</td><td>${escapeHtml(r.transmission)}</td></tr>` : ''}
+      ${r.enginePowerHp ? `<tr><td>Moc</td><td>${r.enginePowerHp} KM</td></tr>` : ''}
+      ${r.color ? `<tr><td>Kolor</td><td>${escapeHtml(r.color)}</td></tr>` : ''}
+    </tbody>
+  </table>
+  ${equipmentSectionHtml(r)}
   <section>
     <h2>Wynajem długoterminowy tego pojazdu</h2>
     <p>${safeName} dostępny w najmie długoterminowym przez ${escapeHtml(ctx.brandName)} — jedna stała rata obejmująca finansowanie auta, bez wkładu własnego i bez zobowiązań na koniec umowy.</p>
@@ -273,30 +350,93 @@ export function buildRentalMeta(r: RentalMetaInput, slug: string, ctx: BrandCtx,
   ${faqSectionHtml(faq, 'Najczęstsze pytania o wynajem długoterminowy')}
 </article>`.trim();
 
+    const jsonLd: any[] = [];
+    jsonLd.push({
+        '@context': 'https://schema.org',
+        '@type': 'Vehicle',
+        name,
+        brand: { '@type': 'Brand', name: r.make },
+        model: r.model,
+        ...(r.productionYear ? { vehicleModelDate: String(r.productionYear) } : {}),
+        ...(imageUrl ? { image: imageUrl } : {}),
+        ...(r.bodyType ? { bodyType: r.bodyType } : {}),
+        ...(r.fuelType ? { fuelType: r.fuelType } : {}),
+        ...(r.transmission ? { vehicleTransmission: r.transmission } : {}),
+        ...(r.color ? { color: r.color } : {}),
+        ...(r.doors ? { numberOfDoors: r.doors } : {}),
+        ...(r.seats ? { seatingCapacity: r.seats } : {}),
+        ...(r.enginePowerHp
+            ? {
+                  vehicleEngine: {
+                      '@type': 'EngineSpecification',
+                      enginePower: { '@type': 'QuantitativeValue', value: r.enginePowerHp, unitCode: 'BHP' },
+                  },
+              }
+            : {}),
+        ...(typeof r.mileageKm === 'number'
+            ? { mileageFromOdometer: { '@type': 'QuantitativeValue', value: r.mileageKm, unitCode: 'KMT' } }
+            : {}),
+        ...(r.condition
+            ? {
+                  itemCondition:
+                      r.condition === 'NEW'
+                          ? 'https://schema.org/NewCondition'
+                          : 'https://schema.org/UsedCondition',
+              }
+            : {}),
+        offers: {
+            '@type': 'Offer',
+            // Najem, nie sprzedaż — GoodRelations LeaseOut
+            businessFunction: 'http://purl.org/goodrelations/v1#LeaseOut',
+            availability: 'https://schema.org/InStock',
+            url: canonical,
+            seller: { '@type': 'Organization', name: ctx.brandName, url: `${ctx.baseUrl}/` },
+            ...(monthlyRateFrom
+                ? {
+                      priceSpecification: {
+                          '@type': 'UnitPriceSpecification',
+                          minPrice: Math.round(monthlyRateFrom),
+                          priceCurrency: 'PLN',
+                          valueAddedTaxIncluded: true,
+                          unitText: 'miesiąc',
+                          referenceQuantity: { '@type': 'QuantitativeValue', value: 1, unitCode: 'MON' },
+                      },
+                  }
+                : {}),
+        },
+        url: canonical,
+    });
+
+    jsonLd.push({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Strona główna', item: ctx.baseUrl },
+            { '@type': 'ListItem', position: 2, name: 'Wynajem długoterminowy', item: `${ctx.baseUrl}/wynajem-dlugoterminowy` },
+            { '@type': 'ListItem', position: 3, name, item: canonical },
+        ],
+    });
+
+    // Strony najmu są self-canonical — FAQPage jest tu zasadne (inaczej niż na wariantach ofert)
+    if (faq.length > 0) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faq.map(f => ({
+                '@type': 'Question',
+                name: stripTags(f.questionPl),
+                acceptedAnswer: { '@type': 'Answer', text: stripTags(f.answerPl) },
+            })),
+        });
+    }
+
     return {
         title: `${name} — najem długoterminowy | ${ctx.brandName}`,
         description: `${name} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.`,
         canonical,
         ogImage: imageUrl || undefined,
         bodyHtml,
-        jsonLd: {
-            '@context': 'https://schema.org',
-            '@type': 'Vehicle',
-            name,
-            brand: { '@type': 'Brand', name: r.make },
-            model: r.model,
-            ...(r.sellingPrice
-                ? {
-                      offers: {
-                          '@type': 'Offer',
-                          price: r.sellingPrice,
-                          priceCurrency: 'PLN',
-                          availability: 'https://schema.org/InStock',
-                          url: canonical,
-                      },
-                  }
-                : {}),
-        },
+        jsonLd,
         status: 200,
     };
 }

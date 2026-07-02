@@ -84,6 +84,10 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
                       transmission: true,
                       primaryImageUrl: true,
                       additionalInfoContent: true,
+                      equipmentSafety: true,
+                      equipmentAudioMultimedia: true,
+                      equipmentComfortExtras: true,
+                      equipmentOther: true,
                   },
               })
             : null;
@@ -113,19 +117,19 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
 
         const variant = lm[1] as ListingVariant;
 
-        // FAQ sprofilowane pod wariant finansowania — ten sam filtr co GET /api/faq
-        const variantFaq = variant !== 'oferta'
-            ? await fastify.prisma.faqEntry.findMany({
-                  where: {
-                      isPublished: true,
-                      page: 'offers',
-                      pageContext: { in: ['all', 'offers'] },
-                      OR: [{ financingType: variant }, { financingType: null }, { financingType: 'all' }],
-                  },
-                  orderBy: { sortOrder: 'asc' },
-                  select: { questionPl: true, answerPl: true },
-              })
-            : [];
+        // FAQ jak na froncie: page=offers; dla wariantów finansowych dodatkowo filtr financingType
+        const variantFaq = await fastify.prisma.faqEntry.findMany({
+            where: {
+                isPublished: true,
+                page: 'offers',
+                pageContext: { in: ['all', 'offers'] },
+                ...(variant !== 'oferta'
+                    ? { OR: [{ financingType: variant }, { financingType: null }, { financingType: 'all' }] }
+                    : {}),
+            },
+            orderBy: { sortOrder: 'asc' },
+            select: { questionPl: true, answerPl: true },
+        });
 
         // Slug z URL bywa zmanipulowany — canonical liczymy z danych, nie z requestu
         const canonicalSlug = generateListingSlug(
@@ -145,12 +149,26 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         const rental = await fastify.prisma.rentalVehicle.findFirst({
             where: { slug: rm[1], isActive: true },
             select: {
+                id: true,
                 make: true,
                 model: true,
                 version: true,
                 productionYear: true,
                 sellingPrice: true,
                 primaryImageUrl: true,
+                bodyType: true,
+                fuelType: true,
+                transmission: true,
+                enginePowerHp: true,
+                doors: true,
+                seats: true,
+                color: true,
+                mileageKm: true,
+                condition: true,
+                equipmentSafety: true,
+                equipmentAudioMultimedia: true,
+                equipmentComfortExtras: true,
+                equipmentOther: true,
             },
         });
         if (!rental) return defaultMeta(ctx, { noindex: true, status: 404 });
@@ -165,7 +183,14 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
             orderBy: { sortOrder: 'asc' },
             select: { questionPl: true, answerPl: true },
         });
-        return buildRentalMeta(rental, rm[1], ctx, rentalFaq);
+
+        // Najniższa rata brutto z matrycy najmu (aktywne przypisania pojazdu)
+        const rateAgg = await fastify.prisma.rentalMatrixEntry.aggregate({
+            _min: { monthlyRateGross: true },
+            where: { assignment: { vehicleId: rental.id, isActive: true } },
+        });
+
+        return buildRentalMeta(rental, rm[1], ctx, rentalFaq, rateAgg._min.monthlyRateGross ?? null);
     }
 
     // Nieznane ścieżki (m.in. probe'y skanerów) odrzucamy przed zapytaniami do bazy
