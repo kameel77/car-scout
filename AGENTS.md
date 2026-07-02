@@ -86,3 +86,10 @@ Przed każdym deploymentem lub zmianą w Docker/Traefik/Nginx:
 - Nie zmieniaj deploymentu, Coolify, Nginx ani ENV w ramach passu poprawkującego bez osobnej, wyraźnej zgody.
 - Nie loguj sekretów ani tokenów.
 - Po zmianach uruchom testy backendu z `backend/` i sprawdź, czy istotne trasy nadal działają.
+
+## 8. Procedury Eksportu Danych
+
+1. **Eksport do CSV**: Jeśli użytkownik prosi o wyciągnięcie danych (np. pojazdów) w formacie CSV, używaj skryptu Node.js z wykorzystaniem Prisma.
+2. **Gotowy skrypt**: W katalogu `docs_other/` znajduje się wzorcowy skrypt [export_listings_csv.cjs](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/docs_other/export_listings_csv.cjs). Należy go uruchamiać z katalogu `backend/` (np. `node ../docs_other/export_listings_csv.cjs`).
+3. **Konfiguracja**: Skrypt automatycznie ładuje ENV z `backend/.env`. Upewnij się, że Prisma Client jest wygenerowany w `backend/` (`npx prisma generate`).
+4. **Miejsce zapisu**: Wygenerowane pliki CSV powinny trafiać do `docs_other/`, chyba że użytkownik wskaże inaczej.
