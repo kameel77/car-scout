@@ -3,6 +3,21 @@ import type { CSVRow, SyncResult, ImportMode } from '../types/csv.types.js';
 import { mapCSVToListing, mapCSVToListingUpdate } from './csv-mapper.js';
 import { generateListingSlug } from '../utils/url-utils.js';
 
+function parsePostalCodeAndCity(addressLine: string | undefined | null) {
+    if (!addressLine) return { postalCode: null, city: null };
+    
+    // Pattern: 00-000 City Name
+    const match = addressLine.match(/^(\d{2}-\d{3})\s+(.+)$/);
+    if (match) {
+        return {
+            postalCode: match[1],
+            city: match[2].trim()
+        };
+    }
+    
+    return { postalCode: null, city: addressLine.trim() };
+}
+
 export async function syncListingsFromCSV(
     prisma: PrismaClient,
     csvData: CSVRow[],
@@ -145,6 +160,7 @@ export async function syncListingsFromCSV(
             // Find or create dealer
             let dealerId: string | undefined;
             if (row.dealer_name && row.dealer_address_line1) {
+                const { postalCode, city } = parsePostalCodeAndCity(row.dealer_address_line2);
                 const dealer = await tx.dealer.upsert({
                     where: {
                         name_addressLine1: {
@@ -152,19 +168,34 @@ export async function syncListingsFromCSV(
                             addressLine1: row.dealer_address_line1
                         }
                     },
-                    update: {},
+                    update: {
+                        // Update city and postalCode only if they are missing in the current record
+                        // We use a separate check for that to be safe
+                    },
                     create: {
                         name: row.dealer_name,
                         addressLine1: row.dealer_address_line1,
                         addressLine2: row.dealer_address_line2 || undefined,
                         addressLine3: row.dealer_address_line3 || undefined,
-                        city: undefined,
+                        city,
+                        postalCode,
                         contactPhone: row.contact_phone || undefined,
                         googleRating: row.dealer_google_rating ? parseFloat(row.dealer_google_rating) : undefined,
                         googleReviewCount: row.dealer_review_count ? parseInt(row.dealer_review_count) : undefined,
                         googleLink: row.dealer_google_link || undefined
                     }
                 });
+
+                // If dealer exists but fields are missing, update them
+                if (dealer && (!dealer.city || !dealer.postalCode) && (city || postalCode)) {
+                    await tx.dealer.update({
+                        where: { id: dealer.id },
+                        data: {
+                            city: dealer.city || city || undefined,
+                            postalCode: dealer.postalCode || postalCode || undefined
+                        }
+                    });
+                }
                 dealerId = dealer.id;
             }
 
