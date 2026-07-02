@@ -242,7 +242,7 @@ export interface RentalMetaInput {
     primaryImageUrl?: string | null;
 }
 
-export function buildRentalMeta(r: RentalMetaInput, slug: string, ctx: BrandCtx): PageMeta {
+export function buildRentalMeta(r: RentalMetaInput, slug: string, ctx: BrandCtx, faq: FaqItem[] = []): PageMeta {
     const name = [r.make, r.model, r.version, r.productionYear ? String(r.productionYear) : null]
         .filter(Boolean)
         .join(' ');
@@ -261,6 +261,16 @@ export function buildRentalMeta(r: RentalMetaInput, slug: string, ctx: BrandCtx)
   <h1>${safeName} — wynajem długoterminowy</h1>
   ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${safeName}" style="max-width:100%;height:auto;"/>` : ''}
   <p>${safeName} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.</p>
+  <section>
+    <h2>Wynajem długoterminowy tego pojazdu</h2>
+    <p>${safeName} dostępny w najmie długoterminowym przez ${escapeHtml(ctx.brandName)} — jedna stała rata obejmująca finansowanie auta, bez wkładu własnego i bez zobowiązań na koniec umowy.</p>
+    <ol>
+      <li>Wybierz okres najmu i roczny limit kilometrów przy ofercie.</li>
+      <li>Zostaw kontakt — doradca przygotuje ofertę najmu dopasowaną do Twoich potrzeb.</li>
+      <li>Podpisz umowę i odbierz samochód.</li>
+    </ol>
+  </section>
+  ${faqSectionHtml(faq, 'Najczęstsze pytania o wynajem długoterminowy')}
 </article>`.trim();
 
     return {

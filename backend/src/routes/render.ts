@@ -154,7 +154,18 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
             },
         });
         if (!rental) return defaultMeta(ctx, { noindex: true, status: 404 });
-        return buildRentalMeta(rental, rm[1], ctx);
+
+        // FAQ najmu — ten sam filtr co frontend (page=rental, pageContext=rental)
+        const rentalFaq = await fastify.prisma.faqEntry.findMany({
+            where: {
+                isPublished: true,
+                page: 'rental',
+                pageContext: { in: ['all', 'rental'] },
+            },
+            orderBy: { sortOrder: 'asc' },
+            select: { questionPl: true, answerPl: true },
+        });
+        return buildRentalMeta(rental, rm[1], ctx, rentalFaq);
     }
 
     // Nieznane ścieżki (m.in. probe'y skanerów) odrzucamy przed zapytaniami do bazy

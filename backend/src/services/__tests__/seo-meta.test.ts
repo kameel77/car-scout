@@ -116,6 +116,21 @@ describe('buildRentalMeta', () => {
         expect(m.title).toContain('najem długoterminowy');
         expect(m.canonical).toBe('https://dev.motolia.pl/wynajem-dlugoterminowy/toyota-corolla-x1');
     });
+
+    it('rental section and FAQ in bodyHtml', () => {
+        const faq = [{ questionPl: 'Jaki limit kilometrów?', answerPl: 'Od <b>10 000</b> km rocznie.' }];
+        const m = buildRentalMeta(
+            { make: 'Toyota', model: 'Corolla', version: null, productionYear: 2024 },
+            'toyota-corolla-x1',
+            ctx,
+            faq
+        );
+        expect(m.bodyHtml).toContain('<h2>Wynajem długoterminowy tego pojazdu</h2>');
+        expect(m.bodyHtml).toContain('<h2>Najczęstsze pytania o wynajem długoterminowy</h2>');
+        expect(m.bodyHtml).toContain('<h3>Jaki limit kilometrów?</h3>');
+        expect(m.bodyHtml).toContain('Od 10 000 km rocznie.');
+        expect(m.bodyHtml).not.toContain('<b>10 000</b>');
+    });
 });
 
 describe('buildStaticMeta', () => {

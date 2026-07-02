@@ -147,7 +147,7 @@ Kontekst decyzji: warianty `/kredyt/:slug` i `/leasing/:slug` kanonikalizują do
 - [ ] Promocja `dev` → `staging` → `main`; po deployu resubmit sitemapy w GSC + test wyrenderowanej strony (Sprawdzenie URL).
 - [ ] Cotygodniowy przegląd GSC: liczba zindeksowanych `/oferta`, rozkład „przyczyn niezindeksowania" (soft 404 powinny zniknąć), Statystyki indeksowania (429/5xx = 0).
 - [ ] GEO smoke-test co 2 tyg.: zapytania typu „kredyt na [marka model] dostępny od ręki", „leasing [model] bez wkładu" w ChatGPT/Perplexity/Claude — czy motolia.pl pojawia się w źródłach.
-- [ ] Uzupełnić FAQ w CMS dla `page=offers` z podziałem na `financingType` (kredyt/leasing) — treść wstrzykiwana na wariantach jest tak dobra, jak wpisy w bazie.
+- [ ] Uzupełnić FAQ w CMS: `Strona oferty` z podziałem na Finansowanie (kredyt/leasing) → renderuje się na `/kredyt/:slug` i `/leasing/:slug`; `Strona najmu` → renderuje się na `/wynajem-dlugoterminowy/:slug`. Treść wstrzykiwana serwerowo jest tak dobra, jak wpisy w bazie.
 
 ### Horyzont 2–3 mies. (09–10.2026) — decyzja o usamodzielnieniu wariantów (Opcja B)
 
