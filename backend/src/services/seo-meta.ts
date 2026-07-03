@@ -111,8 +111,8 @@ export interface RelatedListing {
     make: string;
     model: string;
     version: string | null;
-    productionYear: number;
-    pricePln: number;
+    productionYear: number | null;
+    pricePln: number | null;
     slug: string;
 }
 
@@ -215,7 +215,7 @@ export function buildListingMeta(
   <section>
     <h2>Podobne oferty</h2>
     <ul>
-      ${related.map(r => `<li><a href="/oferta/${r.slug}">${escapeHtml(`${r.make} ${r.model}`)} (${r.productionYear}) — ${r.pricePln.toLocaleString('pl-PL')} zł</a></li>`).join('\n')}
+      ${related.map(r => listingLinkHtml(r, '/oferta')).join('\n')}
     </ul>
   </section>` : ''}
 </article>`.trim();
@@ -510,7 +510,19 @@ export function hasStaticRoute(path: string): boolean {
     return path === '/' || path in STATIC_ROUTES;
 }
 
-export function buildStaticMeta(path: string, ctx: BrandCtx, listings: RelatedListing[] = [], faq: any[] = []): PageMeta | null {
+function listingLinkHtml(l: RelatedListing, basePath: string): string {
+    const year = l.productionYear ? ` (${l.productionYear})` : '';
+    const price = l.pricePln ? ` — ${l.pricePln.toLocaleString('pl-PL')} zł` : '';
+    return `<li><a href="${basePath}/${l.slug}">${escapeHtml(`${l.make} ${l.model}`)}${year}${price}</a></li>`;
+}
+
+export function buildStaticMeta(
+    path: string,
+    ctx: BrandCtx,
+    listings: RelatedListing[] = [],
+    faq: any[] = [],
+    listingsBasePath: string = '/oferta'
+): PageMeta | null {
     if (path === '/') {
         const bodyHtml = `
 <h1>${ctx.defaultTitle}</h1>
@@ -519,7 +531,7 @@ ${listings.length > 0 ? `
 <section>
   <h2>Najnowsze oferty</h2>
   <ul>
-    ${listings.map(l => `<li><a href="/oferta/${l.slug}">${escapeHtml(`${l.make} ${l.model}`)} (${l.productionYear}) — ${l.pricePln.toLocaleString('pl-PL')} zł</a></li>`).join('\n')}
+    ${listings.map(l => listingLinkHtml(l, listingsBasePath)).join('\n')}
   </ul>
   <p><a href="/samochody">Zobacz wszystkie samochody</a></p>
 </section>` : ''}`.trim();
@@ -550,7 +562,7 @@ ${listings.length > 0 ? `
 <section>
   <h2>Oferty</h2>
   <ul>
-    ${listings.map(l => `<li><a href="/oferta/${l.slug}">${escapeHtml(`${l.make} ${l.model}`)} (${l.productionYear}) — ${l.pricePln.toLocaleString('pl-PL')} zł</a></li>`).join('\n')}
+    ${listings.map(l => listingLinkHtml(l, listingsBasePath)).join('\n')}
   </ul>
 </section>` : ''}`.trim();
 
@@ -562,7 +574,7 @@ ${listings.length > 0 ? `
             itemListElement: listings.map((l, i) => ({
                 '@type': 'ListItem',
                 position: i + 1,
-                url: `${ctx.baseUrl}/oferta/${l.slug}`
+                url: `${ctx.baseUrl}${listingsBasePath}/${l.slug}`
             }))
         });
     }

@@ -205,6 +205,18 @@ describe('buildStaticMeta', () => {
     it('unknown route returns null', () => {
         expect(buildStaticMeta('/nie-ma-takiej-strony', ctx)).toBeNull();
     });
+
+    it('rental category links to rental pages via listingsBasePath', () => {
+        const rentals = [
+            { id: 'r1', make: 'Kia', model: 'Sportage', version: null, productionYear: 2026, pricePln: null, slug: 'kia-sportage-r1' },
+        ];
+        const m = buildStaticMeta('/wynajem-dlugoterminowy', ctx, rentals, [], '/wynajem-dlugoterminowy')!;
+        expect(m.bodyHtml).toContain('href="/wynajem-dlugoterminowy/kia-sportage-r1"');
+        expect(m.bodyHtml).toContain('Kia Sportage (2026)');
+        expect(m.bodyHtml).not.toContain('/oferta/');
+        expect(m.bodyHtml).not.toContain('zł');
+        expect(JSON.stringify(m.jsonLd)).toContain('https://dev.motolia.pl/wynajem-dlugoterminowy/kia-sportage-r1');
+    });
 });
 
 describe('defaultMeta', () => {

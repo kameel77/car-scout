@@ -198,26 +198,46 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         return defaultMeta(ctx, { noindex: true, status: 404 });
     }
 
-    const listingsRaw = await fastify.prisma.listing.findMany({
-        where: { isArchived: false },
-        take: 20,
-        orderBy: { createdAt: 'desc' },
-        select: {
-            id: true,
-            make: true,
-            model: true,
-            version: true,
-            productionYear: true,
-            pricePln: true,
-            bodyType: true,
-            fuelType: true,
-        },
-    });
-
-    const listings: RelatedListing[] = listingsRaw.map(l => ({
-        ...l,
-        slug: generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id)
-    }));
+    // Kategoria najmu listuje pojazdy najmu (linki do self-canonical stron), nie auta sprzedażowe
+    let listings: RelatedListing[];
+    let listingsBasePath = '/oferta';
+    if (path === '/wynajem-dlugoterminowy') {
+        const rentalsRaw = await fastify.prisma.rentalVehicle.findMany({
+            where: { isActive: true, slug: { not: null } },
+            take: 20,
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                make: true,
+                model: true,
+                version: true,
+                productionYear: true,
+                slug: true,
+            },
+        });
+        listings = rentalsRaw.map(r => ({ ...r, pricePln: null, slug: r.slug as string }));
+        listingsBasePath = '/wynajem-dlugoterminowy';
+    } else {
+        const listingsRaw = await fastify.prisma.listing.findMany({
+            where: { isArchived: false },
+            take: 20,
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                make: true,
+                model: true,
+                version: true,
+                productionYear: true,
+                pricePln: true,
+                bodyType: true,
+                fuelType: true,
+            },
+        });
+        listings = listingsRaw.map(l => ({
+            ...l,
+            slug: generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id)
+        }));
+    }
 
     let faq: any[] = [];
     if (path === '/faq') {
@@ -227,7 +247,7 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         });
     }
 
-    return buildStaticMeta(path, ctx, listings, faq) ?? defaultMeta(ctx, { noindex: true, status: 404 });
+    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 }
 
 export async function renderRoutes(fastify: FastifyInstance) {
