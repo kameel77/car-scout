@@ -103,6 +103,16 @@ export function SeoManager() {
                 })(window, document, 'script', 'dataLayer', gtmId);
             };
 
+            // Tag Assistant preview opens the page with ?gtm_debug=... and expects the
+            // container at page load — with lazy-load it times out ("Could not connect").
+            // Inject immediately in debug sessions; normal visitors keep the lazy path.
+            const isTagAssistantDebug = window.location.search.includes('gtm_debug')
+                || document.referrer.includes('tagassistant.google.com');
+            if (isTagAssistantDebug) {
+                injectGTM();
+                return;
+            }
+
             const interactionEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
             
             const handleInteraction = () => {
