@@ -63,3 +63,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+## 5. Devlog (Vault)
+
+Po wdrożeniu na prod lub domknięciu znaczącego zakresu prac (feature, migracja, incydent) zaproponuj użytkownikowi wpis devlog do Vault i po akceptacji wykonaj go skillem `vault-devlog` (projekt: motolia). Nie dotyczy drobnych poprawek.
