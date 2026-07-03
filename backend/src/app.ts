@@ -209,14 +209,12 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
 
     await fastify.register(helmet, {
-        contentSecurityPolicy: {
-            directives: {
-                defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", "'unsafe-inline'"],
-                styleSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", "data:", "validator.swagger.io", "*"],
-            },
-        },
+        // CSP temporarily disabled (hotfix). The previous policy set script-src/connect-src
+        // to 'self' only, which blocked GTM, GA4, Google Ads and Clarity on prod and broke
+        // all analytics/remarketing tracking. Re-enable with a proper third-party allowlist
+        // (googletagmanager.com, google-analytics.com, googleadservices, *.clarity.ms, Thulium)
+        // — ideally with nonces instead of 'unsafe-inline'.
+        contentSecurityPolicy: false,
     });
 
     await fastify.register(multipart, {
