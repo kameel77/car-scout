@@ -33,6 +33,8 @@ const ALL_NAV_LINKS = [
   { key: 'samochody', label: 'Samochody', to: '/samochody' },
   { key: 'nowe', label: 'Nowe', to: '/nowe' },
   { key: 'uzywane', label: 'Używane', to: '/uzywane' },
+  { key: 'leasing', label: 'Leasing', to: '/leasing' },
+  { key: 'kredyt', label: 'Kredyt', to: '/kredyt' },
   { key: 'wynajem', label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
   { key: 'faq', label: 'FAQ', to: '/faq' },
   { key: 'kontakt', label: 'Kontakt', to: '/kontakt' },

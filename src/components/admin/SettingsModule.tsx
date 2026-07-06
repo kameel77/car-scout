@@ -333,7 +333,7 @@ Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\
                             Wybierz, które sekcje oferty mają być widoczne w górnym menu nawigacyjnym.
                         </p>
                         <div className="flex flex-wrap gap-4 pt-1">
-                            {[{ key: 'samochody', label: 'Samochody' }, { key: 'wynajem', label: 'Wynajem' }].map(({ key, label }) => (
+                            {[{ key: 'samochody', label: 'Samochody' }, { key: 'leasing', label: 'Leasing' }, { key: 'kredyt', label: 'Kredyt' }, { key: 'wynajem', label: 'Wynajem' }].map(({ key, label }) => (
                                 <div key={key} className="flex items-center space-x-2">
                                     <Checkbox
                                         id={`nav-item-${key}`}

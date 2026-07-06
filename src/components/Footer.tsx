@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Phone, Shield, FileText, ExternalLink, Cookie } from 'lucide-react';
 import { openConsentSettings } from '@/components/consent/ConsentBanner';
@@ -92,7 +93,7 @@ export function Footer() {
   return (
     <footer className="mt-12 border-t bg-slate-950 text-slate-100"
       style={isMotolia ? { borderTopColor: '#F5C51830' } : {}}>
-      <div className="container py-10 grid gap-10 lg:grid-cols-3">
+      <div className="container py-10 grid gap-10 lg:grid-cols-4">
         <div className="space-y-4">
           {logo ? (
             <img
@@ -109,6 +110,27 @@ export function Footer() {
           {sloganText && (
             <p className="text-base font-semibold text-slate-50">{sloganText}</p>
           )}
+        </div>
+
+        <div className="space-y-3">
+          <div className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            Finansowanie
+          </div>
+          <div className="space-y-2">
+            {[
+              { to: '/leasing', label: 'Leasing samochodu' },
+              { to: '/kredyt', label: 'Kredyt samochodowy' },
+              { to: '/wynajem-dlugoterminowy', label: 'Wynajem długoterminowy' },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="block rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm hover:border-slate-600 hover:bg-slate-900 transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         <div className="space-y-3">

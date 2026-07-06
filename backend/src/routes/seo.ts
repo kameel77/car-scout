@@ -75,7 +75,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
         // 1. Static Pages
         const staticPages = [
             '', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
-            '/dla-ciebie', '/dla-firm', '/faq', '/kontakt'
+            '/leasing', '/kredyt', '/dla-ciebie', '/dla-firm', '/faq', '/kontakt'
         ];
 
         staticPages.forEach(path => {

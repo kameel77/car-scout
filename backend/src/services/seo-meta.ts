@@ -185,7 +185,7 @@ export function buildListingMeta(
   <section>
     <h2>Jak kupić ten samochód?</h2>
     <ol>
-      <li>Sprawdź szczegóły oferty i wybierz formę finansowania — gotówka, kredyt, leasing lub najem.</li>
+      <li>Sprawdź szczegóły oferty i wybierz formę finansowania — gotówka, <a href="/kredyt">kredyt samochodowy</a>, <a href="/leasing">leasing samochodu</a> lub <a href="/wynajem-dlugoterminowy">wynajem długoterminowy</a>.</li>
       <li>Zostaw kontakt przez formularz — doradca ${escapeHtml(ctx.brandName)} potwierdzi dostępność auta u dealera.</li>
       <li>Podpisz umowę i odbierz samochód u dealera.</li>
     </ol>
@@ -480,9 +480,9 @@ const STATIC_ROUTES: Record<string, StaticRoute> = {
             'Samochody dostępne od ręki na kredyt. Złóż wniosek o finansowanie i odbierz auto bez czekania.',
     },
     '/wynajem-dlugoterminowy': {
-        title: b => `Najem długoterminowy samochodów | ${b}`,
+        title: b => `Wynajem długoterminowy samochodu — auto w abonamencie | ${b}`,
         description:
-            'Auta w najmie długoterminowym — stała rata, bez wkładu własnego. Sprawdź dostępne samochody.',
+            'Wynajem długoterminowy samochodu — auto w abonamencie ze stałą ratą, bez wkładu własnego. Sprawdź dostępne modele.',
     },
     '/dla-ciebie': {
         title: b => `Oferta dopasowana do Ciebie | ${b}`,

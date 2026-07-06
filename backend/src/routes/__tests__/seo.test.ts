@@ -40,6 +40,8 @@ describe('SEO routes', () => {
         expect(res.body).toContain('<loc>https://dev.motolia.pl/uzywane</loc>');
         expect(res.body).toContain('<loc>https://dev.motolia.pl/nowe</loc>');
         expect(res.body).toContain('<loc>https://dev.motolia.pl/dla-firm</loc>');
+        expect(res.body).toContain('<loc>https://dev.motolia.pl/leasing</loc>');
+        expect(res.body).toContain('<loc>https://dev.motolia.pl/kredyt</loc>');
     });
 
     it('robots.txt declares brand-aware sitemap', async () => {
