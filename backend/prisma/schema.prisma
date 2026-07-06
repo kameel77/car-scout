@@ -828,6 +828,7 @@ enum FaqPage {
   contact
   faq
   rental
+  financing
 }
 
 enum WidgetPlacement {

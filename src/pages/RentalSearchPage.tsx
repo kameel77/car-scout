@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
+import { FinancingContentSection } from '@/components/FinancingContentSection';
 
 /* ── Helpers ── */
 
@@ -766,6 +767,8 @@ export default function RentalSearchPage() {
             </Button>
           </div>
         )}
+
+        <FinancingContentSection type="wynajem" />
       </main>
       <ScrollToTopButton />
       <Footer />

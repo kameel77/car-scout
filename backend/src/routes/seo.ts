@@ -3,8 +3,21 @@ import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
 import { resolveBrandCtx } from '../services/seo-meta.js';
 import { generateListingSlug as buildListingSlug } from '../utils/url-utils.js';
+import { FINANCING_CONTENT } from '../content/financing-content.js';
 
 export async function seoRoutes(fastify: FastifyInstance) {
+    // Treść filarowa stron finansowania dla frontendu (sekcja pod listingiem)
+    fastify.get('/api/content/financing/:type', async (request, reply) => {
+        const { type } = request.params as { type: string };
+        const path = { leasing: '/leasing', kredyt: '/kredyt', wynajem: '/wynajem-dlugoterminowy' }[type];
+        const article = path ? FINANCING_CONTENT[path] : undefined;
+        if (!article) {
+            return reply.status(404).send({ error: 'Unknown financing content type' });
+        }
+        reply.header('Cache-Control', 'public, max-age=3600');
+        return article;
+    });
+
     // Get SEO Config
     fastify.get('/api/seo', async () => {
         const config = await fastify.prisma.seoConfig.findUnique({

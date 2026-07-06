@@ -13,6 +13,14 @@ import {
     PageMeta,
     RelatedListing,
 } from '../services/seo-meta.js';
+import { FINANCING_CONTENT } from '../content/financing-content.js';
+
+// Strony kategorii finansowania → filtr financingType dla FAQ z CMS
+const FINANCING_FAQ_TYPE: Record<string, string> = {
+    '/leasing': 'leasing',
+    '/kredyt': 'kredyt',
+    '/wynajem-dlugoterminowy': 'wynajem',
+};
 
 const TEMPLATE_TTL_MS = 5 * 60 * 1000;
 const PAGE_TTL_MS = 60 * 1000;
@@ -245,9 +253,22 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
             where: { isPublished: true },
             orderBy: { sortOrder: 'asc' },
         });
+    } else if (FINANCING_FAQ_TYPE[path]) {
+        faq = await fastify.prisma.faqEntry.findMany({
+            where: {
+                page: 'financing',
+                isPublished: true,
+                OR: [
+                    { financingType: FINANCING_FAQ_TYPE[path] },
+                    { financingType: 'all' },
+                    { financingType: null },
+                ],
+            },
+            orderBy: { sortOrder: 'asc' },
+        });
     }
 
-    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath) ?? defaultMeta(ctx, { noindex: true, status: 404 });
+    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath, FINANCING_CONTENT[path]) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 }
 
 export async function renderRoutes(fastify: FastifyInstance) {

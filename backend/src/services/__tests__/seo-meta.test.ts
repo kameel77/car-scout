@@ -177,7 +177,7 @@ describe('buildRentalMeta', () => {
         expect(ld[0].offers.seller.name).toBe('Motolia');
         expect(ld[1]['@type']).toBe('BreadcrumbList');
         expect(ld[2]['@type']).toBe('FAQPage');
-        expect(ld[2].mainEntity[0].acceptedAnswer.text).toBe('Finansowanie i **ubezpieczenie**.');
+        expect(ld[2].mainEntity[0].acceptedAnswer.text).toBe('Finansowanie i ubezpieczenie.');
         expect(m.bodyHtml).toContain(`Rata najmu od ${(1900).toLocaleString('pl-PL')} zł brutto miesięcznie.`);
         expect(m.bodyHtml).toContain('<h2>Wyposażenie</h2>');
         expect(m.bodyHtml).toContain('<tr><td>Moc</td><td>140 KM</td></tr>');
@@ -204,6 +204,18 @@ describe('buildStaticMeta', () => {
 
     it('unknown route returns null', () => {
         expect(buildStaticMeta('/nie-ma-takiej-strony', ctx)).toBeNull();
+    });
+
+    it('financing category renders pillar article and visible FAQ with FAQPage JSON-LD', () => {
+        const article = { h1: 'Leasing samochodu osobowego — operacyjny i konsumencki', html: '<p>Treść filaru z <a href="/kredyt">linkiem</a>.</p>' };
+        const faq = [{ questionPl: 'Czy leasing wymaga BIK?', answerPl: 'Tak, **weryfikacja** obejmuje BIK.' }];
+        const m = buildStaticMeta('/leasing', ctx, [], faq, '/oferta', article)!;
+        expect(m.bodyHtml).toContain('<h1>Leasing samochodu osobowego — operacyjny i konsumencki</h1>');
+        expect(m.bodyHtml).toContain('<article>');
+        expect(m.bodyHtml).toContain('href="/kredyt"');
+        expect(m.bodyHtml).toContain('<h3>Czy leasing wymaga BIK?</h3>');
+        expect(m.bodyHtml).not.toContain('**');
+        expect(JSON.stringify(m.jsonLd)).toContain('FAQPage');
     });
 
     it('rental category links to rental pages via listingsBasePath', () => {

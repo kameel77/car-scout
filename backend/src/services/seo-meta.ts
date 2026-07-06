@@ -101,9 +101,14 @@ function equipmentSectionHtml(e: EquipmentGroups): string {
   </section>`;
 }
 
-// Do JSON-LD (JSON.stringify sam escapuje) — tylko zdjęcie tagów/nadmiaru białych znaków
+// Do JSON-LD (JSON.stringify sam escapuje) — zdjęcie tagów, mini-markdownu CMS i nadmiaru białych znaków
 function stripTags(s: string): string {
-    return s.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return s
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '$1')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 export interface RelatedListing {
@@ -122,12 +127,20 @@ export interface FaqItem {
 }
 
 // Widoczne FAQ (bez FAQPage JSON-LD — strona kanonikalizuje do /oferta, schema byłaby ignorowana)
+// Odpowiedzi FAQ z CMS używają mini-markdownu (**pogrubienie**, [tekst](adres))
+function miniMarkdownToHtml(s: string): string {
+    return htmlToText(s)
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, text, href) =>
+            /^(https?:\/\/|\/)/.test(href) ? `<a href="${href}">${text}</a>` : text);
+}
+
 function faqSectionHtml(faq: FaqItem[], heading: string): string {
     if (!faq.length) return '';
     return `
   <section>
     <h2>${escapeHtml(heading)}</h2>
-    ${faq.map(f => `<h3>${escapeHtml(f.questionPl)}</h3>\n<p>${htmlToText(f.answerPl)}</p>`).join('\n')}
+    ${faq.map(f => `<h3>${escapeHtml(f.questionPl)}</h3>\n<p>${miniMarkdownToHtml(f.answerPl)}</p>`).join('\n')}
   </section>`;
 }
 
@@ -516,12 +529,18 @@ function listingLinkHtml(l: RelatedListing, basePath: string): string {
     return `<li><a href="${basePath}/${l.slug}">${escapeHtml(`${l.make} ${l.model}`)}${year}${price}</a></li>`;
 }
 
+export interface FinancingArticle {
+    h1: string;
+    html: string;
+}
+
 export function buildStaticMeta(
     path: string,
     ctx: BrandCtx,
     listings: RelatedListing[] = [],
     faq: any[] = [],
-    listingsBasePath: string = '/oferta'
+    listingsBasePath: string = '/oferta',
+    article?: FinancingArticle
 ): PageMeta | null {
     if (path === '/') {
         const bodyHtml = `
@@ -556,7 +575,7 @@ ${listings.length > 0 ? `
 
     const title = route.title(ctx.brandName);
     const bodyHtml = `
-<h1>${title}</h1>
+<h1>${article ? escapeHtml(article.h1) : title}</h1>
 <p>${route.description}</p>
 ${listings.length > 0 ? `
 <section>
@@ -564,7 +583,12 @@ ${listings.length > 0 ? `
   <ul>
     ${listings.map(l => listingLinkHtml(l, listingsBasePath)).join('\n')}
   </ul>
-</section>` : ''}`.trim();
+</section>` : ''}
+${article ? `
+<article>
+${article.html}
+</article>` : ''}
+${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
 
     const jsonLd: any[] = [];
     if (listings.length > 0) {
@@ -585,10 +609,10 @@ ${listings.length > 0 ? `
             '@type': 'FAQPage',
             mainEntity: faq.map(f => ({
                 '@type': 'Question',
-                name: f.questionPl,
+                name: stripTags(f.questionPl),
                 acceptedAnswer: {
                     '@type': 'Answer',
-                    text: f.answerPl
+                    text: stripTags(f.answerPl)
                 }
             }))
         });

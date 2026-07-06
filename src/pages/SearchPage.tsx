@@ -33,6 +33,7 @@ import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { useBrand } from '@/contexts/BrandContext';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
+import { FinancingContentSection, FinancingContentType } from '@/components/FinancingContentSection';
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -84,6 +85,12 @@ export default function SearchPage() {
     if (ct === 'business') setPriceType('net');
     else if (ct === 'private') setPriceType('gross');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sekcja treści filarowej pod listingiem — tylko na kategoriach finansowania
+  const financingContentType: FinancingContentType | null =
+    window.location.pathname === '/leasing' ? 'leasing'
+      : window.location.pathname === '/kredyt' ? 'kredyt'
+        : null;
 
   // Initialize from URL
   const [filters, setFilters] = React.useState<FilterState>(() => {
@@ -597,6 +604,8 @@ export default function SearchPage() {
             )}
           </div>
         </div>
+
+        {financingContentType && <FinancingContentSection type={financingContentType} />}
       </main>
 
       <ScrollToTopButton />
