@@ -322,6 +322,55 @@ export const importApi = {
     }
 };
 
+// CSFlow Sources API
+export const csflowApi = {
+    getSources: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/csflow/sources`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Nie udało się pobrać źródeł CSFlow');
+        return response.json();
+    },
+
+    createSource: async (data: { name: string; apiUrl: string; slug?: string; dealerGroupId?: string | null }, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/csflow/sources`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Nie udało się utworzyć źródła');
+        }
+        return response.json();
+    },
+
+    updateSource: async (id: string, data: { name?: string; apiUrl?: string; dealerGroupId?: string | null; isEnabled?: boolean }, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/csflow/sources/${id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Nie udało się zaktualizować źródła');
+        }
+        return response.json();
+    },
+
+    syncSource: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/csflow/sources/${id}/sync`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Synchronizacja źródła nie powiodła się');
+        }
+        return response.json();
+    },
+};
+
 // Analytics API
 export const analyticsApi = {
     getPriceTrends: async (params: {

@@ -1,5 +1,6 @@
 import { CSVUploader } from '@/components/admin/CSVUploader';
 import { CSFlowImporter } from '@/components/admin/CSFlowImporter';
+import { CSFlowSourcesManager } from '@/components/admin/CSFlowSourcesManager';
 import { ImportHistory } from '@/components/admin/ImportHistory';
 import { BulkSourceManager } from '@/components/admin/BulkSourceManager';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +28,7 @@ export default function ImportPage() {
                     </div>
                     <div>
                         <CSFlowImporter />
+                        <CSFlowSourcesManager />
                         <CSVUploader />
                     </div>
                 </section>
