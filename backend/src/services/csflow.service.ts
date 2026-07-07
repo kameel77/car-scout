@@ -55,10 +55,6 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
             select: { id: true, vin: true, listingId: true, csflowCarId: true, isArchived: true, pricePln: true }
         });
 
-        const activeCarIdsInDB = new Set(
-            existingListings.filter(l => !l.isArchived && l.csflowCarId !== null).map(l => l.csflowCarId as number)
-        );
-
         // Mapa WSZYSTKICH VIN-ów w bazie (nie tylko CSFlow) — zapobiega duplikatom
         // cross-source (np. VIN ręcznie dodanego auta = VIN z CSFlow)
         const allVinEntries = await prisma.listing.findMany({

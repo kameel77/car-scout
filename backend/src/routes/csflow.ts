@@ -24,7 +24,7 @@ function isValidCsflowUrl(apiUrl: string): boolean {
 export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
     // Ręczna synchronizacja WSZYSTKICH włączonych źródeł CSFlow
     fastify.post('/api/csflow/sync', {
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         try {
             const user = request.user as { userId: string };
@@ -84,12 +84,17 @@ export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
             const group = await fastify.prisma.dealerGroup.findUnique({ where: { id: body.dealerGroupId } });
             if (!group) return reply.status(400).send({ error: 'Wskazana grupa dealerska nie istnieje' });
         }
+        const normalizedApiUrl = body.apiUrl.trim().replace(/\/+$/, '');
+        const existingApiUrl = await fastify.prisma.csflowSource.findFirst({ where: { apiUrl: normalizedApiUrl } });
+        if (existingApiUrl) {
+            return reply.status(400).send({ error: 'Źródło z tym adresem API już istnieje' });
+        }
         try {
             const source = await fastify.prisma.csflowSource.create({
                 data: {
                     name: body.name.trim(),
                     slug,
-                    apiUrl: body.apiUrl.trim().replace(/\/+$/, ''),
+                    apiUrl: normalizedApiUrl,
                     dealerGroupId: body.dealerGroupId || null,
                 },
             });
@@ -119,11 +124,22 @@ export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
             if (!group) return reply.status(400).send({ error: 'Wskazana grupa dealerska nie istnieje' });
         }
 
+        let normalizedApiUrl: string | undefined;
+        if (body.apiUrl !== undefined) {
+            normalizedApiUrl = body.apiUrl.trim().replace(/\/+$/, '');
+            const existingApiUrl = await fastify.prisma.csflowSource.findFirst({
+                where: { apiUrl: normalizedApiUrl, id: { not: id } },
+            });
+            if (existingApiUrl) {
+                return reply.status(400).send({ error: 'Źródło z tym adresem API już istnieje' });
+            }
+        }
+
         const source = await fastify.prisma.csflowSource.update({
             where: { id },
             data: {
                 ...(body.name !== undefined ? { name: body.name.trim() } : {}),
-                ...(body.apiUrl !== undefined ? { apiUrl: body.apiUrl.trim().replace(/\/+$/, '') } : {}),
+                ...(normalizedApiUrl !== undefined ? { apiUrl: normalizedApiUrl } : {}),
                 ...(body.dealerGroupId !== undefined ? { dealerGroupId: body.dealerGroupId || null } : {}),
                 ...(body.isEnabled !== undefined ? { isEnabled: Boolean(body.isEnabled) } : {}),
             },

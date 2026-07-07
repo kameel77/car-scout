@@ -29,26 +29,28 @@ export async function bootstrapCsflowSources(prisma: PrismaClient): Promise<void
         return;
     }
 
-    const source = await prisma.csflowSource.create({
-        data: { name: 'Grupa Bemo', slug: 'grupabemo', apiUrl },
-    });
-    console.log(`[CSFlow Bootstrap] Utworzono źródło "${source.name}" (${apiUrl})`);
-
-    const listings = await prisma.listing.findMany({
-        where: { listingId: { startsWith: 'csflow-' }, csflowSourceId: null },
-        select: { id: true, listingId: true },
-    });
-    for (const l of listings) {
-        await prisma.listing.update({
-            where: { id: l.id },
-            data: { csflowSourceId: source.id, csflowCarId: parseCsflowCarId(l.listingId) },
+    await prisma.$transaction(async (tx) => {
+        const source = await tx.csflowSource.create({
+            data: { name: 'Grupa Bemo', slug: 'grupabemo', apiUrl },
         });
-    }
-    console.log(`[CSFlow Bootstrap] Backfill ofert: ${listings.length}`);
+        console.log(`[CSFlow Bootstrap] Utworzono źródło "${source.name}" (${apiUrl})`);
 
-    const dealers = await prisma.dealer.updateMany({
-        where: { csflowDealerId: { not: null }, csflowSourceId: null },
-        data: { csflowSourceId: source.id },
-    });
-    console.log(`[CSFlow Bootstrap] Backfill dealerów: ${dealers.count}`);
+        const listings = await tx.listing.findMany({
+            where: { listingId: { startsWith: 'csflow-' }, csflowSourceId: null },
+            select: { id: true, listingId: true },
+        });
+        for (const l of listings) {
+            await tx.listing.update({
+                where: { id: l.id },
+                data: { csflowSourceId: source.id, csflowCarId: parseCsflowCarId(l.listingId) },
+            });
+        }
+        console.log(`[CSFlow Bootstrap] Backfill ofert: ${listings.length}`);
+
+        const dealers = await tx.dealer.updateMany({
+            where: { csflowDealerId: { not: null }, csflowSourceId: null },
+            data: { csflowSourceId: source.id },
+        });
+        console.log(`[CSFlow Bootstrap] Backfill dealerów: ${dealers.count}`);
+    }, { timeout: 120_000 });
 }
