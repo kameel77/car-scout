@@ -23,6 +23,8 @@ import { formatNumber } from '@/utils/formatters';
 
 interface SourceRow {
     source: string | null;
+    csflowSourceId?: string | null;
+    csflowSourceName?: string | null;
     activeCount: number;
     archivedCount: number;
 }
@@ -42,6 +44,14 @@ function sourceLabel(source: string | null): string {
     return SOURCE_LABELS[source] ?? source;
 }
 
+function rowLabel(row: Pick<SourceRow, 'source' | 'csflowSourceId' | 'csflowSourceName'>): string {
+    if (row.source === 'csflow') {
+        if (row.csflowSourceId && row.csflowSourceName) return `CSFlow: ${row.csflowSourceName}`;
+        if (row.csflowSourceId === null) return 'CSFlow (bez przypisania)';
+    }
+    return sourceLabel(row.source);
+}
+
 export function BulkSourceManager() {
     const { token, user } = useAuth();
     const [sources, setSources] = useState<SourceRow[]>([]);
@@ -50,6 +60,7 @@ export function BulkSourceManager() {
 
     const [dialogMode, setDialogMode] = useState<DialogMode>(null);
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
+    const [selectedCsflowSourceId, setSelectedCsflowSourceId] = useState<string | null | undefined>(undefined);
     const [includeArchived, setIncludeArchived] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [result, setResult] = useState<{ count: number; action: string } | null>(null);
@@ -72,14 +83,16 @@ export function BulkSourceManager() {
 
     if (user?.role !== 'admin') return null;
 
-    const openArchiveDialog = (source: string | null) => {
+    const openArchiveDialog = (source: string | null, csflowSourceId?: string | null) => {
         setSelectedSource(source);
+        setSelectedCsflowSourceId(csflowSourceId);
         setDialogMode('archive');
         setResult(null);
     };
 
-    const openDeleteDialog = (source: string | null) => {
+    const openDeleteDialog = (source: string | null, csflowSourceId?: string | null) => {
         setSelectedSource(source);
+        setSelectedCsflowSourceId(csflowSourceId);
         setIncludeArchived(false);
         setDialogMode('delete');
         setResult(null);
@@ -91,10 +104,10 @@ export function BulkSourceManager() {
         try {
             let res;
             if (dialogMode === 'archive') {
-                res = await listingsApi.archiveBySource(selectedSource, token);
+                res = await listingsApi.archiveBySource(selectedSource, token, selectedCsflowSourceId);
                 setResult({ count: res.count, action: 'zarchiwizowano' });
             } else {
-                res = await listingsApi.deleteBySource(selectedSource, includeArchived, token);
+                res = await listingsApi.deleteBySource(selectedSource, includeArchived, token, selectedCsflowSourceId);
                 setResult({ count: res.count, action: 'usunięto' });
             }
             await fetchSources();
@@ -107,8 +120,8 @@ export function BulkSourceManager() {
     };
 
     const selectedRow = sources.find(s =>
-        (s.source === null && selectedSource === null) ||
-        s.source === selectedSource
+        s.source === selectedSource &&
+        (s.csflowSourceId ?? null) === (selectedCsflowSourceId ?? null)
     );
 
     const affectedCount = dialogMode === 'archive'
@@ -184,7 +197,7 @@ export function BulkSourceManager() {
                                         )}
                                         {sources.map((row, i) => (
                                             <tr
-                                                key={row.source ?? '__null__'}
+                                                key={row.csflowSourceId !== undefined ? `csflow:${row.csflowSourceId ?? 'null'}` : (row.source ?? '__null__')}
                                                 className={`border-b border-slate-100 hover:bg-slate-50/50 ${i === sources.length - 1 ? 'border-b-0' : ''}`}
                                             >
                                                 <td className="px-4 py-3">
@@ -193,7 +206,7 @@ export function BulkSourceManager() {
                                                             {row.source ?? 'null'}
                                                         </Badge>
                                                         <span className="font-medium text-slate-800">
-                                                            {sourceLabel(row.source)}
+                                                            {rowLabel(row)}
                                                         </span>
                                                     </div>
                                                 </td>
@@ -214,7 +227,7 @@ export function BulkSourceManager() {
                                                             size="sm"
                                                             className="h-8 gap-1.5 text-amber-700 border-amber-200 hover:bg-amber-50 hover:border-amber-300 disabled:opacity-40"
                                                             disabled={row.activeCount === 0}
-                                                            onClick={() => openArchiveDialog(row.source)}
+                                                            onClick={() => openArchiveDialog(row.source, row.csflowSourceId)}
                                                         >
                                                             <Archive className="w-3.5 h-3.5" />
                                                             Archiwizuj
@@ -224,7 +237,7 @@ export function BulkSourceManager() {
                                                             size="sm"
                                                             className="h-8 gap-1.5 text-rose-700 border-rose-200 hover:bg-rose-50 hover:border-rose-300 disabled:opacity-40"
                                                             disabled={row.activeCount === 0 && row.archivedCount === 0}
-                                                            onClick={() => openDeleteDialog(row.source)}
+                                                            onClick={() => openDeleteDialog(row.source, row.csflowSourceId)}
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                             Usuń
@@ -266,8 +279,8 @@ export function BulkSourceManager() {
                             </div>
                             <AlertDialogTitle>
                                 {dialogMode === 'delete'
-                                    ? `Usuń oferty – ${sourceLabel(selectedSource)}`
-                                    : `Archiwizuj oferty – ${sourceLabel(selectedSource)}`
+                                    ? `Usuń oferty – ${rowLabel({ source: selectedSource, csflowSourceId: selectedCsflowSourceId })}`
+                                    : `Archiwizuj oferty – ${rowLabel({ source: selectedSource, csflowSourceId: selectedCsflowSourceId })}`
                                 }
                             </AlertDialogTitle>
                         </div>

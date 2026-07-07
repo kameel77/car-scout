@@ -606,7 +606,7 @@ export const listingsApi = {
         return response.json();
     },
 
-    getSources: async (token: string): Promise<{ sources: { source: string | null; activeCount: number; archivedCount: number }[] }> => {
+    getSources: async (token: string): Promise<{ sources: { source: string | null; csflowSourceId?: string | null; csflowSourceName?: string | null; activeCount: number; archivedCount: number }[] }> => {
         const response = await fetch(`${API_BASE_URL}/api/listings/sources`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -614,22 +614,22 @@ export const listingsApi = {
         return response.json();
     },
 
-    archiveBySource: async (source: string | null, token: string): Promise<{ success: boolean; count: number }> => {
+    archiveBySource: async (source: string | null, token: string, csflowSourceId?: string | null): Promise<{ success: boolean; count: number }> => {
         const response = await fetch(`${API_BASE_URL}/api/listings/bulk/archive-by-source`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ source })
+            body: JSON.stringify({ source, ...(csflowSourceId ? { csflowSourceId } : {}) })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Archive failed');
         return data;
     },
 
-    deleteBySource: async (source: string | null, includeArchived: boolean, token: string): Promise<{ success: boolean; count: number }> => {
+    deleteBySource: async (source: string | null, includeArchived: boolean, token: string, csflowSourceId?: string | null): Promise<{ success: boolean; count: number }> => {
         const response = await fetch(`${API_BASE_URL}/api/listings/bulk/delete-by-source`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ source, includeArchived })
+            body: JSON.stringify({ source, includeArchived, ...(csflowSourceId ? { csflowSourceId } : {}) })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Delete failed');

@@ -853,27 +853,104 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const scope = await resolveScope(fastify, request);
         if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
 
+        // Rozbicie CSFlow per źródło (csflowSourceId)
+        const csflowGroups = await fastify.prisma.listing.groupBy({
+            by: ['csflowSourceId'],
+            _count: { _all: true },
+            where: { csflowSourceId: { not: null }, isArchived: false },
+            orderBy: { _count: { csflowSourceId: 'desc' } }
+        });
+
+        const csflowArchivedGroups = await fastify.prisma.listing.groupBy({
+            by: ['csflowSourceId'],
+            _count: { _all: true },
+            where: { csflowSourceId: { not: null }, isArchived: true },
+            orderBy: { _count: { csflowSourceId: 'desc' } }
+        });
+
+        const csflowArchivedMap = new Map(csflowArchivedGroups.map(g => [g.csflowSourceId as string, g._count._all]));
+
+        const csflowSourceIds = new Set<string>([
+            ...csflowGroups.map(g => g.csflowSourceId as string),
+            ...csflowArchivedGroups.map(g => g.csflowSourceId as string),
+        ]);
+
+        const csflowSourceRecords = csflowSourceIds.size > 0
+            ? await fastify.prisma.csflowSource.findMany({
+                where: { id: { in: Array.from(csflowSourceIds) } },
+                select: { id: true, name: true }
+            })
+            : [];
+        const csflowSourceNameMap = new Map(csflowSourceRecords.map(s => [s.id, s.name]));
+
+        const sources: { source: string | null; csflowSourceId?: string | null; csflowSourceName?: string | null; activeCount: number; archivedCount: number }[] = [];
+
+        for (const g of csflowGroups) {
+            const csflowSourceId = g.csflowSourceId as string;
+            sources.push({
+                source: 'csflow',
+                csflowSourceId,
+                csflowSourceName: csflowSourceNameMap.get(csflowSourceId) ?? null,
+                activeCount: g._count._all,
+                archivedCount: csflowArchivedMap.get(csflowSourceId) ?? 0,
+            });
+        }
+        // Źródła CSFlow obecne tylko w archiwum
+        for (const ag of csflowArchivedGroups) {
+            const csflowSourceId = ag.csflowSourceId as string;
+            if (!csflowGroups.find(g => g.csflowSourceId === csflowSourceId)) {
+                sources.push({
+                    source: 'csflow',
+                    csflowSourceId,
+                    csflowSourceName: csflowSourceNameMap.get(csflowSourceId) ?? null,
+                    activeCount: 0,
+                    archivedCount: ag._count._all,
+                });
+            }
+        }
+
+        // Legacy: oferty CSFlow bez przypisania do konkretnego źródła
+        const legacyCsflowActive = await fastify.prisma.listing.count({
+            where: { importSource: 'csflow', csflowSourceId: null, isArchived: false }
+        });
+        const legacyCsflowArchived = await fastify.prisma.listing.count({
+            where: { importSource: 'csflow', csflowSourceId: null, isArchived: true }
+        });
+        if (legacyCsflowActive + legacyCsflowArchived > 0) {
+            sources.push({
+                source: 'csflow',
+                csflowSourceId: null,
+                csflowSourceName: null,
+                activeCount: legacyCsflowActive,
+                archivedCount: legacyCsflowArchived,
+            });
+        }
+
+        // Pozostałe źródła (bez csflowSourceId, z wyłączeniem 'csflow' — pokryte powyżej)
+        const otherWhere = { csflowSourceId: null, importSource: { not: 'csflow' } };
         const groups = await fastify.prisma.listing.groupBy({
             by: ['importSource'],
             _count: { _all: true },
-            where: { isArchived: false },
+            where: { ...otherWhere, isArchived: false },
             orderBy: { _count: { importSource: 'desc' } }
         });
 
         const archivedGroups = await fastify.prisma.listing.groupBy({
             by: ['importSource'],
             _count: { _all: true },
-            where: { isArchived: true },
+            where: { ...otherWhere, isArchived: true },
             orderBy: { _count: { importSource: 'desc' } }
         });
 
         const archivedMap = new Map(archivedGroups.map(g => [g.importSource ?? '__null__', g._count._all]));
 
-        const sources = groups.map(g => ({
-            source: g.importSource ?? null,
-            activeCount: g._count._all,
-            archivedCount: archivedMap.get(g.importSource ?? '__null__') ?? 0,
-        }));
+        for (const g of groups) {
+            sources.push({
+                source: g.importSource ?? null,
+                activeCount: g._count._all,
+                archivedCount: archivedMap.get(g.importSource ?? '__null__') ?? 0,
+            });
+        }
 
         // Also include sources that only have archived listings
         for (const ag of archivedGroups) {
@@ -896,18 +973,22 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const scope = await resolveScope(fastify, request);
         if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
 
-        const { source } = request.body as { source: string | null };
+        const { source, csflowSourceId } = request.body as { source: string | null; csflowSourceId?: string | null };
 
-        const where = source === null || source === '__null__'
-            ? { importSource: null, isArchived: false }
-            : { importSource: source, isArchived: false };
+        const where = csflowSourceId
+            ? { csflowSourceId, isArchived: false }
+            : source === 'csflow'
+                ? { importSource: 'csflow', csflowSourceId: null, isArchived: false }
+                : source === null || source === '__null__'
+                    ? { importSource: null, isArchived: false }
+                    : { importSource: source, isArchived: false };
 
         const result = await fastify.prisma.listing.updateMany({
             where,
             data: {
                 isArchived: true,
                 archivedAt: new Date(),
-                archivedReason: `Bulk archive by source: ${source ?? 'manual'}`,
+                archivedReason: `Bulk archive by source: ${csflowSourceId ? `csflow:${csflowSourceId}` : (source ?? 'manual')}`,
             }
         });
 
@@ -921,11 +1002,15 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const scope = await resolveScope(fastify, request);
         if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
 
-        const { source, includeArchived } = request.body as { source: string | null; includeArchived?: boolean };
+        const { source, includeArchived, csflowSourceId } = request.body as { source: string | null; includeArchived?: boolean; csflowSourceId?: string | null };
 
-        const where = source === null || source === '__null__'
-            ? { importSource: null, ...(includeArchived ? {} : { isArchived: false }) }
-            : { importSource: source, ...(includeArchived ? {} : { isArchived: false }) };
+        const where = csflowSourceId
+            ? { csflowSourceId, ...(includeArchived ? {} : { isArchived: false }) }
+            : source === 'csflow'
+                ? { importSource: 'csflow', csflowSourceId: null, ...(includeArchived ? {} : { isArchived: false }) }
+                : source === null || source === '__null__'
+                    ? { importSource: null, ...(includeArchived ? {} : { isArchived: false }) }
+                    : { importSource: source, ...(includeArchived ? {} : { isArchived: false }) };
 
         try {
             const result = await fastify.prisma.listing.deleteMany({ where });
