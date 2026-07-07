@@ -926,8 +926,9 @@ export async function listingRoutes(fastify: FastifyInstance) {
             });
         }
 
-        // Pozostałe źródła (bez csflowSourceId, z wyłączeniem 'csflow' — pokryte powyżej)
-        const otherWhere = { csflowSourceId: null, importSource: { not: 'csflow' } };
+        // Pozostałe źródła (bez csflowSourceId, z wyłączeniem 'csflow' — pokryte powyżej).
+        // Uwaga: Prisma `not` na polu nullable wyklucza NULL-e, stąd jawny OR z null.
+        const otherWhere = { csflowSourceId: null, OR: [{ importSource: null }, { importSource: { not: 'csflow' } }] };
         const groups = await fastify.prisma.listing.groupBy({
             by: ['importSource'],
             _count: { _all: true },
