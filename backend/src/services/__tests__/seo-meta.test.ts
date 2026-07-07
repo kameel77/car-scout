@@ -100,6 +100,7 @@ describe('buildListingMeta', () => {
         expect(m.canonical).toBe('https://dev.motolia.pl/oferta/ford-puma-abc123');
         expect((m.jsonLd as any)['@type']).toBe('BreadcrumbList');
         expect(m.bodyHtml).toContain('<h2>Leasing tego pojazdu</h2>');
+        expect(m.bodyHtml).toContain('<a href="/leasing">');
     });
 
     it('kredyt variant: financing section and escaped FAQ in bodyHtml, no FAQPage JSON-LD', () => {
@@ -108,6 +109,7 @@ describe('buildListingMeta', () => {
         ];
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'kredyt', ctx, [], faq);
         expect(m.bodyHtml).toContain('<h2>Kredyt samochodowy na ten pojazd</h2>');
+        expect(m.bodyHtml).toContain('<a href="/kredyt">');
         expect(m.bodyHtml).toContain('<h2>Najczęstsze pytania o kredyt</h2>');
         expect(m.bodyHtml).toContain('<h3>Jaki wkład własny?</h3>');
         expect(m.bodyHtml).toContain('Od 0% wartości auta.');
@@ -135,7 +137,7 @@ describe('buildRentalMeta', () => {
             'toyota-corolla-x1',
             ctx
         );
-        expect(m.title).toContain('najem długoterminowy');
+        expect(m.title).toContain('— wynajem długoterminowy');
         expect(m.canonical).toBe('https://dev.motolia.pl/wynajem-dlugoterminowy/toyota-corolla-x1');
     });
 
@@ -148,6 +150,7 @@ describe('buildRentalMeta', () => {
             faq
         );
         expect(m.bodyHtml).toContain('<h2>Wynajem długoterminowy tego pojazdu</h2>');
+        expect(m.bodyHtml).toContain('<a href="/wynajem-dlugoterminowy">wynajem długoterminowy samochodu</a>');
         expect(m.bodyHtml).toContain('<h2>Najczęstsze pytania o wynajem długoterminowy</h2>');
         expect(m.bodyHtml).toContain('<h3>Jaki limit kilometrów?</h3>');
         expect(m.bodyHtml).toContain('Od 10 000 km rocznie.');

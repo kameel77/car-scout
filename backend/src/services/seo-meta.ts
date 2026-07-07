@@ -214,6 +214,7 @@ export function buildListingMeta(
       <li>Zostaw kontakt — doradca przygotuje ofertę kredytową dopasowaną do Twoich potrzeb.</li>
       <li>Podpisz umowę i odbierz samochód u dealera.</li>
     </ol>
+    <p>Zobacz, jak działa <a href="/kredyt">kredyt samochodowy</a> — warunki, RRSO i wniosek o finansowanie.</p>
   </section>` : ''}
   ${variant === 'leasing' ? `
   <section>
@@ -224,6 +225,7 @@ export function buildListingMeta(
       <li>Zostaw kontakt — doradca przygotuje ofertę leasingową dopasowaną do Twojej firmy.</li>
       <li>Podpisz umowę i odbierz samochód u dealera.</li>
     </ol>
+    <p>Zobacz, jak działa <a href="/leasing">leasing samochodu</a> — operacyjny i konsumencki, rata i wniosek.</p>
   </section>` : ''}
   ${faqSectionHtml(faq, variant === 'kredyt' ? 'Najczęstsze pytania o kredyt' : variant === 'leasing' ? 'Najczęstsze pytania o leasing' : 'Najczęstsze pytania')}
   ${related.length > 0 ? `
@@ -361,6 +363,7 @@ export function buildRentalMeta(
       <li>Zostaw kontakt — doradca przygotuje ofertę najmu dopasowaną do Twoich potrzeb.</li>
       <li>Podpisz umowę i odbierz samochód.</li>
     </ol>
+    <p>Zobacz, jak działa <a href="/wynajem-dlugoterminowy">wynajem długoterminowy samochodu</a> — co obejmuje rata, okresy i limity kilometrów.</p>
   </section>
   ${faqSectionHtml(faq, 'Najczęstsze pytania o wynajem długoterminowy')}
 </article>`.trim();
@@ -446,7 +449,7 @@ export function buildRentalMeta(
     }
 
     return {
-        title: `${name} — najem długoterminowy | ${ctx.brandName}`,
+        title: `${name} — wynajem długoterminowy | ${ctx.brandName}`,
         description: `${name} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.`,
         canonical,
         ogImage: imageUrl || undefined,

@@ -59,6 +59,11 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         <p className="text-muted-foreground leading-relaxed">
           {renderTextWithHtml(getT('financing.leasing.lead', `Leasing operacyjny to najpopularniejsza forma finansowania samochodów wśród polskich przedsiębiorców. Miesięczna rata jest kosztem uzyskania przychodu, a VAT można odliczać na bieżąco - bez angażowania firmowej gotówki w zakup pojazdu. Poniżej znajdziesz szczegóły oferty leasingu na pojazd: **${carDetails}**.`, `Leasing operacyjny stanowi najchętniej wybierany model finansowania wśród przedsiębiorców w Polsce. Twoja comiesięczna rata staje się kosztem prowadzenia działalności, a podatek VAT odliczasz na bieżąco. Pozwala to na użytkowanie auta bez zamrażania kapitału firmowego. Poznaj warunki leasingowe dla auta: **${carDetails}**.`))}
         </p>
+        <p className="text-sm mt-3">
+          <Link to="/leasing" className="text-primary underline hover:no-underline">
+            Jak działa leasing samochodu - operacyjny i konsumencki, rata i wniosek
+          </Link>
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,6 +194,11 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         <p className="text-muted-foreground leading-relaxed">
           {renderTextWithHtml(getT('financing.kredyt.lead', `Kredyt samochodowy to rozwiązanie dla tych, którym zależy na pełnej własności pojazdu. Po podpisaniu umowy pojazd: **${carName}, ${year}, ${body_type || ''}** jest wpisany na Ciebie do dowodu rejestracyjnego - możesz nim dysponować bez żadnych ograniczeń. Kredyt jest dostępny zarówno dla osób prywatnych, jak i dla firm.`, `Kredyt celowy na pojazd sprawdzi się tam, gdzie najważniejsza jest prawna własność i rejestracja wehikułu pod strzechą zameldowania. Autonomiczny start sprawia, że **${carName}, z ${year} (${body_type || ''})** ląduje w Twoim garażu bez bankowych wymogów zdawczych. Rozwiązanie honorowane dla konsumentów NIP oraz regularnych umów o pracę.`))}
         </p>
+        <p className="text-sm mt-3">
+          <Link to="/kredyt" className="text-primary underline hover:no-underline">
+            Jak działa kredyt samochodowy - warunki, RRSO i wniosek o finansowanie
+          </Link>
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -316,6 +326,11 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         <h2 className="font-heading text-xl font-bold mb-3">{getT('financing.wynajem.title', `Wynajem długoterminowy - ${carName} ${year} w jednej miesięcznej racie`, `Abonament i Wynajem od razu do użytku - ${carName} ${year}`)}</h2>
         <p className="text-muted-foreground leading-relaxed">
           {renderTextWithHtml(getT('financing.wynajem.lead', `Wynajem długoterminowy (najem długoterminowy, abonament samochodowy) to najprostszy sposób na korzystanie z nowego samochodu - bez wkładu własnego, bez martwienia się o serwis, ubezpieczenie i przeglądy. Płacisz jedną stałą ratę i po prostu jeździsz. Pojazd: **${carDetails}** czeka na Ciebie gotowy do drogi od pierwszego dnia.`, `Auto w abonamencie (najem wieloletni/długoterminowy) zaspokaja głód korzystania z fabrycznego pojazdu jak we współdzielonym modelu Spotify i Netflix. Opłacasz subskrypcję i jedziesz na wczasy ubezpieczony z wliczonym ASO na całej linii. Świeży **${carDetails}** za dotknięciem portfela gotowy jest służyć.`))}
+        </p>
+        <p className="text-sm mt-3">
+          <Link to="/wynajem-dlugoterminowy" className="text-primary underline hover:no-underline">
+            Jak działa wynajem długoterminowy samochodu - co obejmuje rata, okresy i limity kilometrów
+          </Link>
         </p>
       </div>
 
