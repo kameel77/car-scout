@@ -84,15 +84,22 @@ export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
             const group = await fastify.prisma.dealerGroup.findUnique({ where: { id: body.dealerGroupId } });
             if (!group) return reply.status(400).send({ error: 'Wskazana grupa dealerska nie istnieje' });
         }
-        const source = await fastify.prisma.csflowSource.create({
-            data: {
-                name: body.name.trim(),
-                slug,
-                apiUrl: body.apiUrl.trim().replace(/\/+$/, ''),
-                dealerGroupId: body.dealerGroupId || null,
-            },
-        });
-        return reply.status(201).send({ source });
+        try {
+            const source = await fastify.prisma.csflowSource.create({
+                data: {
+                    name: body.name.trim(),
+                    slug,
+                    apiUrl: body.apiUrl.trim().replace(/\/+$/, ''),
+                    dealerGroupId: body.dealerGroupId || null,
+                },
+            });
+            return reply.status(201).send({ source });
+        } catch (error) {
+            if ((error as { code?: string }).code === 'P2002') {
+                return reply.status(400).send({ error: `Źródło ze slugiem "${slug}" już istnieje` });
+            }
+            throw error;
+        }
     });
 
     // Edycja źródła (slug niezmienialny — stabilność identyfikatorów ofert)
