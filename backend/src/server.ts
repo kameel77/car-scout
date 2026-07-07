@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { buildApp } from './app.js';
 import { initCSFlowCron } from './services/csflow.service.js';
+import { bootstrapCsflowSources } from './services/csflow-bootstrap.js';
 
 dotenv.config();
 
@@ -59,6 +60,12 @@ const start = async () => {
             }
         } catch (error) {
             console.error('[Migration] Failed to run data migration:', error);
+        }
+
+        try {
+            await bootstrapCsflowSources(app.prisma);
+        } catch (error) {
+            console.error('[CSFlow Bootstrap] Błąd bootstrapu źródeł:', error);
         }
 
         initCSFlowCron(app.prisma);
