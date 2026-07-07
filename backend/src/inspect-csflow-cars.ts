@@ -1,18 +1,19 @@
 import { getCSFlowCars, getCSFlowCarDetails } from './utils/csflow-client.js';
 
+const CSFLOW_API_URL = 'https://webapi.grupabemo.csflow.pl';
+
 async function main() {
-    process.env.CSFLOW_API_URL = 'https://webapi.grupabemo.csflow.pl';
     process.env.CSFLOW_LIMIT = '9999';
-    
+
     console.log('Fetching cars from CSFlow...');
-    const cars = await getCSFlowCars();
+    const cars = await getCSFlowCars(CSFLOW_API_URL);
     console.log(`Fetched ${cars.length} cars. Searching details...`);
-    
+
     let matchCount = 0;
-    
+
     for (let i = 0; i < cars.length; i++) {
         try {
-            const detail = await getCSFlowCarDetails(cars[i].id);
+            const detail = await getCSFlowCarDetails(CSFLOW_API_URL, cars[i].id);
             if (!detail) continue;
             
             const detailStr = JSON.stringify(detail);

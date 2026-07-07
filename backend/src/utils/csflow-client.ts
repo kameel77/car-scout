@@ -1,9 +1,5 @@
 import fetch from 'node-fetch';
 
-const CSFLOW_API_URL = process.env.CSFLOW_API_URL || 
-    (process.env.BRAND === 'motolia' 
-        ? 'https://webapi.grupabemo.csflow.pl' 
-        : 'https://webapi.demo.csflow.pl');
 const FETCH_TIMEOUT_MS = 15000;
 
 async function fetchWithTimeout(url: string, options: any = {}) {
@@ -21,8 +17,8 @@ async function fetchWithTimeout(url: string, options: any = {}) {
  * Dokumentacja wskazuje także na możliwość `/cars-updated`, ale /cars służy jako główne źródło, 
  * które możemy odpytać, aby zsynchronizować bazę.
  */
-export async function getCSFlowCars(): Promise<any[]> {
-    const url = new URL(`${CSFLOW_API_URL}/cars`);
+export async function getCSFlowCars(apiUrl: string): Promise<any[]> {
+    const url = new URL(`${apiUrl}/cars`);
     // Limit można skonfigurować przez CSFLOW_LIMIT w ENV.
     // Domyślnie 9999 — bez limitu CSFlow API zwraca tylko 10 rekordów.
     const limit = process.env.CSFLOW_LIMIT || '9999';
@@ -53,8 +49,8 @@ export async function getCSFlowCars(): Promise<any[]> {
  * Zwraca szczegóły pojedynczego pojazdu z CSFlow (m.in. po to by zdobyć tablicę equipped_groups i duże zdjęcia).
  * @param id ID pojazdu w systemie CSFlow (np. 35203)
  */
-export async function getCSFlowCarDetails(id: string | number): Promise<any> {
-    const url = new URL(`${CSFLOW_API_URL}/car`);
+export async function getCSFlowCarDetails(apiUrl: string, id: string | number): Promise<any> {
+    const url = new URL(`${apiUrl}/car`);
     url.searchParams.append('id', id.toString());
 
     try {
