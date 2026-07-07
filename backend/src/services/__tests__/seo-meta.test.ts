@@ -267,6 +267,13 @@ describe('injectHead', () => {
         expect(html).not.toContain('noindex');
     });
 
+    it('wraps bodyHtml in a hidden prerender container inside #root', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        const html = injectHead(TEMPLATE, m);
+        expect(html).toContain('<div id="root"><div class="seo-prerender" style="display:none">');
+        expect(html).toContain('<h1>Ford Puma');
+    });
+
     it('adds robots noindex when meta.noindex', () => {
         const html = injectHead(TEMPLATE, defaultMeta(ctx, { noindex: true, status: 404 }));
         expect(html).toContain('<meta name="robots" content="noindex" />');

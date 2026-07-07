@@ -689,9 +689,11 @@ export function injectHead(template: string, meta: PageMeta): string {
     }
 
     if (meta.bodyHtml) {
+        // display:none — fallback jest dla botów czytających surowy HTML; bez tego użytkownik
+        // widzi błysk niestylowanego tekstu zanim React zamontuje SPA i wyczyści #root
         html = html.replace(
             /<div id="root"><\/div>/,
-            () => `<div id="root">${meta.bodyHtml}</div>`
+            () => `<div id="root"><div class="seo-prerender" style="display:none">${meta.bodyHtml}</div></div>`
         );
     }
 
