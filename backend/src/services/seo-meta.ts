@@ -10,6 +10,7 @@ export interface PageMeta {
 }
 
 export interface BrandCtx {
+    brand: string;
     baseUrl: string;
     brandName: string;
     defaultTitle: string;
@@ -37,6 +38,7 @@ export function resolveBrandCtx(): BrandCtx {
     const d = BRAND_DEFAULTS[brand];
     const baseUrl = (process.env.FRONTEND_URL || 'https://carsalon.pl').replace(/\/$/, '');
     return {
+        brand,
         baseUrl,
         brandName: d.name,
         defaultTitle: d.title,

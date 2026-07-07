@@ -23,10 +23,11 @@ interface FinancingArticle {
 export function FinancingContentSection({ type }: { type: FinancingContentType }) {
   const [expanded, setExpanded] = React.useState(false);
 
-  const { data: article } = useQuery<FinancingArticle>({
+  const { data: article } = useQuery<FinancingArticle | null>({
     queryKey: ['financing-content', type],
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/api/content/financing/${type}`);
+      if (res.status === 404) return null; // brand bez treści filarowej
       if (!res.ok) throw new Error('Failed to fetch financing content');
       return res.json();
     },

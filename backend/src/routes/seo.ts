@@ -3,14 +3,14 @@ import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
 import { resolveBrandCtx } from '../services/seo-meta.js';
 import { generateListingSlug as buildListingSlug } from '../utils/url-utils.js';
-import { FINANCING_CONTENT } from '../content/financing-content.js';
+import { getFinancingArticle } from '../content/financing-content.js';
 
 export async function seoRoutes(fastify: FastifyInstance) {
-    // Treść filarowa stron finansowania dla frontendu (sekcja pod listingiem)
+    // Treść filarowa stron finansowania dla frontendu (sekcja pod listingiem), per brand
     fastify.get('/api/content/financing/:type', async (request, reply) => {
         const { type } = request.params as { type: string };
         const path = { leasing: '/leasing', kredyt: '/kredyt', wynajem: '/wynajem-dlugoterminowy' }[type];
-        const article = path ? FINANCING_CONTENT[path] : undefined;
+        const article = path ? getFinancingArticle(resolveBrandCtx().brand, path) : undefined;
         if (!article) {
             return reply.status(404).send({ error: 'Unknown financing content type' });
         }

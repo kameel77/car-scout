@@ -13,7 +13,7 @@ import {
     PageMeta,
     RelatedListing,
 } from '../services/seo-meta.js';
-import { FINANCING_CONTENT } from '../content/financing-content.js';
+import { getFinancingArticle } from '../content/financing-content.js';
 
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
@@ -268,7 +268,7 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         });
     }
 
-    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath, FINANCING_CONTENT[path]) ?? defaultMeta(ctx, { noindex: true, status: 404 });
+    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path)) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 }
 
 export async function renderRoutes(fastify: FastifyInstance) {

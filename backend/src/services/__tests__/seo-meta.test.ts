@@ -8,8 +8,10 @@ import {
     resolveBrandCtx,
     BrandCtx,
 } from '../seo-meta';
+import { getFinancingArticle } from '../../content/financing-content';
 
 const ctx: BrandCtx = {
+    brand: 'motolia',
     baseUrl: 'https://dev.motolia.pl',
     brandName: 'Motolia',
     defaultTitle: 'Motolia - leasing, kredyt i wynajem samochodów',
@@ -44,6 +46,7 @@ describe('resolveBrandCtx', () => {
         process.env.BRAND = 'motolia';
         process.env.FRONTEND_URL = 'https://dev.motolia.pl/';
         const c = resolveBrandCtx();
+        expect(c.brand).toBe('motolia');
         expect(c.brandName).toBe('Motolia');
         expect(c.baseUrl).toBe('https://dev.motolia.pl'); // trailing slash stripped
         if (prev.BRAND === undefined) delete process.env.BRAND; else process.env.BRAND = prev.BRAND;
@@ -55,6 +58,15 @@ describe('resolveBrandCtx', () => {
         delete process.env.BRAND;
         expect(resolveBrandCtx().brandName).toBe('CarSalon');
         if (prev === undefined) delete process.env.BRAND; else process.env.BRAND = prev;
+    });
+});
+
+describe('getFinancingArticle', () => {
+    it('serves pillar articles for motolia only', () => {
+        for (const path of ['/leasing', '/kredyt', '/wynajem-dlugoterminowy']) {
+            expect(getFinancingArticle('motolia', path)?.h1).toBeTruthy();
+            expect(getFinancingArticle('carsalon', path)).toBeUndefined();
+        }
     });
 });
 
