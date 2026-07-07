@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, CsflowSource } from '@prisma/client';
 import { getCSFlowCars, getCSFlowCarDetails } from '../utils/csflow-client.js';
 import { generateListingSlug } from '../utils/url-utils.js';
 import { downloadAndCacheImages, queueListingImagesDownload } from './csflow-image-downloader.js';
@@ -33,19 +33,13 @@ function mapEquipment(groups: any[]) {
     return { audio, comfort, safety, other };
 }
 
-export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'system-cron') {
+export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, userId: string = 'system-cron') {
     const startTime = Date.now();
-    console.log('[CSFlow] Start synchronizacji API');
+    console.log(`[CSFlow:${source.slug}] Start synchronizacji API`);
 
     try {
-        const settings = await prisma.appSettings.findUnique({ where: { id: 'default' } });
-        if (settings?.csflowEnabled === false) {
-            console.log('[CSFlow] Synchronizacja pominięta — integracja wyłączona w ustawieniach');
-            return { inserted: 0, updated: 0, archived: 0, failed: 0, totalRows: 0, skipped: true };
-        }
-
-        const carsData = await getCSFlowCars();
-        console.log(`[CSFlow] Pobrane pojazdy z API: ${carsData.length}`);
+        const carsData = await getCSFlowCars(source.apiUrl);
+        console.log(`[CSFlow:${source.slug}] Pobrane pojazdy z API: ${carsData.length}`);
 
         const result = {
             inserted: 0,
@@ -55,18 +49,14 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
             totalRows: carsData.length
         };
 
-        // Zbieranie wszystkich już zapisanych ofert systemu CSFlow w bazie
+        // Zbieranie wszystkich już zapisanych ofert tego źródła CSFlow w bazie
         const existingListings = await prisma.listing.findMany({
-            where: {
-                listingId: { startsWith: 'csflow-' }
-            },
-            select: { id: true, vin: true, listingId: true, isArchived: true, pricePln: true }
+            where: { csflowSourceId: source.id },
+            select: { id: true, vin: true, listingId: true, csflowCarId: true, isArchived: true, pricePln: true }
         });
 
-        const activeCsflowIdsInDB = new Set(
-            existingListings
-                .filter(l => !l.isArchived && l.listingId !== null)
-                .map(l => l.listingId as string)
+        const activeCarIdsInDB = new Set(
+            existingListings.filter(l => !l.isArchived && l.csflowCarId !== null).map(l => l.csflowCarId as number)
         );
 
         // Mapa WSZYSTKICH VIN-ów w bazie (nie tylko CSFlow) — zapobiega duplikatom
@@ -79,7 +69,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
             allVinEntries.map(l => [l.vin as string, l.listingId])
         );
 
-        const currentApiIds = new Set<string>();
+        const currentCarIds = new Set<number>();
 
         // Do śledzenia historii cen z transaction
         const priceHistoryEntries: any[] = [];
@@ -87,17 +77,17 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
         // Pobieramy szczegóły wszystkich aut w równoległych paczkach (po 15)
         const fullCars: any[] = [];
         const BATCH_SIZE = 15;
-        console.log(`[CSFlow] Pobieranie szczegółów dla ${carsData.length} pojazdów w paczkach po ${BATCH_SIZE}...`);
+        console.log(`[CSFlow:${source.slug}] Pobieranie szczegółów dla ${carsData.length} pojazdów w paczkach po ${BATCH_SIZE}...`);
         
         for (let idx = 0; idx < carsData.length; idx += BATCH_SIZE) {
             const batch = carsData.slice(idx, idx + BATCH_SIZE);
             const details = await Promise.all(
                 batch.map(async (basicCar) => {
                     try {
-                        const car = await getCSFlowCarDetails(basicCar.id);
+                        const car = await getCSFlowCarDetails(source.apiUrl, basicCar.id);
                         return car;
                     } catch (err: any) {
-                        console.error(`[CSFlow] Błąd pobierania szczegółów dla ID ${basicCar.id}: ${err.message}`);
+                        console.error(`[CSFlow:${source.slug}] Błąd pobierania szczegółów dla ID ${basicCar.id}: ${err.message}`);
                         result.failed++;
                         return null;
                     }
@@ -105,12 +95,13 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
             );
             fullCars.push(...details.filter(Boolean));
         }
-        console.log(`[CSFlow] Pomyślnie pobrano szczegóły dla ${fullCars.length}/${carsData.length} pojazdów.`);
+        console.log(`[CSFlow:${source.slug}] Pomyślnie pobrano szczegóły dla ${fullCars.length}/${carsData.length} pojazdów.`);
 
         for (const car of fullCars) {
             try {
-                const listingId = `csflow-${car.id}`;
-                currentApiIds.add(listingId);
+                const carId = Number(car.id);
+                currentCarIds.add(carId);
+                const listingId = `csflow-${source.slug}-${carId}`; // tylko dla NOWYCH rekordów
                 
                 // 1. Zapis Dealera — pre-check zamiast try-catch (brak P2002, brak pisma:error spam)
                 let currentDealerId: string | undefined;
@@ -131,14 +122,19 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                     if (d.id) {
                         // Krok 1: Szukaj po CSFlow ID (najszybsza ścieżka, O(1))
                         const byId = await prisma.dealer.findUnique({
-                            where: { csflowDealerId: d.id }
+                            where: { csflowSourceId_csflowDealerId: { csflowSourceId: source.id, csflowDealerId: d.id } }
                         });
 
                         if (byId) {
                             // Dealer już powiązany — zaktualizuj dane (np. telefon, miasto)
                             dealer = await prisma.dealer.update({
                                 where: { id: byId.id },
-                                data: dealerData,
+                                data: {
+                                    ...dealerData,
+                                    ...(byId.dealerGroupId === null && source.dealerGroupId
+                                        ? { dealerGroupId: source.dealerGroupId }
+                                        : {}),
+                                },
                             });
                         } else {
                             // Krok 2: Sprawdź czy jest dealer z tym samym name+adres (ręcznie dodany
@@ -155,19 +151,24 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                                     // Dealer bez CSFlow ID — połącz go z bieżącym
                                     dealer = await prisma.dealer.update({
                                         where: { id: byNameAddr.id },
-                                        data: { ...dealerData, csflowDealerId: d.id },
+                                        data: { ...dealerData, csflowDealerId: d.id, csflowSourceId: source.id },
                                     });
-                                    console.log(`[CSFlow] Połączono dealera "${dealerData.name}" (DB: ${byNameAddr.id}) z CSFlow ID ${d.id}`);
+                                    console.log(`[CSFlow:${source.slug}] Połączono dealera "${dealerData.name}" (DB: ${byNameAddr.id}) z CSFlow ID ${d.id}`);
                                 } else {
                                     // Dealer już powiązany z INNYM csflowDealerId — użyj go bez nadpisywania
                                     // (zapobiega ping-pongowi gdy dwa CSFlow-dealerzy mają tę samą nazwę/adres)
-                                    console.log(`[CSFlow] Dealer "${dealerData.name}" już powiązany z CSFlow ID ${byNameAddr.csflowDealerId}, pomijam przypisanie ID ${d.id}`);
+                                    console.log(`[CSFlow:${source.slug}] Dealer "${dealerData.name}" już powiązany z CSFlow ID ${byNameAddr.csflowDealerId}, pomijam przypisanie ID ${d.id}`);
                                     dealer = byNameAddr;
                                 }
                             } else {
                                 // Krok 3: Nowy dealer — utwórz
                                 dealer = await prisma.dealer.create({
-                                    data: { csflowDealerId: d.id, ...dealerData },
+                                    data: {
+                                        csflowDealerId: d.id,
+                                        csflowSourceId: source.id,
+                                        dealerGroupId: source.dealerGroupId,
+                                        ...dealerData,
+                                    },
                                 });
                             }
                         }
@@ -183,6 +184,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                             create: {
                                 ...dealerData,
                                 addressLine1: dealerData.addressLine1 || 'Brak Ulicy',
+                                csflowSourceId: source.id,
+                                dealerGroupId: source.dealerGroupId,
                             },
                             update: dealerData,
                         });
@@ -193,14 +196,14 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
                 const mappedEq = mapEquipment(car.equipment_groups);
 
                 // Szukamy po CSFlow ID oraz po unikalnym VIN
-                const existingByCsflowId = existingListings.find(l => l.listingId === listingId);
+                const existingByCsflowId = existingListings.find(l => l.csflowCarId === carId);
                 
                 // Sprawdź VIN w CAŁEJ bazie (nie tylko w CSFlow)
                 const vinConflictListingId = car.vin ? allVinToListingId.get(car.vin) : undefined;
                 const isVinConflict = !existingByCsflowId && car.vin && vinConflictListingId !== undefined;
 
                 if (isVinConflict) {
-                    console.log(`[CSFlow] Pominięto auto id ${car.id} ponieważ VIN ${car.vin} już istnieje (oferta: ${vinConflictListingId || 'brak ID'}).`);
+                    console.log(`[CSFlow:${source.slug}] Pominięto auto id ${car.id} ponieważ VIN ${car.vin} już istnieje (oferta: ${vinConflictListingId || 'brak ID'}).`);
                     result.failed++;
                     continue;
                 }
@@ -262,6 +265,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
 
                 const payload = {
                     listingId: listingId,
+                    csflowSourceId: source.id,
+                    csflowCarId: carId,
                     make: make,
                     model: model,
                     version: version,
@@ -297,15 +302,10 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
 
                 let savedListing;
                 if (existingByCsflowId) {
+                    const { listingId: _ignored, ...updatePayload } = payload;
                     savedListing = await prisma.listing.update({
                         where: { id: existingByCsflowId.id },
-                        data: {
-                            ...payload,
-                            isArchived: false,
-                            archivedAt: null,
-                            archivedReason: null,
-                            entrySource: 'CSFLOW' as const
-                        }
+                        data: { ...updatePayload, isArchived: false, archivedAt: null, archivedReason: null, entrySource: 'CSFLOW' as const }
                     });
 
                     if (existingByCsflowId.pricePln !== price) {
@@ -335,25 +335,23 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
 
                 // Dodaj pobieranie i zcachowanie zdjęć do kolejki w tle
                 if (externalPhotos.length > 0) {
-                    queueListingImagesDownload(listingId, externalPhotos, prisma);
+                    queueListingImagesDownload(savedListing.listingId as string, externalPhotos, prisma);
                 }
             } catch (err: any) {
-                console.error(`[CSFlow] Błąd zapisu ID ${car.id}: ${err.message}`);
+                console.error(`[CSFlow:${source.slug}] Błąd zapisu ID ${car.id}: ${err.message}`);
                 result.failed++;
             }
         }
 
         // Archiwizowanie nieobecnych na aktualnej liście CSFlow API
-        for (const existingListingId of activeCsflowIdsInDB) {
-            if (!currentApiIds.has(existingListingId)) {
-                // Był w aktywnej puli, ale zniknął w obecnym pakiecie
-                // Prisma is expected to have it if we fetched active ones earlier
+        for (const l of existingListings) {
+            if (!l.isArchived && l.csflowCarId !== null && !currentCarIds.has(l.csflowCarId)) {
                 await prisma.listing.update({
-                    where: { listingId: existingListingId },
+                    where: { id: l.id },
                     data: {
                         isArchived: true,
                         archivedAt: new Date(),
-                        archivedReason: 'Usunięte ze źródła CSFlow'
+                        archivedReason: `Usunięte ze źródła CSFlow (${source.name})`
                     }
                 });
                 result.archived++;
@@ -385,7 +383,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
             await prisma.importLog.create({
                 data: {
                     importedBy: actualUserId,
-                    fileName: 'Zewnętrzne API (CSFlow)',
+                    fileName: `Zewnętrzne API (CSFlow: ${source.name})`,
                     totalRows: carsData.length,
                     inserted: result.inserted,
                     updated: result.updated,
@@ -397,12 +395,14 @@ export async function syncCSFlowAPI(prisma: PrismaClient, userId: string = 'syst
             });
         }
 
-        console.log(`[CSFlow] Synchronizacja zakończona w ${duration}ms. Wstawiono: ${result.inserted}, Aktualiz: ${result.updated}, Zarch: ${result.archived}, Błędy: ${result.failed}`);
-        
+        console.log(`[CSFlow:${source.slug}] Synchronizacja zakończona w ${duration}ms. Wstawiono: ${result.inserted}, Aktualiz: ${result.updated}, Zarch: ${result.archived}, Błędy: ${result.failed}`);
+
+        await prisma.csflowSource.update({ where: { id: source.id }, data: { lastSyncAt: new Date() } });
+
         return result;
 
     } catch (err) {
-        console.error('[CSFlow] Krytyczny błąd pobrania listy pojazdów', err);
+        console.error(`[CSFlow:${source.slug}] Krytyczny błąd pobrania listy pojazdów`, err);
         throw err;
     }
 }
@@ -412,11 +412,6 @@ export function initCSFlowCron(prisma: PrismaClient) {
     // Cron odpala się co 6 godzin (zgodnie z decyzją "co 6 godzin")
     console.log('[CSFlow] Rejestracja zadania (co 6 godzin)');
     cron.schedule('0 */6 * * *', async () => {
-        console.log('[CRON] Wykonanie automatycznego importu CSFlow API');
-        try {
-            await syncCSFlowAPI(prisma);
-        } catch (e) {
-            console.error('[CRON] Nie udało się wykonać zadania importu CSFlow:', e);
-        }
+        // podpięcie w syncAllCSFlowSources (Task 5)
     });
 }
