@@ -407,11 +407,47 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
     }
 }
 
-// Funkcja rejestracji harmonogramu
+export async function syncAllCSFlowSources(prisma: PrismaClient, userId: string = 'system-cron') {
+    const settings = await prisma.appSettings.findUnique({ where: { id: 'default' } });
+    if (settings?.csflowEnabled === false) {
+        console.log('[CSFlow] Synchronizacja pominięta — integracja wyłączona w ustawieniach (master switch)');
+        return { inserted: 0, updated: 0, archived: 0, failed: 0, totalRows: 0, perSource: [], skipped: true };
+    }
+
+    const sources = await prisma.csflowSource.findMany({
+        where: { isEnabled: true },
+        orderBy: { createdAt: 'asc' },
+    });
+
+    const totals = { inserted: 0, updated: 0, archived: 0, failed: 0, totalRows: 0 };
+    const perSource: any[] = [];
+
+    for (const source of sources) {
+        try {
+            const result = await syncCSFlowAPI(prisma, source, userId);
+            totals.inserted += result.inserted;
+            totals.updated += result.updated;
+            totals.archived += result.archived;
+            totals.failed += result.failed;
+            totals.totalRows += result.totalRows;
+            perSource.push({ sourceId: source.id, name: source.name, slug: source.slug, ...result });
+        } catch (err: any) {
+            console.error(`[CSFlow:${source.slug}] Błąd synchronizacji źródła:`, err);
+            perSource.push({ sourceId: source.id, name: source.name, slug: source.slug, error: err.message });
+        }
+    }
+
+    return { ...totals, perSource };
+}
+
 export function initCSFlowCron(prisma: PrismaClient) {
-    // Cron odpala się co 6 godzin (zgodnie z decyzją "co 6 godzin")
     console.log('[CSFlow] Rejestracja zadania (co 6 godzin)');
     cron.schedule('0 */6 * * *', async () => {
-        // podpięcie w syncAllCSFlowSources (Task 5)
+        console.log('[CRON] Wykonanie automatycznego importu CSFlow API');
+        try {
+            await syncAllCSFlowSources(prisma);
+        } catch (e) {
+            console.error('[CRON] Nie udało się wykonać zadania importu CSFlow:', e);
+        }
     });
 }
