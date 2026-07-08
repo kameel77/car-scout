@@ -87,16 +87,19 @@ const App = () => (
                         <Routes>
                         {/* Public routes */}
                         <Route path="/" element={<HomePage />} />
-                      <Route path="/samochody" element={<SearchPage />} />
-                      <Route path="/search" element={<SearchPage />} />
-                      <Route path="/nowe" element={<ConditionPage condition="NEW" />} />
-                      <Route path="/uzywane" element={<ConditionPage condition="USED" />} />
+                      {/* key wymusza remount przy nawigacji SPA między trasami dzielącymi
+                          ten sam komponent — bez niego stan (np. filters.statuses) zostaje
+                          z poprzedniej trasy i lista pokazuje złe auta do czasu odświeżenia */}
+                      <Route path="/samochody" element={<SearchPage key="samochody" />} />
+                      <Route path="/search" element={<SearchPage key="search" />} />
+                      <Route path="/nowe" element={<ConditionPage key="nowe" condition="NEW" />} />
+                      <Route path="/uzywane" element={<ConditionPage key="uzywane" condition="USED" />} />
                       <Route path="/kontakt" element={<ContactPage />} />
                       <Route path="/faq" element={<PublicFaqPage />} />
 
                       {/* SEO financing-type routes */}
-                      <Route path="/leasing" element={<SearchPage />} />
-                      <Route path="/kredyt" element={<SearchPage />} />
+                      <Route path="/leasing" element={<SearchPage key="leasing" />} />
+                      <Route path="/kredyt" element={<SearchPage key="kredyt" />} />
                       <Route path="/leasing/:slug" element={<ListingDetailPage />} />
                       <Route path="/leasing/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/leasing/:slug/negotiate" element={<LeadFormPage />} />
