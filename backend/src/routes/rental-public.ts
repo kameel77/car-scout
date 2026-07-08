@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { normalizeBrand } from '../services/brand-normalization.service.js';
 
 const calculateRatesWithInsurance = (entry: any, assignment: any) => {
     const insuranceAddMode = assignment.insuranceAddModeOverride || assignment.rentalCompany?.insuranceAddMode || 'INSURANCE_23';
@@ -646,6 +647,11 @@ async function computeFacets(fastify: FastifyInstance, where: any) {
                 out[k] = (out[k] || 0) + r._count._all;
                 continue;
             }
+            if (key === 'make') {
+                const k = normalizeBrand(raw);
+                out[k] = (out[k] || 0) + r._count._all;
+                continue;
+            }
             const lower = raw.toLowerCase();
             if (!canonical[lower]) canonical[lower] = raw;
             const k = canonical[lower];
@@ -737,8 +743,8 @@ async function getFilterOptions(fastify: FastifyInstance, currentWhere?: any) {
         ]);
 
         staticOptions = {
-            makes: makes.map(v => v.make).sort(),
-            models: models.map(v => ({ make: v.make, model: v.model })).sort((a, b) => a.model.localeCompare(b.model)),
+            makes: [...new Set(makes.map(v => normalizeBrand(v.make)))].sort(),
+            models: models.map(v => ({ make: normalizeBrand(v.make), model: v.model })).sort((a, b) => a.model.localeCompare(b.model)),
             bodyTypes: bodyTypes.map(v => v.bodyType as string).sort(),
             fuelTypes: fuelTypes.map(v => v.fuelType as string).sort(),
             years: years.map(v => v.productionYear as number)

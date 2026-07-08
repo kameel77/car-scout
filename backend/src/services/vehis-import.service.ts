@@ -1,5 +1,6 @@
 import { PrismaClient, ListingCondition, Prisma } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
+import { normalizeBrand } from './brand-normalization.service.js';
 
 export async function importVehisCSV(
     prisma: PrismaClient,
@@ -29,7 +30,7 @@ export async function importVehisCSV(
             // Extract fields
             const vin = row['vin'] || null;
             const isNew = row['is_new'] === '1' || row['is_new'] === 'true' || row['is_new'] === 'TRUE';
-            const brand = row['brand'] || 'Unknown';
+            const brand = normalizeBrand(row['brand']);
             const model = row['model']?.replace(/\t|\n/g, '').trim() || 'Unknown';
             const version = row['version'] || '';
             const color = row['color'] || null;

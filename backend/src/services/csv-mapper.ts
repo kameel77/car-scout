@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { CSVRow } from '../types/csv.types.js';
 import { getMarketplaceFromUrl } from '../utils/url-utils.js';
+import { normalizeBrand } from './brand-normalization.service.js';
 
 export function mapCSVToListing(row: CSVRow, dealerId?: string, importSource?: string): Prisma.ListingCreateInput {
     const mileageVal = safeInt(row.mileage_km);
@@ -21,7 +22,7 @@ export function mapCSVToListing(row: CSVRow, dealerId?: string, importSource?: s
         entrySource: 'CSV' as const,
         scrapedAt: row.scraped_at ? new Date(row.scraped_at) : undefined,
 
-        make: row.make,
+        make: normalizeBrand(row.make),
         model: row.model,
         version: row.version || undefined,
         vin: row.vin || undefined,

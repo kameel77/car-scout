@@ -8,6 +8,7 @@ import {
     pickCsvEditableFields,
     validateListingPayload,
 } from '../services/listing-mapper.js';
+import { normalizeBrand } from '../services/brand-normalization.service.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
     // Sanitization helper for dealer data
@@ -68,8 +69,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
             orderBy: { dealer: { city: 'asc' } }
         });
 
-        const makes = makesRaw.map(m => m.make).filter(Boolean);
-        const models = modelsRaw.map(m => ({ make: m.make, model: m.model })).filter(m => m.make && m.model);
+        const makes = [...new Set(makesRaw.map(m => normalizeBrand(m.make)).filter(Boolean))].sort();
+        const models = modelsRaw.map(m => ({ make: normalizeBrand(m.make), model: m.model })).filter(m => m.make && m.model);
         const bodyTypes = bodyTypesRaw.map(b => b.bodyType).filter(Boolean) as string[];
         const cities = [...new Set(citiesRaw.map(c => c.dealer?.city).filter(Boolean))] as string[];
 
@@ -558,6 +559,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 }
                 if (key === 'fuelType') {
                     const k = fuelCanonical(raw);
+                    out[k] = (out[k] || 0) + r._count._all;
+                    continue;
+                }
+                if (key === 'make') {
+                    const k = normalizeBrand(raw);
                     out[k] = (out[k] || 0) + r._count._all;
                     continue;
                 }

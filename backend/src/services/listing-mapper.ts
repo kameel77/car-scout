@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { normalizeBrand } from './brand-normalization.service.js';
 
 export const CSV_EDITABLE_FIELDS = [
     'catalogPrice',
@@ -69,7 +70,7 @@ export function validateListingPayload(body: any): ListingValidationError[] {
 
 export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.ListingCreateInput {
     return {
-        make: body.make.trim().slice(0, 100),
+        make: normalizeBrand(body.make),
         model: body.model.trim().slice(0, 100),
         version: body.version || undefined,
         vin: body.vin || undefined,

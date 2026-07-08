@@ -390,3 +390,10 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Opis rabatu w tooltipie**: Zaktualizowano i uproszczono tekst tooltipu "i" obok ceny pojazdu na: "Cena pojazdu zawiera dodatkowy rabat z tytułu finansowania pojazdu z Motolia."
 - **Domyślny URL integracji CSFlow**: Ustawiono, że w przypadku marki "motolia" system automatycznie korzysta z produkcyjnego API Grupy Bemo (https://webapi.grupabemo.csflow.pl) jako domyślnego, zamiast środowiska testowego (demo). Dzięki temu po wdrożeniu na serwer import pobiera rzeczywistą bazę ofert (ponad 580 pojazdów, w tym samochody dostawcze jak Sprintery) bez konieczności wprowadzania dodatkowej konfiguracji w panelu Coolify.
 
+## 33. Unifikacja nazw marek i filtrowania (Brand Normalization)
+- **Cel**: Wyeliminowanie duplikatów marek (np. "Citroën" vs "Citroen") w wyszukiwarce oraz na listach rozwijanych filtrów, co zapewnia spójność danych i lepsze UX.
+- **Zachowanie**:
+  - **Centralna normalizacja**: Wprowadzono serwis `brand-normalization.service.ts` z listą kanonicznych nazw marek (np. Škoda, Citroën, Mercedes-Benz, SsangYong/KGM).
+  - **Ingestia danych**: Każdy sposób dodawania ofert (importy CSV, CSFLOW, Vehis oraz ręczne dodawanie) automatycznie normalizuje nazwę marki przed zapisem do bazy danych.
+  - **Filtry i Facety**: API filtrów (zarówno dla ofert sprzedaży, jak i wynajmu) automatycznie grupuje i unifikuje marki w locie, dzięki czemu w dropdownach i licznikach (facetach) marki zawsze wyświetlają się w poprawnej, zunifikowanej formie.
+  - **Migracja**: Istniejące dane w bazie zostały zaktualizowane skryptem migracyjnym `migrate-brands.ts`, co natychmiastowo "oczyściło" interfejs użytkownika z duplikatów.

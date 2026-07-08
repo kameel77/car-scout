@@ -9,6 +9,7 @@ import { getSafeFilePath } from '../utils/path-helpers.js';
 import { authorizeRoles } from '../middleware/authorize.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { LiteParse } from '@llamaindex/liteparse';
+import { normalizeBrand } from '../services/brand-normalization.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +25,7 @@ export async function specificationRoutes(fastify: FastifyInstance) {
         const data = (request.body as any) || {};
         const spec = await fastify.prisma.vehicleSpecification.create({
             data: {
-                brand: data.brand || 'Nowa Marka',
+                brand: normalizeBrand(data.brand),
                 model: data.model || 'Nowy Model',
                 version: data.version || 'Wersja',
                 condition: data.condition || 'NEW',
@@ -85,7 +86,7 @@ export async function specificationRoutes(fastify: FastifyInstance) {
                 where: { id },
                 data: {
                     displayMode: data.displayMode,
-                    brand: data.brand,
+                    brand: normalizeBrand(data.brand),
                     model: data.model,
                     version: data.version,
                     color: data.color,

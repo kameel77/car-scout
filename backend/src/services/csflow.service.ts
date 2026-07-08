@@ -2,6 +2,7 @@ import { PrismaClient, CsflowSource } from '@prisma/client';
 import { getCSFlowCars, getCSFlowCarDetails } from '../utils/csflow-client.js';
 import { generateListingSlug } from '../utils/url-utils.js';
 import { downloadAndCacheImages, queueListingImagesDownload } from './csflow-image-downloader.js';
+import { normalizeBrand } from './brand-normalization.service.js';
 import cron from 'node-cron';
 
 // Pomocnicza funkcja mapowania CSFlow -> Prisma
@@ -252,7 +253,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                 // Początkowo przypisujemy zewnętrzne URL zdjęć, a pobieranie lokalne zlecamy w tle
                 const primaryImage = externalPhotos.length > 0 ? externalPhotos[0] : null;
 
-                const make = car.brand_name || car.brand?.name || 'Inne';
+                const make = normalizeBrand(car.brand_name || car.brand?.name);
                 const model = car.model_name || car.model?.name || 'Inne';
                 const version = car.version || null;
                 const prodYear = parseInt(car.production_year) || new Date().getFullYear();
