@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { normalizeBrand } from './brand-normalization.service.js';
+import { normalizeBrand } from '../services/brand-normalization.service.js';
 
 const prisma = new PrismaClient();
 
