@@ -5,7 +5,7 @@
  * Routes: /nowe → condition="NEW"   /uzywane → condition="USED"
  */
 import React from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Car, Building2, User, ArrowUpDown, Check } from 'lucide-react';
@@ -78,8 +78,17 @@ function ConditionNavTabs({ condition, resultCount, byCondition, sortBy, onSortC
   onSortChange: (v: string) => void;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const { priceType, setPriceType } = usePriceSettings();
+  // Zmiana zakładki zmienia tylko stan — pozostałe filtry (z URL-a,
+  // synchronizowanego na bieżąco ze stanem) przenosimy na docelową trasę.
+  const goTo = (path: string) => {
+    const params = new URLSearchParams(location.search);
+    params.delete('page');
+    const qs = params.toString();
+    navigate(`${path}${qs ? `?${qs}` : ''}`);
+  };
   const isNew = condition === 'NEW';
   const tabCls = (active: boolean) => cn(
     'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer',
@@ -89,19 +98,19 @@ function ConditionNavTabs({ condition, resultCount, byCondition, sortBy, onSortC
   const totalCount = byCondition ? byCondition.NEW + byCondition.USED : null;
   return (
     <div className="flex items-center gap-1 border-b border-border overflow-x-auto mb-3">
-      <button type="button" onClick={() => navigate('/samochody')} className={tabCls(false)}>
+      <button type="button" onClick={() => goTo('/samochody')} className={tabCls(false)}>
         {t('status.all', 'Wszystkie')}
         {totalCount !== null && (
           <span className="ml-1.5 text-xs text-muted-foreground">({PLN_FMT.format(totalCount)})</span>
         )}
       </button>
-      <button type="button" onClick={() => navigate('/nowe')} className={tabCls(isNew)}>
+      <button type="button" onClick={() => goTo('/nowe')} className={tabCls(isNew)}>
         {t('status.new', 'Nowy')}
         {byCondition && (
           <span className="ml-1.5 text-xs text-muted-foreground">({PLN_FMT.format(byCondition.NEW)})</span>
         )}
       </button>
-      <button type="button" onClick={() => navigate('/uzywane')} className={tabCls(!isNew)}>
+      <button type="button" onClick={() => goTo('/uzywane')} className={tabCls(!isNew)}>
         {t('status.used', 'Używany')}
         {byCondition && (
           <span className="ml-1.5 text-xs text-muted-foreground">({PLN_FMT.format(byCondition.USED)})</span>
