@@ -105,6 +105,11 @@ export default function ListingDetailPage() {
   const [showArchiveModal, setShowArchiveModal] = React.useState(false);
   const autoRefreshTriggered = React.useRef(false);
 
+  // Reset auto-refresh flag when navigating between listings within the same route (SPA navigation doesn't remount)
+  React.useEffect(() => {
+    autoRefreshTriggered.current = false;
+  }, [listingIdentifier]);
+
   const { data: faqData } = useQuery({
     queryKey: ['faq', 'offers', financingType],
     queryFn: () => faqApi.list({ 
@@ -116,12 +121,13 @@ export default function ListingDetailPage() {
   });
 
   const handleRefreshImages = React.useCallback(async () => {
-    if (!id || !token) return;
+    const listingDbId = listing?.listing_id;
+    if (!listingDbId || !token) return;
 
     try {
       setRefreshing(true);
-      await listingsApi.refreshImages(id, token);
-      await queryClient.invalidateQueries({ queryKey: ['listing', id] });
+      await listingsApi.refreshImages(listingDbId, token);
+      await queryClient.invalidateQueries({ queryKey: ['listing', listingIdentifier] });
       await queryClient.invalidateQueries({ queryKey: ['listings'] });
       toast.success('Zdjęcia zostały zaktualizowane');
     } catch (error) {
@@ -134,15 +140,16 @@ export default function ListingDetailPage() {
     } finally {
       setRefreshing(false);
     }
-  }, [id, queryClient, token]);
+  }, [listing?.listing_id, listingIdentifier, queryClient, token]);
 
   const handleAutoRefreshImages = React.useCallback(async () => {
-    if (!id) return;
+    const listingDbId = listing?.listing_id;
+    if (!listingDbId) return;
 
     try {
       // For auto-refresh, we don't show loading state or toast notifications
-      await listingsApi.refreshImages(id, token);
-      await queryClient.invalidateQueries({ queryKey: ['listing', id] });
+      await listingsApi.refreshImages(listingDbId, token);
+      await queryClient.invalidateQueries({ queryKey: ['listing', listingIdentifier] });
       await queryClient.invalidateQueries({ queryKey: ['listings'] });
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
@@ -151,7 +158,7 @@ export default function ListingDetailPage() {
       }
       // Don't show error toast for auto-refresh to avoid disturbing users
     }
-  }, [id, queryClient, token]);
+  }, [listing?.listing_id, listingIdentifier, queryClient, token]);
 
   // Auto-check images and refresh if broken (when enabled in settings)
   React.useEffect(() => {
