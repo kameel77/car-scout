@@ -18,6 +18,7 @@ import { rentalPublicApi } from '@/services/rental-api';
 import { leadsApi } from '@/services/api';
 import { useBrand } from '@/contexts/BrandContext';
 import { Turnstile } from '@/components/Turnstile';
+import { MetaHead } from '@/components/seo/MetaHead';
 
 const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
@@ -248,6 +249,11 @@ export default function RentalLeadFormPage() {
     // Form
     return (
         <div className="min-h-screen bg-stone-50/50">
+            <MetaHead
+                title={`Zapytaj o ofertę - ${vehicle.make} ${vehicle.model} | Motolia`}
+                description={`Formularz zapytania o wynajem długoterminowy ${vehicle.make} ${vehicle.model}${vehicle.version ? ` ${vehicle.version}` : ''}. Wypełnij formularz i otrzymaj spersonalizowaną ofertę.`}
+                canonical={`/wynajem-dlugoterminowy/${slug}/zapytanie`}
+            />
             <Header onClearFilters={() => {}} hasActiveFilters={false} />
             <div className="container max-w-5xl py-8">
                 <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-8 gap-2 hover:bg-white">

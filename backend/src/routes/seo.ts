@@ -39,6 +39,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
             where: { id: 'default' },
             update: {
                 gtmId: data.gtmId,
+                clarityId: data.clarityId,
                 homeTitle: data.homeTitle,
                 homeTitleEn: data.homeTitleEn,
                 homeTitleDe: data.homeTitleDe,
@@ -56,6 +57,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
             create: {
                 id: 'default',
                 gtmId: data.gtmId,
+                clarityId: data.clarityId,
                 homeTitle: data.homeTitle,
                 homeTitleEn: data.homeTitleEn,
                 homeTitleDe: data.homeTitleDe,

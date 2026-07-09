@@ -32,6 +32,7 @@ import { normalizeRentalImageUrl } from '@/lib/utils';
 import { formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
 import { RentalFinancingContent } from '@/components/RentalFinancingContent';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
+import { MetaHead } from '@/components/seo/MetaHead';
 
 type OfferType = 'business' | 'consumer';
 
@@ -195,8 +196,17 @@ export default function RentalDetailPage() {
         { label: 'Inne', icon: Package, items: vehicle.equipmentOther },
     ].filter(cat => cat.items?.length > 0);
 
+    const metaTitle = `Wynajem długoterminowy ${vehicle.make} ${vehicle.model}${vehicle.version ? ` ${vehicle.version}` : ''}${vehicle.productionYear ? ` ${vehicle.productionYear}` : ''} | Motolia`.replace(/\s+/g, ' ').trim();
+    const metaDescription = `Wynajmij ${vehicle.make} ${vehicle.model}${vehicle.version ? ` ${vehicle.version}` : ''} w najlepszej cenie. Porównaj oferty najmu długoterminowego, sprawdź ratę miesięczną i zamów online na Motolia.`;
+
     return (
         <div className="min-h-screen bg-gray-50 pb-24 md:pb-0">
+            <MetaHead
+                title={metaTitle}
+                description={metaDescription}
+                canonical={`/wynajem-dlugoterminowy/${slug}`}
+                image={images[0]}
+            />
             <Header onClearFilters={() => {}} hasActiveFilters={false} />
 
             <main className="container pb-10 pt-4">

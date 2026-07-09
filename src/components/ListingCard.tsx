@@ -232,6 +232,17 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             alt={`${listing.make} ${listing.model}`}
             aspectClassName="aspect-[16/10]"
             imgClassName="group-hover:scale-105"
+            ctaSlide={monthlyRates ? (
+              <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-b from-primary/5 to-primary/15 p-6 text-center gap-1">
+                <p className="text-xs text-muted-foreground">{t('listing.kredytFrom')}</p>
+                <p className="text-3xl font-bold text-primary">{formatNumber(monthlyRates.kredyt)} <span className="text-lg">zł</span></p>
+                <p className="text-xs text-muted-foreground mt-1">{t('listing.perMonth')}</p>
+                <div className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+                  <span>Zobacz ofertę</span>
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </div>
+            ) : undefined}
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 

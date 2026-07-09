@@ -444,6 +444,7 @@ model CrmTrackingVisit {
 model SeoConfig {
   id                   String   @id @default("default")
   gtmId                String?  @map("gtm_id")
+  clarityId            String?  @map("clarity_id")
   homeTitle            String?  @map("home_title")
   homeDescription      String?  @map("home_description")
   homeOgImage          String?  @map("home_og_image")

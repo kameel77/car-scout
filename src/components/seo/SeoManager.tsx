@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { initClarity } from '@/lib/clarity';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +10,7 @@ import React from 'react';
 
 export interface SeoConfig {
     gtmId?: string;
+    clarityId?: string;
     homeTitle?: string;
     homeTitleEn?: string;
     homeTitleDe?: string;
@@ -61,6 +63,13 @@ export function SeoManager() {
         const pick = candidates.find((s) => typeof s === 'string' && s.trim().length > 0);
         return pick?.trim() || config.name;
     }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings, config.name]);
+
+    // Initialize Clarity directly (not through GTM) to ensure SPA page views are tracked
+    useEffect(() => {
+        if (seoConfig?.clarityId) {
+            initClarity(seoConfig.clarityId);
+        }
+    }, [seoConfig?.clarityId]);
 
     useEffect(() => {
         if (!seoConfig?.gtmId) return;

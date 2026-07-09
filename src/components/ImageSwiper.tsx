@@ -10,6 +10,7 @@ interface ImageSwiperProps {
     aspectClassName?: string;
     fallback?: React.ReactNode;
     imgClassName?: string;
+    ctaSlide?: React.ReactNode;
 }
 
 export function ImageSwiper({
@@ -18,16 +19,17 @@ export function ImageSwiper({
     aspectClassName = 'aspect-[16/10]',
     fallback,
     imgClassName,
+    ctaSlide,
 }: ImageSwiperProps) {
     const [index, setIndex] = React.useState(0);
-    const total = images.length;
+    const total = images.length + (ctaSlide ? 1 : 0);
 
     const goPrev = React.useCallback(() => {
-        setIndex((i) => Math.max(0, i - 1));
-    }, []);
+        setIndex((i) => (i === 0 ? total - 1 : i - 1));
+    }, [total]);
 
     const goNext = React.useCallback(() => {
-        setIndex((i) => Math.min(total - 1, i + 1));
+        setIndex((i) => (i === total - 1 ? 0 : i + 1));
     }, [total]);
 
     const swipe = useSwipe({ onSwipeLeft: goNext, onSwipeRight: goPrev });
@@ -60,12 +62,16 @@ export function ImageSwiper({
             className={cn('relative overflow-hidden bg-muted touch-pan-y select-none', aspectClassName)}
             {...swipe}
         >
-            <OptimizedImage
-                src={images[index]}
-                alt={alt}
-                draggable={false}
-                className={cn('h-full w-full object-cover transition-transform duration-500', imgClassName)}
-            />
+            {ctaSlide && index === images.length ? (
+                <div className="h-full w-full">{ctaSlide}</div>
+            ) : (
+                <OptimizedImage
+                    src={images[index]}
+                    alt={alt}
+                    draggable={false}
+                    className={cn('h-full w-full object-cover transition-transform duration-500', imgClassName)}
+                />
+            )}
 
             {showNav && (
                 <>
@@ -73,12 +79,10 @@ export function ImageSwiper({
                         type="button"
                         aria-label="Poprzednie zdjęcie"
                         onClick={(e) => handleNavClick(e, 'prev')}
-                        disabled={index === 0}
                         className={cn(
-                            'absolute left-2 top-1/2 -translate-y-1/2 hidden md:flex items-center justify-center',
-                            'h-8 w-8 rounded-full bg-background/80 text-foreground shadow-sm',
-                            'opacity-0 group-hover:opacity-100 transition-opacity',
-                            'disabled:opacity-30 disabled:cursor-not-allowed hover:bg-background',
+                            'absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center',
+                            'h-10 w-10 rounded-full bg-background/80 text-foreground shadow-sm',
+                            'opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-opacity',
                         )}
                     >
                         <ChevronLeft className="h-5 w-5" />
@@ -87,30 +91,17 @@ export function ImageSwiper({
                         type="button"
                         aria-label="Następne zdjęcie"
                         onClick={(e) => handleNavClick(e, 'next')}
-                        disabled={index === total - 1}
                         className={cn(
-                            'absolute right-2 top-1/2 -translate-y-1/2 hidden md:flex items-center justify-center',
-                            'h-8 w-8 rounded-full bg-background/80 text-foreground shadow-sm',
-                            'opacity-0 group-hover:opacity-100 transition-opacity',
-                            'disabled:opacity-30 disabled:cursor-not-allowed hover:bg-background',
+                            'absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center',
+                            'h-10 w-10 rounded-full bg-background/80 text-foreground shadow-sm',
+                            'opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-opacity',
                         )}
                     >
                         <ChevronRight className="h-5 w-5" />
                     </button>
 
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {images.map((_, i) => (
-                            <button
-                                type="button"
-                                key={i}
-                                aria-label={`Zdjęcie ${i + 1}`}
-                                onClick={(e) => handleDotClick(e, i)}
-                                className={cn(
-                                    'h-1.5 rounded-full transition-all',
-                                    i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/60',
-                                )}
-                            />
-                        ))}
+                    <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 text-white text-xs rounded-full font-medium tabular-nums">
+                        {index + 1} / {total}
                     </div>
                 </>
             )}

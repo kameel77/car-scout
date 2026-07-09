@@ -18,11 +18,11 @@ export function OptimizedImage({
     const [error, setError] = useState(false);
 
     if (!src) {
-        return <img src={fallbackSrc} alt={alt} className={className} {...props} />;
+        return <img src={fallbackSrc} alt={alt} className={className} width={800} height={500} {...props} />;
     }
 
     if (error) {
-        return <img src={fallbackSrc} alt={alt} className={className} {...props} />;
+        return <img src={fallbackSrc} alt={alt} className={className} width={800} height={500} {...props} />;
     }
 
     const isLocalUpload = src.startsWith('/uploads/');
@@ -37,6 +37,8 @@ export function OptimizedImage({
                     src={thumbSrc} 
                     alt={alt} 
                     className={className} 
+                    width={800}
+                    height={500}
                     onError={() => setError(true)}
                     {...props} 
                 />
@@ -50,6 +52,8 @@ export function OptimizedImage({
                     src={src} 
                     alt={alt} 
                     className={className} 
+                    width={800}
+                    height={500}
                     onError={() => setError(true)}
                     {...props} 
                 />
@@ -62,6 +66,8 @@ export function OptimizedImage({
             src={src} 
             alt={alt} 
             className={className} 
+            width={800}
+            height={500}
             onError={() => setError(true)}
             {...props} 
         />
