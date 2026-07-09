@@ -10,8 +10,8 @@ export function initClarity(projectId: string) {
     (function (c: Window, l: Document, a: string, r: string, i: string) {
         (c as any)[a] =
             (c as any)[a] ||
-            function () {
-                ((c as any)[a].q = (c as any)[a].q || []).push(arguments);
+            function (...args: any[]) {
+                ((c as any)[a].q = (c as any)[a].q || []).push(args);
             };
         const t = l.createElement(r) as HTMLScriptElement;
         t.async = true;
