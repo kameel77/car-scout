@@ -17,15 +17,20 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { faqApi, leadsApi } from '@/services/api';
+import { faqApi, leadsApi, heroBannersApi } from '@/services/api';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
 import { DynamicWidget } from '@/components/public/DynamicWidget';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import HeroVehicleFilter from '@/components/HeroVehicleFilter';
-import { HeroBannerCarousel, useHeroBanners } from '@/components/HeroBannerCarousel';
 import { FeatureTilesSection } from '@/components/FeatureTilesSection';
+
+// Lazy: karuzela ciągnie embla-carousel (~18 KB min) — ładuje się dopiero,
+// gdy API zwróci aktywne bannery, więc nie obciąża krytycznej ścieżki LCP
+const HeroBannerCarousel = React.lazy(() =>
+  import('@/components/HeroBannerCarousel').then((m) => ({ default: m.HeroBannerCarousel })),
+);
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -163,7 +168,11 @@ const CAR_BRANDS_CN = ['BYD', 'Chery', 'MG', 'Geely', 'Omoda', 'Jaecoo', 'Leapmo
 
 export default function MotoliaHomePage() {
   const { config } = useBrand();
-  const { data: heroBannerData } = useHeroBanners();
+  const { data: heroBannerData } = useQuery({
+    queryKey: ['hero-banners', 'public'],
+    queryFn: () => heroBannersApi.listPublic(),
+    staleTime: 5 * 60 * 1000,
+  });
   const hasHeroBanners = (heroBannerData?.banners?.length ?? 0) > 0;
   const [openFaq, setOpenFaq] = React.useState<number | null>(0);
   const { i18n } = useTranslation();
@@ -213,7 +222,9 @@ export default function MotoliaHomePage() {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           {hasHeroBanners ? (
             <div className="relative">
-              <HeroBannerCarousel />
+              <React.Suspense fallback={null}>
+                <HeroBannerCarousel />
+              </React.Suspense>
               {/* Floating search card (superauto layout) — plain div so the
                   -translate-y-1/2 centering isn't overridden by framer-motion's transform */}
               <div className="mt-6 lg:mt-0 lg:absolute lg:top-1/2 lg:right-6 xl:right-10 lg:-translate-y-1/2 lg:w-[400px] lg:z-20">
@@ -223,17 +234,18 @@ export default function MotoliaHomePage() {
           ) : (
             <div className="grid lg:grid-cols-[1.5fr_1fr] gap-16 items-center">
 
-              {/* Left col */}
+              {/* Left col — bez animacji wejścia: H1 to element LCP, a ten sam
+                  markup renderuje statyczny shell w index.html zanim wstanie React */}
               <div className="max-w-2xl">
-                <FadeIn>
+                <div>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8"
                     style={{ background: `${YELLOW}20`, borderColor: `${YELLOW}60`, color: BLACK }}>
                     <span style={{ color: YELLOW_DARK }}>◆</span>
                     {config.homePage.hero.badge}
                   </div>
-                </FadeIn>
+                </div>
 
-                <FadeIn delay={0.1}>
+                <div>
                   <h1
                     className="text-5xl lg:text-7xl font-outfit font-bold tracking-tight mb-6 leading-[1.08] text-[#1A1A1A]"
                     dangerouslySetInnerHTML={{
@@ -243,15 +255,15 @@ export default function MotoliaHomePage() {
                       ),
                     }}
                   />
-                </FadeIn>
+                </div>
 
-                <FadeIn delay={0.2}>
+                <div>
                   <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light">
                     {config.homePage.hero.subtitle}
                   </p>
-                </FadeIn>
+                </div>
 
-                <FadeIn delay={0.3} className="flex flex-col sm:flex-row gap-4 mb-12">
+                <div className="flex flex-col sm:flex-row gap-4 mb-12">
                   <Link
                     to="/samochody"
                     className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
@@ -272,22 +284,22 @@ export default function MotoliaHomePage() {
                   >
                     Jak to działa?
                   </a>
-                </FadeIn>
+                </div>
 
-                <FadeIn delay={0.4} className="flex flex-wrap gap-x-8 gap-y-3">
+                <div className="flex flex-wrap gap-x-8 gap-y-3">
                   {config.homePage.hero.trustBadges.map((badge, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-gray-600 text-sm font-medium">
                       <CheckCircle2 size={17} style={{ color: YELLOW_DARK }} />
                       {badge}
                     </div>
                   ))}
-                </FadeIn>
+                </div>
               </div>
 
               {/* Right col — vehicle filter widget */}
-              <FadeIn delay={0.4} className="relative">
+              <div className="relative">
                 <HeroVehicleFilter />
-              </FadeIn>
+              </div>
 
             </div>
           )}

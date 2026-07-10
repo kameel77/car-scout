@@ -38,6 +38,21 @@ const brandMeta: Record<BrandId, {
   },
 };
 
+// Statyczny shell hero strony głównej Motolii — maluje się zaraz po HTML
+// (CSS jest inline'owany), zanim pobierze się i wykona bundle Reacta.
+// React po zamontowaniu podmienia #root na identyczny markup, więc nie ma
+// przeskoku. Teksty muszą odpowiadać src/brands/motolia/config.ts
+// (homePage.hero) i klasom z MotoliaHomePage.tsx / Header.tsx.
+const motoliaHeroShell = `<div id="root"><div class="bg-white min-h-screen text-[#1A1A1A] font-inter">` +
+  `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>` +
+  `<section class="relative overflow-hidden bg-[#FAFAF8] pt-14 pb-16 lg:pt-40 lg:pb-28"><div class="max-w-7xl mx-auto px-6 relative z-10"><div class="grid lg:grid-cols-[1.5fr_1fr] gap-16 items-center"><div class="max-w-2xl">` +
+  `<div><div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8" style="background:#F5C51820;border-color:#F5C51860;color:#1A1A1A"><span style="color:#D4A90A">◆</span>Leasing · Kredyt · Wynajem · Pożyczka</div></div>` +
+  `<div><h1 class="text-5xl lg:text-7xl font-outfit font-bold tracking-tight mb-6 leading-[1.08] text-[#1A1A1A]">Szeroki wybór aut.<br><span style="color:#D4A90A">Proste finansowanie.</span></h1></div>` +
+  `<div><p class="text-xl text-gray-500 mb-10 leading-relaxed font-light">Niezależnie czy jesteś osobą prywatną czy firmą – dobierzemy finansowanie do Twojej sytuacji. Jedna rozmowa, wiele ofert.</p></div>` +
+  `<div class="flex flex-col sm:flex-row gap-4 mb-12"><a href="/samochody" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg" style="background:#F5C518;color:#1A1A1A;box-shadow:0 4px 24px #F5C51860">Sprawdź dostępne auta</a><a href="#jak-to-dziala" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-gray-200 text-gray-700">Jak to działa?</a></div>` +
+  `</div></div></div></section>` +
+  `</div></div>`;
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -79,7 +94,29 @@ export default defineConfig(({ mode }) => {
             .replace(/(<meta property="og:url"[^>]*content=").*?(")/,          `$1${meta.ogUrl}$2`)
             .replace(/(<meta name="twitter:title"[^>]*content=").*?(")/,       `$1${meta.ogTitle}$2`)
             .replace(/(<meta name="twitter:description"[^>]*content=").*?(")/,  `$1${meta.ogDescription}$2`)
-            .replace(/(<meta name="twitter:image"[^>]*content=").*?(")/,        `$1${meta.ogImage}$2`);
+            .replace(/(<meta name="twitter:image"[^>]*content=").*?(")/,        `$1${meta.ogImage}$2`)
+            .replace('<div id="root"></div>', brand === 'motolia' ? motoliaHeroShell : '<div id="root"></div>');
+        },
+      },
+      {
+        name: 'font-preload',
+        enforce: 'post' as const,
+        generateBundle(_options: unknown, bundle: Record<string, { type: string }>) {
+          const htmlChunk = bundle['index.html'];
+          if (!htmlChunk || htmlChunk.type !== 'asset') return;
+          const asset = htmlChunk as unknown as { source: string | Uint8Array };
+
+          // Fonty elementu LCP (H1: Outfit 700) i tekstu bazowego (Inter 400) —
+          // preload zamiast czekania, aż przeglądarka sparsuje inline'owany CSS
+          const criticalFonts = Object.keys(bundle).filter(
+            (k) => /(-|\/)(outfit-latin-700|inter-latin-400)-normal-[^/]*\.woff2$/.test(k),
+          );
+          if (criticalFonts.length === 0) return;
+
+          const links = criticalFonts
+            .map((f) => `<link rel="preload" href="/${f}" as="font" type="font/woff2" crossorigin>`)
+            .join('\n    ');
+          asset.source = asset.source.toString().replace('</title>', `</title>\n    ${links}`);
         },
       },
       {
