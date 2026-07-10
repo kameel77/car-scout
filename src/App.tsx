@@ -1,6 +1,5 @@
 import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -13,7 +12,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BrandProvider } from "@/contexts/BrandContext";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
-import AdminLayout from "./components/admin/AdminLayout";
 import { ConsentBanner } from "./components/consent/ConsentBanner";
 import { HelmetProvider } from 'react-helmet-async';
 import { SeoManager } from '@/components/seo/SeoManager';
@@ -22,6 +20,13 @@ import { ClarityPageTracker } from './components/seo/ClarityPageTracker';
 import './i18n';
 
 import HomePage from "./pages/HomePage";
+
+// Poza ścieżką krytyczną strony głównej: layout admina i sonner (~45 KB min)
+// nie mają prawa siedzieć w głównym chunku.
+const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+const Sonner = lazy(() =>
+  import("@/components/ui/sonner").then((m) => ({ default: m.Toaster })),
+);
 
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const ListingDetailPage = lazy(() => import("./pages/ListingDetailPage"));
@@ -78,7 +83,9 @@ const App = () => (
               <DynamicTranslationsLoader />
               <LanguageSync />
               <Toaster />
-              <Sonner />
+              <Suspense fallback={null}>
+                <Sonner />
+              </Suspense>
               <BrowserRouter>
                 <ClarityPageTracker />
                 <SpecialOfferProvider>

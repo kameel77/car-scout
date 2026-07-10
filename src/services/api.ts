@@ -982,7 +982,10 @@ export const translationsApi = {
         if (params?.category) queryParams.append('category', params.category);
         if (params?.search) queryParams.append('search', params.search);
 
-        const response = await fetch(`${API_BASE_URL}/api/translations?${queryParams.toString()}`, {
+        // Bez parametrów URL musi być identyczny z <link rel="preload"> w index.html
+        // (goły /api/translations) — samotny "?" unieważnia dopasowanie preloadu
+        const qs = queryParams.toString();
+        const response = await fetch(`${API_BASE_URL}/api/translations${qs ? `?${qs}` : ''}`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
         });
 

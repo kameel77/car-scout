@@ -132,6 +132,8 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 src={buildAssetUrl(headerLogoSrc)}
                 alt={siteName}
                 className="h-14 md:h-16 w-auto max-w-[240px] object-contain"
+                width={240}
+                height={47}
                 decoding="async"
                 {...({ fetchpriority: 'high' } as object)}
               />
@@ -256,6 +258,8 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                       src={buildAssetUrl(headerLogoSrc)}
                       alt={siteName}
                       className="h-12 w-auto object-contain"
+                      width={240}
+                      height={47}
                       decoding="async"
                     />
                   ) : (

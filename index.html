@@ -16,9 +16,12 @@
     <link rel="preload" href="/api/feature-tiles/public" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/geo" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/listings/options" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/hero-banners/public" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/rental/vehicles?limit=1" as="fetch" crossorigin="anonymous" />
 
-    <!-- Dynamic Environment Config (Turnstile Site Key) -->
-    <script src="/config.js"></script>
+    <!-- Dynamic Environment Config (Turnstile Site Key) — defer: klucz czytany
+         dopiero przy montowaniu widgetu Turnstile, nie może blokować renderu -->
+    <script src="/config.js" defer></script>
 
     <link rel="icon" type="image/png" href="/brands/carsalon/favicon.png" />
     <link rel="apple-touch-icon" href="/brands/carsalon/favicon.png" />

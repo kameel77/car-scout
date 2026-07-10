@@ -15,7 +15,6 @@ import {
   Users,
   Briefcase,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { faqApi, leadsApi } from '@/services/api';
@@ -36,6 +35,9 @@ const BLACK = '#1A1A1A';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// CSS-owy odpowiednik framer-motionowego whileInView — framer (~110 KB min)
+// wypadł z krytycznego chunka strony głównej, a H1 (element LCP) nie czeka
+// już na hydratację biblioteki animacji.
 const FadeIn = ({
   children,
   delay = 0,
@@ -44,17 +46,40 @@ const FadeIn = ({
   children: React.ReactNode;
   delay?: number;
   className?: string;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 28 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: '-80px' }}
-    transition={{ duration: 0.6, delay, ease: [0.21, 0.47, 0.32, 0.98] }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-);
+}) => {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { rootMargin: '-80px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'none' : 'translateY(28px)',
+        transition: `opacity 0.6s cubic-bezier(0.21,0.47,0.32,0.98) ${delay}s, transform 0.6s cubic-bezier(0.21,0.47,0.32,0.98) ${delay}s`,
+      }}
+    >
+      {children}
+    </div>
+  );
+};
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -527,20 +552,20 @@ export default function MotoliaHomePage() {
                         <ChevronDown size={16} />
                       </div>
                     </button>
-                    <AnimatePresence>
-                      {openFaq === idx && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25 }}
-                        >
-                          <div className="px-6 pb-6 text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
-                            {item.a}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateRows: openFaq === idx ? '1fr' : '0fr',
+                        opacity: openFaq === idx ? 1 : 0,
+                        transition: 'grid-template-rows 0.25s, opacity 0.25s',
+                      }}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="px-6 pb-6 text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
+                          {item.a}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </FadeIn>
               ))}
