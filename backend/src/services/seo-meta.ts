@@ -158,6 +158,12 @@ export function buildListingMeta(
     const price = l.pricePln.toLocaleString('pl-PL');
     const variantLabel = variant === 'leasing' ? ' — leasing' : variant === 'kredyt' ? ' — kredyt' : '';
     const canonical = `${ctx.baseUrl}/oferta/${slug}`;
+    const breadcrumbLevel2: { name: string; path: string } =
+        variant === 'leasing'
+            ? { name: 'Leasing samochodowy', path: '/leasing' }
+            : variant === 'kredyt'
+            ? { name: 'Kredyt samochodowy', path: '/kredyt' }
+            : { name: 'Samochody', path: '/samochody' };
     const detale = [
         `cena ${price} zł`,
         `przebieg ${l.mileageKm.toLocaleString('pl-PL')} km`,
@@ -174,7 +180,7 @@ export function buildListingMeta(
 <nav aria-label="Breadcrumb">
   <ol>
     <li><a href="/">Strona główna</a></li>
-    <li><a href="/samochody">Samochody</a></li>
+    <li><a href="${breadcrumbLevel2.path}">${breadcrumbLevel2.name}</a></li>
     <li>${safeName}</li>
   </ol>
 </nav>
@@ -276,7 +282,7 @@ export function buildListingMeta(
         '@type': 'BreadcrumbList',
         itemListElement: [
             { '@type': 'ListItem', position: 1, name: 'Strona główna', item: ctx.baseUrl },
-            { '@type': 'ListItem', position: 2, name: 'Samochody', item: `${ctx.baseUrl}/samochody` },
+            { '@type': 'ListItem', position: 2, name: breadcrumbLevel2.name, item: `${ctx.baseUrl}${breadcrumbLevel2.path}` },
             { '@type': 'ListItem', position: 3, name: name, item: canonical }
         ]
     });

@@ -40,6 +40,11 @@ export const translations = {
         contact: "Kontakt",
       },
 
+      // Breadcrumb
+      breadcrumb: {
+        cars: "Samochody",
+      },
+
       // Header
       header: {
         searchPlaceholder: "Szukaj marki, modelu...",
@@ -453,6 +458,11 @@ export const translations = {
         contact: "Contact",
       },
 
+      // Breadcrumb
+      breadcrumb: {
+        cars: "Cars",
+      },
+
       // Header
       header: {
         searchPlaceholder: "Search make, model...",
@@ -857,6 +867,11 @@ export const translations = {
         search: "Suche",
         favorites: "Favoriten",
         contact: "Kontakt",
+      },
+
+      // Breadcrumb
+      breadcrumb: {
+        cars: "Autos",
       },
 
       // Header

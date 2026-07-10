@@ -128,6 +128,30 @@ describe('buildListingMeta', () => {
         expect(m.bodyHtml).toContain('<li>Apple CarPlay</li>');
         expect(m.bodyHtml).not.toContain('<h3>Komfort i dodatki</h3>');
     });
+
+    it('oferta variant: BreadcrumbList item 2 is Samochody / /samochody', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        const ld = m.jsonLd as any[];
+        expect(ld[1].itemListElement[1].name).toBe('Samochody');
+        expect(ld[1].itemListElement[1].item).toBe('https://dev.motolia.pl/samochody');
+        expect(m.bodyHtml).toContain('<li><a href="/samochody">Samochody</a></li>');
+    });
+
+    it('leasing variant: BreadcrumbList item 2 is Leasing samochodowy / /leasing', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'leasing', ctx);
+        const ld = m.jsonLd as any;
+        expect(ld.itemListElement[1].name).toBe('Leasing samochodowy');
+        expect(ld.itemListElement[1].item).toBe('https://dev.motolia.pl/leasing');
+        expect(m.bodyHtml).toContain('<li><a href="/leasing">Leasing samochodowy</a></li>');
+    });
+
+    it('kredyt variant: BreadcrumbList item 2 is Kredyt samochodowy / /kredyt', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'kredyt', ctx);
+        const ld = m.jsonLd as any;
+        expect(ld.itemListElement[1].name).toBe('Kredyt samochodowy');
+        expect(ld.itemListElement[1].item).toBe('https://dev.motolia.pl/kredyt');
+        expect(m.bodyHtml).toContain('<li><a href="/kredyt">Kredyt samochodowy</a></li>');
+    });
 });
 
 describe('buildRentalMeta', () => {

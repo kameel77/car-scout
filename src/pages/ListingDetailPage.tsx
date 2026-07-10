@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ChevronRight, Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info, FileDown } from 'lucide-react';
+import { Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info, FileDown } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
@@ -17,6 +17,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from '@/components/ui/separator';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { useListing } from '@/hooks/useListings';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
@@ -53,7 +61,6 @@ import { CustomerTypeToggle } from '@/components/CustomerTypeToggle';
 import { useBrand } from '@/contexts/BrandContext';
 
 import { MetaHead } from '@/components/seo/MetaHead';
-import { Helmet } from 'react-helmet-async';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -386,9 +393,6 @@ export default function ListingDetailPage() {
     </TooltipProvider>
   ) : null;
 
-  // Financing type detection from URL
-  const financingLabel = getFinancingLabel(financingType, i18n.language);         // short: "Kredyt"
-
   // Financing variants (/kredyt/, /leasing/) canonicalize to /oferta/ ('gotowka' prefix)
   const canonicalPath = getListingUrlPath({
     id: listing.listing_id,
@@ -530,42 +534,15 @@ export default function ListingDetailPage() {
       "@graph": graph
     };
   }
-  // BreadcrumbList JSON-LD — uses FULL SEO labels for bots (not the short UI form)
-  const breadcrumbSchema = listing ? {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": lang === 'pl' ? 'Strona główna' : lang === 'en' ? 'Home' : 'Startseite',
-        "item": siteUrl
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": financingType !== 'gotowka' ? financingSeoLabel : (lang === 'pl' ? 'Samochody' : lang === 'en' ? 'Cars' : 'Autos'),
-        "item": `${siteUrl}/samochody`
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
-        "name": listing.make,
-        "item": `${siteUrl}/samochody?make=${encodeURIComponent(listing.make)}`
-      },
-      {
-        "@type": "ListItem",
-        "position": 4,
-        "name": `${listing.make} ${listing.model}`,
-        "item": `${siteUrl}/samochody?make=${encodeURIComponent(listing.make)}&model=${encodeURIComponent(listing.model)}`
-      },
-      {
-        "@type": "ListItem",
-        "position": 5,
-        "name": title
-      }
-    ]
-  } : undefined;
+
+  // Breadcrumb level 2 — variant-aware (must match backend SSR breadcrumb + BreadcrumbList schema)
+  const breadcrumbLevel2 = financingType === 'leasing'
+    ? { label: getFinancingLabel('leasing', lang), path: '/leasing' }
+    : financingType === 'kredyt'
+    ? { label: getFinancingLabel('kredyt', lang), path: '/kredyt' }
+    : financingType === 'wynajem'
+    ? { label: getFinancingLabel('wynajem', lang), path: '/wynajem-dlugoterminowy' }
+    : { label: t('breadcrumb.cars'), path: '/samochody' };
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
@@ -578,29 +555,30 @@ export default function ListingDetailPage() {
           schema={schema}
         />
       )}
-      {breadcrumbSchema && (
-        <Helmet>
-          <script type="application/ld+json">
-            {JSON.stringify(breadcrumbSchema)}
-          </script>
-        </Helmet>
-      )}
       <Header />
 
       <main className="container py-6 relative">
         <h1 className="sr-only">{baseTitle}</h1>
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link to="/samochody" className="hover:text-foreground transition-colors">
-            {financingType !== 'gotowka' ? financingLabel : t('nav.search')}
-          </Link>
-          <ChevronRight className="h-4 w-4" />
-          <span>{listing.make}</span>
-          <ChevronRight className="h-4 w-4" />
-          <span>{listing.model}</span>
-          <ChevronRight className="h-4 w-4" />
-          <span className="text-foreground">{listing.version}</span>
-        </nav>
+        <Breadcrumb className="text-sm text-muted-foreground mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/">{t('nav.home')}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to={breadcrumbLevel2.path}>{breadcrumbLevel2.label}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{baseTitle}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
         {/* Title for Motolia (Desktop only, since mobile has it below gallery) */}
         {isMotolia && (
