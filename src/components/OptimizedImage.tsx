@@ -22,7 +22,7 @@ type Mode = 'srcset' | 'plain' | 'fallback';
 export function OptimizedImage({
     src,
     alt = '',
-    fallbackSrc = '/motolia-placeholder.png',
+    fallbackSrc = '/motolia-placeholder.webp',
     forceThumbnail = false,
     priority = false,
     className,

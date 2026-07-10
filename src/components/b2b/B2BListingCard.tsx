@@ -14,7 +14,7 @@ const KREDYT_FACTOR = 0.014;
 const LEASING_FACTOR = 0.012;
 
 export function B2BListingCard({ offer }: { offer: B2BOffer }) {
-  const image = offer.primaryImageUrl || offer.imageUrls?.[0] || '/motolia-placeholder.png';
+  const image = offer.primaryImageUrl || offer.imageUrls?.[0] || '/motolia-placeholder.webp';
   const baseHref = getListingUrlPath(offer, 'gotowka');
   const href = useTrackedUrl(baseHref);
 

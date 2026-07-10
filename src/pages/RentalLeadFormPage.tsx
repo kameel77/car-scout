@@ -278,7 +278,7 @@ export default function RentalLeadFormPage() {
                                         />
                                     ) : (
                                         <img
-                                            src="/motolia-placeholder.png"
+                                            src="/motolia-placeholder.webp"
                                             alt="Placeholder"
                                             className="w-full h-full object-cover"
                                         />

@@ -49,7 +49,7 @@ function dedupImages(primary: string | undefined, all: string[] | undefined): st
     }
   }
   if (out.length === 0) {
-    return ['/motolia-placeholder.png'];
+    return ['/motolia-placeholder.webp'];
   }
   return out;
 }

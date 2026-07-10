@@ -40,10 +40,10 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
                 ? backendListing.primaryImageUrl.startsWith('/uploads/')
                     ? backendListing.primaryImageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')
                     : backendListing.primaryImageUrl
-                : '/motolia-placeholder.png',
+                : '/motolia-placeholder.webp',
             image_urls: backendListing.imageUrls && backendListing.imageUrls.length > 0
                 ? backendListing.imageUrls.map((url: string) => url.startsWith('/uploads/') ? url.replace(/\.(jpg|jpeg|png)$/i, '.webp') : url)
-                : ['/motolia-placeholder.png'],
+                : ['/motolia-placeholder.webp'],
             is_archived: backendListing.isArchived || false,
             is_featured: backendListing.isFeatured || false,
 
