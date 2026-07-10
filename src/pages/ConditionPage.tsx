@@ -22,13 +22,6 @@ import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { ListingPagination } from '@/components/ListingPagination';
 import { RentalListingCard } from '@/components/RentalListingCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -54,8 +47,6 @@ const emptyFilters: FilterState = {
 };
 
 const parseArray = (param: string | null) => param ? param.split(',') : [];
-const DEFAULT_PER_PAGE = 30;
-const PAGE_SIZE_OPTIONS = [30, 60];
 const parseNumberParam = (v: string | null, fallback: number) => {
   const p = v ? parseInt(v, 10) : NaN;
   return Number.isFinite(p) && p > 0 ? p : fallback;
@@ -229,11 +220,8 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   }, [settings?.defaultSortCars, searchParams]);
 
   const initialPage = parseNumberParam(searchParams.get('page'), 1);
-  const initialPerPage = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
   const [page, setPage] = React.useState(initialPage);
-  const [perPage, setPerPage] = React.useState(
-    PAGE_SIZE_OPTIONS.includes(initialPerPage) ? initialPerPage : DEFAULT_PER_PAGE
-  );
+  const perPage = Number(settings?.searchGridColumns) === 3 ? 30 : 32;
 
   const [allFiltersOpen, setAllFiltersOpen] = React.useState(() => searchParams.get('openFilters') === 'true');
 
@@ -295,18 +283,14 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       if (filters.cities.length) params.set('city', filters.cities.join(','));
       if (sortBy !== defaultSortCars) params.set('sortBy', sortBy);
       if (page > 1) params.set('page', page.toString());
-      if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
       setSearchParams(params, { replace: true });
     }, 100);
     return () => { if (urlSyncTimeoutRef.current) clearTimeout(urlSyncTimeoutRef.current); };
-  }, [filters, sortBy, page, perPage, setSearchParams]);
+  }, [filters, sortBy, page, setSearchParams]);
 
   React.useEffect(() => {
     const nextPage = parseNumberParam(searchParams.get('page'), 1);
-    const nextPerPageRaw = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
-    const nextPerPage = PAGE_SIZE_OPTIONS.includes(nextPerPageRaw) ? nextPerPageRaw : DEFAULT_PER_PAGE;
     if (nextPage !== page) setPage(nextPage);
-    if (nextPerPage !== perPage) setPerPage(nextPerPage);
   }, [searchParams]);
 
   /* ── Data: sale listings ── */
@@ -462,14 +446,6 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
     return `${location.pathname}${qs ? `?${qs}` : ''}`;
   }, [searchParams, location.pathname]);
 
-  const handlePerPageChange = React.useCallback((value: string) => {
-    const parsed = parseInt(value, 10);
-    const validated = PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PER_PAGE;
-    setPerPage(validated);
-    setPage(1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
   const totalCombined = saleTotalCount + rentalVehicles.length;
 
   /* ── SEO ── */
@@ -623,27 +599,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
 
             {/* Pagination (for sale listings) */}
             {!saleLoading && saleListings.length > 0 && (
-              <div className="mt-8 flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="text-sm text-muted-foreground">
-                    {t('common.found')}: <span className="font-semibold text-foreground">{totalCombined}</span> {t('common.offers')}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground">{t('common.perPage')}</span>
-                    <Select value={perPage.toString()} onValueChange={handlePerPageChange}>
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PAGE_SIZE_OPTIONS.map((size) => (
-                          <SelectItem key={size} value={size.toString()}>
-                            {size}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              <div className="mt-8">
                 <ListingPagination
                   page={page}
                   totalPages={saleTotalPages}

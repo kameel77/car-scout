@@ -4,11 +4,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
+import { buildPages } from '@/utils/listingPagination';
 
 interface ListingPaginationProps {
   page: number;
@@ -18,33 +18,6 @@ interface ListingPaginationProps {
   buildPageHref?: (page: number) => string;
 }
 
-type PageElement = number | 'ellipsis';
-
-const buildPages = (current: number, total: number): PageElement[] => {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, index) => index + 1);
-  }
-
-  const pages: PageElement[] = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-
-  if (start > 2) {
-    pages.push('ellipsis');
-  }
-
-  for (let page = start; page <= end; page += 1) {
-    pages.push(page);
-  }
-
-  if (end < total - 1) {
-    pages.push('ellipsis');
-  }
-
-  pages.push(total);
-  return pages;
-};
-
 export function ListingPagination({ page, totalPages, onPageChange, buildPageHref }: ListingPaginationProps) {
   const { t } = useTranslation();
   const pages = React.useMemo(() => buildPages(page, totalPages), [page, totalPages]);
@@ -53,62 +26,59 @@ export function ListingPagination({ page, totalPages, onPageChange, buildPageHre
   const hrefFor = (target: number) => buildPageHref?.(target) ?? '#';
 
   return (
-    <Pagination className="justify-end">
+    <Pagination className="justify-center">
       <PaginationContent>
-        <PaginationItem>
-          <PaginationLink
-            href={hrefFor(Math.max(1, page - 1))}
-            size="default"
-            className={cn('gap-1 pl-2.5', isFirstPage && 'pointer-events-none opacity-50')}
-            aria-label={t('common.previous')}
-            onClick={(event) => {
-              event.preventDefault();
-              if (!isFirstPage) {
+        {!isFirstPage && (
+          <PaginationItem>
+            <PaginationLink
+              href={hrefFor(page - 1)}
+              size="default"
+              className="gap-1 pl-2.5"
+              aria-label={t('common.previous')}
+              onClick={(event) => {
+                event.preventDefault();
                 onPageChange(page - 1);
-              }
-            }}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('common.previous')}</span>
-          </PaginationLink>
-        </PaginationItem>
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('common.previous')}</span>
+            </PaginationLink>
+          </PaginationItem>
+        )}
 
-        {pages.map((pageValue, index) => (
-          <PaginationItem key={`${pageValue}-${index}`}>
-            {pageValue === 'ellipsis' ? (
-              <PaginationEllipsis />
-            ) : (
-              <PaginationLink
-                href={hrefFor(pageValue)}
-                isActive={pageValue === page}
-                onClick={(event) => {
-                  event.preventDefault();
-                  onPageChange(pageValue);
-                }}
-              >
-                {pageValue}
-              </PaginationLink>
-            )}
+        {pages.map((pageValue) => (
+          <PaginationItem key={pageValue}>
+            <PaginationLink
+              href={hrefFor(pageValue)}
+              isActive={pageValue === page}
+              className={cn(pageValue === page && 'bg-accent text-accent-foreground hover:bg-accent/90 border-transparent')}
+              onClick={(event) => {
+                event.preventDefault();
+                onPageChange(pageValue);
+              }}
+            >
+              {pageValue}
+            </PaginationLink>
           </PaginationItem>
         ))}
 
-        <PaginationItem>
-          <PaginationLink
-            href={hrefFor(Math.min(totalPages, page + 1))}
-            size="default"
-            className={cn('gap-1 pr-2.5', isLastPage && 'pointer-events-none opacity-50')}
-            aria-label={t('common.next')}
-            onClick={(event) => {
-              event.preventDefault();
-              if (!isLastPage) {
+        {!isLastPage && (
+          <PaginationItem>
+            <PaginationLink
+              href={hrefFor(page + 1)}
+              size="default"
+              className="gap-1 pr-2.5"
+              aria-label={t('common.next')}
+              onClick={(event) => {
+                event.preventDefault();
                 onPageChange(page + 1);
-              }
-            }}
-          >
-            <span className="hidden sm:inline">{t('common.next')}</span>
-            <ChevronRight className="h-4 w-4" />
-          </PaginationLink>
-        </PaginationItem>
+              }}
+            >
+              <span className="hidden sm:inline">{t('common.next')}</span>
+              <ChevronRight className="h-4 w-4" />
+            </PaginationLink>
+          </PaginationItem>
+        )}
       </PaginationContent>
     </Pagination>
   );

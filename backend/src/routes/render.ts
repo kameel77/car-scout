@@ -38,7 +38,25 @@ const PAGINATED_ROUTES = new Set([
     '/uzywane',
     '/wynajem-dlugoterminowy',
 ]);
-const SSR_PER_PAGE = 30; // spójne z DEFAULT_PER_PAGE na froncie
+
+// Rozmiar strony SSR spójny z frontem: 3 kolumny siatki → 30/stronę, w przeciwnym razie 32.
+const SSR_PER_PAGE_TTL_MS = 60 * 1000;
+let ssrPerPageCache: { value: number; fetchedAt: number } | null = null;
+
+async function getSsrPerPage(fastify: FastifyInstance): Promise<number> {
+    if (ssrPerPageCache && Date.now() - ssrPerPageCache.fetchedAt < SSR_PER_PAGE_TTL_MS) {
+        return ssrPerPageCache.value;
+    }
+    let value = 32;
+    try {
+        const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
+        value = Number(settings?.searchGridColumns) === 3 ? 30 : 32;
+    } catch {
+        value = 32;
+    }
+    ssrPerPageCache = { value, fetchedAt: Date.now() };
+    return value;
+}
 
 // Zróżnicowanie list kategorii — jak filtry w SPA (ConditionPage)
 const CONDITION_BY_PATH: Record<string, 'NEW' | 'USED'> = {
@@ -233,14 +251,15 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
     let pagination: StaticPagination | undefined;
     const paginated = PAGINATED_ROUTES.has(path);
     const isFinancingList = path === '/leasing' || path === '/kredyt';
-    const take = paginated ? SSR_PER_PAGE : isFinancingList ? FINANCING_LIST_TAKE : 20;
-    const skip = paginated ? (page - 1) * SSR_PER_PAGE : 0;
+    const ssrPerPage = paginated ? await getSsrPerPage(fastify) : 0;
+    const take = paginated ? ssrPerPage : isFinancingList ? FINANCING_LIST_TAKE : 20;
+    const skip = paginated ? (page - 1) * ssrPerPage : 0;
 
     if (path === '/wynajem-dlugoterminowy') {
         const where = { isActive: true, slug: { not: null } };
         if (paginated) {
             const total = await fastify.prisma.rentalVehicle.count({ where });
-            const totalPages = Math.max(1, Math.ceil(total / SSR_PER_PAGE));
+            const totalPages = Math.max(1, Math.ceil(total / ssrPerPage));
             if (page > totalPages) return defaultMeta(ctx, { noindex: true, status: 404 });
             pagination = { page, totalPages };
         }
@@ -267,7 +286,7 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         };
         if (paginated) {
             const total = await fastify.prisma.listing.count({ where });
-            const totalPages = Math.max(1, Math.ceil(total / SSR_PER_PAGE));
+            const totalPages = Math.max(1, Math.ceil(total / ssrPerPage));
             if (page > totalPages) return defaultMeta(ctx, { noindex: true, status: 404 });
             pagination = { page, totalPages };
         }

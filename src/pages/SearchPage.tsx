@@ -17,13 +17,6 @@ import { mergeFacets, mergeMakes, mergeModels } from '@/utils/listingMerge';
 import { ListingPagination } from '@/components/ListingPagination';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { Footer } from '@/components/Footer';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -63,9 +56,6 @@ const emptyFilters: FilterState = {
 
 // Helper to parse arrays from URL
 const parseArray = (param: string | null) => param ? param.split(',') : [];
-
-const DEFAULT_PER_PAGE = 30;
-const PAGE_SIZE_OPTIONS = [30, 60];
 
 const parseNumberParam = (value: string | null, fallback: number) => {
   const parsed = value ? parseInt(value, 10) : NaN;
@@ -142,11 +132,8 @@ export default function SearchPage() {
   }, [settings?.defaultSortCars, searchParams]);
 
   const initialPage = parseNumberParam(searchParams.get('page'), 1);
-  const initialPerPage = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
   const [page, setPage] = React.useState(initialPage);
-  const [perPage, setPerPage] = React.useState(
-    PAGE_SIZE_OPTIONS.includes(initialPerPage) ? initialPerPage : DEFAULT_PER_PAGE
-  );
+  const perPage = Number(settings?.searchGridColumns) === 3 ? 30 : 32;
 
   // "Wszystkie filtry" sheet (full FilterPanel) trigger
   const [allFiltersOpen, setAllFiltersOpen] = React.useState(() => {
@@ -231,7 +218,6 @@ export default function SearchPage() {
       if (filters.cities.length) params.set('city', filters.cities.join(','));
       if (sortBy !== defaultSortCars) params.set('sortBy', sortBy);
       if (page > 1) params.set('page', page.toString());
-      if (perPage !== DEFAULT_PER_PAGE) params.set('perPage', perPage.toString());
 
       setSearchParams(params, { replace: true });
     }, 100);
@@ -241,19 +227,13 @@ export default function SearchPage() {
         clearTimeout(urlSyncTimeoutRef.current);
       }
     };
-  }, [filters, sortBy, page, perPage, setSearchParams]);
+  }, [filters, sortBy, page, setSearchParams]);
 
   React.useEffect(() => {
     const nextPage = parseNumberParam(searchParams.get('page'), 1);
-    const nextPerPageRaw = parseNumberParam(searchParams.get('perPage'), DEFAULT_PER_PAGE);
-    const nextPerPage = PAGE_SIZE_OPTIONS.includes(nextPerPageRaw) ? nextPerPageRaw : DEFAULT_PER_PAGE;
 
     if (nextPage !== page) {
       setPage(nextPage);
-    }
-
-    if (nextPerPage !== perPage) {
-      setPerPage(nextPerPage);
     }
   }, [searchParams]);
 
@@ -367,14 +347,6 @@ export default function SearchPage() {
     const qs = params.toString();
     return `${window.location.pathname}${qs ? `?${qs}` : ''}`;
   }, [searchParams]);
-
-  const handlePerPageChange = React.useCallback((value: string) => {
-    const parsed = parseInt(value, 10);
-    const validated = PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PER_PAGE;
-    setPerPage(validated);
-    setPage(1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
 
   const { i18n } = useTranslation();
   const lang = i18n.language;
@@ -583,27 +555,7 @@ export default function SearchPage() {
             </div>
 
             {!isLoading && (
-              <div className="mt-8 flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="text-sm text-muted-foreground">
-                    {t('common.found')}: <span className="font-semibold text-foreground">{totalCount}</span> {t('common.offers')}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground">{t('common.perPage')}</span>
-                    <Select value={perPage.toString()} onValueChange={handlePerPageChange}>
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PAGE_SIZE_OPTIONS.map((size) => (
-                          <SelectItem key={size} value={size.toString()}>
-                            {size}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              <div className="mt-8">
                 <ListingPagination
                   page={page}
                   totalPages={totalPages}
