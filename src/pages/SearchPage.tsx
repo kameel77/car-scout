@@ -359,6 +359,15 @@ export default function SearchPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [totalPages]);
 
+  // Crawlowalne URL-e paginacji (Googlebot nie podąża za href="#")
+  const buildPageHref = React.useCallback((targetPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    if (targetPage > 1) params.set('page', targetPage.toString());
+    else params.delete('page');
+    const qs = params.toString();
+    return `${window.location.pathname}${qs ? `?${qs}` : ''}`;
+  }, [searchParams]);
+
   const handlePerPageChange = React.useCallback((value: string) => {
     const parsed = parseInt(value, 10);
     const validated = PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PER_PAGE;
@@ -599,6 +608,7 @@ export default function SearchPage() {
                   page={page}
                   totalPages={totalPages}
                   onPageChange={handlePageChange}
+                  buildPageHref={buildPageHref}
                 />
               </div>
             )}

@@ -12,6 +12,7 @@ import {
     ListingVariant,
     PageMeta,
     RelatedListing,
+    StaticPagination,
 } from '../services/seo-meta.js';
 import { getFinancingArticle } from '../content/financing-content.js';
 
@@ -25,6 +26,18 @@ const FINANCING_FAQ_TYPE: Record<string, string> = {
 const TEMPLATE_TTL_MS = 5 * 60 * 1000;
 const PAGE_TTL_MS = 60 * 1000;
 const PAGE_CACHE_MAX = 5000;
+
+// Strony katalogowe z paginacją SSR (?page=N) — crawlery bez JS widzą kolejne porcje ofert
+const PAGINATED_ROUTES = new Set([
+    '/samochody',
+    '/search',
+    '/nowe',
+    '/uzywane',
+    '/leasing',
+    '/kredyt',
+    '/wynajem-dlugoterminowy',
+]);
+const SSR_PER_PAGE = 30; // spójne z DEFAULT_PER_PAGE na froncie
 
 // Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
@@ -68,7 +81,7 @@ const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
 const NOINDEX_RE = /^\/(admin|login|embed|listing)(\/|$)|\/(lead|negotiate|zapytanie)$/;
 
-async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx): Promise<PageMeta> {
+async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx, page: number = 1): Promise<PageMeta> {
     if (NOINDEX_RE.test(path)) {
         return defaultMeta(ctx, { noindex: true, status: 200 });
     }
@@ -209,10 +222,23 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
     // Kategoria najmu listuje pojazdy najmu (linki do self-canonical stron), nie auta sprzedażowe
     let listings: RelatedListing[];
     let listingsBasePath = '/oferta';
+    let pagination: StaticPagination | undefined;
+    const paginated = PAGINATED_ROUTES.has(path);
+    const take = paginated ? SSR_PER_PAGE : 20;
+    const skip = paginated ? (page - 1) * SSR_PER_PAGE : 0;
+
     if (path === '/wynajem-dlugoterminowy') {
+        const where = { isActive: true, slug: { not: null } };
+        if (paginated) {
+            const total = await fastify.prisma.rentalVehicle.count({ where });
+            const totalPages = Math.max(1, Math.ceil(total / SSR_PER_PAGE));
+            if (page > totalPages) return defaultMeta(ctx, { noindex: true, status: 404 });
+            pagination = { page, totalPages };
+        }
         const rentalsRaw = await fastify.prisma.rentalVehicle.findMany({
-            where: { isActive: true, slug: { not: null } },
-            take: 20,
+            where,
+            skip,
+            take,
             orderBy: { createdAt: 'desc' },
             select: {
                 id: true,
@@ -226,9 +252,17 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         listings = rentalsRaw.map(r => ({ ...r, pricePln: null, slug: r.slug as string }));
         listingsBasePath = '/wynajem-dlugoterminowy';
     } else {
+        const where = { isArchived: false };
+        if (paginated) {
+            const total = await fastify.prisma.listing.count({ where });
+            const totalPages = Math.max(1, Math.ceil(total / SSR_PER_PAGE));
+            if (page > totalPages) return defaultMeta(ctx, { noindex: true, status: 404 });
+            pagination = { page, totalPages };
+        }
         const listingsRaw = await fastify.prisma.listing.findMany({
-            where: { isArchived: false },
-            take: 20,
+            where,
+            skip,
+            take,
             orderBy: { createdAt: 'desc' },
             select: {
                 id: true,
@@ -268,17 +302,32 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         });
     }
 
-    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path)) ?? defaultMeta(ctx, { noindex: true, status: 404 });
+    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path), pagination) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 }
 
 export async function renderRoutes(fastify: FastifyInstance) {
     fastify.get('/api/render', async (request, reply) => {
         const q = (request.query as { path?: unknown }).path;
         const rawPath = typeof q === 'string' && q ? q : '/';
-        let path = rawPath.split('?')[0];
+        const [rawPathname, rawQuery] = rawPath.split('?');
+        let path = rawPathname;
         if (path.length > 1 && path.endsWith('/')) path = path.replace(/\/+$/, '') || '/';
 
-        const cached = pageCache.get(path);
+        // ?page=N tylko dla stron katalogowych; clamp chroni cache przed spamem parametrów.
+        // Nginx przekazuje pełne $request_uri w ?path=, ale surowe `&` w URI klienta
+        // rozbija parametry na najwyższy poziom query — czytamy page z obu miejsc.
+        let page = 1;
+        if (PAGINATED_ROUTES.has(path)) {
+            const topLevelPage = (request.query as { page?: unknown }).page;
+            const pageStr =
+                (rawQuery ? new URLSearchParams(rawQuery).get('page') : null) ??
+                (typeof topLevelPage === 'string' ? topLevelPage : null);
+            const parsed = parseInt(pageStr ?? '1', 10);
+            if (Number.isFinite(parsed)) page = Math.min(Math.max(parsed, 1), 10000);
+        }
+
+        const cacheKey = page > 1 ? `${path}?page=${page}` : path;
+        const cached = pageCache.get(cacheKey);
         if (cached && Date.now() - cached.at < PAGE_TTL_MS) {
             return reply
                 .code(cached.status)
@@ -292,11 +341,11 @@ export async function renderRoutes(fastify: FastifyInstance) {
         }
 
         const ctx = resolveBrandCtx();
-        const meta = await resolveMeta(fastify, path, ctx);
+        const meta = await resolveMeta(fastify, path, ctx, page);
         const html = injectHead(template, meta);
 
         if (pageCache.size >= PAGE_CACHE_MAX) pageCache.clear();
-        pageCache.set(path, { html, status: meta.status, at: Date.now() });
+        pageCache.set(cacheKey, { html, status: meta.status, at: Date.now() });
 
         return reply
             .code(meta.status)

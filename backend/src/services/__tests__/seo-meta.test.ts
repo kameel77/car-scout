@@ -244,6 +244,35 @@ describe('buildStaticMeta', () => {
         expect(m.bodyHtml).not.toContain('zł');
         expect(JSON.stringify(m.jsonLd)).toContain('https://dev.motolia.pl/wynajem-dlugoterminowy/kia-sportage-r1');
     });
+
+    it('paginated category page: title suffix, self-canonical with ?page, prev/next links', () => {
+        const m = buildStaticMeta('/samochody', ctx, [], [], '/oferta', undefined, { page: 3, totalPages: 58 })!;
+        expect(m.title).toContain('— strona 3');
+        expect(m.canonical).toBe('https://dev.motolia.pl/samochody?page=3');
+        expect(m.bodyHtml).toContain('href="/samochody?page=2"');
+        expect(m.bodyHtml).toContain('href="/samochody?page=4"');
+        expect(m.bodyHtml).toContain('href="/samochody?page=58"');
+        expect(m.bodyHtml).toContain('aria-current="page"');
+    });
+
+    it('page 1 with pagination: clean canonical, no title suffix, link to page 2', () => {
+        const m = buildStaticMeta('/samochody', ctx, [], [], '/oferta', undefined, { page: 1, totalPages: 58 })!;
+        expect(m.title).not.toContain('strona');
+        expect(m.canonical).toBe('https://dev.motolia.pl/samochody');
+        expect(m.bodyHtml).toContain('href="/samochody?page=2"');
+        expect(m.bodyHtml).not.toContain('rel="prev"');
+    });
+
+    it('single page: no pagination nav', () => {
+        const m = buildStaticMeta('/samochody', ctx, [], [], '/oferta', undefined, { page: 1, totalPages: 1 })!;
+        expect(m.bodyHtml).not.toContain('Paginacja');
+    });
+
+    it('paginated /search links point at canonical /samochody base', () => {
+        const m = buildStaticMeta('/search', ctx, [], [], '/oferta', undefined, { page: 2, totalPages: 5 })!;
+        expect(m.canonical).toBe('https://dev.motolia.pl/samochody?page=2');
+        expect(m.bodyHtml).toContain('href="/samochody?page=3"');
+    });
 });
 
 describe('defaultMeta', () => {

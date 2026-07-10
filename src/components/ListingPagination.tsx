@@ -14,6 +14,8 @@ interface ListingPaginationProps {
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  /** Buduje crawlowalny URL strony (np. ?page=2). Nawigacja i tak idzie przez onPageChange (SPA). */
+  buildPageHref?: (page: number) => string;
 }
 
 type PageElement = number | 'ellipsis';
@@ -43,18 +45,19 @@ const buildPages = (current: number, total: number): PageElement[] => {
   return pages;
 };
 
-export function ListingPagination({ page, totalPages, onPageChange }: ListingPaginationProps) {
+export function ListingPagination({ page, totalPages, onPageChange, buildPageHref }: ListingPaginationProps) {
   const { t } = useTranslation();
   const pages = React.useMemo(() => buildPages(page, totalPages), [page, totalPages]);
   const isFirstPage = page <= 1;
   const isLastPage = page >= totalPages;
+  const hrefFor = (target: number) => buildPageHref?.(target) ?? '#';
 
   return (
     <Pagination className="justify-end">
       <PaginationContent>
         <PaginationItem>
           <PaginationLink
-            href="#"
+            href={hrefFor(Math.max(1, page - 1))}
             size="default"
             className={cn('gap-1 pl-2.5', isFirstPage && 'pointer-events-none opacity-50')}
             aria-label={t('common.previous')}
@@ -76,7 +79,7 @@ export function ListingPagination({ page, totalPages, onPageChange }: ListingPag
               <PaginationEllipsis />
             ) : (
               <PaginationLink
-                href="#"
+                href={hrefFor(pageValue)}
                 isActive={pageValue === page}
                 onClick={(event) => {
                   event.preventDefault();
@@ -91,7 +94,7 @@ export function ListingPagination({ page, totalPages, onPageChange }: ListingPag
 
         <PaginationItem>
           <PaginationLink
-            href="#"
+            href={hrefFor(Math.min(totalPages, page + 1))}
             size="default"
             className={cn('gap-1 pr-2.5', isLastPage && 'pointer-events-none opacity-50')}
             aria-label={t('common.next')}

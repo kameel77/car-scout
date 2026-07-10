@@ -453,6 +453,15 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [saleTotalPages]);
 
+  // Crawlowalne URL-e paginacji (Googlebot nie podąża za href="#")
+  const buildPageHref = React.useCallback((targetPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    if (targetPage > 1) params.set('page', targetPage.toString());
+    else params.delete('page');
+    const qs = params.toString();
+    return `${location.pathname}${qs ? `?${qs}` : ''}`;
+  }, [searchParams, location.pathname]);
+
   const handlePerPageChange = React.useCallback((value: string) => {
     const parsed = parseInt(value, 10);
     const validated = PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PER_PAGE;
@@ -639,6 +648,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
                   page={page}
                   totalPages={saleTotalPages}
                   onPageChange={handlePageChange}
+                  buildPageHref={buildPageHref}
                 />
               </div>
             )}

@@ -539,13 +539,43 @@ export interface FinancingArticle {
     html: string;
 }
 
+export interface StaticPagination {
+    page: number; // 1-based
+    totalPages: number;
+}
+
+// Crawlowalna nawigacja paginacji dla stron katalogowych (SSR-lite).
+// Prawdziwe hrefy — crawlery bez JS odkrywają oferty ze stron 2+.
+function paginationNavHtml(basePath: string, { page, totalPages }: StaticPagination): string {
+    if (totalPages <= 1) return '';
+    const href = (p: number) => (p > 1 ? `${basePath}?page=${p}` : basePath);
+    const windowPages = new Set<number>([1, totalPages]);
+    for (let p = page - 1; p <= page + 1; p++) {
+        if (p >= 1 && p <= totalPages) windowPages.add(p);
+    }
+    const items = [...windowPages].sort((a, b) => a - b)
+        .map(p => (p === page
+            ? `<li><span aria-current="page">${p}</span></li>`
+            : `<li><a href="${href(p)}">${p}</a></li>`))
+        .join('\n    ');
+    return `
+<nav aria-label="Paginacja">
+  <ul>
+    ${page > 1 ? `<li><a href="${href(page - 1)}" rel="prev">Poprzednia strona</a></li>` : ''}
+    ${items}
+    ${page < totalPages ? `<li><a href="${href(page + 1)}" rel="next">Następna strona</a></li>` : ''}
+  </ul>
+</nav>`;
+}
+
 export function buildStaticMeta(
     path: string,
     ctx: BrandCtx,
     listings: RelatedListing[] = [],
     faq: any[] = [],
     listingsBasePath: string = '/oferta',
-    article?: FinancingArticle
+    article?: FinancingArticle,
+    pagination?: StaticPagination
 ): PageMeta | null {
     if (path === '/') {
         const bodyHtml = `
@@ -578,7 +608,11 @@ ${listings.length > 0 ? `
     const route = STATIC_ROUTES[path];
     if (!route) return null;
 
-    const title = route.title(ctx.brandName);
+    const isPaged = !!pagination && pagination.page > 1;
+    const canonicalBase = route.canonicalPath ?? path;
+    const title = isPaged
+        ? `${route.title(ctx.brandName)} — strona ${pagination.page}`
+        : route.title(ctx.brandName);
     const bodyHtml = `
 <h1>${article ? escapeHtml(article.h1) : title}</h1>
 <p>${route.description}</p>
@@ -589,6 +623,7 @@ ${listings.length > 0 ? `
     ${listings.map(l => listingLinkHtml(l, listingsBasePath)).join('\n')}
   </ul>
 </section>` : ''}
+${pagination ? paginationNavHtml(canonicalBase, pagination) : ''}
 ${article ? `
 <article>
 ${article.html}
@@ -626,7 +661,7 @@ ${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
     return {
         title,
         description: route.description,
-        canonical: `${ctx.baseUrl}${route.canonicalPath ?? path}`,
+        canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination.page}` : ''}`,
         bodyHtml,
         jsonLd: jsonLd.length === 1 ? jsonLd[0] : jsonLd.length > 1 ? jsonLd : undefined,
         status: 200,
