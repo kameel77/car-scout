@@ -15,6 +15,12 @@
       "port": 3001
     },
     {
+      "name": "preview-dist",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    },
+    {
       "name": "prisma-studio",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "prisma:studio"],
