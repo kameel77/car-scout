@@ -273,6 +273,17 @@ describe('buildStaticMeta', () => {
         expect(m.canonical).toBe('https://dev.motolia.pl/samochody?page=2');
         expect(m.bodyHtml).toContain('href="/samochody?page=3"');
     });
+
+    it('financing pages link to full catalog instead of paginating', () => {
+        const listings = [
+            { id: 'l1', make: 'Kia', model: 'Ceed', version: null, productionYear: 2025, pricePln: 90000, slug: 'kia-ceed-l1' },
+        ];
+        const m = buildStaticMeta('/leasing', ctx, listings)!;
+        expect(m.bodyHtml).toContain('href="/samochody">Zobacz wszystkie samochody');
+        expect(m.bodyHtml).not.toContain('Paginacja');
+        const cars = buildStaticMeta('/samochody', ctx, listings)!;
+        expect(cars.bodyHtml).not.toContain('Zobacz wszystkie samochody');
+    });
 });
 
 describe('defaultMeta', () => {

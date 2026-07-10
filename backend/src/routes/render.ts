@@ -27,17 +27,25 @@ const TEMPLATE_TTL_MS = 5 * 60 * 1000;
 const PAGE_TTL_MS = 60 * 1000;
 const PAGE_CACHE_MAX = 5000;
 
-// Strony katalogowe z paginacją SSR (?page=N) — crawlery bez JS widzą kolejne porcje ofert
+// Strony katalogowe z paginacją SSR (?page=N) — crawlery bez JS widzą kolejne porcje ofert.
+// /leasing i /kredyt celowo bez paginacji: oferty są te same co w /samochody (każde auto
+// dostępne w obu finansowaniach), więc pełna lista byłaby duplikatem — te strony pracują
+// artykułem filarowym + krótką listą z linkiem do pełnego katalogu.
 const PAGINATED_ROUTES = new Set([
     '/samochody',
     '/search',
     '/nowe',
     '/uzywane',
-    '/leasing',
-    '/kredyt',
     '/wynajem-dlugoterminowy',
 ]);
 const SSR_PER_PAGE = 30; // spójne z DEFAULT_PER_PAGE na froncie
+
+// Zróżnicowanie list kategorii — jak filtry w SPA (ConditionPage)
+const CONDITION_BY_PATH: Record<string, 'NEW' | 'USED'> = {
+    '/nowe': 'NEW',
+    '/uzywane': 'USED',
+};
+const FINANCING_LIST_TAKE = 12; // krótka lista na /leasing i /kredyt
 
 // Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
@@ -224,7 +232,8 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
     let listingsBasePath = '/oferta';
     let pagination: StaticPagination | undefined;
     const paginated = PAGINATED_ROUTES.has(path);
-    const take = paginated ? SSR_PER_PAGE : 20;
+    const isFinancingList = path === '/leasing' || path === '/kredyt';
+    const take = paginated ? SSR_PER_PAGE : isFinancingList ? FINANCING_LIST_TAKE : 20;
     const skip = paginated ? (page - 1) * SSR_PER_PAGE : 0;
 
     if (path === '/wynajem-dlugoterminowy') {
@@ -252,7 +261,10 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         listings = rentalsRaw.map(r => ({ ...r, pricePln: null, slug: r.slug as string }));
         listingsBasePath = '/wynajem-dlugoterminowy';
     } else {
-        const where = { isArchived: false };
+        const where = {
+            isArchived: false,
+            ...(CONDITION_BY_PATH[path] ? { condition: CONDITION_BY_PATH[path] } : {}),
+        };
         if (paginated) {
             const total = await fastify.prisma.listing.count({ where });
             const totalPages = Math.max(1, Math.ceil(total / SSR_PER_PAGE));

@@ -613,6 +613,8 @@ ${listings.length > 0 ? `
     const title = isPaged
         ? `${route.title(ctx.brandName)} — strona ${pagination.page}`
         : route.title(ctx.brandName);
+    // Strony finansowania pokazują skróconą listę (pełny katalog jest na /samochody)
+    const browseAllLink = path === '/leasing' || path === '/kredyt';
     const bodyHtml = `
 <h1>${article ? escapeHtml(article.h1) : title}</h1>
 <p>${route.description}</p>
@@ -621,7 +623,8 @@ ${listings.length > 0 ? `
   <h2>Oferty</h2>
   <ul>
     ${listings.map(l => listingLinkHtml(l, listingsBasePath)).join('\n')}
-  </ul>
+  </ul>${browseAllLink ? `
+  <p><a href="/samochody">Zobacz wszystkie samochody</a></p>` : ''}
 </section>` : ''}
 ${pagination ? paginationNavHtml(canonicalBase, pagination) : ''}
 ${article ? `
