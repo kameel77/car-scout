@@ -132,7 +132,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 src={buildAssetUrl(headerLogoSrc)}
                 alt={siteName}
                 className="h-14 md:h-16 w-auto max-w-[240px] object-contain"
-                fetchPriority="high"
+                {...({ fetchpriority: 'high' } as object)}
               />
           ) : (
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">

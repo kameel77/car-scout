@@ -260,9 +260,11 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
         if (!tile) return reply.code(404).send({ error: 'Tile not found' });
         if (tile.imageUrl?.startsWith('/uploads/feature-tiles/')) {
             const oldPath = path.join(process.cwd(), tile.imageUrl.replace(/^\//, ''));
+            const mediumPath = oldPath.replace('.webp', '-md.webp');
             const thumbPath = oldPath.replace('.webp', '-thumb.webp');
             try {
                 await fs.unlink(oldPath);
+                await fs.unlink(mediumPath).catch(() => {});
                 await fs.unlink(thumbPath).catch(() => {});
             } catch { /* ignore */ }
         }
@@ -320,9 +322,11 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
         // Delete previous image file
         if (tile.imageUrl?.startsWith('/uploads/feature-tiles/')) {
             const oldPath = path.join(process.cwd(), tile.imageUrl.replace(/^\//, ''));
+            const mediumPath = oldPath.replace('.webp', '-md.webp');
             const thumbPath = oldPath.replace('.webp', '-thumb.webp');
             try {
                 await fs.unlink(oldPath);
+                await fs.unlink(mediumPath).catch(() => {});
                 await fs.unlink(thumbPath).catch(() => {});
             } catch { /* ignore */ }
         }

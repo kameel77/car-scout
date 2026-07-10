@@ -11,7 +11,13 @@ interface ImageSwiperProps {
     fallback?: React.ReactNode;
     imgClassName?: string;
     ctaSlide?: React.ReactNode;
+    /** Karta nad foldem (LCP): eager + fetchpriority=high */
+    priority?: boolean;
+    sizes?: string;
 }
+
+// Domyślne sizes pod grid kart ofert (1 kol. mobile, 2 sm, 3 lg, 3-4 xl)
+const CARD_SIZES = '(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw';
 
 export function ImageSwiper({
     images,
@@ -20,6 +26,8 @@ export function ImageSwiper({
     fallback,
     imgClassName,
     ctaSlide,
+    priority = false,
+    sizes = CARD_SIZES,
 }: ImageSwiperProps) {
     const [index, setIndex] = React.useState(0);
     const total = images.length + (ctaSlide ? 1 : 0);
@@ -69,6 +77,8 @@ export function ImageSwiper({
                     src={images[index]}
                     alt={alt}
                     draggable={false}
+                    priority={priority && index === 0}
+                    sizes={sizes}
                     className={cn('h-full w-full object-cover transition-transform duration-500', imgClassName)}
                 />
             )}

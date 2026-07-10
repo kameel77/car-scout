@@ -119,7 +119,7 @@ export default function CarsalonHomePage() {
                 ? `${config.homePage.hero.image.split('?')[0]}?q=80&w=600&fm=webp&auto=format&fit=crop 600w, ${config.homePage.hero.image.split('?')[0]}?q=80&w=1200&fm=webp&auto=format&fit=crop 1200w, ${config.homePage.hero.image.split('?')[0]}?q=80&w=2000&fm=webp&auto=format&fit=crop 2000w`
                 : undefined}
               sizes="(max-width: 768px) 100vw, 50vw"
-              fetchPriority="high" 
+              {...({ fetchpriority: 'high' } as object)}
               loading="eager"
               alt={`${config.name} - auta`} 
             />

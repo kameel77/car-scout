@@ -30,9 +30,11 @@ function clampPct(v: unknown): number | undefined {
 async function unlinkBannerImage(imageUrl: string | null) {
   if (!imageUrl?.startsWith('/uploads/hero-banners/')) return;
   const oldPath = path.join(process.cwd(), imageUrl.replace(/^\//, ''));
+  const mediumPath = oldPath.replace('.webp', '-md.webp');
   const thumbPath = oldPath.replace('.webp', '-thumb.webp');
   try {
     await fs.unlink(oldPath);
+    await fs.unlink(mediumPath).catch(() => {});
     await fs.unlink(thumbPath).catch(() => {});
   } catch { /* ignore */ }
 }

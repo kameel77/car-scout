@@ -111,9 +111,11 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
             const baseDir = path.join(uploadsRoot, 'listing-images');
             const filepath = getSafeFilePath(baseDir, url.replace('/uploads/listing-images/', ''));
             if (filepath) {
-                const thumbPath = filepath.replace('.webp', '-thumb.webp'); // Usuwamy też miniaturę, jeśli istnieje
+                const mediumPath = filepath.replace('.webp', '-md.webp'); // Usuwamy też warianty, jeśli istnieją
+                const thumbPath = filepath.replace('.webp', '-thumb.webp');
                 try {
                     await fs.unlink(filepath);
+                    await fs.unlink(mediumPath).catch(() => {});
                     await fs.unlink(thumbPath).catch(() => {});
                 } catch {
                     // file already gone — ignore

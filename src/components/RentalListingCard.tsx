@@ -23,7 +23,7 @@ function buildRentalImageList(v: any): string[] {
   return out;
 }
 
-export function RentalListingCard({ v }: { v: any }) {
+export function RentalListingCard({ v, priority = false }: { v: any; priority?: boolean }) {
   const { t } = useTranslation();
   const { priceType } = usePriceSettings();
   const isBusiness = priceType === 'net';
@@ -34,7 +34,7 @@ export function RentalListingCard({ v }: { v: any }) {
   return (
     <Link to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
       <div className="relative">
-        <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" fallback={<img src="/motolia-placeholder.png" className="w-full h-full object-cover" alt="Placeholder" />} />
+        <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" priority={priority} fallback={<img src="/motolia-placeholder.png" className="w-full h-full object-cover" alt="Placeholder" />} />
         <div className="absolute top-3 left-3 bg-accent text-accent-foreground text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full z-10">WYNAJEM</div>
       </div>
       <div className="p-4 space-y-3 flex-1 flex flex-col">

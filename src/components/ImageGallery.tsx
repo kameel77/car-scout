@@ -87,6 +87,8 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               <OptimizedImage
                 src={images[selectedIndex]}
                 alt={`${title} - ${selectedIndex + 1}`}
+                priority={selectedIndex === 0}
+                sizes="(min-width: 1024px) 66vw, 100vw"
                 className="h-full w-full object-cover"
               />
             </motion.div>

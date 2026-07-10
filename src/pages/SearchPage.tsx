@@ -522,8 +522,8 @@ export default function SearchPage() {
             )}
 
             <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
-              {rentalVehicles.map((v: any) => (
-                <RentalListingCard key={`r-${v.id}`} v={v} />
+              {rentalVehicles.map((v: any, i: number) => (
+                <RentalListingCard key={`r-${v.id}`} v={v} priority={i < 3} />
               ))}
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (

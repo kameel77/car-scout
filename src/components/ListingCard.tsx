@@ -232,6 +232,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             alt={`${listing.make} ${listing.model}`}
             aspectClassName="aspect-[16/10]"
             imgClassName="group-hover:scale-105"
+            priority={index < 3}
             ctaSlide={monthlyRates ? (
               <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-b from-primary/5 to-primary/15 p-6 text-center gap-1">
                 <p className="text-xs text-muted-foreground">{t('listing.kredytFrom')}</p>

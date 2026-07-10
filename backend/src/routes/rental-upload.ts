@@ -158,8 +158,10 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
             
             if (filePath) {
                 try {
+                    const mediumPath = filePath.replace('.webp', '-md.webp');
                     const thumbPath = filePath.replace('.webp', '-thumb.webp');
                     await fs.unlink(filePath);
+                    await fs.unlink(mediumPath).catch(() => {});
                     await fs.unlink(thumbPath).catch(() => {});
                 } catch {
                     // File might not exist on disk, that's ok
