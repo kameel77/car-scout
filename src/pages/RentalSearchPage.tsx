@@ -435,6 +435,7 @@ export default function RentalSearchPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  aria-label="Szukaj: marka, model"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1); }}
                   placeholder="Szukaj: marka, model..."
@@ -603,7 +604,7 @@ export default function RentalSearchPage() {
           <div className="flex-1" />
           <div className="relative w-[340px] flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <Input placeholder={t('search.placeholder', 'Szukaj marki, modelu, typu nadwozia...')} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-9 h-9 text-sm rounded-full border-border bg-background" />
+            <Input aria-label={t('search.placeholder', 'Szukaj marki, modelu, typu nadwozia...')} placeholder={t('search.placeholder', 'Szukaj marki, modelu, typu nadwozia...')} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-9 h-9 text-sm rounded-full border-border bg-background" />
           </div>
           <div className="flex-1" />
 
@@ -617,7 +618,7 @@ export default function RentalSearchPage() {
         <div className="lg:hidden mb-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Szukaj: marka, model..." className="pl-10" />
+            <Input aria-label="Szukaj: marka, model" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Szukaj: marka, model..." className="pl-10" />
           </div>
           <div className="flex flex-wrap gap-2">
             <FilterPill label={t('filters.make')} activeCount={makes.length}>

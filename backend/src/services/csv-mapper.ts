@@ -48,9 +48,10 @@ export function mapCSVToListing(row: CSVRow, dealerId?: string, importSource?: s
         registrationNumber: row.registration_number || undefined,
         firstRegistrationDate: row.first_registration_date || undefined,
 
-        primaryImageUrl: row.primary_image_url || undefined,
+        primaryImageUrl: row.primary_image_url?.trim() || undefined,
         imageCount: safeInt(row.image_count),
-        imageUrls: row.image_urls ? row.image_urls.split('|') : [],
+        // trim: wartości rozdzielane "|" w CSV bywają otoczone spacjami (" https://...")
+        imageUrls: row.image_urls ? row.image_urls.split('|').map(u => u.trim()).filter(Boolean) : [],
 
         equipmentAudioMultimedia: row.equipment_audio_multimedia ? row.equipment_audio_multimedia.split('|') : [],
         equipmentSafety: row.equipment_safety ? row.equipment_safety.split('|') : [],

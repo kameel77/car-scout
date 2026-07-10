@@ -619,6 +619,7 @@ export default function MotoliaHomePage() {
                 >
                   <input
                     type="tel"
+                    aria-label="Numer telefonu"
                     placeholder="Wpisz swój numer telefonu"
                     required
                     className="flex-1 rounded-2xl px-6 py-4 text-white text-lg outline-none transition-all"

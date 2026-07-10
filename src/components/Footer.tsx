@@ -101,6 +101,7 @@ export function Footer() {
               alt="Footer logo"
               className="h-auto max-h-12 w-auto max-w-[200px] object-contain"
               loading="lazy"
+              decoding="async"
             />
           ) : (
             <span className="text-xl font-black" style={isMotolia ? { color: '#F5C518' } : { color: '#fff' }}>

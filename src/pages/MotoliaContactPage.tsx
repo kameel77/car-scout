@@ -213,6 +213,7 @@ export default function MotoliaContactPage() {
                       </label>
                       <input
                         type="text"
+                        aria-label="Imię"
                         value={form.name}
                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                         placeholder="Jan Kowalski"
@@ -228,6 +229,7 @@ export default function MotoliaContactPage() {
                       </label>
                       <input
                         type="tel"
+                        aria-label="Numer telefonu"
                         required
                         value={form.phone}
                         onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
@@ -244,6 +246,7 @@ export default function MotoliaContactPage() {
                       </label>
                       <textarea
                         rows={3}
+                        aria-label="Czego szukasz?"
                         value={form.message}
                         onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
                         placeholder="np. Toyota Corolla, leasing, budżet do 1500 zł/mies."

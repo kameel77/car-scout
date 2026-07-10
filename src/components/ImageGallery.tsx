@@ -100,6 +100,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               <Button
                 variant="secondary"
                 size="icon"
+                aria-label="Poprzednie zdjęcie"
                 className="absolute left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -111,6 +112,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               <Button
                 variant="secondary"
                 size="icon"
+                aria-label="Następne zdjęcie"
                 className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -192,6 +194,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Zamknij podgląd"
               className="absolute top-4 right-4 text-background hover:bg-background/20 z-10"
               onClick={() => setLightboxOpen(false)}
             >
@@ -220,6 +223,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label="Poprzednie zdjęcie"
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-background hover:bg-background/20"
                   onClick={goToPrevious}
                 >
@@ -228,6 +232,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label="Następne zdjęcie"
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-background hover:bg-background/20"
                   onClick={goToNext}
                 >

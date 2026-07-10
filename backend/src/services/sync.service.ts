@@ -2,6 +2,16 @@ import { PrismaClient } from '@prisma/client';
 import type { CSVRow, SyncResult, ImportMode } from '../types/csv.types.js';
 import { mapCSVToListing, mapCSVToListingUpdate } from './csv-mapper.js';
 import { generateListingSlug } from '../utils/url-utils.js';
+import { queueListingImagesDownload } from './csflow-image-downloader.js';
+
+/** Zewnętrzne URL-e zdjęć z wiersza CSV (po trim), np. z api.autopunkt.pl */
+function externalImageUrlsFromRow(row: CSVRow): string[] {
+    if (!row.image_urls) return [];
+    return row.image_urls
+        .split('|')
+        .map(u => u.trim())
+        .filter(u => u.startsWith('http://') || u.startsWith('https://'));
+}
 
 function parsePostalCodeAndCity(addressLine: string | undefined | null) {
     if (!addressLine) return { postalCode: null, city: null };
@@ -28,7 +38,11 @@ export async function syncListingsFromCSV(
 ): Promise<SyncResult> {
     const startTime = Date.now();
 
-    return await prisma.$transaction(async (tx) => {
+    // Zbierane w trakcie transakcji, kolejkowane po jej zatwierdzeniu — kolejka
+    // aktualizuje wiersze listingów osobnym klientem prisma.
+    const imagesToQueue: Array<{ listingId: string; urls: string[] }> = [];
+
+    const result = await prisma.$transaction(async (tx) => {
         // 1. Get existing listings for archiving logic scoped to this source
         const archiveWhere: any = {};
         if (contextDealerId) {
@@ -145,6 +159,13 @@ export async function syncListingsFromCSV(
                     changedAt: new Date()
                 });
             }
+
+            // Update nadpisał imageUrls zewnętrznymi URL-ami z CSV — zleć ponowną
+            // lokalizację (idempotentna: istniejące pliki nie są pobierane ponownie).
+            const externalUrls = externalImageUrlsFromRow(csvRow);
+            if (existing.listingId && externalUrls.length > 0) {
+                imagesToQueue.push({ listingId: existing.listingId, urls: externalUrls });
+            }
         }
 
         // 4. Insert price history
@@ -208,6 +229,11 @@ export async function syncListingsFromCSV(
                 data: mapCSVToListing(row, dealerId, source)
             });
             newListings.push(listing);
+
+            const externalUrls = externalImageUrlsFromRow(row);
+            if (listing.listingId && externalUrls.length > 0) {
+                imagesToQueue.push({ listingId: listing.listingId, urls: externalUrls });
+            }
         }
 
         // Create initial price history for new listings
@@ -305,4 +331,11 @@ export async function syncListingsFromCSV(
         timeout: 180000, // allow more time for larger CSV imports (~3 min)
         maxWait: 5000
     });
+
+    // Lokalizacja zewnętrznych zdjęć w tle (WebP + warianty), jak przy synchronizacji CSFlow
+    for (const { listingId, urls } of imagesToQueue) {
+        queueListingImagesDownload(listingId, urls, prisma);
+    }
+
+    return result;
 }

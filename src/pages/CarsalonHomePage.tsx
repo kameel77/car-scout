@@ -292,7 +292,7 @@ export default function CarsalonHomePage() {
               }
             }}
           >
-            <input type="tel" placeholder="Twój numer telefonu" required />
+            <input type="tel" aria-label="Numer telefonu" placeholder="Twój numer telefonu" required />
             <button type="submit" className="home-btn-primary">
               <CarFront size={18} />&nbsp;Zadzwoń do mnie
             </button>

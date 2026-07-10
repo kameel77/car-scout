@@ -132,6 +132,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 src={buildAssetUrl(headerLogoSrc)}
                 alt={siteName}
                 className="h-14 md:h-16 w-auto max-w-[240px] object-contain"
+                decoding="async"
                 {...({ fetchpriority: 'high' } as object)}
               />
           ) : (
@@ -255,6 +256,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                       src={buildAssetUrl(headerLogoSrc)}
                       alt={siteName}
                       className="h-12 w-auto object-contain"
+                      decoding="async"
                     />
                   ) : (
                     <h1 className="text-xl font-bold tracking-tight">

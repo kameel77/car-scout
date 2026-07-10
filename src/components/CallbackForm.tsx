@@ -74,6 +74,7 @@ export function CallbackForm({
                     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
                         <input
                             type="tel"
+                            aria-label="Numer telefonu"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             placeholder="Wpisz swój numer telefonu"

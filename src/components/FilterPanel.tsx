@@ -365,6 +365,7 @@ export function FilterPanel({
       <div className="mb-4 relative">
         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
+          aria-label={t('search.placeholder', 'Szukaj marki, modelu...')}
           placeholder={t('search.placeholder', 'Szukaj marki, modelu...')}
           value={filters.query}
           onChange={(e) => updateFilter('query', e.target.value)}
