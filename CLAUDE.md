@@ -67,3 +67,19 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## 5. Devlog (Vault)
 
 Po wdrożeniu na prod lub domknięciu znaczącego zakresu prac (feature, migracja, incydent) zaproponuj użytkownikowi wpis devlog do Vault i po akceptacji wykonaj go skillem `vault-devlog` (projekt: motolia). Nie dotyczy drobnych poprawek.
+
+## 6. Uruchamianie skryptów backendu (lokalnie vs kontener)
+
+Backend jest kompilowany TypeScriptem do `dist/`, a obraz Dockera zawiera TYLKO skompilowany kod bez `src/`. Wewnątrz kontenera Coolify `npx tsx src/scripts/<name>.ts` zgłasza ERR_MODULE_NOT_FOUND.
+
+**Lokalna maszyna deweloperska (z katalogu `backend/`):**
+```
+npx tsx src/scripts/<name>.ts
+```
+
+**Wewnątrz kontenera:**
+```
+node dist/scripts/<name>.js
+```
+
+Ścieżki względne (np. `path.resolve(__dirname, '../../uploads')`) działają identycznie w obu wariantach. Kontener ma dostęp tylko do production dependencies (`npm ci --omit=dev`), więc devDependencies (tsx, vitest) nie są dostępne.
