@@ -21,7 +21,7 @@ import { PartnerSidebarAd } from '@/components/ads/PartnerSidebarAd';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import {
-    ArrowLeft, Calendar, Gauge, Fuel, MapPin,
+    Calendar, Gauge, Fuel, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
     User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone
 } from 'lucide-react';
@@ -33,6 +33,14 @@ import { formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
 import { RentalFinancingContent } from '@/components/RentalFinancingContent';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { MetaHead } from '@/components/seo/MetaHead';
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 type OfferType = 'business' | 'consumer';
 
@@ -211,9 +219,25 @@ export default function RentalDetailPage() {
 
             <main className="container pb-10 pt-4">
                 {/* Breadcrumb */}
-                <Link to="/wynajem-dlugoterminowy" className="inline-flex items-center gap-1 text-sm text-accent hover:opacity-80 mb-4">
-                    <ArrowLeft className="w-4 h-4" /> Wróć do listy
-                </Link>
+                <Breadcrumb className="text-sm text-muted-foreground mb-4">
+                    <BreadcrumbList>
+                        <BreadcrumbItem>
+                            <BreadcrumbLink asChild>
+                                <Link to="/">Strona główna</Link>
+                            </BreadcrumbLink>
+                        </BreadcrumbItem>
+                        <BreadcrumbSeparator />
+                        <BreadcrumbItem>
+                            <BreadcrumbLink asChild>
+                                <Link to="/wynajem-dlugoterminowy">Wynajem długoterminowy</Link>
+                            </BreadcrumbLink>
+                        </BreadcrumbItem>
+                        <BreadcrumbSeparator />
+                        <BreadcrumbItem>
+                            <BreadcrumbPage>{vehicle.make} {vehicle.model}</BreadcrumbPage>
+                        </BreadcrumbItem>
+                    </BreadcrumbList>
+                </Breadcrumb>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left: Gallery + Specs + FAQ */}
