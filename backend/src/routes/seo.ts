@@ -83,11 +83,10 @@ export async function seoRoutes(fastify: FastifyInstance) {
         
         // Helper to format dates
         const formatDate = (date: Date) => date.toISOString().split('T')[0];
-        const today = formatDate(new Date());
 
-        const urls: { loc: string; lastmod: string; image?: { loc: string } }[] = [];
+        const urls: { loc: string; lastmod?: string; image?: { loc: string } }[] = [];
 
-        // 1. Static Pages
+        // 1. Static Pages (bez lastmod — brak realnej daty modyfikacji jest lepszy niż fałszywy sygnał)
         const staticPages = [
             '', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
             '/leasing', '/kredyt', '/dla-ciebie', '/dla-firm', '/faq', '/kontakt'
@@ -95,8 +94,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         staticPages.forEach(path => {
             urls.push({
-                loc: `${baseUrl}${path}`,
-                lastmod: today
+                loc: `${baseUrl}${path}`
             });
         });
 
@@ -184,7 +182,9 @@ export async function seoRoutes(fastify: FastifyInstance) {
         urls.forEach(url => {
             xml += `  <url>\n`;
             xml += `    <loc>${url.loc}</loc>\n`;
-            xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
+            if (url.lastmod) {
+                xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
+            }
             if (url.image) {
                 const imageLoc = url.image.loc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 xml += `    <image:image>\n`;
