@@ -155,4 +155,25 @@ describe('GET /api/render', () => {
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('używane');
     });
+
+    it('home-shell zostaje na /, znika na innych trasach', async () => {
+        const SHELL_TEMPLATE = TEMPLATE.replace(
+            '<div id="root"></div>',
+            '<div id="root"><!--home-shell--><h1>Szeroki wybór aut</h1><!--/home-shell--></div>'
+        );
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response(SHELL_TEMPLATE, { status: 200 }))
+        );
+
+        const home = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+        expect(home.statusCode).toBe(200);
+        expect(home.body).toContain('Szeroki wybór aut');
+
+        __resetRenderCache();
+        const other = await app.inject({ method: 'GET', url: '/api/render?path=/uzywane' });
+        expect(other.statusCode).toBe(200);
+        expect(other.body).not.toContain('Szeroki wybór aut');
+        expect(other.body).not.toContain('home-shell');
+    });
 });

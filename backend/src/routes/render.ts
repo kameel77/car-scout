@@ -366,9 +366,16 @@ export async function renderRoutes(fastify: FastifyInstance) {
                 .send(cached.html);
         }
 
-        const template = await getTemplate();
+        let template = await getTemplate();
         if (!template) {
             return reply.code(503).send({ error: 'template unavailable' });
+        }
+
+        // Statyczny shell hero (vite.config, znaczniki home-shell) jest tylko dla
+        // strony głównej — na innych trasach usuwamy go, żeby hero nie migało
+        // przed zamontowaniem SPA
+        if (path !== '/') {
+            template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, '');
         }
 
         const ctx = resolveBrandCtx();

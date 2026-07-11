@@ -43,7 +43,9 @@ const brandMeta: Record<BrandId, {
 // React po zamontowaniu podmienia #root na identyczny markup, więc nie ma
 // przeskoku. Teksty muszą odpowiadać src/brands/motolia/config.ts
 // (homePage.hero) i klasom z MotoliaHomePage.tsx / Header.tsx.
-const motoliaHeroShell = `<div id="root"><div class="bg-white min-h-screen text-[#1A1A1A] font-inter">` +
+// Znaczniki home-shell: backend (render.ts) usuwa ten blok dla ścieżek innych
+// niż strona główna, żeby hero nie migało na /samochody, /oferta/... itd.
+const motoliaHeroShell = `<div id="root"><!--home-shell--><div class="bg-white min-h-screen text-[#1A1A1A] font-inter">` +
   `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>` +
   `<section class="relative overflow-hidden bg-[#FAFAF8] pt-14 pb-16 lg:pt-40 lg:pb-28"><div class="max-w-7xl mx-auto px-6 relative z-10"><div class="grid lg:grid-cols-[1.5fr_1fr] gap-16 items-center"><div class="max-w-2xl">` +
   `<div><div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8" style="background:#F5C51820;border-color:#F5C51860;color:#1A1A1A"><span style="color:#D4A90A">◆</span>Leasing · Kredyt · Wynajem · Pożyczka</div></div>` +
@@ -51,7 +53,7 @@ const motoliaHeroShell = `<div id="root"><div class="bg-white min-h-screen text-
   `<div><p class="text-xl text-gray-500 mb-10 leading-relaxed font-light">Niezależnie czy jesteś osobą prywatną czy firmą – dobierzemy finansowanie do Twojej sytuacji. Jedna rozmowa, wiele ofert.</p></div>` +
   `<div class="flex flex-col sm:flex-row gap-4 mb-12"><a href="/samochody" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg" style="background:#F5C518;color:#1A1A1A;box-shadow:0 4px 24px #F5C51860">Sprawdź dostępne auta</a><a href="#jak-to-dziala" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-gray-200 text-gray-700">Jak to działa?</a></div>` +
   `</div></div></div></section>` +
-  `</div></div>`;
+  `</div><!--/home-shell--></div>`;
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {

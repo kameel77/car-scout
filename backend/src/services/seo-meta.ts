@@ -734,10 +734,12 @@ export function injectHead(template: string, meta: PageMeta): string {
 
     if (meta.bodyHtml) {
         // display:none — fallback jest dla botów czytających surowy HTML; bez tego użytkownik
-        // widzi błysk niestylowanego tekstu zanim React zamontuje SPA i wyczyści #root
+        // widzi błysk niestylowanego tekstu zanim React zamontuje SPA i wyczyści #root.
+        // Wstawiamy zaraz za otwarciem #root (a nie podmieniamy pustego roota), bo na
+        // stronie głównej root zawiera widoczny statyczny shell hero (vite.config).
         html = html.replace(
-            /<div id="root"><\/div>/,
-            () => `<div id="root"><div class="seo-prerender" style="display:none">${meta.bodyHtml}</div></div>`
+            '<div id="root">',
+            () => `<div id="root"><div class="seo-prerender" style="display:none">${meta.bodyHtml}</div>`
         );
     }
 
