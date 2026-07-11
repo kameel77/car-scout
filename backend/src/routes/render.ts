@@ -10,8 +10,10 @@ import {
     resolveBrandCtx,
     BrandCtx,
     ListingVariant,
+    OrgSettings,
     PageMeta,
     RelatedListing,
+    RelatedRentalVehicle,
     StaticPagination,
 } from '../services/seo-meta.js';
 import { getFinancingArticle } from '../content/financing-content.js';
@@ -55,6 +57,33 @@ async function getSsrPerPage(fastify: FastifyInstance): Promise<number> {
         value = 32;
     }
     ssrPerPageCache = { value, fetchedAt: Date.now() };
+    return value;
+}
+
+// Dane prawne do Organization JSON-LD strony głównej — te same pola co stopka frontendu.
+let orgSettingsCache: { value: OrgSettings; fetchedAt: number } | null = null;
+
+async function getOrgSettings(fastify: FastifyInstance): Promise<OrgSettings> {
+    if (orgSettingsCache && Date.now() - orgSettingsCache.fetchedAt < SSR_PER_PAGE_TTL_MS) {
+        return orgSettingsCache.value;
+    }
+    let value: OrgSettings = {};
+    try {
+        const settings = await fastify.prisma.appSettings.findUnique({
+            where: { id: 'default' },
+            select: {
+                legalCompanyName: true,
+                legalAddress: true,
+                legalVatId: true,
+                legalContactEmail: true,
+                legalContactPhone: true,
+            },
+        });
+        if (settings) value = settings;
+    } catch {
+        value = {};
+    }
+    orgSettingsCache = { value, fetchedAt: Date.now() };
     return value;
 }
 
@@ -237,7 +266,40 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
             where: { assignment: { vehicleId: rental.id, isActive: true } },
         });
 
-        return buildRentalMeta(rental, rm[1], ctx, rentalFaq, rateAgg._min.monthlyRateGross ?? null);
+        // Podobne auta najmu do linkowania: najpierw ta sama marka, dobite tym samym nadwoziem — max 5
+        let relatedRentalsRaw = await fastify.prisma.rentalVehicle.findMany({
+            where: { isActive: true, slug: { not: null }, NOT: { id: rental.id }, make: rental.make },
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, make: true, model: true, productionYear: true, slug: true },
+        });
+        if (relatedRentalsRaw.length < 5 && rental.bodyType) {
+            const excludeIds = [rental.id, ...relatedRentalsRaw.map(v => v.id)];
+            const sameBodyRentals = await fastify.prisma.rentalVehicle.findMany({
+                where: { isActive: true, slug: { not: null }, NOT: { id: { in: excludeIds } }, bodyType: rental.bodyType },
+                take: 5 - relatedRentalsRaw.length,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, make: true, model: true, productionYear: true, slug: true },
+            });
+            relatedRentalsRaw = [...relatedRentalsRaw, ...sameBodyRentals];
+        }
+        const relatedRentalRates = await Promise.all(
+            relatedRentalsRaw.map(v =>
+                fastify.prisma.rentalMatrixEntry.aggregate({
+                    _min: { monthlyRateGross: true },
+                    where: { assignment: { vehicleId: v.id, isActive: true } },
+                })
+            )
+        );
+        const relatedRentals: RelatedRentalVehicle[] = relatedRentalsRaw.map((v, i) => ({
+            slug: v.slug as string,
+            make: v.make,
+            model: v.model,
+            productionYear: v.productionYear,
+            monthlyRateFrom: relatedRentalRates[i]._min.monthlyRateGross ?? null,
+        }));
+
+        return buildRentalMeta(rental, rm[1], ctx, rentalFaq, rateAgg._min.monthlyRateGross ?? null, relatedRentals);
     }
 
     // Nieznane ścieżki (m.in. probe'y skanerów) odrzucamy przed zapytaniami do bazy
@@ -333,7 +395,8 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         });
     }
 
-    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path), pagination) ?? defaultMeta(ctx, { noindex: true, status: 404 });
+    const orgSettings = path === '/' ? await getOrgSettings(fastify) : undefined;
+    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path), pagination, orgSettings) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 }
 
 export async function renderRoutes(fastify: FastifyInstance) {

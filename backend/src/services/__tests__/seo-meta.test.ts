@@ -173,12 +173,16 @@ describe('buildRentalMeta', () => {
             ctx,
             faq
         );
-        expect(m.bodyHtml).toContain('<h2>Wynajem długoterminowy tego pojazdu</h2>');
+        // Boilerplate sekcji rotuje deterministycznie wg slugu (suma kodów znaków % 3) — dla
+        // 'toyota-corolla-x1' wypada wariant 2 ("Najem długoterminowy — jak to działa")
+        expect(m.bodyHtml).toContain('<h2>Najem długoterminowy — jak to działa</h2>');
         expect(m.bodyHtml).toContain('<a href="/wynajem-dlugoterminowy">wynajem długoterminowy samochodu</a>');
         expect(m.bodyHtml).toContain('<h2>Najczęstsze pytania o wynajem długoterminowy</h2>');
         expect(m.bodyHtml).toContain('<h3>Jaki limit kilometrów?</h3>');
         expect(m.bodyHtml).toContain('Od 10 000 km rocznie.');
         expect(m.bodyHtml).not.toContain('<b>10 000</b>');
+        // FAQ wygenerowane z danych pojazdu (brak rocznika/paliwa tutaj poza rokiem) — pytanie o dostępność zawsze obecne
+        expect(m.bodyHtml).toContain('<h3>Czy Toyota Corolla 2024 jest dostępny od ręki?</h3>');
     });
 
     it('full Vehicle + LeaseOut offer + BreadcrumbList + FAQPage JSON-LD, rate in body', () => {
@@ -212,15 +216,172 @@ describe('buildRentalMeta', () => {
         expect(ld[0].itemCondition).toBe('https://schema.org/NewCondition');
         expect(ld[0].vehicleTransmission).toBe('automatyczna');
         expect(ld[0].offers.businessFunction).toBe('http://purl.org/goodrelations/v1#LeaseOut');
+        expect(ld[0].offers.priceSpecification.price).toBe(1900);
         expect(ld[0].offers.priceSpecification.minPrice).toBe(1900);
         expect(ld[0].offers.seller.name).toBe('Motolia');
         expect(ld[1]['@type']).toBe('BreadcrumbList');
         expect(ld[2]['@type']).toBe('FAQPage');
-        expect(ld[2].mainEntity[0].acceptedAnswer.text).toBe('Finansowanie i ubezpieczenie.');
+        // Wygenerowane pytania (z danych pojazdu) idą przed FAQ z CMS — ta sama kolejność co w widocznym HTML
+        expect(ld[2].mainEntity.at(-1).acceptedAnswer.text).toBe('Finansowanie i ubezpieczenie.');
+        expect(ld[2].mainEntity[0].name).toContain('Ile kosztuje wynajem długoterminowy');
+        expect(ld[2].mainEntity[0].acceptedAnswer.text).toContain('1900 zł brutto miesięcznie');
         expect(m.bodyHtml).toContain(`Rata najmu od ${(1900).toLocaleString('pl-PL')} zł brutto miesięcznie.`);
         expect(m.bodyHtml).toContain('<h2>Wyposażenie</h2>');
         expect(m.bodyHtml).toContain('<tr><td>Moc</td><td>140 KM</td></tr>');
         expect(m.ogImage).toBe('https://dev.motolia.pl/uploads/rental/corolla.webp');
+    });
+
+    it('omits offers entirely when monthlyRateFrom is not set', () => {
+        const m = buildRentalMeta(
+            { make: 'Toyota', model: 'Corolla', version: null, productionYear: 2024 },
+            'toyota-corolla-x1',
+            ctx
+        );
+        const ld = m.jsonLd as any[];
+        expect(ld[0]['@type']).toBe('Vehicle');
+        expect(ld[0].offers).toBeUndefined();
+    });
+
+    it('two vehicles with different bodyType/fuelType produce substantially different bodyHtml (anti thin-content)', () => {
+        const kombi = buildRentalMeta(
+            {
+                make: 'Skoda',
+                model: 'Fabia',
+                version: '1.0 TSI DSG Drive',
+                productionYear: 2026,
+                bodyType: 'Kombi',
+                fuelType: 'Benzyna',
+                transmission: 'Automatyczna',
+                enginePowerHp: 110,
+            },
+            'skoda-fabia-k1',
+            ctx,
+            [],
+            1261
+        );
+        const suv = buildRentalMeta(
+            {
+                make: 'Kia',
+                model: 'EV6',
+                version: null,
+                productionYear: 2026,
+                bodyType: 'SUV',
+                fuelType: 'Elektryczny',
+                transmission: 'Automatyczna',
+                enginePowerHp: 229,
+            },
+            'kia-ev6-k2',
+            ctx,
+            [],
+            2400
+        );
+
+        // Akapit otwierający zbudowany z konkretnych pól, nie z ogólnika
+        expect(kombi.bodyHtml).toContain(
+            `Skoda Fabia 1.0 TSI DSG Drive 2026 to kombi z silnikiem benzynowym 110 KM i automatyczną skrzynią, dostępne w wynajmie długoterminowym od ${(1261).toLocaleString('pl-PL')} zł brutto miesięcznie.`
+        );
+        expect(suv.bodyHtml).toContain(
+            `Kia EV6 2026 to SUV z napędem elektrycznym 229 KM i automatyczną skrzynią, dostępne w wynajmie długoterminowym od ${(2400).toLocaleString('pl-PL')} zł brutto miesięcznie.`
+        );
+
+        // Akapit segmentowy wg nadwozia różni się między SUV a kombi
+        expect(kombi.bodyHtml).toContain('w nadwoziu kombi to typowy wybór dla rodzin');
+        expect(suv.bodyHtml).toContain('jako SUV zapewnia wysoką pozycję za kierownicą');
+        expect(kombi.bodyHtml).not.toContain('jako SUV zapewnia wysoką pozycję za kierownicą');
+
+        // Akapit wg paliwa różni się między benzyną a elektrykiem, bez podawania liczb spalania/zasięgu
+        expect(kombi.bodyHtml).toContain('Silnik benzynowy w Skoda Fabia sprawdza się');
+        expect(suv.bodyHtml).toContain('jako auto elektryczne wymaga dostępu do ładowania');
+        expect(kombi.bodyHtml).not.toMatch(/\d+\s*km zasięgu|\d+\s*l\/100/);
+        expect(suv.bodyHtml).not.toMatch(/\d+\s*km zasięgu|\d+\s*l\/100/);
+
+        expect(kombi.bodyHtml).not.toBe(suv.bodyHtml);
+    });
+
+    it('FAQ with monthlyRateFrom appears in visible HTML and matches FAQPage JSON-LD exactly', () => {
+        const m = buildRentalMeta(
+            { make: 'Toyota', model: 'Yaris', version: null, productionYear: 2025, transmission: 'Manualna', fuelType: 'Benzyna' },
+            'toyota-yaris-r1',
+            ctx,
+            [],
+            999
+        );
+        expect(m.bodyHtml).toContain('<h3>Ile kosztuje wynajem długoterminowy Toyota Yaris 2025?</h3>');
+        expect(m.bodyHtml).toContain('999 zł brutto miesięcznie');
+        expect(m.bodyHtml).toContain('<h3>Czy Toyota Yaris 2025 jest dostępny od ręki?</h3>');
+        expect(m.bodyHtml).toContain('<h3>Jaka skrzynia biegów i jakie paliwo ma Toyota Yaris 2025?</h3>');
+
+        const ld = m.jsonLd as any[];
+        const faqPage = ld.find(e => e['@type'] === 'FAQPage');
+        expect(faqPage.mainEntity).toHaveLength(3);
+        expect(faqPage.mainEntity.map((e: any) => e.name)).toEqual([
+            'Ile kosztuje wynajem długoterminowy Toyota Yaris 2025?',
+            'Czy Toyota Yaris 2025 jest dostępny od ręki?',
+            'Jaka skrzynia biegów i jakie paliwo ma Toyota Yaris 2025?',
+        ]);
+    });
+
+    it('renders related rental vehicles as links with rate', () => {
+        const related = [
+            { slug: 'skoda-octavia-r2', make: 'Skoda', model: 'Octavia', productionYear: 2025, monthlyRateFrom: 1500.4 },
+            { slug: 'skoda-superb-r3', make: 'Skoda', model: 'Superb', productionYear: null, monthlyRateFrom: null },
+        ];
+        const m = buildRentalMeta(
+            { make: 'Skoda', model: 'Fabia', version: null, productionYear: 2026 },
+            'skoda-fabia-k1',
+            ctx,
+            [],
+            null,
+            related
+        );
+        expect(m.bodyHtml).toContain('<h2>Zobacz też inne auta w wynajmie</h2>');
+        expect(m.bodyHtml).toContain(`<a href="/wynajem-dlugoterminowy/skoda-octavia-r2">Skoda Octavia (2025) — rata od ${(1500).toLocaleString('pl-PL')} zł/mies.</a>`);
+        expect(m.bodyHtml).toContain('<a href="/wynajem-dlugoterminowy/skoda-superb-r3">Skoda Superb</a>');
+    });
+
+    it('no related section when related list is empty', () => {
+        const m = buildRentalMeta(
+            { make: 'Skoda', model: 'Fabia', version: null, productionYear: 2026 },
+            'skoda-fabia-k1',
+            ctx
+        );
+        expect(m.bodyHtml).not.toContain('Zobacz też inne auta w wynajmie');
+    });
+
+    it('missing fields (nulls) render gracefully — no crash, no empty sentences, no empty table rows', () => {
+        const m = buildRentalMeta(
+            {
+                make: 'BMW',
+                model: 'X1',
+                version: null,
+                productionYear: null,
+                bodyType: null,
+                fuelType: null,
+                transmission: null,
+                enginePowerHp: null,
+                color: null,
+            },
+            'bmw-x1-min',
+            ctx
+        );
+        expect(m.bodyHtml).toContain('BMW X1 dostępne jest w wynajmie długoterminowym.');
+        expect(m.bodyHtml).not.toContain('<p></p>');
+        expect(m.bodyHtml).not.toContain('undefined');
+        expect(m.bodyHtml).not.toContain('null');
+        // Sekcja segmentowa/paliwowa pominięta całkowicie, bez zmyślonych kategorii
+        expect(m.bodyHtml).not.toContain('W wynajmie długoterminowym to');
+        expect(m.bodyHtml).toContain('<h3>Czy BMW X1 jest dostępny od ręki?</h3>');
+    });
+
+    it('meta description is enriched with bodyType/fuelType/rate when available', () => {
+        const m = buildRentalMeta(
+            { make: 'Skoda', model: 'Fabia', version: null, productionYear: 2026, bodyType: 'Kombi', fuelType: 'Benzyna' },
+            'skoda-fabia-k1',
+            ctx,
+            [],
+            1261
+        );
+        expect(m.description).toContain(`Kombi, Benzyna, rata od ${(1261).toLocaleString('pl-PL')} zł/mies.`);
     });
 });
 
@@ -239,6 +400,93 @@ describe('buildStaticMeta', () => {
         const m = buildStaticMeta('/', ctx)!;
         expect(m.title).toBe(ctx.defaultTitle);
         expect((m.jsonLd as any)['@type']).toBe('Organization');
+    });
+
+    it('home bodyHtml has no h1 (avoids duplicate with home-shell h1) and shows title as strong text', () => {
+        const m = buildStaticMeta('/', ctx)!;
+        expect(m.bodyHtml).not.toContain('<h1>');
+        expect(m.bodyHtml).toContain(`<p><strong>${ctx.defaultTitle}</strong></p>`);
+    });
+
+    it('category h1 excludes the "| Brand" suffix present in <title>', () => {
+        const m = buildStaticMeta('/samochody', ctx)!;
+        expect(m.title).toContain('| Motolia');
+        expect(m.bodyHtml).toContain('<h1>Samochody dostępne od ręki — nowe i używane</h1>');
+        expect(m.bodyHtml).not.toContain('| Motolia</h1>');
+    });
+
+    it('paginated category h1 keeps "— strona N" but still excludes the brand suffix', () => {
+        const m = buildStaticMeta('/samochody', ctx, [], [], '/oferta', undefined, { page: 3, totalPages: 58 })!;
+        expect(m.bodyHtml).toContain('<h1>Samochody dostępne od ręki — nowe i używane — strona 3</h1>');
+        expect(m.bodyHtml).not.toContain('| Motolia</h1>');
+    });
+
+    it('Organization JSON-LD includes description, alternateName and disambiguatingDescription from brand ctx', () => {
+        const m = buildStaticMeta('/', ctx)!;
+        const org = m.jsonLd as any;
+        expect(org.description).toBe(ctx.defaultDescription);
+        expect(org.alternateName).toBeUndefined();
+        expect(org.disambiguatingDescription).toBeUndefined();
+        expect(org.legalName).toBeUndefined();
+        expect(org.contactPoint).toBeUndefined();
+
+        const prevBrand = process.env.BRAND;
+        process.env.BRAND = 'motolia';
+        const motoliaCtx = resolveBrandCtx();
+        if (prevBrand === undefined) delete process.env.BRAND; else process.env.BRAND = prevBrand;
+
+        const mMotolia = buildStaticMeta('/', motoliaCtx)!;
+        const orgMotolia = mMotolia.jsonLd as any;
+        expect(orgMotolia.alternateName).toEqual(['Motolia.pl', 'motolia.pl', 'Motoria', 'Motalia', 'Moto lia']);
+        expect(orgMotolia.disambiguatingDescription).toContain('Motolia');
+    });
+
+    it('Organization JSON-LD includes legal fields and contactPoint when settings are complete', () => {
+        const m = buildStaticMeta('/', ctx, [], [], '/oferta', undefined, undefined, {
+            legalCompanyName: 'Motolia Sp. z o.o.',
+            legalAddress: 'ul. Testowa 1, 00-001 Warszawa',
+            legalVatId: 'PL1234567890',
+            legalContactEmail: 'kontakt@motolia.pl',
+            legalContactPhone: '+48123456789',
+        })!;
+        const org = m.jsonLd as any;
+        expect(org.legalName).toBe('Motolia Sp. z o.o.');
+        expect(org.address).toBe('ul. Testowa 1, 00-001 Warszawa');
+        expect(org.vatID).toBe('PL1234567890');
+        expect(org.contactPoint).toEqual({
+            '@type': 'ContactPoint',
+            telephone: '+48123456789',
+            email: 'kontakt@motolia.pl',
+            contactType: 'customer service',
+            areaServed: 'PL',
+            availableLanguage: ['pl'],
+        });
+    });
+
+    it('Organization JSON-LD omits legal fields and contactPoint when settings are empty/absent', () => {
+        const m = buildStaticMeta('/', ctx, [], [], '/oferta', undefined, undefined, {})!;
+        const org = m.jsonLd as any;
+        expect(org.legalName).toBeUndefined();
+        expect(org.address).toBeUndefined();
+        expect(org.vatID).toBeUndefined();
+        expect(org.contactPoint).toBeUndefined();
+
+        const mNoArg = buildStaticMeta('/', ctx)!;
+        expect((mNoArg.jsonLd as any).contactPoint).toBeUndefined();
+    });
+
+    it('Organization JSON-LD contactPoint appears even with only one of phone/email set', () => {
+        const m = buildStaticMeta('/', ctx, [], [], '/oferta', undefined, undefined, {
+            legalContactEmail: 'kontakt@motolia.pl',
+        })!;
+        const org = m.jsonLd as any;
+        expect(org.contactPoint).toEqual({
+            '@type': 'ContactPoint',
+            email: 'kontakt@motolia.pl',
+            contactType: 'customer service',
+            areaServed: 'PL',
+            availableLanguage: ['pl'],
+        });
     });
 
     it('unknown route returns null', () => {
