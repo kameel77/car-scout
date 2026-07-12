@@ -37,6 +37,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Get filter options (makes and models) - only active listings
     fastify.get('/api/listings/options', async (request, reply) => {
+        const cacheKey = 'api:listings:options';
+        const cached = await fastify.redis.get(cacheKey);
+        if (cached) return JSON.parse(cached);
+
         // fetch distinct makes from non-archived listings
         const makesRaw = await fastify.prisma.listing.findMany({
             where: { isArchived: false },
@@ -62,19 +66,21 @@ export async function listingRoutes(fastify: FastifyInstance) {
         });
 
         // fetch distinct cities from non-archived listings
-        const citiesRaw = await fastify.prisma.listing.findMany({
-            where: { isArchived: false, dealer: { city: { not: null } } },
-            select: { dealer: { select: { city: true } } },
-            distinct: ['dealerId'],
-            orderBy: { dealer: { city: 'asc' } }
+        const citiesRaw = await fastify.prisma.dealer.findMany({
+            where: { city: { not: null }, listings: { some: { isArchived: false } } },
+            select: { city: true },
+            distinct: ['city'],
+            orderBy: { city: 'asc' }
         });
 
         const makes = [...new Set(makesRaw.map(m => normalizeBrand(m.make)).filter(Boolean))].sort();
         const models = modelsRaw.map(m => ({ make: normalizeBrand(m.make), model: m.model })).filter(m => m.make && m.model);
         const bodyTypes = bodyTypesRaw.map(b => b.bodyType).filter(Boolean) as string[];
-        const cities = [...new Set(citiesRaw.map(c => c.dealer?.city).filter(Boolean))] as string[];
+        const cities = citiesRaw.map(c => c.city).filter(Boolean) as string[];
 
-        return { makes, models, bodyTypes, cities };
+        const result = { makes, models, bodyTypes, cities };
+        await fastify.redis.set(cacheKey, JSON.stringify(result), 'EX', 600);
+        return result;
     });
 
     fastify.post('/api/listings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
@@ -518,9 +524,15 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 where: whereWithoutDrive,
                 _count: { _all: true },
             }),
-            fastify.prisma.listing.findMany({
-                where: whereWithoutCity,
-                select: { dealer: { select: { city: true } } },
+            fastify.prisma.dealer.findMany({
+                where: {
+                    city: { not: null },
+                    listings: { some: whereWithoutCity }
+                },
+                select: {
+                    city: true,
+                    _count: { select: { listings: { where: whereWithoutCity } } }
+                }
             }),
         ]);
 
@@ -585,8 +597,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
             city: (() => {
                 const out: Record<string, number> = {};
                 for (const r of byCityRaw) {
-                    const c = r.dealer?.city;
-                    if (c) out[c] = (out[c] || 0) + 1;
+                    const c = r.city;
+                    if (c) out[c] = (out[c] || 0) + r._count.listings;
                 }
                 return out;
             })(),
