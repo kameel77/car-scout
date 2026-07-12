@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { seoContentApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useListingOptions } from '@/hooks/useListingOptions';
-import { sanitizeForSlug } from '@/utils/url-utils';
+import { slugifyBrandName } from '@/utils/brand-slug';
 import type { SeoContentPage as SeoContentPageEntry, SeoContentPayload } from '@/types/seo-content';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,7 +95,7 @@ export default function SeoContentPage() {
   );
 
   const urlPath = formState.make
-    ? `/samochody/${sanitizeForSlug(formState.make)}${formState.model !== NO_MODEL ? `/${sanitizeForSlug(formState.model)}` : ''}`
+    ? `/samochody/${slugifyBrandName(formState.make)}${formState.model !== NO_MODEL ? `/${slugifyBrandName(formState.model)}` : ''}`
     : '';
 
   const saveMutation = useMutation({
@@ -155,9 +155,9 @@ export default function SeoContentPage() {
     const parts = entry.urlPath.replace('/samochody/', '').split('/');
     const makeSlug = parts[0];
     const modelSlug = parts[1];
-    const make = options?.makes.find((m) => sanitizeForSlug(m) === makeSlug) || '';
+    const make = options?.makes.find((m) => slugifyBrandName(m) === makeSlug) || '';
     const model = modelSlug
-      ? options?.models.find((m) => m.make === make && sanitizeForSlug(m.model) === modelSlug)?.model || ''
+      ? options?.models.find((m) => m.make === make && slugifyBrandName(m.model) === modelSlug)?.model || ''
       : NO_MODEL;
     setEditingId(entry.id);
     setFormState({

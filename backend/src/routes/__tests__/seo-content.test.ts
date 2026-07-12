@@ -125,6 +125,19 @@ describe('SEO content (CMS) routes', () => {
             expect(res.statusCode).toBe(400);
         });
 
+        it('normalizes urlPath diacritics server-side on create (Škoda -> skoda)', async () => {
+            const create = await app.inject({
+                method: 'POST',
+                url: '/api/admin/seo-content',
+                headers: { authorization: `Bearer ${adminToken}` },
+                payload: { urlPath: '/samochody/Škoda', contentMd: '## Q?\nA.' },
+            });
+            expect(create.statusCode).toBe(200);
+            const created = create.json().page;
+            expect(created.urlPath).toBe('/samochody/skoda');
+            await app.prisma.seoContentPage.delete({ where: { id: created.id } });
+        });
+
         it('rejects duplicate urlPath with 409', async () => {
             await app.prisma.seoContentPage.create({
                 data: { urlPath: '/samochody/test-seo-content-dup', contentMd: 'Treść.' },

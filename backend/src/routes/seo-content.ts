@@ -1,9 +1,26 @@
 import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
 import { getSeoContentPage } from '../services/seo-content.js';
+import { slugifyBrandName } from '../services/brand-pages.service.js';
 
-// urlPath admin CRUD musi pasować do wzorca stron marek/modeli (spec §5)
-const URL_PATH_RE = /^\/samochody\/[a-z0-9-]+(?:\/[a-z0-9-]+)?$/;
+// urlPath admin CRUD musi pasować do wzorca stron marek/modeli (spec §5): /samochody/<segment>
+// lub /samochody/<segment>/<segment>. Segmenty są normalizowane tym samym slugifierem co
+// katalog marek/modeli (slugifyBrandName), żeby zapis zawsze lądował na kanonicznym slugu
+// niezależnie od tego, co dokładnie przyszło od klienta (np. surowa nazwa marki z
+// diakrytykami spoza polskiego alfabetu — Škoda, Citroën) — zamiast tylko walidować regexem
+// zakładającym, że urlPath jest już poprawnie zesluggowany.
+const URL_PATH_SHAPE_RE = /^\/samochody\/([^/]+)(?:\/([^/]+))?$/;
+
+function normalizeUrlPath(urlPath: string): string | null {
+    const match = urlPath.match(URL_PATH_SHAPE_RE);
+    if (!match) return null;
+    const makeSlug = slugifyBrandName(match[1]);
+    if (!makeSlug) return null;
+    if (match[2] === undefined) return `/samochody/${makeSlug}`;
+    const modelSlug = slugifyBrandName(match[2]);
+    if (!modelSlug) return null;
+    return `/samochody/${makeSlug}/${modelSlug}`;
+}
 
 export async function seoContentRoutes(fastify: FastifyInstance) {
     // Public: treść CMS dla SPA (SearchPage na trasach marki/modelu) — tylko opublikowane.
@@ -38,7 +55,8 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
             metaDescription?: string | null;
             isPublished?: boolean;
         };
-        if (!body.urlPath || !URL_PATH_RE.test(body.urlPath)) {
+        const normalizedUrlPath = body.urlPath ? normalizeUrlPath(body.urlPath) : null;
+        if (!normalizedUrlPath) {
             return reply.code(400).send({ error: 'urlPath must match /samochody/<slug> or /samochody/<slug>/<slug>' });
         }
         if (!body.contentMd?.trim()) {
@@ -48,7 +66,7 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
         try {
             const page = await fastify.prisma.seoContentPage.create({
                 data: {
-                    urlPath: body.urlPath,
+                    urlPath: normalizedUrlPath,
                     contentMd: body.contentMd,
                     metaTitle: body.metaTitle || null,
                     metaDescription: body.metaDescription || null,
@@ -75,8 +93,13 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
             metaDescription?: string | null;
             isPublished?: boolean;
         };
-        if (body.urlPath !== undefined && !URL_PATH_RE.test(body.urlPath)) {
-            return reply.code(400).send({ error: 'urlPath must match /samochody/<slug> or /samochody/<slug>/<slug>' });
+        let normalizedUrlPath: string | undefined;
+        if (body.urlPath !== undefined) {
+            const normalized = normalizeUrlPath(body.urlPath);
+            if (!normalized) {
+                return reply.code(400).send({ error: 'urlPath must match /samochody/<slug> or /samochody/<slug>/<slug>' });
+            }
+            normalizedUrlPath = normalized;
         }
         if (body.contentMd !== undefined && !body.contentMd.trim()) {
             return reply.code(400).send({ error: 'contentMd is required' });
@@ -86,7 +109,7 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
             const page = await fastify.prisma.seoContentPage.update({
                 where: { id },
                 data: {
-                    ...(body.urlPath !== undefined ? { urlPath: body.urlPath } : {}),
+                    ...(normalizedUrlPath !== undefined ? { urlPath: normalizedUrlPath } : {}),
                     ...(body.contentMd !== undefined ? { contentMd: body.contentMd } : {}),
                     ...(body.metaTitle !== undefined ? { metaTitle: body.metaTitle || null } : {}),
                     ...(body.metaDescription !== undefined ? { metaDescription: body.metaDescription || null } : {}),
