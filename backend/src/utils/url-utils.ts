@@ -90,7 +90,7 @@ function transliteratePolish(text: string): string {
  * - Replaces spaces with hyphens
  * - Removes multiple hyphens
  */
-function sanitizeForSlug(text: string): string {
+export function sanitizeForSlug(text: string): string {
     return transliteratePolish(text)
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')

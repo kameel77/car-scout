@@ -1,7 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { extractListingIdFromSlug, generateListingSlug } from '../utils/url-utils.js';
 import {
+    buildBrandMeta,
     buildListingMeta,
+    buildModelMeta,
     buildRentalMeta,
     buildStaticMeta,
     defaultMeta,
@@ -9,6 +11,8 @@ import {
     injectHead,
     resolveBrandCtx,
     BrandCtx,
+    BrandLinkEntry,
+    CmsPageContent,
     ListingVariant,
     OrgSettings,
     PageMeta,
@@ -17,6 +21,15 @@ import {
     StaticPagination,
 } from '../services/seo-meta.js';
 import { getFinancingArticle } from '../content/financing-content.js';
+import {
+    BrandCatalogEntry,
+    getBrandCatalog,
+    getBrandCatalogAllTime,
+    getModelCatalog,
+    getModelCatalogAllTime,
+    ModelCatalogEntry,
+} from '../services/brand-pages.service.js';
+import { getSeoContentPage } from '../services/seo-content.js';
 
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
@@ -135,8 +148,22 @@ async function getTemplate(): Promise<string | null> {
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
 const NOINDEX_RE = /^\/(admin|login|embed|listing)(\/|$)|\/(lead|negotiate|zapytanie)$/;
+const BRAND_RE = /^\/samochody\/([^/]+)$/;
+const BRAND_MODEL_RE = /^\/samochody\/([^/]+)\/([^/]+)$/;
 
-async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx, page: number = 1): Promise<PageMeta> {
+// Strony marek/modeli mają dynamiczne segmenty w ścieżce więc nie mieszczą się
+// w statycznym PAGINATED_ROUTES — dopisujemy je tu, żeby ?page=N nie było ignorowane.
+function isPaginatedPath(path: string): boolean {
+    return PAGINATED_ROUTES.has(path) || BRAND_RE.test(path) || BRAND_MODEL_RE.test(path);
+}
+
+async function resolveMeta(
+    fastify: FastifyInstance,
+    path: string,
+    ctx: BrandCtx,
+    page: number = 1,
+    queryParams?: URLSearchParams
+): Promise<PageMeta> {
     if (NOINDEX_RE.test(path)) {
         return defaultMeta(ctx, { noindex: true, status: 200 });
     }
@@ -302,6 +329,168 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
         return buildRentalMeta(rental, rm[1], ctx, rentalFaq, rateAgg._min.monthlyRateGross ?? null, relatedRentals);
     }
 
+    // Strona modelu (/samochody/:marka/:model) — sprawdzana przed marką, bo ma więcej segmentów
+    const bm = path.match(BRAND_MODEL_RE);
+    if (bm) {
+        const cmsUrlPath = `/samochody/${bm[1]}/${bm[2]}`;
+        const [brandCatalog, cmsContentRow] = await Promise.all([
+            getBrandCatalog(fastify),
+            getSeoContentPage(fastify, cmsUrlPath),
+        ]);
+        let brandEntry: BrandCatalogEntry | undefined = brandCatalog.find(b => b.slug === bm[1]);
+        let modelCatalog: ModelCatalogEntry[] = brandEntry ? await getModelCatalog(fastify, brandEntry.rawMakes) : [];
+        let modelEntry: ModelCatalogEntry | undefined = modelCatalog.find(m => m.slug === bm[2]);
+
+        if (!modelEntry) {
+            // Model (lub cała marka) bez aktywnych ofert — trwałość strony (200+treść+indeksowalność)
+            // tylko przy opublikowanej treści CMS (spec §1, poprawka F2 pkt 4e); bez CMS zostaje
+            // 404 ze znanego ograniczenia F1 (patrz komentarz w brand-pages.service.ts).
+            if (!cmsContentRow) return defaultMeta(ctx, { noindex: true, status: 404 });
+            if (!brandEntry) {
+                brandEntry = (await getBrandCatalogAllTime(fastify)).find(b => b.slug === bm[1]);
+                if (!brandEntry) return defaultMeta(ctx, { noindex: true, status: 404 });
+                modelCatalog = await getModelCatalogAllTime(fastify, brandEntry.rawMakes);
+                modelEntry = modelCatalog.find(m => m.slug === bm[2]);
+            } else {
+                modelEntry = (await getModelCatalogAllTime(fastify, brandEntry.rawMakes)).find(m => m.slug === bm[2]);
+            }
+            if (!modelEntry) return defaultMeta(ctx, { noindex: true, status: 404 });
+            modelEntry = { ...modelEntry, count: 0 }; // trafiliśmy tu właśnie dlatego, że aktywnych ofert jest 0
+        }
+        // modelEntry znaleziony implikuje brandEntry znaleziony na każdej ścieżce powyżej —
+        // jawny guard tylko dla zawężenia typów przez TS (nieosiągalne w praktyce).
+        if (!brandEntry) return defaultMeta(ctx, { noindex: true, status: 404 });
+
+        const cms: CmsPageContent | undefined = cmsContentRow
+            ? { html: cmsContentRow.html, faq: cmsContentRow.faq, metaTitle: cmsContentRow.metaTitle, metaDescription: cmsContentRow.metaDescription }
+            : undefined;
+
+        const modelWhere = {
+            isArchived: false,
+            make: { in: brandEntry.rawMakes, mode: 'insensitive' as const },
+            model: { in: modelEntry.rawModels, mode: 'insensitive' as const },
+        };
+
+        const ssrPerPage = await getSsrPerPage(fastify);
+        const totalPages = Math.max(1, Math.ceil(modelEntry.count / ssrPerPage));
+        if (page > totalPages) return defaultMeta(ctx, { noindex: true, status: 404 });
+        const pagination: StaticPagination = { page, totalPages };
+        const skip = (page - 1) * ssrPerPage;
+
+        const [listingsRaw, priceAgg] = await Promise.all([
+            fastify.prisma.listing.findMany({
+                where: modelWhere,
+                skip,
+                take: ssrPerPage,
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true, make: true, model: true, version: true,
+                    productionYear: true, pricePln: true, bodyType: true, fuelType: true,
+                },
+            }),
+            fastify.prisma.listing.aggregate({
+                _min: { pricePln: true },
+                _max: { pricePln: true },
+                where: { ...modelWhere, pricePln: { gt: 0 } },
+            }),
+        ]);
+
+        const listings: RelatedListing[] = listingsRaw.map(l => ({
+            ...l,
+            slug: generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id),
+        }));
+        const siblingModels: BrandLinkEntry[] = modelCatalog
+            .filter(m => m.slug !== modelEntry.slug)
+            .map(m => ({ name: m.model, slug: m.slug, count: m.count }));
+
+        return buildModelMeta(
+            brandEntry.make,
+            modelEntry.model,
+            brandEntry.slug,
+            modelEntry.slug,
+            modelEntry.count,
+            { min: priceAgg._min.pricePln, max: priceAgg._max.pricePln },
+            siblingModels,
+            listings,
+            ctx,
+            pagination,
+            cms
+        );
+    }
+
+    // Strona marki (/samochody/:marka)
+    const bOnly = path.match(BRAND_RE);
+    if (bOnly) {
+        const cmsUrlPath = `/samochody/${bOnly[1]}`;
+        const [brandCatalog, cmsContentRow] = await Promise.all([
+            getBrandCatalog(fastify),
+            getSeoContentPage(fastify, cmsUrlPath),
+        ]);
+        let brandEntry: BrandCatalogEntry | undefined = brandCatalog.find(b => b.slug === bOnly[1]);
+        if (!brandEntry) {
+            // Marka bez aktywnych ofert — trwałość strony (spec §1/F2 pkt 4e) tylko przy
+            // opublikowanej treści CMS; bez CMS zostaje 404 ze znanego ograniczenia F1.
+            if (!cmsContentRow) return defaultMeta(ctx, { noindex: true, status: 404 });
+            brandEntry = (await getBrandCatalogAllTime(fastify)).find(b => b.slug === bOnly[1]);
+            if (!brandEntry) return defaultMeta(ctx, { noindex: true, status: 404 });
+            brandEntry = { ...brandEntry, count: 0 };
+        }
+        const cms: CmsPageContent | undefined = cmsContentRow
+            ? { html: cmsContentRow.html, faq: cmsContentRow.faq, metaTitle: cmsContentRow.metaTitle, metaDescription: cmsContentRow.metaDescription }
+            : undefined;
+
+        const brandWhere = { isArchived: false, make: { in: brandEntry.rawMakes, mode: 'insensitive' as const } };
+
+        const ssrPerPage = await getSsrPerPage(fastify);
+        const totalPages = Math.max(1, Math.ceil(brandEntry.count / ssrPerPage));
+        if (page > totalPages) return defaultMeta(ctx, { noindex: true, status: 404 });
+        const pagination: StaticPagination = { page, totalPages };
+        const skip = (page - 1) * ssrPerPage;
+
+        const [listingsRaw, priceAgg, modelCatalog] = await Promise.all([
+            fastify.prisma.listing.findMany({
+                where: brandWhere,
+                skip,
+                take: ssrPerPage,
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true, make: true, model: true, version: true,
+                    productionYear: true, pricePln: true, bodyType: true, fuelType: true,
+                },
+            }),
+            fastify.prisma.listing.aggregate({
+                _min: { pricePln: true },
+                _max: { pricePln: true },
+                where: { ...brandWhere, pricePln: { gt: 0 } },
+            }),
+            getModelCatalog(fastify, brandEntry.rawMakes),
+        ]);
+
+        const listings: RelatedListing[] = listingsRaw.map(l => ({
+            ...l,
+            slug: generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id),
+        }));
+        const models: BrandLinkEntry[] = modelCatalog.map(m => ({ name: m.model, slug: m.slug, count: m.count }));
+        const otherBrands: BrandLinkEntry[] = brandCatalog
+            .filter(b => b.slug !== brandEntry.slug)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 20)
+            .map(b => ({ name: b.make, slug: b.slug, count: b.count }));
+
+        return buildBrandMeta(
+            brandEntry.make,
+            brandEntry.slug,
+            brandEntry.count,
+            { min: priceAgg._min.pricePln, max: priceAgg._max.pricePln },
+            models,
+            otherBrands,
+            listings,
+            ctx,
+            pagination,
+            cms
+        );
+    }
+
     // Nieznane ścieżki (m.in. probe'y skanerów) odrzucamy przed zapytaniami do bazy
     if (!hasStaticRoute(path)) {
         return defaultMeta(ctx, { noindex: true, status: 404 });
@@ -396,7 +585,51 @@ async function resolveMeta(fastify: FastifyInstance, path: string, ctx: BrandCtx
     }
 
     const orgSettings = path === '/' ? await getOrgSettings(fastify) : undefined;
-    return buildStaticMeta(path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path), pagination, orgSettings) ?? defaultMeta(ctx, { noindex: true, status: 404 });
+    // "Popularne marki" — linkowanie wewnętrzne do stron marek, tylko na katalogu głównym
+    const popularBrands: BrandLinkEntry[] = path === '/samochody'
+        ? (await getBrandCatalog(fastify))
+            .slice()
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 20)
+            .map(b => ({ name: b.make, slug: b.slug, count: b.count }))
+        : [];
+
+    const meta = buildStaticMeta(path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path), pagination, orgSettings, popularBrands)
+        ?? defaultMeta(ctx, { noindex: true, status: 404 });
+
+    // Canonical filtrów: /samochody?make=X (pojedyncza marka, opcjonalnie +model) → strona marki/modelu.
+    // Wiele marek lub brak dopasowania: canonical zostaje na /samochody (bez zmian).
+    if (path === '/samochody' && queryParams) {
+        const canonicalOverride = await resolveSamochodyQueryCanonical(fastify, queryParams);
+        if (canonicalOverride) meta.canonical = `${ctx.baseUrl}${canonicalOverride}`;
+    }
+
+    return meta;
+}
+
+async function resolveSamochodyQueryCanonical(fastify: FastifyInstance, queryParams: URLSearchParams): Promise<string | null> {
+    const makeParam = queryParams.get('make');
+    if (!makeParam) return null;
+    const makes = makeParam.split(',').map(s => s.trim()).filter(Boolean);
+    if (makes.length !== 1) return null;
+
+    const brandCatalog = await getBrandCatalog(fastify);
+    const brandEntry = brandCatalog.find(
+        b => b.make.toLowerCase() === makes[0].toLowerCase() || b.rawMakes.some(r => r.toLowerCase() === makes[0].toLowerCase())
+    );
+    if (!brandEntry) return null;
+
+    const modelParam = queryParams.get('model');
+    const models = modelParam ? modelParam.split(',').map(s => s.trim()).filter(Boolean) : [];
+    if (models.length === 1) {
+        const modelCatalog = await getModelCatalog(fastify, brandEntry.rawMakes);
+        const modelEntry = modelCatalog.find(
+            m => m.model.toLowerCase() === models[0].toLowerCase() || m.rawModels.some(r => r.toLowerCase() === models[0].toLowerCase())
+        );
+        if (modelEntry) return `/samochody/${brandEntry.slug}/${modelEntry.slug}`;
+    }
+
+    return `/samochody/${brandEntry.slug}`;
 }
 
 export async function renderRoutes(fastify: FastifyInstance) {
@@ -407,20 +640,31 @@ export async function renderRoutes(fastify: FastifyInstance) {
         let path = rawPathname;
         if (path.length > 1 && path.endsWith('/')) path = path.replace(/\/+$/, '') || '/';
 
-        // ?page=N tylko dla stron katalogowych; clamp chroni cache przed spamem parametrów.
-        // Nginx przekazuje pełne $request_uri w ?path=, ale surowe `&` w URI klienta
-        // rozbija parametry na najwyższy poziom query — czytamy page z obu miejsc.
+        const searchParams = rawQuery ? new URLSearchParams(rawQuery) : undefined;
+
+        // ?page=N tylko dla stron katalogowych (w tym dynamicznych /samochody/:marka[/:model]);
+        // clamp chroni cache przed spamem parametrów. Nginx przekazuje pełne $request_uri
+        // w ?path=, ale surowe `&` w URI klienta rozbija parametry na najwyższy poziom
+        // query — czytamy page z obu miejsc.
         let page = 1;
-        if (PAGINATED_ROUTES.has(path)) {
+        if (isPaginatedPath(path)) {
             const topLevelPage = (request.query as { page?: unknown }).page;
             const pageStr =
-                (rawQuery ? new URLSearchParams(rawQuery).get('page') : null) ??
+                searchParams?.get('page') ??
                 (typeof topLevelPage === 'string' ? topLevelPage : null);
             const parsed = parseInt(pageStr ?? '1', 10);
             if (Number.isFinite(parsed)) page = Math.min(Math.max(parsed, 1), 10000);
         }
 
-        const cacheKey = page > 1 ? `${path}?page=${page}` : path;
+        // Na /samochody make/model wpływają na canonical (patrz resolveSamochodyQueryCanonical),
+        // więc muszą różnicować cache — inaczej różne filtry dzieliłyby ten sam wpis.
+        let cacheKey = page > 1 ? `${path}?page=${page}` : path;
+        if (path === '/samochody' && searchParams) {
+            const makeParam = searchParams.get('make');
+            const modelParam = searchParams.get('model');
+            if (makeParam) cacheKey += `${cacheKey.includes('?') ? '&' : '?'}make=${makeParam}`;
+            if (modelParam) cacheKey += `&model=${modelParam}`;
+        }
         const cached = pageCache.get(cacheKey);
         if (cached && Date.now() - cached.at < PAGE_TTL_MS) {
             return reply
@@ -442,7 +686,7 @@ export async function renderRoutes(fastify: FastifyInstance) {
         }
 
         const ctx = resolveBrandCtx();
-        const meta = await resolveMeta(fastify, path, ctx, page);
+        const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
         const html = injectHead(template, meta);
 
         if (pageCache.size >= PAGE_CACHE_MAX) pageCache.clear();

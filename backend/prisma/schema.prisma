@@ -790,6 +790,19 @@ model HeroBanner {
   @@map("hero_banners")
 }
 
+model SeoContentPage {
+  id              String   @id @default(cuid())
+  urlPath         String   @unique @map("url_path")
+  contentMd       String   @map("content_md")
+  metaTitle       String?  @map("meta_title")
+  metaDescription String?  @map("meta_description")
+  isPublished     Boolean  @default(false) @map("is_published")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("seo_content_pages")
+}
+
 model ConsentRecord {
   id            String   @id @default(cuid())
   createdAt     DateTime @default(now()) @map("created_at")

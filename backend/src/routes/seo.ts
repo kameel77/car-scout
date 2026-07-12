@@ -4,6 +4,7 @@ import { authorizeRoles } from '../middleware/authorize.js';
 import { resolveBrandCtx } from '../services/seo-meta.js';
 import { generateListingSlug as buildListingSlug } from '../utils/url-utils.js';
 import { getFinancingArticle } from '../content/financing-content.js';
+import { getBrandCatalog, getModelCatalog } from '../services/brand-pages.service.js';
 
 export async function seoRoutes(fastify: FastifyInstance) {
     // Treść filarowa stron finansowania dla frontendu (sekcja pod listingiem), per brand
@@ -83,6 +84,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
         
         // Helper to format dates
         const formatDate = (date: Date) => date.toISOString().split('T')[0];
+        const formatDateOrUndefined = (date: Date | null) => (date ? formatDate(date) : undefined);
 
         const urls: { loc: string; lastmod?: string; image?: { loc: string } }[] = [];
 
@@ -175,6 +177,50 @@ export async function seoRoutes(fastify: FastifyInstance) {
             }
         });
 
+        // 4. Dynamic Pages: Brand/Model pages — marka zawsze, model przy >=2 aktywnych ofertach
+        // LUB opublikowanej treści CMS (polityka progowa, spec §1 + poprawka trwałości F2 pkt 4e).
+        const brandCatalog = await getBrandCatalog(fastify);
+        const modelCatalogs = await Promise.all(
+            brandCatalog.map(b => getModelCatalog(fastify, b.rawMakes))
+        );
+
+        // Strony /samochody/* z opublikowaną treścią CMS — lastmod uwzględnia treść (max z ofertami);
+        // strony bez żadnej aktywnej oferty (nie ma ich w brandCatalog/modelCatalogs) trafiają do
+        // sitemapy właśnie stąd, inaczej trwałość strony (render.ts) nie miałaby odpowiednika w sitemapie.
+        const cmsPages = await fastify.prisma.seoContentPage.findMany({
+            where: { isPublished: true, urlPath: { startsWith: '/samochody/' } },
+            select: { urlPath: true, updatedAt: true },
+        });
+        const cmsUpdatedAtByPath = new Map(cmsPages.map(p => [p.urlPath, p.updatedAt]));
+        const laterOf = (a: Date | null, b: Date | undefined): Date | null =>
+            !b ? a : !a || b > a ? b : a;
+
+        const emittedPaths = new Set<string>();
+        brandCatalog.forEach((brand, i) => {
+            const brandPath = `/samochody/${brand.slug}`;
+            urls.push({
+                loc: `${baseUrl}${brandPath}`,
+                lastmod: formatDateOrUndefined(laterOf(brand.lastmod, cmsUpdatedAtByPath.get(brandPath))),
+            });
+            emittedPaths.add(brandPath);
+            modelCatalogs[i].forEach(model => {
+                const modelPath = `${brandPath}/${model.slug}`;
+                const modelCms = cmsUpdatedAtByPath.get(modelPath);
+                if (model.count < 2 && !modelCms) return;
+                urls.push({
+                    loc: `${baseUrl}${modelPath}`,
+                    lastmod: formatDateOrUndefined(laterOf(model.lastmod, modelCms)),
+                });
+                emittedPaths.add(modelPath);
+            });
+        });
+        // Marki/modele z treścią CMS, ale bez ŻADNEJ (nawet archiwalnej) aktywnej oferty —
+        // nie mają wpisu w brandCatalog/modelCatalogs powyżej, dopisujemy je wprost.
+        cmsPages.forEach(p => {
+            if (emittedPaths.has(p.urlPath)) return;
+            urls.push({ loc: `${baseUrl}${p.urlPath}`, lastmod: formatDate(p.updatedAt) });
+        });
+
         // Build XML
         let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
         xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
@@ -216,6 +262,7 @@ Allow: /api/faq
 Allow: /api/feature-tiles
 Allow: /api/geo
 Allow: /api/rental-public
+Allow: /api/seo-content
 Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
@@ -233,6 +280,7 @@ Allow: /api/faq
 Allow: /api/feature-tiles
 Allow: /api/geo
 Allow: /api/rental-public
+Allow: /api/seo-content
 Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
@@ -260,6 +308,7 @@ Allow: /api/faq
 Allow: /api/feature-tiles
 Allow: /api/geo
 Allow: /api/rental-public
+Allow: /api/seo-content
 Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
@@ -277,6 +326,7 @@ Allow: /api/faq
 Allow: /api/feature-tiles
 Allow: /api/geo
 Allow: /api/rental-public
+Allow: /api/seo-content
 Allow: /api/sitemap.xml
 Disallow: /login
 Disallow: /api/
@@ -296,6 +346,14 @@ Sitemap: ${baseUrl}/sitemap.xml
     fastify.get('/api/llms.txt', async (request, reply) => {
         const ctx = resolveBrandCtx();
         const listingsCount = await fastify.prisma.listing.count({ where: { isArchived: false, pricePln: { gt: 0 } } });
+        const brandCatalog = await getBrandCatalog(fastify);
+        const brandsSection = brandCatalog.length > 0
+            ? brandCatalog
+                .slice()
+                .sort((a, b) => b.count - a.count)
+                .map(b => `- [${b.make}](${ctx.baseUrl}/samochody/${b.slug}) - ${b.count} ofert`)
+                .join('\n')
+            : '';
 
         const body = `
 # ${ctx.brandName} - Motoryzacyjny Marketplace
@@ -313,7 +371,10 @@ Sitemap: ${baseUrl}/sitemap.xml
 - [Leasing](${ctx.baseUrl}/leasing)
 - [Kredyt](${ctx.baseUrl}/kredyt)
 - [Kontakt](${ctx.baseUrl}/kontakt)
-
+${brandsSection ? `
+## Marki
+${brandsSection}
+` : ''}
 ## Pełna lista ofert (dla AI)
 Pełny spis wszystkich aktualnych ofert znajduje się pod adresem: [${ctx.baseUrl}/llms-full.txt](${ctx.baseUrl}/llms-full.txt)
 `.trim();

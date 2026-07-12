@@ -41,6 +41,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/DashboardPage"));
 const TranslationsPage = lazy(() => import("./pages/admin/TranslationsPage"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
 const FaqPage = lazy(() => import("./pages/admin/FaqPage"));
+const SeoContentPage = lazy(() => import("./pages/admin/SeoContentPage"));
 const AdminFeatureTilesPage = lazy(() => import("./pages/admin/FeatureTilesPage"));
 const AdminHeroBannersPage = lazy(() => import("./pages/admin/HeroBannersPage"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/PartnersPage"));
@@ -100,6 +101,8 @@ const App = () => (
                           ten sam komponent — bez niego stan (np. filters.statuses) zostaje
                           z poprzedniej trasy i lista pokazuje złe auta do czasu odświeżenia */}
                       <Route path="/samochody" element={<SearchPage key="samochody" />} />
+                      <Route path="/samochody/:marka" element={<SearchPage key="samochody-marka" />} />
+                      <Route path="/samochody/:marka/:model" element={<SearchPage key="samochody-marka-model" />} />
                       <Route path="/search" element={<SearchPage key="search" />} />
                       <Route path="/nowe" element={<ConditionPage key="nowe" condition="NEW" />} />
                       <Route path="/uzywane" element={<ConditionPage key="uzywane" condition="USED" />} />
@@ -192,6 +195,14 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <FaqPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/seo-content"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <SeoContentPage />
                             </ProtectedRoute>
                           }
                         />

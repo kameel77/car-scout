@@ -175,9 +175,13 @@ export function LeadList() {
     };
 
     const filteredLeads = React.useMemo(() => {
+        const q = searchQuery.toLowerCase();
         return mappedLeads.filter(lead =>
-            lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            lead.email.toLowerCase().includes(searchQuery.toLowerCase())
+            lead.name.toLowerCase().includes(q) ||
+            lead.email.toLowerCase().includes(q) ||
+            // Leady z listy oczekujących (waitlist, F3) nie mają dopiętej oferty — poszukiwana
+            // marka/model jest zapisana w treści wiadomości, więc filtrujemy też po niej.
+            lead.message.toLowerCase().includes(q)
         );
     }, [mappedLeads, searchQuery]);
 

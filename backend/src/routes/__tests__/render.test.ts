@@ -3,6 +3,8 @@ import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
 import { __resetRenderCache } from '../render';
 import { generateListingSlug } from '../../utils/url-utils.js';
+import { __resetBrandCatalogCache } from '../../services/brand-pages.service.js';
+import { __resetSeoContentCache } from '../../services/seo-content.js';
 
 const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"></div></body></html>`;
 
@@ -24,6 +26,7 @@ describe('GET /api/render', () => {
 
     beforeEach(async () => {
         __resetRenderCache();
+        __resetBrandCatalogCache();
         prevBrand = process.env.BRAND;
         prevFrontendUrl = process.env.FRONTEND_URL;
         prevInternalFrontendUrl = process.env.INTERNAL_FRONTEND_URL;
@@ -34,6 +37,7 @@ describe('GET /api/render', () => {
             vi.fn(async () => new Response(TEMPLATE, { status: 200 }))
         );
         await app.prisma.listing.deleteMany({ where: { make: 'TEST_RENDER' } });
+        await app.prisma.listing.deleteMany({ where: { make: 'Test Brand Page' } });
     });
 
     afterEach(async () => {
@@ -175,5 +179,239 @@ describe('GET /api/render', () => {
         expect(other.statusCode).toBe(200);
         expect(other.body).not.toContain('Szeroki wybór aut');
         expect(other.body).not.toContain('home-shell');
+    });
+});
+
+describe('GET /api/render — brand/model pages', () => {
+    let app: FastifyInstance;
+
+    beforeAll(async () => {
+        app = await buildApp();
+        await app.ready();
+    });
+
+    afterAll(async () => {
+        await app.prisma.listing.deleteMany({ where: { make: 'Test Brand Page' } });
+        await app.close();
+        vi.unstubAllGlobals();
+    });
+
+    beforeEach(async () => {
+        __resetRenderCache();
+        __resetBrandCatalogCache();
+        process.env.BRAND = 'motolia';
+        process.env.FRONTEND_URL = 'https://dev.motolia.pl';
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(TEMPLATE, { status: 200 })));
+        await app.prisma.listing.deleteMany({ where: { make: 'Test Brand Page' } });
+    });
+
+    async function createListing(overrides: Partial<Parameters<typeof app.prisma.listing.create>[0]['data']> = {}) {
+        return app.prisma.listing.create({
+            data: {
+                make: 'Test Brand Page',
+                model: 'Test Model One',
+                version: null,
+                pricePln: 100000,
+                mileageKm: 10,
+                productionYear: 2024,
+                fuelType: 'benzyna',
+                bodyType: 'suv',
+                isArchived: false,
+                ...overrides,
+            },
+        });
+    }
+
+    it('brand page: 200, self-canonical, offer count in title, breadcrumb links', async () => {
+        await createListing();
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/test-brand-page' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody/test-brand-page"');
+        expect(res.body).not.toContain('noindex');
+        expect(res.body).toContain('Test Brand Page (1 oferta)');
+        expect(res.body).toContain('<h1>Samochody Test Brand Page dostępne od ręki — nowe i używane</h1>');
+    });
+
+    it('brand page: unknown slug is 404 + noindex', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/nie-ma-takiej-marki-xyz' });
+        expect(res.statusCode).toBe(404);
+        expect(res.body).toContain('noindex');
+    });
+
+    it('model page: below threshold (1 offer) is 200 + noindex, self-canonical', async () => {
+        await createListing();
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/test-brand-page/test-model-one' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('noindex');
+        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody/test-brand-page/test-model-one"');
+        expect(res.body).toContain('Test Brand Page Test Model One');
+    });
+
+    it('model page: at threshold (2 offers) is indexable', async () => {
+        await createListing();
+        await createListing({ version: 'v2' });
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/test-brand-page/test-model-one' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('noindex');
+        expect(res.body).toContain('Test Brand Page Test Model One (2 oferty)');
+    });
+
+    it('model page: unknown model under a known brand is 404 + noindex', async () => {
+        await createListing();
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/test-brand-page/nie-taki-model' });
+        expect(res.statusCode).toBe(404);
+        expect(res.body).toContain('noindex');
+    });
+
+    it('/samochody?make=X (single brand) canonicalizes to the brand page', async () => {
+        await createListing();
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' + encodeURIComponent('?make=Test Brand Page') });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody/test-brand-page"');
+    });
+
+    it('/samochody?make=X&model=Y canonicalizes to the model page', async () => {
+        await createListing();
+        const url = '/api/render?path=/samochody' + encodeURIComponent('?make=Test Brand Page&model=Test Model One');
+        const res = await app.inject({ method: 'GET', url });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody/test-brand-page/test-model-one"');
+    });
+
+    it('/samochody?make=X&make=Y (multiple brands) canonical stays on /samochody', async () => {
+        await createListing();
+        const url = '/api/render?path=/samochody' + encodeURIComponent('?make=Test Brand Page,BMW');
+        const res = await app.inject({ method: 'GET', url });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody"');
+    });
+
+    it('/samochody shows a "Popularne marki" internal-linking block linking to brand pages', async () => {
+        await createListing();
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('<h2>Popularne marki</h2>');
+        // top brands by count (real seed data dominates the tiny test fixture) — just assert
+        // the block links to *some* real brand page, proving it's wired to the live catalog.
+        expect(res.body).toMatch(/<a href="\/samochody\/[a-z0-9-]+">[^<]+<\/a> \(\d+\)/);
+    });
+});
+
+describe('GET /api/render — brand/model pages with CMS content (F2)', () => {
+    let app: FastifyInstance;
+    const BRAND_URL_PATH = '/samochody/test-cms-brand';
+    const MODEL_URL_PATH = '/samochody/test-cms-brand/test-cms-model';
+
+    beforeAll(async () => {
+        app = await buildApp();
+        await app.ready();
+    });
+
+    afterAll(async () => {
+        await app.prisma.listing.deleteMany({ where: { make: 'Test CMS Brand' } });
+        await app.prisma.seoContentPage.deleteMany({ where: { urlPath: { in: [BRAND_URL_PATH, MODEL_URL_PATH] } } });
+        await app.close();
+        vi.unstubAllGlobals();
+    });
+
+    beforeEach(async () => {
+        __resetRenderCache();
+        __resetBrandCatalogCache();
+        __resetSeoContentCache();
+        process.env.BRAND = 'motolia';
+        process.env.FRONTEND_URL = 'https://dev.motolia.pl';
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(TEMPLATE, { status: 200 })));
+        await app.prisma.listing.deleteMany({ where: { make: 'Test CMS Brand' } });
+        await app.prisma.seoContentPage.deleteMany({ where: { urlPath: { in: [BRAND_URL_PATH, MODEL_URL_PATH] } } });
+    });
+
+    // Trwałość (spec §1/F2 pkt 4e) wymaga, żeby marka/model kiedykolwiek miały choć jedną
+    // ofertę (nawet zarchiwizowaną) — tylko wtedy jest z czego odtworzyć kanoniczną nazwę.
+    async function createArchivedListing(overrides: Partial<Parameters<typeof app.prisma.listing.create>[0]['data']> = {}) {
+        const l = await app.prisma.listing.create({
+            data: {
+                make: 'Test CMS Brand',
+                model: 'Test CMS Model',
+                version: null,
+                pricePln: 100000,
+                mileageKm: 10,
+                productionYear: 2024,
+                fuelType: 'benzyna',
+                bodyType: 'suv',
+                isArchived: false,
+                ...overrides,
+            },
+        });
+        await app.prisma.listing.update({ where: { id: l.id }, data: { isArchived: true } });
+        return l;
+    }
+
+    it('without CMS content: brand/model with 0 active offers still 404s (unchanged F1 limitation)', async () => {
+        await createArchivedListing();
+        const brandRes = await app.inject({ method: 'GET', url: `/api/render?path=${BRAND_URL_PATH}` });
+        expect(brandRes.statusCode).toBe(404);
+        const modelRes = await app.inject({ method: 'GET', url: `/api/render?path=${MODEL_URL_PATH}` });
+        expect(modelRes.statusCode).toBe(404);
+    });
+
+    it('brand page persists at 0 active offers when CMS content is published: 200, indexable, content rendered', async () => {
+        await createArchivedListing();
+        await app.prisma.seoContentPage.create({
+            data: {
+                urlPath: BRAND_URL_PATH,
+                contentMd: '## Historia marki\n\nOpis redakcyjny testowej marki.',
+                metaTitle: 'CMS Brand — tytuł',
+                isPublished: true,
+            },
+        });
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=${BRAND_URL_PATH}` });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('noindex');
+        expect(res.body).toContain('<title>CMS Brand — tytuł</title>');
+        expect(res.body).toContain('<div class="cms-content"><h2>Historia marki</h2>');
+        expect(res.body).toContain('Opis redakcyjny testowej marki.');
+        // Brak ofert (F3): komunikat waitlist + linki "podobne auta" (Popularne marki, dane realnego seeda)
+        expect(res.body).toContain('Aktualnie brak ofert Test CMS Brand — zostaw kontakt, powiadomimy o nowej ofercie.');
+        expect(res.body).toMatch(/<h2>Popularne marki<\/h2>[\s\S]*<a href="\/samochody\/[a-z0-9-]+">[^<]+<\/a> \(\d+\)/);
+    });
+
+    it('model page persists at 0 active offers when CMS content is published: 200, indexable (noindex overridden), content + editorial FAQ rendered', async () => {
+        await createArchivedListing();
+        await app.prisma.seoContentPage.create({
+            data: {
+                urlPath: MODEL_URL_PATH,
+                contentMd: '## Opis modelu\n\nTreść o testowym modelu.\n\n## Czy model jest dostępny?\n\nSprawdź u dealera.',
+                isPublished: true,
+            },
+        });
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=${MODEL_URL_PATH}` });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('noindex');
+        expect(res.body).toContain('<div class="cms-content"><h2>Opis modelu</h2>');
+        expect(res.body).toContain('<h3>Czy model jest dostępny?</h3>');
+        expect(res.body).toContain('application/ld+json');
+        expect(res.body).toContain('FAQPage');
+    });
+
+    it('model page at exactly 1 active offer is indexable when CMS content is published (below the normal >=2 threshold)', async () => {
+        const l = await createArchivedListing();
+        await app.prisma.listing.update({ where: { id: l.id }, data: { isArchived: false } }); // 1 active offer
+        await app.prisma.seoContentPage.create({
+            data: { urlPath: MODEL_URL_PATH, contentMd: 'Treść dla modelu z jedną ofertą.', isPublished: true },
+        });
+        __resetBrandCatalogCache();
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=${MODEL_URL_PATH}` });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('noindex');
+        expect(res.body).toContain('Treść dla modelu z jedną ofertą.');
+    });
+
+    it('unpublished CMS content does not persist the page (still 404 at 0 offers)', async () => {
+        await createArchivedListing();
+        await app.prisma.seoContentPage.create({
+            data: { urlPath: MODEL_URL_PATH, contentMd: 'Szkic, niepublikowany.', isPublished: false },
+        });
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=${MODEL_URL_PATH}` });
+        expect(res.statusCode).toBe(404);
     });
 });

@@ -1,6 +1,7 @@
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
@@ -12,6 +13,7 @@ import { RentalListingCard } from '@/components/RentalListingCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
+import { useSeoContent } from '@/hooks/useSeoContent';
 import { rentalPublicApi } from '@/services/rental-api';
 import { mergeFacets, mergeMakes, mergeModels } from '@/utils/listingMerge';
 import { ListingPagination } from '@/components/ListingPagination';
@@ -27,6 +29,21 @@ import { useBrand } from '@/contexts/BrandContext';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
 import { FinancingContentSection, FinancingContentType } from '@/components/FinancingContentSection';
+import { sanitizeForSlug } from '@/utils/url-utils';
+import { WaitlistForm } from '@/components/WaitlistForm';
+import NotFound from '@/pages/NotFound';
+
+// Fallback do wyświetlenia marki/modelu, gdy slug nie rozwiązuje się przez katalog aktywnych
+// ofert (0 aktywnych ofert) — "słowo-na-słowo" kapitalizacja slugu, np. "aston-martin" →
+// "Aston Martin". Nie odtwarza prawdziwej pisowni marki (np. "BMW"), ale to jedyne bezpieczne
+// źródło nazwy, gdy nie ma jej ani w katalogu ofert, ani w ustrukturyzowanej treści CMS.
+function capitalizeSlug(slug: string): string {
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
 
 const emptyFilters: FilterState = {
   makes: [],
@@ -65,9 +82,50 @@ const parseNumberParam = (value: string | null, fallback: number) => {
 export default function SearchPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const params = useParams<{ marka?: string; model?: string }>();
   const { data: seoConfig } = useSeoConfig();
   const { config } = useBrand();
   const { priceType, setPriceType } = usePriceSettings();
+  const { data: options } = useListingOptions();
+
+  // Strony marek/modeli (/samochody/:marka[/:model]) rozwiązują slug z URL-a na realną
+  // markę/model z API (dopiero gdy options się załaduje) — to samo źródło danych co filtry.
+  const resolvedBrand = React.useMemo(() => {
+    if (!params.marka || !options) return undefined;
+    const target = params.marka.toLowerCase();
+    return options.makes.find((m) => sanitizeForSlug(m) === target);
+  }, [params.marka, options]);
+  const resolvedModel = React.useMemo(() => {
+    if (!params.model || !resolvedBrand || !options) return undefined;
+    const target = params.model.toLowerCase();
+    return options.models.find((m) => m.make === resolvedBrand && sanitizeForSlug(m.model) === target)?.model;
+  }, [params.model, resolvedBrand, options]);
+  const isOnBrandRoute = Boolean(params.marka);
+
+  // Treść CMS (F2) dla stron marki/modelu — klucz budowany z surowych slugów URL-a (nie z
+  // resolvedBrand/resolvedModel), żeby zapytanie nie czekało na załadowanie /api/listings/options.
+  const seoContentPath = params.marka
+    ? `/samochody/${params.marka}${params.model ? `/${params.model}` : ''}`
+    : undefined;
+  const { data: seoContent, isFetched: seoContentFetched } = useSeoContent(seoContentPath);
+
+  // Slug marki/modelu, który nie rozwiązuje się przez katalog aktywnych ofert (0 aktywnych ofert
+  // — options nie zna marek/modeli bez choćby jednej aktywnej oferty). Zamiast od razu 404,
+  // czekamy aż osiądzie zapytanie o treść CMS (ten sam mechanizm trwałości co SSR, F2 §1 pkt 4e):
+  // jest CMS → strona zostaje (200, pusty listing + waitlist, F3); brak CMS → NotFound (F1).
+  const catalogUnresolved =
+    Boolean(params.marka) && Boolean(options) &&
+    (!resolvedBrand || (Boolean(params.model) && !resolvedModel));
+  const stillResolvingCms = catalogUnresolved && !seoContentFetched;
+  const cmsFallbackActive = catalogUnresolved && seoContentFetched && Boolean(seoContent);
+  const notFoundFinal = catalogUnresolved && seoContentFetched && !seoContent;
+
+  // Nazwa marki/modelu do wyświetlenia: z katalogu ofert, a w trybie CMS-fallback — slug
+  // z kapitalizacją (CMS nie ma ustrukturyzowanego pola nazwy marki/modelu, patrz komentarz
+  // przy capitalizeSlug).
+  const displayBrand = resolvedBrand || (cmsFallbackActive && params.marka ? capitalizeSlug(params.marka) : undefined);
+  const displayModel = resolvedModel || (cmsFallbackActive && params.model ? capitalizeSlug(params.model) : undefined);
 
   // Sync URL ?clientType=private|business → global priceType (one-shot on mount)
   React.useEffect(() => {
@@ -119,6 +177,22 @@ export default function SearchPage() {
       cities: parseArray(searchParams.get('city')),
     };
   });
+
+  // Strona marki/modelu (URL bez ?make=): dopiero gdy displayBrand/displayModel jest znany
+  // (po załadowaniu options — z katalogu ofert, albo w trybie CMS-fallback ze slugu), wstrzykujemy
+  // go do filtrów — SSR/boty widzą poprawną treść od razu z serwera, użytkownik po hydratacji
+  // dostaje krótki błysk nieprzefiltrowanej listy. W trybie CMS-fallback filtrujemy po nazwie
+  // wyprowadzonej ze slugu, żeby listing faktycznie pokazał 0 wyników (a nie cały katalog).
+  React.useEffect(() => {
+    if (!displayBrand) return;
+    setFilters((prev) => {
+      const alreadyApplied =
+        prev.makes.length === 1 && prev.makes[0] === displayBrand &&
+        (!displayModel || (prev.models.length === 1 && prev.models[0] === displayModel));
+      if (alreadyApplied) return prev;
+      return { ...prev, makes: [displayBrand], models: displayModel ? [displayModel] : prev.models };
+    });
+  }, [displayBrand, displayModel]);
 
   const { data: settings } = useAppSettings();
   const defaultSortCars = settings?.defaultSortCars || 'price_asc';
@@ -191,8 +265,13 @@ export default function SearchPage() {
     urlSyncTimeoutRef.current = setTimeout(() => {
       const params = new URLSearchParams();
 
-      if (filters.makes.length) params.set('make', filters.makes.join(','));
-      if (filters.models.length) params.set('model', filters.models.join(','));
+      // Na stronie marki/modelu marka/model są już zakodowane w ścieżce (/samochody/:marka[/:model]) —
+      // nie dublujemy ich w query. Każda zmiana marki/modelu i tak przechodzi przez
+      // handleFilterChange, który w takim wypadku przekierowuje na klasyczny URL z ?make=.
+      if (!isOnBrandRoute) {
+        if (filters.makes.length) params.set('make', filters.makes.join(','));
+        if (filters.models.length) params.set('model', filters.models.join(','));
+      }
       if (filters.fuelTypes.length) params.set('fuelType', filters.fuelTypes.join(','));
       if (filters.transmissions.length) params.set('transmission', filters.transmissions.join(','));
       if (filters.bodyTypes.length) params.set('bodyType', filters.bodyTypes.join(','));
@@ -227,7 +306,7 @@ export default function SearchPage() {
         clearTimeout(urlSyncTimeoutRef.current);
       }
     };
-  }, [filters, sortBy, page, setSearchParams]);
+  }, [filters, sortBy, page, setSearchParams, isOnBrandRoute]);
 
   React.useEffect(() => {
     const nextPage = parseNumberParam(searchParams.get('page'), 1);
@@ -238,7 +317,6 @@ export default function SearchPage() {
   }, [searchParams]);
 
   const { data, isLoading } = useListings(filters, sortBy, page, perPage);
-  const { data: options } = useListingOptions();
   const { data: adsData } = usePartnerAds();
   const partnersAds = adsData?.ads || [];
   const listings = data?.listings || [];
@@ -312,19 +390,67 @@ export default function SearchPage() {
     () => mergeFacets(data?.facets, rentalData?.facets),
     [data?.facets, rentalData?.facets],
   );
+  // "Popularne marki" — linkowanie wewnętrzne do stron marek, tylko na czystym /samochody
+  // (ten sam próg top ~20 wg liczby ofert co blok SSR w buildStaticMeta).
+  const popularBrands = React.useMemo(
+    () => Object.entries(mergedFacets.make || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20),
+    [mergedFacets.make],
+  );
 
   const totalCount = saleTotalCount + rentalVehicles.length;
   const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((saleTotalCount || 1) / perPage));
 
   const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
+    // Na stronie marki/modelu: jeśli użytkownik zmienia filtr tak, że przestaje on
+    // odpowiadać marce/modelowi z ładnego URL-a, zostawiamy tę stronę i przechodzimy na
+    // klasyczny /samochody?... z pełnym zestawem filtrów w query (nie zostajemy na ładnym
+    // URL-u z nieaktualnym filtrem).
+    if (isOnBrandRoute) {
+      const stillMatchesRoute =
+        updatedFilters.makes.length === 1 && updatedFilters.makes[0] === displayBrand &&
+        (params.model
+          ? updatedFilters.models.length === 1 && updatedFilters.models[0] === displayModel
+          : updatedFilters.models.length === 0);
+      if (!stillMatchesRoute) {
+        const qp = new URLSearchParams();
+        if (updatedFilters.makes.length) qp.set('make', updatedFilters.makes.join(','));
+        if (updatedFilters.models.length) qp.set('model', updatedFilters.models.join(','));
+        if (updatedFilters.fuelTypes.length) qp.set('fuelType', updatedFilters.fuelTypes.join(','));
+        if (updatedFilters.transmissions.length) qp.set('transmission', updatedFilters.transmissions.join(','));
+        if (updatedFilters.bodyTypes.length) qp.set('bodyType', updatedFilters.bodyTypes.join(','));
+        if (updatedFilters.drives.length) qp.set('drive', updatedFilters.drives.join(','));
+        if (updatedFilters.statuses.length) qp.set('status', updatedFilters.statuses.map((c) => c.toLowerCase()).join(','));
+        if (updatedFilters.yearFrom) qp.set('yearMin', updatedFilters.yearFrom);
+        if (updatedFilters.yearTo) qp.set('yearMax', updatedFilters.yearTo);
+        if (updatedFilters.mileageFrom) qp.set('mileageMin', updatedFilters.mileageFrom);
+        if (updatedFilters.mileageTo) qp.set('mileageMax', updatedFilters.mileageTo);
+        if (updatedFilters.priceFrom) qp.set('priceMin', updatedFilters.priceFrom);
+        if (updatedFilters.priceTo) qp.set('priceMax', updatedFilters.priceTo);
+        if (updatedFilters.powerFrom) qp.set('powerMin', updatedFilters.powerFrom);
+        if (updatedFilters.powerTo) qp.set('powerMax', updatedFilters.powerTo);
+        if (updatedFilters.capacityFrom) qp.set('capacityMin', updatedFilters.capacityFrom);
+        if (updatedFilters.capacityTo) qp.set('capacityMax', updatedFilters.capacityTo);
+        if (updatedFilters.rateFrom) qp.set('rateMin', updatedFilters.rateFrom);
+        if (updatedFilters.rateTo) qp.set('rateMax', updatedFilters.rateTo);
+        if ((updatedFilters.rateFrom || updatedFilters.rateTo) && updatedFilters.rateType !== 'credit') qp.set('rateType', updatedFilters.rateType);
+        if ((updatedFilters.rateFrom || updatedFilters.rateTo) && updatedFilters.rateBasis !== 'gross') qp.set('rateBasis', updatedFilters.rateBasis);
+        if (updatedFilters.query) qp.set('q', updatedFilters.query);
+        if (updatedFilters.cities.length) qp.set('city', updatedFilters.cities.join(','));
+        const qs = qp.toString();
+        navigate(`/samochody${qs ? `?${qs}` : ''}`);
+        return;
+      }
+    }
+
     setFilters(updatedFilters);
     setPage(1);
-  }, []);
+  }, [isOnBrandRoute, displayBrand, displayModel, params.model, navigate]);
 
   const handleClearFilters = React.useCallback(() => {
-    setFilters(emptyFilters);
-    setPage(1);
-  }, []);
+    handleFilterChange(emptyFilters);
+  }, [handleFilterChange]);
 
   const hasActiveFilters = React.useMemo(() =>
     Object.values(filters).some((v) =>
@@ -355,6 +481,53 @@ export default function SearchPage() {
   const pageTitleBase = 'Samochody nowe i używane z finansowaniem';
   const pageDescription = 'Tysiące sprawdzonych ofert nowych i używanych samochodów w jednym miejscu. Dobieramy kredyt, leasing lub wynajem długoterminowy — i prowadzimy Cię przez cały proces zakupu.';
 
+  // Odmiana liczebnika przy "oferta" (1 oferta / 2-4 oferty / 5+ ofert) — ten sam wzorzec co w
+  // backendowym seo-meta.ts (buildBrandMeta/buildModelMeta), żeby title/description się zgadzały.
+  const pluralOfert = (n: number): string => {
+    if (n === 1) return 'oferta';
+    const lastDigit = n % 10;
+    const lastTwo = n % 100;
+    if (lastDigit >= 2 && lastDigit <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return 'oferty';
+    return 'ofert';
+  };
+
+  // Strona marki/modelu (/samochody/:marka[/:model]) — H1/title/description wg wzorca z
+  // backendowego buildBrandMeta/buildModelMeta, tylko gdy slug jest już rozwiązany (katalog
+  // ofert lub CMS-fallback).
+  const brandPageH1 = displayModel
+    ? `${displayBrand} ${displayModel} — dostępne od ręki`
+    : displayBrand
+    ? `Samochody ${displayBrand} dostępne od ręki — nowe i używane`
+    : null;
+  const brandPageSeoTitle = displayModel
+    ? `${displayBrand} ${displayModel} (${totalCount} ${pluralOfert(totalCount)}) — dostępne od ręki`
+    : displayBrand
+    ? `${displayBrand} (${totalCount} ${pluralOfert(totalCount)}) — nowe i używane`
+    : null;
+  const brandPageDescription = displayBrand
+    ? `${displayModel ? `${displayBrand} ${displayModel}` : `Samochody ${displayBrand}`} dostępne od ręki — ${totalCount} ${pluralOfert(totalCount)}. Sprawdź aktualne ceny i dopasuj finansowanie: leasing, kredyt lub wynajem długoterminowy.`
+    : null;
+
+  // Canonicale filtrów (spec): pojedyncza marka → /samochody/<marka>, marka+model →
+  // /samochody/<marka>/<model>. Tylko na rodzinie tras /samochody — /search, /leasing, /kredyt
+  // (renderowane tym samym komponentem) zachowują swój dotychczasowy canonical.
+  const isSamochodyFamily = window.location.pathname === '/samochody' || window.location.pathname.startsWith('/samochody/');
+  const canonicalPath = React.useMemo(() => {
+    if (!isSamochodyFamily) return '/samochody';
+    // CMS-fallback (0 aktywnych ofert, patrz catalogUnresolved): canonical wprost z surowych
+    // slugów URL-a — sanitizeForSlug(displayBrand) mógłby się rozjechać z oryginalnym slugiem
+    // przy nietypowych znakach, a tu mamy pewne źródło.
+    if (cmsFallbackActive && params.marka) {
+      return params.model ? `/samochody/${params.marka}/${params.model}` : `/samochody/${params.marka}`;
+    }
+    if (filters.makes.length === 1 && filters.models.length === 1) {
+      return `/samochody/${sanitizeForSlug(filters.makes[0])}/${sanitizeForSlug(filters.models[0])}`;
+    }
+    if (filters.makes.length === 1) {
+      return `/samochody/${sanitizeForSlug(filters.makes[0])}`;
+    }
+    return '/samochody';
+  }, [isSamochodyFamily, filters.makes, filters.models, cmsFallbackActive, params.marka, params.model]);
 
   const siteName = React.useMemo(() => {
     if (!settings) return '';
@@ -371,13 +544,54 @@ export default function SearchPage() {
     return pick?.trim() || config.name;
   }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings, config.name]);
 
+  // Nieznany slug marki/modelu bez treści CMS — spójne z SSR resolverem (404). Sprawdzane po
+  // wszystkich hookach (Rules of Hooks), zanim wyrenderujemy właściwą stronę. Gdy katalog ofert
+  // nie rozpoznaje slugu, ale zapytanie o treść CMS jeszcze trwa, czekamy (stillResolvingCms)
+  // zamiast pokazywać przedwczesny NotFound.
+  if (notFoundFinal) {
+    return <NotFound />;
+  }
+  if (stillResolvingCms) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
+        <div className="container py-24 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const breadcrumbItems: Array<{ "@type": string; position: number; name: string; item: string }> = [
+    { "@type": "ListItem", position: 1, name: "Strona główna", item: window.location.origin },
+    { "@type": "ListItem", position: 2, name: "Samochody", item: `${window.location.origin}/samochody` },
+  ];
+  if (displayBrand) {
+    breadcrumbItems.push({
+      "@type": "ListItem", position: 3, name: displayBrand,
+      item: `${window.location.origin}/samochody/${params.marka}`,
+    });
+  }
+  if (displayBrand && displayModel) {
+    breadcrumbItems.push({
+      "@type": "ListItem", position: 4, name: `${displayBrand} ${displayModel}`,
+      item: `${window.location.origin}/samochody/${params.marka}/${params.model}`,
+    });
+  }
+
+  // Treść CMS nadpisuje meta title/description całkowicie (spójne z backendowym buildBrandMeta/
+  // buildModelMeta — cms.metaTitle zastępuje wygenerowany tytuł razem z sufiksem siteName).
+  const metaTitle = seoContent?.metaTitle || `${brandPageSeoTitle || pageTitleBase} | ${siteName}`;
+  const metaDescription = seoContent?.metaDescription || brandPageDescription || pageDescription;
+
   return (
     <div className="min-h-screen bg-background">
       <MetaHead
-        title={`${pageTitleBase} | ${siteName}`}
-        description={pageDescription}
+        title={metaTitle}
+        description={metaDescription}
         image={seoConfig?.homeOgImage}
-        canonical="/samochody"
+        canonical={canonicalPath}
         schema={{
           "@context": "https://schema.org",
           "@graph": [
@@ -389,17 +603,14 @@ export default function SearchPage() {
             },
             {
               "@type": "CollectionPage",
-              "name": pageTitleBase,
-              "description": pageDescription,
-              "url": `${window.location.origin}/samochody`,
+              "name": metaTitle,
+              "description": metaDescription,
+              "url": `${window.location.origin}${canonicalPath}`,
               "isPartOf": { "@type": "WebSite", "name": siteName, "url": window.location.origin },
             },
             {
               "@type": "BreadcrumbList",
-              "itemListElement": [
-                { "@type": "ListItem", "position": 1, "name": "Strona główna", "item": window.location.origin },
-                { "@type": "ListItem", "position": 2, "name": pageTitleBase, "item": `${window.location.origin}/samochody` },
-              ],
+              "itemListElement": breadcrumbItems,
             },
           ],
         }}
@@ -431,8 +642,8 @@ export default function SearchPage() {
         <div className="min-w-0">
           {/* Page heading */}
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-foreground">Samochody nowe i używane z elastycznym finansowaniem</h1>
-            <p className="text-sm text-muted-foreground mt-1">Tysiące sprawdzonych aut w jednym miejscu. Dobieramy kredyt, leasing lub wynajem długoterminowy i prowadzimy Cię przez cały proces — od wyboru pojazdu po odbiór kluczyków.</p>
+            <h1 className="text-2xl font-bold text-foreground">{brandPageH1 || 'Samochody nowe i używane z elastycznym finansowaniem'}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{brandPageDescription || 'Tysiące sprawdzonych aut w jednym miejscu. Dobieramy kredyt, leasing lub wynajem długoterminowy i prowadzimy Cię przez cały proces — od wyboru pojazdu po odbiór kluczyków.'}</p>
           </div>
 
           {/* Top filter bar on desktop */}
@@ -548,8 +759,21 @@ export default function SearchPage() {
               )}
               {!isLoading && !rentalLoading && listings.length === 0 && rentalVehicles.length === 0 && (
                 <div className="col-span-full py-16 text-center">
-                  <p className="text-lg font-medium text-foreground">{t('empty.noResults')}</p>
-                  <p className="text-muted-foreground mt-1">{t('empty.noResultsHint')}</p>
+                  {displayBrand ? (
+                    <>
+                      <p className="text-lg font-medium text-foreground">
+                        {t('waitlist.emptyTitle', 'Aktualnie brak ofert')} {displayModel ? `${displayBrand} ${displayModel}` : displayBrand} — {t('waitlist.emptyHint', 'zostaw kontakt, powiadomimy o nowej ofercie.')}
+                      </p>
+                      <div className="mt-6">
+                        <WaitlistForm make={displayBrand} model={displayModel} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-medium text-foreground">{t('empty.noResults')}</p>
+                      <p className="text-muted-foreground mt-1">{t('empty.noResultsHint')}</p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -564,8 +788,35 @@ export default function SearchPage() {
                 />
               </div>
             )}
+
+            {window.location.pathname === '/samochody' && popularBrands.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-lg font-semibold text-foreground mb-3">Popularne marki</h2>
+                <div className="flex flex-wrap gap-2">
+                  {popularBrands.map(([make, count]) => (
+                    <Link
+                      key={make}
+                      to={`/samochody/${sanitizeForSlug(make)}`}
+                      className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground hover:bg-secondary transition-colors"
+                    >
+                      {make} <span className="text-muted-foreground">({count})</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Treść CMS (F2) pod listingiem stron marki/modelu — HTML już zsanityzowany na backendzie */}
+        {seoContent?.html && (
+          <div className="container mt-12 mb-8 max-w-3xl">
+            <div
+              className="text-sm leading-relaxed text-muted-foreground [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:text-foreground [&_table]:mb-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border [&_td]:border-border [&_td]:p-2"
+              dangerouslySetInnerHTML={{ __html: seoContent.html }}
+            />
+          </div>
+        )}
 
         {financingContentType && <FinancingContentSection type={financingContentType} />}
       </main>

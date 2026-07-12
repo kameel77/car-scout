@@ -27,6 +27,7 @@ import {
     Blocks,
     LayoutGrid,
     Images,
+    FileEdit,
 } from 'lucide-react';
 import { useAuth, MemberRole, ROLE_LABELS } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -86,6 +87,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/admin/financing', label: 'Finansowanie', icon: Banknote, visibleTo: PLATFORM_ONLY },
     { href: '/admin/seo', label: 'SEO', icon: Search, visibleTo: PLATFORM_ONLY },
     { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/seo-content', label: 'Treści SEO', icon: FileEdit, visibleTo: PLATFORM_ONLY },
     { href: '/admin/partners', label: 'Reklamy partnerskie', icon: Handshake, visibleTo: PLATFORM_ONLY },
     { href: '/admin/api-partners', label: 'Klucze API', icon: Network, visibleTo: PLATFORM_ONLY },
     { href: '/admin/widgets', label: 'Widgety', icon: Blocks, visibleTo: PLATFORM_ONLY },

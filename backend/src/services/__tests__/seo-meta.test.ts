@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+    buildBrandMeta,
     buildListingMeta,
+    buildModelMeta,
     buildRentalMeta,
     buildStaticMeta,
     defaultMeta,
@@ -151,6 +153,30 @@ describe('buildListingMeta', () => {
         expect(ld.itemListElement[1].name).toBe('Kredyt samochodowy');
         expect(ld.itemListElement[1].item).toBe('https://dev.motolia.pl/kredyt');
         expect(m.bodyHtml).toContain('<li><a href="/kredyt">Kredyt samochodowy</a></li>');
+    });
+});
+
+describe('buildListingMeta breadcrumb: brand/model levels', () => {
+    it('inserts brand and brand+model levels between category and offer name, links to new URLs', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        const ld = m.jsonLd as any[];
+        const breadcrumb = ld[1];
+        expect(breadcrumb['@type']).toBe('BreadcrumbList');
+        expect(breadcrumb.itemListElement).toHaveLength(5);
+        expect(breadcrumb.itemListElement[2]).toEqual({
+            '@type': 'ListItem', position: 3, name: 'Ford', item: 'https://dev.motolia.pl/samochody/ford',
+        });
+        expect(breadcrumb.itemListElement[3]).toEqual({
+            '@type': 'ListItem', position: 4, name: 'Ford Puma', item: 'https://dev.motolia.pl/samochody/ford/puma',
+        });
+        expect(breadcrumb.itemListElement[4].position).toBe(5);
+        expect(m.bodyHtml).toContain('<li><a href="/samochody/ford">Ford</a></li>');
+        expect(m.bodyHtml).toContain('<li><a href="/samochody/ford/puma">Ford Puma</a></li>');
+    });
+
+    it('uses canonical brand name (normalizeBrand) for the breadcrumb, not the raw make field', () => {
+        const m = buildListingMeta({ ...LISTING, make: 'skoda', model: 'Octavia' }, 'skoda-octavia-abc', 'oferta', ctx);
+        expect(m.bodyHtml).toContain('<li><a href="/samochody/skoda">Škoda</a></li>');
     });
 });
 
@@ -555,6 +581,197 @@ describe('buildStaticMeta', () => {
         expect(m.bodyHtml).not.toContain('Paginacja');
         const cars = buildStaticMeta('/samochody', ctx, listings)!;
         expect(cars.bodyHtml).not.toContain('Zobacz wszystkie samochody');
+    });
+});
+
+describe('buildBrandMeta', () => {
+    const models = [
+        { name: 'Octavia', slug: 'octavia', count: 5 },
+        { name: 'Fabia', slug: 'fabia', count: 2 },
+    ];
+    const otherBrands = [{ name: 'BMW', slug: 'bmw', count: 10 }];
+    const listings = [
+        { id: 'l1', make: 'Škoda', model: 'Octavia', version: null, productionYear: 2023, pricePln: 89900, bodyType: 'kombi', fuelType: 'diesel', slug: 'skoda-octavia-l1' },
+    ];
+
+    it('is always self-canonical (never noindex, count-independent)', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 7, { min: 59900, max: 189900 }, models, otherBrands, listings, ctx);
+        expect(m.canonical).toBe('https://dev.motolia.pl/samochody/skoda');
+        expect(m.noindex).toBeUndefined();
+        expect(m.status).toBe(200);
+    });
+
+    it('title/description/h1 include the real offer count', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 7, { min: 59900, max: 189900 }, models, otherBrands, listings, ctx);
+        expect(m.title).toContain('Škoda (7 ofert)');
+        expect(m.title).toContain('| Motolia');
+        expect(m.description).toContain('7 ofert');
+        expect(m.bodyHtml).toContain('<h1>Samochody Škoda dostępne od ręki — nowe i używane</h1>');
+    });
+
+    it('links to model pages and to other brands (linkowanie wewnętrzne)', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 7, { min: 59900, max: 189900 }, models, otherBrands, listings, ctx);
+        expect(m.bodyHtml).toContain('<a href="/samochody/skoda/octavia">Octavia</a>');
+        expect(m.bodyHtml).toContain('<a href="/samochody/skoda/fabia">Fabia</a>');
+        expect(m.bodyHtml).toContain('<a href="/samochody/bmw">BMW</a>');
+    });
+
+    it('breadcrumb: Home > Samochody > Marka', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 7, { min: 59900, max: 189900 }, models, otherBrands, listings, ctx);
+        const breadcrumb = (m.jsonLd as any[]).find(e => e['@type'] === 'BreadcrumbList');
+        expect(breadcrumb.itemListElement).toEqual([
+            { '@type': 'ListItem', position: 1, name: 'Strona główna', item: 'https://dev.motolia.pl' },
+            { '@type': 'ListItem', position: 2, name: 'Samochody', item: 'https://dev.motolia.pl/samochody' },
+            { '@type': 'ListItem', position: 3, name: 'Škoda', item: 'https://dev.motolia.pl/samochody/skoda' },
+        ]);
+    });
+
+    it('dynamic FAQ (2-3 items, real data) with FAQPage JSON-LD matching visible HTML', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 7, { min: 59900, max: 189900 }, models, otherBrands, listings, ctx);
+        expect(m.bodyHtml).toContain('od 59 900 do 189 900 zł');
+        expect(m.bodyHtml).toContain('Jakie modele Škoda są dostępne?');
+        const faqPage = (m.jsonLd as any[]).find(e => e['@type'] === 'FAQPage');
+        expect(faqPage.mainEntity.length).toBeGreaterThanOrEqual(2);
+        expect(faqPage.mainEntity.length).toBeLessThanOrEqual(3);
+    });
+
+    it('at 0 offers: dynamic FAQ disappears entirely, no fabricated numbers', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 0, { min: null, max: null }, [], otherBrands, [], ctx);
+        expect(m.bodyHtml).not.toContain('Najczęstsze pytania');
+        expect(JSON.stringify(m.jsonLd)).not.toContain('FAQPage');
+        expect(m.canonical).toBe('https://dev.motolia.pl/samochody/skoda'); // still self-canonical
+        expect(m.bodyHtml).toContain('Aktualnie brak ofert Škoda — zostaw kontakt, powiadomimy o nowej ofercie.');
+        // "podobne auta" — linki do innych marek zostają mimo braku ofert (waitlist, F3)
+        expect(m.bodyHtml).toContain('<a href="/samochody/bmw">BMW</a>');
+    });
+
+    it('paginated: title/h1 suffix and canonical carry ?page=N', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 40, { min: 50000, max: 100000 }, models, otherBrands, listings, ctx, { page: 2, totalPages: 3 });
+        expect(m.title).toContain('— strona 2');
+        expect(m.bodyHtml).toContain('<h1>Samochody Škoda dostępne od ręki — nowe i używane — strona 2</h1>');
+        expect(m.canonical).toBe('https://dev.motolia.pl/samochody/skoda?page=2');
+        expect(m.bodyHtml).toContain('<a href="/samochody/skoda">1</a>');
+        expect(m.bodyHtml).toContain('href="/samochody/skoda?page=3"');
+    });
+});
+
+describe('buildBrandMeta with CMS content', () => {
+    const models = [{ name: 'Octavia', slug: 'octavia', count: 5 }];
+    const otherBrands = [{ name: 'BMW', slug: 'bmw', count: 10 }];
+    const listings = [
+        { id: 'l1', make: 'Škoda', model: 'Octavia', version: null, productionYear: 2023, pricePln: 89900, bodyType: 'kombi', fuelType: 'diesel', slug: 'skoda-octavia-l1' },
+    ];
+    const cms = {
+        html: '<p>Treść redakcyjna o Škodzie.</p>',
+        faq: [{ questionPl: 'Czy Škoda jest niezawodna?', answerPl: 'Tak, zwykle tak.' }],
+        metaTitle: 'Škoda — CMS title',
+        metaDescription: 'Škoda — CMS description',
+    };
+
+    it('CMS metaTitle/metaDescription override the generated defaults', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 7, { min: 59900, max: 189900 }, models, otherBrands, listings, ctx, undefined, cms);
+        expect(m.title).toBe('Škoda — CMS title');
+        expect(m.description).toBe('Škoda — CMS description');
+    });
+
+    it('CMS html is inserted into bodyHtml, and CMS FAQ is appended after generated FAQ (visible + FAQPage)', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 7, { min: 59900, max: 189900 }, models, otherBrands, listings, ctx, undefined, cms);
+        expect(m.bodyHtml).toContain('<div class="cms-content"><p>Treść redakcyjna o Škodzie.</p></div>');
+        expect(m.bodyHtml).toContain('<h3>Czy Škoda jest niezawodna?</h3>');
+        const faqPage = (m.jsonLd as any[]).find(e => e['@type'] === 'FAQPage');
+        expect(faqPage.mainEntity.at(-1).name).toBe('Czy Škoda jest niezawodna?');
+        // generowane FAQ idzie przed CMS FAQ — ta sama kolejność co w widocznym HTML
+        expect(faqPage.mainEntity.length).toBeGreaterThan(1);
+    });
+
+    it('paginated title suffix is appended after the CMS override', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 40, { min: 50000, max: 100000 }, models, otherBrands, listings, ctx, { page: 2, totalPages: 3 }, cms);
+        expect(m.title).toBe('Škoda — CMS title — strona 2');
+    });
+
+    it('without CMS content, behaves exactly as before (no cms-content div, no override)', () => {
+        const m = buildBrandMeta('Škoda', 'skoda', 7, { min: 59900, max: 189900 }, models, otherBrands, listings, ctx);
+        expect(m.bodyHtml).not.toContain('cms-content');
+        expect(m.title).toContain('Škoda (7 ofert)');
+    });
+});
+
+describe('buildModelMeta', () => {
+    const listings = [
+        { id: 'l1', make: 'Škoda', model: 'Octavia', version: null, productionYear: 2023, pricePln: 89900, bodyType: 'kombi', fuelType: 'diesel', slug: 'skoda-octavia-l1' },
+        { id: 'l2', make: 'Škoda', model: 'Octavia', version: 'RS', productionYear: 2024, pricePln: 129900, bodyType: 'kombi', fuelType: 'diesel', slug: 'skoda-octavia-rs-l2' },
+    ];
+
+    it('indexing threshold: noindex below 2 active offers, self-canonical either way', () => {
+        const one = buildModelMeta('Škoda', 'Octavia', 'skoda', 'octavia', 1, { min: 89900, max: 89900 }, [], listings.slice(0, 1), ctx);
+        expect(one.noindex).toBe(true);
+        expect(one.status).toBe(200);
+        expect(one.canonical).toBe('https://dev.motolia.pl/samochody/skoda/octavia');
+
+        const zero = buildModelMeta('Škoda', 'Octavia', 'skoda', 'octavia', 0, { min: null, max: null }, [], [], ctx);
+        expect(zero.noindex).toBe(true);
+        expect(zero.status).toBe(200);
+    });
+
+    it('indexing threshold: indexable at >=2 active offers', () => {
+        const m = buildModelMeta('Škoda', 'Octavia', 'skoda', 'octavia', 2, { min: 89900, max: 129900 }, [], listings, ctx);
+        expect(m.noindex).toBe(false);
+    });
+
+    it('title/h1/breadcrumb reflect marka+model', () => {
+        const m = buildModelMeta('Škoda', 'Octavia', 'skoda', 'octavia', 2, { min: 89900, max: 129900 }, [], listings, ctx);
+        expect(m.title).toContain('Škoda Octavia (2 oferty)');
+        expect(m.bodyHtml).toContain('<h1>Škoda Octavia — dostępne od ręki</h1>');
+        expect(m.bodyHtml).toContain('<li><a href="/samochody/skoda">Škoda</a></li>');
+        const breadcrumb = (m.jsonLd as any[]).find(e => e['@type'] === 'BreadcrumbList');
+        expect(breadcrumb.itemListElement).toHaveLength(4);
+        expect(breadcrumb.itemListElement[3]).toEqual({
+            '@type': 'ListItem', position: 4, name: 'Škoda Octavia', item: 'https://dev.motolia.pl/samochody/skoda/octavia',
+        });
+    });
+
+    it('at 0 offers: dynamic FAQ disappears, page still renders with sibling model links', () => {
+        const siblings = [{ name: 'Fabia', slug: 'fabia', count: 3 }];
+        const m = buildModelMeta('Škoda', 'Superb', 'skoda', 'superb', 0, { min: null, max: null }, siblings, [], ctx);
+        expect(JSON.stringify(m.jsonLd)).not.toContain('FAQPage');
+        expect(m.noindex).toBe(true);
+        expect(m.status).toBe(200);
+        expect(m.bodyHtml).toContain('Aktualnie brak ofert Škoda Superb — zostaw kontakt, powiadomimy o nowej ofercie.');
+        expect(m.bodyHtml).toContain('<a href="/samochody/skoda/fabia">Fabia</a>');
+    });
+
+    describe('with CMS content', () => {
+        const cms = {
+            html: '<p>Treść redakcyjna o Octavii.</p>',
+            faq: [{ questionPl: 'Czy Octavia RS jest szybka?', answerPl: 'Tak, bardzo.' }],
+            metaTitle: 'Octavia — CMS title',
+            metaDescription: 'Octavia — CMS description',
+        };
+
+        it('indexable (noindex: false) at 0 offers when CMS content is published — persistence override', () => {
+            const zero = buildModelMeta('Škoda', 'Octavia', 'skoda', 'octavia', 0, { min: null, max: null }, [], [], ctx, undefined, cms);
+            expect(zero.noindex).toBe(false);
+            expect(zero.status).toBe(200);
+        });
+
+        it('indexable (noindex: false) at 1 offer when CMS content is published — below the normal >=2 threshold', () => {
+            const one = buildModelMeta('Škoda', 'Octavia', 'skoda', 'octavia', 1, { min: 89900, max: 89900 }, [], listings.slice(0, 1), ctx, undefined, cms);
+            expect(one.noindex).toBe(false);
+        });
+
+        it('CMS metaTitle/metaDescription override the generated defaults', () => {
+            const m = buildModelMeta('Škoda', 'Octavia', 'skoda', 'octavia', 2, { min: 89900, max: 129900 }, [], listings, ctx, undefined, cms);
+            expect(m.title).toBe('Octavia — CMS title');
+            expect(m.description).toBe('Octavia — CMS description');
+        });
+
+        it('CMS html is inserted into bodyHtml, and CMS FAQ is appended after generated FAQ', () => {
+            const m = buildModelMeta('Škoda', 'Octavia', 'skoda', 'octavia', 2, { min: 89900, max: 129900 }, [], listings, ctx, undefined, cms);
+            expect(m.bodyHtml).toContain('<div class="cms-content"><p>Treść redakcyjna o Octavii.</p></div>');
+            expect(m.bodyHtml).toContain('<h3>Czy Octavia RS jest szybka?</h3>');
+            const faqPage = (m.jsonLd as any[]).find(e => e['@type'] === 'FAQPage');
+            expect(faqPage.mainEntity.at(-1).name).toBe('Czy Octavia RS jest szybka?');
+        });
     });
 });
 

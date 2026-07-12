@@ -87,18 +87,23 @@ export const sendLeadEmail = async (
     });
 
     const isPriceNegotiation = lead.leadType === 'price_negotiation';
-    const isQuickContact = !lead.listingId && !isPriceNegotiation;
+    const isWaitlist = lead.leadType === 'waitlist';
+    const isQuickContact = !lead.listingId && !isPriceNegotiation && !isWaitlist;
     const isFinancingLead = !!lead.financingProductId;
 
     let subjectTitle = 'Nowy szybki kontakt';
     if (isPriceNegotiation) {
         subjectTitle = 'Negocjacja ceny pojazdu';
+    } else if (isWaitlist) {
+        subjectTitle = 'Zgłoszenie na listę oczekujących';
     } else if (!isQuickContact) {
         subjectTitle = isFinancingLead ? 'Zgłoszenie finansowania auta' : 'Nowe zapytanie o auto';
     }
 
     const subject = isQuickContact
         ? `[${siteName}] ${subjectTitle} (Tel): ${lead.name}`
+        : isWaitlist
+        ? `[${siteName}] ${subjectTitle}: ${lead.name}`
         : `[${siteName}] ${subjectTitle}: ${lead.listing?.make} ${lead.listing?.model}`;
 
     const listingSlug = lead.listing?.slug || [
@@ -125,7 +130,9 @@ export const sendLeadEmail = async (
             <li><strong>Dealer:</strong> ID: ${lead.listing.dealerId || 'Brak'}</li>
         </ul>
         <p><a href="${frontendUrl}/oferta/${listingSlug}">Link do ogłoszenia</a></p>
-    ` : '<p><strong>Typ zgłoszenia:</strong> Zapytanie ogólne / Szybki kontakt ze strony głównej</p>';
+    ` : isWaitlist
+        ? '<p><strong>Typ zgłoszenia:</strong> Lista oczekujących — brak aktywnych ofert dla poszukiwanej marki/modelu</p>'
+        : '<p><strong>Typ zgłoszenia:</strong> Zapytanie ogólne / Szybki kontakt ze strony głównej</p>';
 
     const financingDetails = lead.financingProductId ? `
         <h3>Informacje o finansowaniu wybrane w kalkulatorze</h3>

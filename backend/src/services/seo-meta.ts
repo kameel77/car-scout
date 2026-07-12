@@ -1,3 +1,6 @@
+import { normalizeBrand, normalizeModel } from './brand-normalization.service.js';
+import { slugifyBrandName } from './brand-pages.service.js';
+
 export interface PageMeta {
     title: string;
     description: string;
@@ -187,11 +190,22 @@ export function buildListingMeta(
     const safeName = escapeHtml(name);
     const imageUrl = l.primaryImageUrl ? absoluteUrl(l.primaryImageUrl, ctx.baseUrl) : null;
 
+    // Poziomy marki i marka/model w breadcrumbie linkują do nowych stron katalogowych
+    // (/samochody/:marka, /samochody/:marka/:model) — kanoniczna nazwa/slug, nie surowe dane.
+    const brandName = normalizeBrand(l.make);
+    const modelName = normalizeModel(l.model);
+    const brandSlug = slugifyBrandName(brandName);
+    const modelSlug = slugifyBrandName(modelName);
+    const safeBrand = escapeHtml(brandName);
+    const safeBrandModel = escapeHtml(`${brandName} ${modelName}`);
+
     const bodyHtml = `
 <nav aria-label="Breadcrumb">
   <ol>
     <li><a href="/">Strona główna</a></li>
     <li><a href="${breadcrumbLevel2.path}">${breadcrumbLevel2.name}</a></li>
+    <li><a href="/samochody/${brandSlug}">${safeBrand}</a></li>
+    <li><a href="/samochody/${brandSlug}/${modelSlug}">${safeBrandModel}</a></li>
     <li>${safeName}</li>
   </ol>
 </nav>
@@ -294,7 +308,9 @@ export function buildListingMeta(
         itemListElement: [
             { '@type': 'ListItem', position: 1, name: 'Strona główna', item: ctx.baseUrl },
             { '@type': 'ListItem', position: 2, name: breadcrumbLevel2.name, item: `${ctx.baseUrl}${breadcrumbLevel2.path}` },
-            { '@type': 'ListItem', position: 3, name: name, item: canonical }
+            { '@type': 'ListItem', position: 3, name: brandName, item: `${ctx.baseUrl}/samochody/${brandSlug}` },
+            { '@type': 'ListItem', position: 4, name: `${brandName} ${modelName}`, item: `${ctx.baseUrl}/samochody/${brandSlug}/${modelSlug}` },
+            { '@type': 'ListItem', position: 5, name: name, item: canonical }
         ]
     });
 
@@ -793,6 +809,283 @@ function paginationNavHtml(basePath: string, { page, totalPages }: StaticPaginat
 </nav>`;
 }
 
+// Deklinacja liczebnika przy słowie "oferta" (1 oferta / 2-4 oferty / 5+ ofert; 12-14 to wyjątek → "ofert")
+function pluralOfert(n: number): string {
+    if (n === 1) return 'oferta';
+    const lastDigit = n % 10;
+    const lastTwo = n % 100;
+    if (lastDigit >= 2 && lastDigit <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return 'oferty';
+    return 'ofert';
+}
+
+function offersCountLabel(n: number): string {
+    return `${n} ${pluralOfert(n)}`;
+}
+
+export interface BrandLinkEntry {
+    name: string; // marka lub model — nazwa do wyświetlenia
+    slug: string;
+    count: number;
+}
+
+// Linkowanie wewnętrzne: "Popularne marki" na /samochody, "Modele marki" i "Inne marki"
+// na stronach marek/modeli — ten sam znacznik, różny basePath/nagłówek.
+function brandLinksSectionHtml(heading: string, basePath: string, entries: BrandLinkEntry[], max: number = 20): string {
+    if (!entries.length) return '';
+    return `
+  <section>
+    <h2>${escapeHtml(heading)}</h2>
+    <ul>
+      ${entries.slice(0, max).map(e => `<li><a href="${basePath}/${e.slug}">${escapeHtml(e.name)}</a> (${e.count})</li>`).join('\n')}
+    </ul>
+  </section>`;
+}
+
+// FAQ dynamiczne (2–3 pozycje) dla stron marek/modeli — z żywych danych: przedział cen
+// aktywnych ofert, dostępne modele/liczba ofert, formy finansowania. Znika przy 0 ofert
+// (zakaz zmyślonych danych — CLAUDE.md/spec). `models` obecne tylko na stronie marki.
+function buildGeneratedBrandFaq(
+    name: string,
+    count: number,
+    priceRange: { min: number | null; max: number | null },
+    models: BrandLinkEntry[] | undefined,
+    ctx: BrandCtx
+): FaqItem[] {
+    if (count === 0) return [];
+    const items: FaqItem[] = [];
+    if (priceRange.min != null && priceRange.max != null) {
+        const priceText = priceRange.min === priceRange.max
+            ? `${priceRange.min.toLocaleString('pl-PL')} zł`
+            : `od ${priceRange.min.toLocaleString('pl-PL')} do ${priceRange.max.toLocaleString('pl-PL')} zł`;
+        items.push({
+            questionPl: `Ile kosztują samochody ${name}?`,
+            answerPl: `Aktualne ceny ${name} w ofercie ${ctx.brandName} mieszczą się w przedziale ${priceText}, w zależności od modelu, rocznika i wersji.`,
+        });
+    }
+    if (models && models.length > 0) {
+        const modelNames = models.slice(0, 8).map(m => m.name).join(', ');
+        items.push({
+            questionPl: `Jakie modele ${name} są dostępne?`,
+            answerPl: `W ofercie ${ctx.brandName} dostępne są obecnie modele: ${modelNames} — łącznie ${offersCountLabel(count)}.`,
+        });
+    } else {
+        items.push({
+            questionPl: `Ile ofert ${name} jest obecnie dostępnych?`,
+            answerPl: `Obecnie w ofercie ${ctx.brandName} dostępnych jest ${offersCountLabel(count)} ${name}.`,
+        });
+    }
+    items.push({
+        questionPl: `Jak sfinansować zakup ${name}?`,
+        answerPl: `${name} możesz sfinansować kredytem samochodowym, leasingiem lub wynajmem długoterminowym — wybierz formę finansowania przy wybranej ofercie, a doradca ${ctx.brandName} pomoże dobrać warunki.`,
+    });
+    return items;
+}
+
+export interface BrandPricingRange {
+    min: number | null;
+    max: number | null;
+}
+
+// Treść CMS (F2, SeoContentPage) dla strony marki/modelu — meta nadpisuje domyślne,
+// html wstawiany pod listingiem, faq doklejane PO dynamicznym FAQ (spec §2/§3).
+export interface CmsPageContent {
+    html: string;
+    faq: FaqItem[];
+    metaTitle: string | null;
+    metaDescription: string | null;
+}
+
+// Strona marki (/samochody/:marka) — zawsze self-canonical i indeksowalna (polityka progowa w spec).
+export function buildBrandMeta(
+    make: string,
+    brandSlug: string,
+    count: number,
+    priceRange: BrandPricingRange,
+    models: BrandLinkEntry[],
+    otherBrands: BrandLinkEntry[],
+    listings: RelatedListing[],
+    ctx: BrandCtx,
+    pagination?: StaticPagination,
+    cms?: CmsPageContent
+): PageMeta {
+    const safeName = escapeHtml(make);
+    const isPaged = !!pagination && pagination.page > 1;
+    const canonicalBase = `/samochody/${brandSlug}`;
+    const countLabel = offersCountLabel(count);
+    const baseTitle = cms?.metaTitle || `${make} (${countLabel}) — nowe i używane | ${ctx.brandName}`;
+    const title = isPaged ? `${baseTitle} — strona ${pagination!.page}` : baseTitle;
+    const description = cms?.metaDescription || `Samochody ${make} dostępne od ręki — ${countLabel}. Sprawdź aktualne ceny i dopasuj finansowanie: leasing, kredyt lub wynajem długoterminowy.`;
+    const baseH1 = `Samochody ${safeName} dostępne od ręki — nowe i używane`;
+    const h1 = isPaged ? `${baseH1} — strona ${pagination!.page}` : baseH1;
+
+    const faq = [...buildGeneratedBrandFaq(make, count, priceRange, models, ctx), ...(cms?.faq ?? [])];
+
+    const bodyHtml = `
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Strona główna</a></li>
+    <li><a href="/samochody">Samochody</a></li>
+    <li>${safeName}</li>
+  </ol>
+</nav>
+<article>
+  <h1>${h1}</h1>
+  ${listings.length > 0 ? `
+  <section>
+    <h2>Oferty</h2>
+    <ul>
+      ${listings.map(l => listingLinkHtml(l, '/oferta')).join('\n')}
+    </ul>
+  </section>` : `<p>Aktualnie brak ofert ${safeName} — zostaw kontakt, powiadomimy o nowej ofercie.</p>`}
+  ${pagination ? paginationNavHtml(canonicalBase, pagination) : ''}
+  ${cms?.html ? `<div class="cms-content">${cms.html}</div>` : ''}
+  ${brandLinksSectionHtml(`Modele ${make}`, canonicalBase, models)}
+  ${brandLinksSectionHtml('Popularne marki', '/samochody', otherBrands)}
+  ${faqSectionHtml(faq, 'Najczęstsze pytania')}
+</article>`.trim();
+
+    const jsonLd: any[] = [];
+    if (listings.length > 0) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            itemListElement: listings.map((l, i) => ({
+                '@type': 'ListItem',
+                position: i + 1,
+                url: `${ctx.baseUrl}/oferta/${l.slug}`,
+            })),
+        });
+    }
+    jsonLd.push({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Strona główna', item: ctx.baseUrl },
+            { '@type': 'ListItem', position: 2, name: 'Samochody', item: `${ctx.baseUrl}/samochody` },
+            { '@type': 'ListItem', position: 3, name: make, item: `${ctx.baseUrl}${canonicalBase}` },
+        ],
+    });
+    if (faq.length > 0) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faq.map(f => ({
+                '@type': 'Question',
+                name: stripTags(f.questionPl),
+                acceptedAnswer: { '@type': 'Answer', text: stripTags(f.answerPl) },
+            })),
+        });
+    }
+
+    return {
+        title,
+        description,
+        canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination!.page}` : ''}`,
+        bodyHtml,
+        jsonLd,
+        status: 200,
+    };
+}
+
+// Strona modelu (/samochody/:marka/:model) — self-canonical + indeksowalna tylko przy
+// count >= 2 (polityka progowa w spec); poniżej progu: 200 + noindex, treść zostaje.
+export function buildModelMeta(
+    make: string,
+    model: string,
+    brandSlug: string,
+    modelSlug: string,
+    count: number,
+    priceRange: BrandPricingRange,
+    siblingModels: BrandLinkEntry[],
+    listings: RelatedListing[],
+    ctx: BrandCtx,
+    pagination?: StaticPagination,
+    cms?: CmsPageContent
+): PageMeta {
+    const name = `${make} ${model}`;
+    const safeName = escapeHtml(name);
+    const safeBrand = escapeHtml(make);
+    const isPaged = !!pagination && pagination.page > 1;
+    const canonicalBase = `/samochody/${brandSlug}/${modelSlug}`;
+    const countLabel = offersCountLabel(count);
+    const baseTitle = cms?.metaTitle || `${name} (${countLabel}) — dostępne od ręki | ${ctx.brandName}`;
+    const title = isPaged ? `${baseTitle} — strona ${pagination!.page}` : baseTitle;
+    const description = cms?.metaDescription || `${name} dostępne od ręki — ${countLabel}. Sprawdź aktualne ceny i dopasuj finansowanie: leasing, kredyt lub wynajem długoterminowy.`;
+    const baseH1 = `${safeName} — dostępne od ręki`;
+    const h1 = isPaged ? `${baseH1} — strona ${pagination!.page}` : baseH1;
+
+    const faq = [...buildGeneratedBrandFaq(name, count, priceRange, undefined, ctx), ...(cms?.faq ?? [])];
+
+    const bodyHtml = `
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Strona główna</a></li>
+    <li><a href="/samochody">Samochody</a></li>
+    <li><a href="/samochody/${brandSlug}">${safeBrand}</a></li>
+    <li>${safeName}</li>
+  </ol>
+</nav>
+<article>
+  <h1>${h1}</h1>
+  ${listings.length > 0 ? `
+  <section>
+    <h2>Oferty</h2>
+    <ul>
+      ${listings.map(l => listingLinkHtml(l, '/oferta')).join('\n')}
+    </ul>
+  </section>` : `<p>Aktualnie brak ofert ${safeName} — zostaw kontakt, powiadomimy o nowej ofercie.</p>`}
+  ${pagination ? paginationNavHtml(canonicalBase, pagination) : ''}
+  ${cms?.html ? `<div class="cms-content">${cms.html}</div>` : ''}
+  ${brandLinksSectionHtml(`Inne modele ${make}`, `/samochody/${brandSlug}`, siblingModels)}
+  ${faqSectionHtml(faq, 'Najczęstsze pytania')}
+</article>`.trim();
+
+    const jsonLd: any[] = [];
+    if (listings.length > 0) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            itemListElement: listings.map((l, i) => ({
+                '@type': 'ListItem',
+                position: i + 1,
+                url: `${ctx.baseUrl}/oferta/${l.slug}`,
+            })),
+        });
+    }
+    jsonLd.push({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Strona główna', item: ctx.baseUrl },
+            { '@type': 'ListItem', position: 2, name: 'Samochody', item: `${ctx.baseUrl}/samochody` },
+            { '@type': 'ListItem', position: 3, name: make, item: `${ctx.baseUrl}/samochody/${brandSlug}` },
+            { '@type': 'ListItem', position: 4, name, item: `${ctx.baseUrl}${canonicalBase}` },
+        ],
+    });
+    if (faq.length > 0) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faq.map(f => ({
+                '@type': 'Question',
+                name: stripTags(f.questionPl),
+                acceptedAnswer: { '@type': 'Answer', text: stripTags(f.answerPl) },
+            })),
+        });
+    }
+
+    return {
+        title,
+        description,
+        canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination!.page}` : ''}`,
+        // Model z opublikowaną treścią CMS jest indeksowalny nawet poniżej progu 2 ofert (spec §1/F2).
+        noindex: cms ? false : count < 2,
+        bodyHtml,
+        jsonLd,
+        status: 200,
+    };
+}
+
 export interface OrgSettings {
     legalCompanyName?: string | null;
     legalAddress?: string | null;
@@ -809,7 +1102,8 @@ export function buildStaticMeta(
     listingsBasePath: string = '/oferta',
     article?: FinancingArticle,
     pagination?: StaticPagination,
-    orgSettings?: OrgSettings
+    orgSettings?: OrgSettings,
+    popularBrands: BrandLinkEntry[] = []
 ): PageMeta | null {
     if (path === '/') {
         // h1 jest na stronie już w statycznym home-shell (index.html) — tu tylko wzmocniony akapit,
@@ -890,6 +1184,7 @@ ${listings.length > 0 ? `
   <p><a href="/samochody">Zobacz wszystkie samochody</a></p>` : ''}
 </section>` : ''}
 ${pagination ? paginationNavHtml(canonicalBase, pagination) : ''}
+${path === '/samochody' ? brandLinksSectionHtml('Popularne marki', '/samochody', popularBrands) : ''}
 ${article ? `
 <article>
 ${article.html}

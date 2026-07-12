@@ -84,6 +84,16 @@ interface NegotiationLeadPayload {
     consentPrivacy?: boolean;
 }
 
+interface WaitlistLeadPayload {
+    make: string;
+    model?: string;
+    name: string;
+    email: string;
+    phone?: string;
+    consentMarketing?: boolean;
+    consentPrivacy?: boolean;
+}
+
 interface RentalLeadPayload {
     rentalVehicleId: string;
     name: string;
@@ -324,6 +334,47 @@ export async function leadRoutes(fastify: FastifyInstance) {
         // Wyślij powiadomienie email
         sendLeadEmail(fastify, lead as any, getBaseUrl(request)).catch((err: any) => {
             fastify.log.error(err, 'Error sending rental lead notification email');
+        });
+
+        return { lead };
+    });
+
+    // Create new waitlist lead — strony marki/modelu bez aktywnych ofert (F3, spec §1).
+    // Bez listingId/rentalVehicleId: marka/model poszukiwana przez klienta trafia do message
+    // (konwencja z /api/leads/negotiation) i jest widoczna/filtrowalna w miniCRM leadType='waitlist'.
+    fastify.post('/api/leads/waitlist', {
+        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+    }, async (request, reply) => {
+        const data = request.body as WaitlistLeadPayload & { turnstileToken?: string };
+
+        const isTokenValid = await verifyTurnstile(data.turnstileToken, request.ip, fastify.log);
+        if (!isTokenValid) {
+            return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
+        }
+
+        if (!data.make || !data.name || !data.email) {
+            return reply.code(400).send({ error: 'make, name and email are required' });
+        }
+
+        const message = `Lista oczekujących: powiadom o nowej ofercie ${data.make}${data.model ? ` ${data.model}` : ''}.`;
+
+        const lead = await fastify.prisma.lead.create({
+            data: {
+                leadType: 'waitlist',
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                preferredContact: 'email',
+                message,
+                status: 'new',
+                referenceNumber: generateReference(),
+                consentMarketingAt: data.consentMarketing ? new Date() : null,
+                consentPrivacyAt: data.consentPrivacy ? new Date() : null,
+            }
+        });
+
+        sendLeadEmail(fastify, lead as any, getBaseUrl(request)).catch((err: any) => {
+            fastify.log.error(err, 'Error sending waitlist lead notification email');
         });
 
         return { lead };

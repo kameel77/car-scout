@@ -10,6 +10,7 @@ import type {
 import type { SeoConfig } from '@/components/seo/SeoManager';
 import type { CrmTrackingVisit, CrmTrackingResponse } from '@/types/crmTracking';
 import type { PartnerAd, PartnerAdPayload } from '@/types/partnerAds';
+import type { PublicSeoContent, SeoContentPage, SeoContentPayload } from '@/types/seo-content';
 
 export interface PartnerApiIntegration {
     id: string;
@@ -1141,6 +1142,30 @@ export const leadsApi = {
         return response.json();
     },
 
+    submitWaitlistLead: async (data: {
+        make: string;
+        model?: string;
+        name: string;
+        email: string;
+        phone?: string;
+        consentMarketing: boolean;
+        consentPrivacy: boolean;
+        turnstileToken?: string;
+    }) => {
+        const response = await fetch(`${API_BASE_URL}/api/leads/waitlist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to submit waitlist lead');
+        }
+
+        return response.json();
+    },
+
     getLeads: async (token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/leads`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -1431,6 +1456,55 @@ export const seoApi = {
             throw new Error(error.error || 'Failed to update SEO config');
         }
 
+        return response.json();
+    }
+};
+
+// SEO Content (CMS) API — strony marek/modeli (/samochody/:marka[/:model])
+export const seoContentApi = {
+    getPublic: async (path: string): Promise<PublicSeoContent | null> => {
+        const response = await fetch(`${API_BASE_URL}/api/seo-content?path=${encodeURIComponent(path)}`);
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Failed to fetch SEO content');
+        return response.json();
+    },
+    list: async (token: string): Promise<{ pages: SeoContentPage[] }> => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/seo-content`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch SEO content pages');
+        return response.json();
+    },
+    create: async (payload: SeoContentPayload, token: string): Promise<{ page: SeoContentPage }> => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/seo-content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to create SEO content page');
+        }
+        return response.json();
+    },
+    update: async (id: string, payload: Partial<SeoContentPayload>, token: string): Promise<{ page: SeoContentPage }> => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/seo-content/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to update SEO content page');
+        }
+        return response.json();
+    },
+    delete: async (id: string, token: string): Promise<{ success: boolean }> => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/seo-content/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to delete SEO content page');
         return response.json();
     }
 };
