@@ -29,7 +29,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
 import { FinancingContentSection, FinancingContentType } from '@/components/FinancingContentSection';
-import { sanitizeForSlug } from '@/utils/url-utils';
+import { slugifyBrandName } from '@/utils/brand-slug';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import NotFound from '@/pages/NotFound';
 
@@ -94,12 +94,12 @@ export default function SearchPage() {
   const resolvedBrand = React.useMemo(() => {
     if (!params.marka || !options) return undefined;
     const target = params.marka.toLowerCase();
-    return options.makes.find((m) => sanitizeForSlug(m) === target);
+    return options.makes.find((m) => slugifyBrandName(m) === target);
   }, [params.marka, options]);
   const resolvedModel = React.useMemo(() => {
     if (!params.model || !resolvedBrand || !options) return undefined;
     const target = params.model.toLowerCase();
-    return options.models.find((m) => m.make === resolvedBrand && sanitizeForSlug(m.model) === target)?.model;
+    return options.models.find((m) => m.make === resolvedBrand && slugifyBrandName(m.model) === target)?.model;
   }, [params.model, resolvedBrand, options]);
   const isOnBrandRoute = Boolean(params.marka);
 
@@ -513,16 +513,16 @@ export default function SearchPage() {
   const canonicalPath = React.useMemo(() => {
     if (!isSamochodyFamily) return '/samochody';
     // CMS-fallback (0 aktywnych ofert, patrz catalogUnresolved): canonical wprost z surowych
-    // slugów URL-a — sanitizeForSlug(displayBrand) mógłby się rozjechać z oryginalnym slugiem
+    // slugów URL-a — slugifyBrandName(displayBrand) mógłby się rozjechać z oryginalnym slugiem
     // przy nietypowych znakach, a tu mamy pewne źródło.
     if (cmsFallbackActive && params.marka) {
       return params.model ? `/samochody/${params.marka}/${params.model}` : `/samochody/${params.marka}`;
     }
     if (filters.makes.length === 1 && filters.models.length === 1) {
-      return `/samochody/${sanitizeForSlug(filters.makes[0])}/${sanitizeForSlug(filters.models[0])}`;
+      return `/samochody/${slugifyBrandName(filters.makes[0])}/${slugifyBrandName(filters.models[0])}`;
     }
     if (filters.makes.length === 1) {
-      return `/samochody/${sanitizeForSlug(filters.makes[0])}`;
+      return `/samochody/${slugifyBrandName(filters.makes[0])}`;
     }
     return '/samochody';
   }, [isSamochodyFamily, filters.makes, filters.models, cmsFallbackActive, params.marka, params.model]);
@@ -794,7 +794,7 @@ export default function SearchPage() {
                   {popularBrands.map(([make, count]) => (
                     <Link
                       key={make}
-                      to={`/samochody/${sanitizeForSlug(make)}`}
+                      to={`/samochody/${slugifyBrandName(make)}`}
                       className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground hover:bg-secondary transition-colors"
                     >
                       {make} <span className="text-muted-foreground">({count})</span>
