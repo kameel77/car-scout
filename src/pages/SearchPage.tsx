@@ -15,7 +15,7 @@ import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
 import { useSeoContent } from '@/hooks/useSeoContent';
 import { rentalPublicApi } from '@/services/rental-api';
-import { mergeFacets, mergeMakes, mergeModels } from '@/utils/listingMerge';
+import { mergeFacets, mergeMakes, mergeModels, popularBrandsFromFacets } from '@/utils/listingMerge';
 import { ListingPagination } from '@/components/ListingPagination';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { Footer } from '@/components/Footer';
@@ -393,10 +393,8 @@ export default function SearchPage() {
   // "Popularne marki" — linkowanie wewnętrzne do stron marek, tylko na czystym /samochody
   // (ten sam próg top ~20 wg liczby ofert co blok SSR w buildStaticMeta).
   const popularBrands = React.useMemo(
-    () => Object.entries(mergedFacets.make || {})
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20),
-    [mergedFacets.make],
+    () => popularBrandsFromFacets(mergedFacets, 20),
+    [mergedFacets],
   );
 
   const totalCount = saleTotalCount + rentalVehicles.length;

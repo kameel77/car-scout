@@ -60,3 +60,15 @@ export function mergeFacets(
     city: sumMap(sale?.city, rental?.city),
   };
 }
+
+// Top marki wg liczby ofert dla bloku "Popularne marki" na /samochody. `facets` bywa
+// `undefined` (mergeFacets zwraca undefined dopóki żadne z zapytań sale/rental jeszcze
+// się nie rozstrzygnęło), więc funkcja musi to bezpiecznie obsłużyć zamiast rzucać.
+export function popularBrandsFromFacets(
+  facets: ListingFacets | undefined,
+  limit = 20,
+): [string, number][] {
+  return Object.entries(facets?.make || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
+}
