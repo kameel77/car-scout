@@ -112,6 +112,51 @@ describe('GET /api/render', () => {
         expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/uzywane"');
     });
 
+    it('injects route chunk modulepreload from vite manifest', async () => {
+        const MANIFEST = {
+            'src/pages/ConditionPage.tsx': { file: 'assets/ConditionPage-abc.js', imports: ['_shared-xyz.js'] },
+            '_shared-xyz.js': { file: 'assets/shared-xyz.js' },
+            'index.html': { file: 'assets/index-main.js', isEntry: true },
+        };
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: unknown) =>
+                String(url).includes('manifest.json')
+                    ? new Response(JSON.stringify(MANIFEST), { status: 200 })
+                    : new Response(TEMPLATE, { status: 200 })
+            )
+        );
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('<link rel="modulepreload" href="/assets/ConditionPage-abc.js" />');
+        expect(res.body).toContain('<link rel="modulepreload" href="/assets/shared-xyz.js" />');
+        // Główny bundle jest już w <script> szablonu — nie może być dublowany preloadem
+        expect(res.body).not.toContain('index-main.js');
+    });
+
+    it('listing detail gets LCP image preload with srcset variants', async () => {
+        const l = await app.prisma.listing.create({
+            data: {
+                make: 'TEST_RENDER',
+                model: 'Modelo',
+                version: '1.0',
+                pricePln: 123456,
+                mileageKm: 5,
+                productionYear: 2024,
+                fuelType: 'benzyna',
+                bodyType: 'suv',
+                isArchived: false,
+                primaryImageUrl: '/uploads/listings/test-render.webp',
+            },
+        });
+        const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=/oferta/${slug}` });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('rel="preload" as="image" fetchpriority="high"');
+        expect(res.body).toContain('test-render-thumb.webp 600w');
+        expect(res.body).toContain('test-render-md.webp 1200w');
+    });
+
     it('unknown path: 404 + noindex + brand default title', async () => {
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/xyz-nie-istnieje' });
         expect(res.statusCode).toBe(404);

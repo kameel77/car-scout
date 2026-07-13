@@ -73,6 +73,43 @@ async function getSsrPerPage(fastify: FastifyInstance): Promise<number> {
     return value;
 }
 
+// Kolejność ofert jak w widocznym SPA: defaultSortCars z ustawień (SearchPage/ConditionPage
+// fallback 'price_asc'), mapowanie sortBy->orderBy identyczne z listings.ts (priceField PLN).
+// Dzięki temu preload LCP wskazuje te same zdjęcia, które SPA wyrenderuje nad foldem.
+const CARS_ORDER_BY: Record<string, object> = {
+    cheapest: { brokerPricePln: 'asc' },
+    price_asc: { brokerPricePln: 'asc' },
+    expensive: { brokerPricePln: 'desc' },
+    price_desc: { brokerPricePln: 'desc' },
+    year_asc: { productionYear: 'asc' },
+    year_desc: { productionYear: 'desc' },
+    mileage: { mileageKm: 'asc' },
+    mileage_asc: { mileageKm: 'asc' },
+    mileage_desc: { mileageKm: 'desc' },
+    newest: { createdAt: 'desc' },
+};
+
+let carsOrderByCache: { value: object; fetchedAt: number } | null = null;
+
+async function getCarsOrderBy(fastify: FastifyInstance): Promise<object> {
+    if (carsOrderByCache && Date.now() - carsOrderByCache.fetchedAt < SSR_PER_PAGE_TTL_MS) {
+        return carsOrderByCache.value;
+    }
+    let sortKey = 'price_asc';
+    try {
+        const settings = await fastify.prisma.appSettings.findUnique({
+            where: { id: 'default' },
+            select: { defaultSortCars: true },
+        });
+        if (settings?.defaultSortCars) sortKey = settings.defaultSortCars;
+    } catch {
+        // fallback price_asc
+    }
+    const value = CARS_ORDER_BY[sortKey] ?? { brokerPricePln: 'asc' };
+    carsOrderByCache = { value, fetchedAt: Date.now() };
+    return value;
+}
+
 // Dane prawne do Organization JSON-LD strony głównej — te same pola co stopka frontendu.
 let orgSettingsCache: { value: OrgSettings; fetchedAt: number } | null = null;
 
@@ -114,6 +151,19 @@ const pageCache = new Map<string, { html: string; status: number; at: number }>(
 export function __resetRenderCache() {
     templateCache = null;
     pageCache.clear();
+    carsOrderByCache = null;
+    manifestCache = null;
+}
+
+// Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
+// which might resolve to dangling old frontend containers.
+// Fallback to INTERNAL_FRONTEND_URL or http://frontend:80.
+function frontendBase(): string {
+    let base = process.env.SERVICE_URL_FRONTEND || process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80';
+    if (base === 'http://frontend:80' && process.env.INTERNAL_FRONTEND_URL && process.env.INTERNAL_FRONTEND_URL !== 'http://frontend:80') {
+        base = process.env.INTERNAL_FRONTEND_URL;
+    }
+    return base.replace(/\/$/, '');
 }
 
 async function getTemplate(): Promise<string | null> {
@@ -121,15 +171,7 @@ async function getTemplate(): Promise<string | null> {
         return templateCache.html;
     }
     try {
-        // Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
-        // which might resolve to dangling old frontend containers.
-        // Fallback to INTERNAL_FRONTEND_URL or http://frontend:80.
-        let base = process.env.SERVICE_URL_FRONTEND || process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80';
-        if (base === 'http://frontend:80' && process.env.INTERNAL_FRONTEND_URL && process.env.INTERNAL_FRONTEND_URL !== 'http://frontend:80') {
-            base = process.env.INTERNAL_FRONTEND_URL;
-        }
-        base = base.replace(/\/$/, '');
-        const res = await fetch(`${base}/index.html`);
+        const res = await fetch(`${frontendBase()}/index.html`);
         if (!res.ok) throw new Error(`template fetch status ${res.status}`);
         const html = await res.text();
         templateCache = { html, fetchedAt: Date.now() };
@@ -150,6 +192,71 @@ const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
 const NOINDEX_RE = /^\/(admin|login|embed|listing)(\/|$)|\/(lead|negotiate|zapytanie)$/;
 const BRAND_RE = /^\/samochody\/([^/]+)$/;
 const BRAND_MODEL_RE = /^\/samochody\/([^/]+)\/([^/]+)$/;
+
+// --- Modulepreload chunków tras (manifest Vite) ---
+// Lazy-loadowane strony (App.tsx) tworzą łańcuch: index.js -> chunk trasy -> render.
+// SSR zna trasę z góry, więc wstrzykuje modulepreload chunka — przeglądarka pobiera go
+// równolegle z index.js zamiast czekać na jego wykonanie. Klucze = ścieżki źródeł w manifeście.
+const ROUTE_MODULES: Array<{ match: (p: string) => boolean; module: string }> = [
+    { match: p => LISTING_RE.test(p), module: 'src/pages/ListingDetailPage.tsx' },
+    { match: p => RENTAL_RE.test(p), module: 'src/pages/RentalDetailPage.tsx' },
+    { match: p => p === '/nowe' || p === '/uzywane', module: 'src/pages/ConditionPage.tsx' },
+    {
+        match: p =>
+            p === '/samochody' || p === '/search' || p === '/leasing' || p === '/kredyt' ||
+            BRAND_RE.test(p) || BRAND_MODEL_RE.test(p),
+        module: 'src/pages/SearchPage.tsx',
+    },
+    { match: p => p === '/wynajem-dlugoterminowy', module: 'src/pages/RentalSearchPage.tsx' },
+    { match: p => p === '/faq', module: 'src/pages/PublicFaqPage.tsx' },
+];
+
+interface ViteManifestEntry {
+    file: string;
+    css?: string[];
+    imports?: string[];
+    isEntry?: boolean;
+}
+type ViteManifest = Record<string, ViteManifestEntry>;
+
+// null też jest cache'owane (stary deploy frontendu bez manifestu) — bez młócenia 404
+let manifestCache: { value: ViteManifest | null; fetchedAt: number } | null = null;
+
+async function getViteManifest(): Promise<ViteManifest | null> {
+    if (manifestCache && Date.now() - manifestCache.fetchedAt < TEMPLATE_TTL_MS) {
+        return manifestCache.value;
+    }
+    let value: ViteManifest | null = null;
+    try {
+        const res = await fetch(`${frontendBase()}/.vite/manifest.json`);
+        if (res.ok) value = (await res.json()) as ViteManifest;
+    } catch {
+        value = null;
+    }
+    manifestCache = { value, fetchedAt: Date.now() };
+    return value;
+}
+
+function routeChunkLinks(path: string, manifest: ViteManifest): string[] {
+    const route = ROUTE_MODULES.find(r => r.match(path));
+    if (!route) return [];
+    const links: string[] = [];
+    const seen = new Set<string>();
+    const walk = (key: string) => {
+        if (seen.has(key)) return;
+        seen.add(key);
+        const entry = manifest[key];
+        // Główny bundle jest już w <script type="module"> szablonu — nie dublujemy
+        if (!entry || entry.isEntry) return;
+        links.push(`<link rel="modulepreload" href="/${entry.file}" />`);
+        for (const css of entry.css ?? []) {
+            links.push(`<link rel="preload" as="style" href="/${css}" />`);
+        }
+        for (const imp of entry.imports ?? []) walk(imp);
+    };
+    walk(route.module);
+    return links;
+}
 
 // Strony marek/modeli mają dynamiczne segmenty w ścieżce więc nie mieszczą się
 // w statycznym PAGINATED_ROUTES — dopisujemy je tu, żeby ?page=N nie było ignorowane.
@@ -382,10 +489,11 @@ async function resolveMeta(
                 where: modelWhere,
                 skip,
                 take: ssrPerPage,
-                orderBy: { createdAt: 'desc' },
+                orderBy: await getCarsOrderBy(fastify),
                 select: {
                     id: true, make: true, model: true, version: true,
                     productionYear: true, pricePln: true, bodyType: true, fuelType: true,
+                    primaryImageUrl: true,
                 },
             }),
             fastify.prisma.listing.aggregate({
@@ -452,10 +560,11 @@ async function resolveMeta(
                 where: brandWhere,
                 skip,
                 take: ssrPerPage,
-                orderBy: { createdAt: 'desc' },
+                orderBy: await getCarsOrderBy(fastify),
                 select: {
                     id: true, make: true, model: true, version: true,
                     productionYear: true, pricePln: true, bodyType: true, fuelType: true,
+                    primaryImageUrl: true,
                 },
             }),
             fastify.prisma.listing.aggregate({
@@ -545,7 +654,7 @@ async function resolveMeta(
             where,
             skip,
             take,
-            orderBy: { createdAt: 'desc' },
+            orderBy: await getCarsOrderBy(fastify),
             select: {
                 id: true,
                 make: true,
@@ -555,6 +664,7 @@ async function resolveMeta(
                 pricePln: true,
                 bodyType: true,
                 fuelType: true,
+                primaryImageUrl: true,
             },
         });
         listings = listingsRaw.map(l => ({
@@ -687,7 +797,16 @@ export async function renderRoutes(fastify: FastifyInstance) {
 
         const ctx = resolveBrandCtx();
         const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
-        const html = injectHead(template, meta);
+        let html = injectHead(template, meta);
+
+        // Modulepreload chunka trasy — zdejmuje pełne RTT z łańcucha krytycznego FCP
+        const manifest = await getViteManifest();
+        if (manifest) {
+            const chunkLinks = routeChunkLinks(path, manifest);
+            if (chunkLinks.length) {
+                html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
+            }
+        }
 
         if (pageCache.size >= PAGE_CACHE_MAX) pageCache.clear();
         pageCache.set(cacheKey, { html, status: meta.status, at: Date.now() });

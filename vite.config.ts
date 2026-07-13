@@ -63,6 +63,11 @@ export default defineConfig(({ mode }) => {
   const meta = brandMeta[brand] ?? brandMeta.carsalon;
 
   return {
+    build: {
+      // Manifest chunków dla backendu (render.ts): SSR wstrzykuje <link rel="modulepreload">
+      // chunka trasy, żeby przeglądarka nie czekała z jego pobraniem na wykonanie index.js
+      manifest: true,
+    },
     server: {
       host: "::",
       port: 8080,

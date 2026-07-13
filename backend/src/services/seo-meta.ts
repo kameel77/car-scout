@@ -9,7 +9,15 @@ export interface PageMeta {
     noindex?: boolean;
     bodyHtml?: string;
     ogImage?: string;
+    /** Obrazy LCP do <link rel="preload" as="image" fetchpriority="high"> w <head> */
+    preloadImages?: PreloadImage[];
     status: number;
+}
+
+export interface PreloadImage {
+    href: string;
+    imagesrcset?: string;
+    imagesizes?: string;
 }
 
 export interface BrandCtx {
@@ -75,6 +83,44 @@ function absoluteUrl(url: string, baseUrl: string): string {
     return url.startsWith('http') ? url : `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
+// Muszą odpowiadać sizes/srcset w komponentach frontu (ImageGallery / ImageSwiper.CARD_SIZES
+// / OptimizedImage) — preload wybiera wtedy DOKŁADNIE ten wariant, który potem pobierze <img>.
+const HERO_IMAGE_SIZES = '(min-width: 1024px) 66vw, 100vw';
+const CARD_IMAGE_SIZES = '(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw';
+
+// Warianty -thumb/-md generuje pipeline image-optimizer tylko dla lokalnych uploadów webp.
+// Przyjmuje URL relatywny (/uploads/...) i absolutny (https://host/uploads/...).
+function hasLocalVariants(url: string): boolean {
+    return url.includes('/uploads/') && url.endsWith('.webp');
+}
+
+function buildImagePreload(url: string, sizes: string, baseUrl: string): PreloadImage {
+    const abs = absoluteUrl(url, baseUrl);
+    if (hasLocalVariants(url)) {
+        const base = abs.slice(0, -'.webp'.length);
+        return {
+            href: abs,
+            imagesrcset: `${base}-thumb.webp 600w, ${base}-md.webp 1200w, ${abs} 1920w`,
+            imagesizes: sizes,
+        };
+    }
+    return { href: abs };
+}
+
+// Ukryty prerender nie powinien ściągać pełnego 1920w — wariant -md wystarcza botom
+function mdVariantUrl(url: string): string {
+    return hasLocalVariants(url) ? `${url.slice(0, -'.webp'.length)}-md.webp` : url;
+}
+
+// Preload zdjęć pierwszych kart listy (LCP na mobile) — max 2, tylko oferty ze zdjęciem
+function cardPreloads(listings: { primaryImageUrl?: string | null }[], baseUrl: string): PreloadImage[] | undefined {
+    const imgs = listings
+        .filter(l => l.primaryImageUrl)
+        .slice(0, 2)
+        .map(l => buildImagePreload(l.primaryImageUrl!, CARD_IMAGE_SIZES, baseUrl));
+    return imgs.length ? imgs : undefined;
+}
+
 export interface ListingMetaInput {
     make: string;
     model: string;
@@ -135,6 +181,8 @@ export interface RelatedListing {
     productionYear: number | null;
     pricePln: number | null;
     slug: string;
+    /** Zdjęcie pierwszych kart listy — źródło preloadu LCP na stronach katalogowych */
+    primaryImageUrl?: string | null;
 }
 
 export interface FaqItem {
@@ -211,7 +259,7 @@ export function buildListingMeta(
 </nav>
 <article>
   <h1>${safeName}${variantLabel}</h1>
-  ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${safeName}" style="max-width:100%;height:auto;"/>` : ''}
+  ${imageUrl ? `<img src="${escapeHtml(mdVariantUrl(imageUrl))}" alt="${safeName}" loading="lazy" style="max-width:100%;height:auto;"/>` : ''}
   <table>
     <tbody>
       <tr><td>Marka</td><td>${escapeHtml(l.make)}</td></tr>
@@ -319,6 +367,7 @@ export function buildListingMeta(
         description: `${name}: ${detale}. Samochód dostępny od ręki u dealera — sprawdź finansowanie: leasing, kredyt lub najem.`,
         canonical,
         ogImage: imageUrl || undefined,
+        preloadImages: l.primaryImageUrl ? [buildImagePreload(l.primaryImageUrl, HERO_IMAGE_SIZES, ctx.baseUrl)] : undefined,
         bodyHtml,
         jsonLd: jsonLd.length === 1 ? jsonLd[0] : jsonLd,
         status: 200,
@@ -558,7 +607,7 @@ export function buildRentalMeta(
 </nav>
 <article>
   <h1>${safeName} — wynajem długoterminowy</h1>
-  ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${safeName}" style="max-width:100%;height:auto;"/>` : ''}
+  ${imageUrl ? `<img src="${escapeHtml(mdVariantUrl(imageUrl))}" alt="${safeName}" loading="lazy" style="max-width:100%;height:auto;"/>` : ''}
   <p>${rentalOpeningParagraph(r, safeName, rateFrom)}</p>
   ${rateFrom ? `<p>Rata najmu od ${rateFrom} zł brutto miesięcznie.</p>` : ''}
   ${bodyCanon ? `<p>${SEGMENT_TEXT[bodyCanon](safeMakeModel)}</p>` : ''}
@@ -682,6 +731,7 @@ export function buildRentalMeta(
         description: `${name}${metaDetails ? ` (${metaDetails})` : ''} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.`,
         canonical,
         ogImage: imageUrl || undefined,
+        preloadImages: r.primaryImageUrl ? [buildImagePreload(r.primaryImageUrl, HERO_IMAGE_SIZES, ctx.baseUrl)] : undefined,
         bodyHtml,
         jsonLd,
         status: 200,
@@ -981,6 +1031,7 @@ export function buildBrandMeta(
         title,
         description,
         canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination!.page}` : ''}`,
+        preloadImages: cardPreloads(listings, ctx.baseUrl),
         bodyHtml,
         jsonLd,
         status: 200,
@@ -1080,6 +1131,7 @@ export function buildModelMeta(
         canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination!.page}` : ''}`,
         // Model z opublikowaną treścią CMS jest indeksowalny nawet poniżej progu 2 ofert (spec §1/F2).
         noindex: cms ? false : count < 2,
+        preloadImages: cardPreloads(listings, ctx.baseUrl),
         bodyHtml,
         jsonLd,
         status: 200,
@@ -1219,10 +1271,15 @@ ${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
         });
     }
 
+    // Preload kart tylko na stronach z listą nad foldem — na /leasing i /kredyt najpierw
+    // jest artykuł filarowy, więc zdjęcia kart nie są elementem LCP
+    const LIST_FIRST_PATHS = new Set(['/samochody', '/search', '/nowe', '/uzywane']);
+
     return {
         title,
         description: route.description,
         canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination.page}` : ''}`,
+        preloadImages: LIST_FIRST_PATHS.has(path) ? cardPreloads(listings, ctx.baseUrl) : undefined,
         bodyHtml,
         jsonLd: jsonLd.length === 1 ? jsonLd[0] : jsonLd.length > 1 ? jsonLd : undefined,
         status: 200,
@@ -1273,6 +1330,16 @@ export function injectHead(template: string, meta: PageMeta): string {
     }
 
     const extra: string[] = [];
+    // Preload scanner rusza obrazek LCP od pierwszej milisekundy, zanim React się zamontuje —
+    // imagesrcset/imagesizes zgodne z <img> na froncie, żeby trafić w ten sam wariant
+    for (const p of meta.preloadImages ?? []) {
+        extra.push(
+            `<link rel="preload" as="image" fetchpriority="high" href="${escapeAttr(p.href)}"` +
+            (p.imagesrcset ? ` imagesrcset="${escapeAttr(p.imagesrcset)}"` : '') +
+            (p.imagesizes ? ` imagesizes="${escapeAttr(p.imagesizes)}"` : '') +
+            ` />`
+        );
+    }
     if (meta.canonical) extra.push(`<link rel="canonical" href="${escapeAttr(meta.canonical)}" />`);
     if (meta.noindex) extra.push(`<meta name="robots" content="noindex" />`);
     if (meta.jsonLd) {

@@ -90,10 +90,21 @@ describe('buildListingMeta', () => {
     it('oferta: bodyHtml has h1, spec table, absolute image and stripped description', () => {
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
         expect(m.bodyHtml).toContain('<h1>Ford Puma 1.0 EcoBoost 2024</h1>');
-        expect(m.bodyHtml).toContain('src="https://dev.motolia.pl/uploads/listings/puma.webp"');
+        // Ukryty prerender celowo ładuje wariant -md (nie pełny 1920w) + lazy
+        expect(m.bodyHtml).toContain('src="https://dev.motolia.pl/uploads/listings/puma-md.webp"');
         expect(m.bodyHtml).toContain('Bogate wyposażenie');
         expect(m.bodyHtml).not.toContain('<b>');
         expect(m.ogImage).toBe('https://dev.motolia.pl/uploads/listings/puma.webp');
+    });
+
+    it('oferta: preloadImages carries hero srcset variants for LCP preload', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        expect(m.preloadImages).toHaveLength(1);
+        const p = m.preloadImages![0];
+        expect(p.href).toBe('https://dev.motolia.pl/uploads/listings/puma.webp');
+        expect(p.imagesrcset).toContain('puma-thumb.webp 600w');
+        expect(p.imagesrcset).toContain('puma-md.webp 1200w');
+        expect(p.imagesizes).toContain('100vw');
     });
 
     it('leasing variant: canonical points to /oferta, variant in title, breadcrumb-only JSON-LD', () => {
@@ -806,6 +817,14 @@ describe('injectHead', () => {
     it('adds robots noindex when meta.noindex', () => {
         const html = injectHead(TEMPLATE, defaultMeta(ctx, { noindex: true, status: 404 }));
         expect(html).toContain('<meta name="robots" content="noindex" />');
+    });
+
+    it('emits fetchpriority=high image preload with imagesrcset', () => {
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        const html = injectHead(TEMPLATE, m);
+        expect(html).toContain('<link rel="preload" as="image" fetchpriority="high"');
+        expect(html).toContain('imagesrcset=');
+        expect(html).toContain('puma-thumb.webp 600w');
     });
 
     it('escapes </script> in JSON-LD', () => {
