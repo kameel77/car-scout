@@ -582,12 +582,22 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
             />
 
             {/* ── UNIFIED GRID ── */}
-            <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
-              {rentalVehicles.map((v: any, i: number) => (
-                <RentalListingCard key={`r-${v.id}`} v={v} priority={i < 3} />
-              ))}
-              {saleLoading ? Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={i} />) : saleListings.map((listing, index) => <ListingCard key={listing.listing_id} listing={listing} index={index} />)}
-            </div>
+            {(() => {
+              // Kolejność kart najmu vs sprzedaży sterowana ustawieniem backoffice (domyślnie najem pierwszy)
+              const rentalCardsFirst = settings?.rentalCardsFirst !== false;
+              const rentalCards = rentalVehicles.map((v: any, i: number) => (
+                <RentalListingCard key={`r-${v.id}`} v={v} priority={rentalCardsFirst && i < 3} />
+              ));
+              const saleCards = saleLoading ? Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={i} />) : saleListings.map((listing, index) => <ListingCard key={listing.listing_id} listing={listing} index={index} />);
+
+              return (
+                <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
+                  {rentalCardsFirst && rentalCards}
+                  {saleCards}
+                  {!rentalCardsFirst && rentalCards}
+                </div>
+              );
+            })()}
             {/* Empty state */}
             {!saleLoading && !rentalLoading && saleListings.length === 0 && rentalVehicles.length === 0 && (
               <div className="col-span-full py-16 text-center">

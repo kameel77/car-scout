@@ -711,11 +711,13 @@ export default function SearchPage() {
               </div>
             )}
 
-            <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
-              {rentalVehicles.map((v: any, i: number) => (
-                <RentalListingCard key={`r-${v.id}`} v={v} priority={i < 3} />
-              ))}
-              {isLoading ? (
+            {(() => {
+              // Kolejność kart najmu vs sprzedaży sterowana ustawieniem backoffice (domyślnie najem pierwszy)
+              const rentalCardsFirst = settings?.rentalCardsFirst !== false;
+              const rentalCards = rentalVehicles.map((v: any, i: number) => (
+                <RentalListingCard key={`r-${v.id}`} v={v} priority={rentalCardsFirst && i < 3} />
+              ));
+              const saleCards = isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
                 ))
@@ -754,27 +756,35 @@ export default function SearchPage() {
 
                   return elements;
                 })
-              )}
-              {!isLoading && !rentalLoading && listings.length === 0 && rentalVehicles.length === 0 && (
-                <div className="col-span-full py-16 text-center">
-                  {displayBrand ? (
-                    <>
-                      <p className="text-lg font-medium text-foreground">
-                        {t('waitlist.emptyTitle', 'Aktualnie brak ofert')} {displayModel ? `${displayBrand} ${displayModel}` : displayBrand} — {t('waitlist.emptyHint', 'zostaw kontakt, powiadomimy o nowej ofercie.')}
-                      </p>
-                      <div className="mt-6">
-                        <WaitlistForm make={displayBrand} model={displayModel} />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-lg font-medium text-foreground">{t('empty.noResults')}</p>
-                      <p className="text-muted-foreground mt-1">{t('empty.noResultsHint')}</p>
-                    </>
+              );
+
+              return (
+                <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
+                  {rentalCardsFirst && rentalCards}
+                  {saleCards}
+                  {!rentalCardsFirst && rentalCards}
+                  {!isLoading && !rentalLoading && listings.length === 0 && rentalVehicles.length === 0 && (
+                    <div className="col-span-full py-16 text-center">
+                      {displayBrand ? (
+                        <>
+                          <p className="text-lg font-medium text-foreground">
+                            {t('waitlist.emptyTitle', 'Aktualnie brak ofert')} {displayModel ? `${displayBrand} ${displayModel}` : displayBrand} — {t('waitlist.emptyHint', 'zostaw kontakt, powiadomimy o nowej ofercie.')}
+                          </p>
+                          <div className="mt-6">
+                            <WaitlistForm make={displayBrand} model={displayModel} />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-lg font-medium text-foreground">{t('empty.noResults')}</p>
+                          <p className="text-muted-foreground mt-1">{t('empty.noResultsHint')}</p>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {!isLoading && (
               <div className="mt-8">

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
@@ -91,6 +92,9 @@ export function SettingsModule() {
             ? Boolean(data.csflowEnabled)
             : true,
         searchGridColumns: Number(data?.searchGridColumns) === 3 ? 3 : 4,
+        rentalCardsFirst: data?.rentalCardsFirst !== undefined
+            ? Boolean(data.rentalCardsFirst)
+            : true,
         pdfParserLlmModel: data?.pdfParserLlmModel || 'deepseek/deepseek-v4-flash',
         pdfParserSystemPrompt: data?.pdfParserSystemPrompt || `Jesteś asystentem dealera samochodowego. 
 Oto zawartość pliku PDF z wyceną pojazdu (przekonwertowana do Markdown):
@@ -419,6 +423,20 @@ Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\
                         <p className="text-xs text-slate-600">
                             Dotyczy ekranów ≥ 1280 px. Mniejsze ekrany zachowują standardowy układ (1/2/3 kolumny).
                         </p>
+                    </div>
+
+                    {/* Rental cards order */}
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label className="text-base">Oferty najmu przed ofertami sprzedaży</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Dotyczy kolejności kart w katalogu — wyłącz, aby oferty najmu pojawiały się na końcu listy.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={Boolean(settings.rentalCardsFirst)}
+                            onCheckedChange={(val) => setSettings({ ...settings, rentalCardsFirst: Boolean(val) })}
+                        />
                     </div>
 
                     {/* Auto image refresh */}

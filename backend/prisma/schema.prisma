@@ -324,6 +324,7 @@ model AppSettings {
   defaultSortRental           String   @default("minMonthlyRateNet_asc") @map("default_sort_rental")
   searchGridColumns           Int      @default(4) @map("search_grid_columns")
   splitNewUsed                Boolean  @default(false) @map("split_new_used")
+  rentalCardsFirst            Boolean  @default(true) @map("rental_cards_first")
   leadRecipientUserId         String?  @map("lead_recipient_user_id")
   salesContactPhone           String?  @map("sales_contact_phone")
   pdfParserLlmModel           String   @default("deepseek/deepseek-v4-flash") @map("pdf_parser_llm_model")

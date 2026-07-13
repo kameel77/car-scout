@@ -65,6 +65,7 @@ type SettingsPayload = {
     defaultSortRental?: string;
     searchGridColumns?: number | string;
     splitNewUsed?: boolean;
+    rentalCardsFirst?: boolean;
 };
 
 const toNumberOrFallback = (value: unknown, fallback: number) => {
@@ -289,6 +290,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             if (data.splitNewUsed !== undefined) {
                 update.splitNewUsed = Boolean(data.splitNewUsed);
             }
+            if (data.rentalCardsFirst !== undefined) {
+                update.rentalCardsFirst = Boolean(data.rentalCardsFirst);
+            }
             if (data.pdfParserLlmModel !== undefined) {
                 update.pdfParserLlmModel = data.pdfParserLlmModel || null;
             }
@@ -380,6 +384,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                     splitNewUsed: data.splitNewUsed !== undefined
                         ? Boolean(data.splitNewUsed)
                         : false,
+                    rentalCardsFirst: data.rentalCardsFirst !== undefined
+                        ? Boolean(data.rentalCardsFirst)
+                        : true,
                 }
             });
 
