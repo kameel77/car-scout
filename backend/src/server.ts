@@ -13,6 +13,26 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: st
     return Promise.race([promise, timeout]);
 }
 
+// Global error handlers to prevent silent crashes
+process.on('uncaughtException', (err) => {
+    console.error('FATAL: Uncaught Exception:', err);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('FATAL: Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});
+
+// Memory monitor to detect leaks before OOM kill
+setInterval(() => {
+    const usage = process.memoryUsage();
+    const heapUsedMB = Math.round(usage.heapUsed / 1024 / 1024);
+    if (heapUsedMB > 500) {
+        console.warn(`[MEM WARNING] Heap used: ${heapUsedMB}MB / Heap total: ${Math.round(usage.heapTotal / 1024 / 1024)}MB / RSS: ${Math.round(usage.rss / 1024 / 1024)}MB`);
+    }
+}, 60000);
+
 // Start server
 const start = async () => {
     try {
