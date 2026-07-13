@@ -1295,6 +1295,36 @@ export function defaultMeta(ctx: BrandCtx, opts: { noindex?: boolean; status?: n
     };
 }
 
+// Skeleton stron katalogowych (SSR-lite, patrz render.ts/isPaginatedPath) — maluje się od razu
+// po HTML zamiast białego ekranu do montażu SPA. Layout lustrzany wobec stanu ładowania
+// SearchPage/ConditionPage, więc montaż Reacta nie powoduje CLS (te same klasy co realny render).
+export function catalogSkeletonHtml(gridColumns: 3 | 4): string {
+    // Nagłówek 1:1 ze statycznym hero motoliaHeroShell (vite.config.ts) — ten sam markup co
+    // Header.tsx; zmiana loga/nawigacji tam wymaga aktualizacji też tutaj i w vite.config.ts.
+    const header = `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>`;
+
+    // Karta 1:1 z ListingCardSkeleton (src/components/ListingCard.tsx) — zmiana tamtego JSX
+    // wymaga przepisania też tutaj (backend nie renderuje komponentów Reacta).
+    const card = `<div class="listing-card flex flex-col"><div class="aspect-[16/10] skeleton-shimmer"></div><div class="p-4 space-y-3 flex-1 flex flex-col"><div class="space-y-2"><div class="h-6 w-3/4 skeleton-shimmer"></div><div class="h-4 w-1/2 skeleton-shimmer"></div></div><div class="flex flex-wrap gap-1.5"><div class="h-6 w-12 skeleton-shimmer rounded-full"></div><div class="h-6 w-20 skeleton-shimmer rounded-full"></div><div class="h-6 w-10 skeleton-shimmer rounded-full"></div><div class="h-6 w-8 skeleton-shimmer rounded-full"></div><div class="h-6 w-14 skeleton-shimmer rounded-full"></div></div><div class="h-4 w-20 skeleton-shimmer"></div><div class="flex-1"></div><div class="flex gap-3 pt-3"><div class="h-9 w-1/2 skeleton-shimmer rounded-lg"></div><div class="h-9 w-1/2 skeleton-shimmer rounded-lg"></div></div></div><div class="px-4 pb-4 pt-2"><div class="h-11 skeleton-shimmer rounded-lg"></div></div></div>`;
+
+    // Grid 1:1 z SearchPage.tsx (kolumny z appSettings.searchGridColumns, patrz getGridColumns)
+    const grid = `<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${gridColumns} gap-4">${Array(6).fill(card).join('')}</div>`;
+
+    return `<!--catalog-shell--><div class="min-h-screen bg-background">${header}<main class="container pt-4 pb-6">` +
+        // Placeholder H1/opisu — żaden realny tekst, żeby nie dublować h1 z seo-prerender
+        // i nie zmieniać treści na oczach usera przy montażu SPA.
+        `<div class="mb-4 space-y-2"><div class="h-8 w-2/3 skeleton-shimmer"></div><div class="h-5 w-1/2 skeleton-shimmer"></div></div>` +
+        // Pasek filtrów: widoczny tylko od lg w górę, jak realny TopFilterBar (hidden na mobile);
+        // py-2 wyrównuje wysokość do jego wrappera
+        `<div class="hidden lg:flex py-2 mb-3"><div class="h-9 w-full skeleton-shimmer rounded-full"></div></div>` +
+        // StatusTabs
+        `<div class="h-10 mb-3 skeleton-shimmer"></div>` +
+        // Mobilny górny pasek ActiveFilters (szukajka + przycisk filtrów) — SPA renderuje go
+        // zawsze, także bez aktywnych filtrów; bez placeholdera grid skakałby przy montażu
+        `<div class="flex lg:hidden flex-col gap-3 mt-3 mb-3"><div class="h-10 skeleton-shimmer rounded-md"></div><div class="h-10 skeleton-shimmer rounded-md"></div></div>` +
+        `${grid}</main></div><!--/catalog-shell-->`;
+}
+
 function escapeAttr(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

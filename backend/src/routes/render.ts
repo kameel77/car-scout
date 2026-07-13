@@ -6,6 +6,7 @@ import {
     buildModelMeta,
     buildRentalMeta,
     buildStaticMeta,
+    catalogSkeletonHtml,
     defaultMeta,
     hasStaticRoute,
     injectHead,
@@ -70,6 +71,25 @@ async function getSsrPerPage(fastify: FastifyInstance): Promise<number> {
         value = 32;
     }
     ssrPerPageCache = { value, fetchedAt: Date.now() };
+    return value;
+}
+
+// Kolumny gridu skeletonu SSR — ta sama flaga ustawień co getSsrPerPage, ale osobny cache
+// (bliźniaczy, mniejszy diff niż zmiana kształtu zwrotki getSsrPerPage w 3 miejscach wywołania).
+let gridColumnsCache: { value: 3 | 4; fetchedAt: number } | null = null;
+
+async function getGridColumns(fastify: FastifyInstance): Promise<3 | 4> {
+    if (gridColumnsCache && Date.now() - gridColumnsCache.fetchedAt < SSR_PER_PAGE_TTL_MS) {
+        return gridColumnsCache.value;
+    }
+    let value: 3 | 4 = 4;
+    try {
+        const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });
+        value = Number(settings?.searchGridColumns) === 3 ? 3 : 4;
+    } catch {
+        value = 4;
+    }
+    gridColumnsCache = { value, fetchedAt: Date.now() };
     return value;
 }
 
@@ -153,6 +173,7 @@ export function __resetRenderCache() {
     pageCache.clear();
     carsOrderByCache = null;
     manifestCache = null;
+    gridColumnsCache = null;
 }
 
 // Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
@@ -790,9 +811,12 @@ export async function renderRoutes(fastify: FastifyInstance) {
 
         // Statyczny shell hero (vite.config, znaczniki home-shell) jest tylko dla
         // strony głównej — na innych trasach usuwamy go, żeby hero nie migało
-        // przed zamontowaniem SPA
+        // przed zamontowaniem SPA. Strony katalogowe (isPaginatedPath) dostają w zamian
+        // statyczny skeleton (nagłówek + placeholdery kart) zamiast białego ekranu do
+        // montażu Reacta. Podmiana funkcyjna — markup skeletonu może zawierać `$`.
         if (path !== '/') {
-            template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, '');
+            const skeleton = isPaginatedPath(path) ? catalogSkeletonHtml(await getGridColumns(fastify)) : '';
+            template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
         }
 
         const ctx = resolveBrandCtx();

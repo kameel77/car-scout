@@ -460,3 +460,85 @@ describe('GET /api/render — brand/model pages with CMS content (F2)', () => {
         expect(res.statusCode).toBe(404);
     });
 });
+
+describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
+    let app: FastifyInstance;
+    // Szablon z blokiem home-shell w #root — jak w realnym zbudowanym index.html (vite.config.ts)
+    const SHELL_TEMPLATE = TEMPLATE.replace(
+        '<div id="root"></div>',
+        '<div id="root"><!--home-shell--><h1>Szeroki wybór aut</h1><!--/home-shell--></div>'
+    );
+
+    beforeAll(async () => {
+        app = await buildApp();
+        await app.ready();
+    });
+
+    afterAll(async () => {
+        await app.close();
+        vi.unstubAllGlobals();
+    });
+
+    beforeEach(async () => {
+        __resetRenderCache();
+        __resetBrandCatalogCache();
+        process.env.BRAND = 'motolia';
+        process.env.FRONTEND_URL = 'https://dev.motolia.pl';
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(SHELL_TEMPLATE, { status: 200 })));
+    });
+
+    it('/nowe: skeleton katalogowy zamiast home-shell', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('<!--catalog-shell-->');
+        expect(res.body).toContain('skeleton-shimmer');
+        expect(res.body).not.toContain('<!--home-shell-->');
+    });
+
+    it('/: home-shell zostaje, brak skeletonu katalogowego', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('<!--home-shell-->');
+        expect(res.body).not.toContain('<!--catalog-shell-->');
+    });
+
+    it('/leasing: artykuł filarowy — bez skeletonu katalogowego i bez home-shell', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/leasing' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('<!--catalog-shell-->');
+        expect(res.body).not.toContain('<!--home-shell-->');
+    });
+
+    it('/oferta/:slug: strona detalu — bez skeletonu katalogowego i bez home-shell', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/oferta/cokolwiek' });
+        expect(res.body).not.toContain('<!--catalog-shell-->');
+        expect(res.body).not.toContain('<!--home-shell-->');
+    });
+
+    it('/samochody/:marka: skeleton katalogowy (trasa z dynamicznym segmentem)', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/bmw' });
+        expect(res.body).toContain('<!--catalog-shell-->');
+    });
+
+    it('grid: xl:grid-cols-3 przy searchGridColumns=3, domyślnie xl:grid-cols-4', async () => {
+        const original = await app.prisma.appSettings.findUnique({ where: { id: 'default' } });
+        try {
+            await app.prisma.appSettings.update({ where: { id: 'default' }, data: { searchGridColumns: 3 } });
+            __resetRenderCache();
+            const res3 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+            expect(res3.body).toContain('xl:grid-cols-3');
+
+            await app.prisma.appSettings.update({ where: { id: 'default' }, data: { searchGridColumns: 4 } });
+            __resetRenderCache();
+            const res4 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+            expect(res4.body).toContain('xl:grid-cols-4');
+        } finally {
+            if (original) {
+                await app.prisma.appSettings.update({
+                    where: { id: 'default' },
+                    data: { searchGridColumns: original.searchGridColumns },
+                });
+            }
+        }
+    });
+});
