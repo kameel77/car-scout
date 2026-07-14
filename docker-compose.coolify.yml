@@ -71,6 +71,11 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    labels:
+      # Pin Traefik to the coolify network — frontend sits on 3 networks and
+      # without this pin Traefik may pick an unreachable private-network IP,
+      # causing intermittent hangs/504s. Static label, safe for all envs.
+      - traefik.docker.network=coolify
     # NOTE: Do NOT add custom traefik.http.services.* labels here.
     # Coolify doesn't expand env vars in labels, which causes all environments
     # on the same server to share one Traefik service pool → requests get routed
