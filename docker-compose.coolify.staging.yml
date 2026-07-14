@@ -1,23 +1,20 @@
 version: '3.8'
 
-# Coolify deployment file for DEV and PROD environments.
-# Used by: dev.carsalon.pl     (IMAGE_TAG=dev,     BRAND=carsalon,  COMPOSE_PROJECT_NAME=carscout-dev)
-#           dev.motolia.pl      (IMAGE_TAG=dev,     BRAND=motolia,   COMPOSE_PROJECT_NAME=motolia-dev)
-#           carsalon.pl         (IMAGE_TAG=main,    BRAND=carsalon,  COMPOSE_PROJECT_NAME=carscout-prod)
-#           motolia.pl          (IMAGE_TAG=main,    BRAND=motolia,   COMPOSE_PROJECT_NAME=motolia-prod)
+# Coolify deployment file for STAGING environments ONLY.
+# Used by: staging.carsalon.pl (IMAGE_TAG=staging, BRAND=carsalon, COMPOSE_PROJECT_NAME=carscout-staging)
+#          staging.motolia.pl  (IMAGE_TAG=staging, BRAND=motolia,  COMPOSE_PROJECT_NAME=motolia-staging)
 #
-# STAGING uses docker-compose.coolify.staging.yml (own uploads path — staging
-# shares the host with prod and must not share /srv/carscout-prod-uploads).
-# Keep both files in sync except for the uploads path.
+# In Coolify: set "Docker Compose Location" of the STAGING resource to
+# /docker-compose.coolify.staging.yml (dev/prod keep /docker-compose.coolify.yml).
 #
-# In Coolify: set "Docker Compose Location" to /docker-compose.coolify.yml
-# (staging resource: /docker-compose.coolify.staging.yml)
+# WHY A SEPARATE FILE: staging shares the host with prod. Coolify rejects ${...}
+# variables in bind mount paths, so the uploads path must be literal — a separate
+# file (identical on every branch) gives staging its own path without per-branch
+# diffs that would conflict on every merge.
+# Keep this file in sync with docker-compose.coolify.yml except for the uploads path.
 #
 # UPLOADS PERSISTENCE:
-# Uses a literal bind mount path - Coolify rejects ${...} variables in bind mount paths
-# but accepts literal paths. Pre-requisite: host directory must exist before first deploy.
-# DEV+PROD path (this file):     /srv/carscout-prod-uploads
-# STAGING path (staging file):   /srv/carscout-staging-uploads
+# STAGING path: /srv/carscout-staging-uploads (must exist on host before deploy).
 
 services:
   # Backend API — pulled from GHCR, built by GitHub Actions
@@ -51,7 +48,7 @@ services:
     volumes:
       # Literal bind mount - Coolify rejects ${VAR} in paths but accepts literal paths.
       # Data lives on host filesystem, survives docker compose down -v and stack resets.
-      - /srv/carscout-prod-uploads:/app/uploads
+      - /srv/carscout-staging-uploads:/app/uploads
     networks:
       carscout-private:
         aliases:
@@ -94,7 +91,7 @@ services:
           - "${COMPOSE_PROJECT_NAME}-frontend"
 
 # No named volumes - using bind mount (see carscout-api volumes above).
-# Host path /srv/carscout-prod-uploads must exist before deploy.
+# Host path /srv/carscout-staging-uploads must exist before deploy.
 
 networks:
   carscout-private:
