@@ -226,7 +226,11 @@ export default function MotoliaHomePage() {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           {hasHeroBanners ? (
             <div className="relative">
-              <React.Suspense fallback={null}>
+              {/* Fallback rezerwuje wysokość boxa banera (identyczną z HeroBannerCarousel
+                  i SSR home-shell) — bez tego, na szybkim CPU React commituje pierwszą klatkę
+                  zanim dojedzie lazy-chunk, wrapper .relative (karta jest lg:absolute, poza
+                  flow) zapada się do 0 i cała treść pod hero skacze → duży CLS na desktopie. */}
+              <React.Suspense fallback={<div className="w-full h-[360px] md:h-[460px] lg:h-[520px] rounded-3xl bg-slate-900" />}>
                 <HeroBannerCarousel />
               </React.Suspense>
               {/* Floating search card (superauto layout) — plain div so the
