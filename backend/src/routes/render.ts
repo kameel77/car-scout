@@ -8,6 +8,7 @@ import {
     buildStaticMeta,
     catalogSkeletonHtml,
     defaultMeta,
+    detailSkeletonHtml,
     hasStaticRoute,
     homeHeroShellHtml,
     injectHead,
@@ -871,7 +872,13 @@ export async function renderRoutes(fastify: FastifyInstance) {
             // Home-only preloady API (hero-banners/feature-tiles/faq-home/widgets-HOME) są
             // nieużywane poza / i na dławionym mobile kradną pasmo entry JS + obrazkowi LCP.
             template = template.replace(/<!--home-preload-->[\s\S]*?<!--\/home-preload-->/, () => '');
-            const skeleton = isPaginatedPath(path) ? catalogSkeletonHtml(await getGridColumns(fastify)) : '';
+            // Strony katalogowe → skeleton siatki kart; strony detalu (oferta/najem) → skeleton
+            // galerii + sidebara; reszta (formularze, noindex) → pusto do montażu React.
+            const skeleton = isPaginatedPath(path)
+                ? catalogSkeletonHtml(await getGridColumns(fastify))
+                : (LISTING_RE.test(path) || RENTAL_RE.test(path))
+                    ? detailSkeletonHtml()
+                    : '';
             template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
         } else if (heroBanners.length > 0) {
             const heroShell = homeHeroShellHtml(heroBanners[0], ctx.baseUrl);

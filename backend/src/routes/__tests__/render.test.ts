@@ -516,6 +516,20 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         expect(other.body).not.toContain('/api/hero-banners/public');
     });
 
+    it('/oferta/:slug: skeleton detalu (galeria+sidebar), nie katalogowy ani home-shell', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/oferta/audi-a4-2024-aaaaaaaaaaaaaaaaaaaaaaaaa' });
+        expect(res.body).toContain('<!--detail-shell-->');
+        expect(res.body).toContain('skeleton-shimmer');
+        expect(res.body).not.toContain('<!--catalog-shell-->');
+        expect(res.body).not.toContain('<!--home-shell-->');
+    });
+
+    it('/wynajem-dlugoterminowy/:slug: ten sam skeleton detalu', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/wynajem-dlugoterminowy/bmw-x3-2024' });
+        expect(res.body).toContain('<!--detail-shell-->');
+        expect(res.body).not.toContain('<!--catalog-shell-->');
+    });
+
     it('/leasing: artykuł filarowy — bez skeletonu katalogowego i bez home-shell', async () => {
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/leasing' });
         expect(res.statusCode).toBe(200);

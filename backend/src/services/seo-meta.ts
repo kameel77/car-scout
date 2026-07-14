@@ -1338,6 +1338,32 @@ export function catalogSkeletonHtml(gridColumns: 3 | 4): string {
         `${grid}</main></div><!--/catalog-shell-->`;
 }
 
+// SSR skeleton stron detalu (/oferta/:slug, /wynajem-dlugoterminowy/:slug). Oferty sprzedażowe
+// i najem mają identyczny układ above-fold: container > grid lg:grid-cols-3, ImageGallery
+// (aspect-[16/9]) w lg:col-span-2 + sidebar ceny/CTA w lg:col-span-1 — więc jeden wspólny
+// skeleton. Bez niego #root jest pusty aż do montażu React → biały ekran i wolny FCP. Box
+// obrazka rezerwuje aspect-[16/9] zgodny z ImageGallery, więc preloadowany obraz LCP wchodzi
+// bez CLS. Nagłówek 1:1 z catalogSkeletonHtml / motoliaHeroShell (vite.config.ts).
+export function detailSkeletonHtml(): string {
+    const header = `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>`;
+
+    const thumbs = Array(5).fill('<div class="h-16 w-24 flex-shrink-0 rounded-lg skeleton-shimmer"></div>').join('');
+    const sidebarLines = Array(4).fill('<div class="h-4 w-full skeleton-shimmer"></div>').join('');
+
+    return `<!--detail-shell--><div class="min-h-screen bg-background">${header}<main class="container py-6">` +
+        `<div class="h-4 w-1/3 skeleton-shimmer mb-4"></div>` +
+        `<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">` +
+        // Lewa kolumna: galeria (główny box aspect-[16/9] = element LCP) + pasek miniatur
+        `<div class="lg:col-span-2 space-y-6">` +
+        `<div class="aspect-[16/9] rounded-xl skeleton-shimmer"></div>` +
+        `<div class="flex gap-2 overflow-hidden">${thumbs}</div>` +
+        `<div class="space-y-3 pt-2"><div class="h-8 w-2/3 skeleton-shimmer"></div><div class="h-5 w-1/2 skeleton-shimmer"></div></div>` +
+        `</div>` +
+        // Prawa kolumna: sidebar ceny + specyfikacji + CTA
+        `<div class="lg:col-span-1 space-y-4"><div class="h-10 w-1/2 skeleton-shimmer"></div><div class="h-6 w-2/3 skeleton-shimmer"></div><div class="space-y-2 pt-2">${sidebarLines}</div><div class="h-12 skeleton-shimmer rounded-xl mt-4"></div></div>` +
+        `</div></main></div><!--/detail-shell-->`;
+}
+
 // SSR pierwszego banera hero do statycznego home-shell (miejsce tekstowego hero, gdy CMS ma
 // aktywne bannery) — wysokości identyczne z HeroBannerCarousel (h-[360px] md:h-[460px] lg:h-[520px]),
 // żeby montaż SPA nie powodował CLS. Nagłówek 1:1 z motoliaHeroShell (vite.config.ts).
