@@ -502,6 +502,20 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         expect(res.body).not.toContain('<!--catalog-shell-->');
     });
 
+    it('home-preload: zostaje na /, wycinany poza /', async () => {
+        const PRELOAD_TEMPLATE = SHELL_TEMPLATE.replace(
+            '<head>',
+            '<head><!--home-preload--><link rel="preload" href="/api/hero-banners/public" as="fetch" /><!--/home-preload-->'
+        );
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(PRELOAD_TEMPLATE, { status: 200 })));
+        const home = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+        expect(home.body).toContain('<!--home-preload-->');
+        expect(home.body).toContain('/api/hero-banners/public');
+        const other = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(other.body).not.toContain('<!--home-preload-->');
+        expect(other.body).not.toContain('/api/hero-banners/public');
+    });
+
     it('/leasing: artykuł filarowy — bez skeletonu katalogowego i bez home-shell', async () => {
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/leasing' });
         expect(res.statusCode).toBe(200);

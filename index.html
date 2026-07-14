@@ -7,17 +7,21 @@
     <meta name="description" content="Setki ofert od sprawdzonych dealerów. Nowe i używane samochody z gwarancją." />
     <meta name="author" content="CarSalon" />
 
-    <!-- Preload critical API data to avoid network waterfall -->
+    <!-- Preload critical API data (globalne — używane na wszystkich trasach) -->
     <link rel="preload" href="/api/settings" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/seo" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/translations" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/geo" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/listings/options" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/api/rental/vehicles?limit=1" as="fetch" crossorigin="anonymous" />
+    <!-- Home-only API preload — backend (render.ts) wycina ten blok poza / bo poza stroną
+         główną te zapytania są nieużywane i kradną pasmo na dławionym mobile (FCP/LCP). -->
+    <!--home-preload-->
     <link rel="preload" href="/api/widgets/render?placement=HOME" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/faq?page=home" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/feature-tiles/public" as="fetch" crossorigin="anonymous" />
-    <link rel="preload" href="/api/geo" as="fetch" crossorigin="anonymous" />
-    <link rel="preload" href="/api/listings/options" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/api/hero-banners/public" as="fetch" crossorigin="anonymous" />
-    <link rel="preload" href="/api/rental/vehicles?limit=1" as="fetch" crossorigin="anonymous" />
+    <!--/home-preload-->
 
     <!-- Dynamic Environment Config (Turnstile Site Key) — defer: klucz czytany
          dopiero przy montowaniu widgetu Turnstile, nie może blokować renderu -->

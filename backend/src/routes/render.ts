@@ -868,6 +868,9 @@ export async function renderRoutes(fastify: FastifyInstance) {
         // pierwszego banera (ten sam obrazek co preload/LCP) — bez banerów zostaje bez zmian.
         // Podmiana funkcyjna — markup skeletonu/banera może zawierać `$`.
         if (path !== '/') {
+            // Home-only preloady API (hero-banners/feature-tiles/faq-home/widgets-HOME) są
+            // nieużywane poza / i na dławionym mobile kradną pasmo entry JS + obrazkowi LCP.
+            template = template.replace(/<!--home-preload-->[\s\S]*?<!--\/home-preload-->/, () => '');
             const skeleton = isPaginatedPath(path) ? catalogSkeletonHtml(await getGridColumns(fastify)) : '';
             template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
         } else if (heroBanners.length > 0) {
