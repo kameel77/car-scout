@@ -18,6 +18,7 @@ export interface PreloadImage {
     href: string;
     imagesrcset?: string;
     imagesizes?: string;
+    media?: string;
 }
 
 export interface BrandCtx {
@@ -119,6 +120,16 @@ function cardPreloads(listings: { primaryImageUrl?: string | null }[], baseUrl: 
         .slice(0, 2)
         .map(l => buildImagePreload(l.primaryImageUrl!, CARD_IMAGE_SIZES, baseUrl));
     return imgs.length ? imgs : undefined;
+}
+
+// Preload zdjęcia LCP pierwszego banera hero na / — media query zgodny z md:hidden/hidden md:block
+// w HeroBannerCarousel, żeby przeglądarka nie pobierała obu wariantów naraz.
+function heroBannerPreloads(banner: { desktop?: string | null; mobile?: string | null }, baseUrl: string): PreloadImage[] | undefined {
+    const out: PreloadImage[] = [];
+    if (banner.mobile) out.push({ ...buildImagePreload(banner.mobile, '100vw', baseUrl), media: '(max-width: 767px)' });
+    // gdy brak mobile, desktop pokazuje się na wszystkich szerokościach (komponent gubi hidden md:block) → bez media
+    if (banner.desktop) out.push(banner.mobile ? { ...buildImagePreload(banner.desktop, '100vw', baseUrl), media: '(min-width: 768px)' } : buildImagePreload(banner.desktop, '100vw', baseUrl));
+    return out.length ? out : undefined;
 }
 
 export interface ListingMetaInput {
@@ -1155,7 +1166,8 @@ export function buildStaticMeta(
     article?: FinancingArticle,
     pagination?: StaticPagination,
     orgSettings?: OrgSettings,
-    popularBrands: BrandLinkEntry[] = []
+    popularBrands: BrandLinkEntry[] = [],
+    heroBanner?: { desktop?: string | null; mobile?: string | null }
 ): PageMeta | null {
     if (path === '/') {
         // h1 jest na stronie już w statycznym home-shell (index.html) — tu tylko wzmocniony akapit,
@@ -1203,6 +1215,7 @@ ${listings.length > 0 ? `
             title: ctx.defaultTitle,
             description: ctx.defaultDescription,
             canonical: `${ctx.baseUrl}/`,
+            preloadImages: heroBanner ? heroBannerPreloads(heroBanner, ctx.baseUrl) : undefined,
             bodyHtml,
             jsonLd,
             status: 200,
@@ -1325,6 +1338,41 @@ export function catalogSkeletonHtml(gridColumns: 3 | 4): string {
         `${grid}</main></div><!--/catalog-shell-->`;
 }
 
+// SSR pierwszego banera hero do statycznego home-shell (miejsce tekstowego hero, gdy CMS ma
+// aktywne bannery) — wysokości identyczne z HeroBannerCarousel (h-[360px] md:h-[460px] lg:h-[520px]),
+// żeby montaż SPA nie powodował CLS. Nagłówek 1:1 z motoliaHeroShell (vite.config.ts).
+export function homeHeroShellHtml(
+    banner: { imageUrlDesktop?: string | null; imageUrlMobile?: string | null; altText?: string | null },
+    baseUrl: string
+): string {
+    const header = `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>`;
+
+    const alt = escapeAttr(banner.altText ?? '');
+
+    let mobileSource = '';
+    if (banner.imageUrlMobile) {
+        const absMobile = absoluteUrl(banner.imageUrlMobile, baseUrl);
+        const srcsetMobile = hasLocalVariants(banner.imageUrlMobile)
+            ? `${absMobile.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absMobile.slice(0, -'.webp'.length)}-md.webp 1200w, ${absMobile} 1920w`
+            : absMobile;
+        mobileSource = `<source media="(max-width: 767px)" srcset="${escapeAttr(srcsetMobile)}">`;
+    }
+
+    let img = '';
+    if (banner.imageUrlDesktop) {
+        const absDesktop = absoluteUrl(banner.imageUrlDesktop, baseUrl);
+        const srcsetDesktop = hasLocalVariants(banner.imageUrlDesktop)
+            ? `${absDesktop.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absDesktop.slice(0, -'.webp'.length)}-md.webp 1200w, ${absDesktop} 1920w`
+            : absDesktop;
+        img = `<img src="${escapeAttr(absDesktop)}" srcset="${escapeAttr(srcsetDesktop)}" sizes="100vw" width="1600" height="700" fetchpriority="high" decoding="async" loading="eager" alt="${alt}" class="absolute inset-0 w-full h-full object-cover">`;
+    }
+
+    return `<div class="bg-white min-h-screen text-[#1A1A1A] font-inter">${header}` +
+        `<section class="relative overflow-hidden bg-[#FAFAF8] pt-6 pb-8 lg:pt-10 lg:pb-12"><div class="max-w-7xl mx-auto px-6">` +
+        `<div class="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-900 rounded-3xl overflow-hidden"><picture>${mobileSource}${img}</picture></div>` +
+        `</div></section></div>`;
+}
+
 function escapeAttr(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -1367,6 +1415,7 @@ export function injectHead(template: string, meta: PageMeta): string {
             `<link rel="preload" as="image" fetchpriority="high" href="${escapeAttr(p.href)}"` +
             (p.imagesrcset ? ` imagesrcset="${escapeAttr(p.imagesrcset)}"` : '') +
             (p.imagesizes ? ` imagesizes="${escapeAttr(p.imagesizes)}"` : '') +
+            (p.media ? ` media="${escapeAttr(p.media)}"` : '') +
             ` />`
         );
     }

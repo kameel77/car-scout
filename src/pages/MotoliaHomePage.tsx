@@ -168,10 +168,14 @@ const CAR_BRANDS_CN = ['BYD', 'Chery', 'MG', 'Geely', 'Omoda', 'Jaecoo', 'Leapmo
 
 export default function MotoliaHomePage() {
   const { config } = useBrand();
+  const initialHeroBanners = typeof window !== 'undefined' && (window as any).__HERO_BANNERS__
+    ? { banners: (window as any).__HERO_BANNERS__ }
+    : undefined;
   const { data: heroBannerData } = useQuery({
     queryKey: ['hero-banners', 'public'],
     queryFn: () => heroBannersApi.listPublic(),
     staleTime: 5 * 60 * 1000,
+    initialData: initialHeroBanners,
   });
   const hasHeroBanners = (heroBannerData?.banners?.length ?? 0) > 0;
   const [openFaq, setOpenFaq] = React.useState<number | null>(0);

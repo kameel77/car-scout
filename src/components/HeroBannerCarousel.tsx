@@ -18,10 +18,14 @@ const ALIGN_CLASS: Record<string, string> = {
 };
 
 export function useHeroBanners() {
+    const initialHeroBanners = typeof window !== 'undefined' && (window as any).__HERO_BANNERS__
+        ? { banners: (window as any).__HERO_BANNERS__ }
+        : undefined;
     return useQuery({
         queryKey: ['hero-banners', 'public'],
         queryFn: () => heroBannersApi.listPublic(),
         staleTime: 5 * 60 * 1000,
+        initialData: initialHeroBanners,
     });
 }
 
@@ -51,7 +55,7 @@ export function HeroBannerCarousel() {
         <div className="relative">
             <Carousel setApi={setApi} opts={{ loop: true }} className="overflow-hidden rounded-3xl">
                 <CarouselContent>
-                    {banners.map((b) => (
+                    {banners.map((b, idx) => (
                         <CarouselItem key={b.id} className="basis-full">
                             <div className="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-900">
                                 {b.imageUrlDesktop && (
@@ -60,6 +64,7 @@ export function HeroBannerCarousel() {
                                         alt={b.altText}
                                         width="1600"
                                         height="700"
+                                        priority={idx === 0}
                                         className={`absolute inset-0 w-full h-full object-cover ${b.imageUrlMobile ? 'hidden md:block' : ''}`}
                                     />
                                 )}
@@ -69,6 +74,7 @@ export function HeroBannerCarousel() {
                                         alt={b.altText}
                                         width="800"
                                         height="800"
+                                        priority={idx === 0}
                                         className="absolute inset-0 w-full h-full object-cover md:hidden"
                                     />
                                 )}

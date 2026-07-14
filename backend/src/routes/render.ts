@@ -9,6 +9,7 @@ import {
     catalogSkeletonHtml,
     defaultMeta,
     hasStaticRoute,
+    homeHeroShellHtml,
     injectHead,
     resolveBrandCtx,
     BrandCtx,
@@ -157,6 +158,49 @@ async function getOrgSettings(fastify: FastifyInstance): Promise<OrgSettings> {
     return value;
 }
 
+// Bannery hero strony głównej — ten sam kształt/where/orderBy co /api/hero-banners/public.
+// Jedna lista posłuży do preloadu LCP (#1), SSR pierwszego banera do home-shell (#2)
+// i window.__HERO_BANNERS__ dla frontu (#3).
+interface HomeHeroBanner {
+    id: string;
+    imageUrlDesktop: string | null;
+    imageUrlMobile: string | null;
+    altText: string;
+    buttonLabel: string;
+    buttonUrl: string;
+    buttonPositionYPct: number;
+    buttonAlign: string;
+}
+
+let heroBannersCache: { value: HomeHeroBanner[]; fetchedAt: number } | null = null;
+
+async function getHomeHeroBanners(fastify: FastifyInstance): Promise<HomeHeroBanner[]> {
+    if (heroBannersCache && Date.now() - heroBannersCache.fetchedAt < SSR_PER_PAGE_TTL_MS) {
+        return heroBannersCache.value;
+    }
+    let value: HomeHeroBanner[] = [];
+    try {
+        value = await fastify.prisma.heroBanner.findMany({
+            where: { isActive: true },
+            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+            select: {
+                id: true,
+                imageUrlDesktop: true,
+                imageUrlMobile: true,
+                altText: true,
+                buttonLabel: true,
+                buttonUrl: true,
+                buttonPositionYPct: true,
+                buttonAlign: true,
+            },
+        });
+    } catch {
+        value = [];
+    }
+    heroBannersCache = { value, fetchedAt: Date.now() };
+    return value;
+}
+
 // Zróżnicowanie list kategorii — jak filtry w SPA (ConditionPage)
 const CONDITION_BY_PATH: Record<string, 'NEW' | 'USED'> = {
     '/nowe': 'NEW',
@@ -174,6 +218,7 @@ export function __resetRenderCache() {
     carsOrderByCache = null;
     manifestCache = null;
     gridColumnsCache = null;
+    heroBannersCache = null;
 }
 
 // Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
@@ -716,6 +761,7 @@ async function resolveMeta(
     }
 
     const orgSettings = path === '/' ? await getOrgSettings(fastify) : undefined;
+    const heroBanners = path === '/' ? await getHomeHeroBanners(fastify) : [];
     // "Popularne marki" — linkowanie wewnętrzne do stron marek, tylko na katalogu głównym
     const popularBrands: BrandLinkEntry[] = path === '/samochody'
         ? (await getBrandCatalog(fastify))
@@ -725,8 +771,10 @@ async function resolveMeta(
             .map(b => ({ name: b.make, slug: b.slug, count: b.count }))
         : [];
 
-    const meta = buildStaticMeta(path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path), pagination, orgSettings, popularBrands)
-        ?? defaultMeta(ctx, { noindex: true, status: 404 });
+    const meta = buildStaticMeta(
+        path, ctx, listings, faq, listingsBasePath, getFinancingArticle(ctx.brand, path), pagination, orgSettings, popularBrands,
+        heroBanners[0] ? { desktop: heroBanners[0].imageUrlDesktop, mobile: heroBanners[0].imageUrlMobile } : undefined
+    ) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 
     // Canonical filtrów: /samochody?make=X (pojedyncza marka, opcjonalnie +model) → strona marki/modelu.
     // Wiele marek lub brak dopasowania: canonical zostaje na /samochody (bez zmian).
@@ -809,17 +857,24 @@ export async function renderRoutes(fastify: FastifyInstance) {
             return reply.code(503).send({ error: 'template unavailable' });
         }
 
+        const ctx = resolveBrandCtx();
+        const heroBanners = path === '/' ? await getHomeHeroBanners(fastify) : [];
+
         // Statyczny shell hero (vite.config, znaczniki home-shell) jest tylko dla
         // strony głównej — na innych trasach usuwamy go, żeby hero nie migało
         // przed zamontowaniem SPA. Strony katalogowe (isPaginatedPath) dostają w zamian
         // statyczny skeleton (nagłówek + placeholdery kart) zamiast białego ekranu do
-        // montażu Reacta. Podmiana funkcyjna — markup skeletonu może zawierać `$`.
+        // montażu Reacta. Na / z aktywnym bannerem CMS podmieniamy tekstowy shell na SSR
+        // pierwszego banera (ten sam obrazek co preload/LCP) — bez banerów zostaje bez zmian.
+        // Podmiana funkcyjna — markup skeletonu/banera może zawierać `$`.
         if (path !== '/') {
             const skeleton = isPaginatedPath(path) ? catalogSkeletonHtml(await getGridColumns(fastify)) : '';
             template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
+        } else if (heroBanners.length > 0) {
+            const heroShell = homeHeroShellHtml(heroBanners[0], ctx.baseUrl);
+            template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => heroShell);
         }
 
-        const ctx = resolveBrandCtx();
         const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
         let html = injectHead(template, meta);
 
@@ -830,6 +885,13 @@ export async function renderRoutes(fastify: FastifyInstance) {
             if (chunkLinks.length) {
                 html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
             }
+        }
+
+        // window.__HERO_BANNERS__ — initialData React Query dla frontu (#3), tylko na /,
+        // żeby hasHeroBanners/carousel nie czekały na rundę do API na krytycznej ścieżce.
+        if (path === '/' && heroBanners.length > 0) {
+            const heroBannersJson = JSON.stringify(heroBanners).replace(/</g, '\\u003c');
+            html = html.replace('</head>', () => `<script>window.__HERO_BANNERS__=${heroBannersJson};</script>\n</head>`);
         }
 
         if (pageCache.size >= PAGE_CACHE_MAX) pageCache.clear();
