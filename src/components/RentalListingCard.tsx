@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Car, Calendar, Gauge, Fuel } from 'lucide-react';
+import { Car, Calendar, Gauge, Fuel, Info } from 'lucide-react';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { normalizeRentalImageUrl } from '@/lib/utils';
 import { getTransmissionShortLabel, translateTechnicalValue } from '@/utils/i18n-utils';
 import { formatNumber } from '@/utils/formatters';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function buildRentalImageList(v: any): string[] {
   const seen = new Set<string>();
@@ -58,10 +59,23 @@ export function RentalListingCard({ v, priority = false }: { v: any; priority?: 
                 {isBusiness ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23)) : formatNumber(Math.ceil(v.minMonthlyRateGross))}
                 <span className="text-base font-semibold ml-0.5">zł</span>
               </span>
-              <span className="text-xs text-muted-foreground">{isBusiness ? 'netto / mies.' : 'brutto / mies.'}</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="text-xs text-muted-foreground">{isBusiness ? 'netto / mies.' : 'brutto / mies.'}</span>
+                {v.minRateConfig && (
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
+                        Kalkulacja raty przy założeniu: {v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)} tys. km/rok
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </span>
             </div>
             <div className="text-xs text-muted-foreground mt-1">{isBusiness ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto` : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`}</div>
-            {v.minRateConfig && <span className="text-xs text-muted-foreground">{v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)}tys. km/rok</span>}
           </div>) : <span className="text-sm text-muted-foreground">Zapytaj o cenę</span>}
         </div>
       </div>
