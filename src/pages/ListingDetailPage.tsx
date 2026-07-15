@@ -684,7 +684,7 @@ export default function ListingDetailPage() {
                               priceType
                             ),
                             discount
-                          ) / 1.23
+                          ) / (listing.vatMargin ? 1 : 1.23)
                         )
                       : applySpecialOfferDiscount(
                           getFinancingBasePrice(
@@ -696,6 +696,7 @@ export default function ListingDetailPage() {
                         )
                   }
                   priceIsNet={priceType === 'net'}
+                  vatMargin={listing.vatMargin ?? false}
                   currency={settings?.displayCurrency || 'PLN'}
                   manufacturingYear={listing.production_year}
                   mileageKm={listing.mileage_km}
@@ -960,7 +961,7 @@ export default function ListingDetailPage() {
                                       priceType
                                     ),
                                     discount
-                                  ) / 1.23
+                                  ) / (listing.vatMargin ? 1 : 1.23)
                                 )
                               : applySpecialOfferDiscount(
                                   getFinancingBasePrice(
@@ -972,6 +973,7 @@ export default function ListingDetailPage() {
                                 )
                           }
                           priceIsNet={priceType === 'net'}
+                          vatMargin={listing.vatMargin ?? false}
                           currency={settings?.displayCurrency || 'PLN'}
                           manufacturingYear={listing.production_year}
                           mileageKm={listing.mileage_km}
@@ -1189,7 +1191,7 @@ export default function ListingDetailPage() {
                                 priceType
                               ),
                               discount
-                            ) / 1.23
+                            ) / (listing.vatMargin ? 1 : 1.23)
                           )
                         : applySpecialOfferDiscount(
                             getFinancingBasePrice(
@@ -1201,6 +1203,7 @@ export default function ListingDetailPage() {
                           )
                     }
                     priceIsNet={priceType === 'net'}
+                    vatMargin={listing.vatMargin ?? false}
                     currency={settings?.displayCurrency || 'PLN'}
                     manufacturingYear={listing.production_year}
                     mileageKm={listing.mileage_km}
