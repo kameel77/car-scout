@@ -44,6 +44,7 @@ import { dealerAdminRoutes } from './routes/dealers-admin.js';
 import { featuredRoutes } from './routes/featured.js';
 import { widgetRoutes } from './routes/widgets.js';
 import { onepagerRoutes } from './routes/onepager.js';
+import { businessRoutes } from './routes/business.js';
 import { featureTileRoutes } from './routes/feature-tiles.js';
 import { heroBannerRoutes } from './routes/hero-banners.js';
 import { consentRoutes } from './routes/consent.js';
@@ -373,6 +374,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(featuredRoutes);
     await fastify.register(widgetRoutes);
     await fastify.register(onepagerRoutes);
+    await fastify.register(businessRoutes);
     await fastify.register(featureTileRoutes);
     await fastify.register(heroBannerRoutes);
     await fastify.register(consentRoutes);

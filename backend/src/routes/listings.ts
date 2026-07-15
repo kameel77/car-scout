@@ -226,6 +226,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 .catch(err => fastify.log.error({ err, listingId: updated.id }, 'Nie udało się przeliczyć rat referencyjnych po edycji oferty'));
         }
 
+        if (updateData.isBusinessFeatured !== undefined) {
+            await fastify.redis.del('business:offers').catch(() => {});
+        }
+
         return reply.send({ listing: updated });
     });
 

@@ -62,6 +62,7 @@ const RentalCompaniesPage = lazy(() => import("./pages/admin/RentalCompaniesPage
 const RentalMatrixPage = lazy(() => import("./pages/admin/RentalMatrixPage"));
 const PersonalOfferPage = lazy(() => import("./pages/PersonalOfferPage"));
 const B2BOnepagerPage = lazy(() => import("./pages/B2BOnepagerPage"));
+const MotoliaB2BPage = lazy(() => import("./pages/MotoliaB2BPage"));
 const RentalSearchPage = lazy(() => import("./pages/RentalSearchPage"));
 const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
 const ConditionPage = lazy(() => import("./pages/ConditionPage"));
@@ -124,7 +125,8 @@ const App = () => (
                       <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/oferta/:slug/negotiate" element={<LeadFormPage />} />
                       <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
-                      <Route path="/dla-firm" element={<B2BOnepagerPage />} />
+                      <Route path="/dla-firm" element={<MotoliaB2BPage />} />
+                      <Route path="/dla-firmy" element={<B2BOnepagerPage />} />
                       <Route path="/wynajem-dlugoterminowy" element={<RentalSearchPage />} />
                       <Route path="/wynajem-dlugoterminowy/:slug" element={<RentalDetailPage />} />
                       <Route path="/wynajem-dlugoterminowy/:slug/zapytanie" element={<RentalLeadFormPage />} />

@@ -1,4 +1,4 @@
-export type FaqPage = 'home' | 'offers' | 'contact' | 'faq' | 'rental' | 'financing';
+export type FaqPage = 'home' | 'offers' | 'contact' | 'faq' | 'rental' | 'financing' | 'business';
 export type FaqPageContext = 'offers' | 'rental' | 'all';
 
 export interface FaqEntry {

@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
 
-const PAGE_OPTIONS = ['home', 'offers', 'contact', 'faq', 'rental', 'financing'] as const;
+const PAGE_OPTIONS = ['home', 'offers', 'contact', 'faq', 'rental', 'financing', 'business'] as const;
 const PAGE_CONTEXT_OPTIONS = ['offers', 'rental', 'all'] as const;
 
 type FaqPayload = {

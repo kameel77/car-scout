@@ -41,6 +41,7 @@ export interface VehicleFormState {
     // Flags — sale
     isChineseBrand: boolean;           // sale only
     isFeatured: boolean;
+    isBusinessFeatured: boolean;       // sale only — oferta specjalna dla firm (/dla-firm)
     showMotoliaDiscount: boolean;      // sale only — pokaż rabat Motolia na froncie
     financingPriceBase: 'PRICE_PLN' | 'BROKER_PRICE_PLN'; // sale only
 

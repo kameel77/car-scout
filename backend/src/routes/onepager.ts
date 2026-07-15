@@ -74,7 +74,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
     const publicBase = process.env.FRONTEND_URL?.replace(/\/$/, '');
     const idsQs = ids ? `&ids=${encodeURIComponent(ids)}` : '';
     const publicQs = publicBase ? `&publicBase=${encodeURIComponent(publicBase)}` : '';
-    const url = `${internalBase}/dla-firm?print=1${idsQs}${publicQs}`;
+    const url = `${internalBase}/dla-firmy?print=1${idsQs}${publicQs}`;
 
     const browser = await getBrowser();
     const page = await browser.newPage();

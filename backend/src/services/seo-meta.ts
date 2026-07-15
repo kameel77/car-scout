@@ -807,10 +807,10 @@ const STATIC_ROUTES: Record<string, StaticRoute> = {
             'Samochód z dopasowanym finansowaniem — leasing, kredyt lub najem. Zostaw kontakt, dobierzemy ofertę.',
     },
     '/dla-firm': {
-        title: b => `Samochody i finansowanie dla firm | ${b}`,
-        h1: 'Samochody i finansowanie dla firm',
+        title: b => `Leasing i najem samochodów dla firm — od pierwszego auta | ${b}`,
+        h1: 'Auta dla Twojej firmy. Ważnej dla nas od pierwszego samochodu.',
         description:
-            'Auta dla firm — leasing, kredyt lub najem długoterminowy. Złóż wniosek o finansowanie.',
+            'Nowe samochody w leasingu i najmie długoterminowym dla JDG i spółek — jedno auto czy dwadzieścia. Jeden opiekun, oferty wielu finansujących, rata policzona pod podatki firmy.',
     },
     '/faq': {
         title: b => `Najczęstsze pytania | ${b}`,

@@ -24,6 +24,7 @@ const PAGE_OPTIONS: { value: FaqPageType; label: string }[] = [
   { value: 'faq', label: 'Strona FAQ' },
   { value: 'rental', label: 'Strona najmu' },
   { value: 'financing', label: 'Strona finansowania (leasing/kredyt/wynajem)' },
+  { value: 'business', label: 'Strona dla firm (/dla-firm)' },
 ];
 
 const PAGE_CONTEXT_OPTIONS: { value: FaqPageContext; label: string }[] = [
