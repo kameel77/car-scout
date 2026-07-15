@@ -4,8 +4,6 @@ import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge } from 'lu
 import { Link } from 'react-router-dom';
 import { formatNumber } from '@/utils/formatters';
 import { OptimizedImage } from '@/components/OptimizedImage';
-import { computeMonthlyRates, referenceInstallment, selectReferenceProduct, VAT } from '@/utils/financingRates';
-import { useFinancingProducts } from '@/hooks/useFinancingProducts';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 // Normalize URL
@@ -35,8 +33,6 @@ export function DynamicWidget({
       return res.json();
     }
   });
-
-  const products = useFinancingProducts();
 
   if (isLoading) {
     const loader = (
@@ -90,19 +86,9 @@ export function DynamicWidget({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {widget.vehicles.map((v: any) => {
                 const hasDiscount = !!(v.showMotoliaDiscount && v.catalogPrice && v.catalogPrice > v.price);
-                let rates = null;
-                if (!v.installment) {
-                  const creditP = selectReferenceProduct(products, 'CREDIT', v.creditProductId);
-                  const leasingP = selectReferenceProduct(products, 'LEASING', v.leasingProductId);
-                  const k = (v.creditAvailable !== false) ? referenceInstallment(creditP, v.price, 'CREDIT') : null;
-                  const l = (v.leasingAvailable !== false) ? referenceInstallment(leasingP, v.price / VAT, 'LEASING') : null;
-                  if (k != null || l != null) {
-                    const fb = computeMonthlyRates(v.price);
-                    rates = { kredytGross: k ?? fb?.kredytGross ?? 0, leasingNet: l ?? fb?.leasingNet ?? 0 };
-                  } else {
-                    rates = computeMonthlyRates(v.price); // fallback pełny (np. dev bez produktów)
-                  }
-                }
+                const rates = (!v.installment && (v.creditInstallment != null || v.leasingInstallment != null))
+                  ? { kredytGross: v.creditInstallment as number | null, leasingNet: v.leasingInstallment as number | null }
+                  : null;
                 return (
                 <Link to={v.url} key={v.id} target={placement === 'EXTERNAL' ? '_parent' : '_self'}>
                   <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col cursor-pointer">
@@ -222,20 +208,24 @@ export function DynamicWidget({
                             {rates && (
                               <>
                                 <div className="grid grid-cols-2 gap-2 mt-3">
-                                  <div>
-                                    <span className="text-[10px] text-gray-500 block mb-0.5">Kredyt od</span>
-                                    <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
-                                      {formatNumber(rates.kredytGross)} zł<span className="text-xs font-semibold">/mc</span>
-                                    </span>
-                                    <span className="text-[10px] text-gray-400 block mt-0.5">brutto</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[10px] text-gray-500 block mb-0.5">Leasing od</span>
-                                    <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
-                                      {formatNumber(rates.leasingNet)} zł<span className="text-xs font-semibold">/mc</span>
-                                    </span>
-                                    <span className="text-[10px] text-gray-400 block mt-0.5">netto</span>
-                                  </div>
+                                  {rates.kredytGross != null && (
+                                    <div>
+                                      <span className="text-[10px] text-gray-500 block mb-0.5">Kredyt od</span>
+                                      <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
+                                        {formatNumber(rates.kredytGross)} zł<span className="text-xs font-semibold">/mc</span>
+                                      </span>
+                                      <span className="text-[10px] text-gray-400 block mt-0.5">brutto</span>
+                                    </div>
+                                  )}
+                                  {rates.leasingNet != null && (
+                                    <div>
+                                      <span className="text-[10px] text-gray-500 block mb-0.5">Leasing od</span>
+                                      <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
+                                        {formatNumber(rates.leasingNet)} zł<span className="text-xs font-semibold">/mc</span>
+                                      </span>
+                                      <span className="text-[10px] text-gray-400 block mt-0.5">netto</span>
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-[10px] text-gray-400 mt-2">Raty poglądowe, nie stanowią oferty.</p>
                               </>

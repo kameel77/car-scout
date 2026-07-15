@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { buildApp } from './app.js';
 import { initCSFlowCron } from './services/csflow.service.js';
 import { bootstrapCsflowSources } from './services/csflow-bootstrap.js';
+import { initReferenceInstallmentsCron } from './services/financing-calc.service.js';
 
 dotenv.config();
 
@@ -89,6 +90,7 @@ const start = async () => {
         }
 
         initCSFlowCron(app.prisma);
+        initReferenceInstallmentsCron(app.prisma);
 
         // Graceful shutdown
         const signals = ['SIGINT', 'SIGTERM'];

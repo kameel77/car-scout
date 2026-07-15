@@ -9,6 +9,7 @@ import {
     validateListingPayload,
 } from '../services/listing-mapper.js';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
+import { computeReferenceInstallments } from '../services/financing-calc.service.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
     // Sanitization helper for dealer data
@@ -152,6 +153,9 @@ export async function listingRoutes(fastify: FastifyInstance) {
             data: { slug },
         });
 
+        computeReferenceInstallments({ prisma: fastify.prisma, log: fastify.log }, updated.id)
+            .catch(err => fastify.log.error({ err, listingId: updated.id }, 'Nie udało się przeliczyć rat referencyjnych po utworzeniu oferty'));
+
         return reply.code(201).send({ listing: updated });
     });
 
@@ -215,6 +219,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
             where: { id },
             data: updateData,
         });
+
+        const referenceRecalcFields = ['pricePln', 'creditProduct', 'leasingProduct', 'creditAvailable', 'leasingAvailable'];
+        if (referenceRecalcFields.some(field => updateData[field] !== undefined)) {
+            computeReferenceInstallments({ prisma: fastify.prisma, log: fastify.log }, updated.id)
+                .catch(err => fastify.log.error({ err, listingId: updated.id }, 'Nie udało się przeliczyć rat referencyjnych po edycji oferty'));
+        }
 
         return reply.send({ listing: updated });
     });

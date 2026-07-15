@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
+import { recomputeAll } from '../services/financing-calc.service.js';
 import path from 'path';
 import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
@@ -139,6 +140,10 @@ async function recalculateAllPrices(fastify: FastifyInstance) {
             ) * 10
         WHERE "is_archived" = false
     `;
+
+    // Ceny wszystkich ofert się zmieniły — przelicz raty referencyjne (throttled, nie blokuj krytycznie).
+    recomputeAll({ prisma: fastify.prisma, log: fastify.log })
+        .catch(err => fastify.log.error({ err }, 'Nie udało się przeliczyć rat referencyjnych po recalculateAllPrices'));
 
     return result;
 }
