@@ -95,9 +95,9 @@ export function FinancingCalculator({
     const [inbankDetails, setInbankDetails] = React.useState<any | null>(null);
 
     // State for calculation parameters
-    const [months, setMonths] = React.useState(36);
-    const [initialPaymentPct, setInitialPaymentPct] = React.useState(10);
-    const [finalPaymentPct, setFinalPaymentPct] = React.useState(20);
+    const [months, setMonths] = React.useState(60);
+    const [initialPaymentPct, setInitialPaymentPct] = React.useState(25);
+    const [finalPaymentPct, setFinalPaymentPct] = React.useState(35);
 
     const formatRate = React.useCallback((val: number | null | undefined) => {
         if (val == null || !Number.isFinite(val)) return '0,00';
@@ -301,13 +301,13 @@ export function FinancingCalculator({
         if (!selectedProduct) return;
         const vehisMinInitial = selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0;
         const vehisMinFinal = selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0;
-        setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
+        setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 60)));
         const initialFromOffer = offerInitialPaymentPct != null
             ? Math.max(vehisMinInitial, Math.min(offerInitialPaymentPct, selectedProduct.maxInitialPayment))
-            : Math.max(vehisMinInitial, Math.min(10, selectedProduct.maxInitialPayment));
+            : Math.max(vehisMinInitial, Math.min(25, selectedProduct.maxInitialPayment));
         setInitialPaymentPct(initialFromOffer);
         setFinalPaymentPct(selectedProduct.hasBalloonPayment
-            ? Math.max(vehisMinFinal, Math.min(20, selectedProduct.maxFinalPayment))
+            ? Math.max(vehisMinFinal, Math.min(35, selectedProduct.maxFinalPayment))
             : 0
         );
     }, [offerInitialPaymentPct, selectedProduct]);

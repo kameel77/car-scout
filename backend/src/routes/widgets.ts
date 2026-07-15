@@ -123,7 +123,11 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              enginePowerHp: l.enginePowerHp,
              catalogPrice: l.catalogPrice,
              motoliaDiscountPln: l.motoliaDiscountPln,
-             showMotoliaDiscount: l.showMotoliaDiscount
+             showMotoliaDiscount: l.showMotoliaDiscount,
+             creditProductId: l.creditProductId,
+             leasingProductId: l.leasingProductId,
+             creditAvailable: l.creditAvailable,
+             leasingAvailable: l.leasingAvailable
           }));
           unifiedVehicles.push(...formatted);
         }
@@ -203,7 +207,11 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              enginePowerHp: l.enginePowerHp,
              catalogPrice: l.catalogPrice,
              motoliaDiscountPln: l.motoliaDiscountPln,
-             showMotoliaDiscount: l.showMotoliaDiscount
+             showMotoliaDiscount: l.showMotoliaDiscount,
+             creditProductId: l.creditProductId,
+             leasingProductId: l.leasingProductId,
+             creditAvailable: l.creditAvailable,
+             leasingAvailable: l.leasingAvailable
           }));
           unifiedVehicles.push(...formatted);
         }

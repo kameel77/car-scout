@@ -4,7 +4,8 @@ import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge } from 'lu
 import { Link } from 'react-router-dom';
 import { formatNumber } from '@/utils/formatters';
 import { OptimizedImage } from '@/components/OptimizedImage';
-import { computeMonthlyRates } from '@/utils/financingRates';
+import { computeMonthlyRates, referenceInstallment, selectReferenceProduct, VAT } from '@/utils/financingRates';
+import { useFinancingProducts } from '@/hooks/useFinancingProducts';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 // Normalize URL
@@ -34,6 +35,8 @@ export function DynamicWidget({
       return res.json();
     }
   });
+
+  const products = useFinancingProducts();
 
   if (isLoading) {
     const loader = (
@@ -87,7 +90,19 @@ export function DynamicWidget({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {widget.vehicles.map((v: any) => {
                 const hasDiscount = !!(v.showMotoliaDiscount && v.catalogPrice && v.catalogPrice > v.price);
-                const rates = !v.installment ? computeMonthlyRates(v.price) : null;
+                let rates = null;
+                if (!v.installment) {
+                  const creditP = selectReferenceProduct(products, 'CREDIT', v.creditProductId);
+                  const leasingP = selectReferenceProduct(products, 'LEASING', v.leasingProductId);
+                  const k = (v.creditAvailable !== false) ? referenceInstallment(creditP, v.price, 'CREDIT') : null;
+                  const l = (v.leasingAvailable !== false) ? referenceInstallment(leasingP, v.price / VAT, 'LEASING') : null;
+                  if (k != null || l != null) {
+                    const fb = computeMonthlyRates(v.price);
+                    rates = { kredytGross: k ?? fb?.kredytGross ?? 0, leasingNet: l ?? fb?.leasingNet ?? 0 };
+                  } else {
+                    rates = computeMonthlyRates(v.price); // fallback pełny (np. dev bez produktów)
+                  }
+                }
                 return (
                 <Link to={v.url} key={v.id} target={placement === 'EXTERNAL' ? '_parent' : '_self'}>
                   <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col cursor-pointer">

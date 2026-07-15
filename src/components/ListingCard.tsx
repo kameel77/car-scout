@@ -19,7 +19,8 @@ import { getDisplayPrice } from '@/utils/listingPrice';
 import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
 import { useBrand } from '@/contexts/BrandContext';
-import { KREDYT_FACTOR, LEASING_FACTOR, VAT } from '@/utils/financingRates';
+import { KREDYT_FACTOR, LEASING_FACTOR, VAT, selectReferenceProduct, referenceInstallment } from '@/utils/financingRates';
+import { useFinancingProducts } from '@/hooks/useFinancingProducts';
 
 interface ListingCardProps {
   listing: Listing;
@@ -119,6 +120,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
   const { discount, hasSpecialOffer } = useSpecialOffer();
   const { config } = useBrand();
   const isMotolia = config.id === 'motolia';
+  const products = useFinancingProducts();
 
   // Use explicit prop, or read user's cached preference (defaults to 'kredyt')
   const effectiveFinancingType = financingType || getPreferredFinancingType();
@@ -171,8 +173,15 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     if (!grossPln || grossPln <= 0) return null;
     const netPln = grossPln / VAT;
 
-    const kredytGross = Math.round(grossPln * KREDYT_FACTOR);
-    const leasingNet = Math.round(netPln * LEASING_FACTOR);
+    const creditP = selectReferenceProduct(products, 'CREDIT', listing.creditProductId);
+    const leasingP = selectReferenceProduct(products, 'LEASING', listing.leasingProductId);
+    const creditAvail = listing.creditAvailable !== false;
+    const leasingAvail = listing.leasingAvailable !== false;
+    let kredytGross = creditAvail ? referenceInstallment(creditP, grossPln, 'CREDIT') : null;
+    let leasingNet = leasingAvail ? referenceInstallment(leasingP, netPln, 'LEASING') : null;
+    // fallback do przybliżenia gdy produkt niedostępny/brak (żeby nie było pustych rat, jak w Etapie 1)
+    if (kredytGross == null) kredytGross = Math.round(grossPln * KREDYT_FACTOR);
+    if (leasingNet == null) leasingNet = Math.round(netPln * LEASING_FACTOR);
 
     if (priceType === 'net') {
       // Show net rates: kredyt net / leasing net
@@ -187,7 +196,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
       leasing: leasingNet,
       isNet: false,
     };
-  }, [listing, settings, discount, priceType]);
+  }, [listing, settings, discount, priceType, products]);
 
   const handleSpecialOfferClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
