@@ -4,6 +4,7 @@ import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge } from 'lu
 import { Link } from 'react-router-dom';
 import { formatNumber } from '@/utils/formatters';
 import { OptimizedImage } from '@/components/OptimizedImage';
+import { computeMonthlyRates } from '@/utils/financingRates';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 // Normalize URL
@@ -84,13 +85,16 @@ export function DynamicWidget({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {widget.vehicles.map((v: any) => (
+              {widget.vehicles.map((v: any) => {
+                const hasDiscount = !!(v.showMotoliaDiscount && v.catalogPrice && v.catalogPrice > v.price);
+                const rates = !v.installment ? computeMonthlyRates(v.price) : null;
+                return (
                 <Link to={v.url} key={v.id} target={placement === 'EXTERNAL' ? '_parent' : '_self'}>
                   <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col cursor-pointer">
                     <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
                       {v.imageUrl ? (
-                        <OptimizedImage 
-                          src={v.imageUrl} 
+                        <OptimizedImage
+                          src={v.imageUrl}
                           alt={v.title}
                           width="800"
                           height="500"
@@ -102,21 +106,41 @@ export function DynamicWidget({
                           Brak zdjęcia
                         </div>
                       )}
-                      
-                      <div className="absolute top-4 left-4 flex flex-col gap-2">
+
+                      <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
                         {v.bodyType && (
                           <span className="bg-black/60 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full font-medium tracking-wide">
                             {v.bodyType}
                           </span>
                         )}
+                        {v.condition === 'NEW' && (
+                          <span className="bg-accent text-gray-900 text-xs px-3 py-1.5 rounded-full font-medium">
+                            NOWY
+                          </span>
+                        )}
+                        {v.condition === 'USED' && (
+                          <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-medium">
+                            UŻYWANY
+                          </span>
+                        )}
+                        {hasDiscount && (
+                          <span className="bg-green-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md">
+                            -{Math.round((v.catalogPrice - v.price) / v.catalogPrice * 100)}%
+                          </span>
+                        )}
                       </div>
                     </div>
-                    
+
                     <div className="p-5 flex flex-col flex-grow">
                       <div className="mb-2">
-                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-accent transition-colors line-clamp-1">
-                          {v.title}
-                        </h3>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-bold text-lg text-gray-900 group-hover:text-accent transition-colors line-clamp-1">
+                            {v.title}
+                          </h3>
+                          <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent transition-colors shrink-0">
+                            <ChevronRight className="w-4 h-4 text-accent group-hover:text-white" />
+                          </div>
+                        </div>
                         {v.version && (
                           <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{v.version}</p>
                         )}
@@ -131,6 +155,11 @@ export function DynamicWidget({
                                   <Gauge className="w-3 h-3" /> {v.enginePowerHp} KM
                               </span>
                           )}
+                          {v.condition === 'USED' && v.mileage > 0 && (
+                              <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                  <Gauge className="w-3 h-3" /> {formatNumber(v.mileage)} km
+                              </span>
+                          )}
                           {v.fuelType && (
                               <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
                                   <Fuel className="w-3 h-3" /> {v.fuelType}
@@ -143,40 +172,67 @@ export function DynamicWidget({
                           )}
                         </div>
                       </div>
-                      
-                      <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-                        <div className="flex flex-col gap-1">
-                          {v.installment ? (
-                            <>
-                              {v.price && (
-                                <span className="text-xs text-gray-600 font-medium tracking-wide">
-                                  Cena katalogowa: {formatNumber(v.price)} PLN
-                                </span>
-                              )}
-                              <div className="flex items-baseline gap-2 mt-1">
-                                <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-accent text-gray-900 shadow-sm">
-                                  {formatNumber(Math.round(v.installment))} zł
-                                </span>
-                                <span className="text-xs font-medium text-gray-600">brutto / mies.</span>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Cena pojazdu</span>
-                              <span className="text-lg font-bold text-gray-900">
-                                {v.price ? formatNumber(v.price) : '-'} PLN
+
+                      <div className="mt-auto pt-4 border-t border-gray-100">
+                        {v.installment ? (
+                          <>
+                            {v.price && (
+                              <span className="text-xs text-gray-600 font-medium tracking-wide">
+                                Cena katalogowa: {formatNumber(v.price)} PLN
                               </span>
-                            </>
-                          )}
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent transition-colors shrink-0">
-                          <ChevronRight className="w-4 h-4 text-accent group-hover:text-white" />
-                        </div>
+                            )}
+                            <div className="flex items-baseline gap-2 mt-1">
+                              <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-accent text-gray-900 shadow-sm">
+                                {formatNumber(Math.round(v.installment))} zł
+                              </span>
+                              <span className="text-xs font-medium text-gray-600">brutto / mies.</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {hasDiscount ? (
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-400 line-through">{formatNumber(v.catalogPrice)} PLN</span>
+                                <span className="text-xl font-black text-gray-900">{formatNumber(v.price)} PLN</span>
+                                <span className="text-xs font-semibold text-green-600">Oszczędzasz {formatNumber(v.catalogPrice - v.price)} zł</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Cena pojazdu</span>
+                                <span className="text-lg font-bold text-gray-900">
+                                  {v.price ? formatNumber(v.price) : '-'} PLN
+                                </span>
+                              </div>
+                            )}
+                            {rates && (
+                              <>
+                                <div className="grid grid-cols-2 gap-2 mt-3">
+                                  <div>
+                                    <span className="text-[10px] text-gray-500 block mb-0.5">Kredyt od</span>
+                                    <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
+                                      {formatNumber(rates.kredytGross)} zł<span className="text-xs font-semibold">/mc</span>
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 block mt-0.5">brutto</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-gray-500 block mb-0.5">Leasing od</span>
+                                    <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
+                                      {formatNumber(rates.leasingNet)} zł<span className="text-xs font-semibold">/mc</span>
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 block mt-0.5">netto</span>
+                                  </div>
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-2">Raty poglądowe, nie stanowią oferty.</p>
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-6 md:hidden">

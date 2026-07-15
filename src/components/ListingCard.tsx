@@ -19,6 +19,7 @@ import { getDisplayPrice } from '@/utils/listingPrice';
 import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
 import { useBrand } from '@/contexts/BrandContext';
+import { KREDYT_FACTOR, LEASING_FACTOR, VAT } from '@/utils/financingRates';
 
 interface ListingCardProps {
   listing: Listing;
@@ -26,13 +27,6 @@ interface ListingCardProps {
   financingType?: FinancingType;
 }
 
-// Static approximations matching B2B onepager card.
-// Real rates available on offer detail page.
-// Kredyt: ~1.4%/mc on gross price (36mc, 10% wkład, ~9% APR)
-// Leasing: ~1.2%/mc on net price (36mc, 20% wkład, ~6.5% APR)
-const KREDYT_FACTOR = 0.014;
-const LEASING_FACTOR = 0.012;
-const VAT = 1.23;
 const PLN = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 });
 
 function dedupImages(primary: string | undefined, all: string[] | undefined): string[] {
