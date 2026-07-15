@@ -124,6 +124,9 @@ model Listing {
   isRepresentative         Boolean               @default(true) @map("is_representative")
   csflowSourceId           String?               @map("csflow_source_id")
   csflowCarId              Int?                  @map("csflow_car_id")
+  referenceCreditInstallment  Int?              @map("reference_credit_installment")
+  referenceLeasingInstallment Int?              @map("reference_leasing_installment")
+  referenceCalcAt             DateTime?         @map("reference_calc_at")
   leads                    Lead[]
   creditProduct            FinancingProduct?     @relation("ListingCreditProduct", fields: [creditProductId], references: [id])
   dealer                   Dealer?               @relation(fields: [dealerId], references: [id])

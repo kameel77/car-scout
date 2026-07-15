@@ -64,6 +64,8 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             leasingAvailable: backendListing.leasingAvailable ?? true,
             creditProductId: backendListing.creditProductId,
             leasingProductId: backendListing.leasingProductId,
+            referenceCreditInstallment: backendListing.referenceCreditInstallment ?? null,
+            referenceLeasingInstallment: backendListing.referenceLeasingInstallment ?? null,
             dealerSettings: backendListing.dealer?.settings ? {
                 defaultCreditProductId: backendListing.dealer.settings.defaultCreditProductId,
                 defaultLeasingProductId: backendListing.dealer.settings.defaultLeasingProductId,

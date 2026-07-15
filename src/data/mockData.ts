@@ -80,6 +80,8 @@ export interface Listing {
   leasingAvailable?: boolean;
   creditProductId?: string | null;
   leasingProductId?: string | null;
+  referenceCreditInstallment?: number | null;
+  referenceLeasingInstallment?: number | null;
   dealerSettings?: {
     defaultCreditProductId?: string | null;
     defaultLeasingProductId?: string | null;

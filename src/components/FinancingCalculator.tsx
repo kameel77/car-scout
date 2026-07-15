@@ -38,6 +38,7 @@ interface FinancingCalculatorProps {
     forcedProductId?: string;
     creditAvailable?: boolean;
     leasingAvailable?: boolean;
+    vatMargin?: boolean;
 }
 
 /** Maps URL financing type to product category */
@@ -64,8 +65,10 @@ export function FinancingCalculator({
     forcedProductId,
     creditAvailable = true,
     leasingAvailable = true,
+    vatMargin = false,
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
+    const vatMultiplier = vatMargin ? 1 : 1.23;
 
     const { data, isLoading } = useQuery({
         queryKey: ['financing-calculator'],
@@ -95,9 +98,9 @@ export function FinancingCalculator({
     const [inbankDetails, setInbankDetails] = React.useState<any | null>(null);
 
     // State for calculation parameters
-    const [months, setMonths] = React.useState(36);
-    const [initialPaymentPct, setInitialPaymentPct] = React.useState(10);
-    const [finalPaymentPct, setFinalPaymentPct] = React.useState(20);
+    const [months, setMonths] = React.useState(60);
+    const [initialPaymentPct, setInitialPaymentPct] = React.useState(25);
+    const [finalPaymentPct, setFinalPaymentPct] = React.useState(35);
 
     const formatRate = React.useCallback((val: number | null | undefined) => {
         if (val == null || !Number.isFinite(val)) return '0,00';
@@ -112,8 +115,8 @@ export function FinancingCalculator({
 
         // If consumer client (priceIsNet is false), Inbank calculations must be shown in gross (brutto).
         // Since the price was passed as net internally, Inbank returns net values.
-        // We multiply net values by 1.23 for consumers, or display net as-is for entrepreneurs.
-        const multiplier = priceIsNet ? 1 : 1.23;
+        // We multiply net values by vatMultiplier for consumers, or display net as-is for entrepreneurs.
+        const multiplier = priceIsNet ? 1 : vatMultiplier;
 
         const rrso = formatRate(inbankDetails.creditCostRateAnnual);
         const downPayment = formatPrice(Math.round(price * initialPaymentPct / 100), currency);
@@ -241,7 +244,7 @@ export function FinancingCalculator({
             try {
                 // Vehis always operates in netto internally.
                 // Ensure we always send netto price regardless of priceType.
-                const nettoPrice = priceIsNet ? price : Math.round(price / 1.23);
+                const nettoPrice = priceIsNet ? price : Math.round(price / vatMultiplier);
 
                 const response = await financingApi.calculate({
                     productId: selectedProduct.id,
@@ -255,12 +258,12 @@ export function FinancingCalculator({
                 });
                 if (!isCancelled) {
                     // Vehis returns netto installment.
-                    // For consumer (priceIsNet=false): display brutto = netto * 1.23
+                    // For consumer (priceIsNet=false): display brutto = netto * vatMultiplier
                     // For entrepreneur (priceIsNet=true): display netto as-is
                     const nettoInstallment = response.monthlyInstallment;
                     const displayValue = priceIsNet
                         ? nettoInstallment
-                        : Math.round(nettoInstallment * 1.23);
+                        : Math.round(nettoInstallment * vatMultiplier);
                     setExternalInstallment(displayValue);
                     
                     if (selectedProduct.provider === 'INBANK') {
@@ -301,13 +304,13 @@ export function FinancingCalculator({
         if (!selectedProduct) return;
         const vehisMinInitial = selectedProduct.provider === 'VEHIS' && selectedProduct.maxInitialPayment >= 1 ? 1 : 0;
         const vehisMinFinal = selectedProduct.provider === 'VEHIS' && selectedProduct.maxFinalPayment >= 1 ? 1 : 0;
-        setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 36)));
+        setMonths(Math.max(selectedProduct.minInstallments, Math.min(selectedProduct.maxInstallments, 60)));
         const initialFromOffer = offerInitialPaymentPct != null
             ? Math.max(vehisMinInitial, Math.min(offerInitialPaymentPct, selectedProduct.maxInitialPayment))
-            : Math.max(vehisMinInitial, Math.min(10, selectedProduct.maxInitialPayment));
+            : Math.max(vehisMinInitial, Math.min(25, selectedProduct.maxInitialPayment));
         setInitialPaymentPct(initialFromOffer);
         setFinalPaymentPct(selectedProduct.hasBalloonPayment
-            ? Math.max(vehisMinFinal, Math.min(20, selectedProduct.maxFinalPayment))
+            ? Math.max(vehisMinFinal, Math.min(35, selectedProduct.maxFinalPayment))
             : 0
         );
     }, [offerInitialPaymentPct, selectedProduct]);
@@ -566,8 +569,8 @@ export function FinancingCalculator({
                                         </span>
                                         <span className="text-[11px] text-muted-foreground">
                                             {priceIsNet
-                                                ? `(${formatPrice(Math.round((displayInstallment ?? 0) * 1.23), currency)} brutto)`
-                                                : `(${formatPrice(Math.round((displayInstallment ?? 0) / 1.23), currency)} netto)`}
+                                                ? `(${formatPrice(Math.round((displayInstallment ?? 0) * vatMultiplier), currency)} brutto)`
+                                                : `(${formatPrice(Math.round((displayInstallment ?? 0) / vatMultiplier), currency)} netto)`}
                                         </span>
                                     </div>
                                 ) : selectedProduct.category === 'LEASING' ? (

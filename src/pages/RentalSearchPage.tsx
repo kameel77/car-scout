@@ -11,9 +11,10 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Search, Calendar, Gauge, Fuel, ChevronLeft, ChevronRight,
-  Car, Building2, User, ChevronDown, ChevronUp, ArrowUpDown, Check, SlidersHorizontal, X
+  Car, Building2, User, ChevronDown, ChevronUp, ArrowUpDown, Check, SlidersHorizontal, X, Info
 } from 'lucide-react';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
 import { getTransmissionShortLabel, translateTechnicalValue } from '@/utils/i18n-utils';
@@ -734,12 +735,25 @@ export default function RentalSearchPage() {
                             {isBusiness ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23)) : formatNumber(Math.ceil(v.minMonthlyRateGross))}
                             <span className="text-base font-semibold ml-0.5">zł</span>
                           </span>
-                          <span className="text-xs text-muted-foreground">{isBusiness ? 'netto / mies.' : 'brutto / mies.'}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">{isBusiness ? 'netto / mies.' : 'brutto / mies.'}</span>
+                            {v.minRateConfig && (
+                              <TooltipProvider delayDuration={0}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                                    <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
+                                    Kalkulacja raty przy założeniu: {v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)} tys. km/rok
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {isBusiness ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto` : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`}
                         </div>
-                        {v.minRateConfig && <span className="text-xs text-muted-foreground">{v.minRateConfig.contractMonths} mies. | {(v.minRateConfig.annualMileageKm / 1000).toFixed(0)}tys. km/rok</span>}
                       </div>
                     ) : <span className="text-sm text-muted-foreground">Zapytaj o cenę</span>}
                   </div>

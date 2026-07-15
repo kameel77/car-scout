@@ -19,6 +19,7 @@ import { getDisplayPrice } from '@/utils/listingPrice';
 import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
 import { useBrand } from '@/contexts/BrandContext';
+import { VAT } from '@/utils/financingRates';
 
 interface ListingCardProps {
   listing: Listing;
@@ -26,13 +27,6 @@ interface ListingCardProps {
   financingType?: FinancingType;
 }
 
-// Static approximations matching B2B onepager card.
-// Real rates available on offer detail page.
-// Kredyt: ~1.4%/mc on gross price (36mc, 10% wkład, ~9% APR)
-// Leasing: ~1.2%/mc on net price (36mc, 20% wkład, ~6.5% APR)
-const KREDYT_FACTOR = 0.014;
-const LEASING_FACTOR = 0.012;
-const VAT = 1.23;
 const PLN = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 });
 
 function dedupImages(primary: string | undefined, all: string[] | undefined): string[] {
@@ -165,35 +159,27 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     return { primaryLabel: listing.price_display, secondaryLabel: null };
   }, [listing, settings, priceType, discount]);
 
-  // Approximate monthly rates (PLN only — skip for EUR pricing to avoid mixing currencies)
+  // Reference rates — precomputed and stored on the listing by the backend (Etap 3).
+  // No stored value → hide (no fallback/approximation, per design).
   // priceType 'net' → show net rates (without VAT), 'gross' → show gross rates
   const monthlyRates = React.useMemo(() => {
     const currency = settings?.displayCurrency || 'PLN';
     if (currency !== 'PLN') return null;
-    const grossPln = applySpecialOfferDiscount(
-      listing.price_pln || 0,
-      discount
-    );
-    if (!grossPln || grossPln <= 0) return null;
-    const netPln = grossPln / VAT;
 
-    const kredytGross = Math.round(grossPln * KREDYT_FACTOR);
-    const leasingNet = Math.round(netPln * LEASING_FACTOR);
+    const kredytGross = listing.referenceCreditInstallment ?? null;
+    const leasingNet = listing.referenceLeasingInstallment ?? null;
+    if (kredytGross == null && leasingNet == null) return null;
 
-    if (priceType === 'net') {
-      // Show net rates: kredyt net / leasing net
-      return {
-        kredyt: Math.round(kredytGross / VAT),
-        leasing: leasingNet,
-        isNet: true,
-      };
-    }
+    const kredyt = kredytGross == null
+      ? null
+      : (priceType === 'net' ? Math.round(kredytGross / VAT) : kredytGross);
+
     return {
-      kredyt: kredytGross,
+      kredyt,
       leasing: leasingNet,
-      isNet: false,
+      isNet: priceType === 'net',
     };
-  }, [listing, settings, discount, priceType]);
+  }, [listing, settings, priceType]);
 
   const handleSpecialOfferClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -233,7 +219,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             aspectClassName="aspect-[16/10]"
             imgClassName="group-hover:scale-105"
             priority={index < 3}
-            ctaSlide={monthlyRates ? (
+            ctaSlide={monthlyRates?.kredyt != null ? (
               <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-b from-primary/5 to-primary/15 p-6 text-center gap-1">
                 <p className="text-xs text-muted-foreground">{t('listing.kredytFrom')}</p>
                 <p className="text-3xl font-bold text-primary">{formatNumber(monthlyRates.kredyt)} <span className="text-lg">zł</span></p>
@@ -371,70 +357,74 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
             <div className="pt-3">
               <div className="grid grid-cols-2 gap-3">
                 {/* Kredyt */}
-                <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
-                    {t('listing.kredytFrom')}
-                  </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span
-                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
-                      style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
-                    >
-                      {formatNumber(monthlyRates.kredyt)}
-                      <span className="text-base font-semibold ml-0.5">zł</span>
+                {monthlyRates.kredyt != null && (
+                  <div>
+                    <span className="text-xs text-muted-foreground block mb-1">
+                      {t('listing.kredytFrom')}
                     </span>
-                    <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
+                        style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
+                      >
+                        {formatNumber(monthlyRates.kredyt)}
+                        <span className="text-base font-semibold ml-0.5">zł</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        {monthlyRates.isNet
+                          ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
+                          : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
+                      </span>
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
+                            Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-[11px] text-muted-foreground">
-                      {monthlyRates.isNet
-                        ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
-                        : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
-                    </span>
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
-                          Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
+                )}
 
                 {/* Leasing */}
-                <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
-                    {t('listing.leasingFrom')}
-                  </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span
-                      className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
-                      style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
-                    >
-                      {formatNumber(monthlyRates.leasing)}
-                      <span className="text-base font-semibold ml-0.5">zł</span>
+                {monthlyRates.leasing != null && (
+                  <div>
+                    <span className="text-xs text-muted-foreground block mb-1">
+                      {t('listing.leasingFrom')}
                     </span>
-                    <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
+                        style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
+                      >
+                        {formatNumber(monthlyRates.leasing)}
+                        <span className="text-base font-semibold ml-0.5">zł</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
+                      </span>
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
+                            Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-[11px] text-muted-foreground">
-                      {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
-                    </span>
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
-                          Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           )}

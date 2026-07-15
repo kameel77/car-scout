@@ -117,7 +117,15 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              transmission: l.transmission,
              price: l.pricePln,
              imageUrl: l.imageUrls[0] || '',
-             url: `/oferta/${l.slug ?? l.id}`
+             url: `/oferta/${l.slug ?? l.id}`,
+             condition: l.condition,
+             version: l.version,
+             enginePowerHp: l.enginePowerHp,
+             catalogPrice: l.catalogPrice,
+             motoliaDiscountPln: l.motoliaDiscountPln,
+             showMotoliaDiscount: l.showMotoliaDiscount,
+             creditInstallment: l.referenceCreditInstallment,
+             leasingInstallment: l.referenceLeasingInstallment
           }));
           unifiedVehicles.push(...formatted);
         }
@@ -191,7 +199,15 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              transmission: l.transmission,
              price: l.pricePln,
              imageUrl: l.imageUrls[0] || '',
-             url: `/oferta/${l.slug ?? l.id}`
+             url: `/oferta/${l.slug ?? l.id}`,
+             condition: l.condition,
+             version: l.version,
+             enginePowerHp: l.enginePowerHp,
+             catalogPrice: l.catalogPrice,
+             motoliaDiscountPln: l.motoliaDiscountPln,
+             showMotoliaDiscount: l.showMotoliaDiscount,
+             creditInstallment: l.referenceCreditInstallment,
+             leasingInstallment: l.referenceLeasingInstallment
           }));
           unifiedVehicles.push(...formatted);
         }
