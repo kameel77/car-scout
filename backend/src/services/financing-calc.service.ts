@@ -130,8 +130,12 @@ export async function calcInbankInstallment(
     const responseText = await response.text();
 
     if (!response.ok) {
-        try { JSON.parse(responseText); } catch { /* non-JSON response */ }
-        log.error({ provider: 'INBANK', status: response.status }, 'INBANK provider error');
+        log.error({
+            provider: 'INBANK',
+            status: response.status,
+            body: responseText?.slice(0, 800),
+            request: { product_code: payload.product_code, amount: payload.amount, period: payload.period, payment_day: payload.payment_day, response_level: payload.response_level }
+        }, 'INBANK provider error');
         throw new FinancingCalcError(502, { error: 'Provider request failed' });
     }
 
@@ -302,8 +306,7 @@ export async function calcVehisInstallment(
         const responseText = await response.text();
 
         if (!response.ok) {
-            try { JSON.parse(responseText); } catch { /* non-JSON response */ }
-            log.error({ provider: 'VEHIS', status: response.status }, 'VEHIS provider error');
+            log.error({ provider: 'VEHIS', status: response.status, body: responseText?.slice(0, 800), request: vehisPayload }, 'VEHIS provider error');
             throw new FinancingCalcError(502, { error: 'Provider request failed' });
         }
 
@@ -407,14 +410,14 @@ export interface CalcContext {
 }
 
 /** Mirrors `candidateProduct` from FinancingCalculator.tsx: category + availability + amount range + forced product, then priority/isDefault, with an OWN fallback. */
-function selectProduct(
+function selectProductCandidates(
     products: FinancingProduct[],
     category: Category,
     listing: ListingForCalc,
     amountToFinance: number
-): FinancingProduct | null {
+): FinancingProduct[] {
     const available = category === 'CREDIT' ? listing.creditAvailable : listing.leasingAvailable;
-    if (!available) return null;
+    if (!available) return [];
 
     const forcedProductId = category === 'CREDIT' ? listing.creditProductId : listing.leasingProductId;
 
@@ -427,11 +430,6 @@ function selectProduct(
         return true;
     });
 
-    if (forcedProductId) {
-        const forced = eligible.find(p => p.id === forcedProductId);
-        if (forced) return forced;
-    }
-
     const sorted = [...eligible].sort((a, b) => {
         const priorityDiff = (b.priority ?? 0) - (a.priority ?? 0);
         if (priorityDiff !== 0) return priorityDiff;
@@ -443,13 +441,41 @@ function selectProduct(
         return 0;
     });
 
-    if (sorted.length === 0) {
-        return products.find(p => p.category === category && p.provider === 'OWN' && p.isDefault)
-            || products.find(p => p.category === category && p.provider === 'OWN')
-            || null;
+    // Forced (listing-specific) product first — mirrors FinancingCalculator's forcedProductId.
+    if (forcedProductId) {
+        const idx = sorted.findIndex(p => p.id === forcedProductId);
+        if (idx > 0) {
+            const [forced] = sorted.splice(idx, 1);
+            sorted.unshift(forced);
+        }
     }
 
-    return sorted[0] || null;
+    // Terminal OWN fallback (like the calculator) — guarantees a value if every partner fails.
+    if (!sorted.some(p => p.provider === 'OWN')) {
+        const ownFallback = products.find(p => p.category === category && p.provider === 'OWN' && p.isDefault)
+            || products.find(p => p.category === category && p.provider === 'OWN');
+        if (ownFallback) sorted.push(ownFallback);
+    }
+
+    return sorted;
+}
+
+/** Tries candidates in priority order until one yields an installment — mirrors the calculator's failed-product fallback (a broken partner product is skipped, not fatal). */
+async function firstSuccessfulInstallment(
+    ctx: CalcContext,
+    candidates: FinancingProduct[],
+    connectionByProvider: Map<string, FinancingProviderConnection>,
+    category: Category,
+    grossPricePln: number,
+    manufacturingYear: number,
+    mileageKm: number,
+    cache?: Map<string, Promise<number | null>>
+): Promise<number | null> {
+    for (const product of candidates) {
+        const installment = await calcInstallmentForProduct(ctx, product, connectionByProvider, category, grossPricePln, manufacturingYear, mileageKm, cache);
+        if (installment != null) return installment;
+    }
+    return null;
 }
 
 /**
@@ -560,15 +586,15 @@ export async function computeReferenceInstallments(
 
         const price = listing.pricePln;
         const creditAmountToFinance = price - Math.round(price * REFERENCE_INITIAL_PCT / 100);
-        const creditProduct = selectProduct(products, 'CREDIT', listing, creditAmountToFinance);
+        const creditCandidates = selectProductCandidates(products, 'CREDIT', listing, creditAmountToFinance);
 
         const netPrice = price / VAT;
         const leasingAmountToFinance = netPrice - Math.round(netPrice * REFERENCE_INITIAL_PCT / 100);
-        const leasingProduct = selectProduct(products, 'LEASING', listing, leasingAmountToFinance);
+        const leasingCandidates = selectProductCandidates(products, 'LEASING', listing, leasingAmountToFinance);
 
         [creditInstallment, leasingInstallment] = await Promise.all([
-            calcInstallmentForProduct(ctx, creditProduct, connectionByProvider, 'CREDIT', price, listing.productionYear, listing.mileageKm, cache),
-            calcInstallmentForProduct(ctx, leasingProduct, connectionByProvider, 'LEASING', price, listing.productionYear, listing.mileageKm, cache),
+            firstSuccessfulInstallment(ctx, creditCandidates, connectionByProvider, 'CREDIT', price, listing.productionYear, listing.mileageKm, cache),
+            firstSuccessfulInstallment(ctx, leasingCandidates, connectionByProvider, 'LEASING', price, listing.productionYear, listing.mileageKm, cache),
         ]);
     }
 
