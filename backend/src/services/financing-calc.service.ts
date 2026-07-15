@@ -485,8 +485,10 @@ async function calcInstallmentForProduct(
     const connection = connectionByProvider.get(product.provider);
     if (!connection) return null;
 
-    const nettoPrice = grossPricePln / VAT;
-    const cacheKey = `${product.id}:${category}:${Math.round(nettoPrice)}:${downPct}:${finalPct}:${months}`;
+    // Zaokrąglamy jak kalkulator (Math.round(price/1.23)) — INBANK wymaga całkowitego `amount`
+    // (price - downPayment); ułamkowa cena netto dawała 422 od partnera.
+    const nettoPrice = Math.round(grossPricePln / VAT);
+    const cacheKey = `${product.id}:${category}:${nettoPrice}:${downPct}:${finalPct}:${months}`;
     if (cache?.has(cacheKey)) {
         return cache.get(cacheKey)!;
     }
