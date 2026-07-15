@@ -856,6 +856,7 @@ enum EntrySource {
   CSV
   CSFLOW
   MANUAL
+  AGENT
 }
 
 enum LeadRouting {

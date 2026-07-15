@@ -179,7 +179,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         }
 
-        const isImported = existing.entrySource === 'CSV' || existing.entrySource === 'CSFLOW';
+        const isImported = existing.entrySource === 'CSV' || existing.entrySource === 'CSFLOW' || existing.entrySource === 'AGENT';
 
         let updateData: any;
         if (isImported) {
@@ -449,8 +449,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
             isArchived: includeArchived === 'true' ? undefined : false,
             entrySource: lastManualEditBefore
                 ? ('MANUAL' as const)
-                : (entrySource && ['CSV', 'CSFLOW', 'MANUAL'].includes(String(entrySource))
-                    ? (String(entrySource) as 'CSV' | 'CSFLOW' | 'MANUAL')
+                : (entrySource && ['CSV', 'CSFLOW', 'MANUAL', 'AGENT'].includes(String(entrySource))
+                    ? (String(entrySource) as 'CSV' | 'CSFLOW' | 'MANUAL' | 'AGENT')
                     : undefined),
             lastManualEditAt: lastManualEditBefore
                 ? { lt: new Date(String(lastManualEditBefore)) }
