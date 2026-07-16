@@ -597,10 +597,26 @@ export default function SearchPage() {
     });
   }
 
+  // Trasy filarowe: title/description 1:1 z SSR (STATIC_ROUTES w backend/src/services/seo-meta.ts) —
+  // helmet nadpisuje <title> tylko gdy wyliczona wartość różni się od DOM, więc identyczny string
+  // oznacza brak nadpisania SSR-owego tytułu generycznym wariantem katalogu po hydratacji.
+  const financingMeta =
+    financingContentType === 'leasing'
+      ? {
+          title: 'Leasing samochodu — auta dostępne od ręki',
+          description: 'Samochody dostępne od ręki w leasingu. Złóż wniosek o finansowanie i odbierz auto bez czekania.',
+        }
+      : financingContentType === 'kredyt'
+      ? {
+          title: 'Kredyt samochodowy — auta dostępne od ręki',
+          description: 'Samochody dostępne od ręki na kredyt. Złóż wniosek o finansowanie i odbierz auto bez czekania.',
+        }
+      : null;
+
   // Treść CMS nadpisuje meta title/description całkowicie (spójne z backendowym buildBrandMeta/
   // buildModelMeta — cms.metaTitle zastępuje wygenerowany tytuł razem z sufiksem siteName).
-  const metaTitle = seoContent?.metaTitle || `${brandPageSeoTitle || pageTitleBase} | ${siteName}`;
-  const metaDescription = seoContent?.metaDescription || brandPageDescription || pageDescription;
+  const metaTitle = seoContent?.metaTitle || `${financingMeta?.title || brandPageSeoTitle || pageTitleBase} | ${siteName}`;
+  const metaDescription = seoContent?.metaDescription || financingMeta?.description || brandPageDescription || pageDescription;
 
   return (
     <div className="min-h-screen bg-background">
