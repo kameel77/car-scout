@@ -16,14 +16,12 @@ interface FinancingArticle {
 }
 
 /**
- * Sekcja treści filarowej + FAQ pod listingiem na stronach kategorii finansowania
- * (/leasing, /kredyt, /wynajem-dlugoterminowy). Treść artykułu pochodzi z backendu
- * (jedno źródło dla SSR i UI), FAQ z CMS (page=financing + financingType).
+ * Wspólny hook pobierający artykuł filarowy (h1 + html) dla /leasing, /kredyt,
+ * /wynajem-dlugoterminowy. Ten sam queryKey ['financing-content', type] deduplikuje
+ * zapytanie, gdy wołają go jednocześnie SearchPage (H1/lead nad listingiem) i ta sekcja.
  */
-export function FinancingContentSection({ type }: { type: FinancingContentType }) {
-  const [expanded, setExpanded] = React.useState(false);
-
-  const { data: article } = useQuery<FinancingArticle | null>({
+export function useFinancingArticle(type: FinancingContentType | null) {
+  return useQuery<FinancingArticle | null>({
     queryKey: ['financing-content', type],
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/api/content/financing/${type}`);
@@ -31,8 +29,34 @@ export function FinancingContentSection({ type }: { type: FinancingContentType }
       if (!res.ok) throw new Error('Failed to fetch financing content');
       return res.json();
     },
+    enabled: type !== null,
     staleTime: 60 * 60 * 1000,
   });
+}
+
+/**
+ * Wyciąga pierwszy akapit z HTML artykułu filarowego (lead pod H1 strony) i zwraca resztę
+ * HTML bez tego akapitu — żeby nie duplikować go w treści renderowanej niżej.
+ */
+export function splitLeadParagraph(html: string): { lead: string | null; rest: string } {
+  const match = html.match(/<p[^>]*>[\s\S]*?<\/p>/i);
+  if (!match || match.index == null) return { lead: null, rest: html };
+  const lead = match[0].replace(/<\/?p[^>]*>/gi, '').trim();
+  const rest = html.slice(0, match.index) + html.slice(match.index + match[0].length);
+  return { lead, rest };
+}
+
+/**
+ * Sekcja treści filarowej + FAQ pod listingiem na stronach kategorii finansowania
+ * (/leasing, /kredyt, /wynajem-dlugoterminowy). Treść artykułu pochodzi z backendu
+ * (jedno źródło dla SSR i UI), FAQ z CMS (page=financing + financingType).
+ * hideTitle: gdy strona już wyrenderowała H1 + lead z tego samego artykułu wyżej
+ * (trasy filarowe w SearchPage) — pomijamy nagłówek i pierwszy akapit, żeby ich nie zdublować.
+ */
+export function FinancingContentSection({ type, hideTitle }: { type: FinancingContentType; hideTitle?: boolean }) {
+  const [expanded, setExpanded] = React.useState(false);
+
+  const { data: article } = useFinancingArticle(type);
 
   const { data: faqData } = useQuery({
     queryKey: ['financing-faq', type],
@@ -44,15 +68,17 @@ export function FinancingContentSection({ type }: { type: FinancingContentType }
 
   if (!article && faqEntries.length === 0) return null;
 
+  const displayHtml = article ? (hideTitle ? splitLeadParagraph(article.html).rest : article.html) : '';
+
   return (
     <div className="container mt-12 mb-8 space-y-10 max-w-3xl">
       {article && (
         <section>
-          <h2 className="text-2xl font-bold mb-4">{article.h1}</h2>
+          {!hideTitle && <h2 className="text-2xl font-bold mb-4">{article.h1}</h2>}
           <div className="relative">
             <div
-              className={`text-sm leading-relaxed text-muted-foreground [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:text-foreground [&_table]:mb-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border [&_td]:border-border [&_td]:p-2 ${expanded ? '' : 'max-h-72 overflow-hidden'}`}
-              dangerouslySetInnerHTML={{ __html: article.html }}
+              className={`text-sm leading-relaxed text-muted-foreground [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:text-foreground [&_table]:mb-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border [&_td]:border-border [&_td]:p-2 ${expanded ? '' : 'max-h-[36rem] overflow-hidden'}`}
+              dangerouslySetInnerHTML={{ __html: displayHtml }}
             />
             {!expanded && (
               <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
