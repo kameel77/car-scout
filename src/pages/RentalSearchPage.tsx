@@ -384,9 +384,11 @@ export default function RentalSearchPage() {
     <div className="min-h-screen bg-background">
       <Header onClearFilters={clearAllFilters} hasActiveFilters={hasActiveFilters} />
 
+      {/* Title/description 1:1 z SSR (STATIC_ROUTES['/wynajem-dlugoterminowy'] w backend/src/services/
+          seo-meta.ts) — identyczny string oznacza, że helmet nie nadpisze SSR-owego <title> po hydratacji. */}
       <MetaHead
-        title={`Wynajem długoterminowy | ${config.name}`}
-        description="Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne."
+        title={`Wynajem długoterminowy samochodu — auto w abonamencie | ${config.name}`}
+        description="Wynajem długoterminowy samochodu — auto w abonamencie ze stałą ratą, bez wkładu własnego. Sprawdź dostępne modele."
         canonical="/wynajem-dlugoterminowy"
         schema={{
           '@context': 'https://schema.org',
