@@ -39,7 +39,7 @@ import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { formatPrice, formatPhoneForTelLink } from '@/utils/formatters';
+import { formatPrice, formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
@@ -428,7 +428,10 @@ export default function ListingDetailPage() {
   const listingTitleTemplate = (seoConfig ? (seoConfig as any)[`listingTitle${suffix}`] : undefined) || seoConfig?.listingTitle;
   const listingDescriptionTemplate = (seoConfig ? (seoConfig as any)[`listingDescription${suffix}`] : undefined) || seoConfig?.listingDescription;
 
-  // Default meta title from SEO config template (for gotowka / no financing context)
+  // Default meta title from SEO config template (for gotowka / no financing context).
+  // Fallback (no CMS template configured) matches the backend SSR title format
+  // (buildListingMeta in backend/src/services/seo-meta.ts) so hydration doesn't overwrite
+  // the correct SSR <title> with a degraded one missing year/price/brand.
   const defaultMetaTitle = listing && listingTitleTemplate
     ? listingTitleTemplate
       .replace('{{make}}', listing.make)
@@ -436,7 +439,7 @@ export default function ListingDetailPage() {
       .replace('{{year}}', listing.production_year.toString())
       .replace('{{price}}', formattedPrice)
       .replace('{{fuel}}', listing.fuel_type || '')
-    : title;
+    : `${baseTitle} ${listing.production_year} — ${formatNumber(discountedListingPrice)} zł | ${config.name}`;
 
   // Use keyword-rich financing-specific title or fall back to default
   const financingMetaTitle = getFinancingMetaTitle(
@@ -558,7 +561,9 @@ export default function ListingDetailPage() {
       <Header />
 
       <main className="container py-6 relative">
-        <h1 className="sr-only">{baseTitle}</h1>
+        {/* Sole semantic <h1> for the page — includes production year to match the SSR <h1>/<title>.
+            Visible titles below (desktop/mobile) are non-heading elements to avoid duplicate <h1>s. */}
+        <h1 className="sr-only">{baseTitle} {listing.production_year}</h1>
         {/* Breadcrumb */}
         <Breadcrumb className="text-sm text-muted-foreground mb-6">
           <BreadcrumbList>
@@ -580,12 +585,13 @@ export default function ListingDetailPage() {
           </BreadcrumbList>
         </Breadcrumb>
 
-        {/* Title for Motolia (Desktop only, since mobile has it below gallery) */}
+        {/* Title for Motolia (Desktop only, since mobile has it below gallery) — not a real <h1>,
+            the sr-only <h1> above is the sole semantic heading (avoids duplicate <h1>s in the DOM) */}
         {isMotolia && (
           <div className="hidden lg:block mb-6">
-            <h1 className="text-3xl font-bold font-heading text-foreground tracking-tight">
+            <div role="heading" aria-level={2} className="text-3xl font-bold font-heading text-foreground tracking-tight">
               {baseTitle}
-            </h1>
+            </div>
           </div>
         )}
 
@@ -981,7 +987,7 @@ export default function ListingDetailPage() {
                           financingType={financingType}
                           onFinancingTypeChange={handleFinancingTypeChange}
                           motoliaMode={true}
-                          isDuplicateHeading={false}
+                          isDuplicateHeading={true}
                           priceSlot={
                             <div className="pt-2 border-t border-slate-200 mt-2">
                               {catalogLine}

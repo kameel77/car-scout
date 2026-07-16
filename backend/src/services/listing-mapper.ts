@@ -9,6 +9,7 @@ export const CSV_EDITABLE_FIELDS = [
     'financingPriceBase',
     'isChineseBrand',
     'isFeatured',
+    'isBusinessFeatured',
     'additionalInfoHeader',
     'additionalInfoContent',
     'availableForPrivate',
@@ -19,6 +20,7 @@ export const CSV_EDITABLE_FIELDS = [
     'pricePrivateLeasingPln',
     'priceCompanyCreditPln',
     'priceCompanyLeasingPln',
+    'dealerId',
 ] as const;
 
 export type ListingValidationError = { field: string; message: string };
@@ -103,6 +105,7 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
         additionalInfoHeader: body.additionalInfoHeader || undefined,
         additionalInfoContent: body.additionalInfoContent || undefined,
         isFeatured: body.isFeatured ?? false,
+        isBusinessFeatured: body.isBusinessFeatured ?? false,
         availableForPrivate: body.availableForPrivate ?? true,
         availableForCompany: body.availableForCompany ?? true,
         creditAvailable: body.creditAvailable ?? true,

@@ -19,7 +19,7 @@ interface ListingsResponse {
 }
 
 interface AdminListingFilters {
-    entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL';
+    entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL' | 'AGENT';
     lastManualEditBefore?: string;
 }
 

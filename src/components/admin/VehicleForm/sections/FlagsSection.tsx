@@ -17,6 +17,16 @@ export function FlagsSection({ form, setField, mode }: SectionProps) {
                 <>
                     <div className="flex items-center gap-2">
                         <input
+                            id="isBusinessFeatured"
+                            type="checkbox"
+                            checked={form.isBusinessFeatured}
+                            onChange={e => setField('isBusinessFeatured', e.target.checked)}
+                        />
+                        <label htmlFor="isBusinessFeatured" className="text-sm">Oferta dla firm (/dla-firm)</label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
                             id="isChineseBrand"
                             type="checkbox"
                             checked={form.isChineseBrand}

@@ -87,7 +87,7 @@ export interface Listing {
     defaultLeasingProductId?: string | null;
   } | null;
   lastManualEditAt?: string | null;
-  entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL' | null;
+  entrySource?: 'CSV' | 'CSFLOW' | 'MANUAL' | 'AGENT' | null;
 }
 
 export interface Lead {

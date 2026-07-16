@@ -167,6 +167,41 @@ describe('buildListingMeta', () => {
     });
 });
 
+describe('buildListingMeta: itemCondition fallback dla fabrycznie nowych aut', () => {
+    const currentYear = new Date().getFullYear();
+
+    it('condition NEW → NewCondition', () => {
+        const m = buildListingMeta({ ...LISTING, condition: 'NEW', mileageKm: 15000 }, 'x', 'oferta', ctx);
+        const ld = m.jsonLd as any[];
+        expect(ld[0].itemCondition).toBe('https://schema.org/NewCondition');
+        expect(ld[0].offers.itemCondition).toBe('https://schema.org/NewCondition');
+    });
+
+    it('condition USED z typowym przebiegiem i starszym rocznikiem → UsedCondition', () => {
+        const m = buildListingMeta({ ...LISTING, condition: 'USED', mileageKm: 45000, productionYear: 2019 }, 'x', 'oferta', ctx);
+        const ld = m.jsonLd as any[];
+        expect(ld[0].itemCondition).toBe('https://schema.org/UsedCondition');
+    });
+
+    it('brak condition (błędne dane z importu) + przebieg 8 km + rocznik bieżący → fallback do NewCondition', () => {
+        const m = buildListingMeta({ ...LISTING, condition: '', mileageKm: 8, productionYear: currentYear }, 'x', 'oferta', ctx);
+        const ld = m.jsonLd as any[];
+        expect(ld[0].itemCondition).toBe('https://schema.org/NewCondition');
+    });
+
+    it('mały przebieg, ale stary rocznik → fallback się nie uruchamia, zostaje UsedCondition', () => {
+        const m = buildListingMeta({ ...LISTING, condition: 'USED', mileageKm: 8, productionYear: currentYear - 3 }, 'x', 'oferta', ctx);
+        const ld = m.jsonLd as any[];
+        expect(ld[0].itemCondition).toBe('https://schema.org/UsedCondition');
+    });
+
+    it('świeży rocznik, ale przebieg powyżej progu → fallback się nie uruchamia, zostaje UsedCondition', () => {
+        const m = buildListingMeta({ ...LISTING, condition: 'USED', mileageKm: 500, productionYear: currentYear }, 'x', 'oferta', ctx);
+        const ld = m.jsonLd as any[];
+        expect(ld[0].itemCondition).toBe('https://schema.org/UsedCondition');
+    });
+});
+
 describe('buildListingMeta breadcrumb: brand/model levels', () => {
     it('inserts brand and brand+model levels between category and offer name, links to new URLs', () => {
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
@@ -433,6 +468,14 @@ describe('buildStaticMeta', () => {
         expect(buildStaticMeta('/search', ctx)!.canonical).toBe('https://dev.motolia.pl/samochody');
     });
 
+    it('without article: route.description stays the intro <p> right after <h1> (unchanged behavior)', () => {
+        const m = buildStaticMeta('/uzywane', ctx)!;
+        expect(m.bodyHtml).toContain(
+            '<h1>Samochody używane od dealera z gwarancją</h1>\n<p>Samochody używane od dealerów — sprawdzone auta z finansowaniem: leasing, kredyt lub najem.</p>'
+        );
+        expect(m.description).toBe('Samochody używane od dealerów — sprawdzone auta z finansowaniem: leasing, kredyt lub najem.');
+    });
+
     it('home uses brand defaults and Organization JSON-LD', () => {
         const m = buildStaticMeta('/', ctx)!;
         expect(m.title).toBe(ctx.defaultTitle);
@@ -540,6 +583,36 @@ describe('buildStaticMeta', () => {
         expect(m.bodyHtml).toContain('<h3>Czy leasing wymaga BIK?</h3>');
         expect(m.bodyHtml).not.toContain('**');
         expect(JSON.stringify(m.jsonLd)).toContain('FAQPage');
+    });
+
+    it('financing category with article: first <p> of article.html becomes centerpiece right after <h1>, before "Oferty", and is not duplicated inside <article>', () => {
+        const article = {
+            h1: 'Leasing samochodu osobowego — operacyjny i konsumencki',
+            html: '<p>Leasing to forma finansowania <a href="/kredyt">pojazdu</a>.</p>\n\n<h2>Ile kosztuje leasing?</h2>\n\n<p>Druga sekcja artykułu.</p>',
+        };
+        const listings = [
+            { id: 'l1', make: 'Kia', model: 'Ceed', version: null, productionYear: 2025, pricePln: 90000, slug: 'kia-ceed-l1' },
+        ];
+        const m = buildStaticMeta('/leasing', ctx, listings, [], '/oferta', article)!;
+
+        const h1Idx = m.bodyHtml!.indexOf('<h1>');
+        const introIdx = m.bodyHtml!.indexOf('<p>Leasing to forma finansowania');
+        const offersIdx = m.bodyHtml!.indexOf('<h2>Oferty</h2>');
+        const articleIdx = m.bodyHtml!.indexOf('<article>');
+
+        // Definicja pojawia się dokładnie raz — zaraz po <h1>, przed sekcją "Oferty"
+        expect(h1Idx).toBeGreaterThanOrEqual(0);
+        expect(introIdx).toBeGreaterThan(h1Idx);
+        expect(introIdx).toBeLessThan(offersIdx);
+        expect(offersIdx).toBeLessThan(articleIdx);
+        expect(m.bodyHtml!.match(/Leasing to forma finansowania/g)).toHaveLength(1);
+
+        // Reszta artykułu (druga sekcja) nadal renderuje się w <article>, bez pierwszego akapitu
+        expect(m.bodyHtml).toContain('<h2>Ile kosztuje leasing?</h2>');
+        expect(m.bodyHtml).toContain('<p>Druga sekcja artykułu.</p>');
+
+        // route.description zostaje meta description, mimo że w bodyHtml go nie ma
+        expect(m.description).toBe('Samochody dostępne od ręki w leasingu. Złóż wniosek o finansowanie i odbierz auto bez czekania.');
     });
 
     it('rental category links to rental pages via listingsBasePath', () => {

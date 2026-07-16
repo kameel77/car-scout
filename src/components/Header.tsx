@@ -36,6 +36,7 @@ const ALL_NAV_LINKS = [
   { key: 'leasing', label: 'Leasing', to: '/leasing' },
   { key: 'kredyt', label: 'Kredyt', to: '/kredyt' },
   { key: 'wynajem', label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
+  { key: 'dlafirm', label: 'Dla firm', to: '/dla-firm' },
   { key: 'faq', label: 'FAQ', to: '/faq' },
   { key: 'kontakt', label: 'Kontakt', to: '/kontakt' },
 ];
@@ -55,8 +56,8 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
     const splitNewUsed = Boolean(settings?.splitNewUsed);
 
     return ALL_NAV_LINKS.filter((link) => {
-      // FAQ and Kontakt are always shown
-      if (link.key === 'faq' || link.key === 'kontakt') return true;
+      // FAQ, Kontakt and Dla firm are always shown
+      if (link.key === 'faq' || link.key === 'kontakt' || link.key === 'dlafirm') return true;
       // When splitNewUsed is active: hide 'samochody', show 'nowe'+'uzywane'
       if (splitNewUsed) {
         if (link.key === 'samochody') return false;

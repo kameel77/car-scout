@@ -28,7 +28,8 @@ import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { useBrand } from '@/contexts/BrandContext';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
-import { FinancingContentSection, FinancingContentType } from '@/components/FinancingContentSection';
+import { FinancingContentSection, FinancingContentType, useFinancingArticle, splitLeadParagraph } from '@/components/FinancingContentSection';
+import { PillarFinancingCalculator } from '@/components/PillarFinancingCalculator';
 import { slugifyBrandName } from '@/utils/brand-slug';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import NotFound from '@/pages/NotFound';
@@ -140,6 +141,14 @@ export default function SearchPage() {
       : window.location.pathname === '/kredyt' ? 'kredyt'
         : null;
 
+  // Artykuł filarowy do H1/leadu nad listingiem (zad. SSEO) — ten sam queryKey co w
+  // FinancingContentSection pod listingiem, więc react-query deduplikuje zapytanie.
+  const { data: pillarArticle } = useFinancingArticle(financingContentType);
+  const pillarLead = React.useMemo(() => {
+    if (!pillarArticle?.html) return null;
+    return splitLeadParagraph(pillarArticle.html).lead;
+  }, [pillarArticle?.html]);
+
   // Initialize from URL
   const [filters, setFilters] = React.useState<FilterState>(() => {
     const isLeasingPath = window.location.pathname.startsWith('/leasing');
@@ -148,6 +157,7 @@ export default function SearchPage() {
     const rt = searchParams.get('rateType');
     const rb = searchParams.get('rateBasis');
     const searchText = searchParams.get('SearchText') || searchParams.get('q') || '';
+    const statusParam = searchParams.get('status');
 
     return {
       makes: parseArray(searchParams.get('make')),
@@ -156,7 +166,11 @@ export default function SearchPage() {
       transmissions: parseArray(searchParams.get('transmission')).map(canonicalTransmission),
       bodyTypes: parseArray(searchParams.get('bodyType')),
       drives: parseArray(searchParams.get('drive')),
-      statuses: parseArray(searchParams.get('status')).map((c) => c.toUpperCase()),
+      // /leasing bez jawnego ?status= startuje na zakładce "Nowe" (audyt SSEO: filar leasingu
+      // ma pokazywać nowe auta, nie najtańsze używane).
+      statuses: statusParam
+        ? parseArray(statusParam).map((c) => c.toUpperCase())
+        : (financingContentType === 'leasing' ? ['NEW'] : []),
 
       yearFrom: searchParams.get('yearMin') || '',
       yearTo: searchParams.get('yearMax') || '',
@@ -196,14 +210,19 @@ export default function SearchPage() {
 
   const { data: settings } = useAppSettings();
   const defaultSortCars = settings?.defaultSortCars || 'price_asc';
-  const [sortBy, setSortBy] = React.useState(searchParams.get('sortBy') || defaultSortCars);
-  
+  // /kredyt bez jawnego ?sortBy= startuje sortowaniem od najnowszego rocznika (audyt SSEO:
+  // filar kredytu nie ma pokazywać najtańszych używanych aut jako pierwszych).
+  const [sortBy, setSortBy] = React.useState(
+    searchParams.get('sortBy') || (financingContentType === 'kredyt' ? 'year_desc' : defaultSortCars)
+  );
+
   // Re-sync default if settings loads after initial mount and no explicit sort is set
+  // (pomijamy /kredyt — tam domyślne sortowanie to year_desc, niezależne od ustawień backoffice)
   React.useEffect(() => {
-     if (settings?.defaultSortCars && !searchParams.get('sortBy') && sortBy !== settings.defaultSortCars) {
+     if (settings?.defaultSortCars && !searchParams.get('sortBy') && financingContentType !== 'kredyt' && sortBy !== settings.defaultSortCars) {
        setSortBy(settings.defaultSortCars);
      }
-  }, [settings?.defaultSortCars, searchParams]);
+  }, [settings?.defaultSortCars, searchParams, financingContentType]);
 
   const initialPage = parseNumberParam(searchParams.get('page'), 1);
   const [page, setPage] = React.useState(initialPage);
@@ -511,7 +530,7 @@ export default function SearchPage() {
   // (renderowane tym samym komponentem) zachowują swój dotychczasowy canonical.
   const isSamochodyFamily = window.location.pathname === '/samochody' || window.location.pathname.startsWith('/samochody/');
   const canonicalPath = React.useMemo(() => {
-    if (!isSamochodyFamily) return '/samochody';
+    if (!isSamochodyFamily) return window.location.pathname;
     // CMS-fallback (0 aktywnych ofert, patrz catalogUnresolved): canonical wprost z surowych
     // slugów URL-a — slugifyBrandName(displayBrand) mógłby się rozjechać z oryginalnym slugiem
     // przy nietypowych znakach, a tu mamy pewne źródło.
@@ -578,10 +597,26 @@ export default function SearchPage() {
     });
   }
 
+  // Trasy filarowe: title/description 1:1 z SSR (STATIC_ROUTES w backend/src/services/seo-meta.ts) —
+  // helmet nadpisuje <title> tylko gdy wyliczona wartość różni się od DOM, więc identyczny string
+  // oznacza brak nadpisania SSR-owego tytułu generycznym wariantem katalogu po hydratacji.
+  const financingMeta =
+    financingContentType === 'leasing'
+      ? {
+          title: 'Leasing samochodu — auta dostępne od ręki',
+          description: 'Samochody dostępne od ręki w leasingu. Złóż wniosek o finansowanie i odbierz auto bez czekania.',
+        }
+      : financingContentType === 'kredyt'
+      ? {
+          title: 'Kredyt samochodowy — auta dostępne od ręki',
+          description: 'Samochody dostępne od ręki na kredyt. Złóż wniosek o finansowanie i odbierz auto bez czekania.',
+        }
+      : null;
+
   // Treść CMS nadpisuje meta title/description całkowicie (spójne z backendowym buildBrandMeta/
   // buildModelMeta — cms.metaTitle zastępuje wygenerowany tytuł razem z sufiksem siteName).
-  const metaTitle = seoContent?.metaTitle || `${brandPageSeoTitle || pageTitleBase} | ${siteName}`;
-  const metaDescription = seoContent?.metaDescription || brandPageDescription || pageDescription;
+  const metaTitle = seoContent?.metaTitle || `${financingMeta?.title || brandPageSeoTitle || pageTitleBase} | ${siteName}`;
+  const metaDescription = seoContent?.metaDescription || financingMeta?.description || brandPageDescription || pageDescription;
 
   return (
     <div className="min-h-screen bg-background">
@@ -638,11 +673,20 @@ export default function SearchPage() {
 
       <main className="container pt-4 pb-6">
         <div className="min-w-0">
-          {/* Page heading */}
+          {/* Page heading — na trasach filarowych (financingContentType) H1/lead pochodzą
+              z artykułu filarowego (pillarArticle/pillarLead); do czasu jego wczytania zostaje
+              generyczny fallback, żeby uniknąć migotania layoutu. */}
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-foreground">{brandPageH1 || 'Samochody nowe i używane z elastycznym finansowaniem'}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{brandPageDescription || 'Tysiące sprawdzonych aut w jednym miejscu. Dobieramy kredyt, leasing lub wynajem długoterminowy i prowadzimy Cię przez cały proces — od wyboru pojazdu po odbiór kluczyków.'}</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              {(financingContentType && pillarArticle?.h1) || brandPageH1 || 'Samochody nowe i używane z elastycznym finansowaniem'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {(financingContentType && pillarLead) || brandPageDescription || 'Tysiące sprawdzonych aut w jednym miejscu. Dobieramy kredyt, leasing lub wynajem długoterminowy i prowadzimy Cię przez cały proces — od wyboru pojazdu po odbiór kluczyków.'}
+            </p>
           </div>
+
+          {/* Kalkulator finansowania nad listingiem — tylko na trasach filarowych (/leasing, /kredyt) */}
+          {financingContentType && <PillarFinancingCalculator type={financingContentType} />}
 
           {/* Top filter bar on desktop */}
           <TopFilterBar
@@ -826,7 +870,7 @@ export default function SearchPage() {
           </div>
         )}
 
-        {financingContentType && <FinancingContentSection type={financingContentType} />}
+        {financingContentType && <FinancingContentSection type={financingContentType} hideTitle />}
       </main>
 
       <ScrollToTopButton />

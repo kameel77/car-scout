@@ -150,7 +150,7 @@ describe('Onepager — GET /api/onepager/pdf', () => {
     });
     await app.inject({ method: 'GET', url: '/api/onepager/pdf?ids=abc,def' });
     expect(goto).toHaveBeenCalledWith(
-      expect.stringContaining('/dla-firm?print=1&ids=abc%2Cdef'),
+      expect.stringContaining('/dla-firmy?print=1&ids=abc%2Cdef'),
       expect.any(Object)
     );
   });

@@ -179,7 +179,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         }
 
-        const isImported = existing.entrySource === 'CSV' || existing.entrySource === 'CSFLOW';
+        const isImported = existing.entrySource === 'CSV' || existing.entrySource === 'CSFLOW' || existing.entrySource === 'AGENT';
 
         let updateData: any;
         if (isImported) {
@@ -224,6 +224,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
         if (referenceRecalcFields.some(field => updateData[field] !== undefined)) {
             computeReferenceInstallments({ prisma: fastify.prisma, log: fastify.log }, updated.id)
                 .catch(err => fastify.log.error({ err, listingId: updated.id }, 'Nie udało się przeliczyć rat referencyjnych po edycji oferty'));
+        }
+
+        if (updateData.isBusinessFeatured !== undefined) {
+            await fastify.redis.del('business:offers').catch(() => {});
         }
 
         return reply.send({ listing: updated });
@@ -445,8 +449,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
             isArchived: includeArchived === 'true' ? undefined : false,
             entrySource: lastManualEditBefore
                 ? ('MANUAL' as const)
-                : (entrySource && ['CSV', 'CSFLOW', 'MANUAL'].includes(String(entrySource))
-                    ? (String(entrySource) as 'CSV' | 'CSFLOW' | 'MANUAL')
+                : (entrySource && ['CSV', 'CSFLOW', 'MANUAL', 'AGENT'].includes(String(entrySource))
+                    ? (String(entrySource) as 'CSV' | 'CSFLOW' | 'MANUAL' | 'AGENT')
                     : undefined),
             lastManualEditAt: lastManualEditBefore
                 ? { lt: new Date(String(lastManualEditBefore)) }

@@ -111,6 +111,12 @@ const CARS_ORDER_BY: Record<string, object> = {
     newest: { createdAt: 'desc' },
 };
 
+// /leasing i /kredyt: promocja aut nowych nad używanymi (dotychczas SSR pokazywał najpierw
+// najtańsze używane, np. Ford Focus 2008 za 9 900 zł) — najpierw condition NEW (kolejność
+// enuma w Postgresie odpowiada deklaracji w schema.prisma: NEW przed USED), w obu grupach
+// od najnowszego rocznika.
+const FINANCING_LISTINGS_ORDER_BY: object[] = [{ condition: 'asc' }, { productionYear: 'desc' }];
+
 let carsOrderByCache: { value: object; fetchedAt: number } | null = null;
 
 async function getCarsOrderBy(fastify: FastifyInstance): Promise<object> {
@@ -256,7 +262,7 @@ async function getTemplate(): Promise<string | null> {
 
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
-const NOINDEX_RE = /^\/(admin|login|embed|listing)(\/|$)|\/(lead|negotiate|zapytanie)$/;
+const NOINDEX_RE = /^\/(admin|login|embed|listing|dla-firmy)(\/|$)|\/(lead|negotiate|zapytanie)$/;
 const BRAND_RE = /^\/samochody\/([^/]+)$/;
 const BRAND_MODEL_RE = /^\/samochody\/([^/]+)\/([^/]+)$/;
 
@@ -721,7 +727,7 @@ async function resolveMeta(
             where,
             skip,
             take,
-            orderBy: await getCarsOrderBy(fastify),
+            orderBy: isFinancingList ? FINANCING_LISTINGS_ORDER_BY : await getCarsOrderBy(fastify),
             select: {
                 id: true,
                 make: true,
@@ -856,6 +862,14 @@ export async function renderRoutes(fastify: FastifyInstance) {
         let template = await getTemplate();
         if (!template) {
             return reply.code(503).send({ error: 'template unavailable' });
+        }
+
+        // Preload /api/rental/vehicles?limit=1 (index.html) jest oznaczony jako "globalny", ale
+        // realnie czyta go tylko strona główna i /wynajem-dlugoterminowy* — na resztę tras (w tym
+        // /oferta/*) kradnie pasmo bez żadnego zysku, więc wycinamy go tam.
+        const usesRentalPreload = path === '/' || path === '/wynajem-dlugoterminowy' || path.startsWith('/wynajem-dlugoterminowy/');
+        if (!usesRentalPreload) {
+            template = template.replace(/\s*<link rel="preload" href="\/api\/rental\/vehicles\?limit=1"[^>]*\/>/, () => '');
         }
 
         const ctx = resolveBrandCtx();

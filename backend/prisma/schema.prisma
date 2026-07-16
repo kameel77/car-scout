@@ -99,6 +99,7 @@ model Listing {
   importSource             String?               @map("import_source")
   ownerUserId              String?               @map("owner_user_id")
   isFeatured               Boolean               @default(false) @map("is_featured")
+  isBusinessFeatured       Boolean               @default(false) @map("is_business_featured")
   catalogPrice             Int?                  @map("catalog_price")
   condition                ListingCondition      @default(USED)
   entrySource              EntrySource?          @map("entry_source")
@@ -148,6 +149,7 @@ model Listing {
   @@index([slug])
   @@index([ownerUserId])
   @@index([isFeatured])
+  @@index([isBusinessFeatured])
   @@index([condition])
   @@index([isChineseBrand])
   @@index([lastManualEditAt])
@@ -854,6 +856,7 @@ enum EntrySource {
   CSV
   CSFLOW
   MANUAL
+  AGENT
 }
 
 enum LeadRouting {
@@ -873,6 +876,7 @@ enum FaqPage {
   faq
   rental
   financing
+  business
 }
 
 enum WidgetPlacement {

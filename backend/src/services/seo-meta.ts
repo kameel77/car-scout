@@ -327,8 +327,14 @@ export function buildListingMeta(
   </section>` : ''}
 </article>`.trim();
 
-    const schemaCondition =
-        l.condition === 'NEW' ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition';
+    // Fallback niezależny od wartości condition z importu (dane dealerów bywają niedokładne dla
+    // fabrycznie nowych aut, np. Karoq 2026 z przebiegiem 8 km oznaczony jako USED) — mały
+    // przebieg przy świeżym roczniku też kwalifikuje auto jako NewCondition.
+    const currentYear = new Date().getFullYear();
+    const looksFactoryNew =
+        l.condition === 'NEW' ||
+        (typeof l.mileageKm === 'number' && l.mileageKm <= 100 && l.productionYear >= currentYear - 1);
+    const schemaCondition = looksFactoryNew ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition';
 
     const jsonLd: any[] = [];
     if (variant === 'oferta') {
@@ -807,10 +813,10 @@ const STATIC_ROUTES: Record<string, StaticRoute> = {
             'Samochód z dopasowanym finansowaniem — leasing, kredyt lub najem. Zostaw kontakt, dobierzemy ofertę.',
     },
     '/dla-firm': {
-        title: b => `Samochody i finansowanie dla firm | ${b}`,
-        h1: 'Samochody i finansowanie dla firm',
+        title: b => `Leasing i najem samochodów dla firm — od pierwszego auta | ${b}`,
+        h1: 'Auta dla Twojej firmy. Ważnej dla nas od pierwszego samochodu.',
         description:
-            'Auta dla firm — leasing, kredyt lub najem długoterminowy. Złóż wniosek o finansowanie.',
+            'Nowe samochody w leasingu i najmie długoterminowym dla JDG i spółek — jedno auto czy dwadzieścia. Jeden opiekun, oferty wielu finansujących, rata policzona pod podatki firmy.',
     },
     '/faq': {
         title: b => `Najczęstsze pytania | ${b}`,
@@ -844,6 +850,18 @@ export interface FinancingArticle {
 export interface StaticPagination {
     page: number; // 1-based
     totalPages: number;
+}
+
+// Definicja przed listingiem: pierwszy akapit artykułu filarowego trafia zaraz po <h1>
+// (centerpiece odpowiadający na representative query), a w treści artykułu poniżej nie
+// dubluje się — wycinamy go stamtąd tylko przy renderze, źródło (financing-content.ts) zostaje bez zmian.
+function extractFirstParagraph(html: string): { paragraph: string | null; rest: string } {
+    const m = html.match(/<p[^>]*>[\s\S]*?<\/p>/i);
+    if (!m || m.index === undefined) return { paragraph: null, rest: html };
+    return {
+        paragraph: m[0],
+        rest: html.slice(0, m.index) + html.slice(m.index + m[0].length),
+    };
 }
 
 // Crawlowalna nawigacja paginacji dla stron katalogowych (SSR-lite).
@@ -1237,9 +1255,20 @@ ${listings.length > 0 ? `
         : route.h1;
     // Strony finansowania pokazują skróconą listę (pełny katalog jest na /samochody)
     const browseAllLink = path === '/leasing' || path === '/kredyt';
+    // route.description zostaje meta description (niżej), ale w bodyHtml akapit definicyjny
+    // artykułu (jeśli jest) wygrywa jako centerpiece pod h1 — bez artykułu bez zmian.
+    let introParagraphHtml = `<p>${route.description}</p>`;
+    let articleBodyHtml = article?.html;
+    if (article) {
+        const { paragraph, rest } = extractFirstParagraph(article.html);
+        if (paragraph) {
+            introParagraphHtml = paragraph;
+            articleBodyHtml = rest;
+        }
+    }
     const bodyHtml = `
 <h1>${h1}</h1>
-<p>${route.description}</p>
+${introParagraphHtml}
 ${listings.length > 0 ? `
 <section>
   <h2>Oferty</h2>
@@ -1252,7 +1281,7 @@ ${pagination ? paginationNavHtml(canonicalBase, pagination) : ''}
 ${path === '/samochody' ? brandLinksSectionHtml('Popularne marki', '/samochody', popularBrands) : ''}
 ${article ? `
 <article>
-${article.html}
+${articleBodyHtml}
 </article>` : ''}
 ${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
 

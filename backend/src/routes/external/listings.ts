@@ -115,7 +115,8 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
                 isArchived: false,
                 archivedAt: null,
                 archivedReason: null,
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                entrySource: 'AGENT'
             },
             create: {
                 vin: body.vin,
@@ -147,7 +148,8 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
                 slug,
                 marketplace: 'partner_api',
                 dealerId: internalDealerId,
-                isArchived: false
+                isArchived: false,
+                entrySource: 'AGENT'
             }
         });
 

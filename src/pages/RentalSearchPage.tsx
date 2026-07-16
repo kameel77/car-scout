@@ -384,9 +384,11 @@ export default function RentalSearchPage() {
     <div className="min-h-screen bg-background">
       <Header onClearFilters={clearAllFilters} hasActiveFilters={hasActiveFilters} />
 
+      {/* Title/description 1:1 z SSR (STATIC_ROUTES['/wynajem-dlugoterminowy'] w backend/src/services/
+          seo-meta.ts) — identyczny string oznacza, że helmet nie nadpisze SSR-owego <title> po hydratacji. */}
       <MetaHead
-        title={`Wynajem długoterminowy | ${config.name}`}
-        description="Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne."
+        title={`Wynajem długoterminowy samochodu — auto w abonamencie | ${config.name}`}
+        description="Wynajem długoterminowy samochodu — auto w abonamencie ze stałą ratą, bez wkładu własnego. Sprawdź dostępne modele."
         canonical="/wynajem-dlugoterminowy"
         schema={{
           '@context': 'https://schema.org',
@@ -570,7 +572,7 @@ export default function RentalSearchPage() {
       <main className="container pt-4 pb-10">
         {/* Page heading */}
         <div className="mb-4">
-          <h1 className="text-2xl font-bold text-foreground">Wynajem długoterminowy</h1>
+          <h1 className="text-2xl font-bold text-foreground">Wynajem długoterminowy samochodu: auto w abonamencie bez wkładu własnego</h1>
           <p className="text-sm text-muted-foreground mt-1">Oferty wynajmu długoterminowego samochodów - elastyczne warunki, atrakcyjne raty miesięczne.</p>
         </div>
 
@@ -693,7 +695,7 @@ export default function RentalSearchPage() {
         </div>
 
         {/* ── Results ── */}
-        <div className="mt-4">
+        <div id="oferty" className="mt-4">
         {isLoading ? (
           <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
             {Array.from({ length: 6 }).map((_, i) => (
