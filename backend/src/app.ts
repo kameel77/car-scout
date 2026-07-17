@@ -49,7 +49,7 @@ import { featureTileRoutes } from './routes/feature-tiles.js';
 import { heroBannerRoutes } from './routes/hero-banners.js';
 import { consentRoutes } from './routes/consent.js';
 import { externalListingsRoutes } from './routes/external/listings.js';
-import { facebookFeedRoutes } from './routes/external/facebook-feed.js';
+import { marketingFeedsRoutes } from './routes/external/feeds.js';
 import { specificationRoutes } from './routes/specifications.js';
 import { closeBrowser } from './services/puppeteer.js';
 
@@ -380,7 +380,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(heroBannerRoutes);
     await fastify.register(consentRoutes);
     await fastify.register(externalListingsRoutes);
-    await fastify.register(facebookFeedRoutes);
+    await fastify.register(marketingFeedsRoutes);
     await fastify.register(specificationRoutes);
 
     // Static files — helper
