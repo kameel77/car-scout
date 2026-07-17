@@ -1,6 +1,16 @@
 import { FastifyInstance } from 'fastify';
 
 export async function marketingFeedsRoutes(fastify: FastifyInstance) {
+    // Helper function to sanitize descriptions and titles
+    const sanitizeDescription = (str: string | null | undefined): string => {
+        if (!str) return '';
+        // Strip HTML tags
+        let cleaned = str.replace(/<[^>]*>/g, ' ');
+        // Replace newlines, carriage returns, tabs, and multiple spaces with a single space
+        cleaned = cleaned.replace(/[\r\n\t\s]+/g, ' ');
+        return cleaned.trim();
+    };
+
     // Helper function to generate XML for Google Base / RSS 2.0 compatible feeds
     const generateXmlFeed = async (source: string) => {
         const listings = await fastify.prisma.listing.findMany({
@@ -32,6 +42,10 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         xml += `    <description>Katalog aktywnych ofert Motolia</description>\n`;
 
         for (const listing of listings) {
+            if (!listing.pricePln || !listing.make || !listing.model) {
+                continue; // skip incomplete records
+            }
+
             const id = listing.listingId || listing.vin || listing.id;
             let title = `${listing.make} ${listing.model}`;
             if (listing.version) {
@@ -52,12 +66,13 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 });
             };
 
-            const cleanTitle = escapeXml(title);
+            const cleanTitle = escapeXml(sanitizeDescription(title));
             
             // Construct simple description
-            let desc = listing.additionalInfoContent || `Pojazd ${cleanTitle}`;
-            if (desc.length > 5000) desc = desc.substring(0, 4997) + '...';
-            const cleanDesc = escapeXml(desc);
+            let desc = listing.additionalInfoContent || `Pojazd ${title}`;
+            const sanitizedDesc = sanitizeDescription(desc);
+            const truncatedDesc = sanitizedDesc.length > 5000 ? sanitizedDesc.substring(0, 4997) + '...' : sanitizedDesc;
+            const cleanDesc = escapeXml(truncatedDesc);
 
             const condition = listing.condition === 'NEW' ? 'new' : 'used';
             
@@ -68,13 +83,16 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const absoluteImageLink = rawImageLink ? (rawImageLink.startsWith('/') ? baseUrl + rawImageLink : rawImageLink) : '';
             const imageLink = absoluteImageLink ? escapeXml(absoluteImageLink) : '';
 
+            const priceNum = typeof listing.pricePln === 'number' ? listing.pricePln : Number(listing.pricePln);
+            const formattedPrice = `${priceNum.toFixed(2)} PLN`;
+
             xml += `    <item>\n`;
             xml += `      <g:id>${escapeXml(id)}</g:id>\n`;
             xml += `      <g:title>${cleanTitle}</g:title>\n`;
             xml += `      <g:description>${cleanDesc}</g:description>\n`;
             xml += `      <g:availability>in stock</g:availability>\n`;
             xml += `      <g:condition>${condition}</g:condition>\n`;
-            xml += `      <g:price>${listing.pricePln}.00 PLN</g:price>\n`;
+            xml += `      <g:price>${formattedPrice}</g:price>\n`;
             xml += `      <g:link>${escapeXml(link)}</g:link>\n`;
             if (imageLink) {
                 xml += `      <g:image_link>${imageLink}</g:image_link>\n`;
@@ -142,6 +160,10 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         const fallbackImage = `${baseUrl}/brands/${brandName}/logo.png`;
 
         for (const listing of listings) {
+            if (!listing.pricePln || !listing.make || !listing.model || !listing.productionYear) {
+                continue; // skip incomplete records
+            }
+
             const id = listing.listingId || listing.vin || listing.id;
             let title = `${listing.make} ${listing.model}`;
             if (listing.version) {
@@ -149,7 +171,8 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             }
 
             let desc = listing.additionalInfoContent || `Pojazd ${title}`;
-            if (desc.length > 5000) desc = desc.substring(0, 4997) + '...';
+            const sanitizedDesc = sanitizeDescription(desc);
+            const truncatedDesc = sanitizedDesc.length > 5000 ? sanitizedDesc.substring(0, 4997) + '...' : sanitizedDesc;
 
             const condition = listing.condition === 'NEW' ? 'NEW' : 'USED';
             const link = `${baseUrl}/oferty/${listing.slug}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
@@ -160,7 +183,13 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 imageLink = fallbackImage;
             }
 
-            const price = `${listing.pricePln} PLN`;
+            const priceNum = typeof listing.pricePln === 'number' ? listing.pricePln : Number(listing.pricePln);
+            const formattedPrice = `${priceNum.toFixed(2)} PLN`;
+
+            let mileage = listing.mileageKm || 0;
+            if (condition === 'USED' && mileage <= 0) {
+                mileage = 1; // used cars must have mileage > 0
+            }
             
             // Map transmission to FB accepted values
             const getTransmission = (raw: string | null | undefined): string => {
@@ -193,7 +222,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const escapeCsv = (str: string | number | null | undefined) => {
                 if (str === null || str === undefined) return '';
                 const stringified = String(str);
-                if (stringified.includes(',') || stringified.includes('"') || stringified.includes('\n')) {
+                if (stringified.includes(',') || stringified.includes('"')) {
                     return `"${stringified.replace(/"/g, '""')}"`;
                 }
                 return stringified;
@@ -202,13 +231,13 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const row = [
                 id,          // vehicle_id
                 id,          // vehicle_offer_id
-                title,
-                desc,
+                sanitizeDescription(title),
+                truncatedDesc,
                 link,
-                listing.make,
-                listing.model,
-                listing.productionYear || '',
-                listing.mileageKm || 0,
+                listing.make.trim(),
+                listing.model.trim(),
+                listing.productionYear,
+                mileage,
                 'KM',
                 imageLink,   // image[0].url
                 imageLink,   // image
@@ -216,7 +245,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 transmission,
                 bodyStyle,
                 condition,
-                price
+                formattedPrice
             ];
 
             csv += row.map(escapeCsv).join(',') + '\n';
