@@ -64,7 +64,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             // Add UTM parameters based on source
             const link = `${baseUrl}/oferty/${listing.slug}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
             
-            const imageLink = listing.primaryImageUrl ? escapeXml(listing.primaryImageUrl) : '';
+            const rawImageLink = listing.primaryImageUrl || '';
+            const absoluteImageLink = rawImageLink ? (rawImageLink.startsWith('/') ? baseUrl + rawImageLink : rawImageLink) : '';
+            const imageLink = absoluteImageLink ? escapeXml(absoluteImageLink) : '';
 
             xml += `    <item>\n`;
             xml += `      <g:id>${escapeXml(id)}</g:id>\n`;
@@ -145,12 +147,39 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
 
             const condition = listing.condition === 'NEW' ? 'NEW' : 'USED';
             const link = `${baseUrl}/oferty/${listing.slug}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
-            const imageLink = listing.primaryImageUrl || '';
+            let imageLink = listing.primaryImageUrl || '';
+            if (imageLink.startsWith('/')) {
+                imageLink = baseUrl + imageLink;
+            }
             const price = `${listing.pricePln} PLN`;
             
-            // Map body styles to FB accepted values if possible, otherwise keep original or fallback
-            const bodyStyle = listing.bodyType || 'other';
-            const transmission = listing.transmission || 'Manual';
+            // Map transmission to FB accepted values
+            const getTransmission = (raw: string | null | undefined): string => {
+                if (!raw) return 'other';
+                const lower = raw.toLowerCase();
+                if (lower.includes('manual')) return 'manual';
+                if (lower.includes('automat')) return 'automatic';
+                if (lower.includes('półautomat') || lower.includes('semi')) return 'semi-automatic';
+                return 'other';
+            };
+
+            // Map body styles to FB accepted values
+            const getBodyStyle = (raw: string | null | undefined): string => {
+                if (!raw) return 'other';
+                const lower = raw.toLowerCase();
+                if (lower.includes('suv')) return 'suv';
+                if (lower.includes('kombi') || lower.includes('wagon')) return 'wagon';
+                if (lower.includes('kabriolet') || lower.includes('convertible')) return 'convertible';
+                if (lower.includes('coupe')) return 'coupe';
+                if (lower.includes('sedan') || lower.includes('limuzyna')) return 'sedan';
+                if (lower.includes('van') || lower.includes('minibus') || lower.includes('mpv')) return 'van';
+                if (lower.includes('pickup') || lower.includes('furgon') || lower.includes('skrzynia') || lower.includes('doka') || lower.includes('chłodnia')) return 'truck';
+                if (lower.includes('kompakt') || lower.includes('liftback') || lower.includes('miejskie') || lower.includes('małe') || lower.includes('hatchback')) return 'hatchback';
+                return 'other';
+            };
+
+            const bodyStyle = getBodyStyle(listing.bodyType);
+            const transmission = getTransmission(listing.transmission);
 
             const escapeCsv = (str: string | number | null | undefined) => {
                 if (str === null || str === undefined) return '';
