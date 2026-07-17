@@ -69,7 +69,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const cleanTitle = escapeXml(sanitizeDescription(title));
             
             // Construct simple description
-            let desc = listing.additionalInfoContent || `Pojazd ${title}`;
+            const desc = listing.additionalInfoContent || `Pojazd ${title}`;
             const sanitizedDesc = sanitizeDescription(desc);
             const truncatedDesc = sanitizedDesc.length > 5000 ? sanitizedDesc.substring(0, 4997) + '...' : sanitizedDesc;
             const cleanDesc = escapeXml(truncatedDesc);
@@ -170,7 +170,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 title += ` ${listing.version}`;
             }
 
-            let desc = listing.additionalInfoContent || `Pojazd ${title}`;
+            const desc = listing.additionalInfoContent || `Pojazd ${title}`;
             const sanitizedDesc = sanitizeDescription(desc);
             const truncatedDesc = sanitizedDesc.length > 5000 ? sanitizedDesc.substring(0, 4997) + '...' : sanitizedDesc;
 
