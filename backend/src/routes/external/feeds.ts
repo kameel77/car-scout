@@ -118,6 +118,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
 
         const headers = [
             'vehicle_id',
+            'vehicle_offer_id',
             'title',
             'description',
             'url',
@@ -127,6 +128,8 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             'mileage.value',
             'mileage.unit',
             'image[0].url',
+            'image',
+            'image_link',
             'transmission',
             'body_style',
             'state_of_vehicle',
@@ -134,6 +137,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         ];
 
         let csv = headers.join(',') + '\n';
+
+        const brandName = process.env.BRAND || 'carsalon';
+        const fallbackImage = `${baseUrl}/brands/${brandName}/logo.png`;
 
         for (const listing of listings) {
             const id = listing.listingId || listing.vin || listing.id;
@@ -147,10 +153,13 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
 
             const condition = listing.condition === 'NEW' ? 'NEW' : 'USED';
             const link = `${baseUrl}/oferty/${listing.slug}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
-            let imageLink = listing.primaryImageUrl || '';
-            if (imageLink.startsWith('/')) {
-                imageLink = baseUrl + imageLink;
+            
+            const rawImageLink = listing.primaryImageUrl || '';
+            let imageLink = rawImageLink ? (rawImageLink.startsWith('/') ? baseUrl + rawImageLink : rawImageLink) : '';
+            if (!imageLink) {
+                imageLink = fallbackImage;
             }
+
             const price = `${listing.pricePln} PLN`;
             
             // Map transmission to FB accepted values
@@ -191,7 +200,8 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             };
 
             const row = [
-                id,
+                id,          // vehicle_id
+                id,          // vehicle_offer_id
                 title,
                 desc,
                 link,
@@ -200,7 +210,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 listing.productionYear || '',
                 listing.mileageKm || 0,
                 'KM',
-                imageLink,
+                imageLink,   // image[0].url
+                imageLink,   // image
+                imageLink,   // image_link
                 transmission,
                 bodyStyle,
                 condition,
