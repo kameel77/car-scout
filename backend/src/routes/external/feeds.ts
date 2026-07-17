@@ -149,8 +149,8 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const price = `${listing.pricePln} PLN`;
             
             // Map body styles to FB accepted values if possible, otherwise keep original or fallback
-            let bodyStyle = listing.bodyType || 'other';
-            let transmission = listing.transmission || 'Manual';
+            const bodyStyle = listing.bodyType || 'other';
+            const transmission = listing.transmission || 'Manual';
 
             const escapeCsv = (str: string | number | null | undefined) => {
                 if (str === null || str === undefined) return '';
