@@ -87,14 +87,111 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         return xml;
     };
 
-    fastify.get('/api/external/facebook/feed.xml', async (request, reply) => {
+    // Helper function to generate CSV for Facebook Automotive Inventory
+    const generateCsvFeed = async (source: string) => {
+        const listings = await fastify.prisma.listing.findMany({
+            where: {
+                isArchived: false
+            },
+            select: {
+                id: true,
+                listingId: true,
+                vin: true,
+                make: true,
+                model: true,
+                version: true,
+                pricePln: true,
+                condition: true,
+                primaryImageUrl: true,
+                slug: true,
+                additionalInfoContent: true,
+                productionYear: true,
+                mileageKm: true,
+                transmission: true,
+                bodyType: true
+            }
+        });
+
+        const baseUrl = process.env.FRONTEND_URL || 'https://motolia.pl';
+
+        const headers = [
+            'vehicle_id',
+            'title',
+            'description',
+            'url',
+            'make',
+            'model',
+            'year',
+            'mileage.value',
+            'mileage.unit',
+            'image[0].url',
+            'transmission',
+            'body_style',
+            'state_of_vehicle',
+            'price'
+        ];
+
+        let csv = headers.join(',') + '\n';
+
+        for (const listing of listings) {
+            const id = listing.listingId || listing.vin || listing.id;
+            let title = `${listing.make} ${listing.model}`;
+            if (listing.version) {
+                title += ` ${listing.version}`;
+            }
+
+            let desc = listing.additionalInfoContent || `Pojazd ${title}`;
+            if (desc.length > 5000) desc = desc.substring(0, 4997) + '...';
+
+            const condition = listing.condition === 'NEW' ? 'NEW' : 'USED';
+            const link = `${baseUrl}/oferty/${listing.slug}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
+            const imageLink = listing.primaryImageUrl || '';
+            const price = `${listing.pricePln} PLN`;
+            
+            // Map body styles to FB accepted values if possible, otherwise keep original or fallback
+            let bodyStyle = listing.bodyType || 'other';
+            let transmission = listing.transmission || 'Manual';
+
+            const escapeCsv = (str: string | number | null | undefined) => {
+                if (str === null || str === undefined) return '';
+                const stringified = String(str);
+                if (stringified.includes(',') || stringified.includes('"') || stringified.includes('\n')) {
+                    return `"${stringified.replace(/"/g, '""')}"`;
+                }
+                return stringified;
+            };
+
+            const row = [
+                id,
+                title,
+                desc,
+                link,
+                listing.make,
+                listing.model,
+                listing.productionYear || '',
+                listing.mileageKm || 0,
+                'KM',
+                imageLink,
+                transmission,
+                bodyStyle,
+                condition,
+                price
+            ];
+
+            csv += row.map(escapeCsv).join(',') + '\n';
+        }
+
+        return csv;
+    };
+
+    fastify.get('/api/external/facebook/feed.csv', async (request, reply) => {
         try {
-            const xml = await generateXmlFeed('facebook');
-            reply.header('Content-Type', 'application/xml');
+            const csv = await generateCsvFeed('facebook');
+            reply.header('Content-Type', 'text/csv');
             reply.header('Cache-Control', 'public, max-age=3600');
-            return reply.send(xml);
+            return reply.send(csv);
         } catch (error) {
-            fastify.log.error(error, 'Error generating Facebook XML feed');
+            fastify.log.error(error, 'Error generating Facebook CSV feed');
             return reply.code(500).send({ error: 'Failed to generate feed' });
         }
     });
