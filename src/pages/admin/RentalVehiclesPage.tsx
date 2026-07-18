@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { VehicleDataForm } from '@/components/admin/VehicleForm/VehicleDataForm';
 import {
-    Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star,
+    Plus, Search, Edit, Archive, RotateCcw, Trash2, X, Star, Briefcase,
     ChevronLeft, ChevronRight, Image as ImageIcon, Building2, Link2, Copy, Check, Pencil, Upload,
     MoreVertical, CopyPlus, Eye, EyeOff
 } from 'lucide-react';
@@ -774,6 +774,18 @@ export default function RentalVehiclesPage() {
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
     });
 
+    const toggleBusinessFeaturedMutation = useMutation({
+        mutationFn: ({ id, isBusinessFeatured }: { id: string, isBusinessFeatured: boolean }) => rentalVehiclesApi.toggleBusinessFeatured(id, isBusinessFeatured, token!),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+            toast({
+                title: variables.isBusinessFeatured ? 'Dodano do oferty dla firm' : 'Usunięto z oferty dla firm',
+                description: variables.isBusinessFeatured ? 'Pojazd najmu będzie widoczny na /dla-firm.' : 'Pojazd najmu nie będzie pokazywany na /dla-firm.'
+            });
+        },
+        onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
+    });
+
     const togglePublishedMutation = useMutation({
         mutationFn: ({ id, isPublished }: { id: string, isPublished: boolean }) => rentalVehiclesApi.togglePublished(id, isPublished, token!),
         onSuccess: (_, variables) => {
@@ -932,6 +944,15 @@ export default function RentalVehiclesPage() {
                                                 title={v.isFeatured ? "Usuń z wyróżnionych" : "Dodaj do wyróżnionych"}
                                             >
                                                 <Star className="w-4 h-4" fill={v.isFeatured ? "currentColor" : "none"} />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => toggleBusinessFeaturedMutation.mutate({ id: v.id, isBusinessFeatured: !v.isBusinessFeatured })}
+                                                className={v.isBusinessFeatured ? "text-blue-600 hover:text-blue-700 bg-blue-50" : "text-gray-400 hover:text-blue-600 hover:bg-gray-100"}
+                                                title={v.isBusinessFeatured ? "Usuń z oferty dla firm" : "Dodaj do oferty dla firm (/dla-firm)"}
+                                            >
+                                                <Briefcase className="w-4 h-4" fill={v.isBusinessFeatured ? "currentColor" : "none"} />
                                             </Button>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>

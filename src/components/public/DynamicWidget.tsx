@@ -136,8 +136,8 @@ export function DynamicWidget({
                           </span>
                         ))}
                         {hasDiscount && (
-                          <span className="bg-green-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md">
-                            -{Math.round((v.catalogPrice - v.price) / v.catalogPrice * 100)}%
+                          <span className="bg-green-600 text-white text-sm font-bold px-3 py-1.5 rounded-lg shadow-md">
+                            Oszczędzasz {formatNumber(v.catalogPrice - v.price)} zł
                           </span>
                         )}
                       </div>
@@ -206,7 +206,9 @@ export function DynamicWidget({
                               <div className="flex flex-col">
                                 <span className="text-xs text-gray-400 line-through">{formatNumber(v.catalogPrice)} PLN</span>
                                 <span className="text-xl font-black text-gray-900">{formatNumber(v.price)} PLN</span>
-                                <span className="text-xs font-semibold text-green-600">Oszczędzasz {formatNumber(v.catalogPrice - v.price)} zł</span>
+                                <span className="text-xs font-semibold text-green-600">
+                                  Rabat {Math.round((v.catalogPrice - v.price) / v.catalogPrice * 100)}%
+                                </span>
                               </div>
                             ) : (
                               <div className="flex flex-col">
