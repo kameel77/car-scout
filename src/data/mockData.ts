@@ -27,6 +27,8 @@ export interface Listing {
   body_type: string;
   /** Tagi marketingowe z backoffice (np. "Od ręki", "Gwarancja fabryczna") */
   marketing_tags?: string[];
+  /** Wyróżnienie w ofercie dla firm (/dla-firm) */
+  is_business_featured?: boolean;
   first_registration_date: string;
   registration_number?: string;
   primary_image_url: string;

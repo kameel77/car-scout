@@ -1,9 +1,29 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge } from 'lucide-react';
+import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatNumber } from '@/utils/formatters';
 import { OptimizedImage } from '@/components/OptimizedImage';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+/** Etykieta brutto/netto z tooltipem (i) — spójna z kartami na listingach */
+function RateNote({ label, text }: { label: string; text: string }) {
+  return (
+    <span className="flex items-center gap-1 mt-0.5">
+      <span className="text-[10px] text-gray-400">{label}</span>
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+            <Info className="h-3 w-3 text-gray-400 cursor-help shrink-0" />
+          </TooltipTrigger>
+          <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
+            {text}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </span>
+  );
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 // Normalize URL
@@ -205,7 +225,7 @@ export function DynamicWidget({
                                       <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
                                         {formatNumber(rates.kredytGross)} zł<span className="text-xs font-semibold">/mc</span>
                                       </span>
-                                      <span className="text-[10px] text-gray-400 block mt-0.5">brutto</span>
+                                      <RateNote label="brutto" text="Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania." />
                                     </div>
                                   )}
                                   {rates.leasingNet != null && (
@@ -214,11 +234,10 @@ export function DynamicWidget({
                                       <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
                                         {formatNumber(rates.leasingNet)} zł<span className="text-xs font-semibold">/mc</span>
                                       </span>
-                                      <span className="text-[10px] text-gray-400 block mt-0.5">netto</span>
+                                      <RateNote label="netto" text="Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania." />
                                     </div>
                                   )}
                                 </div>
-                                <p className="text-[10px] text-gray-400 mt-2">Raty poglądowe, nie stanowią oferty.</p>
                               </>
                             )}
                           </>
