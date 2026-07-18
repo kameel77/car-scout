@@ -152,8 +152,6 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             'transmission',
             'body_style',
             'state_of_vehicle',
-            'condition',
-            'availability',
             'price'
         ];
 
@@ -167,7 +165,11 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 continue; // skip incomplete records
             }
 
-            const id = listing.listingId || listing.vin || listing.id;
+            let id = listing.listingId || listing.vin || listing.id;
+            if (id.length > 95) {
+                id = listing.id;
+            }
+
             let title = `${listing.make} ${listing.model}`;
             if (listing.version) {
                 title += ` ${listing.version}`;
@@ -186,6 +188,8 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             if (!imageLink) {
                 imageLink = fallbackImage;
             }
+            // Replace .webp extension with .jpg to satisfy Meta's image requirements
+            imageLink = imageLink.replace(/\.webp$/i, '.jpg');
 
             const priceNum = typeof listing.pricePln === 'number' ? listing.pricePln : Number(listing.pricePln);
             const formattedPrice = `${priceNum.toFixed(2)} PLN`;
@@ -250,8 +254,6 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 transmission,
                 bodyStyle,
                 conditionVal,// state_of_vehicle
-                conditionXml,// condition
-                'in stock',  // availability
                 formattedPrice
             ];
 

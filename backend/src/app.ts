@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import { createReadStream } from 'fs';
 import { getSafeFilePath } from './utils/path-helpers.js';
+import sharp from 'sharp';
 
 // Routes
 import { authRoutes } from './routes/auth.js';
@@ -386,17 +387,42 @@ export async function buildApp(): Promise<FastifyInstance> {
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {
         try {
-            await fs.access(filePath);
             const ext = path.extname(filePath).toLowerCase();
-            const mime = ext === '.svg' ? 'image/svg+xml'
-                : ext === '.png' ? 'image/png'
-                    : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
-                        : ext === '.webp' ? 'image/webp'
-                            : ext === '.pdf' ? 'application/pdf'
-                                : 'application/octet-stream';
-            reply.header('Content-Type', mime);
-            reply.header('Cache-Control', 'public, max-age=31536000');
-            return reply.send(createReadStream(filePath));
+            try {
+                await fs.access(filePath);
+                const mime = ext === '.svg' ? 'image/svg+xml'
+                    : ext === '.png' ? 'image/png'
+                        : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+                            : ext === '.webp' ? 'image/webp'
+                                : ext === '.pdf' ? 'application/pdf'
+                                    : 'application/octet-stream';
+                reply.header('Content-Type', mime);
+                reply.header('Cache-Control', 'public, max-age=31536000');
+                return reply.send(createReadStream(filePath));
+            } catch (err) {
+                // If requested file does not exist, but we asked for .jpg/.jpeg/.png,
+                // check if the same file exists with .webp extension!
+                if (ext === '.jpg' || ext === '.jpeg' || ext === '.png') {
+                    const webpPath = filePath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+                    try {
+                        await fs.access(webpPath);
+                        let image = sharp(webpPath);
+                        if (ext === '.png') {
+                            image = image.png();
+                        } else {
+                            image = image.jpeg({ quality: 85 });
+                        }
+                        const buffer = await image.toBuffer();
+                        const mime = ext === '.png' ? 'image/png' : 'image/jpeg';
+                        reply.header('Content-Type', mime);
+                        reply.header('Cache-Control', 'public, max-age=31536000');
+                        return reply.send(buffer);
+                    } catch {
+                        // webp fallback failed too
+                    }
+                }
+                throw err;
+            }
         } catch {
             return reply.code(404).send({ error: 'Not found' });
         }
