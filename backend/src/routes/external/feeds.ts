@@ -143,6 +143,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             'url',
             'make',
             'model',
+            'brand',
             'year',
             'mileage.value',
             'mileage.unit',
@@ -245,6 +246,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 link,        // url
                 listing.make.trim(),
                 listing.model.trim(),
+                listing.make.trim(), // brand
                 listing.productionYear,
                 mileage,
                 'KM',

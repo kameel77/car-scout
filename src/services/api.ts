@@ -490,7 +490,10 @@ export const listingsApi = {
             ? `${API_BASE_URL}/api/listings/by-slug/${idOrSlug}`
             : `${API_BASE_URL}/api/listings/${idOrSlug}`;
 
-        const response = await fetch(endpoint);
+        // Z tokenem backend zwraca pełne dane dealera (adres + kontakt);
+        // bez tokenu sanitizeListing tnie je dla anonimowych odwiedzających.
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        const response = await fetch(endpoint, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
         return response.json();
     },
 
