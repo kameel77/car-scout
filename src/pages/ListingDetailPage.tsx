@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info, FileDown } from 'lucide-react';
+import { Phone, MessageSquare, MapPin, Star, ArrowLeft, ShieldCheck, BadgeCheck, Users, Banknote, HandCoins, Info, FileDown, Mail } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { ImageGallery } from '@/components/ImageGallery';
 import { SpecsGrid } from '@/components/SpecsGrid';
@@ -1281,9 +1281,9 @@ export default function ListingDetailPage() {
                   {isPlatformUser ? t('detail.dealerInfo') : t('detail.vehicleLocation')}
                 </h3>
                 {isPlatformUser ? (
-                  <div>
+                  <div className="space-y-2">
                     <p className="font-medium text-foreground">{listing.dealer_name}</p>
-                    <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                    <div className="flex items-start gap-1 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
                       <span>
                         {(() => {
@@ -1302,6 +1302,35 @@ export default function ListingDetailPage() {
                         })()}
                       </span>
                     </div>
+                    {/* Kontakt do dealera ws. tego auta — widoczne tylko dla zalogowanych */}
+                    {(listing.dealer_contact_phone || listing.dealer_contact_email || listing.dealer_contact_email_service) && (
+                      <div className="space-y-1 text-sm pt-1 border-t">
+                        {listing.dealer_contact_phone && (
+                          <a
+                            href={`tel:${formatPhoneForTelLink(listing.dealer_contact_phone)}`}
+                            className="flex items-center gap-1.5 text-foreground hover:text-primary transition-colors"
+                          >
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            {listing.dealer_contact_phone}
+                          </a>
+                        )}
+                        {listing.dealer_contact_email && (
+                          <a
+                            href={`mailto:${listing.dealer_contact_email}`}
+                            className="flex items-center gap-1.5 text-foreground hover:text-primary transition-colors break-all"
+                          >
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            {listing.dealer_contact_email}
+                          </a>
+                        )}
+                        {listing.dealer_contact_email_service && (
+                          <p className="text-xs text-muted-foreground break-all">serwis: {listing.dealer_contact_email_service}</p>
+                        )}
+                        {listing.dealer_nip && (
+                          <p className="text-xs text-muted-foreground">NIP: {listing.dealer_nip}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-1 text-foreground font-medium">

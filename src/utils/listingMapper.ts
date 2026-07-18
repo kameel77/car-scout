@@ -79,6 +79,11 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             dealer_address_line3: backendListing.dealer?.addressLine3,
             dealer_city: backendListing.dealer?.city || '',
             dealer_postal_code: backendListing.dealer?.postalCode || undefined,
+            // Dane kontaktowe dealera — backend zwraca je tylko dla zalogowanych (sanitizeListing)
+            dealer_contact_phone: backendListing.dealer?.contactPhone || undefined,
+            dealer_contact_email: backendListing.dealer?.contactEmail || undefined,
+            dealer_contact_email_service: backendListing.dealer?.contactEmailService || undefined,
+            dealer_nip: backendListing.dealer?.nip || undefined,
             contact_phone: backendListing.dealer?.contactPhone || '',
             google_rating: backendListing.dealer?.googleRating,
             google_reviews_count: backendListing.dealer?.googleReviewCount,

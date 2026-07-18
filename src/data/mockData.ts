@@ -39,6 +39,11 @@ export interface Listing {
   dealer_address_line3?: string;
   dealer_city: string;
   dealer_postal_code?: string;
+  /** Dane kontaktowe dealera — dostępne tylko dla zalogowanych (backend sanitizeListing) */
+  dealer_contact_phone?: string;
+  dealer_contact_email?: string;
+  dealer_contact_email_service?: string;
+  dealer_nip?: string;
   contact_phone: string;
   google_rating?: number;
   google_reviews_count?: number;
