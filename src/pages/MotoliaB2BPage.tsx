@@ -25,6 +25,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { useBusinessOfferList } from '@/hooks/useBusinessOfferList';
 import { getListingUrlPath } from '@/utils/url-utils';
 import { formatPhoneForTelLink } from '@/utils/formatters';
+import { trackPhoneClick } from '@/lib/analytics';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -410,7 +411,7 @@ export default function MotoliaB2BPage() {
               Oferty specjalne <span style={{ color: YELLOW_DARK }}>dla firm</span>
             </h2>
             <p className="text-lg text-gray-500">
-              Auta z ratą policzoną dla firmy — nowe modele popularne wśród naszych klientów
+              Auta z ratą policzoną dla firmy - nowe modele popularne wśród naszych klientów
               firmowych, dostępne od ręki. Rata netto, w kosztach uzyskania przychodu.
             </p>
           </FadeIn>
@@ -475,7 +476,7 @@ export default function MotoliaB2BPage() {
 
           <FadeIn delay={0.1}>
             <p className="text-center text-gray-500 mt-8 max-w-2xl mx-auto">
-              Nie musisz wybierać sam — doradca policzy oba warianty dla Twojej firmy i pokaże
+              Nie musisz wybierać sam - doradca policzy oba warianty dla Twojej firmy i pokaże
               ratę netto obok siebie.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center mt-6 text-sm font-bold">
@@ -508,9 +509,9 @@ export default function MotoliaB2BPage() {
                 emisji CO2 pojazdu:
               </p>
               <ul className="space-y-2 mb-6 text-gray-700">
-                <li><strong>100 000 zł</strong> — auta spalinowe</li>
-                <li><strong>150 000 zł</strong> — hybrydy plug-in (PHEV)</li>
-                <li><strong>225 000 zł</strong> — auta elektryczne (EV)</li>
+                <li><strong>100 000 zł</strong> - auta spalinowe</li>
+                <li><strong>150 000 zł</strong> - hybrydy plug-in (PHEV)</li>
+                <li><strong>225 000 zł</strong> - auta elektryczne (EV)</li>
               </ul>
               <p className="text-gray-600 leading-relaxed mb-8">
                 To zmienia rachunek przy wyborze modelu i formy finansowania — im wyższy limit,
@@ -547,7 +548,7 @@ export default function MotoliaB2BPage() {
               </h2>
               <p className="text-gray-400 leading-relaxed mb-8 max-w-2xl mx-auto">
                 Twoi pracownicy wynajmują nowe auta na preferencyjnych warunkach
-                wynegocjowanych dla firmy — bez angażowania kapitału firmy i z jednym
+                wynegocjowanych dla firmy - bez angażowania kapitału firmy i z jednym
                 opiekunem po stronie Motolii. Program dla firm od 10 pracowników.
               </p>
               <a
@@ -593,7 +594,7 @@ export default function MotoliaB2BPage() {
               </h2>
               <p className="text-lg text-gray-500">
                 Odpowiadamy na najczęstsze pytania firm o leasing, najem długoterminowy i
-                finansowanie samochodów w Motolii — bez żargonu, z konkretami dla JDG i spółek.
+                finansowanie samochodów w Motolii - bez żargonu, z konkretami dla JDG i spółek.
               </p>
             </FadeIn>
 
@@ -606,9 +607,8 @@ export default function MotoliaB2BPage() {
                       className="w-full flex items-center justify-between p-6 text-left"
                     >
                       <h3 className="text-base font-semibold text-[#1A1A1A] pr-6">{item.q}</h3>
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        openFaq === idx ? 'rotate-180' : ''
-                      }`}
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${openFaq === idx ? 'rotate-180' : ''
+                        }`}
                         style={{
                           background: openFaq === idx ? YELLOW : '#F3F4F6',
                           color: openFaq === idx ? BLACK : '#6B7280',
@@ -659,7 +659,7 @@ export default function MotoliaB2BPage() {
                   <span style={{ color: YELLOW }}>dla Twojej firmy</span>
                 </h2>
                 <p className="text-lg text-gray-400 mb-10 font-light">
-                  Zostaw numer — opiekun firm oddzwoni tego samego dnia i policzy ratę netto
+                  Zostaw numer - opiekun firm oddzwoni tego samego dnia i policzy ratę netto
                   dla Twojego auta. Bez zobowiązań.
                 </p>
 
@@ -687,17 +687,17 @@ export default function MotoliaB2BPage() {
                     {quickStatus === 'loading'
                       ? 'Wysyłanie...'
                       : quickStatus === 'success'
-                      ? 'Otrzymano!'
-                      : quickStatus === 'error'
-                      ? 'Błąd, spróbuj ponownie'
-                      : 'Porozmawiaj z opiekunem firm'}
+                        ? 'Otrzymano!'
+                        : quickStatus === 'error'
+                          ? 'Błąd, spróbuj ponownie'
+                          : 'Porozmawiaj z opiekunem firm'}
                   </button>
                 </form>
 
                 {(phone || email) && (
                   <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-gray-300 text-sm">
                     {phone && (
-                      <a href={`tel:${formatPhoneForTelLink(phone)}`} className="inline-flex items-center gap-2 font-medium hover:text-white">
+                      <a href={`tel:${formatPhoneForTelLink(phone)}`} onClick={() => trackPhoneClick('b2b_page_footer')} className="inline-flex items-center gap-2 font-medium hover:text-white">
                         <Phone size={15} /> {phone}
                       </a>
                     )}
@@ -748,7 +748,7 @@ function BusinessOfferCard({ offer }: { offer: any }) {
         {netRate ? (
           <div>
             <div className="text-2xl font-bold text-[#1A1A1A]">{PLN.format(netRate)} zł/mc</div>
-            <p className="text-xs text-gray-400">netto — dla firmy rata w kosztach</p>
+            <p className="text-xs text-gray-400">netto - dla firmy rata w kosztach</p>
           </div>
         ) : (
           <p className="text-sm text-gray-500">Rata netto dopasowana do Twojej firmy — dopytaj doradcę.</p>

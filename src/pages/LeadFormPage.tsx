@@ -40,7 +40,8 @@ const leadSchema = z.object({
   preferredContact: z.enum(['email', 'phone']),
   message: z.string().min(10, 'validation.required').max(1000),
   proposedPrice: z.coerce.number().optional(),
-  consentMarketing: z.boolean().refine((v) => v === true, 'validation.required'),
+  // Marketing consent must stay optional (GDPR: freely given, separate from the service consent)
+  consentMarketing: z.boolean(),
   consentPrivacy: z.boolean().refine((v) => v === true, 'validation.required'),
 });
 
@@ -559,12 +560,9 @@ export default function LeadFormPage() {
                       onCheckedChange={(v) => setValue('consentMarketing', v === true)}
                     />
                     <Label htmlFor="consentMarketing" className="font-normal text-[11px] leading-relaxed cursor-pointer text-muted-foreground">
-                      {t('lead.consentMarketing', 'Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń.')} *
+                      {t('lead.consentMarketing', 'Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń.')} (opcjonalnie)
                     </Label>
                   </div>
-                  {errors.consentMarketing && (
-                    <p className="text-[10px] text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
-                  )}
                 </div>
 
                 <Turnstile onVerify={setTurnstileToken} />

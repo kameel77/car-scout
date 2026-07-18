@@ -40,6 +40,7 @@ import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
+import { trackPhoneClick } from '@/lib/analytics';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
@@ -1315,6 +1316,7 @@ export default function ListingDetailPage() {
           <a
             href={`tel:${formatPhoneForTelLink(listing.contact_phone)}`}
             aria-label="Kontakt telefoniczny"
+            onClick={() => trackPhoneClick('offer_sticky_mobile')}
             className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
           >
             <Phone className="h-4 w-4" />

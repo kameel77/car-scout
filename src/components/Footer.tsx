@@ -7,6 +7,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
 import { useBrand } from '@/contexts/BrandContext';
 import { formatPhoneForTelLink } from '@/utils/formatters';
+import { trackPhoneClick } from '@/lib/analytics';
 
 type LegalDocKey = 'imprint' | 'privacyPolicy' | 'terms' | 'cookies';
 
@@ -202,6 +203,7 @@ export function Footer() {
               {settings?.legalContactPhone && (
                 <a
                   href={`tel:${formatPhoneForTelLink(settings.legalContactPhone)}`}
+                  onClick={() => trackPhoneClick('footer')}
                   className="flex items-center gap-2 transition-colors hover:text-white"
                   style={isMotolia ? { color: '#F5C518' } : {}}
                 >

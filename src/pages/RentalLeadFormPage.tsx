@@ -30,7 +30,8 @@ const rentalLeadSchema = z.object({
     }),
     preferredContact: z.enum(['email', 'phone']),
     message: z.string().min(10, 'Minimum 10 znaków').max(2000),
-    consentMarketing: z.boolean().refine((v) => v === true, 'Pole wymagane'),
+    // Marketing consent must stay optional (GDPR: freely given, separate from the service consent)
+    consentMarketing: z.boolean(),
     consentPrivacy: z.boolean().refine((v) => v === true, 'Pole wymagane'),
 });
 
@@ -466,12 +467,9 @@ export default function RentalLeadFormPage() {
                                             onCheckedChange={(v) => setValue('consentMarketing', v === true)}
                                         />
                                         <Label htmlFor="consentMarketing" className="font-normal text-[11px] leading-relaxed cursor-pointer text-gray-500">
-                                            Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert najmu i finansowania pojazdów. *
+                                            Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert najmu i finansowania pojazdów. (opcjonalnie)
                                         </Label>
                                     </div>
-                                    {errors.consentMarketing && (
-                                        <p className="text-[10px] text-red-500 font-bold uppercase ml-7">Pole wymagane</p>
-                                    )}
                                 </div>
 
                                 <Turnstile onVerify={setTurnstileToken} />
