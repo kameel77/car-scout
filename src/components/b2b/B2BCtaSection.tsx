@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useTrackedUrl } from '@/hooks/useTrackedUrl';
 import { formatPhoneForTelLink } from '@/utils/formatters';
+import { trackPhoneClick } from '@/lib/analytics';
 
 export function B2BCtaSection() {
   const { data: settings } = useAppSettings();
@@ -19,7 +20,7 @@ export function B2BCtaSection() {
       </p>
       <div className="flex flex-col md:flex-row gap-4 mb-4 print:flex-row print:gap-4 print:mb-3">
         {phone && (
-          <a href={`tel:${formatPhoneForTelLink(phone)}`} className="inline-flex items-center gap-2 text-base font-medium hover:text-primary print:text-sm">
+          <a href={`tel:${formatPhoneForTelLink(phone)}`} onClick={() => trackPhoneClick('b2b_cta_section')} className="inline-flex items-center gap-2 text-base font-medium hover:text-primary print:text-sm">
             <Phone className="h-4 w-4 print:h-4 print:w-4" />
             {phone}
           </a>

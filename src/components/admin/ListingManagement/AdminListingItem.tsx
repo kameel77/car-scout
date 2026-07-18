@@ -10,6 +10,7 @@ import {
     CopyPlus,
     Star,
     Pencil,
+    Briefcase,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +38,7 @@ interface AdminListingItemProps {
     isSelected?: boolean;
     onSelect?: (id: string, selected: boolean) => void;
     onToggleFeatured?: (id: string, isFeatured: boolean) => void;
+    onToggleBusinessFeatured?: (id: string, isBusinessFeatured: boolean) => void;
     onArchive?: (id: string) => void;
     onRestore?: (id: string) => void;
     onDelete?: (id: string) => void;
@@ -44,9 +46,10 @@ interface AdminListingItemProps {
     onDuplicateOffer?: (id: string) => void;
 }
 
-export function AdminListingItem({ listing, isSelected = false, onSelect, onToggleFeatured, onArchive, onRestore, onDelete, onDuplicateModel, onDuplicateOffer }: AdminListingItemProps) {
+export function AdminListingItem({ listing, isSelected = false, onSelect, onToggleFeatured, onToggleBusinessFeatured, onArchive, onRestore, onDelete, onDuplicateModel, onDuplicateOffer }: AdminListingItemProps) {
     const isArchived = listing.is_archived;
     const isFeatured = listing.is_featured;
+    const isBusinessFeatured = listing.is_business_featured;
     const { toast } = useToast();
 
     const handleCopyLink = () => {
@@ -175,6 +178,18 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onTogg
                     title={isFeatured ? "Usuń z wyróżnionych" : "Dodaj do wyróżnionych"}
                 >
                     <Star className="w-4 h-4" fill={isFeatured ? "currentColor" : "none"} />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onToggleBusinessFeatured?.(listing.listing_id, !isBusinessFeatured)}
+                    className={cn(
+                        "h-8 w-8 rounded-full",
+                        isBusinessFeatured ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-gray-400 hover:text-blue-600 hover:bg-gray-100"
+                    )}
+                    title={isBusinessFeatured ? "Usuń z oferty dla firm" : "Dodaj do oferty dla firm (/dla-firm)"}
+                >
+                    <Briefcase className="w-4 h-4" fill={isBusinessFeatured ? "currentColor" : "none"} />
                 </Button>
 
                 <DropdownMenu>

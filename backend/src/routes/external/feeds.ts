@@ -133,12 +133,13 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         });
 
         const baseUrl = process.env.FRONTEND_URL || 'https://motolia.pl';
-
         const headers = [
+            'id',
             'vehicle_id',
             'vehicle_offer_id',
             'title',
             'description',
+            'link',
             'url',
             'make',
             'model',
@@ -151,6 +152,8 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             'transmission',
             'body_style',
             'state_of_vehicle',
+            'condition',
+            'availability',
             'price'
         ];
 
@@ -174,7 +177,8 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const sanitizedDesc = sanitizeDescription(desc);
             const truncatedDesc = sanitizedDesc.length > 5000 ? sanitizedDesc.substring(0, 4997) + '...' : sanitizedDesc;
 
-            const condition = listing.condition === 'NEW' ? 'NEW' : 'USED';
+            const conditionVal = listing.condition === 'NEW' ? 'New' : 'Used';
+            const conditionXml = listing.condition === 'NEW' ? 'new' : 'used';
             const link = `${baseUrl}/oferty/${listing.slug}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
             
             const rawImageLink = listing.primaryImageUrl || '';
@@ -187,33 +191,33 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const formattedPrice = `${priceNum.toFixed(2)} PLN`;
 
             let mileage = listing.mileageKm || 0;
-            if (condition === 'USED' && mileage <= 0) {
+            if (conditionVal === 'Used' && mileage <= 0) {
                 mileage = 1; // used cars must have mileage > 0
             }
             
-            // Map transmission to FB accepted values
+            // Map transmission to FB accepted values (capitalized)
             const getTransmission = (raw: string | null | undefined): string => {
-                if (!raw) return 'other';
+                if (!raw) return 'Other';
                 const lower = raw.toLowerCase();
-                if (lower.includes('manual')) return 'manual';
-                if (lower.includes('automat')) return 'automatic';
-                if (lower.includes('półautomat') || lower.includes('semi')) return 'semi-automatic';
-                return 'other';
+                if (lower.includes('manual')) return 'Manual';
+                if (lower.includes('automat')) return 'Automatic';
+                if (lower.includes('półautomat') || lower.includes('semi')) return 'Semi-automatic';
+                return 'Other';
             };
 
-            // Map body styles to FB accepted values
+            // Map body styles to FB accepted values (capitalized)
             const getBodyStyle = (raw: string | null | undefined): string => {
-                if (!raw) return 'other';
+                if (!raw) return 'Other';
                 const lower = raw.toLowerCase();
-                if (lower.includes('suv')) return 'suv';
-                if (lower.includes('kombi') || lower.includes('wagon')) return 'wagon';
-                if (lower.includes('kabriolet') || lower.includes('convertible')) return 'convertible';
-                if (lower.includes('coupe')) return 'coupe';
-                if (lower.includes('sedan') || lower.includes('limuzyna')) return 'sedan';
-                if (lower.includes('van') || lower.includes('minibus') || lower.includes('mpv')) return 'van';
-                if (lower.includes('pickup') || lower.includes('furgon') || lower.includes('skrzynia') || lower.includes('doka') || lower.includes('chłodnia')) return 'truck';
-                if (lower.includes('kompakt') || lower.includes('liftback') || lower.includes('miejskie') || lower.includes('małe') || lower.includes('hatchback')) return 'hatchback';
-                return 'other';
+                if (lower.includes('suv')) return 'SUV';
+                if (lower.includes('kombi') || lower.includes('wagon')) return 'Wagon';
+                if (lower.includes('kabriolet') || lower.includes('convertible')) return 'Convertible';
+                if (lower.includes('coupe')) return 'Coupe';
+                if (lower.includes('sedan') || lower.includes('limuzyna')) return 'Sedan';
+                if (lower.includes('van') || lower.includes('minibus') || lower.includes('mpv')) return 'Van';
+                if (lower.includes('pickup') || lower.includes('furgon') || lower.includes('skrzynia') || lower.includes('doka') || lower.includes('chłodnia')) return 'Truck';
+                if (lower.includes('kompakt') || lower.includes('liftback') || lower.includes('miejskie') || lower.includes('małe') || lower.includes('hatchback')) return 'Hatchback';
+                return 'Other';
             };
 
             const bodyStyle = getBodyStyle(listing.bodyType);
@@ -229,11 +233,13 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             };
 
             const row = [
+                id,          // id
                 id,          // vehicle_id
                 id,          // vehicle_offer_id
                 sanitizeDescription(title),
                 truncatedDesc,
-                link,
+                link,        // link
+                link,        // url
                 listing.make.trim(),
                 listing.model.trim(),
                 listing.productionYear,
@@ -244,7 +250,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 imageLink,   // image_link
                 transmission,
                 bodyStyle,
-                condition,
+                conditionVal,// state_of_vehicle
+                conditionXml,// condition
+                'in stock',  // availability
                 formattedPrice
             ];
 

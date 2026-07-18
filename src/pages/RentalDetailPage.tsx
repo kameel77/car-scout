@@ -30,6 +30,7 @@ import { translateTechnicalValue } from '@/utils/i18n-utils';
 import { useBrand } from '@/contexts/BrandContext';
 import { normalizeRentalImageUrl } from '@/lib/utils';
 import { formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
+import { trackPhoneClick } from '@/lib/analytics';
 import { RentalFinancingContent } from '@/components/RentalFinancingContent';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { MetaHead } from '@/components/seo/MetaHead';
@@ -594,7 +595,10 @@ export default function RentalDetailPage() {
                     {config.contactInfo.phone && (
                         <button
                             className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm"
-                            onClick={() => window.open(`tel:${formatPhoneForTelLink(config.contactInfo.phone)}`)}
+                            onClick={() => {
+                                trackPhoneClick('rental_sticky_mobile');
+                                window.open(`tel:${formatPhoneForTelLink(config.contactInfo.phone)}`);
+                            }}
                         >
                             <Phone className="h-4 w-4" />
                             Kontakt

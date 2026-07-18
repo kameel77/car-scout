@@ -115,6 +115,12 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                         googleLink: d.url || null,
                     };
 
+                    const updateData = { ...dealerData };
+                    // Nie nadpisuj nazwy (i nie resetuj do `Dealer #ID`), jeśli CSFlow API nie dostarczyło prawidłowej nazwy
+                    if (!d.name) {
+                        delete (updateData as any).name;
+                    }
+
                     let dealer;
                     if (d.id) {
                         // Krok 1: Szukaj po CSFlow ID (najszybsza ścieżka, O(1))
@@ -123,11 +129,12 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                         });
 
                         if (byId) {
-                            // Dealer już powiązany — zaktualizuj dane (np. telefon, miasto)
+                            // Dealer już powiązany — zaktualizuj dane (np. telefon, miasto).
+                            // manualOverride: dane poprawione ręcznie w backoffice — import ich nie dotyka.
                             dealer = await prisma.dealer.update({
                                 where: { id: byId.id },
                                 data: {
-                                    ...dealerData,
+                                    ...(byId.manualOverride ? {} : updateData),
                                     ...(byId.dealerGroupId === null && source.dealerGroupId
                                         ? { dealerGroupId: source.dealerGroupId }
                                         : {}),
@@ -146,9 +153,14 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                             if (byNameAddr) {
                                 if (!byNameAddr.csflowDealerId) {
                                     // Dealer bez CSFlow ID — połącz go z bieżącym
+                                    // (przy manualOverride tylko powiąż ID, bez nadpisywania danych opisowych)
                                     dealer = await prisma.dealer.update({
                                         where: { id: byNameAddr.id },
-                                        data: { ...dealerData, csflowDealerId: d.id, csflowSourceId: source.id },
+                                        data: {
+                                            ...(byNameAddr.manualOverride ? {} : updateData),
+                                            csflowDealerId: d.id,
+                                            csflowSourceId: source.id,
+                                        },
                                     });
                                     console.log(`[CSFlow:${source.slug}] Połączono dealera "${dealerData.name}" (DB: ${byNameAddr.id}) z CSFlow ID ${d.id}`);
                                 } else {
@@ -171,20 +183,22 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                         }
                     } else {
                         // Fallback gdy brak d.id (nie powinno się zdarzać)
+                        const fallbackWhere = {
+                            name_addressLine1: {
+                                name: dealerData.name,
+                                addressLine1: dealerData.addressLine1 || 'Brak Ulicy',
+                            }
+                        };
+                        const fallbackExisting = await prisma.dealer.findUnique({ where: fallbackWhere });
                         dealer = await prisma.dealer.upsert({
-                            where: {
-                                name_addressLine1: {
-                                    name: dealerData.name,
-                                    addressLine1: dealerData.addressLine1 || 'Brak Ulicy',
-                                }
-                            },
+                            where: fallbackWhere,
                             create: {
                                 ...dealerData,
                                 addressLine1: dealerData.addressLine1 || 'Brak Ulicy',
                                 csflowSourceId: source.id,
                                 dealerGroupId: source.dealerGroupId,
                             },
-                            update: dealerData,
+                            update: fallbackExisting?.manualOverride ? {} : updateData,
                         });
                     }
                     currentDealerId = dealer.id;
@@ -271,6 +285,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                     pricePln: price,
                     productionYear: prodYear,
                     registrationNumber: car.registration_number || null,
+                    firstRegistrationDate: car.registration_date || null,
                     mileageKm: car.mileage ? parseInt(car.mileage) : 0,
                     fuelType: fuelType,
                     transmission: car.transmission || null,

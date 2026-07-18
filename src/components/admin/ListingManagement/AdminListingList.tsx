@@ -9,6 +9,7 @@ interface AdminListingListProps {
     selectedIds: string[];
     onSelectionChange: (ids: string[]) => void;
     onToggleFeatured?: (id: string, isFeatured: boolean) => void;
+    onToggleBusinessFeatured?: (id: string, isBusinessFeatured: boolean) => void;
     onArchive?: (id: string) => void;
     onRestore?: (id: string) => void;
     onDelete?: (id: string) => void;
@@ -22,6 +23,7 @@ export function AdminListingList({
     selectedIds,
     onSelectionChange,
     onToggleFeatured,
+    onToggleBusinessFeatured,
     onArchive,
     onRestore,
     onDelete,
@@ -119,6 +121,7 @@ export function AdminListingList({
                         isSelected={selectedIds.includes(listing.listing_id)}
                         onSelect={handleSelect}
                         onToggleFeatured={onToggleFeatured}
+                        onToggleBusinessFeatured={onToggleBusinessFeatured}
                         onArchive={onArchive}
                         onRestore={onRestore}
                         onDelete={onDelete}

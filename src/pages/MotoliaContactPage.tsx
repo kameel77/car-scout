@@ -19,6 +19,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { leadsApi } from '@/services/api';
 import { formatPhoneForTelLink } from '@/utils/formatters';
+import { trackPhoneClick } from '@/lib/analytics';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -143,6 +144,7 @@ export default function MotoliaContactPage() {
             <FadeIn delay={0.3} className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
               <a
                 href={`tel:${formatPhoneForTelLink(salesPhone)}`}
+                onClick={() => trackPhoneClick('contact_hero')}
                 className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
                 style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}50` }}
                 onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
@@ -287,6 +289,7 @@ export default function MotoliaContactPage() {
                   {/* Phone — sales */}
                   <a
                     href={`tel:${formatPhoneForTelLink(salesPhone)}`}
+                    onClick={() => trackPhoneClick('contact_sales_card')}
                     className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
                   >
                     <div
@@ -305,6 +308,7 @@ export default function MotoliaContactPage() {
                   {settings?.legalContactPhone && (
                     <a
                       href={`tel:${formatPhoneForTelLink(settings.legalContactPhone)}`}
+                      onClick={() => trackPhoneClick('contact_general_card')}
                       className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
                     >
                       <div

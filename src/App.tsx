@@ -17,6 +17,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { SeoManager } from '@/components/seo/SeoManager';
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
 import { ClarityPageTracker } from './components/seo/ClarityPageTracker';
+import { ScrollToTop } from './components/ScrollToTop';
 import './i18n';
 
 import HomePage from "./pages/HomePage";
@@ -89,6 +90,7 @@ const App = () => (
                 <Sonner />
               </Suspense>
               <BrowserRouter>
+                <ScrollToTop />
                 <ClarityPageTracker />
                 <SpecialOfferProvider>
                   <CrmTrackingProvider>

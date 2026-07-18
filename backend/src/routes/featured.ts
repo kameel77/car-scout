@@ -55,7 +55,8 @@ export async function featuredRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
-        const { isFeatured } = request.body as { isFeatured: boolean };
+        // isBusinessFeatured: wyróżnienie w ofercie dla firm (/dla-firm) — oba pola opcjonalne
+        const { isFeatured, isBusinessFeatured } = request.body as { isFeatured?: boolean; isBusinessFeatured?: boolean };
         const scope = await resolveScope(fastify, request);
 
         // Security check - just like archive
@@ -70,14 +71,17 @@ export async function featuredRoutes(fastify: FastifyInstance) {
 
         const listing = await fastify.prisma.listing.update({
             where: { id },
-            data: { isFeatured }
+            data: {
+                ...(isFeatured !== undefined ? { isFeatured } : {}),
+                ...(isBusinessFeatured !== undefined ? { isBusinessFeatured } : {}),
+            }
         });
 
         // Invalidate cache
         await fastify.redis.del('featured:vehicles');
         await fastify.redis.del('onepager:pdf:default');
 
-        return { success: true, isFeatured: listing.isFeatured };
+        return { success: true, isFeatured: listing.isFeatured, isBusinessFeatured: listing.isBusinessFeatured };
     });
 
     // Toggle featured status for a rental vehicle

@@ -253,7 +253,7 @@ export const translations = {
         message: "Wiadomość",
         messagePlaceholder: "O co chcesz zapytać?",
         messageDefault: "Dzień dobry, proszę o kontakt w sprawie oferty {{make}} {{model}} {{version}} ({{listingId}}).",
-        consentMarketing: "Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń. *",
+        consentMarketing: "Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń.",
         consentPrivacy: "Oświadczam, że zapoznałem się z Regulaminem oraz Polityką Prywatności i akceptuję ich postanowienia. Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania. *",
         submit: "Wyślij zapytanie",
         sending: "Wysyłanie...",

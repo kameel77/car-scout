@@ -209,6 +209,26 @@ export default function ListingManagementPage() {
         }
     };
 
+    const handleToggleBusinessFeatured = async (id: string, isBusinessFeatured: boolean) => {
+        if (!token) return;
+        try {
+            await listingsApi.toggleBusinessFeatured(id, isBusinessFeatured, token);
+            queryClient.invalidateQueries({ queryKey: ['listings'] });
+            toast({
+                title: isBusinessFeatured ? "Dodano do oferty dla firm" : "Usunięto z oferty dla firm",
+                description: isBusinessFeatured
+                    ? "Pojazd będzie widoczny w sekcji ofert na /dla-firm."
+                    : "Pojazd nie będzie już pokazywany na /dla-firm.",
+            });
+        } catch (error) {
+            toast({
+                title: "Błąd",
+                description: "Nie udało się zmienić statusu oferty dla firm.",
+                variant: "destructive"
+            });
+        }
+    };
+
     const handleBulkArchive = async () => {
         if (!token || selectedIds.length === 0) return;
         
@@ -483,6 +503,7 @@ export default function ListingManagementPage() {
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
                 onToggleFeatured={handleToggleFeatured}
+                onToggleBusinessFeatured={handleToggleBusinessFeatured}
                 onArchive={handleArchive}
                 onRestore={handleRestore}
                 onDelete={handleDelete}

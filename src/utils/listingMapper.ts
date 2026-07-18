@@ -46,6 +46,7 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
                 : ['/motolia-placeholder.webp'],
             is_archived: backendListing.isArchived || false,
             is_featured: backendListing.isFeatured || false,
+            is_business_featured: backendListing.isBusinessFeatured || false,
 
             // Calculated Prices
             dealer_price_net_pln: backendListing.dealerPriceNetPln,
@@ -136,6 +137,7 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             showMotoliaDiscount: backendListing.showMotoliaDiscount ?? false,
             displaySalePrice: backendListing.displaySalePrice ?? false,
             condition: backendListing.condition ?? 'USED',
+            marketing_tags: backendListing.marketingTags ?? [],
             financingPriceBase: backendListing.financingPriceBase ?? 'BROKER_PRICE_PLN',
             isChineseBrand: backendListing.isChineseBrand ?? false,
             lastManualEditAt: backendListing.lastManualEditAt ?? null,

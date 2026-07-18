@@ -232,6 +232,11 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
             }
         }
 
+        // Edycja pól opisowych w backoffice włącza manualOverride — kolejny import
+        // CSFlow nie nadpisze tych danych (można zdjąć jawnym body.manualOverride=false).
+        const descriptiveEdited = ['name', 'addressLine1', 'addressLine2', 'addressLine3', 'city', 'contactPhone', 'contactEmail', 'googleRating', 'googleReviewCount', 'googleLink']
+            .some((field) => body[field] !== undefined);
+
         try {
             const dealer = await fastify.prisma.dealer.update({
                 where: { id },
@@ -247,6 +252,9 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
                     ...(body.googleRating !== undefined && { googleRating: parseFloat(body.googleRating) }),
                     ...(body.googleReviewCount !== undefined && { googleReviewCount: parseInt(body.googleReviewCount) }),
                     ...(body.googleLink !== undefined && { googleLink: body.googleLink }),
+                    ...(body.manualOverride !== undefined
+                        ? { manualOverride: body.manualOverride === true }
+                        : (descriptiveEdited ? { manualOverride: true } : {})),
                 },
             });
 

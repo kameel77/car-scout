@@ -56,6 +56,8 @@ model Listing {
   priceDisplay             String?               @map("price_display")
   omnibusLowest30dPln      Int?                  @map("omnibus_lowest_30d_pln")
   omnibusText              String?               @map("omnibus_text")
+  /// Tagi marketingowe na karcie oferty (np. "Od ręki", "Gwarancja fabryczna")
+  marketingTags            String[]              @default([]) @map("marketing_tags")
   productionYear           Int                   @map("production_year")
   mileageKm                Int                   @map("mileage_km")
   fuelType                 String?               @map("fuel_type")
@@ -210,6 +212,8 @@ model Dealer {
   googleRating        Float?                 @map("google_rating")
   googleReviewCount   Int?                   @map("google_review_count")
   googleLink          String?                @map("google_link")
+  /// Dane edytowane ręcznie w backoffice — import CSFlow nie nadpisuje pól opisowych
+  manualOverride      Boolean                @default(false) @map("manual_override")
   createdAt           DateTime               @default(now()) @map("created_at")
   updatedAt           DateTime               @updatedAt @map("updated_at")
   contactEmail        String?                @map("contact_email")

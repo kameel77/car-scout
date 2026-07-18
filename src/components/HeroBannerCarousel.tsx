@@ -57,7 +57,7 @@ export function HeroBannerCarousel() {
                 <CarouselContent>
                     {banners.map((b, idx) => (
                         <CarouselItem key={b.id} className="basis-full">
-                            <div className="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-900">
+                            <div className="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-100">
                                 {b.imageUrlDesktop && (
                                     <OptimizedImage
                                         src={b.imageUrlDesktop}

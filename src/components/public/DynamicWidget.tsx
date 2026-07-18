@@ -1,9 +1,29 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge } from 'lucide-react';
+import { Car, ChevronRight, Loader2, Calendar, Fuel, Settings2, Gauge, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatNumber } from '@/utils/formatters';
 import { OptimizedImage } from '@/components/OptimizedImage';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+/** Etykieta brutto/netto z tooltipem (i) — spójna z kartami na listingach */
+function RateNote({ label, text }: { label: string; text: string }) {
+  return (
+    <span className="flex items-center gap-1 mt-0.5">
+      <span className="text-[10px] text-gray-400">{label}</span>
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+            <Info className="h-3 w-3 text-gray-400 cursor-help shrink-0" />
+          </TooltipTrigger>
+          <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
+            {text}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </span>
+  );
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 // Normalize URL
@@ -109,21 +129,12 @@ export function DynamicWidget({
                       )}
 
                       <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
-                        {v.bodyType && (
-                          <span className="bg-black/60 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full font-medium tracking-wide">
-                            {v.bodyType}
+                        {/* Tagi marketingowe (backoffice) zamiast nadwozia/stanu — te widać na zdjęciu i w danych karty */}
+                        {(v.marketingTags || []).slice(0, 2).map((tag: string) => (
+                          <span key={tag} className="bg-accent text-gray-900 text-xs px-3 py-1.5 rounded-full font-semibold shadow-sm">
+                            {tag}
                           </span>
-                        )}
-                        {v.condition === 'NEW' && (
-                          <span className="bg-accent text-gray-900 text-xs px-3 py-1.5 rounded-full font-medium">
-                            NOWY
-                          </span>
-                        )}
-                        {v.condition === 'USED' && (
-                          <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-medium">
-                            UŻYWANY
-                          </span>
-                        )}
+                        ))}
                         {hasDiscount && (
                           <span className="bg-green-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md">
                             -{Math.round((v.catalogPrice - v.price) / v.catalogPrice * 100)}%
@@ -214,7 +225,7 @@ export function DynamicWidget({
                                       <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
                                         {formatNumber(rates.kredytGross)} zł<span className="text-xs font-semibold">/mc</span>
                                       </span>
-                                      <span className="text-[10px] text-gray-400 block mt-0.5">brutto</span>
+                                      <RateNote label="brutto" text="Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania." />
                                     </div>
                                   )}
                                   {rates.leasingNet != null && (
@@ -223,11 +234,10 @@ export function DynamicWidget({
                                       <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
                                         {formatNumber(rates.leasingNet)} zł<span className="text-xs font-semibold">/mc</span>
                                       </span>
-                                      <span className="text-[10px] text-gray-400 block mt-0.5">netto</span>
+                                      <RateNote label="netto" text="Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania." />
                                     </div>
                                   )}
                                 </div>
-                                <p className="text-[10px] text-gray-400 mt-2">Raty poglądowe, nie stanowią oferty.</p>
                               </>
                             )}
                           </>

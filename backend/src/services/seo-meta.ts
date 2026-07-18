@@ -1424,7 +1424,7 @@ export function homeHeroShellHtml(
 
     return `<div class="bg-white min-h-screen text-[#1A1A1A] font-inter">${header}` +
         `<section class="relative overflow-hidden bg-[#FAFAF8] pt-6 pb-8 lg:pt-10 lg:pb-12"><div class="max-w-7xl mx-auto px-6">` +
-        `<div class="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-900 rounded-3xl overflow-hidden"><picture>${mobileSource}${img}</picture></div>` +
+        `<div class="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-100 rounded-3xl overflow-hidden"><picture>${mobileSource}${img}</picture></div>` +
         `</div></section></div>`;
 }
 

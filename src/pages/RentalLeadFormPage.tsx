@@ -24,13 +24,13 @@ const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
 const rentalLeadSchema = z.object({
     name: z.string().min(2, 'Pole wymagane').max(100),
-    email: z.string().email('Nieprawidłowy adres e-mail'),
-    phone: z.string().optional().refine((val) => !val || phoneRegex.test(val), {
-        message: 'Nieprawidłowy numer telefonu',
-    }),
+    // Phone-first funnel (CRO P1.2): phone is the required channel, email optional
+    email: z.string().email('Nieprawidłowy adres e-mail').optional().or(z.literal('')),
+    phone: z.string().regex(phoneRegex, 'Nieprawidłowy numer telefonu'),
     preferredContact: z.enum(['email', 'phone']),
-    message: z.string().min(10, 'Minimum 10 znaków').max(2000),
-    consentMarketing: z.boolean().refine((v) => v === true, 'Pole wymagane'),
+    message: z.string().max(2000).optional(),
+    // Marketing consent must stay optional (GDPR: freely given, separate from the service consent)
+    consentMarketing: z.boolean(),
     consentPrivacy: z.boolean().refine((v) => v === true, 'Pole wymagane'),
 });
 
@@ -76,7 +76,7 @@ export default function RentalLeadFormPage() {
     } = useForm<RentalLeadFormData>({
         resolver: zodResolver(rentalLeadSchema),
         defaultValues: {
-            preferredContact: 'email',
+            preferredContact: 'phone',
             message: '',
             consentMarketing: false,
             consentPrivacy: false,
@@ -383,7 +383,7 @@ export default function RentalLeadFormPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider">Adres e-mail *</Label>
+                                        <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider">Adres e-mail <span className="normal-case font-normal text-gray-400">(opcjonalnie)</span></Label>
                                         <Input
                                             id="email"
                                             type="email"
@@ -399,7 +399,7 @@ export default function RentalLeadFormPage() {
 
                                 <div className="grid gap-6 sm:grid-cols-2 items-end">
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider">Numer telefonu</Label>
+                                        <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider">Numer telefonu *</Label>
                                         <Input
                                             id="phone"
                                             {...register('phone')}
@@ -414,7 +414,7 @@ export default function RentalLeadFormPage() {
                                     <div className="space-y-2">
                                         <Label className="text-xs font-bold uppercase tracking-wider mb-3 block">Preferowany kontakt</Label>
                                         <RadioGroup
-                                            defaultValue="email"
+                                            defaultValue="phone"
                                             onValueChange={(v) => setValue('preferredContact', v as 'email' | 'phone')}
                                             className="flex gap-6 pb-2"
                                         >
@@ -431,7 +431,7 @@ export default function RentalLeadFormPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">Twoja wiadomość *</Label>
+                                    <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">Twoja wiadomość <span className="normal-case font-normal text-gray-400">(opcjonalnie)</span></Label>
                                     <Textarea
                                         id="message"
                                         {...register('message')}
@@ -466,12 +466,9 @@ export default function RentalLeadFormPage() {
                                             onCheckedChange={(v) => setValue('consentMarketing', v === true)}
                                         />
                                         <Label htmlFor="consentMarketing" className="font-normal text-[11px] leading-relaxed cursor-pointer text-gray-500">
-                                            Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert najmu i finansowania pojazdów. *
+                                            Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert najmu i finansowania pojazdów. (opcjonalnie)
                                         </Label>
                                     </div>
-                                    {errors.consentMarketing && (
-                                        <p className="text-[10px] text-red-500 font-bold uppercase ml-7">Pole wymagane</p>
-                                    )}
                                 </div>
 
                                 <Turnstile onVerify={setTurnstileToken} />

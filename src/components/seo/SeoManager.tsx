@@ -122,18 +122,14 @@ export function SeoManager() {
                 return;
             }
 
-            const interactionEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
-            
-            const handleInteraction = () => {
-                injectGTM();
-                interactionEvents.forEach(e => window.removeEventListener(e, handleInteraction));
-                if (fallbackTimeout) clearTimeout(fallbackTimeout);
-            };
-
-            interactionEvents.forEach(e => window.addEventListener(e, handleInteraction, { once: true, passive: true }));
-            
-            // Fallback timeout in case user doesn't interact but we still want tracking
-            const fallbackTimeout = setTimeout(handleInteraction, 5000);
+            // Inject GTM as soon as the main thread is idle (instead of waiting for
+            // user interaction / 5s). The old lazy path made GA4 blind to sessions
+            // that bounced within 5s without interacting — see docs/CRO_AUDIT_MOTOLIA_2026-07.md (P0.6).
+            if ('requestIdleCallback' in window) {
+                (window as any).requestIdleCallback(injectGTM, { timeout: 2000 });
+            } else {
+                setTimeout(injectGTM, 200);
+            }
         })();
 
         return () => { cancelled = true; };

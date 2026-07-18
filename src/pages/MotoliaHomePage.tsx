@@ -25,6 +25,7 @@ import { DynamicWidget } from '@/components/public/DynamicWidget';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import HeroVehicleFilter from '@/components/HeroVehicleFilter';
 import { FeatureTilesSection } from '@/components/FeatureTilesSection';
+import { CallbackForm } from '@/components/CallbackForm';
 
 // Lazy: karuzela ciągnie embla-carousel (~18 KB min) — ładuje się dopiero,
 // gdy API zwróci aktywne bannery, więc nie obciąża krytycznej ścieżki LCP
@@ -230,13 +231,22 @@ export default function MotoliaHomePage() {
                   i SSR home-shell) — bez tego, na szybkim CPU React commituje pierwszą klatkę
                   zanim dojedzie lazy-chunk, wrapper .relative (karta jest lg:absolute, poza
                   flow) zapada się do 0 i cała treść pod hero skacze → duży CLS na desktopie. */}
-              <React.Suspense fallback={<div className="w-full h-[360px] md:h-[460px] lg:h-[520px] rounded-3xl bg-slate-900" />}>
+              <React.Suspense fallback={<div className="w-full h-[360px] md:h-[460px] lg:h-[520px] rounded-3xl bg-slate-100 animate-pulse" />}>
                 <HeroBannerCarousel />
               </React.Suspense>
               {/* Floating search card (superauto layout) — plain div so the
                   -translate-y-1/2 centering isn't overridden by framer-motion's transform */}
               <div className="mt-6 lg:mt-0 lg:absolute lg:top-1/2 lg:right-6 xl:right-10 lg:-translate-y-1/2 lg:w-[400px] lg:z-20">
                 <HeroVehicleFilter />
+                {/* Hero quick-callback (CRO P1.3) — mobile only; desktop keeps the floating card compact */}
+                <CallbackForm
+                  compact
+                  formId="home_hero_callback"
+                  title="Wolisz rozmowę?"
+                  titleHighlight="Oddzwonimy w 15 minut"
+                  description="Zostaw numer – doradca dobierze auto i finansowanie."
+                  className="mt-4 lg:hidden"
+                />
               </div>
             </div>
           ) : (
@@ -302,6 +312,16 @@ export default function MotoliaHomePage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Hero quick-callback (CRO P1.3) — TV traffic lands here with a phone in hand */}
+                <CallbackForm
+                  compact
+                  formId="home_hero_callback"
+                  title="Wolisz rozmowę?"
+                  titleHighlight="Oddzwonimy w 15 minut"
+                  description="Zostaw numer – doradca dobierze finansowanie do Twojej sytuacji."
+                  className="mt-8 max-w-md border border-gray-100"
+                />
               </div>
 
               {/* Right col — vehicle filter widget */}

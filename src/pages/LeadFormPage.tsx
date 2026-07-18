@@ -19,7 +19,6 @@ import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
-import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
@@ -33,14 +32,14 @@ const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
 const leadSchema = z.object({
   name: z.string().min(2, 'validation.required').max(100),
-  email: z.string().email('validation.invalidEmail'),
-  phone: z.string().optional().refine((val) => !val || phoneRegex.test(val), {
-    message: 'validation.invalidPhone',
-  }),
+  // Phone-first funnel (CRO P1.2): phone is the required channel, email optional
+  email: z.string().email('validation.invalidEmail').optional().or(z.literal('')),
+  phone: z.string().regex(phoneRegex, 'validation.invalidPhone'),
   preferredContact: z.enum(['email', 'phone']),
-  message: z.string().min(10, 'validation.required').max(1000),
+  message: z.string().max(1000).optional(),
   proposedPrice: z.coerce.number().optional(),
-  consentMarketing: z.boolean().refine((v) => v === true, 'validation.required'),
+  // Marketing consent must stay optional (GDPR: freely given, separate from the service consent)
+  consentMarketing: z.boolean(),
   consentPrivacy: z.boolean().refine((v) => v === true, 'validation.required'),
 });
 
@@ -118,7 +117,7 @@ export default function LeadFormPage() {
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
     defaultValues: {
-      preferredContact: 'email',
+      preferredContact: 'phone',
       message: '',
       proposedPrice: undefined,
       consentMarketing: false,
@@ -448,7 +447,7 @@ export default function LeadFormPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider">{t('lead.email', 'Adres e-mail')} *</Label>
+                    <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider">{t('lead.email', 'Adres e-mail')} <span className="normal-case font-normal text-muted-foreground">({t('lead.optional', 'opcjonalnie')})</span></Label>
                     <Input
                       id="email"
                       type="email"
@@ -464,7 +463,7 @@ export default function LeadFormPage() {
 
                 <div className="grid gap-6 sm:grid-cols-2 items-end">
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider">{t('lead.phone', 'Numer telefonu')}</Label>
+                    <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider">{t('lead.phone', 'Numer telefonu')} *</Label>
                     <Input
                       id="phone"
                       {...register('phone')}
@@ -479,7 +478,7 @@ export default function LeadFormPage() {
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider mb-3 block">{t('lead.preferredContact', 'Preferowany kontakt')}</Label>
                     <RadioGroup
-                      defaultValue="email"
+                      defaultValue="phone"
                       onValueChange={(v) => setValue('preferredContact', v as 'email' | 'phone')}
                       className="flex gap-6 pb-2"
                     >
@@ -513,18 +512,8 @@ export default function LeadFormPage() {
                   </div>
                 )}
 
-                {!isNegotiationFlow && (
-                  <div className="space-y-3 pt-4 border-t">
-                  <Label className="text-xs font-bold uppercase tracking-wider">{t('lead.fastQuestions', 'Szybkie pytania')}</Label>
-                  <InquiryChips
-                    carName={`${listing.make} ${listing.model}`}
-                    onSelect={(msg) => setValue('message', msg, { shouldDirty: true, shouldValidate: true })}
-                  />
-                </div>
-                )}
-
                 <div className="space-y-2">
-                  <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">{t('lead.message', 'Twoja wiadomość')} *</Label>
+                  <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">{t('lead.message', 'Twoja wiadomość')} <span className="normal-case font-normal text-muted-foreground">({t('lead.optional', 'opcjonalnie')})</span></Label>
                   <Textarea
                     id="message"
                     {...register('message')}
@@ -559,12 +548,9 @@ export default function LeadFormPage() {
                       onCheckedChange={(v) => setValue('consentMarketing', v === true)}
                     />
                     <Label htmlFor="consentMarketing" className="font-normal text-[11px] leading-relaxed cursor-pointer text-muted-foreground">
-                      {t('lead.consentMarketing', 'Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń.')} *
+                      {t('lead.consentMarketing', 'Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń.')} (opcjonalnie)
                     </Label>
                   </div>
-                  {errors.consentMarketing && (
-                    <p className="text-[10px] text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
-                  )}
                 </div>
 
                 <Turnstile onVerify={setTurnstileToken} />

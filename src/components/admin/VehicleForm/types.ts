@@ -43,6 +43,7 @@ export interface VehicleFormState {
     isFeatured: boolean;
     isBusinessFeatured: boolean;       // sale only — oferta specjalna dla firm (/dla-firm)
     showMotoliaDiscount: boolean;      // sale only — pokaż rabat Motolia na froncie
+    marketingTags: string[];           // sale only — tagi na karcie oferty (max 4)
     financingPriceBase: 'PRICE_PLN' | 'BROKER_PRICE_PLN'; // sale only
 
     // Dostępność per klient i produkt — sale

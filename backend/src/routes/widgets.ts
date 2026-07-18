@@ -125,7 +125,8 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              motoliaDiscountPln: l.motoliaDiscountPln,
              showMotoliaDiscount: l.showMotoliaDiscount,
              creditInstallment: l.referenceCreditInstallment,
-             leasingInstallment: l.referenceLeasingInstallment
+             leasingInstallment: l.referenceLeasingInstallment,
+             marketingTags: l.marketingTags
           }));
           unifiedVehicles.push(...formatted);
         }
@@ -207,7 +208,8 @@ export async function widgetRoutes(fastify: FastifyInstance) {
              motoliaDiscountPln: l.motoliaDiscountPln,
              showMotoliaDiscount: l.showMotoliaDiscount,
              creditInstallment: l.referenceCreditInstallment,
-             leasingInstallment: l.referenceLeasingInstallment
+             leasingInstallment: l.referenceLeasingInstallment,
+             marketingTags: l.marketingTags
           }));
           unifiedVehicles.push(...formatted);
         }
