@@ -39,6 +39,7 @@ export interface RentalVehicle {
     slug: string | null;
     isActive: boolean;
     isFeatured?: boolean;
+    isBusinessFeatured?: boolean;
     isPublished?: boolean;
     createdAt: string;
     updatedAt: string;
@@ -183,6 +184,14 @@ export const rentalVehiclesApi = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ isFeatured })
+        });
+    },
+
+    toggleBusinessFeatured: async (id: string, isBusinessFeatured: boolean, token: string) => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-vehicles/${id}/featured`, token, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isBusinessFeatured })
         });
     },
 

@@ -80,6 +80,7 @@ export async function featuredRoutes(fastify: FastifyInstance) {
         // Invalidate cache
         await fastify.redis.del('featured:vehicles');
         await fastify.redis.del('onepager:pdf:default');
+        await fastify.redis.del('business:offers');
 
         return { success: true, isFeatured: listing.isFeatured, isBusinessFeatured: listing.isBusinessFeatured };
     });
@@ -89,18 +90,22 @@ export async function featuredRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
-        const { isFeatured } = request.body as { isFeatured: boolean };
+        const { isFeatured, isBusinessFeatured } = request.body as { isFeatured?: boolean; isBusinessFeatured?: boolean };
 
         const rv = await fastify.prisma.rentalVehicle.update({
             where: { id },
-            data: { isFeatured }
+            data: {
+                ...(isFeatured !== undefined ? { isFeatured } : {}),
+                ...(isBusinessFeatured !== undefined ? { isBusinessFeatured } : {}),
+            }
         });
 
         // Invalidate cache
         await fastify.redis.del('featured:vehicles');
         await fastify.redis.del('onepager:pdf:default');
+        await fastify.redis.del('business:offers');
 
-        return { success: true, isFeatured: rv.isFeatured };
+        return { success: true, isFeatured: rv.isFeatured, isBusinessFeatured: rv.isBusinessFeatured };
     });
 
     // Toggle published (frontend visibility) status for a rental vehicle

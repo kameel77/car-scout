@@ -664,6 +664,8 @@ model RentalVehicle {
   specificationUrl         String?                   @map("specification_url")
   carClass                 String?                   @map("car_class")
   isFeatured               Boolean                   @default(false) @map("is_featured")
+  /// Wyróżnienie w ofercie dla firm (/dla-firm) — miks najmu z innymi formami finansowania
+  isBusinessFeatured       Boolean                   @default(false) @map("is_business_featured")
   modelCode                String?                   @map("model_code")
   condition                ListingCondition          @default(NEW) @map("condition")
   firstRegistrationDate    String?                   @map("first_registration_date")

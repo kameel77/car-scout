@@ -177,7 +177,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const sanitizedDesc = sanitizeDescription(desc);
             const truncatedDesc = sanitizedDesc.length > 5000 ? sanitizedDesc.substring(0, 4997) + '...' : sanitizedDesc;
 
-            const conditionVal = listing.condition === 'NEW' ? 'New' : 'Used';
+            const conditionVal = listing.condition === 'NEW' ? 'NEW' : 'USED';
             const conditionXml = listing.condition === 'NEW' ? 'new' : 'used';
             const link = `${baseUrl}/oferty/${listing.slug}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
             
@@ -191,33 +191,32 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const formattedPrice = `${priceNum.toFixed(2)} PLN`;
 
             let mileage = listing.mileageKm || 0;
-            if (conditionVal === 'Used' && mileage <= 0) {
+            if (conditionVal === 'USED' && mileage <= 0) {
                 mileage = 1; // used cars must have mileage > 0
             }
             
-            // Map transmission to FB accepted values (capitalized)
+            // Map transmission to FB accepted values (uppercase)
             const getTransmission = (raw: string | null | undefined): string => {
-                if (!raw) return 'Other';
+                if (!raw) return 'OTHER';
                 const lower = raw.toLowerCase();
-                if (lower.includes('manual')) return 'Manual';
-                if (lower.includes('automat')) return 'Automatic';
-                if (lower.includes('półautomat') || lower.includes('semi')) return 'Semi-automatic';
-                return 'Other';
+                if (lower.includes('manual')) return 'MANUAL';
+                if (lower.includes('automat')) return 'AUTOMATIC';
+                return 'OTHER';
             };
 
-            // Map body styles to FB accepted values (capitalized)
+            // Map body styles to FB accepted values (uppercase)
             const getBodyStyle = (raw: string | null | undefined): string => {
-                if (!raw) return 'Other';
+                if (!raw) return 'OTHER';
                 const lower = raw.toLowerCase();
                 if (lower.includes('suv')) return 'SUV';
-                if (lower.includes('kombi') || lower.includes('wagon')) return 'Wagon';
-                if (lower.includes('kabriolet') || lower.includes('convertible')) return 'Convertible';
-                if (lower.includes('coupe')) return 'Coupe';
-                if (lower.includes('sedan') || lower.includes('limuzyna')) return 'Sedan';
-                if (lower.includes('van') || lower.includes('minibus') || lower.includes('mpv')) return 'Van';
-                if (lower.includes('pickup') || lower.includes('furgon') || lower.includes('skrzynia') || lower.includes('doka') || lower.includes('chłodnia')) return 'Truck';
-                if (lower.includes('kompakt') || lower.includes('liftback') || lower.includes('miejskie') || lower.includes('małe') || lower.includes('hatchback')) return 'Hatchback';
-                return 'Other';
+                if (lower.includes('kombi') || lower.includes('wagon')) return 'WAGON';
+                if (lower.includes('kabriolet') || lower.includes('convertible')) return 'CONVERTIBLE';
+                if (lower.includes('coupe')) return 'COUPE';
+                if (lower.includes('sedan') || lower.includes('limuzyna')) return 'SEDAN';
+                if (lower.includes('van') || lower.includes('minibus') || lower.includes('mpv')) return 'VAN';
+                if (lower.includes('pickup') || lower.includes('furgon') || lower.includes('skrzynia') || lower.includes('doka') || lower.includes('chłodnia')) return 'TRUCK';
+                if (lower.includes('kompakt') || lower.includes('liftback') || lower.includes('miejskie') || lower.includes('małe') || lower.includes('hatchback')) return 'HATCHBACK';
+                return 'OTHER';
             };
 
             const bodyStyle = getBodyStyle(listing.bodyType);

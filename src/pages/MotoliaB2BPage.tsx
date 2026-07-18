@@ -727,8 +727,12 @@ export default function MotoliaB2BPage() {
 
 function BusinessOfferCard({ offer }: { offer: any }) {
   const image = offer.primaryImageUrl || offer.imageUrls?.[0] || '/motolia-placeholder.webp';
-  const href = `${getListingUrlPath(offer, 'leasing')}/lead?context=business`;
-  const netRate: number | null = offer.referenceLeasingInstallment ?? null;
+  // Miks form finansowania: pojazd najmu (offerKind 'rental') prowadzi na stronę najmu
+  const isRental = offer.offerKind === 'rental';
+  const href = isRental
+    ? `/wynajem-dlugoterminowy/${offer.slug ?? offer.id}`
+    : `${getListingUrlPath(offer, 'leasing')}/lead?context=business`;
+  const netRate: number | null = (isRental ? offer.rentalNetRate : offer.referenceLeasingInstallment) ?? null;
 
   return (
     <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden hover:shadow-lg hover:border-gray-200 transition-all duration-300 flex flex-col h-full">
@@ -738,7 +742,7 @@ function BusinessOfferCard({ offer }: { offer: any }) {
       <div className="p-6 flex flex-col gap-3 flex-1">
         <div className="inline-flex items-center gap-1.5 self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"
           style={{ background: `${YELLOW}20`, color: YELLOW_DARK }}>
-          Oferta dla firm
+          {isRental ? 'Najem dla firm' : 'Oferta dla firm'}
         </div>
         <h3 className="font-bold text-lg text-[#1A1A1A] leading-tight">
           {offer.make} {offer.model} {offer.version ? <span className="font-normal text-gray-500">{offer.version}</span> : null}
@@ -748,7 +752,9 @@ function BusinessOfferCard({ offer }: { offer: any }) {
         {netRate ? (
           <div>
             <div className="text-2xl font-bold text-[#1A1A1A]">{PLN.format(netRate)} zł/mc</div>
-            <p className="text-xs text-gray-400">netto - dla firmy rata w kosztach</p>
+            <p className="text-xs text-gray-400">
+              {isRental ? 'netto - najem długoterminowy, rata w kosztach' : 'netto - dla firmy rata w kosztach'}
+            </p>
           </div>
         ) : (
           <p className="text-sm text-gray-500">Rata netto dopasowana do Twojej firmy — dopytaj doradcę.</p>
@@ -759,7 +765,7 @@ function BusinessOfferCard({ offer }: { offer: any }) {
           className="mt-auto inline-flex items-center justify-center gap-1.5 text-sm font-bold px-5 py-3 rounded-2xl transition-all"
           style={{ background: YELLOW, color: BLACK }}
         >
-          Zapytaj o to auto na firmę <ArrowRight size={14} />
+          {isRental ? 'Zobacz ofertę najmu' : 'Zapytaj o to auto na firmę'} <ArrowRight size={14} />
         </Link>
       </div>
     </div>
