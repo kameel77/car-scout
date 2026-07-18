@@ -33,12 +33,11 @@ const phoneRegex = /^(\+48\s?)?[1-9]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
 
 const leadSchema = z.object({
   name: z.string().min(2, 'validation.required').max(100),
-  email: z.string().email('validation.invalidEmail'),
-  phone: z.string().optional().refine((val) => !val || phoneRegex.test(val), {
-    message: 'validation.invalidPhone',
-  }),
+  // Phone-first funnel (CRO P1.2): phone is the required channel, email optional
+  email: z.string().email('validation.invalidEmail').optional().or(z.literal('')),
+  phone: z.string().regex(phoneRegex, 'validation.invalidPhone'),
   preferredContact: z.enum(['email', 'phone']),
-  message: z.string().min(10, 'validation.required').max(1000),
+  message: z.string().max(1000).optional(),
   proposedPrice: z.coerce.number().optional(),
   // Marketing consent must stay optional (GDPR: freely given, separate from the service consent)
   consentMarketing: z.boolean(),
@@ -119,7 +118,7 @@ export default function LeadFormPage() {
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
     defaultValues: {
-      preferredContact: 'email',
+      preferredContact: 'phone',
       message: '',
       proposedPrice: undefined,
       consentMarketing: false,
@@ -449,7 +448,7 @@ export default function LeadFormPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider">{t('lead.email', 'Adres e-mail')} *</Label>
+                    <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider">{t('lead.email', 'Adres e-mail')} <span className="normal-case font-normal text-muted-foreground">({t('lead.optional', 'opcjonalnie')})</span></Label>
                     <Input
                       id="email"
                       type="email"
@@ -465,7 +464,7 @@ export default function LeadFormPage() {
 
                 <div className="grid gap-6 sm:grid-cols-2 items-end">
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider">{t('lead.phone', 'Numer telefonu')}</Label>
+                    <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider">{t('lead.phone', 'Numer telefonu')} *</Label>
                     <Input
                       id="phone"
                       {...register('phone')}
@@ -480,7 +479,7 @@ export default function LeadFormPage() {
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider mb-3 block">{t('lead.preferredContact', 'Preferowany kontakt')}</Label>
                     <RadioGroup
-                      defaultValue="email"
+                      defaultValue="phone"
                       onValueChange={(v) => setValue('preferredContact', v as 'email' | 'phone')}
                       className="flex gap-6 pb-2"
                     >
@@ -525,7 +524,7 @@ export default function LeadFormPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">{t('lead.message', 'Twoja wiadomość')} *</Label>
+                  <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">{t('lead.message', 'Twoja wiadomość')} <span className="normal-case font-normal text-muted-foreground">({t('lead.optional', 'opcjonalnie')})</span></Label>
                   <Textarea
                     id="message"
                     {...register('message')}

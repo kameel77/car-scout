@@ -57,10 +57,10 @@ type PreferredContact = 'email' | 'phone';
 interface LeadPayload {
     listingId: string;
     name: string;
-    email: string;
+    email?: string;
     phone?: string;
     preferredContact?: PreferredContact;
-    message: string;
+    message?: string;
     consentMarketing?: boolean;
     consentPrivacy?: boolean;
     // Financing fields
@@ -75,7 +75,7 @@ interface LeadPayload {
 interface NegotiationLeadPayload {
     listingId: string;
     name: string;
-    email: string;
+    email?: string;
     phone?: string;
     preferredContact?: PreferredContact;
     message?: string;
@@ -97,10 +97,10 @@ interface WaitlistLeadPayload {
 interface RentalLeadPayload {
     rentalVehicleId: string;
     name: string;
-    email: string;
+    email?: string;
     phone?: string;
     preferredContact?: PreferredContact;
-    message: string;
+    message?: string;
     consentMarketing?: boolean;
     consentPrivacy?: boolean;
     // Rental config from calculator
@@ -130,8 +130,9 @@ export async function leadRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
         }
 
-        if (!data.listingId || !data.name || !data.email || !data.message) {
-            return reply.code(400).send({ error: 'listingId, name, email and message are required' });
+        // Phone-first funnel (CRO P1.2): either contact channel is enough.
+        if (!data.listingId || !data.name || (!data.email && !data.phone)) {
+            return reply.code(400).send({ error: 'listingId, name and email or phone are required' });
         }
 
         const listing = await fastify.prisma.listing.findUnique({
@@ -148,10 +149,10 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 leadType: 'sale',
                 listingId: data.listingId,
                 name: data.name,
-                email: data.email,
+                email: data.email || 'brak@email.pl',
                 phone: data.phone,
-                preferredContact: data.preferredContact || 'email',
-                message: data.message,
+                preferredContact: data.preferredContact || (data.phone ? 'phone' : 'email'),
+                message: data.message || 'Zapytanie o ofertę.',
                 status: 'new',
                 referenceNumber: generateReference(),
                 consentMarketingAt: data.consentMarketing ? new Date() : null,
@@ -191,8 +192,8 @@ export async function leadRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
         }
 
-        if (!data.listingId || !data.name || !data.email || !data.proposedPrice) {
-            return reply.code(400).send({ error: 'listingId, name, email and proposedPrice are required' });
+        if (!data.listingId || !data.name || (!data.email && !data.phone) || !data.proposedPrice) {
+            return reply.code(400).send({ error: 'listingId, name, proposedPrice and email or phone are required' });
         }
 
         const listing = await fastify.prisma.listing.findUnique({
@@ -239,9 +240,9 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 leadType: 'price_negotiation',
                 listingId: data.listingId,
                 name: data.name,
-                email: data.email,
+                email: data.email || 'brak@email.pl',
                 phone: data.phone,
-                preferredContact: data.preferredContact || 'email',
+                preferredContact: data.preferredContact || (data.phone ? 'phone' : 'email'),
                 message: negotiationSummary,
                 status: 'negotiation_pending',
                 referenceNumber: generateReference(),
@@ -289,8 +290,8 @@ export async function leadRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
         }
 
-        if (!data.rentalVehicleId || !data.name || !data.email || !data.message) {
-            return reply.code(400).send({ error: 'rentalVehicleId, name, email and message are required' });
+        if (!data.rentalVehicleId || !data.name || (!data.email && !data.phone)) {
+            return reply.code(400).send({ error: 'rentalVehicleId, name and email or phone are required' });
         }
 
         const rentalVehicle = await fastify.prisma.rentalVehicle.findUnique({
@@ -307,10 +308,10 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 leadType: 'rental',
                 rentalVehicleId: data.rentalVehicleId,
                 name: data.name,
-                email: data.email,
+                email: data.email || 'brak@email.pl',
                 phone: data.phone,
-                preferredContact: data.preferredContact || 'email',
-                message: data.message,
+                preferredContact: data.preferredContact || (data.phone ? 'phone' : 'email'),
+                message: data.message || 'Zapytanie o wynajem.',
                 status: 'new',
                 referenceNumber: generateReference(),
                 consentMarketingAt: data.consentMarketing ? new Date() : null,
@@ -385,28 +386,59 @@ export async function leadRoutes(fastify: FastifyInstance) {
         config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
     }, async (request, reply) => {
         const body = request.body as any;
-        const phone = body.phone;
+        const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
         const name = body.name || 'Szybki Kontakt';
 
-        const isTokenValid = await verifyTurnstile(body.turnstileToken, request.ip, fastify.log);
-        if (!isTokenValid) {
+        // Honeypot: real quick forms render a hidden, always-empty "company" field.
+        // Bots that fill every field reveal themselves here.
+        if (body.company) {
             return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
+        }
+
+        // Quick forms are single-field CTAs without a Turnstile widget — requiring the
+        // token here silently killed every quick-callback lead in production (CRO audit
+        // P1, 2026-07). Verify the token when provided; otherwise rely on honeypot +
+        // phone format + the 10/min rate limit.
+        if (body.turnstileToken) {
+            const isTokenValid = await verifyTurnstile(body.turnstileToken, request.ip, fastify.log);
+            if (!isTokenValid) {
+                return reply.code(400).send({ error: 'Niezgodność zabezpieczenia antyspamowego. Spróbuj ponownie.' });
+            }
         }
 
         if (!phone) {
             return reply.code(400).send({ error: 'phone is required' });
         }
+        if (!/^(\+?\d{1,3}[ -]?)?[\d ()-]{7,15}$/.test(phone)) {
+            return reply.code(400).send({ error: 'Nieprawidłowy numer telefonu' });
+        }
+
+        // Optional vehicle context so the CRM sees which car the caller was viewing
+        let listingId: string | undefined;
+        if (typeof body.listingId === 'string' && body.listingId) {
+            const listing = await fastify.prisma.listing.findUnique({
+                where: { id: body.listingId },
+                select: { id: true }
+            });
+            if (listing) listingId = listing.id;
+        }
 
         const lead = await fastify.prisma.lead.create({
             data: {
                 leadType: 'quick_contact',
+                ...(listingId ? { listingId } : {}),
                 name: name,
                 email: 'brak@email.pl',
                 phone: phone,
                 preferredContact: 'phone',
-                message: 'Prośba o szybki kontakt telefoniczny.',
+                message: body.message || 'Prośba o szybki kontakt telefoniczny.',
                 status: 'quick_contact',
                 referenceNumber: generateReference(),
+            },
+            include: {
+                listing: {
+                    include: { dealer: true }
+                }
             }
         });
 

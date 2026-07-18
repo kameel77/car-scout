@@ -25,6 +25,7 @@ import { DynamicWidget } from '@/components/public/DynamicWidget';
 import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import HeroVehicleFilter from '@/components/HeroVehicleFilter';
 import { FeatureTilesSection } from '@/components/FeatureTilesSection';
+import { CallbackForm } from '@/components/CallbackForm';
 
 // Lazy: karuzela ciągnie embla-carousel (~18 KB min) — ładuje się dopiero,
 // gdy API zwróci aktywne bannery, więc nie obciąża krytycznej ścieżki LCP
@@ -302,6 +303,16 @@ export default function MotoliaHomePage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Hero quick-callback (CRO P1.3) — TV traffic lands here with a phone in hand */}
+                <CallbackForm
+                  compact
+                  formId="home_hero_callback"
+                  title="Wolisz rozmowę?"
+                  titleHighlight="Oddzwonimy w 15 minut"
+                  description="Zostaw numer – doradca dobierze finansowanie do Twojej sytuacji."
+                  className="mt-8 max-w-md border border-gray-100"
+                />
               </div>
 
               {/* Right col — vehicle filter widget */}

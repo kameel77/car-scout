@@ -1089,10 +1089,10 @@ export const leadsApi = {
     submitLead: async (data: {
         listingId: string;
         name: string;
-        email: string;
+        email?: string;
         phone?: string;
         preferredContact: 'email' | 'phone';
-        message: string;
+        message?: string;
         consentMarketing: boolean;
         consentPrivacy: boolean;
         financingProductId?: string;
@@ -1119,7 +1119,7 @@ export const leadsApi = {
     submitNegotiationLead: async (data: {
         listingId: string;
         name: string;
-        email: string;
+        email?: string;
         phone?: string;
         preferredContact: 'email' | 'phone';
         message?: string;
@@ -1192,7 +1192,7 @@ export const leadsApi = {
 
         return response.json();
     },
-    submitQuickLead: async (data: { phone: string; name?: string; message?: string; turnstileToken?: string; }) => {
+    submitQuickLead: async (data: { phone: string; name?: string; message?: string; listingId?: string; company?: string; turnstileToken?: string; }) => {
         const response = await fetch(`${API_BASE_URL}/api/leads/quick`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1210,10 +1210,10 @@ export const leadsApi = {
     submitRentalLead: async (data: {
         rentalVehicleId: string;
         name: string;
-        email: string;
+        email?: string;
         phone?: string;
         preferredContact: 'email' | 'phone';
-        message: string;
+        message?: string;
         consentMarketing: boolean;
         consentPrivacy: boolean;
         rentalCompanyName?: string;

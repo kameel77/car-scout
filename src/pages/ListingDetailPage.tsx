@@ -1023,6 +1023,34 @@ export default function ListingDetailPage() {
                     ) : null
                   )}
 
+                  {/* Micro-conversions: call now or leave a number (CRO P1.1) */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 }}
+                    className="space-y-3"
+                  >
+                    {listing.contact_phone && (
+                      <a
+                        href={`tel:${formatPhoneForTelLink(listing.contact_phone)}`}
+                        onClick={() => trackPhoneClick('offer_sidebar')}
+                        className="flex items-center justify-center gap-2 h-11 w-full rounded-xl border border-border bg-card shadow-card text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
+                      >
+                        <Phone className="h-4 w-4 text-accent" />
+                        Zadzwoń: {listing.contact_phone}
+                      </a>
+                    )}
+                    <CallbackForm
+                      compact
+                      listingId={listing.listing_id}
+                      formId="offer_sidebar_callback"
+                      title="Wolisz, żebyśmy"
+                      titleHighlight="oddzwonili?"
+                      description="Zostaw numer – doradca oddzwoni w sprawie tego auta."
+                      message={`Prośba o kontakt ws. oferty: ${listing.make} ${listing.model} ${listing.production_year ?? ''}`.trim()}
+                    />
+                  </motion.div>
+
                   {/* Secondary CTA — commented out, may be needed in the future */}
                   {/* <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -1304,6 +1332,9 @@ export default function ListingDetailPage() {
           title="Masz dodatkowe pytania?"
           titleHighlight="Zostaw numer, oddzwonimy"
           description="Nasz doradca skontaktuje się z Tobą w ciągu 24h i pomoże dobrać najlepsze finansowanie."
+          listingId={listing.listing_id}
+          formId="offer_bottom_callback"
+          message={`Prośba o kontakt ws. oferty: ${listing.make} ${listing.model} ${listing.production_year ?? ''}`.trim()}
         />
       </div>
 
