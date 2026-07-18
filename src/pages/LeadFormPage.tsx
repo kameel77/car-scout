@@ -19,7 +19,6 @@ import { usePriceSettings } from '@/contexts/PriceSettingsContext';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
-import { InquiryChips } from '@/components/InquiryChips';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber } from '@/utils/formatters';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
@@ -511,16 +510,6 @@ export default function LeadFormPage() {
                       <p className="text-xs text-destructive mt-1 font-medium">{t(errors.proposedPrice.message || '')}</p>
                     )}
                   </div>
-                )}
-
-                {!isNegotiationFlow && (
-                  <div className="space-y-3 pt-4 border-t">
-                  <Label className="text-xs font-bold uppercase tracking-wider">{t('lead.fastQuestions', 'Szybkie pytania')}</Label>
-                  <InquiryChips
-                    carName={`${listing.make} ${listing.model}`}
-                    onSelect={(msg) => setValue('message', msg, { shouldDirty: true, shouldValidate: true })}
-                  />
-                </div>
                 )}
 
                 <div className="space-y-2">

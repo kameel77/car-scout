@@ -81,7 +81,7 @@ export function CallbackForm({
 
     if (compact) {
         return (
-            <div className={`rounded-xl bg-card shadow-card p-4 ${className}`}>
+            <div className={`rounded-xl bg-card shadow-card border-2 border-accent/40 p-4 ${className}`}>
                 {status === 'success' ? (
                     <div className="flex items-center gap-2 text-green-600 font-semibold text-sm">
                         <ShieldCheck className="w-4 h-4 shrink-0" />
@@ -89,11 +89,13 @@ export function CallbackForm({
                     </div>
                 ) : (
                     <>
-                        <p className="font-heading font-semibold text-sm text-foreground mb-1 flex items-center gap-1.5">
-                            <Phone className="w-4 h-4 text-accent" />
-                            {title} <span className="text-accent">{titleHighlight}</span>
+                        <p className="font-heading font-bold text-base text-foreground mb-1 flex items-center gap-2">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/15 shrink-0">
+                                <Phone className="w-4 h-4 text-accent" />
+                            </span>
+                            <span>{title} <span className="text-accent">{titleHighlight}</span></span>
                         </p>
-                        <p className="text-xs text-muted-foreground mb-3">{description}</p>
+                        <p className="text-sm text-muted-foreground mb-3">{description}</p>
                         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
                             {honeypotField}
                             <input
