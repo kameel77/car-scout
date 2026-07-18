@@ -267,7 +267,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         try {
             const csv = await generateCsvFeed('facebook');
             reply.header('Content-Type', 'text/csv');
-            reply.header('Cache-Control', 'public, max-age=3600');
+            reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            reply.header('Pragma', 'no-cache');
+            reply.header('Expires', '0');
             return reply.send(csv);
         } catch (error) {
             fastify.log.error(error, 'Error generating Facebook CSV feed');
@@ -279,7 +281,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         try {
             const xml = await generateXmlFeed('google');
             reply.header('Content-Type', 'application/xml');
-            reply.header('Cache-Control', 'public, max-age=3600');
+            reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            reply.header('Pragma', 'no-cache');
+            reply.header('Expires', '0');
             return reply.send(xml);
         } catch (error) {
             fastify.log.error(error, 'Error generating Google XML feed');
@@ -291,7 +295,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         try {
             const xml = await generateXmlFeed('bing');
             reply.header('Content-Type', 'application/xml');
-            reply.header('Cache-Control', 'public, max-age=3600');
+            reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            reply.header('Pragma', 'no-cache');
+            reply.header('Expires', '0');
             return reply.send(xml);
         } catch (error) {
             fastify.log.error(error, 'Error generating Bing XML feed');
