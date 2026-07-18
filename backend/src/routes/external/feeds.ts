@@ -148,7 +148,6 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             'mileage.value',
             'mileage.unit',
             'image[0].url',
-            'image',
             'image_link',
             'transmission',
             'body_style',
@@ -190,7 +189,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 imageLink = fallbackImage;
             }
             // Replace .webp extension with .jpg to satisfy Meta's image requirements
-            imageLink = imageLink.replace(/\.webp$/i, '.jpg');
+            imageLink = imageLink.replace(/\.webp$/i, '.jpg') + '?v=3';
 
             const priceNum = typeof listing.pricePln === 'number' ? listing.pricePln : Number(listing.pricePln);
             const formattedPrice = `${priceNum.toFixed(2)} PLN`;
@@ -251,7 +250,6 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 mileage,
                 'KM',
                 imageLink,   // image[0].url
-                imageLink,   // image
                 imageLink,   // image_link
                 transmission,
                 bodyStyle,
@@ -268,7 +266,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
     fastify.get('/api/external/facebook/feed.csv', async (request, reply) => {
         try {
             const csv = await generateCsvFeed('facebook');
-            reply.header('Content-Type', 'text/csv');
+            reply.header('Content-Type', 'text/csv; charset=utf-8');
             reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
             reply.header('Pragma', 'no-cache');
             reply.header('Expires', '0');
