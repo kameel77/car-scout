@@ -21,7 +21,18 @@ export const CSV_EDITABLE_FIELDS = [
     'priceCompanyCreditPln',
     'priceCompanyLeasingPln',
     'dealerId',
+    'marketingTags',
 ] as const;
+
+/** Tagi marketingowe na karcie oferty: krótkie stringi, max 4 */
+export function sanitizeMarketingTags(input: unknown): string[] {
+    if (!Array.isArray(input)) return [];
+    return input
+        .filter((t): t is string => typeof t === 'string')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0 && t.length <= 30)
+        .slice(0, 4);
+}
 
 export type ListingValidationError = { field: string; message: string };
 
@@ -122,6 +133,7 @@ export function mapManualPayloadToListing(body: any, dealerId: string): Prisma.L
         primaryImageUrl: body.primaryImageUrl || undefined,
         imageUrls: Array.isArray(body.imageUrls) ? body.imageUrls : [],
         specificationUrl: body.specificationPdfUrl || undefined,
+        marketingTags: sanitizeMarketingTags(body.marketingTags),
     };
 }
 
@@ -148,6 +160,9 @@ export function pickCsvEditableFields(body: any): Prisma.ListingUpdateInput {
         if (body[field] !== undefined) {
             result[field] = body[field];
         }
+    }
+    if (result.marketingTags !== undefined) {
+        result.marketingTags = sanitizeMarketingTags(result.marketingTags);
     }
     
     // Explicitly handle relations for CSV/imported vehicles

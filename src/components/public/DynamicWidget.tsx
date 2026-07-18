@@ -109,21 +109,12 @@ export function DynamicWidget({
                       )}
 
                       <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
-                        {v.bodyType && (
-                          <span className="bg-black/60 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full font-medium tracking-wide">
-                            {v.bodyType}
+                        {/* Tagi marketingowe (backoffice) zamiast nadwozia/stanu — te widać na zdjęciu i w danych karty */}
+                        {(v.marketingTags || []).slice(0, 2).map((tag: string) => (
+                          <span key={tag} className="bg-accent text-gray-900 text-xs px-3 py-1.5 rounded-full font-semibold shadow-sm">
+                            {tag}
                           </span>
-                        )}
-                        {v.condition === 'NEW' && (
-                          <span className="bg-accent text-gray-900 text-xs px-3 py-1.5 rounded-full font-medium">
-                            NOWY
-                          </span>
-                        )}
-                        {v.condition === 'USED' && (
-                          <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-medium">
-                            UŻYWANY
-                          </span>
-                        )}
+                        ))}
                         {hasDiscount && (
                           <span className="bg-green-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md">
                             -{Math.round((v.catalogPrice - v.price) / v.catalogPrice * 100)}%

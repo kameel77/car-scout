@@ -25,6 +25,8 @@ export interface Listing {
   engine_power_hp: number;
   engine_capacity_cm3: number;
   body_type: string;
+  /** Tagi marketingowe z backoffice (np. "Od ręki", "Gwarancja fabryczna") */
+  marketing_tags?: string[];
   first_registration_date: string;
   registration_number?: string;
   primary_image_url: string;

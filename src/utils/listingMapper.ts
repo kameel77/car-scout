@@ -136,6 +136,7 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             showMotoliaDiscount: backendListing.showMotoliaDiscount ?? false,
             displaySalePrice: backendListing.displaySalePrice ?? false,
             condition: backendListing.condition ?? 'USED',
+            marketing_tags: backendListing.marketingTags ?? [],
             financingPriceBase: backendListing.financingPriceBase ?? 'BROKER_PRICE_PLN',
             isChineseBrand: backendListing.isChineseBrand ?? false,
             lastManualEditAt: backendListing.lastManualEditAt ?? null,

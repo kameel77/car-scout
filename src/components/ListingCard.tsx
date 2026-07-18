@@ -233,8 +233,13 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-          {(hasSpecialOffer || showMotolia) && (
-            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+          {(hasSpecialOffer || showMotolia || (listing.marketing_tags?.length ?? 0) > 0) && (
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
+              {(listing.marketing_tags ?? []).slice(0, 2).map((tag) => (
+                <span key={tag} className="px-2.5 py-1 bg-accent text-accent-foreground text-xs font-bold rounded-lg shadow-md">
+                  {tag}
+                </span>
+              ))}
               {hasSpecialOffer && <SpecialOfferTag onClick={handleSpecialOfferClick} />}
               {showMotolia && (
                 <div className="px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
