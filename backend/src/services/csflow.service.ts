@@ -53,7 +53,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
         // Zbieranie wszystkich już zapisanych ofert tego źródła CSFlow w bazie
         const existingListings = await prisma.listing.findMany({
             where: { csflowSourceId: source.id },
-            select: { id: true, vin: true, listingId: true, csflowCarId: true, isArchived: true, pricePln: true }
+            select: { id: true, vin: true, listingId: true, csflowCarId: true, isArchived: true, pricePln: true, lastManualEditAt: true, entrySource: true }
         });
 
         // Mapa WSZYSTKICH VIN-ów w bazie (nie tylko CSFlow) — zapobiega duplikatom
@@ -141,14 +141,27 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                                 },
                             });
                         } else {
-                            // Krok 2: Sprawdź czy jest dealer z tym samym name+adres (ręcznie dodany
-                            // lub inny CSFlow ID z identyczną nazwą/adresem)
-                            const byNameAddr = await prisma.dealer.findFirst({
-                                where: {
-                                    name: dealerData.name,
-                                    addressLine1: dealerData.addressLine1 || '',
-                                }
-                            });
+                            // Krok 2: Sprawdź czy jest dealer z tym samym adres+nazwą
+                            // Dodatek: jeśli CSFlow nie przysłał nazwy (d.name jest puste),
+                            // szukamy pierwszego dealera pod tym samym adresem, aby połączyć puste klony
+                            let byNameAddr = null;
+
+                            if (!d.name && dealerData.addressLine1) {
+                                byNameAddr = await prisma.dealer.findFirst({
+                                    where: {
+                                        addressLine1: dealerData.addressLine1,
+                                    }
+                                });
+                            }
+
+                            if (!byNameAddr) {
+                                byNameAddr = await prisma.dealer.findFirst({
+                                    where: {
+                                        name: dealerData.name,
+                                        addressLine1: dealerData.addressLine1 || '',
+                                    }
+                                });
+                            }
 
                             if (byNameAddr) {
                                 if (!byNameAddr.csflowDealerId) {
@@ -315,16 +328,32 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
 
                 let savedListing;
                 if (existingByCsflowId) {
-                    const { listingId: _ignored, ...updatePayload } = payload;
-                    savedListing = await prisma.listing.update({
-                        where: { id: existingByCsflowId.id },
-                        data: { ...updatePayload, isArchived: false, archivedAt: null, archivedReason: null, entrySource: 'CSFLOW' as const }
-                    });
+                    if (existingByCsflowId.lastManualEditAt !== null || existingByCsflowId.entrySource !== 'CSFLOW') {
+                        // Jeśli pojazd był edytowany ręcznie lub pochodzi z innego źródła (np. MANUAL/CSV),
+                        // nie nadpisujemy jego danych ani zdjęć. Chcemy go jedynie przywrócić z archiwum
+                        // (jeśli był zarchiwizowany), ponieważ nadal jest obecny w CSFlow API.
+                        savedListing = await prisma.listing.update({
+                            where: { id: existingByCsflowId.id },
+                            data: { isArchived: false, archivedAt: null, archivedReason: null }
+                        });
+                        console.log(`[CSFlow:${source.slug}] Pominięto aktualizację pól dla ręcznej/zewnętrznej oferty ${existingByCsflowId.listingId} (źródło: ${existingByCsflowId.entrySource})`);
+                        result.updated++;
+                    } else {
+                        const { listingId: _ignored, ...updatePayload } = payload;
+                        savedListing = await prisma.listing.update({
+                            where: { id: existingByCsflowId.id },
+                            data: { ...updatePayload, isArchived: false, archivedAt: null, archivedReason: null, entrySource: 'CSFLOW' as const }
+                        });
 
-                    if (existingByCsflowId.pricePln !== price) {
-                        priceHistoryEntries.push({ listingId: savedListing.id, pricePln: price });
+                        if (existingByCsflowId.pricePln !== price) {
+                            priceHistoryEntries.push({ listingId: savedListing.id, pricePln: price });
+                        }
+                        result.updated++;
+                        // Dodaj pobieranie i zcachowanie zdjęć do kolejki w tle
+                        if (externalPhotos.length > 0) {
+                            queueListingImagesDownload(savedListing.listingId as string, externalPhotos, prisma);
+                        }
                     }
-                    result.updated++;
                 } else {
                     const temporarySlug = generateListingSlug(make, model, version, prodYear, bodyType, fuelType, listingId);
 
@@ -344,11 +373,11 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                     result.inserted++;
                     // Dodaj VIN do mapy, żeby duplikaty w tym samym batchu też były wykryte
                     if (car.vin) allVinToListingId.set(car.vin, listingId);
-                }
 
-                // Dodaj pobieranie i zcachowanie zdjęć do kolejki w tle
-                if (externalPhotos.length > 0) {
-                    queueListingImagesDownload(savedListing.listingId as string, externalPhotos, prisma);
+                    // Dodaj pobieranie i zcachowanie zdjęć do kolejki w tle
+                    if (externalPhotos.length > 0) {
+                        queueListingImagesDownload(savedListing.listingId as string, externalPhotos, prisma);
+                    }
                 }
             } catch (err: any) {
                 console.error(`[CSFlow:${source.slug}] Błąd zapisu ID ${car.id}: ${err.message}`);

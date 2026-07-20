@@ -249,8 +249,8 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
                     ...(body.contactPhone !== undefined && { contactPhone: body.contactPhone }),
                     ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail }),
                     ...(body.dealerGroupId !== undefined && { dealerGroupId: body.dealerGroupId || null }),
-                    ...(body.googleRating !== undefined && { googleRating: parseFloat(body.googleRating) }),
-                    ...(body.googleReviewCount !== undefined && { googleReviewCount: parseInt(body.googleReviewCount) }),
+                    ...(body.googleRating !== undefined && { googleRating: body.googleRating ? parseFloat(body.googleRating) : null }),
+                    ...(body.googleReviewCount !== undefined && { googleReviewCount: body.googleReviewCount ? parseInt(body.googleReviewCount) : null }),
                     ...(body.googleLink !== undefined && { googleLink: body.googleLink }),
                     ...(body.manualOverride !== undefined
                         ? { manualOverride: body.manualOverride === true }
