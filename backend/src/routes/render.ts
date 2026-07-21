@@ -872,6 +872,16 @@ export async function renderRoutes(fastify: FastifyInstance) {
             template = template.replace(/\s*<link rel="preload" href="\/api\/rental\/vehicles\?limit=1"[^>]*\/>/, () => '');
         }
 
+        // Mini-wyszukiwarka hero na / pobiera opcje zawężone do stanu (?status=new), więc globalny
+        // preload bez parametru trafiłby w próżnię. Na pozostałych trasach (/samochody, /nowe,
+        // /uzywane) wołany jest wariant bez parametru, więc podmieniamy tylko dla /.
+        if (path === '/') {
+            template = template.replace(
+                /<link rel="preload" href="\/api\/listings\/options"([^>]*)\/>/,
+                (_m, rest) => `<link rel="preload" href="/api/listings/options?status=new"${rest}/>`,
+            );
+        }
+
         const ctx = resolveBrandCtx();
         const heroBanners = path === '/' ? await getHomeHeroBanners(fastify) : [];
 

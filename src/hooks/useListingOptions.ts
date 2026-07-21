@@ -7,10 +7,11 @@ export interface ListingOptions {
     bodyTypes: string[];
 }
 
-export function useListingOptions() {
+/** `status` narrows the options to one condition (e.g. only makes that have used listings). */
+export function useListingOptions(status?: 'new' | 'used') {
     return useQuery<ListingOptions>({
-        queryKey: ['listingOptions'],
-        queryFn: listingsApi.getListingOptions,
+        queryKey: ['listingOptions', status ?? 'all'],
+        queryFn: () => listingsApi.getListingOptions(status),
         staleTime: 1000 * 60 * 60, // 1 hour (options don't change often)
         refetchOnWindowFocus: false,
     });

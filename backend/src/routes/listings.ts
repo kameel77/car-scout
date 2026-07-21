@@ -38,13 +38,21 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Get filter options (makes and models) - only active listings
     fastify.get('/api/listings/options', async (request, reply) => {
-        const cacheKey = 'api:listings:options';
+        // Optional ?status=new|used narrows the options to one condition, so pickers
+        // don't offer makes/models/body types that have no listing in that condition.
+        const statusRaw = (request.query as any)?.status;
+        const condition = typeof statusRaw === 'string' && ['NEW', 'USED'].includes(statusRaw.toUpperCase())
+            ? statusRaw.toUpperCase() as 'NEW' | 'USED'
+            : undefined;
+        const listingWhere = { isArchived: false, ...(condition ? { condition } : {}) };
+
+        const cacheKey = `api:listings:options${condition ? `:${condition}` : ''}`;
         const cached = await fastify.redis.get(cacheKey);
         if (cached) return JSON.parse(cached);
 
         // fetch distinct makes from non-archived listings
         const makesRaw = await fastify.prisma.listing.findMany({
-            where: { isArchived: false },
+            where: listingWhere,
             select: { make: true },
             distinct: ['make'],
             orderBy: { make: 'asc' }
@@ -52,7 +60,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         // fetch distinct models with their makes from non-archived listings
         const modelsRaw = await fastify.prisma.listing.findMany({
-            where: { isArchived: false },
+            where: listingWhere,
             select: { make: true, model: true },
             distinct: ['make', 'model'],
             orderBy: { model: 'asc' }
@@ -60,7 +68,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         // fetch distinct body types from non-archived listings
         const bodyTypesRaw = await fastify.prisma.listing.findMany({
-            where: { isArchived: false, bodyType: { not: null } },
+            where: { ...listingWhere, bodyType: { not: null } },
             select: { bodyType: true },
             distinct: ['bodyType'],
             orderBy: { bodyType: 'asc' }
@@ -68,7 +76,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         // fetch distinct cities from non-archived listings
         const citiesRaw = await fastify.prisma.dealer.findMany({
-            where: { city: { not: null }, listings: { some: { isArchived: false } } },
+            where: { city: { not: null }, listings: { some: listingWhere } },
             select: { city: true },
             distinct: ['city'],
             orderBy: { city: 'asc' }
@@ -1152,12 +1160,15 @@ export async function listingRoutes(fastify: FastifyInstance) {
             archivedReason: _archivedReason,
             createdAt: _createdAt,
             updatedAt: _updatedAt,
+            csflowSourceId: _csflowSourceId,
+            csflowCarId: _csflowCarId,
             ...dataToCopy
         } = listing;
 
         const newListing = await fastify.prisma.listing.create({
             data: {
                 ...dataToCopy,
+                importSource: null,
                 entrySource: 'MANUAL',
                 lastManualEditAt: new Date(),
             } as any
