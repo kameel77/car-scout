@@ -169,12 +169,14 @@ export default function HeroVehicleFilter() {
     rateMax: '',
   });
 
-  // Fetch options for both contexts
-  const { data: listingOptions } = useListingOptions();
+  const isRental = filters.status === 'rental';
+
+  // Fetch options for both contexts. Sale options are narrowed to the selected
+  // condition so we never offer a make/model/body type that has no listing there.
+  const { data: listingOptions } = useListingOptions(filters.status === 'rental' ? undefined : filters.status);
   const { data: rentalOptions } = useRentalFilterOptions();
 
   // Pick the right options based on current status
-  const isRental = filters.status === 'rental';
   const activeOptions = isRental ? rentalOptions : listingOptions;
 
   const makes = activeOptions?.makes ?? [];

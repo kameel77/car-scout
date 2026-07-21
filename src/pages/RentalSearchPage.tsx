@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
@@ -271,18 +271,26 @@ export default function RentalSearchPage() {
   const defaultSortRental = settings?.defaultSortRental || 'minMonthlyRateNet_asc';
   const [initSortBy, initSortOrder] = defaultSortRental.split('_');
 
+  // Entry filters from the URL (hero search on the homepage links here).
+  const [searchParams] = useSearchParams();
+  const initParam = (key: string) => searchParams.get(key) || '';
+  const initArray = (key: string) => {
+    const v = searchParams.get(key);
+    return v ? v.split(',') : [];
+  };
+
   // ── Filter state ──
   const [search, setSearch] = useState('');
-  const [makes, setMakes] = useState<string[]>([]);
+  const [makes, setMakes] = useState<string[]>(() => initArray('make'));
   const [models, setModels] = useState<string[]>([]);
   const [fuelTypes, setFuelTypes] = useState<string[]>([]);
-  const [bodyTypes, setBodyTypes] = useState<string[]>([]);
+  const [bodyTypes, setBodyTypes] = useState<string[]>(() => initArray('bodyType'));
   const [transmissions, setTransmissions] = useState<string[]>([]);
   const [drives, setDrives] = useState<string[]>([]);
   const [yearFrom, setYearFrom] = useState('');
   const [yearTo, setYearTo] = useState('');
-  const [priceFrom, setPriceFrom] = useState('');
-  const [priceTo, setPriceTo] = useState('');
+  const [priceFrom, setPriceFrom] = useState(() => initParam('priceMin'));
+  const [priceTo, setPriceTo] = useState(() => initParam('priceMax'));
   const [mileageFrom, setMileageFrom] = useState('');
   const [mileageTo, setMileageTo] = useState('');
   const [powerFrom, setPowerFrom] = useState('');
@@ -293,7 +301,12 @@ export default function RentalSearchPage() {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState(initSortBy || 'minMonthlyRateNet');
   const [sortOrder, setSortOrder] = useState(initSortOrder || 'asc');
-  const [clientType, setClientType] = useState<ClientType>(getStoredClientType);
+  const [clientType, setClientType] = useState<ClientType>(() => {
+    const ot = searchParams.get('offerType');
+    if (ot === 'b2c') return 'consumer';
+    if (ot === 'b2b') return 'business';
+    return getStoredClientType();
+  });
   const [allFiltersOpen, setAllFiltersOpen] = useState(false);
 
   useEffect(() => {
