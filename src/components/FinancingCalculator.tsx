@@ -80,16 +80,22 @@ export function FinancingCalculator({
         () => (data?.products ?? []) as FinancingProduct[],
         [data?.products]
     );
-    const categories = React.useMemo(
-        () => Array.from(new Set(products.map(p => p.category))).sort(),
-        [products]
-    );
+    const categories = React.useMemo(() => {
+        const allCats = Array.from(new Set(products.map(p => p.category))).sort();
+        return allCats.filter(cat => {
+            if (cat === 'CREDIT' && creditAvailable === false) return false;
+            if (cat === 'LEASING' && leasingAvailable === false) return false;
+            return true;
+        });
+    }, [products, creditAvailable, leasingAvailable]);
 
     // Derive initial category from URL financing type, falling back to first available
     const urlCategory = financingType ? FINANCING_TO_CATEGORY[financingType] : undefined;
-    const [activeCategory, setActiveCategory] = React.useState<FinancingProduct['category']>(
-        urlCategory || (categories[0] as FinancingProduct['category']) || 'CREDIT'
-    );
+    const initialCat = (urlCategory && categories.includes(urlCategory)) 
+        ? urlCategory 
+        : ((categories[0] as FinancingProduct['category']) || 'CREDIT');
+        
+    const [activeCategory, setActiveCategory] = React.useState<FinancingProduct['category']>(initialCat);
     const [selectedProduct, setSelectedProduct] = React.useState<FinancingProduct | null>(null);
     const [failedProducts, setFailedProducts] = React.useState<Set<string>>(new Set());
     const [externalInstallment, setExternalInstallment] = React.useState<number | null>(null);
@@ -414,37 +420,21 @@ export function FinancingCalculator({
                         onFinancingTypeChange(newType);
                     }
                 }} className="w-full">
-                    <TabsList className="w-full justify-start grid grid-cols-3 h-9">
-                        {categories.map(cat => {
-                            const isAvailable = cat === 'CREDIT' 
-                                ? creditAvailable 
-                                : cat === 'LEASING' 
-                                    ? leasingAvailable 
-                                    : true;
-
-                            return (
-                                <TooltipProvider key={cat} delayDuration={0}>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <div className="flex-1">
-                                                <TabsTrigger 
-                                                    value={cat} 
-                                                    disabled={!isAvailable}
-                                                    className={cn("text-xs py-1 w-full", !isAvailable && "opacity-50 cursor-not-allowed")}
-                                                >
-                                                    {cat === 'CREDIT' ? 'Kredyt' : cat === 'LEASING' ? 'Leasing' : 'Najem'}
-                                                </TabsTrigger>
-                                            </div>
-                                        </TooltipTrigger>
-                                        {!isAvailable && (
-                                            <TooltipContent>
-                                                <p>Ten rodzaj finansowania nie jest dostępny dla tego pojazdu.</p>
-                                            </TooltipContent>
-                                        )}
-                                    </Tooltip>
-                                </TooltipProvider>
-                            );
-                        })}
+                    <TabsList className={cn(
+                        "w-full justify-start grid h-9",
+                        categories.length === 1 ? "grid-cols-1" :
+                        categories.length === 2 ? "grid-cols-2" : "grid-cols-3"
+                    )}>
+                        {categories.map(cat => (
+                            <div className="flex-1" key={cat}>
+                                <TabsTrigger 
+                                    value={cat} 
+                                    className="text-xs py-1 w-full"
+                                >
+                                    {cat === 'CREDIT' ? 'Kredyt' : cat === 'LEASING' ? 'Leasing' : 'Najem'}
+                                </TabsTrigger>
+                            </div>
+                        ))}
                     </TabsList>
                 </Tabs>
 
