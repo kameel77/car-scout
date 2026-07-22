@@ -678,7 +678,7 @@ export default function ListingDetailPage() {
               ) : showCalculator ? (
                 <FinancingCalculator
                   creditAvailable={listing.creditAvailable !== false}
-                  leasingAvailable={listing.leasingAvailable !== false}
+                  leasingAvailable={listing.leasingAvailable !== false && (listing.production_year ? (new Date().getFullYear() - listing.production_year <= 9) : true)}
                   forcedProductId={forcedProductId}
                   listingId={listing.listing_id}
                   price={

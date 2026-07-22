@@ -167,7 +167,13 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     if (currency !== 'PLN') return null;
 
     const kredytGross = listing.referenceCreditInstallment ?? null;
-    const leasingNet = listing.referenceLeasingInstallment ?? null;
+    const rawLeasingNet = listing.referenceLeasingInstallment ?? null;
+
+    // Leasing dostępny tylko dla pojazdów nie starszych niż 9 lat
+    const currentYear = new Date().getFullYear();
+    const isLeasingAvailable = listing.production_year ? (currentYear - listing.production_year <= 9) : true;
+    const leasingNet = isLeasingAvailable ? rawLeasingNet : null;
+
     if (kredytGross == null && leasingNet == null) return null;
 
     const kredyt = kredytGross == null
