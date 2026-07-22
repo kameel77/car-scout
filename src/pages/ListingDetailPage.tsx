@@ -317,10 +317,12 @@ export default function ListingDetailPage() {
     ? listing.leasingProductId || listing.dealerSettings?.defaultLeasingProductId || undefined
     : undefined;
 
+  const isLeasingAvailableLocal = listing.leasingAvailable !== false && (listing.production_year ? (new Date().getFullYear() - listing.production_year <= 9) : true);
+
   const isFinancingAvailable = financingType === 'kredyt'
     ? listing.creditAvailable !== false
     : financingType === 'leasing'
-    ? listing.leasingAvailable !== false
+    ? isLeasingAvailableLocal
     : true;
 
   const isCustomerTypeAvailable = priceType === 'gross'
@@ -678,7 +680,7 @@ export default function ListingDetailPage() {
               ) : showCalculator ? (
                 <FinancingCalculator
                   creditAvailable={listing.creditAvailable !== false}
-                  leasingAvailable={listing.leasingAvailable !== false && (listing.production_year ? (new Date().getFullYear() - listing.production_year <= 9) : true)}
+                  leasingAvailable={isLeasingAvailableLocal}
                   forcedProductId={forcedProductId}
                   listingId={listing.listing_id}
                   price={
@@ -955,7 +957,7 @@ export default function ListingDetailPage() {
                       >
                         <FinancingCalculator
                           creditAvailable={listing.creditAvailable !== false}
-                          leasingAvailable={listing.leasingAvailable !== false}
+                          leasingAvailable={isLeasingAvailableLocal}
                           forcedProductId={forcedProductId}
                           listingId={listing.listing_id}
                           price={
@@ -1213,7 +1215,7 @@ export default function ListingDetailPage() {
                   ) : showCalculator ? (
                     <FinancingCalculator
                       creditAvailable={listing.creditAvailable !== false}
-                      leasingAvailable={listing.leasingAvailable !== false}
+                      leasingAvailable={isLeasingAvailableLocal}
                       forcedProductId={forcedProductId}
                       listingId={listing.listing_id}
                       price={
