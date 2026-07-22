@@ -6,6 +6,9 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends openssl && \
     rm -rf /var/lib/apt/lists/*
 
+# Update npm to get the latest bundled 'tar' (fixes CVE-2024-59873/CVE-2026-59873)
+RUN npm install -g npm@latest
+
 WORKDIR /app
 
 # Install dependencies including devDependencies for build
@@ -40,6 +43,9 @@ RUN apt-get update && \
       libnss3 libfontconfig1 libfreetype6 \
       fonts-liberation ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Update npm to get the latest bundled 'tar' (fixes CVE-2024-59873/CVE-2026-59873)
+RUN npm install -g npm@latest
 
 WORKDIR /app
 
