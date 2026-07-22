@@ -334,6 +334,7 @@ model AppSettings {
   searchGridColumns           Int      @default(4) @map("search_grid_columns")
   splitNewUsed                Boolean  @default(false) @map("split_new_used")
   rentalCardsFirst            Boolean  @default(true) @map("rental_cards_first")
+  showRentalsInNew            Boolean  @default(true) @map("show_rentals_in_new")
   leadRecipientUserId         String?  @map("lead_recipient_user_id")
   salesContactPhone           String?  @map("sales_contact_phone")
   pdfParserLlmModel           String   @default("deepseek/deepseek-v4-flash") @map("pdf_parser_llm_model")

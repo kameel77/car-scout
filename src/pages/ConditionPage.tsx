@@ -301,10 +301,8 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const saleTotalPages = saleData?.totalPages ?? Math.max(1, Math.ceil((saleTotalCount || 1) / perPage));
 
   /* ── Data: rental vehicles (same condition) ── */
-  // Hide rentals when a sale-price range is set: rental "price" is the monthly rate,
-  // not a comparable scale to sale price. Rate filter (rateFrom/rateTo) is mapped
-  // through priceMin/priceMax + priceBasis below so it still applies to rentals.
-  const hideRentals = Boolean(filters.priceFrom || filters.priceTo);
+  // hideRentals depends on global setting for new cars, plus we hide if sale-price filters are set
+  const hideRentals = (condition === 'NEW' && settings?.showRentalsInNew === false) || Boolean(filters.priceFrom || filters.priceTo);
   const rentalOfferType = priceType === 'net' ? 'b2b' : 'b2c';
   const rentalRateMin = filters.rateFrom || undefined;
   const rentalRateMax = filters.rateTo || undefined;

@@ -95,6 +95,9 @@ export function SettingsModule() {
         rentalCardsFirst: data?.rentalCardsFirst !== undefined
             ? Boolean(data.rentalCardsFirst)
             : true,
+        showRentalsInNew: data?.showRentalsInNew !== undefined
+            ? Boolean(data.showRentalsInNew)
+            : true,
         pdfParserLlmModel: data?.pdfParserLlmModel || 'deepseek/deepseek-v4-flash',
         pdfParserSystemPrompt: data?.pdfParserSystemPrompt || `Jesteś asystentem dealera samochodowego. 
 Oto zawartość pliku PDF z wyceną pojazdu (przekonwertowana do Markdown):
@@ -436,6 +439,20 @@ Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\
                         <Switch
                             checked={Boolean(settings.rentalCardsFirst)}
                             onCheckedChange={(val) => setSettings({ ...settings, rentalCardsFirst: Boolean(val) })}
+                        />
+                    </div>
+
+                    {/* Show rentals in new cars */}
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label className="text-base">Pokazuj najem na liście aut nowych i w wyszukiwarce</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Wyłącz, aby oferty najmu były widoczne tylko w zakładce /wynajem-dlugoterminowy.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={Boolean(settings.showRentalsInNew)}
+                            onCheckedChange={(val) => setSettings({ ...settings, showRentalsInNew: Boolean(val) })}
                         />
                     </div>
 
