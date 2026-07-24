@@ -97,7 +97,7 @@ export function SettingsModule() {
             : true,
         showRentalsInNew: data?.showRentalsInNew !== undefined
             ? Boolean(data.showRentalsInNew)
-            : true,
+            : false,
         pdfParserLlmModel: data?.pdfParserLlmModel || 'deepseek/deepseek-v4-flash',
         pdfParserSystemPrompt: data?.pdfParserSystemPrompt || `Jesteś asystentem dealera samochodowego. 
 Oto zawartość pliku PDF z wyceną pojazdu (przekonwertowana do Markdown):

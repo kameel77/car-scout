@@ -300,9 +300,8 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const saleTotalCount = saleData?.count ?? saleListings.length;
   const saleTotalPages = saleData?.totalPages ?? Math.max(1, Math.ceil((saleTotalCount || 1) / perPage));
 
-  /* ── Data: rental vehicles (same condition) ── */
-  // hideRentals depends on global setting for new cars, plus we hide if sale-price filters are set
-  const hideRentals = (condition === 'NEW' && settings?.showRentalsInNew === false) || Boolean(filters.priceFrom || filters.priceTo);
+  /* ── Data: rental vehicles (hidden on /nowe and /uzywane - rentals appear only in /wynajem-dlugoterminowy) ── */
+  const hideRentals = true;
   const rentalOfferType = priceType === 'net' ? 'b2b' : 'b2c';
   const rentalRateMin = filters.rateFrom || undefined;
   const rentalRateMax = filters.rateTo || undefined;

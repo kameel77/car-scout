@@ -53,6 +53,16 @@ export function SpecificationsTable({
               const category = categoryMatch ? categoryMatch[1] : 'specs';
               const translatedValue = translateTechnicalValue(category, spec.value, t);
 
+              // Find first registration if present to show it next to registration number
+              const firstRegSpec = specifications.find(s => s.label === 'specs.firstRegistration');
+              const firstRegValue = firstRegSpec?.value;
+
+              let displayValue = translatedValue;
+              if (spec.label === 'specs.registrationNumber' && firstRegValue) {
+                const firstRegLabel = t('specs.firstRegistration').toLowerCase();
+                displayValue = `${translatedValue} (${firstRegLabel}: ${firstRegValue})`;
+              }
+
               return (
                 <motion.tr
                   key={index}
@@ -73,7 +83,7 @@ export function SpecificationsTable({
                       isImportant && 'font-semibold text-foreground'
                     )}
                   >
-                    {translatedValue}
+                    {displayValue}
                   </TableCell>
                 </motion.tr>
               );

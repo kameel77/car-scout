@@ -5,6 +5,26 @@ import { Type } from '@sinclair/typebox';
 import { ListingCondition } from '@prisma/client';
 import crypto from 'crypto';
 
+// Mapuje różne warianty opisu napędu (np. z Otomoto: "Na przednie koła",
+// "Na tylne koła", "4x4 (stały)") na wartości oczekiwane przez formularz
+// edycji w panelu (select: "Przedni" | "Tylny" | "4x4"). Nieznane -> null.
+function normalizeDrive(raw: unknown): string | null {
+    if (!raw) return null;
+    const s = String(raw).toLowerCase();
+    if (s.includes('4x4') || s.includes('cztery') || s.includes('awd') ||
+        s.includes('all-wheel') || s.includes('all wheel') || s.includes('quattro') ||
+        s.includes('4matic') || s.includes('4motion') || s.includes('xdrive')) {
+        return '4x4';
+    }
+    if (s.includes('tyl') || s.includes('rwd') || s.includes('rear')) {
+        return 'Tylny';
+    }
+    if (s.includes('przod') || s.includes('przedn') || s.includes('fwd') || s.includes('front')) {
+        return 'Przedni';
+    }
+    return null;
+}
+
 export async function externalListingsRoutes(fastify: FastifyInstance) {
     fastify.addHook('preHandler', partnerAuth);
 
@@ -147,7 +167,7 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
                 transmission: body.transmission || null,
                 enginePowerHp,
                 engineCapacityCm3,
-                drive: body.drive || null,
+                drive: normalizeDrive(body.drive),
                 bodyType: body.bodyType || null,
                 doors,
                 seats,
