@@ -63,10 +63,22 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
             const partnerReq = request as PartnerRequest;
             const partner = partnerReq.partner;            const body = request.body as any;
 
-            // 1. Ścisła weryfikacja dealerId - brak zgadywania, bezwzględne użycie podanego ID dealera
+            // 1. Weryfikacja dealerId i uprawnień partnera
             const targetDealerId = body.dealerId || body.externalDealerId;
             if (!targetDealerId) {
                 return reply.code(400).send({ error: 'Brak identyfikatora dealera (dealerId).' });
+            }
+
+            const mappings = partner.mappings || [];
+
+            // Jeśli w panelu administracyjnym przypisano konkretnych dealerów, wymagamy ścisłego dopasowania!
+            if (mappings.length > 0) {
+                const isAuthorized = mappings.some(m => m.externalId === targetDealerId || m.dealerId === targetDealerId);
+                if (!isAuthorized) {
+                    return reply.code(403).send({
+                        error: `Brak uprawnień. Klucz Partnera API jest przypisany do konkretnych dealerów i nie zezwala na zapis dla dealera '${targetDealerId}'.`
+                    });
+                }
             }
 
             const dealerExists = await fastify.prisma.dealer.findUnique({
