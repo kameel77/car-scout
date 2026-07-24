@@ -14,6 +14,20 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
         return dealers.map(d => d.id);
     }
 
+    // Public list of dealers for Chrome Extensions / Widgets
+    fastify.get('/api/dealers/public', async (request, reply) => {
+        try {
+            const dealers = await fastify.prisma.dealer.findMany({
+                select: { id: true, name: true, city: true, addressLine1: true },
+                orderBy: { name: 'asc' },
+            });
+            return { dealers };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.code(500).send({ error: 'Failed to fetch dealers' });
+        }
+    });
+
     // List dealers (scope-aware)
     fastify.get('/api/admin/dealers', {
         preHandler: [fastify.authenticate, requirePermission('dealers:read')]
