@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { partnerAuth, PartnerRequest } from '../../middleware/partnerAuth.js';
 import { generateListingSlug } from '../../utils/url-utils.js';
 import { Type } from '@sinclair/typebox';
+import { ListingCondition } from '@prisma/client';
 import crypto from 'crypto';
 
 export async function externalListingsRoutes(fastify: FastifyInstance) {
@@ -60,24 +61,34 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const partnerReq = request as PartnerRequest;
-            const partner = partnerReq.partner;
-            const body = request.body as any;
+            const partner = partnerReq.partner;            const body = request.body as any;
 
+            // 1. Ścisła weryfikacja dealerId - brak zgadywania, bezwzględne użycie podanego ID dealera
             const targetDealerId = body.dealerId || body.externalDealerId;
-            const mappings = partner.mappings || [];
-            
-            let mapping = mappings.find(m => m.externalId === targetDealerId || m.dealerId === targetDealerId);
-            if (!mapping && mappings.length > 0) {
-                mapping = mappings[0];
+            if (!targetDealerId) {
+                return reply.code(400).send({ error: 'Brak identyfikatora dealera (dealerId).' });
             }
 
-            const internalDealerId = mapping ? mapping.dealerId : targetDealerId;
+            const dealerExists = await fastify.prisma.dealer.findUnique({
+                where: { id: targetDealerId }
+            });
 
-            if (!internalDealerId) {
-                return reply.code(400).send({ error: 'Nie wskazano identyfikatora dealera (dealerId lub externalDealerId).' });
+            if (!dealerExists) {
+                return reply.code(400).send({ error: `Dealer o ID '${targetDealerId}' nie istnieje w bazie danych.` });
             }
 
-            // Normalizacja liczbowych wartości
+            const internalDealerId = dealerExists.id;
+
+            // 2. Walidacja VIN: Standard ISO (dokładnie 17 znaków alfanumerycznych, wykluczając I, O, Q)
+            let cleanVin: string | null = null;
+            if (body.vin && typeof body.vin === 'string') {
+                const trimmed = body.vin.trim().toUpperCase();
+                if (/^[A-HJ-NPR-Z0-9]{17}$/.test(trimmed)) {
+                    cleanVin = trimmed;
+                }
+            }
+
+            // Normalizacja typów liczbowych
             const productionYear = parseInt(body.productionYear, 10) || new Date().getFullYear();
             const mileageKm = parseInt(body.mileageKm, 10) || 0;
             const pricePln = parseInt(body.pricePln, 10) || 0;
@@ -86,21 +97,16 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
             const doors = body.doors ? parseInt(body.doors, 10) : null;
             const seats = body.seats ? parseInt(body.seats, 10) : null;
 
-            // Przygotowanie bezpiecznego VIN (max 30 znaków, unikalne ID jeśli brak)
-            let safeVin = body.vin ? String(body.vin).trim() : null;
-            if (safeVin && safeVin.length > 30) {
-                safeVin = safeVin.substring(0, 30);
+            // Szukanie istniejącej oferty (po VIN jeśli poprawny, lub po listingId z Otomoto)
+            let existingListing = null;
+            if (cleanVin) {
+                existingListing = await fastify.prisma.listing.findUnique({ where: { vin: cleanVin } });
+            } else if (body.listingId) {
+                existingListing = await fastify.prisma.listing.findUnique({ where: { listingId: String(body.listingId) } });
             }
-            if (!safeVin) {
-                safeVin = `OTM_${body.listingId || crypto.randomBytes(6).toString('hex')}`;
-            }
-
-            const existingListing = await fastify.prisma.listing.findUnique({
-                where: { vin: safeVin }
-            });
 
             if (existingListing && existingListing.dealerId !== internalDealerId) {
-                return reply.code(403).send({ error: 'Forbidden. Listing with this VIN belongs to another dealer.' });
+                return reply.code(403).send({ error: 'Forbidden. Listing z tym VIN należy do innego dealera.' });
             }
 
             const tempListingId = existingListing?.id || crypto.randomBytes(12).toString('hex');
@@ -116,80 +122,58 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
 
             const imageUrls = body.imageUrls || body.images || [];
 
-            const listing = await fastify.prisma.listing.upsert({
-                where: { vin: safeVin },
-                update: {
-                    make: body.make,
-                    model: body.model,
-                    version: body.version || null,
-                    productionYear,
-                    mileageKm,
-                    pricePln,
-                    priceDisplay: pricePln > 0 ? pricePln.toLocaleString('pl-PL') + ' PLN' : 'Zapytaj o cenę',
-                    fuelType: body.fuelType || null,
-                    transmission: body.transmission || null,
-                    enginePowerHp,
-                    engineCapacityCm3,
-                    drive: body.drive || null,
-                    bodyType: body.bodyType || null,
-                    doors,
-                    seats,
-                    color: body.color || null,
-                    paintType: body.paintType || null,
-                    equipmentAudioMultimedia: body.equipmentAudioMultimedia || [],
-                    equipmentSafety: body.equipmentSafety || [],
-                    equipmentComfortExtras: body.equipmentComfortExtras || [],
-                    equipmentOther: body.equipmentOther || [],
-                    condition: body.condition === 'NEW' ? 'NEW' : 'USED',
-                    primaryImageUrl: imageUrls.length > 0 ? imageUrls[0] : (body.primaryImageUrl || null),
-                    imageUrls: imageUrls,
-                    imageCount: imageUrls.length,
-                    isArchived: false,
-                    archivedAt: null,
-                    archivedReason: null,
-                    updatedAt: new Date(),
-                    entrySource: 'AGENT',
-                    marketplace: 'motolia',
-                    dealerId: internalDealerId,
-                    listingId: body.listingId ? String(body.listingId) : null,
-                    listingUrl: body.listingUrl || null
-                },
-                create: {
-                    vin: safeVin,
-                    make: body.make,
-                    model: body.model,
-                    version: body.version || null,
-                    productionYear,
-                    mileageKm,
-                    pricePln,
-                    priceDisplay: pricePln > 0 ? pricePln.toLocaleString('pl-PL') + ' PLN' : 'Zapytaj o cenę',
-                    fuelType: body.fuelType || null,
-                    transmission: body.transmission || null,
-                    enginePowerHp,
-                    engineCapacityCm3,
-                    drive: body.drive || null,
-                    bodyType: body.bodyType || null,
-                    doors,
-                    seats,
-                    color: body.color || null,
-                    paintType: body.paintType || null,
-                    equipmentAudioMultimedia: body.equipmentAudioMultimedia || [],
-                    equipmentSafety: body.equipmentSafety || [],
-                    equipmentComfortExtras: body.equipmentComfortExtras || [],
-                    equipmentOther: body.equipmentOther || [],
-                    condition: body.condition === 'NEW' ? 'NEW' : 'USED',
-                    primaryImageUrl: imageUrls.length > 0 ? imageUrls[0] : (body.primaryImageUrl || null),
-                    imageUrls: imageUrls,
-                    imageCount: imageUrls.length,
-                    slug,
-                    marketplace: 'motolia',
-                    dealerId: internalDealerId,
-                    isArchived: false,
-                    entrySource: 'AGENT',
-                    listingId: body.listingId ? String(body.listingId) : null,
-                    listingUrl: body.listingUrl || null
-                }
-            });
+            const listingData = {
+                vin: cleanVin,
+                make: body.make,
+                model: body.model,
+                version: body.version || null,
+                productionYear,
+                mileageKm,
+                pricePln,
+                priceDisplay: pricePln > 0 ? pricePln.toLocaleString('pl-PL') + ' PLN' : 'Zapytaj o cenę',
+                fuelType: body.fuelType || null,
+                transmission: body.transmission || null,
+                enginePowerHp,
+                engineCapacityCm3,
+                drive: body.drive || null,
+                bodyType: body.bodyType || null,
+                doors,
+                seats,
+                color: body.color || null,
+                paintType: body.paintType || null,
+                equipmentAudioMultimedia: body.equipmentAudioMultimedia || [],
+                equipmentSafety: body.equipmentSafety || [],
+                equipmentComfortExtras: body.equipmentComfortExtras || [],
+                equipmentOther: body.equipmentOther || [],
+                condition: body.condition === 'NEW' ? ListingCondition.NEW : ListingCondition.USED,
+                primaryImageUrl: imageUrls.length > 0 ? imageUrls[0] : (body.primaryImageUrl || null),
+                imageUrls: imageUrls,
+                imageCount: imageUrls.length,
+                isArchived: false,
+                archivedAt: null,
+                archivedReason: null,
+                updatedAt: new Date(),
+                entrySource: 'AGENT' as const,
+                marketplace: 'motolia',
+                dealerId: internalDealerId,
+                listingId: body.listingId ? String(body.listingId) : null,
+                listingUrl: body.listingUrl || null
+            };
+
+            let listing;
+            if (existingListing) {
+                listing = await fastify.prisma.listing.update({
+                    where: { id: existingListing.id },
+                    data: listingData
+                });
+            } else {
+                listing = await fastify.prisma.listing.create({
+                    data: {
+                        ...listingData,
+                        slug
+                    }
+                });
+            }
 
             return reply.code(201).send({
                 id: listing.id,
