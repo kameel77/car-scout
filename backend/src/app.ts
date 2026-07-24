@@ -284,6 +284,19 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.decorate('prisma', prisma);
     fastify.decorate('redis', redis);
 
+    // Bootstrap default Motolia Chrome Exporter partner key
+    const defaultPartnerKey = 'cs_partner_74e07e9d6903146d650ebcf3478eae7e';
+    prisma.partner.upsert({
+        where: { apiKey: defaultPartnerKey },
+        update: { isActive: true },
+        create: {
+            name: 'Motolia Chrome Extension',
+            apiKey: defaultPartnerKey,
+            isActive: true,
+            contactEmail: 'contact@motolia.pl'
+        }
+    }).catch(err => fastify.log.error(err, 'Failed to bootstrap default partner key'));
+
     fastify.decorate('authenticate', async function (request: any, reply: any) {
         try {
             await request.jwtVerify();
