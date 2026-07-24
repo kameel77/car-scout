@@ -7,6 +7,20 @@ import crypto from 'crypto';
 export async function externalListingsRoutes(fastify: FastifyInstance) {
     fastify.addHook('preHandler', partnerAuth);
 
+    fastify.get('/api/v1/external/dealers', async (request, reply) => {
+        const partnerReq = request as PartnerRequest;
+        const partner = partnerReq.partner;
+        
+        const dealerIds = partner.mappings.map(m => m.dealerId);
+        const dealers = await fastify.prisma.dealer.findMany({
+            where: { id: { in: dealerIds } },
+            select: { id: true, name: true, city: true, addressLine1: true },
+            orderBy: { name: 'asc' }
+        });
+        
+        return { dealers };
+    });
+
     const ListingSchema = Type.Object({
         externalDealerId: Type.String(),
         vin: Type.String(),

@@ -397,3 +397,18 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Ingestia danych**: Każdy sposób dodawania ofert (importy CSV, CSFLOW, Vehis oraz ręczne dodawanie) automatycznie normalizuje nazwę marki przed zapisem do bazy danych.
   - **Filtry i Facety**: API filtrów (zarówno dla ofert sprzedaży, jak i wynajmu) automatycznie grupuje i unifikuje marki w locie, dzięki czemu w dropdownach i licznikach (facetach) marki zawsze wyświetlają się w poprawnej, zunifikowanej formie.
   - **Migracja**: Istniejące dane w bazie zostały zaktualizowane skryptem migracyjnym `migrate-brands.ts`, co natychmiastowo "oczyściło" interfejs użytkownika z duplikatów.
+
+## 34. Edycja przypisania dealera dla ofert importowanych
+- **Cel**: Umożliwienie ręcznej zmiany przypisanego dealera dla pojazdów pochodzących z importu (np. CSFlow, CSV).
+- **Rozwiązanie**: Dodano pole `dealerId` do listy `CSV_EDITABLE_FIELDS` w konfiguracji mapera ofert (`listing-mapper.ts`). Dzięki temu administrator może skutecznie aktualizować przypisanie dealera poprzez formularz edycji w panelu admina, a zmiana ta nie jest już ignorowana (odfiltrowywana) przez backend podczas zapisu.
+
+## 35. Ochrona ręcznych edycji ofert przed nadpisaniem przez import CSFlow
+- **Cel**: Zapobieganie nadpisywaniu zmian wprowadzonych przez administratora (np. opisów, cen lub niestandardowych zdjęć) na ofertach zintegrowanych z CSFlow podczas cyklicznej synchronizacji.
+- **Zachowanie**:
+  - **Blokada aktualizacji pól**: Funkcja synchronizacji `syncCSFlowAPI` w `csflow.service.ts` sprawdza pole `lastManualEditAt` oraz `entrySource` na istniejących ofertach. Jeśli oferta posiada `lastManualEditAt` różny od `null` (ręczna edycja w panelu admina) LUB jej `entrySource` jest inne niż `CSFLOW` (np. MANUAL lub CSV), system pomija nadpisywanie jakichkolwiek pól oraz wywoływanie pobierania zdjęć w tle.
+  - **Utrzymanie statusu**: Oferta jest jedynie aktualizowana pod kątem widoczności (jest przywracana z archiwum, jeśli była zarchiwizowana, i nie ulega ponownej automatycznej archiwizacji, dopóki występuje w feedzie API).
+  - **Ochrona duplikatów**: W ścieżce duplikowania ofert (`duplicate-offer`) wykluczono kopiowanie kluczy powiązań z integracją (`csflowSourceId`, `csflowCarId`) oraz zresetowano źródło importu (`importSource` ustawione na `null`), aby nowa ręczna oferta była w pełni niezależna od automatycznego procesu.
+
+## 36. Ukrywanie ofert najmu w ogólnych widokach katalogu (nowe / wyszukiwarka)
+- **Cel**: Wykluczenie wynajmu z innych list ofert niż celowana /wynajem-dlugoterminowy za sprawą prostej flagi konfiguracyjnej w panelu administratora.
+- **Działanie**: Administrator może odznaczyć pokazywanie ofert wynajmu na innych stronach przy pomocy przycisku „Pokazuj najem na liście aut nowych i w wyszukiwarce" w menu Konfiguracji Ogólnej. Na stronie z ofertami /nowe i w wynikach /samochody zostanie ukryty najem, kierując po te pojazdy wprost na podstronę dedykowaną.
