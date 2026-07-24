@@ -83,3 +83,7 @@ node dist/scripts/<name>.js
 ```
 
 Ścieżki względne (np. `path.resolve(__dirname, '../../uploads')`) działają identycznie w obu wariantach. Kontener ma dostęp tylko do production dependencies (`npm ci --omit=dev`), więc devDependencies (tsx, vitest) nie są dostępne.
+
+## 7. Tworzenie treści na motolia.pl (SEO/GEO)
+
+Przy tworzeniu lub edycji JAKIEJKOLWIEK treści serwisu (artykuły CMS marek/modeli, filary finansowania, blog) obowiązuje strategia linkowania wewnętrznego i konwencje treści z [docs/SEO_LINKING_STRATEGY_MOTOLIA.md](docs/SEO_LINKING_STRATEGY_MOTOLIA.md). Kluczowe: linki w dół hierarchii (marka → model → oferta) przenoszą moc, linki do filarów (/leasing, /kredyt, /wynajem-dlugoterminowy) przenoszą kontekst — anchor zawsze z encją; nie linkować wariantów /leasing/:slug ani stron noindex; nagłówki markdown w CMS nie mogą kończyć się `?` (poza celowym FAQ).

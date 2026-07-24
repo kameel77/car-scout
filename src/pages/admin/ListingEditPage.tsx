@@ -42,7 +42,12 @@ export default function ListingEditPage() {
         enabled: !!token,
     });
 
-    const isImported = listing?.entrySource === 'CSV' || listing?.entrySource === 'CSFLOW' || listing?.entrySource === 'AGENT';
+    // Blokujemy edycję pól tylko dla ŹRÓDEŁ Z CYKLICZNYM SYNC (CSV, CSFLOW) —
+    // tam ręczne zmiany zostałyby nadpisane przy kolejnym imporcie.
+    // Auta z Otomoto (entrySource 'AGENT') to jednorazowy import (bez re-syncu
+    // danych — dzienny checker jedynie archiwizuje wygasłe oferty), więc
+    // pozwalamy je edytować ręcznie w panelu.
+    const isImported = listing?.entrySource === 'CSV' || listing?.entrySource === 'CSFLOW';
 
     const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
     const queryClient = useQueryClient();

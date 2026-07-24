@@ -117,32 +117,32 @@ function parseTargetUrl(rawUrl: string): ParsedTarget | null {
 
     const norm = pathname.replace(/\/+$/, '').toLowerCase() || '/';
 
-    // /nowe — sale + rental, condition=NEW
+    // /nowe — sale condition=NEW (rentals are strictly on /wynajem-dlugoterminowy)
     if (norm === '/nowe') {
         return {
-            kind: 'both',
+            kind: 'sale-only',
             saleWhere: buildSaleWhere('NEW', qs),
-            rentalWhere: buildRentalWhere('NEW', qs),
+            rentalWhere: null,
         };
     }
-    // /uzywane — sale + rental, condition=USED
+    // /uzywane — sale condition=USED
     if (norm === '/uzywane') {
         return {
-            kind: 'both',
+            kind: 'sale-only',
             saleWhere: buildSaleWhere('USED', qs),
-            rentalWhere: buildRentalWhere('USED', qs),
+            rentalWhere: null,
         };
     }
-    // /samochody — sale + rental, optional status filter
+    // /samochody — sale optional status filter
     if (norm === '/samochody') {
         const statusRaw = qs.get('status');
         const cond = statusRaw === 'new' || statusRaw === 'NEW' ? 'NEW'
             : statusRaw === 'used' || statusRaw === 'USED' ? 'USED'
                 : undefined;
         return {
-            kind: 'both',
+            kind: 'sale-only',
             saleWhere: buildSaleWhere(cond, qs),
-            rentalWhere: buildRentalWhere(cond, qs),
+            rentalWhere: null,
         };
     }
     // /wynajem and /wynajem-dlugoterminowy — rental only

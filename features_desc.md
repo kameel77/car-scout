@@ -409,6 +409,7 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Utrzymanie statusu**: Oferta jest jedynie aktualizowana pod kątem widoczności (jest przywracana z archiwum, jeśli była zarchiwizowana, i nie ulega ponownej automatycznej archiwizacji, dopóki występuje w feedzie API).
   - **Ochrona duplikatów**: W ścieżce duplikowania ofert (`duplicate-offer`) wykluczono kopiowanie kluczy powiązań z integracją (`csflowSourceId`, `csflowCarId`) oraz zresetowano źródło importu (`importSource` ustawione na `null`), aby nowa ręczna oferta była w pełni niezależna od automatycznego procesu.
 
-## 36. Ukrywanie ofert najmu w ogólnych widokach katalogu (nowe / wyszukiwarka)
-- **Cel**: Wykluczenie wynajmu z innych list ofert niż celowana /wynajem-dlugoterminowy za sprawą prostej flagi konfiguracyjnej w panelu administratora.
-- **Działanie**: Administrator może odznaczyć pokazywanie ofert wynajmu na innych stronach przy pomocy przycisku „Pokazuj najem na liście aut nowych i w wyszukiwarce" w menu Konfiguracji Ogólnej. Na stronie z ofertami /nowe i w wynikach /samochody zostanie ukryty najem, kierując po te pojazdy wprost na podstronę dedykowaną.
+## 36. Izolacja ofert najmu w dedykowanej sekcji /wynajem-dlugoterminowy
+- **Cel**: Wykluczenie wynajmu z innych list ofert (m.in. /nowe, /uzywane, /samochody) i ich wyłączna prezentacja na dedykowanej podstronie /wynajem-dlugoterminowy/.
+- **Działanie**: Oferty pojazdów z najmu długoterminowego nie wyświetlają się na stronach /nowe, /uzywane oraz w ogólnych wynikach /samochody. Pojazdy na najem są dostępne i wyświetlane wyłącznie na podstronie /wynajem-dlugoterminowy/.
+

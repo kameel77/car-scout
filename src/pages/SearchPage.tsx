@@ -344,10 +344,8 @@ export default function SearchPage() {
   const rentalCondition = filters.statuses.length === 1
     ? (filters.statuses[0] as 'NEW' | 'USED')
     : undefined;
-  // Hide rentals when a sale-price range is set: rental "price" is the monthly rate,
-  // not a comparable scale to sale price. Rate filter (rateFrom/rateTo) is mapped
-  // through priceMin/priceMax + priceBasis below so it still applies to rentals.
-  const hideRentals = settings?.showRentalsInNew === false || Boolean(filters.priceFrom || filters.priceTo);
+  // Rental vehicles display exclusively in /wynajem-dlugoterminowy
+  const hideRentals = true;
   const rentalOfferType = priceType === 'net' ? 'b2b' : 'b2c';
   const rentalRateMin = filters.rateFrom || undefined;
   const rentalRateMax = filters.rateTo || undefined;

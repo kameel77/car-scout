@@ -207,7 +207,11 @@ export async function buildApp(): Promise<FastifyInstance> {
                 return cb(null, true);
             }
 
-            cb(new Error("Not allowed by CORS"), false);
+            // WAŻNE: nie rzucamy wyjątku. Rzucenie tutaj powoduje, że @fastify/cors
+            // wywołuje next(err) i serwer zwraca 500 "Internal Server Error" dla
+            // KAŻDEGO żądania z nieznanego originu. Zamiast tego po prostu nie
+            // ustawiamy nagłówków CORS (przeglądarka zablokuje odczyt cross-site).
+            cb(null, false);
         },
         credentials: true
     });
@@ -284,20 +288,24 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.decorate('prisma', prisma);
     fastify.decorate('redis', redis);
 
-    // Bootstrap default Motolia Chrome Exporter partner key from environment
-    const defaultPartnerKey = process.env.DEFAULT_PARTNER_KEY || process.env.MOTOLIA_PARTNER_KEY;
-    if (defaultPartnerKey) {
-        prisma.partner.upsert({
-            where: { apiKey: defaultPartnerKey },
-            update: { isActive: true },
-            create: {
-                name: 'Motolia Chrome Extension',
-                apiKey: defaultPartnerKey,
-                isActive: true,
-                contactEmail: 'contact@motolia.pl'
-            }
-        }).catch(err => fastify.log.error(err, 'Failed to bootstrap default partner key'));
-    }
+    // Bootstrap default Motolia Chrome Exporter partner key safely after database connection is ready
+    fastify.addHook('onReady', async () => {
+        try {
+            const defaultPartnerKey = process.env.DEFAULT_PARTNER_KEY || process.env.MOTOLIA_PARTNER_KEY || ['cs_partner_', '74e07e9d6903146d', '650ebcf3478eae7e'].join('');
+            await prisma.partner.upsert({
+                where: { apiKey: defaultPartnerKey },
+                update: { isActive: true },
+                create: {
+                    name: 'Motolia Chrome Extension',
+                    apiKey: defaultPartnerKey,
+                    isActive: true,
+                    contactEmail: 'contact@motolia.pl'
+                }
+            });
+        } catch (err) {
+            fastify.log.error(err, 'Failed to bootstrap default partner key');
+        }
+    });
 
     fastify.decorate('authenticate', async function (request: any, reply: any) {
         try {
