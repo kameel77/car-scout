@@ -192,7 +192,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         }
 
-        const isImported = existing.entrySource === 'CSV' || existing.entrySource === 'CSFLOW' || existing.entrySource === 'AGENT';
+        // Tylko źródła z cyklicznym sync (CSV, CSFLOW) mają ograniczoną edycję —
+        // ich pola i tak zostałyby nadpisane przy kolejnym imporcie.
+        // Auta z Otomoto ('AGENT') to jednorazowy import, więc dopuszczamy pełną
+        // ręczną edycję (ścieżka manualna z walidacją).
+        const isImported = existing.entrySource === 'CSV' || existing.entrySource === 'CSFLOW';
 
         let updateData: any;
         if (isImported) {
