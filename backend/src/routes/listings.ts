@@ -93,16 +93,17 @@ export async function listingRoutes(fastify: FastifyInstance) {
     });
 
     fastify.post('/api/listings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-        const body = request.body as any;
-        const scope = await resolveScope(fastify, request);
+        try {
+            const body = request.body as any;
+            const scope = await resolveScope(fastify, request);
 
-        let dealerId = body.dealerId;
-        if (!dealerId && scope.activeContext.scopeType === 'DEALER') {
-            dealerId = scope.activeContext.scopeId;
-        }
-        if (!dealerId) {
-            return reply.code(400).send({ error: 'dealerId is required' });
-        }
+            let dealerId = body.dealerId;
+            if (!dealerId && scope && scope.activeContext && scope.activeContext.scopeType === 'DEALER') {
+                dealerId = scope.activeContext.scopeId;
+            }
+            if (!dealerId) {
+                return reply.code(400).send({ error: 'dealerId is required' });
+            }
 
         if (!scope.isPlatform) {
             const allowed = scope.dealerFilter.dealerId;
@@ -165,6 +166,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
             .catch(err => fastify.log.error({ err, listingId: updated.id }, 'Nie udało się przeliczyć rat referencyjnych po utworzeniu oferty'));
 
         return reply.code(201).send({ listing: updated });
+        } catch (err: any) {
+            fastify.log.error(err);
+            return reply.code(500).send({ error: 'Błąd dodawania ogłoszenia: ' + (err.message || String(err)) });
+        }
     });
 
     fastify.patch('/api/listings/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
