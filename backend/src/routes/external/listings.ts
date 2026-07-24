@@ -68,7 +68,9 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
         equipmentOther: Type.Optional(Type.Array(Type.String())),
         condition: Type.Optional(Type.String({ description: 'e.g. USED, NEW' })),
         images: Type.Optional(Type.Array(Type.String({ description: 'Array of image URLs' }))),
-        imageUrls: Type.Optional(Type.Array(Type.String()))
+        imageUrls: Type.Optional(Type.Array(Type.String())),
+        additionalInfoContent: Type.Optional(Type.String({ description: 'Treść opisu dodatkowego' })),
+        additionalInfoHeader: Type.Optional(Type.String({ description: 'Nagłówek opisu dodatkowego' }))
     });
 
     fastify.post('/api/v1/external/listings', {
@@ -189,7 +191,10 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
                 marketplace: 'motolia',
                 dealerId: internalDealerId,
                 listingId: body.listingId ? String(body.listingId) : null,
-                listingUrl: body.listingUrl || null
+                listingUrl: body.listingUrl || null,
+                // Opis dodatkowy (backoffice: "Treść/Nagłówek opisu dodatkowego")
+                additionalInfoContent: body.additionalInfoContent || null,
+                additionalInfoHeader: body.additionalInfoHeader || null
             };
 
             let listing;
