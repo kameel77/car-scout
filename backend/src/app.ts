@@ -207,7 +207,11 @@ export async function buildApp(): Promise<FastifyInstance> {
                 return cb(null, true);
             }
 
-            cb(new Error("Not allowed by CORS"), false);
+            // WAŻNE: nie rzucamy wyjątku. Rzucenie tutaj powoduje, że @fastify/cors
+            // wywołuje next(err) i serwer zwraca 500 "Internal Server Error" dla
+            // KAŻDEGO żądania z nieznanego originu. Zamiast tego po prostu nie
+            // ustawiamy nagłówków CORS (przeglądarka zablokuje odczyt cross-site).
+            cb(null, false);
         },
         credentials: true
     });
