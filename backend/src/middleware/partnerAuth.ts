@@ -30,11 +30,9 @@ export async function partnerAuth(request: FastifyRequest, reply: FastifyReply) 
         return reply.code(401).send({ error: 'Unauthorized. Invalid API Key or Partner is inactive.' });
     }
 
-    if (!partner.mappings || partner.mappings.length === 0) {
-        request.log.error(`Partner API: Partner ${partner.id} próbował wykonać akcję bez przypisanego dealera (brak mapowań).`);
-        return reply.code(403).send({ error: 'Forbidden. Partner does not have any assigned Dealers.' });
-    }
-
     // Attach partner to request for handlers to use
-    (request as PartnerRequest).partner = partner;
+    (request as PartnerRequest).partner = {
+        ...partner,
+        mappings: partner.mappings || []
+    };
 }
