@@ -1,7 +1,6 @@
-import { LeadList } from '@/components/admin/LeadList';
 import { SettingsModule } from '@/components/admin/SettingsModule';
 import { useAuth } from '@/contexts/AuthContext';
-import { MessageSquare, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 export default function AdminDashboard() {
     const { user } = useAuth();
@@ -25,15 +24,6 @@ export default function AdminDashboard() {
                     <SettingsModule />
                 </section>
             )}
-
-            {/* Lead Management Section */}
-            <section>
-                <div className="flex items-center gap-2 mb-4">
-                    <MessageSquare className="w-5 h-5 text-blue-600" />
-                    <h2 className="text-xl font-semibold">Lead Management</h2>
-                </div>
-                <LeadList />
-            </section>
         </div>
     );
 }
