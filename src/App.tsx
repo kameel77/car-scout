@@ -39,6 +39,7 @@ const ContactPage = lazy(() => import("./pages/ContactPage"));
 const PublicFaqPage = lazy(() => import("./pages/PublicFaqPage"));
 const LoginPage = lazy(() => import("./pages/admin/LoginPage"));
 const AdminDashboard = lazy(() => import("./pages/admin/DashboardPage"));
+const LeadsPage = lazy(() => import("./pages/admin/LeadsPage"));
 const TranslationsPage = lazy(() => import("./pages/admin/TranslationsPage"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
 const FaqPage = lazy(() => import("./pages/admin/FaqPage"));
@@ -151,6 +152,14 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <AdminDashboard />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/leads"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <LeadsPage />
                             </ProtectedRoute>
                           }
                         />

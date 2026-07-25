@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
     LayoutDashboard,
+    MessageSquare,
     Languages,
     Users,
     HelpCircle,
@@ -63,6 +64,7 @@ const STOCK_ACCESS: MemberRole[] = ALL_ROLES;
 const NAV_ITEMS: NavItem[] = [
     // Dashboard – everyone
     { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, visibleTo: ALL_ROLES },
+    { href: '/admin/leads', label: 'Leady', icon: MessageSquare, visibleTo: ALL_ROLES },
 
     // Stock management – everyone with stock access
     { href: '/admin/listings', label: 'Pojazdy', icon: Car, visibleTo: STOCK_ACCESS },

@@ -149,7 +149,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 leadType: 'sale',
                 listingId: data.listingId,
                 name: data.name,
-                email: data.email || 'brak@email.pl',
+                email: data.email ? data.email.trim() : null,
                 phone: data.phone,
                 preferredContact: data.preferredContact || (data.phone ? 'phone' : 'email'),
                 message: data.message || 'Zapytanie o ofertę.',
@@ -240,7 +240,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 leadType: 'price_negotiation',
                 listingId: data.listingId,
                 name: data.name,
-                email: data.email || 'brak@email.pl',
+                email: data.email ? data.email.trim() : null,
                 phone: data.phone,
                 preferredContact: data.preferredContact || (data.phone ? 'phone' : 'email'),
                 message: negotiationSummary,
@@ -308,7 +308,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 leadType: 'rental',
                 rentalVehicleId: data.rentalVehicleId,
                 name: data.name,
-                email: data.email || 'brak@email.pl',
+                email: data.email ? data.email.trim() : null,
                 phone: data.phone,
                 preferredContact: data.preferredContact || (data.phone ? 'phone' : 'email'),
                 message: data.message || 'Zapytanie o wynajem.',
@@ -423,15 +423,21 @@ export async function leadRoutes(fastify: FastifyInstance) {
             if (listing) listingId = listing.id;
         }
 
+        const pageUrl = body.pageUrl || request.headers.referer;
+        let messageText = body.message || 'Prośba o szybki kontakt telefoniczny.';
+        if (pageUrl && !messageText.includes(pageUrl)) {
+            messageText = `${messageText}\nStrona wysłania: ${pageUrl}`;
+        }
+
         const lead = await fastify.prisma.lead.create({
             data: {
                 leadType: 'quick_contact',
                 ...(listingId ? { listingId } : {}),
                 name: name,
-                email: 'brak@email.pl',
+                email: body.email ? String(body.email).trim() : null,
                 phone: phone,
                 preferredContact: 'phone',
-                message: body.message || 'Prośba o szybki kontakt telefoniczny.',
+                message: messageText,
                 status: 'quick_contact',
                 referenceNumber: generateReference(),
             },
