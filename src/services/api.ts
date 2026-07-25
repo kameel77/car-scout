@@ -1214,11 +1214,15 @@ export const leadsApi = {
 
         return response.json();
     },
-    submitQuickLead: async (data: { phone: string; name?: string; message?: string; listingId?: string; company?: string; turnstileToken?: string; }) => {
+    submitQuickLead: async (data: { phone: string; name?: string; message?: string; listingId?: string; company?: string; turnstileToken?: string; pageUrl?: string; }) => {
+        const payload = {
+            pageUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+            ...data
+        };
         const response = await fetch(`${API_BASE_URL}/api/leads/quick`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {

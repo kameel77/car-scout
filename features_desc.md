@@ -341,6 +341,17 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Ograniczenia dostępu**:
   - Wybór odbiorcy leada jest całkowicie ukryty przed użytkownikami o niższych rolach (np. Dealer Admin, Dealer Employee, Platform Manager). Opcja ta jest widoczna i modyfikowalna wyłącznie dla roli `SUPERADMIN_PLATFORM`.
 
+## 28. Dedykowany panel Leady, rejestracja URL źródłowego i obsługa braku e-maila
+- **Dedykowana pozycja w menu bocznym ("Leady")**:
+  - Sekcja zarządzań zapytaniami klientów (Lead Management) została przeniesiona z Pulpitu Nawigacyjnego (`DashboardPage`) do osobnej pozycji w menu bocznym pod adresem `/admin/leads`.
+  - Dostępna pod ikoną `MessageSquare` dla wszystkich uprawnionych ról (`ALL_ROLES`).
+- **Rejestrowanie adresu URL strony dla szybkiego kontaktu**:
+  - Formularze szybkiego kontaktu (prośby o oddzwonienie) automatycznie przechwytują adres URL strony, na której klient wypełnił formularz (np. strona danej oferty, strona główna, strona kontaktu).
+  - Adres ten jest przesyłany do backendu w polu `pageUrl` i automatycznie dołączany do treści wiadomości leada (`Strona wysłania: https://...`), co pozwala obsłudze oraz CRM natychmiast zweryfikować kontekst zgłoszenia.
+- **Obsługa braku e-maila (wartość `null` zamiast `'brak@email.pl'`)**:
+  - W przypadkach, gdy klient nie podaje adresu e-mail (np. w szybkim kontakcie telefonicznym), w bazie danych oraz API wartość pola `email` ustawiana jest na `null` zamiast fikcyjnego ciągu `'brak@email.pl'`.
+  - Zapobiega to błędnej automatyzacji wysyłki wiadomości e-mail na nieistniejące adresy w zewnętrznym systemie CRM.
+
 ## 27. Śledzenie konwersji i leadów (GTM i GA4)
 - **Cel**: automatyczne informowanie Google Tag Manager oraz Google Analytics 4 o każdym udanym przesłaniu leada ze strony, z podziałem na typ formularza oraz dynamiczne dane pojazdu i finansowania.
 - **Zdarzenie w dataLayer**:
@@ -412,4 +423,9 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 ## 36. Izolacja ofert najmu w dedykowanej sekcji /wynajem-dlugoterminowy
 - **Cel**: Wykluczenie wynajmu z innych list ofert (m.in. /nowe, /uzywane, /samochody) i ich wyłączna prezentacja na dedykowanej podstronie /wynajem-dlugoterminowy/.
 - **Działanie**: Oferty pojazdów z najmu długoterminowego nie wyświetlają się na stronach /nowe, /uzywane oraz w ogólnych wynikach /samochody. Pojazdy na najem są dostępne i wyświetlane wyłącznie na podstronie /wynajem-dlugoterminowy/.
+
+## 37. Kolumna rodzaju napędu w panelu administracyjnym (/admin/listings)
+- **Cel**: Wyświetlanie informacji o rodzaju napędu (np. FWD, RWD, 4x4, AWD) na liście pojazdów w panelu administratora.
+- **Zachowanie**: W widoku listy pojazdów (`/admin/listings`) zaktualizowano zbiór kolumn specyfikacji (`AdminListingItem`), dodając 6. kolumnę "Napęd". Wyświetla ona wartość z pola `listing.drive` (np. FWD, RWD, 4x4) lub `-` w przypadku braku danych.
+
 

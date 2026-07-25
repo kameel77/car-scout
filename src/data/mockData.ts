@@ -102,7 +102,7 @@ export interface Listing {
 export interface Lead {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   phone?: string;
   message: string;
   status: 'new' | 'contacted' | 'in_progress' | 'sold' | 'closed' | 'applied';

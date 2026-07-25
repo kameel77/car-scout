@@ -131,7 +131,7 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onTogg
                 </div>
 
                 {/* Specs Columns */}
-                <div className="flex-1 grid grid-cols-5 gap-4 items-center">
+                <div className="flex-1 grid grid-cols-6 gap-2 items-center">
                     <div className="text-xs text-center text-gray-600 truncate px-1">
                         <span className="block text-[10px] text-gray-400 mb-0.5 uppercase tracking-tighter">Nadwozie</span>
                         {listing.body_type}
@@ -151,6 +151,10 @@ export function AdminListingItem({ listing, isSelected = false, onSelect, onTogg
                     <div className="text-xs text-center text-gray-600 truncate px-1 border-l">
                         <span className="block text-[10px] text-gray-400 mb-0.5 uppercase tracking-tighter">Skrzynia</span>
                         <span className="truncate">{listing.transmission}</span>
+                    </div>
+                    <div className="text-xs text-center text-gray-600 truncate px-1 border-l">
+                        <span className="block text-[10px] text-gray-400 mb-0.5 uppercase tracking-tighter">Napęd</span>
+                        <span className="truncate">{listing.drive || '-'}</span>
                     </div>
                 </div>
 

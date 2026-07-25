@@ -163,7 +163,7 @@ model Lead {
   id                              String            @id @default(cuid())
   listingId                       String?           @map("listing_id")
   name                            String
-  email                           String
+  email                           String?
   phone                           String?
   preferredContact                String            @default("email") @map("preferred_contact")
   message                         String

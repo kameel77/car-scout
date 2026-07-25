@@ -61,7 +61,8 @@ export function AdminListingList({
                                 <div className="h-3 bg-gray-100 rounded w-3/4" />
                                 <div className="h-2 bg-gray-100 rounded w-1/2" />
                             </div>
-                            <div className="flex-1 grid grid-cols-5 gap-4">
+                            <div className="flex-1 grid grid-cols-6 gap-2">
+                                <div className="h-2 bg-gray-50 rounded" />
                                 <div className="h-2 bg-gray-50 rounded" />
                                 <div className="h-2 bg-gray-50 rounded" />
                                 <div className="h-2 bg-gray-50 rounded" />

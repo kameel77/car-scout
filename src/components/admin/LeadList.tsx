@@ -178,7 +178,7 @@ export function LeadList() {
         const q = searchQuery.toLowerCase();
         return mappedLeads.filter(lead =>
             lead.name.toLowerCase().includes(q) ||
-            lead.email.toLowerCase().includes(q) ||
+            (lead.email || '').toLowerCase().includes(q) ||
             // Leady z listy oczekujących (waitlist, F3) nie mają dopiętej oferty — poszukiwana
             // marka/model jest zapisana w treści wiadomości, więc filtrujemy też po niej.
             lead.message.toLowerCase().includes(q)
@@ -323,7 +323,7 @@ export function LeadList() {
                                             <User className="h-3.5 w-3.5 text-slate-400" />
                                             {lead.name}
                                         </span>
-                                        <span className="text-sm text-muted-foreground">{lead.email}</span>
+                                        <span className="text-sm text-muted-foreground">{lead.email || 'Brak e-maila'}</span>
                                         {lead.phone && (
                                             <span className="text-sm text-muted-foreground font-mono">{lead.phone}</span>
                                         )}
@@ -465,7 +465,7 @@ export function LeadList() {
                                     <div className="space-y-2">
                                         <p className="font-bold text-lg">{selectedLead.name}</p>
                                         <div className="flex items-center gap-2 text-sm text-slate-600">
-                                            <span className="font-medium">Email:</span> {selectedLead.email}
+                                            <span className="font-medium">Email:</span> {selectedLead.email || 'Brak'}
                                         </div>
                                         {selectedLead.phone && (
                                             <div className="flex items-center gap-2 text-sm text-slate-600">
