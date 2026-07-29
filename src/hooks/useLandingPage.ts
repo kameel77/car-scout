@@ -26,6 +26,9 @@ export interface LandingPageData {
     heroBadge?: string;
     heroImageUrl?: string;
     ctaLabel: string;
+    theme?: 'dark' | 'light';
+    heroPosition?: 'before' | 'after';
+    contactPhone?: string;
     discount?: number;
     initialPayment?: number;
     selectionMode: 'MANUAL' | 'FILTERED';
@@ -33,6 +36,7 @@ export interface LandingPageData {
     metaTitle?: string;
     metaDescription?: string;
     listings: Listing[];
+    rentalVehicles?: any[];
 }
 
 export function useLandingPage(slug: string | undefined) {

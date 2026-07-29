@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { landingPagesApi, listingsApi } from '@/services/api';
+import { rentalPublicApi } from '@/services/rental-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,10 +28,14 @@ interface LandingPageAdmin {
     heroBadge?: string | null;
     heroImageUrl?: string | null;
     ctaLabel: string;
+    theme?: 'dark' | 'light';
+    heroPosition?: 'before' | 'after';
+    contactPhone?: string | null;
     discount?: number | null;
     initialPayment?: number | null;
     selectionMode: 'MANUAL' | 'FILTERED';
     listingIds: string[];
+    rentalVehicleIds: string[];
     filterParams?: any;
     maxListings: number;
     sections?: any;
@@ -54,10 +59,14 @@ const DEFAULT_FORM: Partial<LandingPageAdmin> = {
     heroSubtitle: '',
     heroBadge: '',
     ctaLabel: 'Oddzwońcie do mnie',
+    theme: 'dark',
+    heroPosition: 'before',
+    contactPhone: '',
     discount: undefined,
     initialPayment: undefined,
     selectionMode: 'FILTERED',
     listingIds: [],
+    rentalVehicleIds: [],
     filterParams: { brand: [], bodyType: [], minYear: undefined, minPrice: undefined, maxPrice: undefined, condition: '' },
     maxListings: 12,
     sections: {
@@ -91,6 +100,7 @@ export default function LandingPagesPage() {
     const [carSearchQuery, setCarSearchQuery] = useState('');
     const [carSearchResults, setCarSearchResults] = useState<any[]>([]);
     const [carSearchLoading, setCarSearchLoading] = useState(false);
+    const [carSearchSource, setCarSearchSource] = useState<'NEW' | 'USED' | 'RENTAL'>('NEW');
 
     const { data, isLoading, refetch } = useQuery<{ landingPages: LandingPageAdmin[] }>({
         queryKey: ['admin-landing-pages'],
@@ -234,7 +244,7 @@ export default function LandingPagesPage() {
         setPreviewLoading(true);
         try {
             const res = await landingPagesApi.getPreviewListings(id);
-            setPreviewListings(res.listings || []);
+            setPreviewListings([...(res.listings || []), ...(res.rentalVehicles || [])]);
         } catch {
             // ignore preview error
         } finally {
@@ -246,13 +256,37 @@ export default function LandingPagesPage() {
         if (!carSearchQuery.trim()) return;
         setCarSearchLoading(true);
         try {
-            const res = await listingsApi.getListings({ search: carSearchQuery.trim() });
-            setCarSearchResults(res.listings || []);
+            if (carSearchSource === 'RENTAL') {
+                const res = await rentalPublicApi.listVehicles({ search: carSearchQuery.trim(), limit: '24' });
+                setCarSearchResults(res.vehicles || []);
+            } else {
+                // getListings mapuje `query` -> ?q i `statuses` -> ?status; `search`/`condition` są ignorowane.
+                const res = await listingsApi.getListings({
+                    query: carSearchQuery.trim(),
+                    statuses: [carSearchSource.toLowerCase()],
+                    perPage: 24,
+                });
+                setCarSearchResults(res.listings || []);
+            }
         } catch {
-            toast.error('Błąd wyszukiwania aut');
+            toast.error('Błąd wyszukiwania pojazdów');
         } finally {
             setCarSearchLoading(false);
         }
+    };
+
+    /** Wynajem trafia do osobnej listy — to inna encja niż ogłoszenia sprzedażowe. */
+    const isRentalSearch = carSearchSource === 'RENTAL';
+    const selectedVehicleIds = isRentalSearch
+        ? (editingPage?.rentalVehicleIds || [])
+        : (editingPage?.listingIds || []);
+
+    const addVehicleId = (id: string) => {
+        if (!editingPage || !id) return;
+        const key = isRentalSearch ? 'rentalVehicleIds' : 'listingIds';
+        const current = (editingPage[key] as string[]) || [];
+        if (current.includes(id)) return;
+        setEditingPage({ ...editingPage, [key]: [...current, id] });
     };
 
     const getStatusBadge = (page: LandingPageAdmin) => {
@@ -554,6 +588,63 @@ export default function LandingPagesPage() {
                                             )}
                                         </div>
                                     </div>
+
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-semibold text-gray-700">Numer telefonu na landingu</Label>
+                                        <Input
+                                            value={editingPage.contactPhone || ''}
+                                            onChange={(e) => setEditingPage({ ...editingPage, contactPhone: e.target.value })}
+                                            placeholder="+48 22 112 09 50"
+                                        />
+                                        <p className="text-[11px] text-gray-500">
+                                            Puste pole = numer z ustawień serwisu. Osobny numer ułatwia rozliczenie kampanii.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold text-gray-700">Motyw kolorystyczny</Label>
+                                            <div className="flex gap-2">
+                                                {(['dark', 'light'] as const).map((mode) => (
+                                                    <button
+                                                        key={mode}
+                                                        type="button"
+                                                        onClick={() => setEditingPage({ ...editingPage, theme: mode })}
+                                                        className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                                                            (editingPage.theme || 'dark') === mode
+                                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {mode === 'dark' ? 'Ciemny' : 'Jasny'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold text-gray-700">Blok hero z telefonem</Label>
+                                            <div className="flex gap-2">
+                                                {([
+                                                    { value: 'before', label: 'Przed ofertami' },
+                                                    { value: 'after', label: 'Po ofertach' },
+                                                ] as const).map((option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        type="button"
+                                                        onClick={() => setEditingPage({ ...editingPage, heroPosition: option.value })}
+                                                        className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                                                            (editingPage.heroPosition || 'before') === option.value
+                                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {option.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </TabsContent>
 
                                 {/* TAB 3: OFERTA */}
@@ -686,6 +777,29 @@ export default function LandingPagesPage() {
                                             <div className="space-y-2">
                                                 <Label className="text-xs font-semibold text-gray-700">Wyszukaj pojazd w bazie</Label>
                                                 <div className="flex gap-2">
+                                                    {([
+                                                        { value: 'NEW', label: 'Nowe' },
+                                                        { value: 'USED', label: 'Używane' },
+                                                        { value: 'RENTAL', label: 'Wynajem długoterminowy' },
+                                                    ] as const).map((option) => (
+                                                        <button
+                                                            key={option.value}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setCarSearchSource(option.value);
+                                                                setCarSearchResults([]);
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${
+                                                                carSearchSource === option.value
+                                                                    ? 'bg-purple-600 text-white border-purple-600'
+                                                                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            {option.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="flex gap-2">
                                                     <Input
                                                         value={carSearchQuery}
                                                         onChange={(e) => setCarSearchQuery(e.target.value)}
@@ -711,8 +825,8 @@ export default function LandingPagesPage() {
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
                                                         {carSearchResults.map((car: any) => {
                                                             const carId = car.id || car.listing_id;
-                                                            const isSelected = (editingPage.listingIds || []).includes(carId);
-                                                            const mainImage = car.main_image_url || car.image_url || car.images?.[0];
+                                                            const isSelected = selectedVehicleIds.includes(carId);
+                                                            const mainImage = car.main_image_url || car.image_url || car.images?.[0] || car.primaryImageUrl;
                                                             return (
                                                                 <div key={carId} className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200 text-xs gap-2">
                                                                     <div className="flex items-center gap-2 min-w-0">
@@ -723,7 +837,11 @@ export default function LandingPagesPage() {
                                                                         )}
                                                                         <div className="min-w-0">
                                                                             <p className="font-semibold text-gray-900 truncate">{car.brand || car.make} {car.model}</p>
-                                                                            <p className="text-[10px] text-gray-500">{car.price || car.pricePln || '—'} PLN • {car.year || car.productionYear || ''}</p>
+                                                                            <p className="text-[10px] text-gray-500">
+                                                                                {isRentalSearch
+                                                                                    ? `${car.minMonthlyRateGross ? `${car.minMonthlyRateGross} PLN/mies.` : 'brak raty'} • ${car.productionYear || ''}`
+                                                                                    : `${car.price || car.pricePln || '—'} PLN • ${car.year || car.productionYear || ''}`}
+                                                                            </p>
                                                                         </div>
                                                                     </div>
                                                                     <Button
@@ -732,12 +850,7 @@ export default function LandingPagesPage() {
                                                                         variant={isSelected ? "outline" : "default"}
                                                                         className={isSelected ? "text-gray-400 border-gray-200 text-[11px] h-7" : "bg-purple-600 hover:bg-purple-700 text-white text-[11px] h-7"}
                                                                         disabled={isSelected}
-                                                                        onClick={() => {
-                                                                            const current = editingPage.listingIds || [];
-                                                                            if (!current.includes(carId)) {
-                                                                                setEditingPage({ ...editingPage, listingIds: [...current, carId] });
-                                                                            }
-                                                                        }}
+                                                                        onClick={() => addVehicleId(carId)}
                                                                     >
                                                                         {isSelected ? 'Dodano' : '+ Dodaj'}
                                                                     </Button>
@@ -763,11 +876,7 @@ export default function LandingPagesPage() {
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => {
-                                                            if (!manualListingIdInput.trim()) return;
-                                                            const current = editingPage.listingIds || [];
-                                                            if (!current.includes(manualListingIdInput.trim())) {
-                                                                setEditingPage({ ...editingPage, listingIds: [...current, manualListingIdInput.trim()] });
-                                                            }
+                                                            addVehicleId(manualListingIdInput.trim());
                                                             setManualListingIdInput('');
                                                         }}
                                                         className="text-xs shrink-0"
@@ -791,6 +900,30 @@ export default function LandingPagesPage() {
                                                                     listingIds: (editingPage.listingIds || []).filter(item => item !== id)
                                                                 })}
                                                                 className="hover:text-purple-950 font-bold ml-1"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Selected Rental Vehicle IDs */}
+                                            <div className="space-y-1 pt-2">
+                                                <p className="text-[11px] font-bold text-gray-700 uppercase">
+                                                    Wybrany wynajem długoterminowy ({(editingPage.rentalVehicleIds || []).length}):
+                                                </p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {(editingPage.rentalVehicleIds || []).map((id) => (
+                                                        <span key={id} className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 text-xs px-2.5 py-1 rounded-full font-mono">
+                                                            {id}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditingPage({
+                                                                    ...editingPage,
+                                                                    rentalVehicleIds: (editingPage.rentalVehicleIds || []).filter(item => item !== id)
+                                                                })}
+                                                                className="hover:text-sky-950 font-bold ml-1"
                                                             >
                                                                 ✕
                                                             </button>

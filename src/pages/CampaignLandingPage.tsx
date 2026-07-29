@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useParams, useSearchParams, Navigate } from 'react-router-dom';
 import { Phone, ShieldCheck, CheckCircle2, ArrowRight, HelpCircle, AlertTriangle } from 'lucide-react';
 import { useLandingPage } from '@/hooks/useLandingPage';
@@ -7,8 +7,45 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { CallbackForm } from '@/components/CallbackForm';
 import { ListingCard } from '@/components/ListingCard';
+import { RentalListingCard } from '@/components/RentalListingCard';
 import { trackLpView, trackPhoneClick } from '@/lib/analytics';
 import { formatPhoneForTelLink } from '@/utils/formatters';
+
+/** Klasy motywu — landing bywa wysyłany do różnych grup, część kampanii wymaga jasnej wersji. */
+const THEMES = {
+    dark: {
+        page: 'bg-[#121212] text-white',
+        header: 'bg-[#1a1a1a]/95 border-white/10',
+        heroSection: 'bg-gradient-to-b from-[#1a1a1a] to-[#121212] border-white/5',
+        band: 'bg-[#181818] border-white/5',
+        card: 'bg-[#222222] border-white/5',
+        callbackCard: 'bg-[#222222] border-[#F5C518]/40',
+        heading: 'text-white',
+        body: 'text-gray-300',
+        muted: 'text-gray-400',
+        footer: 'bg-[#0e0e0e] border-white/10 text-gray-500',
+        stickyBar: 'bg-[#1a1a1a]/95 border-white/10',
+        stickyCall: 'bg-[#2a2a2a] text-white border-white/10',
+        loader: 'bg-[#1a1a1a] text-white',
+        accentText: 'text-[#F5C518]',
+    },
+    light: {
+        page: 'bg-white text-gray-900',
+        header: 'bg-white/95 border-gray-200',
+        heroSection: 'bg-gradient-to-b from-gray-50 to-white border-gray-200',
+        band: 'bg-gray-50 border-gray-200',
+        card: 'bg-white border-gray-200',
+        callbackCard: 'bg-white border-[#F5C518]',
+        heading: 'text-gray-900',
+        body: 'text-gray-600',
+        muted: 'text-gray-500',
+        footer: 'bg-gray-50 border-gray-200 text-gray-500',
+        stickyBar: 'bg-white/95 border-gray-200',
+        stickyCall: 'bg-gray-100 text-gray-900 border-gray-300',
+        loader: 'bg-white text-gray-900',
+        accentText: 'text-[#8a6d05]',
+    },
+} as const;
 
 export default function CampaignLandingPage() {
     const { slug } = useParams<{ slug: string }>();
@@ -25,10 +62,16 @@ export default function CampaignLandingPage() {
     const lpDiscount = lp?.discount;
     const lpInitialPayment = lp?.initialPayment;
 
-    // Contact phone: prioritize brand/settings phone
+    const theme = THEMES[lp?.theme === 'light' ? 'light' : 'dark'];
+
+    // Numer z landingu ma pierwszeństwo — kampanie bywają rozliczane po osobnej linii.
     const contactPhone = useMemo(() => {
-        return settings?.salesContactPhone || settings?.legalContactPhone || config.contactInfo?.phone || '+48 000 000 000';
-    }, [settings, config]);
+        return lp?.contactPhone
+            || settings?.salesContactPhone
+            || settings?.legalContactPhone
+            || config.contactInfo?.phone
+            || '+48 22 112 09 50';
+    }, [lp?.contactPhone, settings, config]);
 
     // Programmatic discount injection in SpecialOfferContext
     useEffect(() => {
@@ -58,10 +101,10 @@ export default function CampaignLandingPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center">
+            <div className={`min-h-screen ${theme.loader} flex items-center justify-center`}>
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
-                    <p className="text-sm text-gray-400">Ładowanie oferty...</p>
+                    <p className={`text-sm ${theme.muted}`}>Ładowanie oferty...</p>
                 </div>
             </div>
         );
@@ -69,10 +112,10 @@ export default function CampaignLandingPage() {
 
     if (error || !lp) {
         return (
-            <div className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center p-4">
-                <div className="max-w-md text-center bg-[#242424] p-8 rounded-2xl border border-white/10">
+            <div className={`min-h-screen ${theme.loader} flex items-center justify-center p-4`}>
+                <div className={`max-w-md text-center p-8 rounded-2xl border ${theme.card}`}>
                     <h1 className="text-2xl font-bold mb-2">Oferta jest niedostępna</h1>
-                    <p className="text-gray-400 text-sm mb-6">
+                    <p className={`text-sm mb-6 ${theme.muted}`}>
                         Strona, której szukasz, wygasła lub została przeniesiona.
                     </p>
                     <a
@@ -94,6 +137,10 @@ export default function CampaignLandingPage() {
     const showFaq = sections.faq?.enabled && sections.faq.items && sections.faq.items.length > 0;
     const showUrgency = sections.urgency?.enabled && sections.urgency.text;
 
+    const rentalVehicles = lp.rentalVehicles || [];
+    const hasVehicles = (lp.listings && lp.listings.length > 0) || rentalVehicles.length > 0;
+    const heroFirst = lp.heroPosition !== 'after';
+
     const handleCallClick = (location: string) => {
         trackPhoneClick(location, lp.slug, src);
     };
@@ -105,24 +152,118 @@ export default function CampaignLandingPage() {
         }
     };
 
+    const heroSection = (
+        <section className={`pt-8 pb-12 px-4 border-b ${theme.heroSection}`}>
+            <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-7 space-y-4 text-left">
+                    {lp.heroBadge && (
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5C518]/15 border border-[#F5C518]/30 text-xs font-semibold uppercase tracking-wider ${theme.accentText}`}>
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>{lp.heroBadge}</span>
+                        </div>
+                    )}
+
+                    <h1 className={`text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight ${theme.heading}`}>
+                        {lp.heroTitle}
+                    </h1>
+
+                    {lp.heroSubtitle && (
+                        <p className={`text-base md:text-lg leading-relaxed max-w-2xl ${theme.body}`}>
+                            {lp.heroSubtitle}
+                        </p>
+                    )}
+
+                    {lp.heroImageUrl && (
+                        <div className={`pt-2 overflow-hidden rounded-2xl border shadow-2xl ${theme.card}`}>
+                            <img
+                                src={lp.heroImageUrl}
+                                alt={lp.heroTitle}
+                                fetchPriority="high"
+                                className="w-full h-auto max-h-[320px] object-cover"
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {showCallback && (
+                    <div id="lp-callback" className="lg:col-span-5 scroll-mt-20">
+                        <div className={`border-2 p-6 rounded-2xl shadow-2xl space-y-4 ${theme.callbackCard}`}>
+                            <div className="text-left space-y-1">
+                                <h2 className={`text-xl font-bold flex items-center gap-2 ${theme.heading}`}>
+                                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#F5C518]/20 shrink-0 ${theme.accentText}`}>
+                                        <Phone className="w-4 h-4" />
+                                    </span>
+                                    <span>{sections.callback?.title || 'Oddzwonimy do Ciebie'}</span>
+                                </h2>
+                            </div>
+
+                            <CallbackForm
+                                compact
+                                title=""
+                                titleHighlight=""
+                                description={sections.callback?.description || 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczegóły oferty.'}
+                                submitLabel={lp.ctaLabel || 'Zadzwoń do mnie'}
+                                landingPageSlug={lp.slug}
+                                src={src}
+                                formId={`lp_${lp.slug}`}
+                                className="bg-transparent border-0 p-0 shadow-none"
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+
+    const listingsSection = showListings ? (
+        <section className="py-12 px-4 max-w-6xl mx-auto">
+            <div className="mb-8 text-center md:text-left">
+                <h2 className={`text-2xl md:text-3xl font-extrabold ${theme.heading}`}>
+                    {sections.listings?.title || 'Dostępne samochody w ofercie'}
+                </h2>
+                <p className={`text-sm mt-1 ${theme.muted}`}>
+                    Sprawdź wybrane pojazdy z naszej aktualnej floty i poproś o ratę dopasowaną do Ciebie.
+                </p>
+            </div>
+
+            {hasVehicles ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {(lp.listings || []).map((listing) => (
+                        <ListingCard key={listing.listing_id} listing={listing} />
+                    ))}
+                    {rentalVehicles.map((vehicle: any) => (
+                        <RentalListingCard key={vehicle.id} v={vehicle} />
+                    ))}
+                </div>
+            ) : (
+                <div className={`p-8 rounded-2xl text-center border ${theme.card}`}>
+                    <p className={`text-sm ${theme.muted}`}>
+                        Brak samochodów spełniających kryteria w tym momencie. Skontaktuj się z nami telefonicznie.
+                    </p>
+                </div>
+            )}
+        </section>
+    ) : null;
+
     return (
-        <div className="min-h-screen bg-[#121212] text-white flex flex-col font-sans antialiased pb-20 md:pb-0">
+        <div className={`min-h-screen flex flex-col font-sans antialiased pb-20 md:pb-0 ${theme.page}`}>
             {/* Top Navigation Bar — Zero conversion leak, no main navigation links */}
-            <header className="sticky top-0 z-40 bg-[#1a1a1a]/95 backdrop-blur border-b border-white/10 px-4 py-3">
+            <header className={`sticky top-0 z-40 backdrop-blur border-b px-4 py-3 ${theme.header}`}>
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <a
+                        href={`https://${config.domain}`}
+                        className="flex items-center gap-2"
+                        aria-label={`${config.name} — strona główna`}
+                    >
                         <img
-                            src={settings?.headerLogoUrl || '/motolia-placeholder.webp'}
+                            src={settings?.headerLogoUrl || config.logo?.header || ''}
                             alt={config.name || 'Motolia'}
-                            className="h-8 md:h-9 object-contain"
+                            className="h-8 md:h-9 w-auto object-contain"
                             onError={(e) => {
                                 (e.target as HTMLElement).style.display = 'none';
                             }}
                         />
-                        <span className="font-heading text-lg md:text-xl font-bold tracking-tight text-white">
-                            {config.name || 'Motolia'}
-                        </span>
-                    </div>
+                    </a>
 
                     <a
                         href={`tel:${formatPhoneForTelLink(contactPhone)}`}
@@ -144,132 +285,41 @@ export default function CampaignLandingPage() {
             )}
 
             <main className="flex-1">
-                {/* Hero & Callback Section */}
-                <section className="bg-gradient-to-b from-[#1a1a1a] to-[#121212] pt-8 pb-12 px-4 border-b border-white/5">
-                    <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                        {/* Hero Left Content */}
-                        <div className="lg:col-span-7 space-y-4 text-left">
-                            {lp.heroBadge && (
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5C518]/15 border border-[#F5C518]/30 text-[#F5C518] text-xs font-semibold uppercase tracking-wider">
-                                    <ShieldCheck className="w-3.5 h-3.5" />
-                                    <span>{lp.heroBadge}</span>
-                                </div>
-                            )}
-
-                            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight">
-                                {lp.heroTitle}
-                            </h1>
-
-                            {lp.heroSubtitle && (
-                                <p className="text-gray-300 text-base md:text-lg leading-relaxed max-w-2xl">
-                                    {lp.heroSubtitle}
-                                </p>
-                            )}
-
-                            {lp.heroImageUrl && (
-                                <div className="pt-2 overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
-                                    <img
-                                        src={lp.heroImageUrl}
-                                        alt={lp.heroTitle}
-                                        fetchPriority="high"
-                                        className="w-full h-auto max-h-[320px] object-cover"
-                                    />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Callback Form (Right / Above the fold) */}
-                        {showCallback && (
-                            <div id="lp-callback" className="lg:col-span-5 scroll-mt-20">
-                                <div className="bg-[#222222] border-2 border-[#F5C518]/40 p-6 rounded-2xl shadow-2xl space-y-4">
-                                    <div className="text-left space-y-1">
-                                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#F5C518]/20 text-[#F5C518] shrink-0">
-                                                <Phone className="w-4 h-4" />
-                                            </span>
-                                            <span>{sections.callback?.title || lp.ctaLabel || 'Oddzwońcie do mnie'}</span>
-                                        </h2>
-                                        {sections.callback?.description && (
-                                            <p className="text-xs text-gray-400 leading-normal">
-                                                {sections.callback.description}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <CallbackForm
-                                        compact
-                                        title=""
-                                        description={sections.callback?.description || 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczeóły oferty.'}
-                                        landingPageSlug={lp.slug}
-                                        src={src}
-                                        formId={`lp_${lp.slug}`}
-                                        className="bg-transparent border-0 p-0 shadow-none"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </section>
+                {heroFirst ? heroSection : listingsSection}
 
                 {/* Optional Trust Bar */}
                 {showTrustBar && (
-                    <section className="bg-[#181818] border-b border-white/5 py-6 px-4">
+                    <section className={`border-b py-6 px-4 ${theme.band}`}>
                         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                             {sections.trustBar?.items?.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-center gap-2 bg-[#222] p-3 rounded-xl border border-white/5">
+                                <div key={idx} className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${theme.card}`}>
                                     <CheckCircle2 className="w-4 h-4 text-[#F5C518] shrink-0" />
-                                    <span className="text-xs md:text-sm font-medium text-gray-200">{item}</span>
+                                    <span className={`text-xs md:text-sm font-medium ${theme.body}`}>{item}</span>
                                 </div>
                             ))}
                         </div>
                     </section>
                 )}
 
-                {/* Listings Section */}
-                {showListings && (
-                    <section className="py-12 px-4 max-w-6xl mx-auto">
-                        <div className="mb-8 text-center md:text-left">
-                            <h2 className="text-2xl md:text-3xl font-extrabold text-white">
-                                {sections.listings?.title || 'Dostępne samochody w ofercie'}
-                            </h2>
-                            <p className="text-sm text-gray-400 mt-1">
-                                Sprawdź wybrane pojazdy z naszej aktualnej floty i poproś o ratę dopasowaną do Ciebie.
-                            </p>
-                        </div>
-
-                        {lp.listings && lp.listings.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {lp.listings.map((listing) => (
-                                    <ListingCard key={listing.listing_id} listing={listing} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="bg-[#222] p-8 rounded-2xl text-center border border-white/5">
-                                <p className="text-gray-400 text-sm">
-                                    Brak samochodów spełniających kryteria w tym momencie. Skontaktuj się z nami telefonicznie.
-                                </p>
-                            </div>
-                        )}
-                    </section>
-                )}
+                {heroFirst ? listingsSection : heroSection}
 
                 {/* Optional How It Works */}
                 {showHowItWorks && (
-                    <section className="bg-[#181818] py-12 px-4 border-t border-b border-white/5">
+                    <section className={`py-12 px-4 border-t border-b ${theme.band}`}>
                         <div className="max-w-4xl mx-auto space-y-8">
                             <div className="text-center">
-                                <h2 className="text-2xl md:text-3xl font-bold text-white">Jak to działa?</h2>
-                                <p className="text-sm text-gray-400 mt-1">Prosty proces odbioru nowego auta w 3 krokach</p>
+                                <h2 className={`text-2xl md:text-3xl font-bold ${theme.heading}`}>Jak to działa?</h2>
+                                <p className={`text-sm mt-1 ${theme.muted}`}>Prosty proces odbioru nowego auta w 3 krokach</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {sections.howItWorks?.steps?.map((step, idx) => (
-                                    <div key={idx} className="bg-[#222] p-6 rounded-2xl border border-white/5 space-y-3 text-left relative">
+                                    <div key={idx} className={`p-6 rounded-2xl border space-y-3 text-left relative ${theme.card}`}>
                                         <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm">
                                             {idx + 1}
                                         </div>
-                                        <h3 className="font-bold text-white text-base">{step.title}</h3>
-                                        <p className="text-xs text-gray-400 leading-relaxed">{step.text}</p>
+                                        <h3 className={`font-bold text-base ${theme.heading}`}>{step.title}</h3>
+                                        <p className={`text-xs leading-relaxed ${theme.muted}`}>{step.text}</p>
                                     </div>
                                 ))}
                             </div>
@@ -281,7 +331,7 @@ export default function CampaignLandingPage() {
                 {showFaq && (
                     <section className="py-12 px-4 max-w-4xl mx-auto space-y-8">
                         <div className="text-center">
-                            <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center justify-center gap-2">
+                            <h2 className={`text-2xl md:text-3xl font-bold flex items-center justify-center gap-2 ${theme.heading}`}>
                                 <HelpCircle className="w-6 h-6 text-[#F5C518]" />
                                 Najczęściej zadawane pytania
                             </h2>
@@ -289,9 +339,9 @@ export default function CampaignLandingPage() {
 
                         <div className="space-y-4">
                             {sections.faq?.items?.map((item, idx) => (
-                                <div key={idx} className="bg-[#222] p-5 rounded-2xl border border-white/5 space-y-2 text-left">
-                                    <h3 className="font-semibold text-white text-sm md:text-base">{item.q}</h3>
-                                    <p className="text-xs md:text-sm text-gray-400 leading-relaxed">{item.a}</p>
+                                <div key={idx} className={`p-5 rounded-2xl border space-y-2 text-left ${theme.card}`}>
+                                    <h3 className={`font-semibold text-sm md:text-base ${theme.heading}`}>{item.q}</h3>
+                                    <p className={`text-xs md:text-sm leading-relaxed ${theme.muted}`}>{item.a}</p>
                                 </div>
                             ))}
                         </div>
@@ -300,23 +350,23 @@ export default function CampaignLandingPage() {
             </main>
 
             {/* Minimal Footer — No site navigation links */}
-            <footer className="bg-[#0e0e0e] border-t border-white/10 py-8 px-4 text-center text-xs text-gray-500 space-y-3">
+            <footer className={`border-t py-8 px-4 text-center text-xs space-y-3 ${theme.footer}`}>
                 <div className="max-w-4xl mx-auto space-y-2">
-                    <p className="font-semibold text-gray-400">{settings?.legalCompanyName || config.name || 'Motolia'}</p>
+                    <p className="font-semibold">{settings?.legalCompanyName || config.name || 'Motolia'}</p>
                     {settings?.legalAddress && <p>{settings.legalAddress}</p>}
                     <p>NIP: {settings?.legalVatId || '—'} | REGON/KRS: {settings?.legalRegisterNumber || '—'}</p>
-                    <p className="text-[11px] text-gray-600 max-w-2xl mx-auto">
+                    <p className="text-[11px] max-w-2xl mx-auto opacity-80">
                         Wysyłając formularz zgadzasz się na kontakt ze strony doradcy w celu przedstawienia spersonalizowanej oferty. Rezygnacja z kontaktu jest możliwa w każdej chwili.
                     </p>
                 </div>
             </footer>
 
             {/* Mobile Bottom Sticky Bar */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1a1a1a]/95 backdrop-blur border-t border-white/10 p-3 flex md:hidden items-center gap-3">
+            <div className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur border-t p-3 flex md:hidden items-center gap-3 ${theme.stickyBar}`}>
                 <a
                     href={`tel:${formatPhoneForTelLink(contactPhone)}`}
                     onClick={() => handleCallClick('lp_sticky_bar')}
-                    className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#2a2a2a] text-white font-bold text-xs border border-white/10 active:scale-95 transition-transform"
+                    className={`flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-xl font-bold text-xs border active:scale-95 transition-transform ${theme.stickyCall}`}
                 >
                     <Phone className="w-4 h-4 text-[#F5C518]" />
                     <span>Zadzwoń</span>

@@ -919,11 +919,20 @@ model LandingPage {
   heroImageUrl   String?         @map("hero_image_url")
   ctaLabel       String          @default("Oddzwońcie do mnie") @map("cta_label")
 
+  /// Wygląd landingu: 'dark' (domyślny, czarno-żółty) lub 'light'
+  theme          String          @default("dark")
+  /// Czy blok hero z formularzem callback stoi przed listą pojazdów, czy za nią
+  heroPosition   String          @default("before") @map("hero_position")
+  /// Numer telefonu dla tego landingu; pusty = numer z ustawień serwisu
+  contactPhone   String?         @map("contact_phone")
+
   discount       Int?
   initialPayment Int?            @map("initial_payment")
 
   selectionMode  LpSelectionMode @default(FILTERED) @map("selection_mode")
   listingIds     String[]        @map("listing_ids")
+  /// Pojazdy wynajmu długoterminowego wybrane ręcznie (tryb MANUAL)
+  rentalVehicleIds String[]      @map("rental_vehicle_ids")
   filterParams   Json?           @map("filter_params")
   maxListings    Int             @default(12) @map("max_listings")
 

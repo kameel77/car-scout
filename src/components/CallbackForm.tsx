@@ -22,6 +22,8 @@ interface CallbackFormProps {
     model?: string;
     landingPageSlug?: string;
     src?: string;
+    /** Etykieta przycisku wysyłki (wariant compact) */
+    submitLabel?: string;
 }
 
 export function CallbackForm({
@@ -38,6 +40,7 @@ export function CallbackForm({
     model,
     landingPageSlug,
     src,
+    submitLabel = 'Zadzwoń do mnie',
 }: CallbackFormProps) {
     const [phone, setPhone] = useState('');
     const [honeypot, setHoneypot] = useState('');
@@ -101,12 +104,14 @@ export function CallbackForm({
                     </div>
                 ) : (
                     <>
-                        <p className="font-heading font-bold text-base text-foreground mb-1 flex items-center gap-2">
-                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/15 shrink-0">
-                                <Phone className="w-4 h-4 text-accent" />
-                            </span>
-                            <span>{title} <span className="text-accent">{titleHighlight}</span></span>
-                        </p>
+                        {(title || titleHighlight) && (
+                            <p className="font-heading font-bold text-base text-foreground mb-1 flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/15 shrink-0">
+                                    <Phone className="w-4 h-4 text-accent" />
+                                </span>
+                                <span>{title} <span className="text-accent">{titleHighlight}</span></span>
+                            </p>
+                        )}
                         <p className="text-sm text-muted-foreground mb-3">{description}</p>
                         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
                             {honeypotField}
@@ -124,7 +129,7 @@ export function CallbackForm({
                                 disabled={status === 'loading'}
                                 className="h-10 px-4 rounded-lg bg-accent text-accent-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
                             >
-                                {status === 'loading' ? 'Wysyłam...' : 'Zadzwoń do mnie'}
+                                {status === 'loading' ? 'Wysyłam...' : submitLabel}
                             </button>
                         </form>
                         {status === 'error' && (

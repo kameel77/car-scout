@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { authorizeRoles } from '../middleware/authorize.js';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 import { sanitizeListing } from '../constants/dealer.js';
+import { calculateRatesWithInsurance } from './rental-public.js';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 const LANDING_PAGES_DIR = path.join(UPLOADS_DIR, 'landing-pages');
@@ -15,6 +16,25 @@ const RESERVED_SLUGS = new Set([
   'admin', 'api', 'embed', 'login', 'samochody', 'wynajem-dlugoterminowy',
   'leasing', 'kredyt', 'oferta', 'dla-firmy', 'lead', 'negotiate', 'zapytanie', 'nowe', 'uzywane'
 ]);
+
+function normalizeTheme(value: unknown): 'dark' | 'light' {
+  return value === 'light' ? 'light' : 'dark';
+}
+
+function normalizeHeroPosition(value: unknown): 'before' | 'after' {
+  return value === 'after' ? 'after' : 'before';
+}
+
+function normalizePhone(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, 32);
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((i: any) => typeof i === 'string' && i.trim()) : [];
+}
 
 function isValidSlug(slug: unknown): slug is string {
   if (typeof slug !== 'string') return false;
@@ -107,6 +127,64 @@ async function unlinkLandingPageHeroImage(imageUrl: string | null) {
   } catch { /* ignore */ }
 }
 
+/**
+ * Pojazdy wynajmu wybrane ręcznie dla landingu. Kształt odpowiedzi odpowiada
+ * `/api/rental/vehicles`, żeby front mógł użyć istniejącego RentalListingCard.
+ */
+async function resolveRentalVehiclesForLandingPage(fastify: FastifyInstance, rentalVehicleIds: string[]) {
+  if (!rentalVehicleIds || rentalVehicleIds.length === 0) return [];
+
+  const vehicles = await fastify.prisma.rentalVehicle.findMany({
+    where: { id: { in: rentalVehicleIds.slice(0, 50) }, isActive: true, isPublished: true },
+    include: {
+      rentalAssignments: {
+        where: { isActive: true },
+        include: {
+          rentalCompany: {
+            select: { id: true, name: true, slug: true, includedServices: true, insuranceAddMode: true },
+          },
+          matrixEntries: true,
+        },
+      },
+    },
+  });
+
+  const mapped = vehicles.map((v: any) => {
+    const rates = v.rentalAssignments.flatMap((a: any) =>
+      a.matrixEntries.map((e: any) => ({
+        ...calculateRatesWithInsurance(e, a),
+        companyName: a.rentalCompany.name,
+      }))
+    );
+
+    const minRate = rates.length > 0
+      ? rates.reduce((best: any, current: any) =>
+          current.monthlyRateGross < best.monthlyRateGross ? current : best
+        )
+      : null;
+
+    return {
+      ...v,
+      minMonthlyRateGross: minRate ? Math.ceil(minRate.monthlyRateGross) : null,
+      minMonthlyRateNet: minRate ? Math.ceil(minRate.monthlyRateNet) : null,
+      minRateCompany: minRate?.companyName || null,
+      minRateConfig: minRate
+        ? {
+            contractMonths: minRate.contractMonths,
+            annualMileageKm: minRate.annualMileageKm,
+            servicesIncluded: minRate.servicesIncluded,
+          }
+        : null,
+      rentalCompanyCount: v.rentalAssignments.length,
+      rentalAssignments: undefined,
+    };
+  });
+
+  // Kolejność jak w panelu
+  const map = new Map(mapped.map((v: any) => [v.id, v]));
+  return rentalVehicleIds.map(id => map.get(id)).filter(Boolean);
+}
+
 async function resolveCarsForLandingPage(fastify: FastifyInstance, lp: {
   selectionMode: 'MANUAL' | 'FILTERED';
   listingIds: string[];
@@ -189,6 +267,10 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
       maxListings: lp.maxListings,
     });
 
+    const rentalVehicles = lp.selectionMode === 'MANUAL'
+      ? await resolveRentalVehiclesForLandingPage(fastify, lp.rentalVehicleIds)
+      : [];
+
     return {
       landingPage: {
         id: lp.id,
@@ -204,6 +286,9 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
         heroBadge: lp.heroBadge,
         heroImageUrl: lp.heroImageUrl,
         ctaLabel: lp.ctaLabel,
+        theme: lp.theme,
+        heroPosition: lp.heroPosition,
+        contactPhone: lp.contactPhone,
         discount: lp.discount,
         initialPayment: lp.initialPayment,
         selectionMode: lp.selectionMode,
@@ -211,6 +296,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
         metaTitle: lp.metaTitle,
         metaDescription: lp.metaDescription,
         listings,
+        rentalVehicles,
       },
     };
   });
@@ -299,10 +385,14 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
         heroBadge: body.heroBadge ? String(body.heroBadge).trim() : null,
         heroImageUrl: body.heroImageUrl ? String(body.heroImageUrl).trim() : null,
         ctaLabel: body.ctaLabel ? String(body.ctaLabel).trim() : 'Oddzwońcie do mnie',
-        discount: typeof body.discount === 'number' ? Math.max(0, body.discount) : null,
-        initialPayment: typeof body.initialPayment === 'number' ? Math.max(0, body.initialPayment) : null,
+        theme: normalizeTheme(body.theme),
+        heroPosition: normalizeHeroPosition(body.heroPosition),
+        contactPhone: normalizePhone(body.contactPhone),
+        discount: typeof body.discount === 'number' ? Math.max(0, Math.round(body.discount)) : null,
+        initialPayment: typeof body.initialPayment === 'number' ? Math.max(0, Math.round(body.initialPayment)) : null,
         selectionMode,
-        listingIds: Array.isArray(body.listingIds) ? body.listingIds.filter((i: any) => typeof i === 'string') : [],
+        listingIds: stringArray(body.listingIds),
+        rentalVehicleIds: stringArray(body.rentalVehicleIds),
         filterParams: body.filterParams && typeof body.filterParams === 'object' ? body.filterParams : null,
         maxListings: typeof body.maxListings === 'number' ? Math.max(1, Math.min(48, body.maxListings)) : 12,
         sections: sanitizedSections ? (sanitizedSections as any) : undefined,
@@ -352,10 +442,14 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
         ...(body.heroBadge !== undefined ? { heroBadge: body.heroBadge ? String(body.heroBadge).trim() : null } : {}),
         ...(body.heroImageUrl !== undefined ? { heroImageUrl: body.heroImageUrl ? String(body.heroImageUrl).trim() : null } : {}),
         ...(body.ctaLabel !== undefined ? { ctaLabel: body.ctaLabel ? String(body.ctaLabel).trim() : 'Oddzwońcie do mnie' } : {}),
-        ...(body.discount !== undefined ? { discount: typeof body.discount === 'number' ? Math.max(0, body.discount) : null } : {}),
-        ...(body.initialPayment !== undefined ? { initialPayment: typeof body.initialPayment === 'number' ? Math.max(0, body.initialPayment) : null } : {}),
+        ...(body.theme !== undefined ? { theme: normalizeTheme(body.theme) } : {}),
+        ...(body.heroPosition !== undefined ? { heroPosition: normalizeHeroPosition(body.heroPosition) } : {}),
+        ...(body.contactPhone !== undefined ? { contactPhone: normalizePhone(body.contactPhone) } : {}),
+        ...(body.discount !== undefined ? { discount: typeof body.discount === 'number' ? Math.max(0, Math.round(body.discount)) : null } : {}),
+        ...(body.initialPayment !== undefined ? { initialPayment: typeof body.initialPayment === 'number' ? Math.max(0, Math.round(body.initialPayment)) : null } : {}),
         ...(selectionMode ? { selectionMode } : {}),
-        ...(Array.isArray(body.listingIds) ? { listingIds: body.listingIds.filter((i: any) => typeof i === 'string') } : {}),
+        ...(Array.isArray(body.listingIds) ? { listingIds: stringArray(body.listingIds) } : {}),
+        ...(Array.isArray(body.rentalVehicleIds) ? { rentalVehicleIds: stringArray(body.rentalVehicleIds) } : {}),
         ...(body.filterParams !== undefined ? { filterParams: body.filterParams } : {}),
         ...(typeof body.maxListings === 'number' ? { maxListings: Math.max(1, Math.min(48, body.maxListings)) } : {}),
         ...(sanitizedSections !== undefined ? { sections: sanitizedSections as any } : {}),
@@ -428,6 +522,10 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
       maxListings: lp.maxListings,
     });
 
-    return { listings, count: listings.length };
+    const rentalVehicles = lp.selectionMode === 'MANUAL'
+      ? await resolveRentalVehiclesForLandingPage(fastify, lp.rentalVehicleIds)
+      : [];
+
+    return { listings, rentalVehicles, count: listings.length + rentalVehicles.length };
   });
 }
