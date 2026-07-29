@@ -1723,7 +1723,7 @@ export const landingPagesApi = {
     },
 
     list: async () => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch(`${API_BASE_URL}/api/landing-pages`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1732,7 +1732,7 @@ export const landingPagesApi = {
     },
 
     getById: async (id: string) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1741,7 +1741,7 @@ export const landingPagesApi = {
     },
 
     create: async (data: any) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch(`${API_BASE_URL}/api/landing-pages`, {
             method: 'POST',
             headers: {
@@ -1758,7 +1758,7 @@ export const landingPagesApi = {
     },
 
     update: async (id: string, data: any) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}`, {
             method: 'PUT',
             headers: {
@@ -1775,7 +1775,7 @@ export const landingPagesApi = {
     },
 
     delete: async (id: string) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
@@ -1785,7 +1785,7 @@ export const landingPagesApi = {
     },
 
     uploadHeroImage: async (id: string, file: File) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const formData = new FormData();
         formData.append('file', file);
         const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/hero-image`, {
@@ -1801,7 +1801,7 @@ export const landingPagesApi = {
     },
 
     getPreviewListings: async (id: string) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/preview-listings`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
