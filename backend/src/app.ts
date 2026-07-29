@@ -48,6 +48,7 @@ import { onepagerRoutes } from './routes/onepager.js';
 import { businessRoutes } from './routes/business.js';
 import { featureTileRoutes } from './routes/feature-tiles.js';
 import { heroBannerRoutes } from './routes/hero-banners.js';
+import { landingPageRoutes } from './routes/landing-pages.js';
 import { consentRoutes } from './routes/consent.js';
 import { externalListingsRoutes } from './routes/external/listings.js';
 import { marketingFeedsRoutes } from './routes/external/feeds.js';
@@ -402,6 +403,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(businessRoutes);
     await fastify.register(featureTileRoutes);
     await fastify.register(heroBannerRoutes);
+    await fastify.register(landingPageRoutes);
     await fastify.register(consentRoutes);
     await fastify.register(externalListingsRoutes);
     await fastify.register(marketingFeedsRoutes);

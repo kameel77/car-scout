@@ -35,3 +35,6 @@ security/
 
 # Local git worktrees (isolated workspaces for parallel work)
 .worktrees/
+
+*.tsbuildinfo
+graphify-out/

@@ -29,6 +29,7 @@ import {
     LayoutGrid,
     Images,
     FileEdit,
+    Target,
 } from 'lucide-react';
 import { useAuth, MemberRole, ROLE_LABELS } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -95,6 +96,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/admin/widgets', label: 'Widgety', icon: Blocks, visibleTo: PLATFORM_ONLY },
     { href: '/admin/feature-tiles', label: 'Kafle home', icon: LayoutGrid, visibleTo: PLATFORM_ONLY },
     { href: '/admin/hero-banners', label: 'Banery hero', icon: Images, visibleTo: PLATFORM_ONLY },
+    { href: '/admin/landing-pages', label: 'Landing Pages', icon: Target, visibleTo: PLATFORM_ONLY },
 ];
 
 export function AdminSidebar() {

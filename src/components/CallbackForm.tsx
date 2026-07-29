@@ -20,6 +20,8 @@ interface CallbackFormProps {
     financingType?: string;
     brand?: string;
     model?: string;
+    landingPageSlug?: string;
+    src?: string;
 }
 
 export function CallbackForm({
@@ -34,6 +36,8 @@ export function CallbackForm({
     financingType,
     brand,
     model,
+    landingPageSlug,
+    src,
 }: CallbackFormProps) {
     const [phone, setPhone] = useState('');
     const [honeypot, setHoneypot] = useState('');
@@ -50,6 +54,8 @@ export function CallbackForm({
                 listingId,
                 message,
                 company: honeypot,
+                landingPageSlug,
+                src,
             });
 
             // Push event to Google Tag Manager dataLayer
@@ -61,7 +67,9 @@ export function CallbackForm({
                 listingId,
                 financingType: financingType || 'general',
                 phone: phone.trim(),
-            });
+                landing_page_slug: landingPageSlug,
+                traffic_source: src,
+            } as any);
 
             setStatus('success');
             setPhone('');
