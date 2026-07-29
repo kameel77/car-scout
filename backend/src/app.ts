@@ -507,6 +507,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         'feature-tiles',
         'hero-banners',
         'migrated-images',
+        'landing-pages',
     ]);
     fastify.get('/uploads/:slug/:file', async (request, reply) => {
         const { slug, file } = request.params as { slug: string; file: string };
