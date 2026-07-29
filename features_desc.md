@@ -428,4 +428,16 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Cel**: Wyświetlanie informacji o rodzaju napędu (np. FWD, RWD, 4x4, AWD) na liście pojazdów w panelu administratora.
 - **Zachowanie**: W widoku listy pojazdów (`/admin/listings`) zaktualizowano zbiór kolumn specyfikacji (`AdminListingItem`), dodając 6. kolumnę "Napęd". Wyświetla ona wartość z pola `listing.drive` (np. FWD, RWD, 4x4) lub `-` w przypadku braku danych.
 
+## 38. Dedykowany system landing page'y dla kampanii płatnych i QR (/promo/:slug)
+- **Cel**: Zarządzanie dedykowanymi stronami docelowymi dla kampanii reklamowych (Meta/Google Ads, mailingi, kody QR z mediów offline/TV). System umożliwia stworzenie jednej strony docelowej na dany segment odbiorców, z obsługą wielu kampanii i kanałów poprzez parametry URL (`?src=` oraz parametry UTM).
+- **Zachowanie**:
+  - **Dedykowany URL**: Strony dostępne są pod adresem `/promo/:slug`.
+  - **Strict zero conversion leak**: Minimalistyczny nagłówek (logo marki + klikalny telefon) bez głównego menu nawigacyjnego i bez odnośników wyprowadzających użytkownika poza lejek konwersji.
+  - **Formularz kontaktowy above the fold**: Skierowany na szybki kontakt telefoniczny z doradcą (jedne pole na numer telefonu).
+  - **Przeznaczenie aut**: Strona obsługuje dwa tryby doboru aut: `MANUAL` (lista wyselekcjonowanych aut po ID) oraz `FILTERED` (automatyczne dopasowanie filtrami po marce, cenie, roczniku itp.).
+  - **Sloty treści**: Elastyczna konfigurowalna struktura ze stałą kolejnością slotów (Pilność/Urgency, Pasek zaufania/TrustBar, Jak to działa/HowItWorks, FAQ).
+  - **Indeksowanie i SEO**: Domyślnie strony posiadają nagłówek `noindex`. Flaga `isIndexable` zezwala na indeksowanie wyłącznie dla evergreenowych stron bez daty zakończenia. Strony wygasłe (`validTo < now()`) zwracają status HTTP 410 i automatycznie przekierowują użytkownika na `/samochody`.
+  - **Panel administracyjny**: Zarządzanie stronami w zakładce `/admin/landing-pages` pozwala na tworzenie, edycję, duplikowanie oraz generowanie gotowych kodów QR PNG w rozdzielczości 1024px z przypisanym źródłem ruchu `?src=qr`.
+  - **Analityka**: Zdarzenia `lp_view`, `phone_click` oraz `generate_lead` przesyłają ścieżkę konwersji oraz źródło ruchu (`landing_page_slug`, `traffic_source`) do dataLayer.
+
 

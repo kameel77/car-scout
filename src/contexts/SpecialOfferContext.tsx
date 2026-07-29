@@ -11,6 +11,7 @@ interface SpecialOfferContextType {
     discount: number;
     initialPayment: number | null;
     hasSpecialOffer: boolean;
+    setProgrammaticOffer: (offer: { discount: number; initialPayment?: number | null } | null) => void;
 }
 
 const SpecialOfferContext = createContext<SpecialOfferContextType | undefined>(undefined);
@@ -19,8 +20,10 @@ export function SpecialOfferProvider({ children }: { children: React.ReactNode }
     const location = useLocation();
     const [discount, setDiscount] = useState<number>(() => readSpecialOfferDiscount() ?? 0);
     const [initialPayment, setInitialPayment] = useState<number | null>(null);
+    const [programmaticOffer, setProgrammaticOffer] = useState<{ discount: number; initialPayment?: number | null } | null>(null);
 
     useEffect(() => {
+        if (programmaticOffer !== null) return;
         const params = new URLSearchParams(location.search);
         const paramValue = params.get(OFFER_PARAM);
         const parsed = parseDiscountFromOfferParam(paramValue);
@@ -38,13 +41,17 @@ export function SpecialOfferProvider({ children }: { children: React.ReactNode }
         if (cookieValue !== null && cookieValue !== discount) {
             setDiscount(cookieValue);
         }
-    }, [location.search, discount]);
+    }, [location.search, discount, programmaticOffer]);
+
+    const activeDiscount = programmaticOffer !== null ? programmaticOffer.discount : discount;
+    const activeInitialPayment = programmaticOffer !== null ? (programmaticOffer.initialPayment ?? null) : initialPayment;
 
     const value = useMemo(() => ({
-        discount,
-        initialPayment,
-        hasSpecialOffer: discount > 0,
-    }), [discount, initialPayment]);
+        discount: activeDiscount,
+        initialPayment: activeInitialPayment,
+        hasSpecialOffer: activeDiscount > 0,
+        setProgrammaticOffer,
+    }), [activeDiscount, activeInitialPayment]);
 
     return (
         <SpecialOfferContext.Provider value={value}>

@@ -262,6 +262,7 @@ async function getTemplate(): Promise<string | null> {
 
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
+const PROMO_RE = /^\/promo\/([^/]+)$/;
 const NOINDEX_RE = /^\/(admin|login|embed|listing|dla-firmy)(\/|$)|\/(lead|negotiate|zapytanie)$/;
 const BRAND_RE = /^\/samochody\/([^/]+)$/;
 const BRAND_MODEL_RE = /^\/samochody\/([^/]+)\/([^/]+)$/;
@@ -273,6 +274,7 @@ const BRAND_MODEL_RE = /^\/samochody\/([^/]+)\/([^/]+)$/;
 const ROUTE_MODULES: Array<{ match: (p: string) => boolean; module: string }> = [
     { match: p => LISTING_RE.test(p), module: 'src/pages/ListingDetailPage.tsx' },
     { match: p => RENTAL_RE.test(p), module: 'src/pages/RentalDetailPage.tsx' },
+    { match: p => PROMO_RE.test(p), module: 'src/pages/CampaignLandingPage.tsx' },
     { match: p => p === '/nowe' || p === '/uzywane', module: 'src/pages/ConditionPage.tsx' },
     {
         match: p =>
@@ -346,6 +348,39 @@ async function resolveMeta(
 ): Promise<PageMeta> {
     if (NOINDEX_RE.test(path)) {
         return defaultMeta(ctx, { noindex: true, status: 200 });
+    }
+
+    const pm = path.match(PROMO_RE);
+    if (pm) {
+        const slug = pm[1];
+        const lp = await fastify.prisma.landingPage.findUnique({
+            where: { slug },
+            select: {
+                name: true,
+                heroTitle: true,
+                heroSubtitle: true,
+                metaTitle: true,
+                metaDescription: true,
+                isIndexable: true,
+                isActive: true,
+                validTo: true,
+            },
+        });
+        if (!lp || !lp.isActive) {
+            return defaultMeta(ctx, { noindex: true, status: 404 });
+        }
+        if (lp.validTo && lp.validTo < new Date()) {
+            return defaultMeta(ctx, { noindex: true, status: 410 });
+        }
+        const title = lp.metaTitle || lp.heroTitle || lp.name;
+        const description = lp.metaDescription || lp.heroSubtitle || `${title} - oferta specjalna na ${ctx.brandName}`;
+        return {
+            title,
+            description,
+            canonical: `${ctx.baseUrl}${path}`,
+            noindex: !lp.isIndexable,
+            status: 200,
+        };
     }
 
     const lm = path.match(LISTING_RE);

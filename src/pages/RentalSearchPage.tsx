@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -273,39 +273,45 @@ export default function RentalSearchPage() {
   const [initSortBy, initSortOrder] = defaultSortRental.split('_');
 
   // Entry filters from the URL (hero search on the homepage links here).
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initParam = (key: string) => searchParams.get(key) || '';
   const initArray = (key: string) => {
     const v = searchParams.get(key);
-    return v ? v.split(',') : [];
+    return v ? v.split(',').filter(Boolean) : [];
   };
 
   // ── Filter state ──
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => initParam('q') || initParam('SearchText'));
   const [makes, setMakes] = useState<string[]>(() => initArray('make'));
-  const [models, setModels] = useState<string[]>([]);
-  const [fuelTypes, setFuelTypes] = useState<string[]>([]);
+  const [models, setModels] = useState<string[]>(() => initArray('model'));
+  const [fuelTypes, setFuelTypes] = useState<string[]>(() => initArray('fuelType'));
   const [bodyTypes, setBodyTypes] = useState<string[]>(() => initArray('bodyType'));
-  const [transmissions, setTransmissions] = useState<string[]>([]);
-  const [drives, setDrives] = useState<string[]>([]);
-  const [yearFrom, setYearFrom] = useState('');
-  const [yearTo, setYearTo] = useState('');
-  const [priceFrom, setPriceFrom] = useState(() => initParam('priceMin'));
-  const [priceTo, setPriceTo] = useState(() => initParam('priceMax'));
-  const [mileageFrom, setMileageFrom] = useState('');
-  const [mileageTo, setMileageTo] = useState('');
-  const [powerFrom, setPowerFrom] = useState('');
-  const [powerTo, setPowerTo] = useState('');
-  const [capacityFrom, setCapacityFrom] = useState('');
-  const [capacityTo, setCapacityTo] = useState('');
-  const [condition, setCondition] = useState<string[]>([]); // [] = all, ['NEW'], ['USED']
-  const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState(initSortBy || 'minMonthlyRateNet');
-  const [sortOrder, setSortOrder] = useState(initSortOrder || 'asc');
+  const [transmissions, setTransmissions] = useState<string[]>(() => initArray('transmission'));
+  const [drives, setDrives] = useState<string[]>(() => initArray('drive'));
+  const [yearFrom, setYearFrom] = useState(() => initParam('yearMin') || initParam('yearFrom'));
+  const [yearTo, setYearTo] = useState(() => initParam('yearMax') || initParam('yearTo'));
+  const [priceFrom, setPriceFrom] = useState(() => initParam('priceMin') || initParam('priceFrom') || initParam('rateMin'));
+  const [priceTo, setPriceTo] = useState(() => initParam('priceMax') || initParam('priceTo') || initParam('rateMax'));
+  const [mileageFrom, setMileageFrom] = useState(() => initParam('mileageMin') || initParam('mileageFrom'));
+  const [mileageTo, setMileageTo] = useState(() => initParam('mileageMax') || initParam('mileageTo'));
+  const [powerFrom, setPowerFrom] = useState(() => initParam('powerMin') || initParam('powerFrom'));
+  const [powerTo, setPowerTo] = useState(() => initParam('powerMax') || initParam('powerTo'));
+  const [capacityFrom, setCapacityFrom] = useState(() => initParam('capacityMin') || initParam('capacityFrom'));
+  const [capacityTo, setCapacityTo] = useState(() => initParam('capacityMax') || initParam('capacityTo'));
+  const [condition, setCondition] = useState<string[]>(() => {
+    const arr = initArray('status');
+    return arr.length ? arr : initArray('condition');
+  }); // [] = all, ['NEW'], ['USED']
+  const [page, setPage] = useState(() => {
+    const p = searchParams.get('page');
+    return p ? parseInt(p, 10) || 1 : 1;
+  });
+  const [sortBy, setSortBy] = useState(() => searchParams.get('sortBy') || initSortBy || 'minMonthlyRateNet');
+  const [sortOrder, setSortOrder] = useState(() => searchParams.get('sortOrder') || initSortOrder || 'asc');
   const [clientType, setClientType] = useState<ClientType>(() => {
-    const ot = searchParams.get('offerType');
-    if (ot === 'b2c') return 'consumer';
-    if (ot === 'b2b') return 'business';
+    const ot = searchParams.get('offerType') || searchParams.get('clientType');
+    if (ot === 'b2c' || ot === 'consumer' || ot === 'private') return 'consumer';
+    if (ot === 'b2b' || ot === 'business') return 'business';
     return getStoredClientType();
   });
   const [allFiltersOpen, setAllFiltersOpen] = useState(false);
@@ -313,11 +319,58 @@ export default function RentalSearchPage() {
   useEffect(() => {
     if (settings?.defaultSortRental) {
       const [dsb, dso] = settings.defaultSortRental.split('_');
-      if (dsb && dso && sortBy === 'minMonthlyRateNet' && sortOrder === 'asc') {
+      if (dsb && dso && sortBy === 'minMonthlyRateNet' && sortOrder === 'asc' && !searchParams.get('sortBy')) {
         setSortBy(dsb); setSortOrder(dso);
       }
     }
   }, [settings?.defaultSortRental]);
+
+  // Sync URL params when filters change
+  const urlSyncTimeoutRef = useRef<NodeJS.Timeout>();
+  useEffect(() => {
+    if (urlSyncTimeoutRef.current) clearTimeout(urlSyncTimeoutRef.current);
+    urlSyncTimeoutRef.current = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (makes.length) params.set('make', makes.join(','));
+      if (models.length) params.set('model', models.join(','));
+      if (fuelTypes.length) params.set('fuelType', fuelTypes.join(','));
+      if (transmissions.length) params.set('transmission', transmissions.join(','));
+      if (bodyTypes.length) params.set('bodyType', bodyTypes.join(','));
+      if (drives.length) params.set('drive', drives.join(','));
+      if (yearFrom) params.set('yearMin', yearFrom);
+      if (yearTo) params.set('yearMax', yearTo);
+      if (mileageFrom) params.set('mileageMin', mileageFrom);
+      if (mileageTo) params.set('mileageMax', mileageTo);
+      if (priceFrom) params.set('priceMin', priceFrom);
+      if (priceTo) params.set('priceMax', priceTo);
+      if (powerFrom) params.set('powerMin', powerFrom);
+      if (powerTo) params.set('powerMax', powerTo);
+      if (capacityFrom) params.set('capacityMin', capacityFrom);
+      if (capacityTo) params.set('capacityMax', capacityTo);
+      if (condition.length) params.set('status', condition.join(','));
+      if (search) params.set('q', search);
+      if (clientType === 'consumer') params.set('offerType', 'b2c');
+      else if (clientType === 'business') params.set('offerType', 'b2b');
+      if (sortBy !== initSortBy || sortOrder !== initSortOrder) {
+        params.set('sortBy', sortBy);
+        params.set('sortOrder', sortOrder);
+      }
+      if (page > 1) params.set('page', page.toString());
+
+      if (params.toString() !== searchParams.toString()) {
+        setSearchParams(params, { replace: true });
+      }
+    }, 100);
+    return () => {
+      if (urlSyncTimeoutRef.current) clearTimeout(urlSyncTimeoutRef.current);
+    };
+  }, [
+    makes, models, fuelTypes, transmissions, bodyTypes, drives,
+    yearFrom, yearTo, mileageFrom, mileageTo, priceFrom, priceTo,
+    powerFrom, powerTo, capacityFrom, capacityTo, condition,
+    search, clientType, sortBy, sortOrder, page, setSearchParams,
+    initSortBy, initSortOrder, searchParams
+  ]);
 
   const handleClientTypeChange = (type: ClientType) => {
     setClientType(type);

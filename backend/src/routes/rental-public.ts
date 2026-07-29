@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { sanitizeListing, sanitizeDealer, tryAuthenticate } from '../constants/dealer.js';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
 
-const calculateRatesWithInsurance = (entry: any, assignment: any) => {
+export const calculateRatesWithInsurance = (entry: any, assignment: any) => {
     const insuranceAddMode = assignment.insuranceAddModeOverride || assignment.rentalCompany?.insuranceAddMode || 'INSURANCE_23';
     const servicesIncluded = (assignment.includedServicesOverride && assignment.includedServicesOverride.length > 0)
         ? assignment.includedServicesOverride

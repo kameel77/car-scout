@@ -32,12 +32,25 @@ const getWindowDataLayer = (): any[] | null => {
   return null;
 };
 
-export const trackPhoneClick = (clickLocation: string) => {
+export const trackPhoneClick = (clickLocation: string, landingPageSlug?: string, trafficSource?: string) => {
   const dl = getWindowDataLayer();
   if (dl) {
     dl.push({
       event: 'phone_click',
       click_location: clickLocation,
+      landing_page_slug: landingPageSlug || '',
+      traffic_source: trafficSource || '',
+    });
+  }
+};
+
+export const trackLpView = (landingPageSlug: string, trafficSource?: string) => {
+  const dl = getWindowDataLayer();
+  if (dl) {
+    dl.push({
+      event: 'lp_view',
+      landing_page_slug: landingPageSlug,
+      traffic_source: trafficSource || '',
     });
   }
 };
