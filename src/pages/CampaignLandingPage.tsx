@@ -171,8 +171,7 @@ export default function CampaignLandingPage() {
                                     <img
                                         src={lp.heroImageUrl}
                                         alt={lp.heroTitle}
-                                        // @ts-ignore fetchpriority HTML attribute
-                                        fetchpriority="high"
+                                        fetchPriority="high"
                                         className="w-full h-auto max-h-[320px] object-cover"
                                     />
                                 </div>
