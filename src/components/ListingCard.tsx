@@ -15,7 +15,8 @@ import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { ImageSwiper } from '@/components/ImageSwiper';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
-import { getDisplayPrice } from '@/utils/listingPrice';
+import { getDisplayPrice, getFinancingBasePrice } from '@/utils/listingPrice';
+import { trackSelectItem } from '@/lib/analytics';
 import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
 import { useBrand } from '@/contexts/BrandContext';
@@ -199,6 +200,16 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     if (currentSearchParams.toString()) {
       sessionStorage.setItem('searchParams', currentSearchParams.toString());
     }
+
+    trackSelectItem({
+      id: String(listing.listing_id),
+      name: `${listing.make} ${listing.model} ${listing.version || ''}`.trim(),
+      make: listing.make,
+      model: listing.model,
+      price: listing.price_pln,
+      monthlyRate: getFinancingBasePrice(listing, effectiveFinancingType),
+      financingType: effectiveFinancingType || 'leasing',
+    });
   };
 
   const offerPath = getListingUrlPath({

@@ -148,7 +148,10 @@ export default function RentalLeadFormPage() {
                     event: 'generate_lead',
                     lead_type: 'rental_inquiry',
                     form_id: 'rental_inquiry_form',
-                    brand: config.id,
+                    brand: vehicle.make || config.id,
+                    model: vehicle.model || '',
+                    listing_id: vehicle.id || '',
+                    financing_type: 'wynajem',
                     lead_details: {
                         name: formData.name,
                         email: formData.email,

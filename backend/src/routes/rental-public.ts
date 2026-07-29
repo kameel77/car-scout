@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { sanitizeListing, sanitizeDealer, tryAuthenticate } from '../constants/dealer.js';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
 
 const calculateRatesWithInsurance = (entry: any, assignment: any) => {
@@ -438,8 +439,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             filterOptions.byCondition = byConditionOverride;
         }
 
+        const isAuthenticated = await tryAuthenticate(fastify, request);
+        const sanitizedVehicles = vehiclesWithRates.map((v: any) => sanitizeListing(v, isAuthenticated));
+
         return {
-            vehicles: vehiclesWithRates,
+            vehicles: sanitizedVehicles,
             pagination: {
                 page: pageNum,
                 limit: limitNum,
@@ -504,7 +508,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             offerTypeOptions: [...new Set(assignmentOptions.map(e => e.offerType))].sort()
         };
 
-        return { vehicle, options };
+        const isAuthenticated = await tryAuthenticate(fastify, request);
+        return { vehicle: sanitizeListing(vehicle, isAuthenticated), options };
     });
 
     // Public: Calculate rate lookup

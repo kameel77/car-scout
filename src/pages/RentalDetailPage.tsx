@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { faqApi } from '@/services/api';
@@ -30,7 +30,7 @@ import { translateTechnicalValue } from '@/utils/i18n-utils';
 import { useBrand } from '@/contexts/BrandContext';
 import { normalizeRentalImageUrl } from '@/lib/utils';
 import { formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
-import { trackPhoneClick } from '@/lib/analytics';
+import { trackPhoneClick, trackViewItem } from '@/lib/analytics';
 import { RentalFinancingContent } from '@/components/RentalFinancingContent';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { MetaHead } from '@/components/seo/MetaHead';
@@ -59,6 +59,22 @@ export default function RentalDetailPage() {
         enabled: !!slug
     });
 
+    const vehicle = data?.vehicle;
+
+    useEffect(() => {
+        if (vehicle) {
+            trackViewItem({
+                id: String(vehicle.id),
+                name: `${vehicle.make} ${vehicle.model} ${vehicle.version || ''}`.trim(),
+                make: vehicle.make,
+                model: vehicle.model,
+                monthlyRate: vehicle.min_rate_netto || vehicle.rate_netto,
+                financingType: 'wynajem',
+                category: 'wynajem',
+            });
+        }
+    }, [vehicle]);
+
     // FAQ for rental pages
     const { data: faqData } = useQuery({
         queryKey: ['faq', 'rental'],
@@ -70,8 +86,6 @@ export default function RentalDetailPage() {
     // Below-equipment ads
     const { data: belowEquipmentAdsData } = usePartnerAds('DETAIL_BELOW_EQUIPMENT', 'rental');
     const belowEquipmentAds = belowEquipmentAdsData?.ads || [];
-
-    const vehicle = data?.vehicle;
     const options = data?.options;
 
     // Calculator state — init with first available option

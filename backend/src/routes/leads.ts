@@ -178,7 +178,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
             fastify.log.error(err, 'Error sending lead notification email');
         });
 
-        return { lead };
+        return { lead: { id: lead.id, referenceNumber: lead.referenceNumber, status: lead.status } };
     });
 
     // Create new negotiation lead from listing page
@@ -267,13 +267,8 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 : 'too_low';
 
         return {
-            lead,
+            lead: { id: lead.id, referenceNumber: lead.referenceNumber, status: lead.status },
             negotiation: {
-                listedPrice,
-                partnerGrossPrice,
-                proposedPrice,
-                minSuggestedPrice,
-                stretchPrice,
                 autoReply
             }
         };
@@ -337,7 +332,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
             fastify.log.error(err, 'Error sending rental lead notification email');
         });
 
-        return { lead };
+        return { lead: { id: lead.id, referenceNumber: lead.referenceNumber, status: lead.status } };
     });
 
     // Create new waitlist lead — strony marki/modelu bez aktywnych ofert (F3, spec §1).
@@ -378,7 +373,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
             fastify.log.error(err, 'Error sending waitlist lead notification email');
         });
 
-        return { lead };
+        return { lead: { id: lead.id, referenceNumber: lead.referenceNumber, status: lead.status } };
     });
 
     // Create new quick contact lead from CTA
@@ -453,7 +448,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
             fastify.log.error(err, 'Error sending quick lead notification email');
         });
 
-        return { success: true, lead };
+        return { success: true, lead: { id: lead.id, referenceNumber: lead.referenceNumber, status: lead.status } };
     });
 
     // Get leads for backoffice (requires auth, scope-aware)

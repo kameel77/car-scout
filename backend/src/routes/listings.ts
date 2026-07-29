@@ -10,31 +10,9 @@ import {
 } from '../services/listing-mapper.js';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
 import { computeReferenceInstallments } from '../services/financing-calc.service.js';
+import { sanitizeListing, tryAuthenticate } from '../constants/dealer.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
-    // Sanitization helper for dealer data
-    const sanitizeListing = (listing: any, isAuthenticated: boolean) => {
-        if (isAuthenticated) return listing;
-        if (!listing.dealer) return listing;
-
-        // Strip sensitive info for unauthenticated users
-        const {
-            addressLine1,
-            addressLine2,
-            addressLine3,
-            postalCode,
-            contactPhone,
-            contactEmail,
-            nip,
-            settings,
-            ...safeDealer
-        } = listing.dealer;
-
-        return {
-            ...listing,
-            dealer: safeDealer
-        };
-    };
 
     // Get filter options (makes and models) - only active listings
     fastify.get('/api/listings/options', async (request, reply) => {
@@ -255,16 +233,13 @@ export async function listingRoutes(fastify: FastifyInstance) {
     fastify.get('/api/listings', async (request, reply) => {
         // Optionally resolve scope if user is authenticated
         let scopeDealerFilter: Record<string, any> = {};
-        const authHeader = request.headers.authorization;
-        let isAuthenticated = false;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
+        const isAuthenticated = await tryAuthenticate(fastify, request);
+        if (isAuthenticated) {
             try {
-                await request.jwtVerify();
                 const scope = await resolveScope(fastify, request);
                 scopeDealerFilter = scope.dealerFilter;
-                isAuthenticated = true;
             } catch {
-                // Not authenticated or invalid token — ignore, serve public
+                // Not authenticated or invalid scope — ignore, serve public
             }
         }
 
@@ -673,16 +648,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 specification: true
             }
         });
-        let isAuthenticated = false;
-        try {
-            if (request.headers.authorization) {
-                await request.jwtVerify();
-                isAuthenticated = true;
-            }
-        } catch (e) {
-            // Ignore token errors for public view
-        }
-
+        const isAuthenticated = await tryAuthenticate(fastify, request);
         return { listings: listings.map(l => sanitizeListing(l, isAuthenticated)) };
     });
 
@@ -1200,15 +1166,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
     fastify.post('/api/listings/:id/refresh-images', async (request, reply) => {
         const { id } = request.params as { id: string };
 
-        // Check if user is authenticated (for manual refresh)
-        let isAuthenticated = false;
-        const authHeader = request.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            try {
-                await request.jwtVerify();
-                isAuthenticated = true;
-            } catch { /* invalid token */ }
-        }
+        const isAuthenticated = await tryAuthenticate(fastify, request);
 
         if (!isAuthenticated) {
             // For auto-refresh, check if autoRefreshImages setting is enabled
