@@ -5,6 +5,7 @@ import { useLandingPage } from '@/hooks/useLandingPage';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
+import { writeSpecialOfferDiscount } from '@/utils/specialOffer';
 import { CallbackForm } from '@/components/CallbackForm';
 import { ListingCard } from '@/components/ListingCard';
 import { RentalListingCard } from '@/components/RentalListingCard';
@@ -73,9 +74,12 @@ export default function CampaignLandingPage() {
             || '+48 22 112 09 50';
     }, [lp?.contactPhone, settings, config]);
 
-    // Programmatic discount injection in SpecialOfferContext
+    // Programmatic discount injection in SpecialOfferContext + persist to cookie
     useEffect(() => {
         if (lpSlug) {
+            if (lpDiscount && lpDiscount > 0) {
+                writeSpecialOfferDiscount(lpDiscount);
+            }
             setProgrammaticOffer({
                 discount: lpDiscount || 0,
                 initialPayment: lpInitialPayment || null,
