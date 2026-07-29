@@ -27,6 +27,9 @@ import { PartnerAdCard } from '@/components/ads/PartnerAdCard';
 import { usePartnerAds } from '@/hooks/usePartnerAds';
 import { useBrand } from '@/contexts/BrandContext';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
+import { trackViewItemList } from '@/lib/analytics';
+import { getFinancingBasePrice } from '@/utils/listingPrice';
+import type { Listing } from '@/data/mockData';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
 import { FinancingContentSection, FinancingContentType, useFinancingArticle, splitLeadParagraph } from '@/components/FinancingContentSection';
 import { PillarFinancingCalculator } from '@/components/PillarFinancingCalculator';
@@ -340,6 +343,23 @@ export default function SearchPage() {
   const partnersAds = adsData?.ads || [];
   const listings = data?.listings || [];
   const saleTotalCount = data?.count ?? listings.length;
+
+  React.useEffect(() => {
+    if (listings && listings.length > 0) {
+      trackViewItemList(
+        listings.map((l: Listing) => ({
+          id: String(l.listing_id),
+          name: `${l.make} ${l.model} ${l.version || ''}`.trim(),
+          make: l.make,
+          model: l.model,
+          price: l.price_pln,
+          monthlyRate: getFinancingBasePrice(l, financingContentType || undefined),
+          financingType: financingContentType || 'leasing',
+        })),
+        'Wyniki wyszukiwania'
+      );
+    }
+  }, [listings, financingContentType]);
 
   const rentalCondition = filters.statuses.length === 1
     ? (filters.statuses[0] as 'NEW' | 'USED')

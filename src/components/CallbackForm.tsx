@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Car, Phone, ShieldCheck } from 'lucide-react';
 import { leadsApi } from '@/services/api';
 import { useBrand } from '@/contexts/BrandContext';
+import { trackLeadSubmit } from '@/lib/analytics';
 
 interface CallbackFormProps {
     title?: string;
@@ -16,6 +17,9 @@ interface CallbackFormProps {
     formId?: string;
     /** Compact, light card variant for sidebars (default is the full dark section) */
     compact?: boolean;
+    financingType?: string;
+    brand?: string;
+    model?: string;
 }
 
 export function CallbackForm({
@@ -27,6 +31,9 @@ export function CallbackForm({
     message,
     formId = 'callback_form',
     compact = false,
+    financingType,
+    brand,
+    model,
 }: CallbackFormProps) {
     const [phone, setPhone] = useState('');
     const [honeypot, setHoneypot] = useState('');
@@ -35,7 +42,7 @@ export function CallbackForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!phone.trim()) return;
+        if (!phone.trim() || status === 'loading') return;
         setStatus('loading');
         try {
             await leadsApi.submitQuickLead({
@@ -46,18 +53,15 @@ export function CallbackForm({
             });
 
             // Push event to Google Tag Manager dataLayer
-            if (typeof window !== 'undefined') {
-                (window as any).dataLayer = (window as any).dataLayer || [];
-                (window as any).dataLayer.push({
-                    event: 'generate_lead',
-                    lead_type: 'quick_callback',
-                    form_id: formId,
-                    brand: config.id,
-                    lead_details: {
-                        phone: phone.trim(),
-                    }
-                });
-            }
+            trackLeadSubmit({
+                formId,
+                leadType: 'quick_callback',
+                brand: brand || config.id,
+                model,
+                listingId,
+                financingType: financingType || 'general',
+                phone: phone.trim(),
+            });
 
             setStatus('success');
             setPhone('');

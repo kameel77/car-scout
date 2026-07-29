@@ -205,7 +205,10 @@ export default function LeadFormPage() {
           event: 'generate_lead',
           lead_type: isNegotiationFlow ? 'negotiation' : 'offer_inquiry',
           form_id: isNegotiationFlow ? 'negotiation_form' : 'offer_inquiry_form',
-          brand: config.id,
+          brand: listing.make || config.id,
+          model: listing.model || '',
+          listing_id: listing.listing_id || '',
+          financing_type: financingType || 'leasing',
           lead_details: {
             name: formData.name,
             email: formData.email,

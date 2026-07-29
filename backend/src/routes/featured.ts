@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { authorizeRoles } from '../middleware/authorize.js';
 import { resolveScope } from '../utils/scope-resolver.js';
+import { sanitizeListing } from '../constants/dealer.js';
 
 export async function featuredRoutes(fastify: FastifyInstance) {
     fastify.get('/api/featured', async (request, reply) => {
@@ -33,9 +34,9 @@ export async function featuredRoutes(fastify: FastifyInstance) {
             ]);
 
             const result = {
-                newCars: featuredNewCars,
-                usedCars: featuredUsedCars,
-                rentals: featuredRentals
+                newCars: featuredNewCars.map((l) => sanitizeListing(l, false)),
+                usedCars: featuredUsedCars.map((l) => sanitizeListing(l, false)),
+                rentals: featuredRentals.map((r) => sanitizeListing(r, false))
             };
 
             await fastify.redis.set('featured:vehicles', JSON.stringify(result), 'EX', 600); // 10 minutes TTL

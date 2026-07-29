@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { getBrowser } from '../services/puppeteer.js';
+import { sanitizeListing, tryAuthenticate } from '../constants/dealer.js';
 
 const ID_REGEX = /^[\w-]+(,[\w-]+)*$/;
 const CACHE_KEY = 'onepager:pdf:default';
@@ -14,6 +15,8 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
       return reply.code(400).send({ error: 'Invalid ids format' });
     }
 
+    const isAuthenticated = await tryAuthenticate(fastify, req);
+
     if (ids) {
       const idList = ids.split(',');
       const found = await fastify.prisma.listing.findMany({
@@ -22,7 +25,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
       });
       const byId = new Map(found.map((l) => [l.id, l]));
       const ordered = idList.map((id) => byId.get(id)).filter(Boolean);
-      return { offers: ordered };
+      return { offers: ordered.map((l) => sanitizeListing(l, isAuthenticated)) };
     }
 
     const featured = await fastify.prisma.listing.findMany({
@@ -33,7 +36,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
     });
 
     if (featured.length >= OFFERS_LIMIT) {
-      return { offers: featured };
+      return { offers: featured.map((l) => sanitizeListing(l, isAuthenticated)) };
     }
 
     const fillCount = OFFERS_LIMIT - featured.length;
@@ -48,7 +51,7 @@ export async function onepagerRoutes(fastify: FastifyInstance) {
       include: { dealer: true },
     });
 
-    return { offers: [...featured, ...filler] };
+    return { offers: [...featured, ...filler].map((l) => sanitizeListing(l, isAuthenticated)) };
   });
 
   fastify.get('/api/onepager/pdf', async (req, reply) => {
