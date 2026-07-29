@@ -40,7 +40,7 @@ import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
-import { trackPhoneClick } from '@/lib/analytics';
+import { trackPhoneClick, trackViewItem } from '@/lib/analytics';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
@@ -108,6 +108,20 @@ export default function ListingDetailPage() {
       }
     }
   }, []);
+
+  React.useEffect(() => {
+    if (listing) {
+      trackViewItem({
+        id: String(listing.listing_id),
+        name: `${listing.make} ${listing.model} ${listing.version || ''}`.trim(),
+        make: listing.make,
+        model: listing.model,
+        price: listing.price_pln,
+        monthlyRate: getFinancingBasePrice(listing, financingType),
+        financingType: financingType || 'leasing',
+      });
+    }
+  }, [listing?.listing_id, financingType]);
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [showArchiveModal, setShowArchiveModal] = React.useState(false);

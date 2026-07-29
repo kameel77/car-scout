@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { trackSelectItem } from '@/lib/analytics';
 import { useTranslation } from 'react-i18next';
 import { Car, Calendar, Gauge, Fuel, Info } from 'lucide-react';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
@@ -32,8 +33,20 @@ export function RentalListingCard({ v, priority = false }: { v: any; priority?: 
   const accentText = 'hsl(var(--accent-foreground))';
   const isNew = v.condition === 'NEW';
 
+  const handleClick = () => {
+    trackSelectItem({
+      id: String(v.id),
+      name: `${v.make} ${v.model} ${v.version || ''}`.trim(),
+      make: v.make,
+      model: v.model,
+      monthlyRate: v.min_rate_netto || v.rate_netto,
+      financingType: 'wynajem',
+      category: 'wynajem',
+    });
+  };
+
   return (
-    <Link to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+    <Link to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} onClick={handleClick} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
       <div className="relative">
         <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" priority={priority} fallback={<img src="/motolia-placeholder.webp" className="w-full h-full object-cover" alt="Placeholder" />} />
         <div className="absolute top-3 left-3 bg-accent text-accent-foreground text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full z-10">WYNAJEM</div>

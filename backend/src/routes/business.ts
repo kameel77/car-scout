@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { sanitizeListing } from '../constants/dealer.js';
 
 const CACHE_KEY = 'business:offers';
 const CACHE_TTL_S = 600;
@@ -58,7 +59,8 @@ export async function businessRoutes(fastify: FastifyInstance) {
             merged = fallback.map((l) => ({ ...l, offerKind: 'sale' }));
         }
 
-        const result = { offers: merged };
+        const sanitizedOffers = merged.map((item) => sanitizeListing(item, false));
+        const result = { offers: sanitizedOffers };
         await fastify.redis.set(CACHE_KEY, JSON.stringify(result), 'EX', CACHE_TTL_S);
         return result;
     });

@@ -17,6 +17,7 @@ import {
   Car, Building2, User, ChevronDown, ChevronUp, ArrowUpDown, Check, SlidersHorizontal, X, Info
 } from 'lucide-react';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
+import { trackViewItemList } from '@/lib/analytics';
 import { getTransmissionShortLabel, translateTechnicalValue } from '@/utils/i18n-utils';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { formatNumber } from '@/utils/formatters';
@@ -352,6 +353,23 @@ export default function RentalSearchPage() {
   });
 
   const vehicles = data?.vehicles || [];
+
+  useEffect(() => {
+    if (vehicles && vehicles.length > 0) {
+      trackViewItemList(
+        vehicles.map((v: any) => ({
+          id: String(v.id),
+          name: `${v.make} ${v.model} ${v.version || ''}`.trim(),
+          make: v.make,
+          model: v.model,
+          monthlyRate: v.min_rate_netto || v.rate_netto,
+          financingType: 'wynajem',
+          category: 'wynajem',
+        })),
+        'Wyniki wynajmu długoterminowego'
+      );
+    }
+  }, [vehicles]);
   const pagination = data?.pagination;
   const filters = data?.filters;
   const isBusiness = clientType === 'business';

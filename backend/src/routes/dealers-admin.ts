@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requirePermission, buildScopeFilter, type MembershipInfo, type ActiveContext } from '../middleware/permissions.js';
 import { ScopeType, MemberRole } from '@prisma/client';
+import { partnerAuth } from '../middleware/partnerAuth.js';
 
 export async function dealerAdminRoutes(fastify: FastifyInstance) {
     /**
@@ -14,8 +15,8 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
         return dealers.map(d => d.id);
     }
 
-    // Public list of dealers for Chrome Extensions / Widgets
-    fastify.get('/api/dealers/public', async (request, reply) => {
+    // List of dealers for Chrome Extensions / Integration Partners (requires Partner API Key)
+    fastify.get('/api/dealers/public', { preHandler: partnerAuth }, async (request, reply) => {
         try {
             const dealers = await fastify.prisma.dealer.findMany({
                 select: { id: true, name: true, city: true, addressLine1: true },
