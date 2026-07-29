@@ -32,6 +32,7 @@ const Sonner = lazy(() =>
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const ListingDetailPage = lazy(() => import("./pages/ListingDetailPage"));
 const LeadFormPage = lazy(() => import("./pages/LeadFormPage"));
+const CampaignLandingPage = lazy(() => import("./pages/CampaignLandingPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Lazy load non-critical page components to enable code splitting
@@ -47,6 +48,7 @@ const SeoContentPage = lazy(() => import("./pages/admin/SeoContentPage"));
 const AdminFeatureTilesPage = lazy(() => import("./pages/admin/FeatureTilesPage"));
 const AdminHeroBannersPage = lazy(() => import("./pages/admin/HeroBannersPage"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/PartnersPage"));
+const AdminLandingPagesPage = lazy(() => import("./pages/admin/LandingPagesPage"));
 const SpecificationsPage = lazy(() => import("./pages/admin/SpecificationsPage"));
 const SpecificationEditPage = lazy(() => import("./pages/admin/SpecificationEditPage"));
 const AdminApiPartnersPage = lazy(() => import("./pages/admin/ApiPartnersPage"));
@@ -128,6 +130,7 @@ const App = () => (
                       <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                       <Route path="/oferta/:slug/negotiate" element={<LeadFormPage />} />
                       <Route path="/dla-ciebie" element={<PersonalOfferPage />} />
+                      <Route path="/promo/:slug" element={<CampaignLandingPage />} />
                       <Route path="/dla-firm" element={<MotoliaB2BPage />} />
                       <Route path="/dla-firmy" element={<B2BOnepagerPage />} />
                       <Route path="/wynajem-dlugoterminowy" element={<RentalSearchPage />} />
@@ -232,6 +235,14 @@ const App = () => (
                           element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                               <AdminHeroBannersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/landing-pages"
+                          element={
+                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                              <AdminLandingPagesPage />
                             </ProtectedRoute>
                           }
                         />

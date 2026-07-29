@@ -26,3 +26,4 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 - [ ] **Owner pojazdu i tryb kontaktu**: przypisanie oferty do dealera oraz opcjonalnego opiekuna (pracownika dealera), z przełączaniem kontaktu `dealer generyczny` vs `pracownik` przy publikacji i imporcie CSV.
 
 - 2026-04-01: Rozbudować panel admina o dedykowany widok/filtry dla leadów typu `price_negotiation` (priorytety, SLA, statusy negocjacji i szablony odpowiedzi).
+- 2026-07-29: **Dedykowany system landing page'y dla kampanii płatnych i QR (/promo/:slug)**: Pełny moduł Landing Page'y pod ruchem płatnym (Meta/Google Ads, QR, mailingi) z zero conversion leak, dedykowanym panelem zarządczym `/admin/landing-pages`, generatorem kodów QR 1024px oraz atrybucją leadów i analityką dataLayer (`lp_view`, `phone_click`, `generate_lead`).

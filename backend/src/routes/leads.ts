@@ -373,7 +373,19 @@ export async function leadRoutes(fastify: FastifyInstance) {
             fastify.log.error(err, 'Error sending waitlist lead notification email');
         });
 
-        return { lead: { id: lead.id, referenceNumber: lead.referenceNumber, status: lead.status } };
+        return {
+            lead: {
+                id: lead.id,
+                referenceNumber: lead.referenceNumber,
+                status: lead.status,
+                leadType: lead.leadType,
+                listingId: lead.listingId,
+                rentalVehicleId: lead.rentalVehicleId,
+                message: lead.message,
+                consentMarketingAt: lead.consentMarketingAt,
+                consentPrivacyAt: lead.consentPrivacyAt,
+            }
+        };
     });
 
     // Create new quick contact lead from CTA
@@ -418,6 +430,22 @@ export async function leadRoutes(fastify: FastifyInstance) {
             if (listing) listingId = listing.id;
         }
 
+        // Optional landing page context & traffic source attribution
+        let landingPageId: string | undefined;
+        if (typeof body.landingPageSlug === 'string' && body.landingPageSlug.trim()) {
+            const lp = await fastify.prisma.landingPage.findUnique({
+                where: { slug: body.landingPageSlug.trim().toLowerCase() },
+                select: { id: true }
+            });
+            if (lp) landingPageId = lp.id;
+        }
+
+        let trafficSource: string | undefined;
+        const rawSrc = body.src || body.trafficSource;
+        if (typeof rawSrc === 'string' && rawSrc.trim()) {
+            trafficSource = rawSrc.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 64);
+        }
+
         const pageUrl = body.pageUrl || request.headers.referer;
         let messageText = body.message || 'Prośba o szybki kontakt telefoniczny.';
         if (pageUrl && !messageText.includes(pageUrl)) {
@@ -428,6 +456,8 @@ export async function leadRoutes(fastify: FastifyInstance) {
             data: {
                 leadType: 'quick_contact',
                 ...(listingId ? { listingId } : {}),
+                ...(landingPageId ? { landingPageId } : {}),
+                ...(trafficSource ? { trafficSource } : {}),
                 name: name,
                 email: body.email ? String(body.email).trim() : null,
                 phone: phone,

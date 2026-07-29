@@ -319,6 +319,13 @@ export default function ListingDetailPage() {
     );
   }
 
+  // CTA telefoniczne prowadzą ZAWSZE do Motolii — listing.contact_phone to numer dealera
+  // i kierowanie tam ruchu z oferty omija nasz proces sprzedaży.
+  const salesPhone = settings?.salesContactPhone
+    || settings?.legalContactPhone
+    || config.contactInfo?.phone
+    || '';
+
   const baseTitle = `${listing.make} ${listing.model} ${listing.version}`;
   const financingSeoLabel = getFinancingSeoLabel(financingType, i18n.language);   // full: "Kredyt samochodowy"
   const title = financingType !== 'gotowka' && financingSeoLabel ? `${financingSeoLabel}: ${baseTitle}` : baseTitle;
@@ -1046,14 +1053,14 @@ export default function ListingDetailPage() {
                     transition={{ delay: 0.05 }}
                     className="space-y-3"
                   >
-                    {listing.contact_phone && (
+                    {salesPhone && (
                       <a
-                        href={`tel:${formatPhoneForTelLink(listing.contact_phone)}`}
+                        href={`tel:${formatPhoneForTelLink(salesPhone)}`}
                         onClick={() => trackPhoneClick('offer_sidebar')}
                         className="flex items-center justify-center gap-2 h-11 w-full rounded-xl border border-border bg-card shadow-card text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
                       >
                         <Phone className="h-4 w-4 text-accent" />
-                        Zadzwoń: {listing.contact_phone}
+                        Zadzwoń: {salesPhone}
                       </a>
                     )}
                     <CallbackForm
@@ -1390,7 +1397,7 @@ export default function ListingDetailPage() {
         <div className="flex gap-3 items-center">
           {/* Phone CTA — replaces the mobile-only Thulium chat widget on small screens */}
           <a
-            href={`tel:${formatPhoneForTelLink(listing.contact_phone)}`}
+            href={`tel:${formatPhoneForTelLink(salesPhone)}`}
             aria-label="Kontakt telefoniczny"
             onClick={() => trackPhoneClick('offer_sticky_mobile')}
             className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm hover:bg-secondary transition-colors"

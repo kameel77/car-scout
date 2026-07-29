@@ -190,14 +190,18 @@ model Lead {
   rentalVehicleId                 String?           @map("rental_vehicle_id")
   rentalInitialPaymentAmountGross Float?            @map("rental_initial_payment_amount_gross")
   rentalInitialPaymentAmountNet   Float?            @map("rental_initial_payment_amount_net")
+  landingPageId                   String?           @map("landing_page_id")
+  trafficSource                   String?           @map("traffic_source")
   financingProduct                FinancingProduct? @relation(fields: [financingProductId], references: [id])
   listing                         Listing?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
   rentalVehicle                   RentalVehicle?    @relation(fields: [rentalVehicleId], references: [id])
+  landingPage                     LandingPage?      @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
 
   @@index([listingId])
   @@index([financingProductId])
   @@index([rentalVehicleId])
   @@index([leadType])
+  @@index([landingPageId])
   @@map("leads")
 }
 
@@ -898,3 +902,55 @@ enum SelectionMode {
   FEATURED
   FILTERED
 }
+
+model LandingPage {
+  id             String          @id @default(cuid())
+  slug           String          @unique
+  name           String
+  audience       String?
+  isActive       Boolean         @default(true) @map("is_active")
+  isIndexable    Boolean         @default(false) @map("is_indexable")
+  validFrom      DateTime?       @map("valid_from")
+  validTo        DateTime?       @map("valid_to")
+
+  heroTitle      String          @map("hero_title")
+  heroSubtitle   String?         @map("hero_subtitle")
+  heroBadge      String?         @map("hero_badge")
+  heroImageUrl   String?         @map("hero_image_url")
+  ctaLabel       String          @default("Oddzwońcie do mnie") @map("cta_label")
+
+  /// Wygląd landingu: 'dark' (domyślny, czarno-żółty) lub 'light'
+  theme          String          @default("dark")
+  /// Czy blok hero z formularzem callback stoi przed listą pojazdów, czy za nią
+  heroPosition   String          @default("before") @map("hero_position")
+  /// Numer telefonu dla tego landingu; pusty = numer z ustawień serwisu
+  contactPhone   String?         @map("contact_phone")
+
+  discount       Int?
+  initialPayment Int?            @map("initial_payment")
+
+  selectionMode  LpSelectionMode @default(FILTERED) @map("selection_mode")
+  listingIds     String[]        @map("listing_ids")
+  /// Pojazdy wynajmu długoterminowego wybrane ręcznie (tryb MANUAL)
+  rentalVehicleIds String[]      @map("rental_vehicle_ids")
+  filterParams   Json?           @map("filter_params")
+  maxListings    Int             @default(12) @map("max_listings")
+
+  sections       Json?
+  metaTitle      String?         @map("meta_title")
+  metaDescription String?        @map("meta_description")
+
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  leads          Lead[]
+
+  @@index([isActive, slug])
+  @@map("landing_pages")
+}
+
+enum LpSelectionMode {
+  MANUAL
+  FILTERED
+}
+

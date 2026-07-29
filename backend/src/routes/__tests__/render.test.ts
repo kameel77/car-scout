@@ -569,4 +569,38 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
             }
         }
     });
+
+    it('/promo/:slug returns noindex by default and respects isIndexable=true', async () => {
+        const lpDefault = await app.prisma.landingPage.create({
+            data: {
+                slug: 'test-promo-noindex',
+                name: 'Test Promo NoIndex',
+                heroTitle: 'Nagłówek NoIndex',
+                isIndexable: false,
+            },
+        });
+        const lpIndexable = await app.prisma.landingPage.create({
+            data: {
+                slug: 'test-promo-indexable',
+                name: 'Test Promo Indexable',
+                heroTitle: 'Nagłówek Indexable',
+                isIndexable: true,
+            },
+        });
+
+        try {
+            const resNoIndex = await app.inject({ method: 'GET', url: '/api/render?path=/promo/test-promo-noindex' });
+            expect(resNoIndex.statusCode).toBe(200);
+            expect(resNoIndex.body).toContain('<meta name="robots" content="noindex" />');
+
+            const resIndexable = await app.inject({ method: 'GET', url: '/api/render?path=/promo/test-promo-indexable' });
+            expect(resIndexable.statusCode).toBe(200);
+            expect(resIndexable.body).not.toContain('<meta name="robots" content="noindex" />');
+        } finally {
+            await app.prisma.landingPage.deleteMany({
+                where: { id: { in: [lpDefault.id, lpIndexable.id] } },
+            });
+        }
+    });
 });
+

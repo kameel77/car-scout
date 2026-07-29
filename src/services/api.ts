@@ -1214,7 +1214,7 @@ export const leadsApi = {
 
         return response.json();
     },
-    submitQuickLead: async (data: { phone: string; name?: string; message?: string; listingId?: string; company?: string; turnstileToken?: string; pageUrl?: string; }) => {
+    submitQuickLead: async (data: { phone: string; name?: string; message?: string; listingId?: string; company?: string; turnstileToken?: string; pageUrl?: string; landingPageSlug?: string; src?: string; }) => {
         const payload = {
             pageUrl: typeof window !== 'undefined' ? window.location.href : undefined,
             ...data
@@ -1704,3 +1704,109 @@ export const partnerManagementApi = {
         return json;
     }
 };
+
+export const landingPagesApi = {
+    getPublic: async (slug: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/public/${encodeURIComponent(slug)}`);
+        if (response.status === 410) {
+            const error: any = new Error('Landing page expired');
+            error.status = 410;
+            throw error;
+        }
+        if (!response.ok) {
+            const error: any = await response.json().catch(() => ({}));
+            const err: any = new Error(error.error || 'Failed to fetch landing page');
+            err.status = response.status;
+            throw err;
+        }
+        return response.json();
+    },
+
+    list: async () => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch landing pages');
+        return response.json();
+    },
+
+    getById: async (id: string) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch landing page');
+        return response.json();
+    },
+
+    create: async (data: any) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to create landing page');
+        }
+        return response.json();
+    },
+
+    update: async (id: string, data: any) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to update landing page');
+        }
+        return response.json();
+    },
+
+    delete: async (id: string) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to delete landing page');
+        return response.json();
+    },
+
+    uploadHeroImage: async (id: string, file: File) => {
+        const token = localStorage.getItem('auth_token');
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/hero-image`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to upload hero image');
+        }
+        return response.json();
+    },
+
+    getPreviewListings: async (id: string) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/preview-listings`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch preview listings');
+        return response.json();
+    }
+};
+

@@ -94,3 +94,11 @@ Przed każdym deploymentem lub zmianą w Docker/Traefik/Nginx:
 2. **Gotowy skrypt**: W katalogu `docs_other/` znajduje się wzorcowy skrypt [export_listings_csv.cjs](file:///Users/kamiltonkowicz/Documents/Coding/github/car-scout/docs_other/export_listings_csv.cjs). Należy go uruchamiać z katalogu `backend/` (np. `node ../docs_other/export_listings_csv.cjs`).
 3. **Konfiguracja**: Skrypt automatycznie ładuje ENV z `backend/.env`. Upewnij się, że Prisma Client jest wygenerowany w `backend/` (`npx prisma generate`).
 4. **Miejsce zapisu**: Wygenerowane pliki CSV powinny trafiać do `docs_other/`, chyba że użytkownik wskaże inaczej.
+
+## 9. Generowanie Grafu Architektury (Graphify)
+
+1. **Uprawnienia i Sandbox**: Komendy `graphify` uruchamiaj zawsze z `BypassSandbox: true`, aby zapobiec blokadom tworzenia plików w `graphify-out/` oraz wykonywania lokalnego interpretera Pythona.
+2. **Rozszerzenia AST (SQL)**: Przed uruchomieniem weryfikuj obecność paczki `graphifyy[sql]` (`pip install "graphifyy[sql]"`), aby zapobiec pomijaniu parsowania skryptów SQL/migracji w grafie.
+3. **Ekstrakcja Dokumentacji w Pythonie**: Dla plików `.md` i `.txt` bez ustawionego `GEMINI_API_KEY`, funkcja `extract_markdown(path)` bezpośrednio wyciąga nagłówki i relacje (sygnatura pobiera wyłącznie `path: Path` bez `cache_root`).
+4. **Parametryzacja Eksportu HTML**: Przekazując etykiety społeczności w `to_html(G, communities, output_path, community_labels=labels)`, należy stosować poprawną nazwę argumentu `community_labels`.
+5. **Skalowanie dla Dużych Repozytoriów**: W przypadku ponad 500 plików zaleca się podzielenie zapytań na dedykowane moduły (`src/`, `backend/`) lub uruchamianie dedykowanego potoku zbiorczego.
