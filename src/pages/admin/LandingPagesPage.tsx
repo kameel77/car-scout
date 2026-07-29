@@ -101,6 +101,7 @@ export default function LandingPagesPage() {
     const [carSearchResults, setCarSearchResults] = useState<any[]>([]);
     const [carSearchLoading, setCarSearchLoading] = useState(false);
     const [carSearchSource, setCarSearchSource] = useState<'NEW' | 'USED' | 'RENTAL'>('NEW');
+    const [hasSearchedCars, setHasSearchedCars] = useState(false);
 
     const { data, isLoading, refetch } = useQuery<{ landingPages: LandingPageAdmin[] }>({
         queryKey: ['admin-landing-pages'],
@@ -255,6 +256,7 @@ export default function LandingPagesPage() {
     const handleSearchCars = async () => {
         if (!carSearchQuery.trim()) return;
         setCarSearchLoading(true);
+        setHasSearchedCars(true);
         try {
             if (carSearchSource === 'RENTAL') {
                 const res = await rentalPublicApi.listVehicles({ search: carSearchQuery.trim(), limit: '24' });
@@ -788,6 +790,7 @@ export default function LandingPagesPage() {
                                                             onClick={() => {
                                                                 setCarSearchSource(option.value);
                                                                 setCarSearchResults([]);
+                                                                setHasSearchedCars(false);
                                                             }}
                                                             className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${
                                                                 carSearchSource === option.value
@@ -857,6 +860,23 @@ export default function LandingPagesPage() {
                                                                 </div>
                                                             );
                                                         })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Empty search results explanation */}
+                                            {carSearchResults.length === 0 && hasSearchedCars && !carSearchLoading && (
+                                                <div className="border-t pt-3">
+                                                    <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-relaxed">
+                                                        {carSearchSource === 'RENTAL' && (
+                                                            <span>Brak pojazdów w wynikach. Wyszukiwarka wynajmu wymaga, aby pojazd posiadał aktywne przypisanie oraz wprowadzoną macierz rat (matrix entries). Pojazdy bez macierzy rat nie mogą trafić na landing page.</span>
+                                                        )}
+                                                        {carSearchSource === 'NEW' && (
+                                                            <span>Brak wyników wśród ogłoszeń o statusie <strong>NOWE</strong>. Sprawdź frazę lub poszukaj w zakładce „Używane”.</span>
+                                                        )}
+                                                        {carSearchSource === 'USED' && (
+                                                            <span>Brak wyników dla podanej frazy wyszukiwania.</span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
