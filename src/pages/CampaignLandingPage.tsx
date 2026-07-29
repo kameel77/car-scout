@@ -180,6 +180,10 @@ export default function CampaignLandingPage() {
                                 alt={lp.heroTitle}
                                 fetchPriority="high"
                                 className="w-full h-auto max-h-[320px] object-cover"
+                                onError={(e) => {
+                                    const container = (e.target as HTMLElement).closest('div');
+                                    if (container) container.style.display = 'none';
+                                }}
                             />
                         </div>
                     )}
@@ -291,7 +295,10 @@ export default function CampaignLandingPage() {
                 {showTrustBar && (
                     <section className={`border-b py-6 px-4 ${theme.band}`}>
                         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            {sections.trustBar?.items?.map((item, idx) => (
+                            {(sections.trustBar?.items && sections.trustBar.items.length > 0
+                                ? sections.trustBar.items
+                                : ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Wsparcie konsultanta']
+                            ).map((item, idx) => (
                                 <div key={idx} className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${theme.card}`}>
                                     <CheckCircle2 className="w-4 h-4 text-[#F5C518] shrink-0" />
                                     <span className={`text-xs md:text-sm font-medium ${theme.body}`}>{item}</span>
