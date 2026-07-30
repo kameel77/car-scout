@@ -29,7 +29,6 @@ const THEMES = {
         muted: 'text-gray-400',
         footer: 'bg-[#0e0e0e] border-white/10 text-gray-500',
         stickyBar: 'bg-[#1a1a1a]/95 border-white/10',
-        stickyCall: 'bg-[#2a2a2a] text-white border-white/10',
         loader: 'bg-[#1a1a1a] text-white',
         accentText: 'text-[#F5C518]',
         faqItem: 'border-white/10 hover:border-white/20 bg-[#1c1c1c]',
@@ -49,7 +48,6 @@ const THEMES = {
         muted: 'text-gray-500',
         footer: 'bg-gray-50 border-gray-200 text-gray-500',
         stickyBar: 'bg-white/95 border-gray-200',
-        stickyCall: 'bg-gray-100 text-gray-900 border-gray-300',
         loader: 'bg-white text-gray-900',
         accentText: 'text-[#8a6d05]',
         faqItem: 'border-gray-100 hover:border-gray-200 bg-white',
@@ -69,6 +67,9 @@ export default function CampaignLandingPage() {
     const { data: settings } = useAppSettings();
     const { setProgrammaticOffer } = useSpecialOffer();
     const [openFaq, setOpenFaq] = useState<number | null>(0);
+    // Gdy formularz jest na ekranie, powtarzanie go w pasku nie ma sensu —
+    // wtedy jedyną sensowną alternatywą jest telefon, i odwrotnie.
+    const [callbackOnScreen, setCallbackOnScreen] = useState(false);
 
     const lp = data?.landingPage;
     const lpSlug = lp?.slug;
@@ -109,6 +110,18 @@ export default function CampaignLandingPage() {
             trackLpView(lpSlug, src);
         }
     }, [lpSlug, src]);
+
+    useEffect(() => {
+        const section = document.getElementById('lp-callback');
+        if (!section || typeof IntersectionObserver === 'undefined') return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => setCallbackOnScreen(entry.isIntersecting),
+            { threshold: 0.35 }
+        );
+        observer.observe(section);
+        return () => observer.disconnect();
+    }, [lpSlug]);
 
     // Redirect to /samochody if LP is expired (410)
     if (error && (error.status === 410 || error.message?.includes('expired'))) {
@@ -160,9 +173,6 @@ export default function CampaignLandingPage() {
     const handleCallClick = (location: string) => {
         trackPhoneClick(location, lp.slug, src);
     };
-
-    // W wąskim pasku mobilnym prefiks kierunkowy tylko zabiera miejsce.
-    const stickyPhoneLabel = contactPhone.replace(/^\+48\s*/, '');
 
     const scrollToCallback = () => {
         const el = document.getElementById('lp-callback');
@@ -460,23 +470,28 @@ export default function CampaignLandingPage() {
                 </div>
             </footer>
 
-            {/* Mobile Bottom Sticky Bar */}
-            <div className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur border-t p-3 flex md:hidden items-center gap-3 ${theme.stickyBar}`}>
-                <a
-                    href={`tel:${formatPhoneForTelLink(contactPhone)}`}
-                    onClick={() => handleCallClick('lp_sticky_bar')}
-                    className={`flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-xl font-bold text-[13px] border active:scale-95 transition-transform whitespace-nowrap ${theme.stickyCall}`}
-                >
-                    <Phone className="w-4 h-4 text-[#F5C518] shrink-0" />
-                    <span>{stickyPhoneLabel}</span>
-                </a>
-                <button
-                    onClick={scrollToCallback}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-[13px] shadow-lg active:scale-95 transition-transform whitespace-nowrap"
-                >
-                    <span>Oddzwońcie</span>
-                    <ArrowRight className="w-4 h-4 shrink-0" />
-                </button>
+            {/* Mobile Bottom Sticky Bar — jedna akcja, zawsze ta, której nie ma pod ręką.
+                Numer telefonu jest stale widoczny w przyklejonym nagłówku, więc powielanie
+                go tutaj obok drugiego CTA tylko rozpraszało. */}
+            <div className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur border-t px-3 py-2.5 md:hidden ${theme.stickyBar}`}>
+                {callbackOnScreen ? (
+                    <a
+                        href={`tel:${formatPhoneForTelLink(contactPhone)}`}
+                        onClick={() => handleCallClick('lp_sticky_bar')}
+                        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm shadow-lg active:scale-[0.98] transition-transform"
+                    >
+                        <Phone className="w-4 h-4 shrink-0" />
+                        <span>Zadzwoń: {contactPhone}</span>
+                    </a>
+                ) : (
+                    <button
+                        onClick={scrollToCallback}
+                        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm shadow-lg active:scale-[0.98] transition-transform"
+                    >
+                        <span>Zostaw numer — oddzwonimy w 15 minut</span>
+                        <ArrowRight className="w-4 h-4 shrink-0" />
+                    </button>
+                )}
             </div>
         </div>
     );
