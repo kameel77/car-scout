@@ -394,7 +394,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             externalVehicleId?: string;
             calculationId?: string;
             includedServicesOverride?: string[] | null;
-            insuranceAddModeOverride?: 'INSURANCE_23' | 'INSURANCE_0' | null;
+            insuranceAddModeOverride?: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED' | null;
         };
 
         if (!rentalCompanyId) {
@@ -454,7 +454,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             calculationId?: string;
             isActive?: boolean;
             includedServicesOverride?: string[] | null;
-            insuranceAddModeOverride?: 'INSURANCE_23' | 'INSURANCE_0' | null;
+            insuranceAddModeOverride?: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED' | null;
         };
 
         const assignment = await fastify.prisma.vehicleRentalAssignment.findUnique({

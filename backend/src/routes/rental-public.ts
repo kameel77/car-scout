@@ -19,6 +19,9 @@ export const calculateRatesWithInsurance = (entry: any, assignment: any) => {
         } else if (insuranceAddMode === 'INSURANCE_0') {
             finalNet += entry.insuranceNet;
             finalGross += entry.insuranceNet;
+        } else if (insuranceAddMode === 'INSURANCE_INCLUDED') {
+            // Insurance is already included in monthlyRateNet & monthlyRateGross
+            // Do not add entry.insuranceNet again
         }
     }
     return { ...entry, monthlyRateNet: finalNet, monthlyRateGross: finalGross, servicesIncluded };
