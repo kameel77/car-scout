@@ -941,6 +941,10 @@ model LandingPage {
   metaTitle      String?         @map("meta_title")
   metaDescription String?        @map("meta_description")
 
+  /// Regulamin promocji (PDF) — link pojawia się w stopce landingu tylko gdy plik jest wgrany
+  termsFileUrl   String?         @map("terms_file_url")
+  termsLabel     String?         @map("terms_label")
+
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
 

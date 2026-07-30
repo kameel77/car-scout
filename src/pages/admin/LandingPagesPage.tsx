@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { landingPagesApi, listingsApi } from '@/services/api';
 import { rentalPublicApi } from '@/services/rental-api';
+import { isoToWarsawInput, warsawInputToIso } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +42,8 @@ interface LandingPageAdmin {
     sections?: any;
     metaTitle?: string | null;
     metaDescription?: string | null;
+    termsFileUrl?: string | null;
+    termsLabel?: string | null;
     createdAt: string;
     updatedAt: string;
     leadsTotal?: number;
@@ -71,21 +74,21 @@ const DEFAULT_FORM: Partial<LandingPageAdmin> = {
     maxListings: 12,
     sections: {
         callback: { enabled: true, title: 'Chcesz omówić ofertę?', description: 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczegóły.' },
-        listings: { enabled: true, title: 'Dostępne samochody w ofercie' },
+        listings: { enabled: true, title: 'Dostępne samochody w ofercie', ctaEnabled: true, ctaLabel: 'Sprawdź całą ofertę', ctaUrl: '/samochody' },
         trustBar: { enabled: true, items: ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Wsparcie konsultanta'] },
         howItWorks: { enabled: true, steps: [
             { title: 'Wybierz auto lub ratę', text: 'Przejrzyj naszą flotę lub opowiedz doradcy czego szukasz.' },
             { title: 'Wypełnij prosty wniosek', text: 'Bez zbędnych dokumentów – decyzję otrzymasz w 24 godziny.' },
             { title: 'Odbierz kluczyki', text: 'Auto dostarczymy prosto pod wskazany adres lub wybierz odbiór własny.' }
         ]},
-        faq: { enabled: true, items: [
-            { q: 'Czy oferta dotyczy firm czy osób prywatnych?', a: 'Obsługujemy zarówno firmy (leasing, najm), jak i osoby prywatne.' },
-            { q: 'Jak szybko otrzymam odpowiedź?', a: 'Nasi doradcy kontaktują się w ciągu kilkunastu minut w godzinach pracy.' }
-        ]},
+        // Treści konkretnej promocji NIE należą do wartości domyślnych systemu —
+        // nowy landing startuje pusty, a powtarzalne kampanie tworzy się przyciskiem „Duplikuj”.
+        faq: { enabled: false, items: [] },
         urgency: { enabled: false, text: 'Promocja ograniczona czasowo!' }
     },
     metaTitle: '',
     metaDescription: '',
+    termsLabel: '',
 };
 
 export default function LandingPagesPage() {
@@ -94,6 +97,7 @@ export default function LandingPagesPage() {
     const [editingPage, setEditingPage] = useState<Partial<LandingPageAdmin> | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [heroFile, setHeroFile] = useState<File | null>(null);
+    const [termsFile, setTermsFile] = useState<File | null>(null);
     const [previewListings, setPreviewListings] = useState<any[]>([]);
     const [previewLoading, setPreviewLoading] = useState(false);
     const [manualListingIdInput, setManualListingIdInput] = useState('');
@@ -114,6 +118,9 @@ export default function LandingPagesPage() {
             if (heroFile && res.landingPage?.id) {
                 await landingPagesApi.uploadHeroImage(res.landingPage.id, heroFile);
             }
+            if (termsFile && res.landingPage?.id) {
+                await landingPagesApi.uploadTermsFile(res.landingPage.id, termsFile);
+            }
             return res;
         },
         onSuccess: () => {
@@ -131,6 +138,9 @@ export default function LandingPagesPage() {
             const res = await landingPagesApi.update(id, formData);
             if (heroFile) {
                 await landingPagesApi.uploadHeroImage(id, heroFile);
+            }
+            if (termsFile) {
+                await landingPagesApi.uploadTermsFile(id, termsFile);
             }
             return res;
         },
@@ -155,17 +165,45 @@ export default function LandingPagesPage() {
         },
     });
 
+    const deleteHeroMutation = useMutation({
+        mutationFn: (id: string) => landingPagesApi.deleteHeroImage(id),
+        onSuccess: () => {
+            toast.success('Zdjęcie hero zostało usunięte');
+            setEditingPage((prev) => (prev ? { ...prev, heroImageUrl: null } : prev));
+            setHeroFile(null);
+            queryClient.invalidateQueries({ queryKey: ['admin-landing-pages'] });
+        },
+        onError: (err: any) => {
+            toast.error(err.message || 'Błąd usuwania zdjęcia');
+        },
+    });
+
+    const deleteTermsMutation = useMutation({
+        mutationFn: (id: string) => landingPagesApi.deleteTermsFile(id),
+        onSuccess: () => {
+            toast.success('Regulamin został usunięty');
+            setEditingPage((prev) => (prev ? { ...prev, termsFileUrl: null } : prev));
+            setTermsFile(null);
+            queryClient.invalidateQueries({ queryKey: ['admin-landing-pages'] });
+        },
+        onError: (err: any) => {
+            toast.error(err.message || 'Błąd usuwania regulaminu');
+        },
+    });
+
     const pages = data?.landingPages || [];
 
     const filteredPages = pages.filter((p) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.heroTitle && p.heroTitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (p.audience && p.audience.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     const openCreateModal = () => {
         setEditingPage({ ...DEFAULT_FORM, slug: `promo-${Date.now().toString().slice(-4)}` });
         setHeroFile(null);
+        setTermsFile(null);
         setPreviewListings([]);
         setIsModalOpen(true);
     };
@@ -173,31 +211,43 @@ export default function LandingPagesPage() {
     const openEditModal = (page: LandingPageAdmin) => {
         setEditingPage({
             ...page,
-            validFrom: page.validFrom ? page.validFrom.slice(0, 16) : '',
-            validTo: page.validTo ? page.validTo.slice(0, 16) : '',
+            validFrom: isoToWarsawInput(page.validFrom),
+            validTo: isoToWarsawInput(page.validTo),
         });
         setHeroFile(null);
+        setTermsFile(null);
         setIsModalOpen(true);
         if (page.id) {
             loadPreview(page.id);
         }
     };
 
+    const duplicateMutation = useMutation({
+        mutationFn: (id: string) => landingPagesApi.duplicate(id),
+        onSuccess: (res: any) => {
+            toast.success('Utworzono kopię. Jest nieaktywna — sprawdź treść i włącz ją.');
+            queryClient.invalidateQueries({ queryKey: ['admin-landing-pages'] });
+            if (res?.landingPage) {
+                setEditingPage(res.landingPage);
+                setHeroFile(null);
+                setTermsFile(null);
+                setIsModalOpen(true);
+            }
+        },
+        onError: (err: any) => {
+            toast.error(err.message || 'Błąd duplikowania');
+        },
+    });
+
     const duplicatePage = (page: LandingPageAdmin) => {
-        setEditingPage({
-            ...page,
-            id: undefined,
-            name: `${page.name} (Kopia)`,
-            slug: `${page.slug}-kopia`,
-        });
-        setHeroFile(null);
-        setIsModalOpen(true);
+        duplicateMutation.mutate(page.id);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingPage(null);
         setHeroFile(null);
+        setTermsFile(null);
         setPreviewListings([]);
     };
 
@@ -212,6 +262,9 @@ export default function LandingPagesPage() {
             discount: editingPage.discount ? Number(editingPage.discount) : null,
             initialPayment: editingPage.initialPayment ? Number(editingPage.initialPayment) : null,
             maxListings: editingPage.maxListings ? Number(editingPage.maxListings) : 12,
+            // Pola formularza są w czasie polskim; backend i baza pracują w UTC.
+            validFrom: warsawInputToIso(editingPage.validFrom),
+            validTo: warsawInputToIso(editingPage.validTo),
         };
 
         if (editingPage.id) {
@@ -586,7 +639,25 @@ export default function LandingPagesPage() {
                                                 />
                                             </div>
                                             {editingPage.heroImageUrl && (
-                                                <p className="text-[11px] text-gray-500 truncate">Obecny obraz: {editingPage.heroImageUrl}</p>
+                                                <div className="flex items-center gap-3 pt-1">
+                                                    <p className="text-[11px] text-gray-500 truncate">Obecny obraz: {editingPage.heroImageUrl}</p>
+                                                    {editingPage.id && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-red-600 border-red-200 hover:bg-red-50 text-[11px] h-6 px-2 shrink-0"
+                                                            onClick={() => {
+                                                                if (window.confirm('Czy na pewno chcesz usunąć zdjęcie hero?')) {
+                                                                    deleteHeroMutation.mutate(editingPage.id!);
+                                                                }
+                                                            }}
+                                                            disabled={deleteHeroMutation.isPending}
+                                                        >
+                                                            {deleteHeroMutation.isPending ? 'Usuwanie...' : 'Usuń zdjęcie'}
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -671,6 +742,55 @@ export default function LandingPagesPage() {
                                                 onChange={(e) => setEditingPage({ ...editingPage, initialPayment: e.target.value ? Number(e.target.value) : undefined })}
                                                 placeholder="np. 10000"
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 border-t space-y-3">
+                                        <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Regulamin promocji (PDF)</h3>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold text-gray-700">Etykieta linku regulaminu</Label>
+                                            <Input
+                                                value={editingPage.termsLabel || ''}
+                                                onChange={(e) => setEditingPage({ ...editingPage, termsLabel: e.target.value })}
+                                                placeholder="Regulamin promocji (PDF)"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold text-gray-700">Plik regulaminu (PDF, max 8MB)</Label>
+                                            <Input
+                                                type="file"
+                                                accept="application/pdf"
+                                                onChange={(e) => setTermsFile(e.target.files?.[0] || null)}
+                                                className="text-xs"
+                                            />
+                                            {editingPage.termsFileUrl && (
+                                                <div className="flex items-center gap-3 pt-1">
+                                                    <a
+                                                        href={editingPage.termsFileUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-blue-600 underline truncate max-w-xs"
+                                                    >
+                                                        Podgląd obecnego PDF ({editingPage.termsFileUrl})
+                                                    </a>
+                                                    {editingPage.id && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-red-600 border-red-200 hover:bg-red-50 text-[11px] h-6 px-2 shrink-0"
+                                                            onClick={() => {
+                                                                if (window.confirm('Czy na pewno chcesz usunąć regulamin PDF?')) {
+                                                                    deleteTermsMutation.mutate(editingPage.id!);
+                                                                }
+                                                            }}
+                                                            disabled={deleteTermsMutation.isPending}
+                                                        >
+                                                            {deleteTermsMutation.isPending ? 'Usuwanie...' : 'Usuń regulamin'}
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </TabsContent>
@@ -1010,6 +1130,67 @@ export default function LandingPagesPage() {
                                         />
                                     </div>
 
+                                    {/* Listings Section Slot */}
+                                    <div className="p-4 rounded-xl border border-gray-200 space-y-3 bg-gray-50/40">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="font-bold text-sm">Sekcja Ofert Samochodowych</Label>
+                                            <Switch
+                                                checked={editingPage.sections?.listings?.enabled !== false}
+                                                onCheckedChange={(val) => setEditingPage({
+                                                    ...editingPage,
+                                                    sections: { ...editingPage.sections, listings: { ...editingPage.sections?.listings, enabled: val } }
+                                                })}
+                                            />
+                                        </div>
+                                        <Input
+                                            placeholder="Tytuł sekcji ofert (domyślnie: Dostępne samochody w ofercie)"
+                                            value={editingPage.sections?.listings?.title || ''}
+                                            onChange={(e) => setEditingPage({
+                                                ...editingPage,
+                                                sections: { ...editingPage.sections, listings: { ...editingPage.sections?.listings, title: e.target.value } }
+                                            })}
+                                        />
+                                        <div className="pt-2 border-t space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-xs font-semibold text-gray-700">Przycisk przejścia do pełnej oferty pod listą</Label>
+                                                <Switch
+                                                    checked={editingPage.sections?.listings?.ctaEnabled !== false}
+                                                    onCheckedChange={(val) => setEditingPage({
+                                                        ...editingPage,
+                                                        sections: { ...editingPage.sections, listings: { ...editingPage.sections?.listings, ctaEnabled: val } }
+                                                    })}
+                                                />
+                                            </div>
+                                            {editingPage.sections?.listings?.ctaEnabled !== false && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                                                    <div>
+                                                        <Label className="text-xs">Napis na przycisku</Label>
+                                                        <Input
+                                                            placeholder="Sprawdź całą ofertę"
+                                                            value={editingPage.sections?.listings?.ctaLabel || ''}
+                                                            onChange={(e) => setEditingPage({
+                                                                ...editingPage,
+                                                                sections: { ...editingPage.sections, listings: { ...editingPage.sections?.listings, ctaLabel: e.target.value } }
+                                                            })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-xs">Ścieżka docelowa (względna)</Label>
+                                                        <Input
+                                                            placeholder="/samochody"
+                                                            value={editingPage.sections?.listings?.ctaUrl || ''}
+                                                            onChange={(e) => setEditingPage({
+                                                                ...editingPage,
+                                                                sections: { ...editingPage.sections, listings: { ...editingPage.sections?.listings, ctaUrl: e.target.value } }
+                                                            })}
+                                                        />
+                                                        <p className="text-[10px] text-gray-500 mt-1">Sugerowane: <code>/wynajem-dlugoterminowy</code></p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     {/* TrustBar Slot */}
                                     <div className="p-4 rounded-xl border border-gray-200 space-y-3 bg-gray-50/40">
                                         <div className="flex items-center justify-between">
@@ -1036,6 +1217,215 @@ export default function LandingPagesPage() {
                                                 }
                                             })}
                                         />
+                                    </div>
+
+                                    {/* How It Works Slot */}
+                                    <div className="p-4 rounded-xl border border-gray-200 space-y-4 bg-gray-50/40">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="font-bold text-sm">Sekcja „Jak to działa”</Label>
+                                            <Switch
+                                                checked={Boolean(editingPage.sections?.howItWorks?.enabled)}
+                                                onCheckedChange={(val) => setEditingPage({
+                                                    ...editingPage,
+                                                    sections: { ...editingPage.sections, howItWorks: { ...editingPage.sections?.howItWorks, enabled: val } }
+                                                })}
+                                            />
+                                        </div>
+
+                                        {editingPage.sections?.howItWorks?.enabled && (
+                                            <div className="space-y-4 pt-1">
+                                                <p className="text-xs text-gray-500">Podstawowe kroki procesu (max 3):</p>
+                                                {([0, 1, 2] as const).map((idx) => {
+                                                    const step = editingPage.sections?.howItWorks?.steps?.[idx] || { title: '', text: '' };
+                                                    const defaultTitles = ['Wybierz auto lub ratę', 'Wypełnij prosty wniosek', 'Odbierz kluczyki'];
+                                                    const defaultTexts = [
+                                                        'Przejrzyj naszą flotę lub opowiedz doradcy czego szukasz.',
+                                                        'Bez zbędnych dokumentów – decyzję otrzymasz w 24 godziny.',
+                                                        'Auto dostarczymy prosto pod wskazany adres lub wybierz odbiór własny.'
+                                                    ];
+                                                    return (
+                                                        <div key={idx} className="p-3 bg-white rounded-lg border border-gray-200 space-y-2">
+                                                            <Label className="text-xs font-bold text-gray-700">Krok {idx + 1}</Label>
+                                                            <Input
+                                                                placeholder={defaultTitles[idx]}
+                                                                value={step.title}
+                                                                onChange={(e) => {
+                                                                    const currentSteps = [...(editingPage.sections?.howItWorks?.steps || [])];
+                                                                    while (currentSteps.length <= idx) currentSteps.push({ title: '', text: '' });
+                                                                    currentSteps[idx] = { ...currentSteps[idx], title: e.target.value };
+                                                                    setEditingPage({
+                                                                        ...editingPage,
+                                                                        sections: { ...editingPage.sections, howItWorks: { ...editingPage.sections?.howItWorks, steps: currentSteps } }
+                                                                    });
+                                                                }}
+                                                            />
+                                                            <textarea
+                                                                rows={2}
+                                                                placeholder={defaultTexts[idx]}
+                                                                value={step.text}
+                                                                onChange={(e) => {
+                                                                    const currentSteps = [...(editingPage.sections?.howItWorks?.steps || [])];
+                                                                    while (currentSteps.length <= idx) currentSteps.push({ title: '', text: '' });
+                                                                    currentSteps[idx] = { ...currentSteps[idx], text: e.target.value };
+                                                                    setEditingPage({
+                                                                        ...editingPage,
+                                                                        sections: { ...editingPage.sections, howItWorks: { ...editingPage.sections?.howItWorks, steps: currentSteps } }
+                                                                    });
+                                                                }}
+                                                                className="w-full p-2 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+
+                                                {/* Opcjonalny 4. kafel odbiór nagrody */}
+                                                <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-xs font-bold text-amber-900">Kafel odbioru nagrody (opcjonalny 4. krok)</Label>
+                                                        <Switch
+                                                            checked={Boolean(editingPage.sections?.howItWorks?.steps?.[3]?.title || (editingPage.sections?.howItWorks?.steps?.length === 4))}
+                                                            onCheckedChange={(val) => {
+                                                                const currentSteps = [...(editingPage.sections?.howItWorks?.steps || [])];
+                                                                if (val) {
+                                                                    while (currentSteps.length < 3) currentSteps.push({ title: '', text: '' });
+                                                                    if (currentSteps.length < 4) {
+                                                                        currentSteps[3] = { title: '', text: '' };
+                                                                    }
+                                                                } else {
+                                                                    if (currentSteps.length >= 4) {
+                                                                        currentSteps.splice(3, 1);
+                                                                    }
+                                                                }
+                                                                setEditingPage({
+                                                                    ...editingPage,
+                                                                    sections: { ...editingPage.sections, howItWorks: { ...editingPage.sections?.howItWorks, steps: currentSteps } }
+                                                                });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    {(editingPage.sections?.howItWorks?.steps?.[3]?.title !== undefined || editingPage.sections?.howItWorks?.steps?.length === 4) && (
+                                                        <div className="space-y-2 pt-1">
+                                                            <Input
+                                                                placeholder="np. Odbierz 500 zł na paliwo"
+                                                                value={editingPage.sections?.howItWorks?.steps?.[3]?.title || ''}
+                                                                onChange={(e) => {
+                                                                    const currentSteps = [...(editingPage.sections?.howItWorks?.steps || [])];
+                                                                    while (currentSteps.length < 3) currentSteps.push({ title: '', text: '' });
+                                                                    currentSteps[3] = { title: e.target.value, text: currentSteps[3]?.text || '' };
+                                                                    setEditingPage({
+                                                                        ...editingPage,
+                                                                        sections: { ...editingPage.sections, howItWorks: { ...editingPage.sections?.howItWorks, steps: currentSteps } }
+                                                                    });
+                                                                }}
+                                                            />
+                                                            <textarea
+                                                                rows={2}
+                                                                placeholder="np. Po podpisaniu umowy najmu z partnerem otrzymasz kartę paliwową."
+                                                                value={editingPage.sections?.howItWorks?.steps?.[3]?.text || ''}
+                                                                onChange={(e) => {
+                                                                    const currentSteps = [...(editingPage.sections?.howItWorks?.steps || [])];
+                                                                    while (currentSteps.length < 3) currentSteps.push({ title: '', text: '' });
+                                                                    currentSteps[3] = { title: currentSteps[3]?.title || '', text: e.target.value };
+                                                                    setEditingPage({
+                                                                        ...editingPage,
+                                                                        sections: { ...editingPage.sections, howItWorks: { ...editingPage.sections?.howItWorks, steps: currentSteps } }
+                                                                    });
+                                                                }}
+                                                                className="w-full p-2 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* FAQ Section Slot */}
+                                    <div className="p-4 rounded-xl border border-gray-200 space-y-4 bg-gray-50/40">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="font-bold text-sm">Sekcja FAQ (Najczęściej zadawane pytania — max 6)</Label>
+                                            <Switch
+                                                checked={Boolean(editingPage.sections?.faq?.enabled)}
+                                                onCheckedChange={(val) => setEditingPage({
+                                                    ...editingPage,
+                                                    sections: { ...editingPage.sections, faq: { ...editingPage.sections?.faq, enabled: val } }
+                                                })}
+                                            />
+                                        </div>
+
+                                        {editingPage.sections?.faq?.enabled && (
+                                            <div className="space-y-3 pt-1">
+                                                {((editingPage.sections?.faq?.items as any[]) || []).map((item, idx) => (
+                                                    <div key={idx} className="p-3 bg-white rounded-lg border border-gray-200 space-y-2 relative">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label className="text-xs font-bold text-gray-700">Pytanie #{idx + 1}</Label>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-6 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 p-1"
+                                                                onClick={() => {
+                                                                    const newItems = [...(editingPage.sections?.faq?.items || [])];
+                                                                    newItems.splice(idx, 1);
+                                                                    setEditingPage({
+                                                                        ...editingPage,
+                                                                        sections: { ...editingPage.sections, faq: { ...editingPage.sections?.faq, items: newItems } }
+                                                                    });
+                                                                }}
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                        <Input
+                                                            placeholder="Pytanie"
+                                                            value={item.q || ''}
+                                                            onChange={(e) => {
+                                                                const newItems = [...(editingPage.sections?.faq?.items || [])];
+                                                                newItems[idx] = { ...newItems[idx], q: e.target.value };
+                                                                setEditingPage({
+                                                                    ...editingPage,
+                                                                    sections: { ...editingPage.sections, faq: { ...editingPage.sections?.faq, items: newItems } }
+                                                                });
+                                                            }}
+                                                        />
+                                                        <textarea
+                                                            rows={2}
+                                                            placeholder="Odpowiedź"
+                                                            value={item.a || ''}
+                                                            onChange={(e) => {
+                                                                const newItems = [...(editingPage.sections?.faq?.items || [])];
+                                                                newItems[idx] = { ...newItems[idx], a: e.target.value };
+                                                                setEditingPage({
+                                                                    ...editingPage,
+                                                                    sections: { ...editingPage.sections, faq: { ...editingPage.sections?.faq, items: newItems } }
+                                                                });
+                                                            }}
+                                                            className="w-full p-2 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                ))}
+
+                                                {((editingPage.sections?.faq?.items || []).length < 6) && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="w-full text-xs"
+                                                        onClick={() => {
+                                                            const newItems = [...(editingPage.sections?.faq?.items || [])];
+                                                            newItems.push({ q: '', a: '' });
+                                                            setEditingPage({
+                                                                ...editingPage,
+                                                                sections: { ...editingPage.sections, faq: { ...editingPage.sections?.faq, items: newItems } }
+                                                            });
+                                                        }}
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5 mr-1" />
+                                                        Dodaj pytanie
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Urgency Banner Slot */}

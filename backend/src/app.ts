@@ -498,6 +498,15 @@ export async function buildApp(): Promise<FastifyInstance> {
         return serveStaticFile(filePath, reply);
     });
 
+    // Static files — landing page terms PDFs
+    fastify.get('/uploads/landing-pages/terms/:file', async (request, reply) => {
+        const { file } = request.params as { file: string };
+        const baseDir = path.join(uploadsRoot, 'landing-pages', 'terms');
+        const filePath = getSafeFilePath(baseDir, file);
+        if (!filePath) return reply.code(400).send({ error: 'Invalid path' });
+        return serveStaticFile(filePath, reply);
+    });
+
     // Static files — legal documents (PDF) + feature tile images at human-readable slugs
     const PUBLIC_SLUGS = new Set([
         'impressum',

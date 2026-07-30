@@ -5,7 +5,13 @@ import { mapBackendListingToFrontend } from '@/utils/listingMapper';
 
 export interface LpSectionsData {
     callback?: { enabled: boolean; title?: string; description?: string };
-    listings?: { enabled: boolean; title?: string };
+    listings?: {
+        enabled: boolean;
+        title?: string;
+        ctaEnabled?: boolean;
+        ctaLabel?: string;
+        ctaUrl?: string;
+    };
     trustBar?: { enabled: boolean; items?: string[] };
     howItWorks?: { enabled: boolean; steps?: { title: string; text: string }[] };
     faq?: { enabled: boolean; items?: { q: string; a: string }[] };
@@ -35,6 +41,8 @@ export interface LandingPageData {
     sections?: LpSectionsData;
     metaTitle?: string;
     metaDescription?: string;
+    termsFileUrl?: string;
+    termsLabel?: string;
     listings: Listing[];
     rentalVehicles?: any[];
 }
