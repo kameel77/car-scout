@@ -75,7 +75,7 @@ const DEFAULT_FORM: Partial<LandingPageAdmin> = {
     sections: {
         callback: { enabled: true, title: 'Chcesz omówić ofertę?', description: 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczegóły.' },
         listings: { enabled: true, title: 'Dostępne samochody w ofercie', ctaEnabled: true, ctaLabel: 'Sprawdź całą ofertę', ctaUrl: '/samochody' },
-        trustBar: { enabled: true, items: ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Wsparcie konsultanta'] },
+        trustBar: { enabled: true, items: ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Decyzja nawet w 60 minut'] },
         howItWorks: { enabled: true, steps: [
             { title: 'Wybierz auto lub ratę', text: 'Przejrzyj naszą flotę lub opowiedz doradcy czego szukasz.' },
             { title: 'Wypełnij prosty wniosek', text: 'Bez zbędnych dokumentów – decyzję otrzymasz w 24 godziny.' },
@@ -1194,7 +1194,7 @@ export default function LandingPagesPage() {
                                     {/* TrustBar Slot */}
                                     <div className="p-4 rounded-xl border border-gray-200 space-y-3 bg-gray-50/40">
                                         <div className="flex items-center justify-between">
-                                            <Label className="font-bold text-sm">Pasek Zaufania (TrustBar — max 4)</Label>
+                                            <Label className="font-bold text-sm">Pasek Zaufania (TrustBar — max 4, rozdzielaj średnikiem)</Label>
                                             <Switch
                                                 checked={Boolean(editingPage.sections?.trustBar?.enabled)}
                                                 onCheckedChange={(val) => setEditingPage({
@@ -1204,15 +1204,15 @@ export default function LandingPagesPage() {
                                             />
                                         </div>
                                         <Input
-                                            placeholder="Wpisy rozdzielone przecinkami (max 4)"
-                                            value={Array.isArray(editingPage.sections?.trustBar?.items) ? editingPage.sections.trustBar.items.join(', ') : ''}
+                                            placeholder="Wpisy rozdzielone średnikami, np. Zaufani dealerzy; Leasing, kredyt i wynajem (max 4)"
+                                            value={Array.isArray(editingPage.sections?.trustBar?.items) ? editingPage.sections.trustBar.items.join('; ') : ''}
                                             onChange={(e) => setEditingPage({
                                                 ...editingPage,
                                                 sections: {
                                                     ...editingPage.sections,
                                                     trustBar: {
                                                         ...editingPage.sections?.trustBar,
-                                                        items: e.target.value.split(',').map(s => s.trim()).filter(Boolean).slice(0, 4)
+                                                        items: e.target.value.split(';').map(s => s.trim()).filter(Boolean).slice(0, 4)
                                                     }
                                                 }
                                             })}

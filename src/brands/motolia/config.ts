@@ -19,6 +19,14 @@ export const motoliaConfig: BrandConfig = {
     phone: '+48 22 112 09 50',
     email: 'kontakt@motolia.pl',
   },
+  // Dane z KRS 0001061451 (stan na 14.04.2026). Używane w stopkach jako zapas,
+  // gdy odpowiednie pola w ustawieniach serwisu nie są uzupełnione.
+  companyInfo: {
+    legalName: 'Motolia sp. z o.o.',
+    address: 'ul. Alternatywy 7/135, 02-775 Warszawa',
+    vatId: '9512579189',
+    registerNumber: 'REGON 526563977, KRS 0001061451',
+  },
   logo: {
     header: '/brands/motolia/logo-header.svg',
     footer: '/brands/motolia/logo-footer.svg',
@@ -33,7 +41,7 @@ export const motoliaConfig: BrandConfig = {
     hero: {
       badge: 'Leasing · Kredyt · Wynajem · Pożyczka',
       title: 'Szeroki wybór aut.<br /><span>Proste finansowanie.</span>',
-      seoH1: 'Leasing, kredyt i wynajem samochodów — nowe i używane auta w Motolia',
+      seoH1: 'Leasing, kredyt i wynajem samochodów: nowe i używane auta w Motolia',
       subtitle: 'Niezależnie czy jesteś osobą prywatną czy firmą – dobierzemy finansowanie do Twojej sytuacji. Jedna rozmowa, wiele ofert.',
       ctaLabel: 'Sprawdź dostępne auta',
       image: 'https://images.unsplash.com/photo-1617469767053-d3b523a0b982?q=80&w=2662&auto=format&fit=crop',
