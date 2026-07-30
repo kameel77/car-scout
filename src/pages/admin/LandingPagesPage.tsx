@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { landingPagesApi, listingsApi } from '@/services/api';
 import { rentalPublicApi } from '@/services/rental-api';
+import { isoToWarsawInput, warsawInputToIso } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -210,8 +211,8 @@ export default function LandingPagesPage() {
     const openEditModal = (page: LandingPageAdmin) => {
         setEditingPage({
             ...page,
-            validFrom: page.validFrom ? page.validFrom.slice(0, 16) : '',
-            validTo: page.validTo ? page.validTo.slice(0, 16) : '',
+            validFrom: isoToWarsawInput(page.validFrom),
+            validTo: isoToWarsawInput(page.validTo),
         });
         setHeroFile(null);
         setTermsFile(null);
@@ -261,6 +262,9 @@ export default function LandingPagesPage() {
             discount: editingPage.discount ? Number(editingPage.discount) : null,
             initialPayment: editingPage.initialPayment ? Number(editingPage.initialPayment) : null,
             maxListings: editingPage.maxListings ? Number(editingPage.maxListings) : 12,
+            // Pola formularza są w czasie polskim; backend i baza pracują w UTC.
+            validFrom: warsawInputToIso(editingPage.validFrom),
+            validTo: warsawInputToIso(editingPage.validTo),
         };
 
         if (editingPage.id) {
