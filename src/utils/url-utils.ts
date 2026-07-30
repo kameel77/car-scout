@@ -67,7 +67,11 @@ function transliteratePolish(text: string): string {
  * - Removes multiple hyphens
  */
 export function sanitizeForSlug(text: string): string {
+  // NFD + usuniecie znakow laczacych obsluguje diakrytyki spoza polskiego alfabetu
+  // (Skoda, Citroen). Musi byc identyczne z backend/src/utils/url-utils.ts.
   return transliteratePolish(text)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
