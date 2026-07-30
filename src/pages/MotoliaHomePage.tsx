@@ -229,6 +229,7 @@ export default function MotoliaHomePage() {
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           {hasHeroBanners ? (
+            <>
             <div className="relative">
               {/* Fallback rezerwuje wysokość boxa banera (identyczną z HeroBannerCarousel
                   i SSR home-shell) — bez tego, na szybkim CPU React commituje pierwszą klatkę
@@ -237,13 +238,6 @@ export default function MotoliaHomePage() {
               <React.Suspense fallback={<div className="w-full h-[360px] md:h-[460px] lg:h-[520px] rounded-3xl bg-slate-100 animate-pulse" />}>
                 <HeroBannerCarousel />
               </React.Suspense>
-              {/* H1 musi zostać BEZPOŚREDNIO pod banerem — tak samo w SSR home-shell
-                  (homeHeroShellHtml w backend/seo-meta.ts). Na mobile floating-card (niżej)
-                  jest w normalnym flow, więc H1 po nim renderowałoby się w innej kolejności
-                  niż w statycznym shellu z index.html i powodowało CLS przy hydratacji. */}
-              <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-[#1A1A1A] mt-8 mb-3">
-                {config.homePage.hero.seoH1 || cleanHeroTitle}
-              </h1>
               {/* Floating search card (superauto layout) — plain div so the
                   -translate-y-1/2 centering isn't overridden by framer-motion's transform */}
               <div className="mt-6 lg:mt-0 lg:absolute lg:top-1/2 lg:right-6 xl:right-10 lg:-translate-y-1/2 lg:w-[400px] lg:z-20">
@@ -259,6 +253,14 @@ export default function MotoliaHomePage() {
                 />
               </div>
             </div>
+            {/* H1 MUSI zostać POZA wrapperem .relative z banerem: karta wyszukiwarki jest
+                lg:absolute z lg:top-1/2 -translate-y-1/2 względem tego wrappera, więc każdy
+                element dołożony do jego wnętrza podbija wysokość i zsuwa kartę w dół
+                (baner "rozjeżdża się" na desktopie). Ta sama pozycja co w SSR home-shell. */}
+            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-[#1A1A1A] text-center mt-8 mb-3">
+              {config.homePage.hero.seoH1 || cleanHeroTitle}
+            </h1>
+            </>
           ) : (
             <div className="grid lg:grid-cols-[1.5fr_1fr] gap-16 items-center">
 
@@ -383,8 +385,8 @@ export default function MotoliaHomePage() {
                 Co oferujemy
               </p>
               <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-5 text-[#1A1A1A]">
-                Leasing, kredyt, wynajem i pożyczka —{' '}
-                <span style={{ color: YELLOW_DARK }}>jeden serwis</span>
+                Leasing, kredyt, wynajem i pożyczka w{' '}
+                <span style={{ color: YELLOW_DARK }}>jednym serwisie</span>
               </h2>
               <p className="text-lg text-gray-500">
                 Obsługujemy zarówno osoby prywatne, jak i firmy – każdy znajdzie tu coś dla siebie.
@@ -453,7 +455,7 @@ export default function MotoliaHomePage() {
                 Oferta
               </p>
               <h2 className="text-4xl md:text-5xl font-outfit font-bold mb-4 text-[#1A1A1A]">
-                Samochody nowe i używane —{' '}
+                Samochody nowe i używane,{' '}
                 <span style={{ color: YELLOW_DARK }}>praktycznie każda marka</span>
               </h2>
               <p className="text-lg text-gray-500 max-w-2xl mx-auto">

@@ -44,13 +44,13 @@ const BRAND_DEFAULTS: Record<
         name: 'CarSalon',
         title: 'CarSalon - auta nowe i używane z gwarancją',
         description: 'Setki ofert od sprawdzonych dealerów. Nowe i używane samochody z gwarancją.',
-        homeH1: 'Samochody nowe i używane z finansowaniem — leasing, kredyt i wynajem',
+        homeH1: 'Samochody nowe i używane z finansowaniem: leasing, kredyt i wynajem',
     },
     motolia: {
         name: 'Motolia',
-        title: 'Motolia — leasing, kredyt i wynajem samochodów bez formalności',
-        description: 'Nowe i używane auta z finansowaniem dopasowanym do Twojej sytuacji — leasing, kredyt, wynajem długoterminowy. Sprawdź oferty i policz ratę online w 2 minuty.',
-        homeH1: 'Leasing, kredyt i wynajem samochodów — nowe i używane auta w Motolia',
+        title: 'Motolia - leasing, kredyt i wynajem samochodów bez formalności',
+        description: 'Nowe i używane auta z finansowaniem dopasowanym do Twojej sytuacji: leasing, kredyt, wynajem długoterminowy. Sprawdź oferty i policz ratę online w 2 minuty.',
+        homeH1: 'Leasing, kredyt i wynajem samochodów: nowe i używane auta w Motolia',
         // Warianty zapisu marki, którymi ludzie realnie szukają (dane z Google Search Console)
         alternateNames: ['Motolia.pl', 'motolia.pl', 'Motoria', 'Motalia', 'Moto lia'],
         disambiguatingDescription:
@@ -1470,7 +1470,7 @@ export function homeHeroShellHtml(
     return `<div class="bg-white min-h-screen text-[#1A1A1A] font-inter">${header}` +
         `<section class="relative overflow-hidden bg-[#FAFAF8] pt-6 pb-8 lg:pt-10 lg:pb-12"><div class="max-w-7xl mx-auto px-6">` +
         `<div class="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-100 rounded-3xl overflow-hidden"><picture>${mobileSource}${img}</picture></div>` +
-        `<h1 class="text-2xl lg:text-3xl font-bold tracking-tight text-[#1A1A1A] mt-8 mb-3">${h1Escaped}</h1>` +
+        `<h1 class="text-2xl lg:text-3xl font-bold tracking-tight text-[#1A1A1A] text-center mt-8 mb-3">${h1Escaped}</h1>` +
         `</div></section></div>`;
 }
 

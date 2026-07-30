@@ -47,6 +47,14 @@ export interface ContactInfo {
   email: string;
 }
 
+/** Dane rejestrowe spółki — zapas dla stopek, gdy ustawienia serwisu są puste. */
+export interface CompanyInfo {
+  legalName: string;
+  address: string;
+  vatId: string;
+  registerNumber: string;
+}
+
 export interface BrandLogo {
   header?: string;
   footer?: string;
@@ -58,6 +66,7 @@ export interface BrandConfig {
   domain: string;
   colors: BrandColors;
   contactInfo: ContactInfo;
+  companyInfo?: CompanyInfo;
   logo?: BrandLogo;
   homePage: {
     hero: HeroConfig;

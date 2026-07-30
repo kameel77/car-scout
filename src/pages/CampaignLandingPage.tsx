@@ -445,9 +445,17 @@ export default function CampaignLandingPage() {
                             </a>
                         </div>
                     )}
-                    <p className="font-semibold">{settings?.legalCompanyName || config.name || 'Motolia'}</p>
-                    {settings?.legalAddress && <p>{settings.legalAddress}</p>}
-                    <p>NIP: {settings?.legalVatId || '—'} | REGON/KRS: {settings?.legalRegisterNumber || '—'}</p>
+                    <p className="font-semibold">
+                        {settings?.legalCompanyName || config.companyInfo?.legalName || config.name}
+                    </p>
+                    {(settings?.legalAddress || config.companyInfo?.address) && (
+                        <p>{settings?.legalAddress || config.companyInfo?.address}</p>
+                    )}
+                    <p>
+                        NIP: {settings?.legalVatId || config.companyInfo?.vatId || '—'}
+                        {' | '}
+                        {settings?.legalRegisterNumber || config.companyInfo?.registerNumber || '—'}
+                    </p>
                     <p className="text-[11px] max-w-2xl mx-auto opacity-80">
                         Wysyłając formularz zgadzasz się na kontakt ze strony doradcy w celu przedstawienia spersonalizowanej oferty. Rezygnacja z kontaktu jest możliwa w każdej chwili.
                     </p>
