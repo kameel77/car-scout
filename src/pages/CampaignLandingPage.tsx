@@ -29,7 +29,6 @@ const THEMES = {
         muted: 'text-gray-400',
         footer: 'bg-[#0e0e0e] border-white/10 text-gray-500',
         stickyBar: 'bg-[#1a1a1a]/95 border-white/10',
-        stickyCall: 'bg-[#2a2a2a] text-white border-white/10',
         loader: 'bg-[#1a1a1a] text-white',
         accentText: 'text-[#F5C518]',
         faqItem: 'border-white/10 hover:border-white/20 bg-[#1c1c1c]',
@@ -49,7 +48,6 @@ const THEMES = {
         muted: 'text-gray-500',
         footer: 'bg-gray-50 border-gray-200 text-gray-500',
         stickyBar: 'bg-white/95 border-gray-200',
-        stickyCall: 'bg-gray-100 text-gray-900 border-gray-300',
         loader: 'bg-white text-gray-900',
         accentText: 'text-[#8a6d05]',
         faqItem: 'border-gray-100 hover:border-gray-200 bg-white',
@@ -69,6 +67,9 @@ export default function CampaignLandingPage() {
     const { data: settings } = useAppSettings();
     const { setProgrammaticOffer } = useSpecialOffer();
     const [openFaq, setOpenFaq] = useState<number | null>(0);
+    // Gdy formularz jest na ekranie, powtarzanie go w pasku nie ma sensu —
+    // wtedy jedyną sensowną alternatywą jest telefon, i odwrotnie.
+    const [callbackOnScreen, setCallbackOnScreen] = useState(false);
 
     const lp = data?.landingPage;
     const lpSlug = lp?.slug;
@@ -109,6 +110,18 @@ export default function CampaignLandingPage() {
             trackLpView(lpSlug, src);
         }
     }, [lpSlug, src]);
+
+    useEffect(() => {
+        const section = document.getElementById('lp-callback');
+        if (!section || typeof IntersectionObserver === 'undefined') return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => setCallbackOnScreen(entry.isIntersecting),
+            { threshold: 0.35 }
+        );
+        observer.observe(section);
+        return () => observer.disconnect();
+    }, [lpSlug]);
 
     // Redirect to /samochody if LP is expired (410)
     if (error && (error.status === 410 || error.message?.includes('expired'))) {
@@ -170,8 +183,8 @@ export default function CampaignLandingPage() {
 
     const heroSection = (
         <section className={`pt-8 pb-12 px-4 border-b ${theme.heroSection}`}>
-            <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4 text-left">
+            <div className="max-w-5xl mx-auto">
+                <div className="space-y-4 text-left">
                     {lp.heroBadge && (
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5C518]/15 border border-[#F5C518]/30 text-xs font-semibold uppercase tracking-wider ${theme.accentText}`}>
                             <ShieldCheck className="w-3.5 h-3.5" />
@@ -205,35 +218,28 @@ export default function CampaignLandingPage() {
                     )}
                 </div>
 
-                {showCallback && (
-                    <div id="lp-callback" className="lg:col-span-5 scroll-mt-20">
-                        <div className={`border-2 p-6 rounded-2xl shadow-2xl space-y-4 ${theme.callbackCard}`}>
-                            <div className="text-left space-y-1">
-                                <h2 className={`text-xl font-bold flex items-center gap-2 ${theme.heading}`}>
-                                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#F5C518]/20 shrink-0 ${theme.accentText}`}>
-                                        <Phone className="w-4 h-4" />
-                                    </span>
-                                    <span>{sections.callback?.title || 'Oddzwonimy do Ciebie'}</span>
-                                </h2>
-                            </div>
-
-                            <CallbackForm
-                                compact
-                                title=""
-                                titleHighlight=""
-                                description={sections.callback?.description || 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczegóły oferty.'}
-                                submitLabel={lp.ctaLabel || 'Zadzwoń do mnie'}
-                                landingPageSlug={lp.slug}
-                                src={src}
-                                formId={`lp_${lp.slug}`}
-                                className="bg-transparent border-0 p-0 shadow-none"
-                            />
-                        </div>
-                    </div>
-                )}
             </div>
         </section>
     );
+
+    // Formularz stoi pod listą pojazdów: użytkownik najpierw widzi konkretne auta i raty,
+    // a prośba o numer pada dopiero wtedy, gdy jest po co dzwonić.
+    const callbackSection = showCallback ? (
+        <section id="lp-callback" className={`py-10 px-4 border-t ${theme.band}`}>
+            <div className="max-w-xl mx-auto scroll-mt-20">
+                <CallbackForm
+                    compact
+                    title={sections.callback?.title || 'Oddzwonimy do Ciebie'}
+                    titleHighlight=""
+                    description={sections.callback?.description || 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczegóły oferty.'}
+                    submitLabel={lp.ctaLabel || 'Zadzwoń do mnie'}
+                    landingPageSlug={lp.slug}
+                    src={src}
+                    formId={`lp_${lp.slug}`}
+                />
+            </div>
+        </section>
+    ) : null;
 
     const listingsSection = showListings ? (
         <section className="py-12 px-4 max-w-6xl mx-auto">
@@ -338,7 +344,7 @@ export default function CampaignLandingPage() {
                         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                             {(sections.trustBar?.items && sections.trustBar.items.length > 0
                                 ? sections.trustBar.items
-                                : ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Wsparcie konsultanta']
+                                : ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Decyzja nawet w 60 minut']
                             ).map((item, idx) => (
                                 <div key={idx} className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${theme.card}`}>
                                     <CheckCircle2 className="w-4 h-4 text-[#F5C518] shrink-0" />
@@ -350,6 +356,8 @@ export default function CampaignLandingPage() {
                 )}
 
                 {heroFirst ? listingsSection : heroSection}
+
+                {callbackSection}
 
                 {/* Optional How It Works */}
                 {showHowItWorks && (
@@ -462,23 +470,28 @@ export default function CampaignLandingPage() {
                 </div>
             </footer>
 
-            {/* Mobile Bottom Sticky Bar */}
-            <div className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur border-t p-3 flex md:hidden items-center gap-3 ${theme.stickyBar}`}>
-                <a
-                    href={`tel:${formatPhoneForTelLink(contactPhone)}`}
-                    onClick={() => handleCallClick('lp_sticky_bar')}
-                    className={`flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-xl font-bold text-xs border active:scale-95 transition-transform ${theme.stickyCall}`}
-                >
-                    <Phone className="w-4 h-4 text-[#F5C518]" />
-                    <span>Zadzwoń</span>
-                </a>
-                <button
-                    onClick={scrollToCallback}
-                    className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-xs shadow-lg active:scale-95 transition-transform"
-                >
-                    <span>Oddzwońcie do mnie</span>
-                    <ArrowRight className="w-4 h-4" />
-                </button>
+            {/* Mobile Bottom Sticky Bar — jedna akcja, zawsze ta, której nie ma pod ręką.
+                Numer telefonu jest stale widoczny w przyklejonym nagłówku, więc powielanie
+                go tutaj obok drugiego CTA tylko rozpraszało. */}
+            <div className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur border-t px-3 py-2.5 md:hidden ${theme.stickyBar}`}>
+                {callbackOnScreen ? (
+                    <a
+                        href={`tel:${formatPhoneForTelLink(contactPhone)}`}
+                        onClick={() => handleCallClick('lp_sticky_bar')}
+                        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm shadow-lg active:scale-[0.98] transition-transform"
+                    >
+                        <Phone className="w-4 h-4 shrink-0" />
+                        <span>Zadzwoń: {contactPhone}</span>
+                    </a>
+                ) : (
+                    <button
+                        onClick={scrollToCallback}
+                        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm shadow-lg active:scale-[0.98] transition-transform"
+                    >
+                        <span>Zostaw numer — oddzwonimy w 15 minut</span>
+                        <ArrowRight className="w-4 h-4 shrink-0" />
+                    </button>
+                )}
             </div>
         </div>
     );
