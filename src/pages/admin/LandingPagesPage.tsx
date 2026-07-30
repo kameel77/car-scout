@@ -1194,7 +1194,7 @@ export default function LandingPagesPage() {
                                     {/* TrustBar Slot */}
                                     <div className="p-4 rounded-xl border border-gray-200 space-y-3 bg-gray-50/40">
                                         <div className="flex items-center justify-between">
-                                            <Label className="font-bold text-sm">Pasek Zaufania (TrustBar — max 4)</Label>
+                                            <Label className="font-bold text-sm">Pasek Zaufania (TrustBar — max 4, rozdzielaj średnikiem)</Label>
                                             <Switch
                                                 checked={Boolean(editingPage.sections?.trustBar?.enabled)}
                                                 onCheckedChange={(val) => setEditingPage({
@@ -1204,15 +1204,15 @@ export default function LandingPagesPage() {
                                             />
                                         </div>
                                         <Input
-                                            placeholder="Wpisy rozdzielone przecinkami (max 4)"
-                                            value={Array.isArray(editingPage.sections?.trustBar?.items) ? editingPage.sections.trustBar.items.join(', ') : ''}
+                                            placeholder="Wpisy rozdzielone średnikami, np. Zaufani dealerzy; Leasing, kredyt i wynajem (max 4)"
+                                            value={Array.isArray(editingPage.sections?.trustBar?.items) ? editingPage.sections.trustBar.items.join('; ') : ''}
                                             onChange={(e) => setEditingPage({
                                                 ...editingPage,
                                                 sections: {
                                                     ...editingPage.sections,
                                                     trustBar: {
                                                         ...editingPage.sections?.trustBar,
-                                                        items: e.target.value.split(',').map(s => s.trim()).filter(Boolean).slice(0, 4)
+                                                        items: e.target.value.split(';').map(s => s.trim()).filter(Boolean).slice(0, 4)
                                                     }
                                                 }
                                             })}
