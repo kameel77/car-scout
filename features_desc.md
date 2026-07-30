@@ -432,10 +432,15 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Cel**: Zarządzanie dedykowanymi stronami docelowymi dla kampanii reklamowych (Meta/Google Ads, mailingi, kody QR z mediów offline/TV). System umożliwia stworzenie jednej strony docelowej na dany segment odbiorców, z obsługą wielu kampanii i kanałów poprzez parametry URL (`?src=` oraz parametry UTM).
 - **Zachowanie**:
   - **Dedykowany URL**: Strony dostępne są pod adresem `/promo/:slug`.
-  - **Strict zero conversion leak**: Minimalistyczny nagłówek (logo marki + klikalny telefon) bez głównego menu nawigacyjnego i bez odnośników wyprowadzających użytkownika poza lejek konwersji.
+  - **Strict zero conversion leak**: Minimalistyczny nagłówek (logo marki + klikalny telefon) bez głównego menu nawigacyjnego i bez odnośników wyprowadzających użytkownika poza lejek konwersji (z jednym kontrolowanym wyjątkiem dla przycisku przejścia do katalogu pod ofertami).
   - **Formularz kontaktowy above the fold**: Skierowany na szybki kontakt telefoniczny z doradcą (jedne pole na numer telefonu).
   - **Przeznaczenie aut**: Strona obsługuje dwa tryby doboru aut: `MANUAL` (lista wyselekcjonowanych aut po ID) oraz `FILTERED` (automatyczne dopasowanie filtrami po marce, cenie, roczniku itp.).
-  - **Sloty treści**: Elastyczna konfigurowalna struktura ze stałą kolejnością slotów (Pilność/Urgency, Pasek zaufania/TrustBar, Jak to działa/HowItWorks, FAQ).
+  - **Przycisk przejścia do katalogu**: Pod listą pojazdów przycisk akcentowy w kolorze motywu (domyślnie "Sprawdź całą ofertę" na `/samochody` lub `/wynajem-dlugoterminowy`), rejestrujący zdarzenie `lp_offer_cta` w GA4 dataLayer.
+  - **Regulamin promocji (PDF)**: Możliwość wgrania per LP pliku PDF (limit 8 MB z walidacją magii `%PDF`), z opcjonalną etykietą i automatyczną sekcją w stopce.
+  - **Sloty treści i edytory**: Elastyczna struktura slotów w panelu:
+    - **Jak to działa**: 3 podstawowe kroki + opcjonalny, niezależny 4. kafel odbioru nagrody, z automatyczną responsywną siatką (4 kolumny na desktopie przy 4 krokach).
+    - **Edytor FAQ**: Lista pytań i odpowiedzi (do 6 wpisów) z pełną edycją w panelu bez konieczności deployu.
+    - **Usuwanie zdjęć hero**: Przycisk bezpiecznego usuwania obrazu hero w panelu z kasowaniem wariantów z dysku.
   - **Indeksowanie i SEO**: Domyślnie strony posiadają nagłówek `noindex`. Flaga `isIndexable` zezwala na indeksowanie wyłącznie dla evergreenowych stron bez daty zakończenia. Strony wygasłe (`validTo < now()`) zwracają status HTTP 410 i automatycznie przekierowują użytkownika na `/samochody`.
   - **Panel administracyjny**: Zarządzanie stronami w zakładce `/admin/landing-pages` pozwala na tworzenie, edycję, duplikowanie oraz generowanie gotowych kodów QR PNG w rozdzielczości 1024px z przypisanym źródłem ruchu `?src=qr`.
 ## 39. Pakiet poprawek SEO On-Site dla strony głównej motolia.pl (2026-07)

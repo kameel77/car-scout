@@ -235,14 +235,36 @@ export default function CampaignLandingPage() {
             </div>
 
             {hasVehicles ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(lp.listings || []).map((listing) => (
-                        <ListingCard key={listing.listing_id} listing={listing} />
-                    ))}
-                    {rentalVehicles.map((vehicle: any) => (
-                        <RentalListingCard key={vehicle.id} v={vehicle} />
-                    ))}
-                </div>
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {(lp.listings || []).map((listing) => (
+                            <ListingCard key={listing.listing_id} listing={listing} />
+                        ))}
+                        {rentalVehicles.map((vehicle: any) => (
+                            <RentalListingCard key={vehicle.id} v={vehicle} />
+                        ))}
+                    </div>
+                    {sections.listings?.ctaEnabled !== false && (
+                        <div className="mt-8 text-center">
+                            <a
+                                href={sections.listings?.ctaUrl || '/samochody'}
+                                onClick={() => {
+                                    if (typeof window !== 'undefined' && (window as any).dataLayer) {
+                                        (window as any).dataLayer.push({
+                                            event: 'lp_offer_cta',
+                                            landing_page_slug: lp.slug,
+                                            traffic_source: src || 'direct',
+                                        });
+                                    }
+                                }}
+                                className="inline-flex items-center justify-center h-12 px-8 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm hover:opacity-90 transition-opacity shadow-md"
+                            >
+                                <span>{sections.listings?.ctaLabel || 'Sprawdź całą ofertę'}</span>
+                                <ArrowRight className="w-4 h-4 ml-2" />
+                            </a>
+                        </div>
+                    )}
+                </>
             ) : (
                 <div className={`p-8 rounded-2xl text-center border ${theme.card}`}>
                     <p className={`text-sm ${theme.muted}`}>
@@ -252,6 +274,9 @@ export default function CampaignLandingPage() {
             )}
         </section>
     ) : null;
+
+    const howItWorksSteps = sections.howItWorks?.steps || [];
+    const howItWorksGridCols = howItWorksSteps.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3';
 
     return (
         <div className={`min-h-screen flex flex-col font-sans antialiased pb-20 md:pb-0 ${theme.page}`}>
@@ -317,14 +342,14 @@ export default function CampaignLandingPage() {
                 {/* Optional How It Works */}
                 {showHowItWorks && (
                     <section className={`py-12 px-4 border-t border-b ${theme.band}`}>
-                        <div className="max-w-4xl mx-auto space-y-8">
+                        <div className="max-w-5xl mx-auto space-y-8">
                             <div className="text-center">
                                 <h2 className={`text-2xl md:text-3xl font-bold ${theme.heading}`}>Jak to działa?</h2>
-                                <p className={`text-sm mt-1 ${theme.muted}`}>Prosty proces odbioru nowego auta w 3 krokach</p>
+                                <p className={`text-sm mt-1 ${theme.muted}`}>Prosty proces odbioru nowego auta</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {sections.howItWorks?.steps?.map((step, idx) => (
+                            <div className={`grid grid-cols-1 ${howItWorksGridCols} gap-6`}>
+                                {howItWorksSteps.map((step, idx) => (
                                     <div key={idx} className={`p-6 rounded-2xl border space-y-3 text-left relative ${theme.card}`}>
                                         <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm">
                                             {idx + 1}
@@ -363,6 +388,18 @@ export default function CampaignLandingPage() {
             {/* Minimal Footer — No site navigation links */}
             <footer className={`border-t py-8 px-4 text-center text-xs space-y-3 ${theme.footer}`}>
                 <div className="max-w-4xl mx-auto space-y-2">
+                    {lp.termsFileUrl && (
+                        <div className="pb-2">
+                            <a
+                                href={lp.termsFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`text-sm font-medium underline hover:opacity-80 transition-opacity ${theme.body}`}
+                            >
+                                {lp.termsLabel || 'Regulamin promocji (PDF)'}
+                            </a>
+                        </div>
+                    )}
                     <p className="font-semibold">{settings?.legalCompanyName || config.name || 'Motolia'}</p>
                     {settings?.legalAddress && <p>{settings.legalAddress}</p>}
                     <p>NIP: {settings?.legalVatId || '—'} | REGON/KRS: {settings?.legalRegisterNumber || '—'}</p>
