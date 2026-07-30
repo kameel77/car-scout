@@ -161,6 +161,9 @@ export default function CampaignLandingPage() {
         trackPhoneClick(location, lp.slug, src);
     };
 
+    // W wąskim pasku mobilnym prefiks kierunkowy tylko zabiera miejsce.
+    const stickyPhoneLabel = contactPhone.replace(/^\+48\s*/, '');
+
     const scrollToCallback = () => {
         const el = document.getElementById('lp-callback');
         if (el) {
@@ -170,8 +173,8 @@ export default function CampaignLandingPage() {
 
     const heroSection = (
         <section className={`pt-8 pb-12 px-4 border-b ${theme.heroSection}`}>
-            <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4 text-left">
+            <div className="max-w-5xl mx-auto">
+                <div className="space-y-4 text-left">
                     {lp.heroBadge && (
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5C518]/15 border border-[#F5C518]/30 text-xs font-semibold uppercase tracking-wider ${theme.accentText}`}>
                             <ShieldCheck className="w-3.5 h-3.5" />
@@ -205,35 +208,28 @@ export default function CampaignLandingPage() {
                     )}
                 </div>
 
-                {showCallback && (
-                    <div id="lp-callback" className="lg:col-span-5 scroll-mt-20">
-                        <div className={`border-2 p-6 rounded-2xl shadow-2xl space-y-4 ${theme.callbackCard}`}>
-                            <div className="text-left space-y-1">
-                                <h2 className={`text-xl font-bold flex items-center gap-2 ${theme.heading}`}>
-                                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#F5C518]/20 shrink-0 ${theme.accentText}`}>
-                                        <Phone className="w-4 h-4" />
-                                    </span>
-                                    <span>{sections.callback?.title || 'Oddzwonimy do Ciebie'}</span>
-                                </h2>
-                            </div>
-
-                            <CallbackForm
-                                compact
-                                title=""
-                                titleHighlight=""
-                                description={sections.callback?.description || 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczegóły oferty.'}
-                                submitLabel={lp.ctaLabel || 'Zadzwoń do mnie'}
-                                landingPageSlug={lp.slug}
-                                src={src}
-                                formId={`lp_${lp.slug}`}
-                                className="bg-transparent border-0 p-0 shadow-none"
-                            />
-                        </div>
-                    </div>
-                )}
             </div>
         </section>
     );
+
+    // Formularz stoi pod listą pojazdów: użytkownik najpierw widzi konkretne auta i raty,
+    // a prośba o numer pada dopiero wtedy, gdy jest po co dzwonić.
+    const callbackSection = showCallback ? (
+        <section id="lp-callback" className={`py-10 px-4 border-t ${theme.band}`}>
+            <div className="max-w-xl mx-auto scroll-mt-20">
+                <CallbackForm
+                    compact
+                    title={sections.callback?.title || 'Oddzwonimy do Ciebie'}
+                    titleHighlight=""
+                    description={sections.callback?.description || 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczegóły oferty.'}
+                    submitLabel={lp.ctaLabel || 'Zadzwoń do mnie'}
+                    landingPageSlug={lp.slug}
+                    src={src}
+                    formId={`lp_${lp.slug}`}
+                />
+            </div>
+        </section>
+    ) : null;
 
     const listingsSection = showListings ? (
         <section className="py-12 px-4 max-w-6xl mx-auto">
@@ -338,7 +334,7 @@ export default function CampaignLandingPage() {
                         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                             {(sections.trustBar?.items && sections.trustBar.items.length > 0
                                 ? sections.trustBar.items
-                                : ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Wsparcie konsultanta']
+                                : ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Decyzja nawet w 60 minut']
                             ).map((item, idx) => (
                                 <div key={idx} className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${theme.card}`}>
                                     <CheckCircle2 className="w-4 h-4 text-[#F5C518] shrink-0" />
@@ -350,6 +346,8 @@ export default function CampaignLandingPage() {
                 )}
 
                 {heroFirst ? listingsSection : heroSection}
+
+                {callbackSection}
 
                 {/* Optional How It Works */}
                 {showHowItWorks && (
@@ -467,17 +465,17 @@ export default function CampaignLandingPage() {
                 <a
                     href={`tel:${formatPhoneForTelLink(contactPhone)}`}
                     onClick={() => handleCallClick('lp_sticky_bar')}
-                    className={`flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-xl font-bold text-xs border active:scale-95 transition-transform ${theme.stickyCall}`}
+                    className={`flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-xl font-bold text-[13px] border active:scale-95 transition-transform whitespace-nowrap ${theme.stickyCall}`}
                 >
-                    <Phone className="w-4 h-4 text-[#F5C518]" />
-                    <span>Zadzwoń</span>
+                    <Phone className="w-4 h-4 text-[#F5C518] shrink-0" />
+                    <span>{stickyPhoneLabel}</span>
                 </a>
                 <button
                     onClick={scrollToCallback}
-                    className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-xs shadow-lg active:scale-95 transition-transform"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-[13px] shadow-lg active:scale-95 transition-transform whitespace-nowrap"
                 >
-                    <span>Oddzwońcie do mnie</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span>Oddzwońcie</span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
                 </button>
             </div>
         </div>
