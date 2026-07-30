@@ -69,7 +69,7 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
             contactPhone?: string;
             logoUrl?: string;
             includedServices?: string[];
-            insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0';
+            insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED';
         };
 
         if (!name) {
@@ -105,7 +105,7 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
             logoUrl?: string;
             isActive?: boolean;
             includedServices?: string[];
-            insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0';
+            insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED';
         };
 
         const existing = await fastify.prisma.rentalCompany.findUnique({ where: { id } });

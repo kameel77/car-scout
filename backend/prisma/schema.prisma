@@ -878,6 +878,7 @@ enum LeadRouting {
 enum InsuranceAddMode {
   INSURANCE_23
   INSURANCE_0
+  INSURANCE_INCLUDED
 }
 
 enum FaqPage {

@@ -63,7 +63,7 @@ function AssignmentSection({ vehicleId, assignments, companies }: AssignmentSect
         externalVehicleId: string;
         calculationId: string;
         includedServicesOverride: string[] | null;
-        insuranceAddModeOverride: 'INSURANCE_23' | 'INSURANCE_0' | null;
+        insuranceAddModeOverride: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED' | null;
     }>({ rentalCompanyId: '', externalVehicleId: '', calculationId: '', includedServicesOverride: null, insuranceAddModeOverride: null });
 
     const SERVICE_OPTIONS = [
@@ -145,6 +145,7 @@ function AssignmentSection({ vehicleId, assignments, companies }: AssignmentSect
                             <option value="">-- domyślnie z ustawień firmy --</option>
                             <option value="INSURANCE_23">23% (do netto, VAT od całości)</option>
                             <option value="INSURANCE_0">0% (stała kwota do netto/brutto bez VAT)</option>
+                            <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In — nie doliczaj)</option>
                         </select>
                     </div>
 
@@ -204,7 +205,7 @@ function AssignmentRow({ assignment: a, vehicleId, onDelete }: { assignment: any
     const [extId, setExtId] = useState(a.externalVehicleId || '');
     const [calcId, setCalcId] = useState(a.calculationId || '');
     const [includedServicesOverride, setIncludedServicesOverride] = useState<string[] | null>(a.includedServicesOverride ?? null);
-    const [insuranceAddModeOverride, setInsuranceAddModeOverride] = useState<'INSURANCE_23' | 'INSURANCE_0' | null>(a.insuranceAddModeOverride ?? null);
+    const [insuranceAddModeOverride, setInsuranceAddModeOverride] = useState<'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED' | null>(a.insuranceAddModeOverride ?? null);
 
     const SERVICE_OPTIONS = [
         { id: 'insurance', label: 'Ubezpieczenie' },
@@ -254,6 +255,7 @@ function AssignmentRow({ assignment: a, vehicleId, onDelete }: { assignment: any
                             <option value="">-- brak (z firmy) --</option>
                             <option value="INSURANCE_23">23% (do netto, VAT całościowy)</option>
                             <option value="INSURANCE_0">0% (stała kwota, bez VAT)</option>
+                            <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In — nie doliczaj)</option>
                         </select>
                     </div>
                     <div className="col-span-full">
