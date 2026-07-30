@@ -171,6 +171,7 @@ export default function RentalCompaniesPage() {
                                         >
                                             <option value="INSURANCE_23">23% (doliczane do netto, VAT naliczany od całości)</option>
                                             <option value="INSURANCE_0">0% (stała kwota z matrycy osobno na fakturze bez VAT)</option>
+                                            <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In — nie doliczaj dodatkowo)</option>
                                         </select>
                                     </div>
 
