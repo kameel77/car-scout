@@ -80,14 +80,9 @@ const DEFAULT_FORM: Partial<LandingPageAdmin> = {
             { title: 'Wypełnij prosty wniosek', text: 'Bez zbędnych dokumentów – decyzję otrzymasz w 24 godziny.' },
             { title: 'Odbierz kluczyki', text: 'Auto dostarczymy prosto pod wskazany adres lub wybierz odbiór własny.' }
         ]},
-        faq: { enabled: true, items: [
-            { q: 'Na czym polega promocja?', a: 'Podpisz do 30 sierpnia 2026 r. umowę najmu długoterminowego samochodu z jednym z partnerów Motolii, a otrzymasz kartę paliwową o wartości 500 zł.' },
-            { q: 'Kto może skorzystać z promocji?', a: 'Promocja jest przeznaczona zarówno dla konsumentów, jak i przedsiębiorców, którzy zawrą umowę najmu długoterminowego za pośrednictwem Motolii i spełnią warunki określone w regulaminie.' },
-            { q: 'Jakie samochody są objęte promocją?', a: 'Promocja dotyczy samochodów dostępnych w ofercie najmu długoterminowego prezentowanej przez Motolię. Doradca pomoże Ci wybrać auto oraz dopasować warunki umowy do Twoich potrzeb.' },
-            { q: 'Co muszę zrobić, aby otrzymać kartę paliwową?', a: 'Wybierz samochód, skontaktuj się z Motolią i podpisz do 30 sierpnia 2026 r. umowę najmu długoterminowego z partnerem Motolii. Po spełnieniu warunków promocji otrzymasz kartę paliwową od jej operatora.' },
-            { q: 'Gdzie można wykorzystać kartę paliwową?', a: 'Kartą będzie można płacić za paliwo na stacjach obsługiwanych przez jej operatora, między innymi w sieciach Shell, BP i Circle K. Pełna lista stacji będzie dostępna w warunkach korzystania z karty.' },
-            { q: 'Jak długo karta paliwowa będzie ważna?', a: 'Kartą będzie można wykorzystać w ciągu 12 miesięcy od momentu jej aktywacji. Niewykorzystane środki wygasną po upływie terminu ważności karty.' }
-        ]},
+        // Treści konkretnej promocji NIE należą do wartości domyślnych systemu —
+        // nowy landing startuje pusty, a powtarzalne kampanie tworzy się przyciskiem „Duplikuj”.
+        faq: { enabled: false, items: [] },
         urgency: { enabled: false, text: 'Promocja ograniczona czasowo!' }
     },
     metaTitle: '',
@@ -226,16 +221,25 @@ export default function LandingPagesPage() {
         }
     };
 
+    const duplicateMutation = useMutation({
+        mutationFn: (id: string) => landingPagesApi.duplicate(id),
+        onSuccess: (res: any) => {
+            toast.success('Utworzono kopię. Jest nieaktywna — sprawdź treść i włącz ją.');
+            queryClient.invalidateQueries({ queryKey: ['admin-landing-pages'] });
+            if (res?.landingPage) {
+                setEditingPage(res.landingPage);
+                setHeroFile(null);
+                setTermsFile(null);
+                setIsModalOpen(true);
+            }
+        },
+        onError: (err: any) => {
+            toast.error(err.message || 'Błąd duplikowania');
+        },
+    });
+
     const duplicatePage = (page: LandingPageAdmin) => {
-        setEditingPage({
-            ...page,
-            id: undefined,
-            name: `${page.name} (Kopia)`,
-            slug: `${page.slug}-kopia`,
-        });
-        setHeroFile(null);
-        setTermsFile(null);
-        setIsModalOpen(true);
+        duplicateMutation.mutate(page.id);
     };
 
     const closeModal = () => {
@@ -1281,7 +1285,7 @@ export default function LandingPagesPage() {
                                                                 if (val) {
                                                                     while (currentSteps.length < 3) currentSteps.push({ title: '', text: '' });
                                                                     if (currentSteps.length < 4) {
-                                                                        currentSteps[3] = { title: 'Odbierz 500 zł na paliwo', text: 'Po podpisaniu umowy otrzymasz kartę paliwową o wartości 500 zł.' };
+                                                                        currentSteps[3] = { title: '', text: '' };
                                                                     }
                                                                 } else {
                                                                     if (currentSteps.length >= 4) {

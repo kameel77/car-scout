@@ -1800,6 +1800,61 @@ export const landingPagesApi = {
         return response.json();
     },
 
+    duplicate: async (id: string) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/duplicate`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to duplicate landing page');
+        }
+        return response.json();
+    },
+
+    deleteHeroImage: async (id: string) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/hero-image`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to delete hero image');
+        }
+        return response.json();
+    },
+
+    uploadTermsFile: async (id: string, file: File) => {
+        const token = localStorage.getItem('auth_token');
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/terms-file`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to upload terms file');
+        }
+        return response.json();
+    },
+
+    deleteTermsFile: async (id: string) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/terms-file`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to delete terms file');
+        }
+        return response.json();
+    },
+
     getPreviewListings: async (id: string) => {
         const token = localStorage.getItem('auth_token');
         const response = await fetch(`${API_BASE_URL}/api/landing-pages/${id}/preview-listings`, {

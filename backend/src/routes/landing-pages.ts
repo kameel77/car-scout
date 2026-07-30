@@ -144,6 +144,30 @@ function sanitizeSections(input: any): LpSections | null {
   return cleaned;
 }
 
+/**
+ * Kopiuje wgrany plik obok oryginału i zwraca nowy URL. Zwraca null, gdy nie ma czego kopiować
+ * lub gdy plik zniknął z dysku — duplikat ma powstać nawet bez grafiki.
+ */
+async function copyUploadedFile(
+  sourceUrl: string | null,
+  targetDir: string,
+  urlPrefix: string
+): Promise<string | null> {
+  if (!sourceUrl?.startsWith(`${urlPrefix}/`)) return null;
+
+  const sourcePath = path.join(process.cwd(), sourceUrl.replace(/^\//, ''));
+  const extension = path.extname(sourceUrl) || '.bin';
+  const filename = `copy-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${extension}`;
+
+  try {
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.copyFile(sourcePath, path.join(targetDir, filename));
+    return `${urlPrefix}/${filename}`;
+  } catch {
+    return null;
+  }
+}
+
 async function unlinkLandingPageHeroImage(imageUrl: string | null) {
   if (!imageUrl?.startsWith('/uploads/landing-pages/')) return;
   const oldPath = path.join(process.cwd(), imageUrl.replace(/^\//, ''));
@@ -513,6 +537,44 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
     await unlinkLandingPageTermsFile(lp.termsFileUrl);
     await fastify.prisma.landingPage.delete({ where: { id } });
     return { success: true };
+  });
+
+  // Admin Endpoint: POST /api/landing-pages/:id/duplicate
+  // Kopiuje też pliki na dysku — inaczej usunięcie oryginału zabrałoby kopii obraz i regulamin.
+  fastify.post('/api/landing-pages/:id/duplicate', {
+    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const source = await fastify.prisma.landingPage.findUnique({ where: { id } });
+    if (!source) return reply.code(404).send({ error: 'Landing page nie istnieje' });
+
+    // Wolny slug: <slug>-kopia, -kopia-2, -kopia-3...
+    let slug = `${source.slug}-kopia`.slice(0, 48);
+    for (let i = 2; await fastify.prisma.landingPage.findUnique({ where: { slug } }); i++) {
+      slug = `${source.slug}-kopia-${i}`.slice(0, 48);
+      if (i > 50) return reply.code(409).send({ error: 'Nie udało się wygenerować wolnego slug-a' });
+    }
+
+    const heroImageUrl = await copyUploadedFile(source.heroImageUrl, LANDING_PAGES_DIR, '/uploads/landing-pages');
+    const termsFileUrl = await copyUploadedFile(source.termsFileUrl, TERMS_DIR, '/uploads/landing-pages/terms');
+
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = source;
+
+    const duplicate = await fastify.prisma.landingPage.create({
+      data: {
+        ...rest,
+        slug,
+        name: `${source.name} (kopia)`.slice(0, 200),
+        // Kopia startuje wyłączona, żeby publiczny URL nie ożył przed sprawdzeniem treści.
+        isActive: false,
+        heroImageUrl,
+        termsFileUrl,
+        sections: (source.sections ?? undefined) as any,
+        filterParams: (source.filterParams ?? undefined) as any,
+      },
+    });
+
+    return { landingPage: duplicate };
   });
 
   // Admin Endpoint: DELETE /api/landing-pages/:id/hero-image
