@@ -91,7 +91,12 @@ function transliteratePolish(text: string): string {
  * - Removes multiple hyphens
  */
 export function sanitizeForSlug(text: string): string {
+    // NFD + usunięcie znaków łączących obsługuje diakrytyki spoza polskiego alfabetu
+    // (Škoda, Citroën, Cupra Ateca…). Bez tego 'Š' wypadało razem z resztą znaków
+    // specjalnych i marka Škoda dawała slug 'koda-octavia'.
     return transliteratePolish(text)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
         .trim()

@@ -6,7 +6,7 @@ import { generateListingSlug } from '../../utils/url-utils.js';
 import { __resetBrandCatalogCache } from '../../services/brand-pages.service.js';
 import { __resetSeoContentCache } from '../../services/seo-content.js';
 
-const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"></div></body></html>`;
+const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"><!--home-shell--><h1>Szeroki wybór aut.<br><span>Proste finansowanie.</span></h1><!--/home-shell--></div></body></html>`;
 
 describe('GET /api/render', () => {
     let app: FastifyInstance;
@@ -110,6 +110,64 @@ describe('GET /api/render', () => {
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('używane');
         expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/uzywane"');
+    });
+
+    it('home page SEO (no active hero banner): title, description, exactly 1 h1, and JSON-LD (Organization, WebSite)', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+        expect(res.statusCode).toBe(200);
+
+        // Title length check (50-65 chars)
+        const titleMatch = res.body.match(/<title>(.*?)<\/title>/);
+        expect(titleMatch).not.toBeNull();
+        const titleText = titleMatch![1];
+        expect(titleText.length).toBeGreaterThanOrEqual(50);
+        expect(titleText.length).toBeLessThanOrEqual(65);
+
+        // Meta description length check (140-165 chars)
+        const descMatch = res.body.match(/<meta name="description" content="(.*?)"/);
+        expect(descMatch).not.toBeNull();
+        const descText = descMatch![1];
+        expect(descText.length).toBeGreaterThanOrEqual(140);
+        expect(descText.length).toBeLessThanOrEqual(165);
+
+        // H1 count: exactly 1 <h1...
+        const h1Matches = res.body.match(/<h1[\s>]/g) || [];
+        expect(h1Matches.length).toBe(1);
+
+        // JSON-LD schemas
+        expect(res.body).toContain('"@type":"Organization"');
+        expect(res.body).toContain('"@type":"WebSite"');
+        expect(res.body).toContain('"SearchAction"');
+    });
+
+    it('home page SEO (active hero banner): SSR banner shell replaces the static home-shell, still exactly 1 h1 with the home H1 text', async () => {
+        const banner = await app.prisma.heroBanner.create({
+            data: {
+                imageUrlDesktop: '/uploads/hero-banners/test-render-banner.webp',
+                imageUrlMobile: '/uploads/hero-banners/test-render-banner-mobile.webp',
+                altText: 'Test render banner',
+                isActive: true,
+            },
+        });
+        try {
+            const res = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+            expect(res.statusCode).toBe(200);
+
+            // Statyczny <!--home-shell--> z TEMPLATE zniknął — podmieniony na SSR bannera
+            expect(res.body).not.toContain('Szeroki wybór aut.');
+            expect(res.body).toContain('test-render-banner');
+            expect(res.body).toContain('<img');
+
+            // H1 count: exactly 1 <h1...
+            const h1Matches = res.body.match(/<h1[\s>]/g) || [];
+            expect(h1Matches.length).toBe(1);
+
+            const h1Match = res.body.match(/<h1[^>]*>(.*?)<\/h1>/);
+            expect(h1Match).not.toBeNull();
+            expect(h1Match![1]).toContain('Leasing, kredyt i wynajem samochodów');
+        } finally {
+            await app.prisma.heroBanner.delete({ where: { id: banner.id } });
+        }
     });
 
     it('injects route chunk modulepreload from vite manifest', async () => {

@@ -30,23 +30,27 @@ export interface BrandCtx {
     logoUrl: string;
     alternateNames?: string[];
     disambiguatingDescription?: string;
+    /** H1 strony głównej (banner CMS aktywny) — SSR home-shell i preload LCP muszą zgadzać się z frontem 1:1 */
+    homeH1: string;
 }
 
 export type ListingVariant = 'oferta' | 'leasing' | 'kredyt';
 
 const BRAND_DEFAULTS: Record<
     string,
-    { name: string; title: string; description: string; alternateNames?: string[]; disambiguatingDescription?: string }
+    { name: string; title: string; description: string; homeH1: string; alternateNames?: string[]; disambiguatingDescription?: string }
 > = {
     carsalon: {
         name: 'CarSalon',
         title: 'CarSalon - auta nowe i używane z gwarancją',
         description: 'Setki ofert od sprawdzonych dealerów. Nowe i używane samochody z gwarancją.',
+        homeH1: 'Samochody nowe i używane z finansowaniem — leasing, kredyt i wynajem',
     },
     motolia: {
         name: 'Motolia',
-        title: 'Motolia - leasing, kredyt i wynajem samochodów',
-        description: 'Szeroki wybór aut. Proste finansowanie. Leasing, kredyt i wynajem długoterminowy.',
+        title: 'Motolia — leasing, kredyt i wynajem samochodów bez formalności',
+        description: 'Nowe i używane auta z finansowaniem dopasowanym do Twojej sytuacji — leasing, kredyt, wynajem długoterminowy. Sprawdź oferty i policz ratę online w 2 minuty.',
+        homeH1: 'Leasing, kredyt i wynajem samochodów — nowe i używane auta w Motolia',
         // Warianty zapisu marki, którymi ludzie realnie szukają (dane z Google Search Console)
         alternateNames: ['Motolia.pl', 'motolia.pl', 'Motoria', 'Motalia', 'Moto lia'],
         disambiguatingDescription:
@@ -67,6 +71,7 @@ export function resolveBrandCtx(): BrandCtx {
         logoUrl: `${baseUrl}/brands/${brand}/logo.png`,
         alternateNames: d.alternateNames,
         disambiguatingDescription: d.disambiguatingDescription,
+        homeH1: d.homeH1,
     };
 }
 
@@ -1188,8 +1193,8 @@ export function buildStaticMeta(
     heroBanner?: { desktop?: string | null; mobile?: string | null }
 ): PageMeta | null {
     if (path === '/') {
-        // h1 jest na stronie już w statycznym home-shell (index.html) — tu tylko wzmocniony akapit,
-        // żeby prerender dla botów nie dublował <h1>
+        // H1 na stronie głównej jest wyrenderowany w drzewie React (#root / home-shell) — tu w bodyHtml dla botów
+        // podajemy opisy i sekcję ofert bez dublowania <h1>, co gwarantuje dokładnie jedno <h1> w dokumencie.
         const bodyHtml = `
 <p><strong>${ctx.defaultTitle}</strong></p>
 <p>${ctx.defaultDescription}</p>
@@ -1202,7 +1207,7 @@ ${listings.length > 0 ? `
   <p><a href="/samochody">Zobacz wszystkie samochody</a></p>
 </section>` : ''}`.trim();
 
-        const jsonLd: Record<string, unknown> = {
+        const orgJsonLd: Record<string, unknown> = {
             '@context': 'https://schema.org',
             '@type': 'Organization',
             name: ctx.brandName,
@@ -1210,14 +1215,14 @@ ${listings.length > 0 ? `
             logo: ctx.logoUrl,
             description: ctx.defaultDescription,
         };
-        if (orgSettings?.legalCompanyName) jsonLd.legalName = orgSettings.legalCompanyName;
-        if (orgSettings?.legalVatId) jsonLd.vatID = orgSettings.legalVatId;
-        if (orgSettings?.legalAddress) jsonLd.address = orgSettings.legalAddress;
+        if (orgSettings?.legalCompanyName) orgJsonLd.legalName = orgSettings.legalCompanyName;
+        if (orgSettings?.legalVatId) orgJsonLd.vatID = orgSettings.legalVatId;
+        if (orgSettings?.legalAddress) orgJsonLd.address = orgSettings.legalAddress;
         const contactPoint: Record<string, unknown> = {};
         if (orgSettings?.legalContactPhone) contactPoint.telephone = orgSettings.legalContactPhone;
         if (orgSettings?.legalContactEmail) contactPoint.email = orgSettings.legalContactEmail;
         if (Object.keys(contactPoint).length > 0) {
-            jsonLd.contactPoint = {
+            orgJsonLd.contactPoint = {
                 '@type': 'ContactPoint',
                 ...contactPoint,
                 contactType: 'customer service',
@@ -1225,9 +1230,46 @@ ${listings.length > 0 ? `
                 availableLanguage: ['pl'],
             };
         }
-        if (ctx.alternateNames && ctx.alternateNames.length > 0) jsonLd.alternateName = ctx.alternateNames;
-        if (ctx.disambiguatingDescription) jsonLd.disambiguatingDescription = ctx.disambiguatingDescription;
-        // TODO: sameAs — brak zweryfikowanych profili społecznościowych w danych
+        if (ctx.alternateNames && ctx.alternateNames.length > 0) orgJsonLd.alternateName = ctx.alternateNames;
+        if (ctx.disambiguatingDescription) orgJsonLd.disambiguatingDescription = ctx.disambiguatingDescription;
+
+        const webSiteJsonLd: Record<string, unknown> = {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: ctx.brandName,
+            url: `${ctx.baseUrl}/`,
+            potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                    '@type': 'EntryPoint',
+                    urlTemplate: `${ctx.baseUrl}/samochody?search={search_term_string}`
+                },
+                'query-input': 'required name=search_term_string'
+            }
+        };
+
+        const jsonLdList: any[] = [orgJsonLd, webSiteJsonLd];
+
+        // Ten sam filtr co dynamicFaqs na froncie (MotoliaHomePage.tsx) — wpis bez pytania
+        // lub odpowiedzi po odchudzeniu nie trafia na stronę, więc nie może trafić do schema
+        // (name: "" w FAQPage jest błędem walidacji i desynchronizuje JSON-LD z treścią).
+        const validFaq = faq
+            .map(f => ({ question: stripTags(f.questionPl), answer: stripTags(f.answerPl) }))
+            .filter(f => f.question && f.answer);
+        if (validFaq.length > 0) {
+            jsonLdList.push({
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: validFaq.map(f => ({
+                    '@type': 'Question',
+                    name: f.question,
+                    acceptedAnswer: {
+                        '@type': 'Answer',
+                        text: f.answer
+                    }
+                }))
+            });
+        }
 
         return {
             title: ctx.defaultTitle,
@@ -1235,7 +1277,7 @@ ${listings.length > 0 ? `
             canonical: `${ctx.baseUrl}/`,
             preloadImages: heroBanner ? heroBannerPreloads(heroBanner, ctx.baseUrl) : undefined,
             bodyHtml,
-            jsonLd,
+            jsonLd: jsonLdList,
             status: 200,
         };
     }
@@ -1398,7 +1440,8 @@ export function detailSkeletonHtml(): string {
 // żeby montaż SPA nie powodował CLS. Nagłówek 1:1 z motoliaHeroShell (vite.config.ts).
 export function homeHeroShellHtml(
     banner: { imageUrlDesktop?: string | null; imageUrlMobile?: string | null; altText?: string | null },
-    baseUrl: string
+    baseUrl: string,
+    h1Text: string
 ): string {
     const header = `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>`;
 
@@ -1422,9 +1465,12 @@ export function homeHeroShellHtml(
         img = `<img src="${escapeAttr(absDesktop)}" srcset="${escapeAttr(srcsetDesktop)}" sizes="100vw" width="1600" height="700" fetchpriority="high" decoding="async" loading="eager" alt="${alt}" class="absolute inset-0 w-full h-full object-cover">`;
     }
 
+    const h1Escaped = escapeAttr(h1Text);
+
     return `<div class="bg-white min-h-screen text-[#1A1A1A] font-inter">${header}` +
         `<section class="relative overflow-hidden bg-[#FAFAF8] pt-6 pb-8 lg:pt-10 lg:pb-12"><div class="max-w-7xl mx-auto px-6">` +
         `<div class="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-100 rounded-3xl overflow-hidden"><picture>${mobileSource}${img}</picture></div>` +
+        `<h1 class="text-2xl lg:text-3xl font-bold tracking-tight text-[#1A1A1A] mt-8 mb-3">${h1Escaped}</h1>` +
         `</div></section></div>`;
 }
 

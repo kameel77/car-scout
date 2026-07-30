@@ -90,13 +90,13 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         // 1. Static Pages (bez lastmod — brak realnej daty modyfikacji jest lepszy niż fałszywy sygnał)
         const staticPages = [
-            '', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
+            '/', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
             '/leasing', '/kredyt', '/dla-ciebie', '/dla-firm', '/faq', '/kontakt'
         ];
 
         staticPages.forEach(path => {
             urls.push({
-                loc: `${baseUrl}${path}`
+                loc: path === '/' ? `${baseUrl}/` : `${baseUrl}${path}`
             });
         });
 

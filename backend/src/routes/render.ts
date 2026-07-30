@@ -787,6 +787,11 @@ async function resolveMeta(
             where: { isPublished: true },
             orderBy: { sortOrder: 'asc' },
         });
+    } else if (path === '/') {
+        faq = await fastify.prisma.faqEntry.findMany({
+            where: { page: 'home', isPublished: true },
+            orderBy: { sortOrder: 'asc' },
+        });
     } else if (FINANCING_FAQ_TYPE[path]) {
         faq = await fastify.prisma.faqEntry.findMany({
             where: {
@@ -940,7 +945,11 @@ export async function renderRoutes(fastify: FastifyInstance) {
                     : '';
             template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
         } else if (heroBanners.length > 0) {
-            const heroShell = homeHeroShellHtml(heroBanners[0], ctx.baseUrl);
+            const heroShell = homeHeroShellHtml(
+                heroBanners[0],
+                ctx.baseUrl,
+                ctx.homeH1
+            );
             template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => heroShell);
         }
 

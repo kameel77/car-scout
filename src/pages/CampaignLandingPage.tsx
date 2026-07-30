@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, Navigate } from 'react-router-dom';
-import { Phone, ShieldCheck, CheckCircle2, ArrowRight, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Phone, ShieldCheck, CheckCircle2, ArrowRight, ChevronDown, AlertTriangle } from 'lucide-react';
 import { useLandingPage } from '@/hooks/useLandingPage';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -11,6 +11,9 @@ import { ListingCard } from '@/components/ListingCard';
 import { RentalListingCard } from '@/components/RentalListingCard';
 import { trackLpView, trackPhoneClick } from '@/lib/analytics';
 import { formatPhoneForTelLink } from '@/utils/formatters';
+
+const ACCENT = '#F5C518';
+const ACCENT_DARK = '#D4A017';
 
 /** Klasy motywu — landing bywa wysyłany do różnych grup, część kampanii wymaga jasnej wersji. */
 const THEMES = {
@@ -29,6 +32,10 @@ const THEMES = {
         stickyCall: 'bg-[#2a2a2a] text-white border-white/10',
         loader: 'bg-[#1a1a1a] text-white',
         accentText: 'text-[#F5C518]',
+        faqItem: 'border-white/10 hover:border-white/20 bg-[#1c1c1c]',
+        faqIconBg: 'rgba(255,255,255,0.08)',
+        faqIconColor: '#9CA3AF',
+        faqBody: 'border-white/10 text-gray-400',
     },
     light: {
         page: 'bg-white text-gray-900',
@@ -45,6 +52,10 @@ const THEMES = {
         stickyCall: 'bg-gray-100 text-gray-900 border-gray-300',
         loader: 'bg-white text-gray-900',
         accentText: 'text-[#8a6d05]',
+        faqItem: 'border-gray-100 hover:border-gray-200 bg-white',
+        faqIconBg: '#F3F4F6',
+        faqIconColor: '#6B7280',
+        faqBody: 'border-gray-100 text-gray-500',
     },
 } as const;
 
@@ -57,6 +68,7 @@ export default function CampaignLandingPage() {
     const { config } = useBrand();
     const { data: settings } = useAppSettings();
     const { setProgrammaticOffer } = useSpecialOffer();
+    const [openFaq, setOpenFaq] = useState<number | null>(0);
 
     const lp = data?.landingPage;
     const lpSlug = lp?.slug;
@@ -235,14 +247,36 @@ export default function CampaignLandingPage() {
             </div>
 
             {hasVehicles ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(lp.listings || []).map((listing) => (
-                        <ListingCard key={listing.listing_id} listing={listing} />
-                    ))}
-                    {rentalVehicles.map((vehicle: any) => (
-                        <RentalListingCard key={vehicle.id} v={vehicle} />
-                    ))}
-                </div>
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {(lp.listings || []).map((listing) => (
+                            <ListingCard key={listing.listing_id} listing={listing} />
+                        ))}
+                        {rentalVehicles.map((vehicle: any) => (
+                            <RentalListingCard key={vehicle.id} v={vehicle} />
+                        ))}
+                    </div>
+                    {sections.listings?.ctaEnabled !== false && (
+                        <div className="mt-8 text-center">
+                            <a
+                                href={sections.listings?.ctaUrl || '/samochody'}
+                                onClick={() => {
+                                    if (typeof window !== 'undefined' && (window as any).dataLayer) {
+                                        (window as any).dataLayer.push({
+                                            event: 'lp_offer_cta',
+                                            landing_page_slug: lp.slug,
+                                            traffic_source: src || 'direct',
+                                        });
+                                    }
+                                }}
+                                className="inline-flex items-center justify-center h-12 px-8 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm hover:opacity-90 transition-opacity shadow-md"
+                            >
+                                <span>{sections.listings?.ctaLabel || 'Sprawdź całą ofertę'}</span>
+                                <ArrowRight className="w-4 h-4 ml-2" />
+                            </a>
+                        </div>
+                    )}
+                </>
             ) : (
                 <div className={`p-8 rounded-2xl text-center border ${theme.card}`}>
                     <p className={`text-sm ${theme.muted}`}>
@@ -252,6 +286,9 @@ export default function CampaignLandingPage() {
             )}
         </section>
     ) : null;
+
+    const howItWorksSteps = sections.howItWorks?.steps || [];
+    const howItWorksGridCols = howItWorksSteps.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3';
 
     return (
         <div className={`min-h-screen flex flex-col font-sans antialiased pb-20 md:pb-0 ${theme.page}`}>
@@ -317,14 +354,14 @@ export default function CampaignLandingPage() {
                 {/* Optional How It Works */}
                 {showHowItWorks && (
                     <section className={`py-12 px-4 border-t border-b ${theme.band}`}>
-                        <div className="max-w-4xl mx-auto space-y-8">
+                        <div className="max-w-5xl mx-auto space-y-8">
                             <div className="text-center">
                                 <h2 className={`text-2xl md:text-3xl font-bold ${theme.heading}`}>Jak to działa?</h2>
-                                <p className={`text-sm mt-1 ${theme.muted}`}>Prosty proces odbioru nowego auta w 3 krokach</p>
+                                <p className={`text-sm mt-1 ${theme.muted}`}>Prosty proces odbioru nowego auta</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {sections.howItWorks?.steps?.map((step, idx) => (
+                            <div className={`grid grid-cols-1 ${howItWorksGridCols} gap-6`}>
+                                {howItWorksSteps.map((step, idx) => (
                                     <div key={idx} className={`p-6 rounded-2xl border space-y-3 text-left relative ${theme.card}`}>
                                         <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm">
                                             {idx + 1}
@@ -338,21 +375,54 @@ export default function CampaignLandingPage() {
                     </section>
                 )}
 
-                {/* Optional FAQ Section */}
+                {/* Optional FAQ Section — akordeon spójny z FAQ na pozostałych stronach serwisu */}
                 {showFaq && (
-                    <section className="py-12 px-4 max-w-4xl mx-auto space-y-8">
-                        <div className="text-center">
-                            <h2 className={`text-2xl md:text-3xl font-bold flex items-center justify-center gap-2 ${theme.heading}`}>
-                                <HelpCircle className="w-6 h-6 text-[#F5C518]" />
-                                Najczęściej zadawane pytania
+                    <section className="py-16 px-4 max-w-4xl mx-auto" id="faq">
+                        <div className="text-center mb-10">
+                            <h2 className={`text-3xl md:text-4xl font-outfit font-bold ${theme.heading}`}>
+                                Najczęściej zadawane{' '}
+                                <span style={{ color: ACCENT_DARK }}>pytania</span>
                             </h2>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {sections.faq?.items?.map((item, idx) => (
-                                <div key={idx} className={`p-5 rounded-2xl border space-y-2 text-left ${theme.card}`}>
-                                    <h3 className={`font-semibold text-sm md:text-base ${theme.heading}`}>{item.q}</h3>
-                                    <p className={`text-xs md:text-sm leading-relaxed ${theme.muted}`}>{item.a}</p>
+                                <div
+                                    key={idx}
+                                    className={`border rounded-2xl overflow-hidden transition-all ${theme.faqItem}`}
+                                >
+                                    <button
+                                        onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                                        aria-expanded={openFaq === idx}
+                                        className="w-full flex items-center justify-between p-6 text-left"
+                                    >
+                                        <h3 className={`text-base font-semibold pr-6 ${theme.heading}`}>{item.q}</h3>
+                                        <div
+                                            className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                                openFaq === idx ? 'rotate-180' : ''
+                                            }`}
+                                            style={{
+                                                background: openFaq === idx ? ACCENT : theme.faqIconBg,
+                                                color: openFaq === idx ? '#1A1A1A' : theme.faqIconColor,
+                                            }}
+                                        >
+                                            <ChevronDown size={16} />
+                                        </div>
+                                    </button>
+                                    <div
+                                        style={{
+                                            display: 'grid',
+                                            gridTemplateRows: openFaq === idx ? '1fr' : '0fr',
+                                            opacity: openFaq === idx ? 1 : 0,
+                                            transition: 'grid-template-rows 0.25s, opacity 0.25s',
+                                        }}
+                                    >
+                                        <div className="overflow-hidden">
+                                            <div className={`px-6 pb-6 leading-relaxed border-t pt-4 ${theme.faqBody}`}>
+                                                {item.a}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -363,6 +433,18 @@ export default function CampaignLandingPage() {
             {/* Minimal Footer — No site navigation links */}
             <footer className={`border-t py-8 px-4 text-center text-xs space-y-3 ${theme.footer}`}>
                 <div className="max-w-4xl mx-auto space-y-2">
+                    {lp.termsFileUrl && (
+                        <div className="pb-2">
+                            <a
+                                href={lp.termsFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`text-sm font-medium underline hover:opacity-80 transition-opacity ${theme.body}`}
+                            >
+                                {lp.termsLabel || 'Regulamin promocji (PDF)'}
+                            </a>
+                        </div>
+                    )}
                     <p className="font-semibold">{settings?.legalCompanyName || config.name || 'Motolia'}</p>
                     {settings?.legalAddress && <p>{settings.legalAddress}</p>}
                     <p>NIP: {settings?.legalVatId || '—'} | REGON/KRS: {settings?.legalRegisterNumber || '—'}</p>
