@@ -75,7 +75,7 @@ const DEFAULT_FORM: Partial<LandingPageAdmin> = {
     sections: {
         callback: { enabled: true, title: 'Chcesz omówić ofertę?', description: 'Zostaw numer – doradca oddzwoni i w kilka minut przedstawi szczegóły.' },
         listings: { enabled: true, title: 'Dostępne samochody w ofercie', ctaEnabled: true, ctaLabel: 'Sprawdź całą ofertę', ctaUrl: '/samochody' },
-        trustBar: { enabled: true, items: ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Wsparcie konsultanta'] },
+        trustBar: { enabled: true, items: ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Decyzja nawet w 60 minut'] },
         howItWorks: { enabled: true, steps: [
             { title: 'Wybierz auto lub ratę', text: 'Przejrzyj naszą flotę lub opowiedz doradcy czego szukasz.' },
             { title: 'Wypełnij prosty wniosek', text: 'Bez zbędnych dokumentów – decyzję otrzymasz w 24 godziny.' },
