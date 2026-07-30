@@ -10,6 +10,7 @@ export interface BrandColors {
 export interface HeroConfig {
   badge: string;
   title: string; // use <span> for highlighting
+  seoH1?: string;
   subtitle: string;
   ctaLabel: string;
   image: string;

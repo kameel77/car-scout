@@ -438,6 +438,18 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Sloty treści**: Elastyczna konfigurowalna struktura ze stałą kolejnością slotów (Pilność/Urgency, Pasek zaufania/TrustBar, Jak to działa/HowItWorks, FAQ).
   - **Indeksowanie i SEO**: Domyślnie strony posiadają nagłówek `noindex`. Flaga `isIndexable` zezwala na indeksowanie wyłącznie dla evergreenowych stron bez daty zakończenia. Strony wygasłe (`validTo < now()`) zwracają status HTTP 410 i automatycznie przekierowują użytkownika na `/samochody`.
   - **Panel administracyjny**: Zarządzanie stronami w zakładce `/admin/landing-pages` pozwala na tworzenie, edycję, duplikowanie oraz generowanie gotowych kodów QR PNG w rozdzielczości 1024px z przypisanym źródłem ruchu `?src=qr`.
-  - **Analityka**: Zdarzenia `lp_view`, `phone_click` oraz `generate_lead` przesyłają ścieżkę konwersji oraz źródło ruchu (`landing_page_slug`, `traffic_source`) do dataLayer.
+## 39. Pakiet poprawek SEO On-Site dla strony głównej motolia.pl (2026-07)
+- **Cel**: Optymalizacja strony głównej pod kątem wyszukiwarki Google (podniesienie stopnia indeksacji, spójność nagłówków i metadanych oraz grafu encji JSON-LD).
+- **Zastosowane zmiany**:
+  - **Nagłówek H1 (P0)**: Przywrócono pojedynczy, widoczny nagłówek `<h1>` na stronie głównej w obu stanach (z aktywnym banerem karuzeli CMS oraz bez banera), a także w statycznym shellu SSR `homeHeroShellHtml()`. Nagłówek jest umieszczony pod sekcją hero/karty wyszukiwarki, nie zaburzając wskaźnika LCP na urządzeniach mobilnych.
+  - **Title & Meta Description (P1)**: Ujednolicono i wydłużono metadane strony głównej w `BRAND_DEFAULTS` oraz `vite.config.ts`:
+    - Title: `"Motolia — leasing, kredyt i wynajem samochodów bez formalności"` (~62 zn.)
+    - Description: `"Nowe i używane auta z finansowaniem dopasowanym do Twojej sytuacji — leasing, kredyt, wynajem długoterminowy. Sprawdź oferty i policz ratę online w 2 minuty."` (156 zn.)
+    - Zabezpieczono testem automatycznym w `render.test.ts` pilnującym braku regresji długości metadanych.
+  - **Dane strukturalne JSON-LD (P2)**: Rozszerzona struktura JSON-LD na stronie głównej dostarcza botom kompletny zestaw encji: `Organization`, `WebSite` wraz z akcją `SearchAction` (`/samochody?search={search_term_string}`), a także dynamiczną `FAQPage` bazującą na pytaniach z CMS (`page=home`).
+  - **Porządki w sitemapie i linkach (P3)**:
+    - Zaktualizowano sitemapę (`/api/sitemap.xml`) dla strony głównej na `<loc>https://motolia.pl/</loc>` z ukośnikiem końcowym (spójnie z URL-em kanonicznym).
+    - Skierowano martwy anchor `#jak-to-dziala` w hero na sekcję `#produkty`.
+    - Wzmocniono słowa kluczowe w nagłówkach H2 produktów oraz marek.
 
 

@@ -159,7 +159,7 @@ export default function SearchPage() {
 
     const rt = searchParams.get('rateType');
     const rb = searchParams.get('rateBasis');
-    const searchText = searchParams.get('SearchText') || searchParams.get('q') || '';
+    const searchText = searchParams.get('SearchText') || searchParams.get('q') || searchParams.get('search') || '';
     const statusParam = searchParams.get('status');
 
     return {

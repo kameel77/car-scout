@@ -27,12 +27,12 @@ const brandMeta: Record<BrandId, {
     ogUrl: 'https://carsalon.pl',
   },
   motolia: {
-    title: 'Motolia - leasing, kredyt i wynajem samochodów',
+    title: 'Motolia — leasing, kredyt i wynajem samochodów bez formalności',
     author: 'Motolia',
-    description: 'Szeroki wybór aut. Proste finansowanie. Leasing, kredyt i wynajem długoterminowy.',
+    description: 'Nowe i używane auta z finansowaniem dopasowanym do Twojej sytuacji — leasing, kredyt, wynajem długoterminowy. Sprawdź oferty i policz ratę online w 2 minuty.',
     favicon: '/brands/motolia/favicon.png',
-    ogTitle: 'Motolia - szeroki wybór aut, proste finansowanie',
-    ogDescription: 'Leasing, kredyt, wynajem długoterminowy — dopasujemy finansowanie do Twojej sytuacji.',
+    ogTitle: 'Motolia — leasing, kredyt i wynajem samochodów bez formalności',
+    ogDescription: 'Nowe i używane auta z finansowaniem dopasowanym do Twojej sytuacji — leasing, kredyt, wynajem długoterminowy. Sprawdź oferty i policz ratę online w 2 minuty.',
     ogImage: 'https://motolia.pl/brands/motolia/og-image.png',
     ogUrl: 'https://motolia.pl',
   },
@@ -51,7 +51,7 @@ const motoliaHeroShell = `<div id="root"><!--home-shell--><div class="bg-white m
   `<div><div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8" style="background:#F5C51820;border-color:#F5C51860;color:#1A1A1A"><span style="color:#D4A90A">◆</span>Leasing · Kredyt · Wynajem · Pożyczka</div></div>` +
   `<div><h1 class="text-5xl lg:text-7xl font-outfit font-bold tracking-tight mb-6 leading-[1.08] text-[#1A1A1A]">Szeroki wybór aut.<br><span style="color:#D4A90A">Proste finansowanie.</span></h1></div>` +
   `<div><p class="text-xl text-gray-500 mb-10 leading-relaxed font-light">Niezależnie czy jesteś osobą prywatną czy firmą – dobierzemy finansowanie do Twojej sytuacji. Jedna rozmowa, wiele ofert.</p></div>` +
-  `<div class="flex flex-col sm:flex-row gap-4 mb-12"><a href="/samochody" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg" style="background:#F5C518;color:#1A1A1A;box-shadow:0 4px 24px #F5C51860">Sprawdź dostępne auta</a><a href="#jak-to-dziala" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-gray-200 text-gray-700">Jak to działa?</a></div>` +
+  `<div class="flex flex-col sm:flex-row gap-4 mb-12"><a href="/samochody" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg" style="background:#F5C518;color:#1A1A1A;box-shadow:0 4px 24px #F5C51860">Sprawdź dostępne auta</a><a href="#produkty" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-gray-200 text-gray-700">Jak to działa?</a></div>` +
   `</div></div></div></section>` +
   `</div><!--/home-shell--></div>`;
 
