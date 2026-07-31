@@ -49,6 +49,9 @@ const PAGE_CACHE_MAX = 5000;
 // /leasing i /kredyt celowo bez paginacji: oferty są te same co w /samochody (każde auto
 // dostępne w obu finansowaniach), więc pełna lista byłaby duplikatem — te strony pracują
 // artykułem filarowym + krótką listą z linkiem do pełnego katalogu.
+// Trasy statyczne, na których lista ofert w prerenderze jest szumem, a nie treścią
+const LISTINGLESS_STATIC_ROUTES = new Set(['/faq', '/kontakt', '/dla-firm', '/dla-ciebie']);
+
 const PAGINATED_ROUTES = new Set([
     '/samochody',
     '/search',
@@ -723,7 +726,12 @@ async function resolveMeta(
     const take = paginated ? ssrPerPage : isFinancingList ? FINANCING_LIST_TAKE : 20;
     const skip = paginated ? (page - 1) * ssrPerPage : 0;
 
-    if (path === '/wynajem-dlugoterminowy') {
+    // Strony bez listy aut: doklejanie 20 losowych ofert do prerenderu rozmywało ich temat
+    // (na /faq crawler przed pytaniami o kredyt widział listę Fordów) i kosztowało zbędne
+    // zapytanie do bazy. Lista zostaje tam, gdzie jest treścią strony.
+    if (LISTINGLESS_STATIC_ROUTES.has(path)) {
+        listings = [];
+    } else if (path === '/wynajem-dlugoterminowy') {
         const where = { isActive: true, slug: { not: null } };
         if (paginated) {
             const total = await fastify.prisma.rentalVehicle.count({ where });

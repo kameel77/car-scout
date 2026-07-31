@@ -818,16 +818,19 @@ const STATIC_ROUTES: Record<string, StaticRoute> = {
             'Samochód z dopasowanym finansowaniem — leasing, kredyt lub najem. Zostaw kontakt, dobierzemy ofertę.',
     },
     '/dla-firm': {
-        title: b => `Leasing i najem samochodów dla firm — od pierwszego auta | ${b}`,
+        title: b => `Leasing i najem samochodów dla firm od 1 auta | ${b}`,
         h1: 'Auta dla Twojej firmy. Ważnej dla nas od pierwszego samochodu.',
         description:
-            'Nowe samochody w leasingu i najmie długoterminowym dla JDG i spółek — jedno auto czy dwadzieścia. Jeden opiekun, oferty wielu finansujących, rata policzona pod podatki firmy.',
+            'Leasing i najem długoterminowy dla JDG i spółek. Jeden opiekun, oferty wielu finansujących, rata policzona pod podatki firmy. Zostaw kontakt.',
     },
+    // Tytuł celowo z frazami, na które strona realnie zbiera wyświetlenia w GSC
+    // (kredyt/leasing/wynajem), a nie samo "Najczęstsze pytania" — przy 10,5 tys.
+    // wyświetleń CTR wynosił 0,22%, bo tytuł nie odpowiadał zapytaniu.
     '/faq': {
-        title: b => `Najczęstsze pytania | ${b}`,
-        h1: 'Najczęstsze pytania',
+        title: b => `Kredyt, leasing i wynajem auta - najczęstsze pytania | ${b}`,
+        h1: 'Najczęstsze pytania o finansowanie samochodu',
         description:
-            'Odpowiedzi na najczęstsze pytania o zakup samochodu, finansowanie i proces zamówienia.',
+            'Kredyt, leasing i wynajem długoterminowy: wkład własny, limity podatkowe, wcześniejsza spłata, zwrot auta. Sprawdź odpowiedzi doradców Motolia.',
     },
     '/kontakt': {
         title: b => `Kontakt | ${b}`,
