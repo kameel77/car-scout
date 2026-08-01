@@ -38,6 +38,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 // Lazy load non-critical page components to enable code splitting
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const PublicFaqPage = lazy(() => import("./pages/PublicFaqPage"));
+const CalculatorPage = lazy(() => import("./pages/CalculatorPage"));
 const LoginPage = lazy(() => import("./pages/admin/LoginPage"));
 const AdminDashboard = lazy(() => import("./pages/admin/DashboardPage"));
 const LeadsPage = lazy(() => import("./pages/admin/LeadsPage"));
@@ -114,6 +115,7 @@ const App = () => (
                       <Route path="/uzywane" element={<ConditionPage key="uzywane" condition="USED" />} />
                       <Route path="/kontakt" element={<ContactPage />} />
                       <Route path="/faq" element={<PublicFaqPage />} />
+                      <Route path="/kalkulator-rat" element={<CalculatorPage />} />
 
                       {/* SEO financing-type routes */}
                       <Route path="/leasing" element={<SearchPage key="leasing" />} />

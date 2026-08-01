@@ -24,6 +24,15 @@ interface CallbackFormProps {
     src?: string;
     /** Etykieta przycisku wysyłki (wariant compact) */
     submitLabel?: string;
+    /** Opcjonalne parametry kalkulacji finansowania */
+    financingParams?: {
+        productId?: string;
+        amount?: number;
+        period?: number;
+        downPayment?: number;
+        installment?: number;
+        finalPayment?: number;
+    };
 }
 
 export function CallbackForm({
@@ -41,6 +50,7 @@ export function CallbackForm({
     landingPageSlug,
     src,
     submitLabel = 'Zadzwoń do mnie',
+    financingParams,
 }: CallbackFormProps) {
     const [phone, setPhone] = useState('');
     const [honeypot, setHoneypot] = useState('');
@@ -59,6 +69,12 @@ export function CallbackForm({
                 company: honeypot,
                 landingPageSlug,
                 src,
+                financingProductId: financingParams?.productId,
+                financingAmount: financingParams?.amount,
+                financingPeriod: financingParams?.period,
+                financingDownPayment: financingParams?.downPayment,
+                financingInstallment: financingParams?.installment,
+                financingFinalPayment: financingParams?.finalPayment,
             });
 
             // Push event to Google Tag Manager dataLayer

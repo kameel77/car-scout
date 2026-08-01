@@ -457,4 +457,19 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - Skierowano martwy anchor `#jak-to-dziala` w hero na sekcję `#produkty`.
     - Wzmocniono słowa kluczowe w nagłówkach H2 produktów oraz marek.
 
-
+## 40. Samodzielny kalkulator finansowania samochodów (/kalkulator-rat)
+- **Cel**: Pozyskanie leadów od klientów poszukujących auta poza naszą bazą (OTOMOTO, dealer, OLX) oraz zdobycie widoczności SEO na frazy narzędziowe („kalkulator leasingu”, „kalkulator kredytu samochodowego”, „kalkulator najmu”).
+- **Zachowanie i funkcjonalności**:
+  - **Dedykowany URL & SSR**: Dostępny pod adresem `/kalkulator-rat` z pełną obsługą SSR (tytuł, opis, canonical, JSON-LD `FinancialProduct` & `WebApplication`), bez zbędnej siatki aut w prerenderze (`LISTINGLESS_STATIC_ROUTES`) oraz z automatycznym wpisem w `sitemap.xml`.
+  - **Domyślna kwota**: Wartość poczatkowa pojazdu ustawiona na 80 000 zł brutto z suwakiem od 5 000 zł do 500 000 zł i możliwością ręcznego wpisania kwoty w polu numerycznym.
+  - **Stan i rocznik pojazdu**: Wybór auta nowego lub używanego z rocznikiem produkcji (2016-2026).
+  - **Tryby finansowania**: Kredyt samochodowy, Leasing operacyjny oraz Najem długoterminowy.
+  - **Wymogi informacyjne dla kredytu (RRSO & Przykład Reprezentatywny)**:
+    - **RRSO**: Wyświetlane wyłącznie gdy pochodzi bezpośrednio z API partnera bankowego (Inbank). Dla produktów własnych (`OWN`) ani przy braku wartości z API nie podstawiamy żadnych przybliżeń ani szacunków.
+    - **Przykład Reprezentatywny z Backoffice**: Treść okna dialogowego jest wprowadzana ręcznie przez administratora w panelu `/admin/financing` (pole `creditRepresentativeExample` w `AppSettings`). Gdy pole jest puste, ikona i okno dialogowe nie wyświetlają się.
+  - **Ubezpieczenia (v1)**: Zbieranie zgłoszeń wyceny ze zweryfikowanymi tekstami:
+    - Nagłówek: *Dołącz bezpłatną wycenę pakietu OC/AC/GAP*
+    - Podpis: *Nasi eksperci dobiorą optymalną stawkę ubezpieczenia dla tego pojazdu.*
+  - **Zapis w CRM & Identyfikacja Leadów**:
+    - Wysłanie zapytania z kalkulatora otwiera modal `CallbackForm` z zachowaniem natywnego zapisu parametrów finansowania w bazie danych (`financingAmount`, `financingDownPayment`, `financingPeriod`, `financingInstallment`, `financingFinalPayment`, `financingProductId`) przy opcjonalnym `listingId=null`.
+    - Identyfikatory `formId` per miejsce wywołania w konwencji `snake_case` (np. `kalkulator_rat_callback`, `leasing_pillar_calculator_callback`, itd.).
