@@ -91,7 +91,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
         // 1. Static Pages (bez lastmod — brak realnej daty modyfikacji jest lepszy niż fałszywy sygnał)
         const staticPages = [
             '/', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
-            '/leasing', '/kredyt', '/dla-ciebie', '/dla-firm', '/faq', '/kontakt'
+            '/leasing', '/kredyt', '/kalkulator-rat', '/dla-ciebie', '/dla-firm', '/faq', '/kontakt'
         ];
 
         staticPages.forEach(path => {

@@ -74,6 +74,13 @@ export default function FinancingPage() {
     const [isConnectionModalOpen, setIsConnectionModalOpen] = React.useState(false);
     const [editingConnectionId, setEditingConnectionId] = React.useState<string | null>(null);
     const [connectionFormData, setConnectionFormData] = React.useState<FinancingProviderConnectionPayload>(EMPTY_CONNECTION_FORM);
+    const [repExampleText, setRepExampleText] = React.useState('');
+
+    React.useEffect(() => {
+        if (settings?.creditRepresentativeExample != null) {
+            setRepExampleText(settings.creditRepresentativeExample);
+        }
+    }, [settings?.creditRepresentativeExample]);
 
     const { data, isLoading } = useQuery({
         queryKey: ['financing-products'],
@@ -397,6 +404,33 @@ export default function FinancingPage() {
                                 </Label>
                             </div>
                         </RadioGroup>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Przykład reprezentatywny (Kredyt konsumencki)</CardTitle>
+                    <CardDescription>
+                        Treść Przykładu Reprezentatywnego wyświetlana w oknie dialogowym kalkulatora kredytowego. Wprowadź oficjalną formułę prawną. Jeśli pole pozostanie puste, ikona i okno dialogowe nie będą wyświetlane.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <textarea
+                        value={repExampleText}
+                        onChange={(e) => setRepExampleText(e.target.value)}
+                        rows={5}
+                        placeholder="Wpisz treść przykładowego reprezentatywnego..."
+                        className="w-full p-3 rounded-md border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <div className="flex justify-end">
+                        <Button
+                            onClick={() => handleSettingsChange('creditRepresentativeExample', repExampleText)}
+                            disabled={updateSettingsMutation.isPending}
+                        >
+                            {updateSettingsMutation.isPending && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
+                            Zapisz treść przykładu reprezentatywnego
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

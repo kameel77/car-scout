@@ -50,7 +50,7 @@ const PAGE_CACHE_MAX = 5000;
 // dostępne w obu finansowaniach), więc pełna lista byłaby duplikatem — te strony pracują
 // artykułem filarowym + krótką listą z linkiem do pełnego katalogu.
 // Trasy statyczne, na których lista ofert w prerenderze jest szumem, a nie treścią
-const LISTINGLESS_STATIC_ROUTES = new Set(['/faq', '/kontakt', '/dla-firm', '/dla-ciebie']);
+const LISTINGLESS_STATIC_ROUTES = new Set(['/faq', '/kontakt', '/dla-firm', '/dla-ciebie', '/kalkulator-rat']);
 
 const PAGINATED_ROUTES = new Set([
     '/samochody',

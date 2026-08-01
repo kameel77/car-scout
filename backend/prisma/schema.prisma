@@ -343,6 +343,7 @@ model AppSettings {
   salesContactPhone           String?  @map("sales_contact_phone")
   pdfParserLlmModel           String   @default("deepseek/deepseek-v4-flash") @map("pdf_parser_llm_model")
   pdfParserSystemPrompt       String?  @map("pdf_parser_system_prompt")
+  creditRepresentativeExample String?  @map("credit_representative_example")
 
   @@map("app_settings")
 }

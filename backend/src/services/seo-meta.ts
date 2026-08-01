@@ -832,6 +832,12 @@ const STATIC_ROUTES: Record<string, StaticRoute> = {
         description:
             'Kredyt, leasing i wynajem długoterminowy: wkład własny, limity podatkowe, wcześniejsza spłata, zwrot auta. Sprawdź odpowiedzi doradców Motolia.',
     },
+    '/kalkulator-rat': {
+        title: b => `Kalkulator leasingu, kredytu i najmu samochodów | ${b}`,
+        h1: 'Kalkulator finansowania samochodów',
+        description:
+            'Oblicz ratę leasingu, kredytu samochodowego i wynajmu długoterminowego. Podaj cenę auta i okres — policz ratę w 1 minutę.',
+    },
     '/kontakt': {
         title: b => `Kontakt | ${b}`,
         h1: 'Kontakt',
