@@ -131,23 +131,26 @@ export async function leadRoutes(fastify: FastifyInstance) {
         }
 
         // Phone-first funnel (CRO P1.2): either contact channel is enough.
-        if (!data.listingId || !data.name || (!data.email && !data.phone)) {
-            return reply.code(400).send({ error: 'listingId, name and email or phone are required' });
+        if (!data.name || (!data.email && !data.phone)) {
+            return reply.code(400).send({ error: 'name and email or phone are required' });
         }
 
-        const listing = await fastify.prisma.listing.findUnique({
-            where: { id: data.listingId },
-            include: { dealer: true }
-        });
+        let listing = null;
+        if (data.listingId) {
+            listing = await fastify.prisma.listing.findUnique({
+                where: { id: data.listingId },
+                include: { dealer: true }
+            });
 
-        if (!listing) {
-            return reply.code(404).send({ error: 'Listing not found' });
+            if (!listing) {
+                return reply.code(404).send({ error: 'Listing not found' });
+            }
         }
 
         const lead = await fastify.prisma.lead.create({
             data: {
                 leadType: 'sale',
-                listingId: data.listingId,
+                ...(data.listingId ? { listingId: data.listingId } : {}),
                 name: data.name,
                 email: data.email ? data.email.trim() : null,
                 phone: data.phone,
@@ -465,6 +468,12 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 message: messageText,
                 status: 'quick_contact',
                 referenceNumber: generateReference(),
+                financingProductId: typeof body.financingProductId === 'string' ? body.financingProductId : undefined,
+                financingAmount: typeof body.financingAmount === 'number' ? body.financingAmount : undefined,
+                financingPeriod: typeof body.financingPeriod === 'number' ? body.financingPeriod : undefined,
+                financingDownPayment: typeof body.financingDownPayment === 'number' ? body.financingDownPayment : undefined,
+                financingInstallment: typeof body.financingInstallment === 'number' ? body.financingInstallment : undefined,
+                financingFinalPayment: typeof body.financingFinalPayment === 'number' ? body.financingFinalPayment : undefined,
             },
             include: {
                 listing: {

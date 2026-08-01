@@ -43,6 +43,7 @@ type SettingsPayload = {
 
     pdfParserLlmModel?: string | null;
     pdfParserSystemPrompt?: string | null;
+    creditRepresentativeExample?: string | null;
 
     financingCalculatorEnabled?: boolean;
     financingCalculatorLocation?: string;
@@ -242,6 +243,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             }
             if (data.financingCalculatorLocation !== undefined) {
                 update.financingCalculatorLocation = data.financingCalculatorLocation;
+            }
+            if (data.creditRepresentativeExample !== undefined) {
+                update.creditRepresentativeExample = data.creditRepresentativeExample || null;
             }
             if (data.defaultOgTitle !== undefined) update.defaultOgTitle = data.defaultOgTitle || null;
             if (data.defaultOgDescription !== undefined) update.defaultOgDescription = data.defaultOgDescription || null;

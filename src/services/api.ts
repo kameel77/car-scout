@@ -1214,7 +1214,23 @@ export const leadsApi = {
 
         return response.json();
     },
-    submitQuickLead: async (data: { phone: string; name?: string; message?: string; listingId?: string; company?: string; turnstileToken?: string; pageUrl?: string; landingPageSlug?: string; src?: string; }) => {
+    submitQuickLead: async (data: {
+        phone: string;
+        name?: string;
+        message?: string;
+        listingId?: string;
+        company?: string;
+        turnstileToken?: string;
+        pageUrl?: string;
+        landingPageSlug?: string;
+        src?: string;
+        financingProductId?: string;
+        financingAmount?: number;
+        financingPeriod?: number;
+        financingDownPayment?: number;
+        financingInstallment?: number;
+        financingFinalPayment?: number;
+    }) => {
         const payload = {
             pageUrl: typeof window !== 'undefined' ? window.location.href : undefined,
             ...data

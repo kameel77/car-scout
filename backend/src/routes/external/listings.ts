@@ -42,6 +42,61 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
         return { dealers };
     });
 
+    // Sprawdzenie, czy ogłoszenie już istnieje — pozwala klientowi zapytać
+    // użytkownika o zgodę PRZED nadpisaniem danych.
+    fastify.get('/api/v1/external/listings/lookup', {
+        schema: {
+            description: 'Check whether a listing already exists (by listingId or VIN)',
+            tags: ['Listings'],
+            security: [{ bearerAuth: [] }],
+            querystring: Type.Object({
+                listingId: Type.Optional(Type.String()),
+                vin: Type.Optional(Type.String())
+            })
+        }
+    }, async (request, reply) => {
+        const partnerReq = request as PartnerRequest;
+        const partner = partnerReq.partner;
+        const { listingId, vin } = request.query as { listingId?: string; vin?: string };
+
+        if (!listingId && !vin) {
+            return reply.code(400).send({ error: 'Podaj listingId lub vin.' });
+        }
+
+        let found = null;
+        if (vin) {
+            const trimmed = vin.trim().toUpperCase();
+            if (/^[A-HJ-NPR-Z0-9]{17}$/.test(trimmed)) {
+                found = await fastify.prisma.listing.findUnique({ where: { vin: trimmed } });
+            }
+        }
+        if (!found && listingId) {
+            found = await fastify.prisma.listing.findUnique({ where: { listingId: String(listingId) } });
+        }
+
+        if (!found) return { exists: false };
+
+        // Nie ujawniamy danych ogłoszeń spoza zakresu klucza partnera.
+        const authorizedDealerIds = (partner.mappings || []).map(m => m.dealerId);
+        if (authorizedDealerIds.length > 0 &&
+            (!found.dealerId || !authorizedDealerIds.includes(found.dealerId))) {
+            return reply.code(403).send({ error: 'Forbidden. Ogłoszenie należy do innego dealera.' });
+        }
+
+        return {
+            exists: true,
+            id: found.id,
+            listingId: found.listingId,
+            vin: found.vin,
+            make: found.make,
+            model: found.model,
+            pricePln: found.pricePln,
+            mileageKm: found.mileageKm,
+            isArchived: found.isArchived,
+            updatedAt: found.updatedAt
+        };
+    });
+
     const ListingSchema = Type.Object({
         externalDealerId: Type.Optional(Type.String()),
         dealerId: Type.Optional(Type.String()),
@@ -67,6 +122,9 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
         equipmentComfortExtras: Type.Optional(Type.Array(Type.String())),
         equipmentOther: Type.Optional(Type.Array(Type.String())),
         condition: Type.Optional(Type.String({ description: 'e.g. USED, NEW' })),
+        listingId: Type.Optional(Type.String({ description: 'ID ogłoszenia w serwisie źródłowym (Otomoto)' })),
+        listingUrl: Type.Optional(Type.String({ description: 'URL ogłoszenia źródłowego' })),
+        primaryImageUrl: Type.Optional(Type.String()),
         images: Type.Optional(Type.Array(Type.String({ description: 'Array of image URLs' }))),
         imageUrls: Type.Optional(Type.Array(Type.String())),
         additionalInfoContent: Type.Optional(Type.String({ description: 'Treść opisu dodatkowego' })),
@@ -131,16 +189,40 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
             const doors = body.doors ? parseInt(body.doors, 10) : null;
             const seats = body.seats ? parseInt(body.seats, 10) : null;
 
-            // Szukanie istniejącej oferty (po VIN jeśli poprawny, lub po listingId z Otomoto)
+            // Szukanie istniejącej oferty. Oba pola (vin, listingId) są @unique,
+            // więc sprawdzamy je KASKADOWO, nie rozłącznie. Wcześniejsze `else if`
+            // powodowało błąd: pierwszy import bez VIN tworzył rekord z listingId,
+            // a ponowny import tego samego ogłoszenia już z VIN-em szukał wyłącznie
+            // po VIN, nie znajdował go i wpadał w INSERT łamiący unique na listing_id.
+            const externalListingId = body.listingId ? String(body.listingId) : null;
+
             let existingListing = null;
             if (cleanVin) {
                 existingListing = await fastify.prisma.listing.findUnique({ where: { vin: cleanVin } });
-            } else if (body.listingId) {
-                existingListing = await fastify.prisma.listing.findUnique({ where: { listingId: String(body.listingId) } });
+            }
+            if (!existingListing && externalListingId) {
+                existingListing = await fastify.prisma.listing.findUnique({ where: { listingId: externalListingId } });
             }
 
             if (existingListing && existingListing.dealerId !== internalDealerId) {
                 return reply.code(403).send({ error: 'Forbidden. Listing z tym VIN należy do innego dealera.' });
+            }
+
+            // Kolizja odwrotna: aktualizujemy rekord znaleziony po listingId, ale
+            // podany VIN jest już przypisany do INNEGO ogłoszenia. Bez tego guardu
+            // Prisma rzuciłaby surowym unique constraint na `vin` (HTTP 500).
+            if (existingListing && cleanVin && existingListing.vin !== cleanVin) {
+                const vinOwner = await fastify.prisma.listing.findUnique({
+                    where: { vin: cleanVin },
+                    select: { id: true, listingId: true }
+                });
+                if (vinOwner && vinOwner.id !== existingListing.id) {
+                    return reply.code(409).send({
+                        error: `VIN ${cleanVin} jest już przypisany do innego ogłoszenia` +
+                            `${vinOwner.listingId ? ` (listingId: ${vinOwner.listingId})` : ''}. ` +
+                            'Popraw VIN albo zarchiwizuj tamto ogłoszenie.'
+                    });
+                }
             }
 
             const tempListingId = existingListing?.id || crypto.randomBytes(12).toString('hex');
@@ -190,7 +272,9 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
                 entrySource: 'AGENT' as const,
                 marketplace: 'motolia',
                 dealerId: internalDealerId,
-                listingId: body.listingId ? String(body.listingId) : null,
+                // Przy aktualizacji nie kasujemy powiązania z ogłoszeniem źródłowym,
+                // gdy bieżący payload go nie zawiera.
+                listingId: externalListingId ?? existingListing?.listingId ?? null,
                 listingUrl: body.listingUrl || null,
                 // Opis dodatkowy (backoffice: "Treść/Nagłówek opisu dodatkowego")
                 additionalInfoContent: body.additionalInfoContent || null,
@@ -215,6 +299,9 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
             return reply.code(201).send({
                 id: listing.id,
                 vin: listing.vin,
+                listingId: listing.listingId,
+                // Pozwala klientowi (wtyczka Chrome) rozróżnić import od nadpisania.
+                created: !existingListing,
                 status: 'active'
             });
 
