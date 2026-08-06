@@ -68,18 +68,37 @@ declare global {
     }
 }
 
-function pushDataLayer(args: unknown[]) {
+type GtagCommand = (...args: unknown[]) => void;
+
+/**
+ * Canonical gtag helper.
+ *
+ * Google's Consent Mode only recognises commands pushed to the dataLayer as an
+ * `arguments` object — the shape produced by
+ * `function gtag(){ dataLayer.push(arguments); }`.
+ *
+ * A plain array (`dataLayer.push(['consent', 'default', {...}])`) is silently
+ * ignored: `google_tag_data.ics.entries` stays `{implicit: true}` and every tag
+ * behaves as if consent had been granted, whatever the visitor chose. Do not
+ * "simplify" this back into an array push.
+ */
+export const gtag: GtagCommand = function () {
     if (typeof window === 'undefined') return;
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(args);
-}
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer.push(arguments);
+};
 
 export function pushConsentDefault(analytics: boolean, marketing: boolean) {
-    pushDataLayer(['consent', 'default', toGtagPayload(analytics, marketing)]);
+    gtag('consent', 'default', toGtagPayload(analytics, marketing));
+
+    // Preserve ad click attribution and redact ad data while consent is denied.
+    gtag('set', 'url_passthrough', true);
+    gtag('set', 'ads_data_redaction', true);
 }
 
 export function pushConsentUpdate(analytics: boolean, marketing: boolean) {
-    pushDataLayer(['consent', 'update', toGtagPayload(analytics, marketing)]);
+    gtag('consent', 'update', toGtagPayload(analytics, marketing));
 }
 
 // Geo detection — cached for the session

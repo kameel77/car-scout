@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { initClarity } from '@/lib/clarity';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -64,12 +63,12 @@ export function SeoManager() {
         return pick?.trim() || config.name;
     }, [i18n.language, settings?.siteNameEn, settings?.siteNameDe, settings?.siteNamePl, settings, config.name]);
 
-    // Initialize Clarity directly (not through GTM) to ensure SPA page views are tracked
-    useEffect(() => {
-        if (seoConfig?.clarityId) {
-            initClarity(seoConfig.clarityId);
-        }
-    }, [seoConfig?.clarityId]);
+    // Clarity is loaded by the GTM tag "Clarity - Tag all pages", which is gated on
+    // analytics_storage consent. It used to be initialised directly from here, which
+    // bypassed the consent banner entirely — Clarity recorded sessions even after a
+    // visitor rejected optional cookies. SPA navigations stay covered by
+    // <ClarityPageTracker>, which calls clarity('upgrade') on every route change.
+    // Do not re-add a direct init here.
 
     useEffect(() => {
         if (!seoConfig?.gtmId) return;
