@@ -123,6 +123,7 @@ export function Footer() {
               { to: '/leasing', label: 'Leasing samochodu' },
               { to: '/kredyt', label: 'Kredyt samochodowy' },
               { to: '/wynajem-dlugoterminowy', label: 'Wynajem długoterminowy' },
+              { to: '/foton', label: 'Pojazdy użytkowe FOTON' },
             ].map((item) => (
               <Link
                 key={item.to}

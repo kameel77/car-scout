@@ -38,6 +38,7 @@ const ALL_NAV_LINKS = [
   { key: 'kredyt', label: 'Kredyt', to: '/kredyt' },
   { key: 'wynajem', label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
   { key: 'dlafirm', label: 'Dla firm', to: '/dla-firm' },
+  { key: 'foton', label: 'FOTON', to: '/foton' },
   { key: 'faq', label: 'FAQ', to: '/faq' },
   { key: 'kontakt', label: 'Kontakt', to: '/kontakt' },
 ];

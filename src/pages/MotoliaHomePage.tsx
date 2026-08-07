@@ -155,7 +155,7 @@ const WHY_US = [
   },
 ];
 
-const FINANCIAL_PARTNERS = ['Inbank', 'Santander', 'Vehis', 'PKO Leasing', 'Masterlease'];
+const FINANCIAL_PARTNERS = ['Inbank', 'PKO', 'Erste', 'Vehis', 'Masterlease', 'BNP Paribas'];
 
 const CAR_BRANDS_EU = [
   'Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Toyota', 'Kia',

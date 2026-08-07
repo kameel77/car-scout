@@ -55,7 +55,9 @@ const getBaseUrl = (request: any): string | undefined => {
 type PreferredContact = 'email' | 'phone';
 
 interface LeadPayload {
-    listingId: string;
+    listingId?: string;
+    leadType?: string;
+    trafficSource?: string;
     name: string;
     email?: string;
     phone?: string;
@@ -118,6 +120,16 @@ const generateReference = () => {
     return `AF-${timestamp.slice(-8)}`;
 };
 
+const ALLOWED_LEAD_TYPES = new Set([
+    'sale',
+    'price_negotiation',
+    'rental',
+    'waitlist',
+    'quick_contact',
+    'foton_fleet',
+    'foton_lifestyle'
+]);
+
 export async function leadRoutes(fastify: FastifyInstance) {
     // Create new lead from public form (sale)
     fastify.post('/api/leads', {
@@ -147,9 +159,12 @@ export async function leadRoutes(fastify: FastifyInstance) {
             }
         }
 
+        const validLeadType = data.leadType && ALLOWED_LEAD_TYPES.has(data.leadType) ? data.leadType : 'sale';
+
         const lead = await fastify.prisma.lead.create({
             data: {
-                leadType: 'sale',
+                leadType: validLeadType,
+                trafficSource: data.trafficSource || null,
                 ...(data.listingId ? { listingId: data.listingId } : {}),
                 name: data.name,
                 email: data.email ? data.email.trim() : null,
