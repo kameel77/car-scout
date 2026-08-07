@@ -1,30 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Truck,
-  ShieldCheck,
-  Zap,
   CheckCircle2,
-  ChevronDown,
-  Phone,
-  Mail,
   ArrowRight,
   HelpCircle,
-  Award,
-  Building2,
-  Wrench,
   BadgeCheck,
   Compass,
-  Briefcase,
-  Layers,
-  Sparkles,
 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { MetaHead } from '@/components/seo/MetaHead';
-import { leadsApi } from '@/services/api';
-import { trackLeadSubmit } from '@/lib/analytics';
-import { useToast } from '@/components/ui/use-toast';
+import { FOTON_MODELS, type FotonSegment } from '@/data/foton-models';
+import { FotonContextBar } from '@/components/foton/FotonContextBar';
+import { FotonResponsibilityBlock } from '@/components/foton/FotonResponsibilityBlock';
+import { FotonLeadForm } from '@/components/foton/FotonLeadForm';
 
 // ─── Lightweight IntersectionObserver FadeIn ──────────────────────────────────
 const FadeIn = ({
@@ -70,109 +60,6 @@ const FadeIn = ({
   );
 };
 
-// ─── Data & Content (Strictly Verified with Importer Specs) ───────────────────
-
-const FOTON_MODELS = [
-  {
-    id: 'tunland-g7',
-    category: 'lifestyle',
-    categoryLabel: 'Pickup 4x4 · Diesel',
-    name: 'FOTON Tunland G7',
-    tagline: 'Do pracy i na co dzień',
-    engine: 'Silnik wysokoprężny AVL (119 kW / 390 Nm)',
-    drivetrain: '4WD BorgWarner (2H/AUTO/4H/4L) + blokada Eatona',
-    transmission: 'Automatyczna skrzynia ZF 8AT',
-    highlights: [
-      'Silnik wysokoprężny Common Rail Bosch (zużycie ok. 7,5 l/100 km)',
-      'Wyposażenie: kamery 360°, podgrzewane fotele, ekran 10,25"',
-      'Systemy bezpieczeństwa: BSD, FCW, LCA, 6 poduszek powietrznych',
-      'Korzyści podatkowe dla firm: odliczenie VAT oraz kosztów eksploatacji',
-    ],
-    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'tunland-v9',
-    category: 'lifestyle',
-    categoryLabel: 'Pickup 4x4 · Mild Hybrid',
-    name: 'FOTON Tunland V9',
-    tagline: 'Pickup z układem 48V Mild Hybrid',
-    engine: '2.0 turbodiesel AUCAN + 48V Mild Hybrid (163 + 12 KM, 400 + 50 Nm)',
-    drivetrain: 'Napęd 4WD z 6 trybami jazdy + blokada dyferencjału na obu osiach',
-    transmission: 'Automatyczna skrzynia biegów 8AT',
-    highlights: [
-      'Napęd 2.0 turbodiesel AUCAN wspomagany układem 48V Mild Hybrid (163 + 12 KM)',
-      'Blokada dyferencjału na obu osiach oraz 6 profesjonalnych trybów terenowych',
-      '5 gwiazdek w testach bezpieczeństwa C-NCAP',
-      'Nowoczesny cyfrowy kokpit z bogatym wyposażeniem w standardzie',
-    ],
-    image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'etoano-pro',
-    category: 'fleet',
-    categoryLabel: 'Dostawczy EV · Furgon',
-    name: 'FOTON eToano Pro',
-    tagline: 'Zeroemisyjny furgon dla logistyki miejskiej',
-    engine: 'Elektryczny 184 KM',
-    drivetrain: 'Bateria CATL',
-    range: 'do 357 km (cykl WLTP)',
-    volume: 'do 10,4 m³ przestrzeni ładunkowej',
-    highlights: [
-      'Silnik elektryczny o mocy 184 KM oraz wydajna bateria CATL',
-      'Zasięg do 357 km w cyklu WLTP',
-      'Przestrzeń ładunkowa do 10,4 m³',
-      'Gwarancja na baterię trakcyjną: 8 lat / 400 000 km',
-      'Swobodny wjazd do Stref Czystego Transportu (SCT, stan na 2026 r.)',
-    ],
-    image: 'https://images.unsplash.com/photo-1559297434-fae8a1916a79?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'cavan-c1',
-    category: 'fleet',
-    categoryLabel: 'Kompaktowy Van EV',
-    name: 'FOTON Cavan C1',
-    tagline: 'Zwinny van do dystrybucji Ostatniej Mili',
-    engine: 'Napęd elektryczny e-drive',
-    drivetrain: 'Ładowanie prądem stałym DC',
-    highlights: [
-      'Wydajny napęd elektryczny z szybkim ładowaniem DC',
-      'Kompaktowa i zwrotna konstrukcja stworzona do wąskich ulic miast',
-      'Ergonomiczna kabina kierowcy z nowoczesną telematyką flotową',
-    ],
-    image: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'eaumark',
-    category: 'fleet',
-    categoryLabel: 'Pojazd Ciężarowy EV · N2',
-    name: 'FOTON eAumark',
-    tagline: 'Elektryczne podwozie pod zabudowę',
-    engine: 'Napęd elektryczny',
-    drivetrain: 'Bateria CATL LFP',
-    highlights: [
-      'Podwozie pod dowolną zabudowę (chłodnia, kontener, wywrotka)',
-      'Przystosowany do dostaw miejskich i zadań komunalnych',
-      'Cicha praca umożliwiająca nocny transport',
-    ],
-    image: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'aumark-s',
-    category: 'fleet',
-    categoryLabel: 'Ciężarowy Diesel · N2/N3',
-    name: 'FOTON Aumark S',
-    tagline: 'Ciężarówka dystrybucyjna',
-    engine: 'Silnik wysokoprężny',
-    drivetrain: 'Skrzynia biegów ZF + osie Dana',
-    highlights: [
-      'Sprawdzony napęd z osprzętem o wysokiej trwałości',
-      'Konstrukcja zoptymalizowana pod kątem eksploatacji flotowej',
-      'Gwarancja fabryczna producenta: 5 lat / 200 000 km',
-    ],
-    image: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=900&q=80',
-  },
-];
-
 const FAQ_ITEMS = [
   {
     q: 'Czy Motolia jest dealerem lub importerem marki FOTON?',
@@ -197,90 +84,17 @@ const FAQ_ITEMS = [
 ];
 
 export default function FotonLandingPage() {
-  const { toast } = useToast();
+  // Seed values for the shared lead form. Changing this remounts the form
+  // (via `key`) with the requested segment/model preselected.
+  const [formSeed, setFormSeed] = useState<{ segment: FotonSegment; modelId: string }>({
+    segment: 'fleet',
+    modelId: 'etoano-pro',
+  });
 
-  // Form State
-  const [selectedSegment, setSelectedSegment] = useState<'fleet' | 'lifestyle'>('fleet');
-  const [selectedModel, setSelectedModel] = useState<string>('etoano-pro');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [message, setMessage] = useState('');
-  const [consentPrivacy, setConsentPrivacy] = useState(true);
-  const [consentMarketing, setConsentMarketing] = useState(false);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-
-  const formRef = useRef<HTMLDivElement>(null);
-
-  const scrollToForm = (segment: 'fleet' | 'lifestyle', modelId?: string) => {
-    setSelectedSegment(segment);
-    if (modelId) setSelectedModel(modelId);
-    else {
-      setSelectedModel(segment === 'fleet' ? 'etoano-pro' : 'tunland-g7');
-    }
-    formRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || (!email && !phone)) {
-      toast({
-        title: 'Błąd w formularzu',
-        description: 'Podaj imię oraz numer telefonu lub adres email.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const leadType = selectedSegment === 'fleet' ? 'foton_fleet' : 'foton_lifestyle';
-      const modelObj = FOTON_MODELS.find((m) => m.id === selectedModel);
-      const fullMessage = [
-        `Segment: ${selectedSegment === 'fleet' ? 'Flota / Użytkowe' : 'Lifestyle / Pickupy'}`,
-        `Wybrany model: ${modelObj?.name || selectedModel}`,
-        companyName ? `Firma: ${companyName}` : '',
-        message ? `Wiadomość: ${message}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n');
-
-      await leadsApi.submitLead({
-        name,
-        email,
-        phone,
-        leadType,
-        trafficSource: 'foton_landing',
-        message: fullMessage,
-        consentPrivacy,
-        consentMarketing,
-      });
-
-      trackLeadSubmit({
-        formId: 'foton_landing_form',
-        leadType,
-        brand: 'FOTON',
-        model: modelObj?.name,
-        phone,
-      });
-
-      setIsSubmitted(true);
-      toast({
-        title: 'Zapytanie zostało wysłane',
-        description: 'Doradca Motolii skontaktuje się z Tobą w najbliższym czasie.',
-      });
-    } catch (err: any) {
-      toast({
-        title: 'Błąd wysyłania',
-        description: err.message || 'Nie udało się wysłać formularza. Spróbuj ponownie.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const scrollToForm = (segment: FotonSegment, modelId?: string) => {
+    const resolvedModelId = modelId || (segment === 'fleet' ? 'etoano-pro' : 'tunland-g7');
+    setFormSeed({ segment, modelId: resolvedModelId });
+    document.getElementById('foton-lead-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   // Structured Data JSON-LD
@@ -337,25 +151,7 @@ export default function FotonLandingPage() {
       <Header />
 
       {/* ─── STICKY CONTEXT BAR (DISCLOSURE LAYER 1) ─────────────────────────── */}
-      <div className="bg-slate-900/90 border-b border-amber-500/30 backdrop-blur-md text-slate-300 text-xs py-2 px-4 sticky top-[72px] lg:top-[80px] z-40">
-        <div className="container mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-              FOTON
-            </span>
-            <span className="hidden sm:inline text-slate-400">•</span>
-            <span className="text-slate-200">
-              Pojazdy użytkowe i pickupy – Motolia działa jako <strong className="text-white">Agent Importera</strong>
-            </span>
-          </div>
-          <a
-            href="#odpowiedzialnosc"
-            className="text-amber-400 hover:text-amber-300 underline underline-offset-4 flex items-center gap-1 font-medium transition-colors"
-          >
-            Kto za co odpowiada <ChevronDown className="w-3 h-3" />
-          </a>
-        </div>
-      </div>
+      <FotonContextBar />
 
       {/* Main Container Wrapper */}
       <main className="flex-1">
@@ -487,70 +283,7 @@ export default function FotonLandingPage() {
         </section>
 
         {/* ─── DISCLOSURE LAYER 2: KTO ZA CO ODPOWIADA (3 COLUMNS) ─────────────── */}
-        <section id="odpowiedzialnosc" className="py-16 bg-slate-950 border-y border-slate-800">
-          <div className="container mx-auto px-4">
-            <FadeIn>
-              <div className="text-center max-w-2xl mx-auto mb-10">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  Przejrzyste ramy współpracy
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-bold text-white mt-1">
-                  Kto za co odpowiada w transakcji?
-                </h2>
-                <p className="text-sm text-slate-400 mt-2">
-                  Kompletny podział ról zapewnia przejrzystość procesową, bezpieczeństwo zakupu i sprawny czas realizacji.
-                </p>
-              </div>
-            </FadeIn>
-
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {/* Kolumna 1: Sprzedaż */}
-              <FadeIn delay={0.1}>
-                <div className="rounded-xl bg-slate-900 border border-slate-800 p-6 space-y-3 h-full">
-                  <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white">1. Sprzedaż i Umowa</h3>
-                  <p className="text-xs font-semibold text-amber-400">Power Truck Poland Sp. z o.o.</p>
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Sprzedawca i wyłączny importer pojazdu. Umowa sprzedaży pojazdu zawierana jest bezpośrednio z Power Truck Poland Sp. z o.o.
-                  </p>
-                </div>
-              </FadeIn>
-
-              {/* Kolumna 2: Finansowanie (MOTOLIA - WYRÓŻNIONA) */}
-              <FadeIn delay={0.2}>
-                <div className="rounded-xl bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-amber-500/80 p-6 space-y-3 relative shadow-lg shadow-amber-950/20 h-full">
-                  <div className="absolute -top-3 right-4 bg-amber-500 text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-wide">
-                    Rola Motolii
-                  </div>
-                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white">2. Finansowanie & Dobór</h3>
-                  <p className="text-xs font-bold text-amber-400">Motolia Sp. z o.o. (Agent Importera)</p>
-                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                    Dobieramy leasing, najem długoterminowy lub kredyt z oferty instytucji partnerskich. Pomagamy uzyskać decyzję dla nowej marki i włączamy ubezpieczenie w ratę.
-                  </p>
-                </div>
-              </FadeIn>
-
-              {/* Kolumna 3: Serwis */}
-              <FadeIn delay={0.3}>
-                <div className="rounded-xl bg-slate-900 border border-slate-800 p-6 space-y-3 h-full">
-                  <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300">
-                    <Wrench className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white">3. Serwis i Gwarancja</h3>
-                  <p className="text-xs font-semibold text-amber-400">Power Truck Poland / Partnerzy</p>
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Gwarancję fabryczną (5 lat / 200 tys. km) zapewnia importer. Obsługę serwisową realizuje autoryzowana sieć partnerów w Polsce.
-                  </p>
-                </div>
-              </FadeIn>
-            </div>
-          </div>
-        </section>
+        <FotonResponsibilityBlock />
 
         {/* ─── MODEL CATALOG GRID ───────────────────────────────────────────── */}
         <section className="py-20 bg-[#090D16]">
@@ -579,10 +312,11 @@ export default function FotonLandingPage() {
                       {/* Image Container */}
                       <div className="relative h-48 sm:h-52 overflow-hidden bg-slate-950">
                         <img
-                          src={model.image}
-                          alt={model.name}
+                          src={model.images[0]?.src}
+                          alt={model.images[0]?.alt || model.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-85"
                           loading="lazy"
+                          decoding="async"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
                         <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-amber-400 border border-amber-500/30 text-[11px] font-bold px-2.5 py-1 rounded-md">
@@ -593,9 +327,11 @@ export default function FotonLandingPage() {
                       {/* Info Body */}
                       <div className="p-6 space-y-4">
                         <div>
-                          <h3 className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors">
-                            {model.name}
-                          </h3>
+                          <Link to={`/foton/${model.id}`}>
+                            <h3 className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors">
+                              {model.name}
+                            </h3>
+                          </Link>
                           <p className="text-xs text-slate-400 mt-0.5 font-medium">{model.tagline}</p>
                         </div>
 
@@ -637,10 +373,16 @@ export default function FotonLandingPage() {
                       </div>
                     </div>
 
-                    {/* Card Action */}
-                    <div className="p-6 pt-0">
+                    {/* Card Actions */}
+                    <div className="p-6 pt-0 space-y-2">
+                      <Link
+                        to={`/foton/${model.id}`}
+                        className="w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-all duration-200 flex items-center justify-center gap-1.5"
+                      >
+                        Zobacz specyfikację
+                      </Link>
                       <button
-                        onClick={() => scrollToForm(model.category as 'fleet' | 'lifestyle', model.id)}
+                        onClick={() => scrollToForm(model.category, model.id)}
                         className="w-full py-2.5 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-200 font-semibold text-xs transition-all duration-200 flex items-center justify-center gap-1.5"
                       >
                         Zapytaj o ten model
@@ -712,212 +454,14 @@ export default function FotonLandingPage() {
         </section>
 
         {/* ─── LEAD GENERATION FORM (DISCLOSURE LAYER 3) ────────────────────── */}
-        <section ref={formRef} className="py-20 bg-[#090D16] relative">
-          <div className="container mx-auto px-4 max-w-3xl">
-            <FadeIn>
-              <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 sm:p-10 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-[100px] pointer-events-none" />
-
-                <div className="text-center space-y-2 mb-8">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                    Formularz Kontaktowy
-                  </span>
-                  <h2 className="text-2xl sm:text-3xl font-black text-white">
-                    Zapytaj o ofertę i finansowanie FOTON
-                  </h2>
-                  <p className="text-xs sm:text-sm text-slate-400">
-                    Wypełnij krótki formularz – doradca Motolii przygotuje kalkulację raty i odpowie na pytania.
-                  </p>
-                </div>
-
-                {isSubmitted ? (
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8 text-center space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
-                      <CheckCircle2 className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-xl font-bold text-white">Dziękujemy za przesłanie zapytania!</h3>
-                    <p className="text-sm text-slate-300">
-                      Twój formularz został zarejestrowany. Doradca handlowy Motolii skontaktuje się z Tobą telefonicznie lub mailowo w ciągu 24 godzin.
-                    </p>
-                    <button
-                      onClick={() => setIsSubmitted(false)}
-                      className="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors"
-                    >
-                      Wyślij kolejne zapytanie
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Segment Selector */}
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-400 mb-2">
-                        Wybierz interesujący Cię segment:
-                      </label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedSegment('fleet');
-                            setSelectedModel('etoano-pro');
-                          }}
-                          className={`py-3 px-4 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                            selectedSegment === 'fleet'
-                              ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400'
-                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                          }`}
-                        >
-                          <Truck className="w-4 h-4" />
-                          Flota / Dostawcze
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedSegment('lifestyle');
-                            setSelectedModel('tunland-g7');
-                          }}
-                          className={`py-3 px-4 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                            selectedSegment === 'lifestyle'
-                              ? 'bg-amber-500/20 border-amber-500 text-amber-400'
-                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                          }`}
-                        >
-                          <Compass className="w-4 h-4" />
-                          Lifestyle / Pickupy
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Model Select */}
-                    <div>
-                      <label htmlFor="foton-model-select" className="block text-xs font-bold uppercase text-slate-400 mb-1">
-                        Wybierz model pojazdu:
-                      </label>
-                      <select
-                        id="foton-model-select"
-                        value={selectedModel}
-                        onChange={(e) => setSelectedModel(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
-                      >
-                        {FOTON_MODELS.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name} ({m.categoryLabel})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Contact Inputs */}
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="foton-name-input" className="block text-xs font-medium text-slate-300 mb-1">
-                          Imię i Nazwisko *
-                        </label>
-                        <input
-                          id="foton-name-input"
-                          type="text"
-                          required
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          placeholder="Jan Kowalski"
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="foton-company-input" className="block text-xs font-medium text-slate-300 mb-1">
-                          Nazwa firmy / NIP (opcjonalnie)
-                        </label>
-                        <input
-                          id="foton-company-input"
-                          type="text"
-                          value={companyName}
-                          onChange={(e) => setCompanyName(e.target.value)}
-                          placeholder="Moja Firma Sp. z o.o."
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="foton-phone-input" className="block text-xs font-medium text-slate-300 mb-1">
-                          Numer telefonu *
-                        </label>
-                        <input
-                          id="foton-phone-input"
-                          type="tel"
-                          required
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="+48 600 000 000"
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="foton-email-input" className="block text-xs font-medium text-slate-300 mb-1">
-                          Adres e-mail
-                        </label>
-                        <input
-                          id="foton-email-input"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="jan@firma.pl"
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="foton-message-input" className="block text-xs font-medium text-slate-300 mb-1">
-                        Dodatkowe pytania / wymagania flotowe
-                      </label>
-                      <textarea
-                        id="foton-message-input"
-                        rows={3}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="np. interesuje mnie kalkulacja najmu na 36 miesięcy z przebiegiem 30 000 km/rok..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
-                      />
-                    </div>
-
-                    {/* ─── DISCLOSURE LAYER 3: INLINE LEGAL NOTICE ───────────────────── */}
-                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-400 leading-relaxed">
-                      <p>
-                        Wysyłając formularz kontaktujesz się z <strong>Motolia Sp. z o.o.</strong>, działającą jako Agent Importera marki FOTON. Umowa sprzedaży pojazdu zawierana jest z Power Truck Poland Sp. z o.o.
-                      </p>
-                    </div>
-
-                    {/* Consents */}
-                    <div className="space-y-2 text-xs text-slate-400">
-                      <label className="flex items-start gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={consentPrivacy}
-                          onChange={(e) => setConsentPrivacy(e.target.checked)}
-                          className="mt-0.5 rounded bg-slate-950 border-slate-800 text-amber-500 focus:ring-0"
-                        />
-                        <span>
-                          Zapoznałem/am się z Polityką Prywatności i wyrażam zgodę na przetwarzanie moich danych osobowych w celu przygotowania oferty. *
-                        </span>
-                      </label>
-                    </div>
-
-                    {/* Submit Button */}
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-4 px-8 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-extrabold text-base transition-all duration-200 shadow-xl shadow-amber-950/40 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? 'Wysyłanie zapytania...' : 'Wyślij zapytanie o FOTON'}
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
-                  </form>
-                )}
-              </div>
-            </FadeIn>
-          </div>
-        </section>
+        <FadeIn>
+          <FotonLeadForm
+            key={`${formSeed.segment}-${formSeed.modelId}`}
+            defaultSegment={formSeed.segment}
+            defaultModelId={formSeed.modelId}
+            trafficSource="foton_landing"
+          />
+        </FadeIn>
 
         {/* ─── DEDICATED FAQ SECTION ────────────────────────────────────────── */}
         <section className="py-20 bg-slate-950 border-t border-slate-800">
