@@ -890,6 +890,14 @@ async function resolveSamochodyQueryCanonical(fastify: FastifyInstance, queryPar
     return `/samochody/${brandEntry.slug}`;
 }
 
+// Nie ma tu sprawdzania ciasteczek: ta aplikacja nie ma autoryzacji opartej na cookies —
+// JWT jest czytany z nagłówka Authorization (request.jwtVerify() w app.ts,
+// request.headers.authorization w middleware/partnerAuth.ts), nie ma rejestracji
+// @fastify/cookie ani reply.setCookie w backend/src. Wcześniejszy regex dopasowywał się do
+// całego nagłówka Cookie (wartości też), więc ciasteczko analityczne z "sid"/"token" w
+// wartości fałszywie oznaczało anonimowego odwiedzającego jako sesję i wyłączało cache.
+// Jeśli kiedyś pojawi się autoryzacja przez cookies, ta funkcja musi dostać z powrotem
+// bramkę na cookie — inaczej strony z sesją zaczną wyciekać do publicznego cache'a.
 function getCacheControlHeader(
     request: FastifyRequest,
     status: number,
@@ -906,10 +914,6 @@ function getCacheControlHeader(
         return 'private, no-store';
     }
     if (request.headers.authorization) {
-        return 'private, no-store';
-    }
-    const cookieHeader = request.headers.cookie;
-    if (cookieHeader && /session|auth|jwt|token|sid/i.test(cookieHeader)) {
         return 'private, no-store';
     }
     return 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400';
@@ -956,6 +960,12 @@ export async function renderRoutes(fastify: FastifyInstance) {
                     .code(cached.status)
                     .header('Content-Type', 'text/html; charset=utf-8')
                     .header('Cache-Control', cacheControl)
+                    // Global @fastify/cors (app.ts) sets `Vary: Origin` on every response via an
+                    // onRequest hook, which runs before this handler. /api/render is never called
+                    // cross-origin (nginx proxies to it server-side), and Cloudflare only honours
+                    // `Vary: Accept-Encoding` — any other Vary value makes edge caching unreliable.
+                    // Overwrite it here, scoped to this route only.
+                    .header('Vary', 'Accept-Encoding')
                     .send(cached.html);
             }
             pageCache.delete(cacheKey);
@@ -1043,6 +1053,9 @@ export async function renderRoutes(fastify: FastifyInstance) {
             .code(meta.status)
             .header('Content-Type', 'text/html; charset=utf-8')
             .header('Cache-Control', cacheControl)
+            // See comment on the pageCache-hit send above: overwrite CORS's `Vary: Origin`
+            // with `Vary: Accept-Encoding` for Cloudflare edge-cache compatibility.
+            .header('Vary', 'Accept-Encoding')
             .send(html);
     });
 }
