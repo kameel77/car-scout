@@ -43,7 +43,7 @@ const FINANCING_FAQ_TYPE: Record<string, string> = {
 
 const TEMPLATE_TTL_MS = 5 * 60 * 1000;
 const PAGE_TTL_MS = 60 * 1000;
-const PAGE_CACHE_MAX = 5000;
+const PAGE_CACHE_MAX = 300; // Limit do 300 stron w RAM (~45MB max zamiast 750MB przy 5000)
 
 // Strony katalogowe z paginacją SSR (?page=N) — crawlery bez JS widzą kolejne porcje ofert.
 // /leasing i /kredyt celowo bez paginacji: oferty są te same co w /samochody (każde auto
@@ -229,6 +229,30 @@ export function __resetRenderCache() {
     manifestCache = null;
     gridColumnsCache = null;
     heroBannersCache = null;
+}
+
+// exported for tests
+export function __evictPageCache(
+    cache: Map<string, { html: string; status: number; at: number }>,
+    max: number,
+    ttlMs: number,
+    now: number,
+): void {
+    if (cache.size >= max) {
+        for (const [k, v] of cache.entries()) {
+            if (now - v.at >= ttlMs) {
+                cache.delete(k);
+            }
+        }
+        while (cache.size >= max) {
+            const oldestKey = cache.keys().next().value;
+            if (oldestKey !== undefined) {
+                cache.delete(oldestKey);
+            } else {
+                break;
+            }
+        }
+    }
 }
 
 // Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
@@ -900,11 +924,14 @@ export async function renderRoutes(fastify: FastifyInstance) {
             if (modelParam) cacheKey += `&model=${modelParam}`;
         }
         const cached = pageCache.get(cacheKey);
-        if (cached && Date.now() - cached.at < PAGE_TTL_MS) {
-            return reply
-                .code(cached.status)
-                .header('Content-Type', 'text/html; charset=utf-8')
-                .send(cached.html);
+        if (cached) {
+            if (Date.now() - cached.at < PAGE_TTL_MS) {
+                return reply
+                    .code(cached.status)
+                    .header('Content-Type', 'text/html; charset=utf-8')
+                    .send(cached.html);
+            }
+            pageCache.delete(cacheKey);
         }
 
         let template = await getTemplate();
@@ -980,7 +1007,7 @@ export async function renderRoutes(fastify: FastifyInstance) {
             html = html.replace('</head>', () => `<script>window.__HERO_BANNERS__=${heroBannersJson};</script>\n</head>`);
         }
 
-        if (pageCache.size >= PAGE_CACHE_MAX) pageCache.clear();
+        __evictPageCache(pageCache, PAGE_CACHE_MAX, PAGE_TTL_MS, Date.now());
         pageCache.set(cacheKey, { html, status: meta.status, at: Date.now() });
 
         return reply
