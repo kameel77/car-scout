@@ -714,13 +714,18 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
             expect(res.headers['cache-control']).toBe('private, no-store');
         });
 
-        it('emits private no-store for requests with session cookie', async () => {
+        it('remains cacheable for requests with an analytics cookie', async () => {
+            // Regression guard for F2: the old cookie-sniffing regex matched anywhere in the
+            // Cookie header, so an analytics/consent cookie whose value happens to contain
+            // "sid" or "token" (e.g. Clarity's _clsk) used to falsely trip the private branch.
             const res = await app.inject({
                 method: 'GET',
                 url: '/api/render?path=/',
-                headers: { cookie: 'session_id=abcdef123' },
+                headers: { cookie: '_ga=GA1.1.123.456; _clsk=abc123sid456' },
             });
-            expect(res.headers['cache-control']).toBe('private, no-store');
+            expect(res.headers['cache-control']).toBe(
+                'public, max-age=0, s-maxage=300, stale-while-revalidate=86400'
+            );
         });
 
         it('emits private no-store for /admin routes', async () => {
