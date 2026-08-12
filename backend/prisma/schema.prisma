@@ -156,6 +156,8 @@ model Listing {
   @@index([isChineseBrand])
   @@index([lastManualEditAt])
   @@index([dealerId, isArchived, createdAt])
+  @@index([isArchived, brokerPricePln])
+  @@index([isArchived, createdAt])
   @@map("listings")
 }
 
