@@ -688,6 +688,58 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
             dateSpy.mockRestore();
         }
     });
+
+    describe('Cache-Control headers for Edge Caching', () => {
+        it('emits public s-maxage=300 for anonymous 200 GET requests (fresh & cached)', async () => {
+            const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+            expect(res1.statusCode).toBe(200);
+            expect(res1.headers['cache-control']).toBe(
+                'public, max-age=0, s-maxage=300, stale-while-revalidate=86400'
+            );
+
+            // Repeated request (pageCache hit)
+            const res2 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+            expect(res2.statusCode).toBe(200);
+            expect(res2.headers['cache-control']).toBe(
+                'public, max-age=0, s-maxage=300, stale-while-revalidate=86400'
+            );
+        });
+
+        it('emits private no-store for requests with Authorization header', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/render?path=/',
+                headers: { authorization: 'Bearer test-token' },
+            });
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+
+        it('emits private no-store for requests with session cookie', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/render?path=/',
+                headers: { cookie: 'session_id=abcdef123' },
+            });
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+
+        it('emits private no-store for /admin routes', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/render?path=/admin',
+            });
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+
+        it('emits private no-store for 404 responses', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/render?path=/oferta/non-existent-listing-111111111111111111111111',
+            });
+            expect(res.statusCode).toBe(404);
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+    });
 });
 
 describe('__evictPageCache unit tests', () => {
