@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useConsent } from '@/hooks/useConsent';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { ConsentSettingsDialog } from './ConsentSettingsDialog';
 
 export function ConsentBanner() {
-    const { t } = useTranslation();
-    const { hasDecided, isEEA, acceptAll, rejectOptional } = useConsent();
+    const { t, i18n } = useTranslation();
+    const { hasDecided, acceptAll, rejectOptional } = useConsent();
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const { data: settings } = useAppSettings();
 
     useEffect(() => {
         const handler = () => setSettingsOpen(true);
@@ -16,7 +17,11 @@ export function ConsentBanner() {
         return () => window.removeEventListener('open-consent-settings', handler);
     }, []);
 
-    const showBanner = !hasDecided && isEEA === true;
+    const showBanner = !hasDecided;
+
+    const lang = i18n.language.slice(0, 2).toLowerCase();
+    const legalDocs = settings?.legalDocuments as Record<string, Record<string, string>> | undefined;
+    const cookiesDoc = legalDocs?.cookies?.[lang] ?? legalDocs?.cookies?.pl;
 
     return (
         <>
@@ -32,13 +37,20 @@ export function ConsentBanner() {
                                 {t('consent.banner.title')}
                             </p>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                {t('consent.banner.body')}{' '}
-                                <Link
-                                    to="/uploads/polityka-cookies/"
-                                    className="underline underline-offset-2 hover:text-foreground"
-                                >
-                                    {t('consent.banner.policyLink')}
-                                </Link>
+                                {t('consent.banner.body')}
+                                {cookiesDoc && (
+                                    <>
+                                        {' '}
+                                        <a
+                                            href={cookiesDoc}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="underline underline-offset-2 hover:text-foreground"
+                                        >
+                                            {t('consent.banner.policyLink')}
+                                        </a>
+                                    </>
+                                )}
                             </p>
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end lg:shrink-0">

@@ -1109,14 +1109,16 @@ export const usersApi = {
 // Leads API
 export const leadsApi = {
     submitLead: async (data: {
-        listingId: string;
+        listingId?: string;
+        leadType?: string;
+        trafficSource?: string;
         name: string;
         email?: string;
         phone?: string;
-        preferredContact: 'email' | 'phone';
+        preferredContact?: 'email' | 'phone';
         message?: string;
-        consentMarketing: boolean;
-        consentPrivacy: boolean;
+        consentMarketing?: boolean;
+        consentPrivacy?: boolean;
         financingProductId?: string;
         financingAmount?: number;
         financingPeriod?: number;

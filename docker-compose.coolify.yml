@@ -26,9 +26,12 @@ services:
     pull_policy: always
     container_name: "${COMPOSE_PROJECT_NAME}-api"
     restart: unless-stopped
+    # Set heap limit below container limit so Node fails with a catchable heap error instead of being SIGKILLed by OOM killer
+    mem_limit: 768m
     expose:
       - "3000"
     environment:
+      NODE_OPTIONS: "--max-old-space-size=512"
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}

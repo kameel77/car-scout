@@ -91,7 +91,9 @@ export async function seoRoutes(fastify: FastifyInstance) {
         // 1. Static Pages (bez lastmod — brak realnej daty modyfikacji jest lepszy niż fałszywy sygnał)
         const staticPages = [
             '/', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
-            '/leasing', '/kredyt', '/kalkulator-rat', '/dla-ciebie', '/dla-firm', '/faq', '/kontakt'
+            '/leasing', '/kredyt', '/kalkulator-rat', '/dla-ciebie', '/dla-firm', '/foton', '/faq', '/kontakt',
+            '/foton/tunland-g7', '/foton/tunland-v9', '/foton/etoano-pro', '/foton/cavan',
+            '/foton/emiler', '/foton/eaumark', '/foton/aumark-s'
         ];
 
         staticPages.forEach(path => {

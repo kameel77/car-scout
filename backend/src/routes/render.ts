@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest } from 'fastify';
 import { extractListingIdFromSlug, generateListingSlug } from '../utils/url-utils.js';
 import {
     buildBrandMeta,
@@ -43,7 +43,7 @@ const FINANCING_FAQ_TYPE: Record<string, string> = {
 
 const TEMPLATE_TTL_MS = 5 * 60 * 1000;
 const PAGE_TTL_MS = 60 * 1000;
-const PAGE_CACHE_MAX = 5000;
+const PAGE_CACHE_MAX = 300; // Limit do 300 stron w RAM (~45MB max zamiast 750MB przy 5000)
 
 // Strony katalogowe z paginacją SSR (?page=N) — crawlery bez JS widzą kolejne porcje ofert.
 // /leasing i /kredyt celowo bez paginacji: oferty są te same co w /samochody (każde auto
@@ -220,7 +220,7 @@ const FINANCING_LIST_TAKE = 12; // krótka lista na /leasing i /kredyt
 
 // Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
-const pageCache = new Map<string, { html: string; status: number; at: number }>();
+const pageCache = new Map<string, { html: string; status: number; noindex?: boolean; at: number }>();
 
 export function __resetRenderCache() {
     templateCache = null;
@@ -229,6 +229,30 @@ export function __resetRenderCache() {
     manifestCache = null;
     gridColumnsCache = null;
     heroBannersCache = null;
+}
+
+// exported for tests
+export function __evictPageCache(
+    cache: Map<string, { html: string; status: number; noindex?: boolean; at: number }>,
+    max: number,
+    ttlMs: number,
+    now: number,
+): void {
+    if (cache.size >= max) {
+        for (const [k, v] of cache.entries()) {
+            if (now - v.at >= ttlMs) {
+                cache.delete(k);
+            }
+        }
+        while (cache.size >= max) {
+            const oldestKey = cache.keys().next().value;
+            if (oldestKey !== undefined) {
+                cache.delete(oldestKey);
+            } else {
+                break;
+            }
+        }
+    }
 }
 
 // Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
@@ -866,6 +890,31 @@ async function resolveSamochodyQueryCanonical(fastify: FastifyInstance, queryPar
     return `/samochody/${brandEntry.slug}`;
 }
 
+function getCacheControlHeader(
+    request: FastifyRequest,
+    status: number,
+    path: string,
+    noindex?: boolean
+): string {
+    if (request.method !== 'GET') {
+        return 'private, no-store';
+    }
+    if (status !== 200) {
+        return 'private, no-store';
+    }
+    if (path.startsWith('/admin') || NOINDEX_RE.test(path) || noindex) {
+        return 'private, no-store';
+    }
+    if (request.headers.authorization) {
+        return 'private, no-store';
+    }
+    const cookieHeader = request.headers.cookie;
+    if (cookieHeader && /session|auth|jwt|token|sid/i.test(cookieHeader)) {
+        return 'private, no-store';
+    }
+    return 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400';
+}
+
 export async function renderRoutes(fastify: FastifyInstance) {
     fastify.get('/api/render', async (request, reply) => {
         const q = (request.query as { path?: unknown }).path;
@@ -900,11 +949,16 @@ export async function renderRoutes(fastify: FastifyInstance) {
             if (modelParam) cacheKey += `&model=${modelParam}`;
         }
         const cached = pageCache.get(cacheKey);
-        if (cached && Date.now() - cached.at < PAGE_TTL_MS) {
-            return reply
-                .code(cached.status)
-                .header('Content-Type', 'text/html; charset=utf-8')
-                .send(cached.html);
+        if (cached) {
+            if (Date.now() - cached.at < PAGE_TTL_MS) {
+                const cacheControl = getCacheControlHeader(request, cached.status, path, cached.noindex);
+                return reply
+                    .code(cached.status)
+                    .header('Content-Type', 'text/html; charset=utf-8')
+                    .header('Cache-Control', cacheControl)
+                    .send(cached.html);
+            }
+            pageCache.delete(cacheKey);
         }
 
         let template = await getTemplate();
@@ -980,12 +1034,15 @@ export async function renderRoutes(fastify: FastifyInstance) {
             html = html.replace('</head>', () => `<script>window.__HERO_BANNERS__=${heroBannersJson};</script>\n</head>`);
         }
 
-        if (pageCache.size >= PAGE_CACHE_MAX) pageCache.clear();
-        pageCache.set(cacheKey, { html, status: meta.status, at: Date.now() });
+        __evictPageCache(pageCache, PAGE_CACHE_MAX, PAGE_TTL_MS, Date.now());
+        pageCache.set(cacheKey, { html, status: meta.status, noindex: meta.noindex, at: Date.now() });
+
+        const cacheControl = getCacheControlHeader(request, meta.status, path, meta.noindex);
 
         return reply
             .code(meta.status)
             .header('Content-Type', 'text/html; charset=utf-8')
+            .header('Cache-Control', cacheControl)
             .send(html);
     });
 }

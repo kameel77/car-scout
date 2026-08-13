@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
-import { __resetRenderCache } from '../render';
+import { __resetRenderCache, __evictPageCache } from '../render';
 import { generateListingSlug } from '../../utils/url-utils.js';
 import { __resetBrandCatalogCache } from '../../services/brand-pages.service.js';
 import { __resetSeoContentCache } from '../../services/seo-content.js';
@@ -659,6 +659,139 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
                 where: { id: { in: [lpDefault.id, lpIndexable.id] } },
             });
         }
+    });
+
+    it('deletes expired entry from pageCache on read and re-renders page', async () => {
+        const fetchSpy = vi.fn(async () => new Response(TEMPLATE, { status: 200 }));
+        vi.stubGlobal('fetch', fetchSpy);
+
+        // 1. First request fills pageCache
+        const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(res1.statusCode).toBe(200);
+        const fetchCallsCountInitial = fetchSpy.mock.calls.length;
+
+        // 2. Second request within TTL uses cached page (no new template/manifest fetch calls)
+        const res2 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(res2.statusCode).toBe(200);
+        expect(fetchSpy.mock.calls.length).toBe(fetchCallsCountInitial);
+
+        // 3. Advance Date.now past PAGE_TTL_MS (60s) and TEMPLATE_TTL_MS (5 min)
+        const realNow = Date.now();
+        const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(realNow + 365_000);
+
+        try {
+            // Third request after TTL: expired entry is deleted from cache on read and re-rendered
+            const res3 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+            expect(res3.statusCode).toBe(200);
+            expect(fetchSpy.mock.calls.length).toBeGreaterThan(fetchCallsCountInitial);
+        } finally {
+            dateSpy.mockRestore();
+        }
+    });
+
+    describe('Cache-Control headers for Edge Caching', () => {
+        it('emits public s-maxage=300 for anonymous 200 GET requests (fresh & cached)', async () => {
+            const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+            expect(res1.statusCode).toBe(200);
+            expect(res1.headers['cache-control']).toBe(
+                'public, max-age=0, s-maxage=300, stale-while-revalidate=86400'
+            );
+
+            // Repeated request (pageCache hit)
+            const res2 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+            expect(res2.statusCode).toBe(200);
+            expect(res2.headers['cache-control']).toBe(
+                'public, max-age=0, s-maxage=300, stale-while-revalidate=86400'
+            );
+        });
+
+        it('emits private no-store for requests with Authorization header', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/render?path=/',
+                headers: { authorization: 'Bearer test-token' },
+            });
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+
+        it('emits private no-store for requests with session cookie', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/render?path=/',
+                headers: { cookie: 'session_id=abcdef123' },
+            });
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+
+        it('emits private no-store for /admin routes', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/render?path=/admin',
+            });
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+
+        it('emits private no-store for 404 responses', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/render?path=/oferta/non-existent-listing-111111111111111111111111',
+            });
+            expect(res.statusCode).toBe(404);
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+    });
+});
+
+describe('__evictPageCache unit tests', () => {
+    const TTL = 60_000;
+    const MAX = 300;
+
+    it('no-op when cache size is below max limit', () => {
+        const cache = new Map<string, { html: string; status: number; at: number }>();
+        const now = 100_000;
+        for (let i = 0; i < MAX - 1; i++) {
+            cache.set(`/page-${i}`, { html: `<html>${i}</html>`, status: 200, at: now });
+        }
+        __evictPageCache(cache, MAX, TTL, now);
+        expect(cache.size).toBe(MAX - 1);
+    });
+
+    it('purges expired entries first when cache reaches max limit', () => {
+        const cache = new Map<string, { html: string; status: number; at: number }>();
+        const now = 100_000;
+        // 150 expired entries
+        for (let i = 0; i < 150; i++) {
+            cache.set(`/stale-${i}`, { html: 'stale', status: 200, at: now - TTL - 1000 });
+        }
+        // 150 fresh entries (total = 300 = MAX)
+        for (let i = 0; i < 150; i++) {
+            cache.set(`/fresh-${i}`, { html: 'fresh', status: 200, at: now });
+        }
+        expect(cache.size).toBe(300);
+        __evictPageCache(cache, MAX, TTL, now);
+        expect(cache.size).toBe(150);
+        expect(cache.has('/stale-0')).toBe(false);
+        expect(cache.has('/fresh-0')).toBe(true);
+    });
+
+    it('uses FIFO fallback when all entries are fresh and cache is at max limit', () => {
+        const cache = new Map<string, { html: string; status: number; at: number }>();
+        const now = 100_000;
+        for (let i = 0; i < MAX; i++) {
+            cache.set(`/fresh-${i}`, { html: 'fresh', status: 200, at: now });
+        }
+        expect(cache.size).toBe(300);
+        __evictPageCache(cache, MAX, TTL, now);
+        // Drops the oldest inserted key (/fresh-0) so size < MAX
+        expect(cache.size).toBe(MAX - 1);
+        expect(cache.has('/fresh-0')).toBe(false);
+        expect(cache.has('/fresh-1')).toBe(true);
+    });
+
+    it('terminates cleanly on an empty map', () => {
+        const cache = new Map<string, { html: string; status: number; at: number }>();
+        expect(() => __evictPageCache(cache, MAX, TTL, Date.now())).not.toThrow();
+        expect(cache.size).toBe(0);
     });
 });
 
