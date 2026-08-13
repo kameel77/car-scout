@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useBrand } from '@/contexts/BrandContext';
-import { loadConsent, pushConsentDefault, fetchGeo } from '@/lib/consent';
+import { loadConsent, pushConsentDefault } from '@/lib/consent';
 import React from 'react';
 
 export interface SeoConfig {
@@ -75,23 +75,12 @@ export function SeoManager() {
         const gtmId = seoConfig.gtmId;
 
         let cancelled = false;
-        (async () => {
-            const saved = loadConsent();
-            let analytics = false;
-            let marketing = false;
-            if (saved) {
-                analytics = saved.analytics;
-                marketing = saved.marketing;
-            } else {
-                const geo = await fetchGeo();
-                if (cancelled) return;
-                if (!geo.isEEA) {
-                    analytics = true;
-                    marketing = true;
-                }
-            }
-            pushConsentDefault(analytics, marketing);
+        const saved = loadConsent();
+        const analytics = saved ? saved.analytics : false;
+        const marketing = saved ? saved.marketing : false;
+        pushConsentDefault(analytics, marketing);
 
+        (() => {
             // Lazy Load GTM on user interaction to drastically improve PageSpeed
             const injectGTM = () => {
                 if (cancelled || (window as any)._gtmLoaded) return;

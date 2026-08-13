@@ -101,29 +101,6 @@ export function pushConsentUpdate(analytics: boolean, marketing: boolean) {
     gtag('consent', 'update', toGtagPayload(analytics, marketing));
 }
 
-// Geo detection — cached for the session
-let geoPromise: Promise<{ country: string | null; isEEA: boolean }> | null = null;
-
-export function fetchGeo(): Promise<{ country: string | null; isEEA: boolean }> {
-    if (geoPromise) return geoPromise;
-    geoPromise = (async () => {
-        try {
-            const cached = window.sessionStorage.getItem('consent_geo');
-            if (cached) return JSON.parse(cached);
-        } catch { /* ignore */ }
-        try {
-            const r = await fetch(`${API_BASE_URL}/api/geo`);
-            if (!r.ok) throw new Error('geo failed');
-            const data = (await r.json()) as { country: string | null; isEEA: boolean };
-            try { window.sessionStorage.setItem('consent_geo', JSON.stringify(data)); } catch { /* ignore */ }
-            return data;
-        } catch {
-            return { country: null, isEEA: true };
-        }
-    })();
-    return geoPromise;
-}
-
 export async function persistConsentToBackend(payload: {
     analytics: boolean;
     marketing: boolean;
