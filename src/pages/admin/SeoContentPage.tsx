@@ -42,7 +42,10 @@ const EMPTY_FORM: FormState = {
 // żeby zweryfikować strukturę treści przed zapisem. Whitelist tagów i sanityzacja są robione
 // dopiero na backendzie (services/seo-content.ts), ten podgląd nic nie sanityzuje.
 function simpleMarkdownPreview(md: string): string {
-  const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Escape HTML entities (incl. quotes, so a pasted link URL can't break out of the
+  // href="..." attribute below) before applying markdown replacements, so any raw
+  // HTML/script the admin pastes renders as visible text instead of executing.
+  const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const inline = (s: string) =>
     escapeHtml(s)
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')

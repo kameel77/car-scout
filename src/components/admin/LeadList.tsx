@@ -73,9 +73,10 @@ export function LeadList() {
     });
 
     const { data: settingsData, isLoading: isLoadingSettings } = useQuery({
-        queryKey: ['appSettings', token],
+        queryKey: ['adminAppSettings', token],
         queryFn: async () => {
-            return settingsApi.getSettings();
+            if (!token) throw new Error('Brak tokenu');
+            return settingsApi.getAdminSettings(token);
         },
         enabled: !!token && isSuperAdmin
     });
@@ -96,6 +97,7 @@ export function LeadList() {
                 leadRecipientUserId: nextRecipientId
             }, token);
             await queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+            await queryClient.invalidateQueries({ queryKey: ['adminAppSettings'] });
             toast.success('Pomyślnie zaktualizowano odbiorcę powiadomień o leadach');
         } catch (error) {
             toast.error('Błąd podczas zapisywania odbiorcy');

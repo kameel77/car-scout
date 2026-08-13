@@ -473,3 +473,19 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Zapis w CRM & Identyfikacja Leadów**:
     - Wysłanie zapytania z kalkulatora otwiera modal `CallbackForm` z zachowaniem natywnego zapisu parametrów finansowania w bazie danych (`financingAmount`, `financingDownPayment`, `financingPeriod`, `financingInstallment`, `financingFinalPayment`, `financingProductId`) przy opcjonalnym `listingId=null`.
     - Identyfikatory `formId` per miejsce wywołania w konwencji `snake_case` (np. `kalkulator_rat_callback`, `leasing_pillar_calculator_callback`, itd.).
+
+## 41. Hardening bezpieczeństwa po audycie black-box (2026-08-13)
+- **Cel**: zamknięcie ustaleń audytu bezpieczeństwa `AUDYT-BEZPIECZENSTWA-MOTOLIA_2026-08-13.md` bez zmiany zachowania widocznego dla użytkownika.
+- **Publiczne `GET /api/settings` zwraca tylko allowlistę pól**:
+  - Endpoint pozostaje publiczny (potrzebuje go SSR i cała strona), ale zwraca wyłącznie pola z `PUBLIC_SETTINGS_FIELDS` (języki, waluta, dokumenty prawne, dane rejestrowe w stopce, loga, nazwy serwisu, domyślne OG, widoczność modułów, domyślne sortowania, przełączniki funkcji).
+  - Z odpowiedzi publicznej usunięto: wszystkie pola `smtp*`, wszystkie `pdfParser*`, `leadRecipientUserId`, `csflowEnabled`, `eurExRate`, `brokerFeePctPln`, `brokerFeePctEur`.
+  - **Nowy endpoint `GET /api/admin/settings`** (`fastify.authenticate` + `authorizeRoles(['admin'])`) zwraca pełny rekord `AppSettings` z zamaskowanym `smtpPassword`. Korzystają z niego panel Ustawień, `LeadList` i `CSFlowImporter`.
+- **Usunięcie niesanityzowanych sinków HTML we froncie**:
+  - `DynamicFinancingContent` i `RentalFinancingContent`: lokalna funkcja `renderTextWithHtml` (wstrzykiwała `dangerouslySetInnerHTML` z danymi oferty pochodzącymi z importu CSV, parsera PDF i synchronizacji CRM) zastąpiona komponentem `MarkdownText`, który buduje elementy Reacta i escapuje treść.
+  - `PublicFaqPage`: odpowiedź FAQ z CMS renderowana jako escapowany tekst z `whitespace-pre-line` zamiast `dangerouslySetInnerHTML`.
+  - `MarkdownText`: linki przepuszczane przez `safeHref` - dozwolone tylko adresy względne (`/`, `#`, `?`) oraz `http`, `https`, `mailto`, `tel`. Adresy `javascript:`, `data:`, `vbscript:` i protokołowo-względne (`//host`) renderują się jako zwykły tekst.
+  - `SeoContentPage` (podgląd w panelu): `simpleMarkdownPreview` escapuje dodatkowo `"`, żeby wklejony URL nie mógł wyjść z atrybutu `href`.
+- **Content Security Policy w trybie Report-Only**: nagłówek `Content-Security-Policy-Report-Only` w `nginx.conf` w blokach `location @render` i `location @spa_fallback`, z allowlistą GTM, GA4, Clarity i Cloudflare Turnstile. Naruszenia trafiają na `POST /api/csp-report` i lądują w logach backendu jako `fastify.log.warn(..., 'CSP violation')`. Nagłówek nie egzekwuje polityki - służy do zebrania listy realnych źródeł przed przełączeniem na tryb wymuszający.
+  - Przy okazji: oba bloki `location` odzyskały nagłówki `X-Frame-Options`, `X-XSS-Protection` i `X-Content-Type-Options`. Blok `@spa_fallback` gubił je wcześniej po cichu (reguła dziedziczenia `add_header` w nginx).
+- **Jednolite 404 dla nieznanych ścieżek `/api/*`**: `setNotFoundHandler` w `backend/src/app.ts` zwraca `{statusCode: 404, error: 'Not Found', message: 'Route not found'}` zamiast błędu warstwy proxy.
+- **Kanał zgłoszeń bezpieczeństwa**: `public/.well-known/security.txt` (RFC 9116) z adresem `security@motolia.pl`, serwowany przez dedykowaną regułę w `nginx.conf`.

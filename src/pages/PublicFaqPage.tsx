@@ -63,10 +63,9 @@ function FaqItem({ question, answer, isOpen, onClick, accent, accentBg, isMotoli
         </div>
       </div>
       {isOpen && (
-        <div
-          className="px-5 pb-5 text-gray-500 leading-relaxed text-sm border-t border-gray-100 pt-4"
-          dangerouslySetInnerHTML={{ __html: answer.replace(/\n/g, '<br/>') }}
-        />
+        <div className="px-5 pb-5 text-gray-500 leading-relaxed text-sm border-t border-gray-100 pt-4 whitespace-pre-line">
+          {answer}
+        </div>
       )}
     </div>
   );

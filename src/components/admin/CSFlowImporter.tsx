@@ -19,9 +19,10 @@ export function CSFlowImporter() {
     const [isSettingsLoading, setIsSettingsLoading] = useState(true);
 
     useEffect(() => {
+        if (!token) return;
         const loadSettings = async () => {
             try {
-                const data = await settingsApi.getSettings();
+                const data = await settingsApi.getAdminSettings(token);
                 if (data.csflowEnabled !== undefined) {
                     setCsflowEnabled(data.csflowEnabled);
                 }
@@ -32,7 +33,7 @@ export function CSFlowImporter() {
             }
         };
         loadSettings();
-    }, []);
+    }, [token]);
 
     const handleToggleCSFlow = async (checked: boolean) => {
         if (!token) return;
