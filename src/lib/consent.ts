@@ -141,6 +141,9 @@ export function commitConsent(
 ): ConsentChoice {
     const saved = saveConsent(choice);
     pushConsentUpdate(saved.analytics, saved.marketing);
+    // Plain-object push, not gtag(): GTM custom event triggers only match a
+    // plain object with an `event` key, not the `arguments` object gtag() pushes.
+    if (typeof window !== 'undefined') window.dataLayer!.push({ event: 'consent_updated' });
     if (opts.persistRemote !== false) {
         void persistConsentToBackend({
             analytics: saved.analytics,
