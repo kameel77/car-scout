@@ -32,7 +32,11 @@ export default function ApiPartnersPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingPartner, setEditingPartner] = useState<PartnerApiIntegration | null>(null);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
-    
+    // Holds the plaintext key right after it is created/regenerated - this is
+    // the only moment the backend ever sends it, so it's shown once here and
+    // then discarded.
+    const [revealedKey, setRevealedKey] = useState<string | null>(null);
+
     // Controlled state for mappings
     const [mappings, setMappings] = useState<MappingState[]>([]);
 
@@ -66,10 +70,11 @@ export default function ApiPartnersPage() {
 
     const createMutation = useMutation({
         mutationFn: (newPartner: Partial<PartnerApiIntegration>) => partnerManagementApi.create(newPartner, token || ''),
-        onSuccess: () => {
+        onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['admin-api-partners'] });
             toast.success("Klucz API został wygenerowany pomyślnie.");
             setIsDialogOpen(false);
+            setRevealedKey(result.apiKey);
         },
         onError: (err: any) => toast.error(`Błąd: ${err.message}`)
     });
@@ -86,9 +91,10 @@ export default function ApiPartnersPage() {
 
     const regenerateMutation = useMutation({
         mutationFn: (id: string) => partnerManagementApi.regenerateKey(id, token || ''),
-        onSuccess: () => {
+        onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['admin-api-partners'] });
             toast.success("Nowy klucz API został wygenerowany.");
+            setRevealedKey(result.apiKey);
         },
         onError: (err: any) => toast.error(`Błąd: ${err.message}`)
     });
@@ -198,12 +204,12 @@ export default function ApiPartnersPage() {
                                 </div>
                                 <div className="flex items-center gap-2 mt-1 bg-muted/50 rounded p-1.5 border border-dashed border-primary/20">
                                     <code className="text-xs truncate flex-1 font-mono text-primary font-semibold">
-                                        {partner.apiKey}
+                                        {partner.hasApiKey ? `Ustawiony ••••${partner.apiKeyLast4 ?? ''}` : 'Nie ustawiony'}
                                     </code>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(partner.apiKey)}>
-                                        {copiedKey === partner.apiKey ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-                                    </Button>
                                 </div>
+                                <p className="text-[10px] text-muted-foreground">
+                                    Pełny klucz jest widoczny tylko raz - zaraz po wygenerowaniu lub zresetowaniu.
+                                </p>
                             </div>
                             
                             <div className="space-y-1 pt-2 border-t">
@@ -371,6 +377,33 @@ export default function ApiPartnersPage() {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!revealedKey} onOpenChange={(open) => { if (!open) setRevealedKey(null); }}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Nowy klucz API</DialogTitle>
+                        <DialogDescription>
+                            To jedyny moment, w którym pełny klucz jest widoczny - skopiuj go teraz i zapisz w bezpiecznym miejscu. Po zamknięciu tego okna nie będzie już możliwości jego ponownego wyświetlenia.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex items-center gap-2 mt-1 bg-muted/50 rounded p-2 border border-dashed border-primary/20">
+                        <code className="text-xs truncate flex-1 font-mono text-primary font-semibold">
+                            {revealedKey}
+                        </code>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => revealedKey && copyToClipboard(revealedKey)}
+                        >
+                            {copiedKey === revealedKey ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" onClick={() => setRevealedKey(null)}>Zamknij</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

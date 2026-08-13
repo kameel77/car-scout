@@ -315,16 +315,28 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.decorate('authenticate', async function (request: any, reply: any) {
         try {
             await request.jwtVerify();
-            const authHeader = request.headers.authorization;
-            if (authHeader && authHeader.startsWith('Bearer ')) {
-                const token = authHeader.substring(7);
-                const isBlacklisted = await fastify.redis.get(`blacklist:${token}`);
-                if (isBlacklisted) {
-                    throw new Error('Token is revoked');
-                }
-            }
         } catch (err) {
-            reply.code(401).send({ error: 'Unauthorized' });
+            return reply.code(401).send({ error: 'Unauthorized' });
+        }
+
+        const authHeader = request.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.substring(7);
+            // The blacklist only covers tokens that were explicitly logged out (see
+            // /api/auth/logout). It is a best-effort revocation list, not the source of
+            // truth for validity — a valid, signed JWT must not be rejected just because
+            // Redis is momentarily unreachable. Failing open here turns a transient Redis
+            // outage into "logout doesn't work for a bit" instead of "everyone is logged
+            // out", which is the safer failure mode.
+            let isBlacklisted: string | null = null;
+            try {
+                isBlacklisted = await fastify.redis.get(`blacklist:${token}`);
+            } catch (err) {
+                fastify.log.error({ err }, 'Blacklist lookup failed, allowing request');
+            }
+            if (isBlacklisted) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
         }
     });
 

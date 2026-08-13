@@ -38,12 +38,25 @@ export interface FinancingProviderConnection {
     provider: 'INBANK' | 'OWN' | 'VEHIS';
     name: string;
     apiBaseUrl: string;
-    apiKey: string;
-    apiSecret?: string | null;
+    hasApiKey: boolean;
+    apiKeyLast4: string | null;
+    hasApiSecret: boolean;
+    apiSecretLast4: string | null;
     shopUuid?: string | null;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
 }
 
-export type FinancingProviderConnectionPayload = Omit<FinancingProviderConnection, 'id' | 'createdAt' | 'updatedAt'>;
+// Write payload: apiKey/apiSecret are the raw values to set. They are omitted
+// (not sent) when the admin isn't changing them, so a masked display value can
+// never be written back over the real secret.
+export interface FinancingProviderConnectionPayload {
+    provider: 'INBANK' | 'OWN' | 'VEHIS';
+    name: string;
+    apiBaseUrl: string;
+    apiKey?: string;
+    apiSecret?: string | null;
+    shopUuid?: string | null;
+    isActive: boolean;
+}
