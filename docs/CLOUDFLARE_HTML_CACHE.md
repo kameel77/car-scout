@@ -18,8 +18,11 @@ Enabling edge caching for SSR HTML serves HTML directly from Cloudflare PoP loca
      ```text
      (http.host eq "motolia.pl" or http.host eq "www.motolia.pl")
      and not (http.request.uri.path starts_with "/admin")
-     and not (http.request.uri.path starts_with "/api/" and http.request.uri.path ne "/api/render")
+     and not (http.request.uri.path starts_with "/api/")
      ```
+     (`/api/render` is internal-only — nginx's `@render` location rewrites public URLs like
+     `/`, `/samochody`, `/oferta/...` to it server-side, it is never requested directly by a
+     browser or Cloudflare, so excluding all of `/api/` is simpler and equally correct.)
 6. Under **Cache eligibility**:
    - Select **Eligible for cache**.
 7. Under **Setting overrides**:
@@ -38,10 +41,17 @@ Enabling edge caching for SSR HTML serves HTML directly from Cloudflare PoP loca
 The origin `backend/src/routes/render.ts` already enforces safety by sending `Cache-Control: private, no-store` whenever:
 - Path is under `/admin`
 - Route is marked `noindex` or is form-bearing (`/lead`, `/negotiate`, `/zapytanie`)
-- Request carries an `Authorization` header or session cookie
+- Request carries an `Authorization` header
 - Response status code is not `200`
 
 Cloudflare automatically respects `Cache-Control: private, no-store` from the origin and will **never** cache those responses.
+
+> [!CAUTION]
+> `getCacheControlHeader` currently has **no cookie check** — this app has no cookie-based
+> authentication today (JWT is read from the `Authorization` header only). If cookie-based
+> sessions are ever introduced, `getCacheControlHeader` must gate on that cookie *before*
+> this edge-caching setup is safe to keep enabled, otherwise authenticated HTML could be
+> served from the shared edge cache to anonymous visitors.
 
 ---
 
@@ -82,7 +92,7 @@ When new listings are imported or prices are updated via CSFlow/admin:
 
 | TTL (`s-maxage`) | Edge Cache Hit Ratio | Price Update Delay to Visitors | Recommendation |
 |---|---|---|---|
-| **300 seconds (5 min)** | **Highest** (~85–95%) | Up to 5 minutes | **Recommended**: Best TTFB reduction for Googlebot and PSI score. |
-| **60 seconds (1 min)** | Moderate (~50–70%) | Up to 1 minute | **Conservative Alternative**: Faster price updates, slightly lower cache efficiency. |
+| **300 seconds (5 min)** | Higher (unvalidated estimate — no measured figure yet) | Up to 5 minutes | **Recommended**: Best TTFB reduction for Googlebot and PSI score. |
+| **60 seconds (1 min)** | Lower (unvalidated estimate — no measured figure yet) | Up to 1 minute | **Conservative Alternative**: Faster price updates, slightly lower cache efficiency. |
 
 *Note: You can change `s-maxage=300` in `backend/src/routes/render.ts` at any time if business requirements favor shorter cache retention.*
