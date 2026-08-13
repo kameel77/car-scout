@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { pushConsentDefault, pushConsentUpdate } from '@/lib/consent';
+import { pushConsentDefault, pushConsentUpdate, commitConsent } from '@/lib/consent';
 
 /**
  * Regression guard for a bug that silently disabled Consent Mode in production.
@@ -72,5 +72,27 @@ describe('consent mode dataLayer commands', () => {
 
         expect(commands).toContainEqual(['set', 'url_passthrough', true]);
         expect(commands).toContainEqual(['set', 'ads_data_redaction', true]);
+    });
+});
+
+describe('commitConsent', () => {
+    beforeEach(() => {
+        window.dataLayer = [];
+    });
+
+    it('pushes consent_updated as a plain object after the consent update command', () => {
+        commitConsent({ analytics: true, marketing: false }, { persistRemote: false });
+
+        const [command, eventPush] = window.dataLayer!;
+        expect(tag(command)).toBe('[object Arguments]');
+        expect(eventPush).toEqual({ event: 'consent_updated' });
+    });
+
+    it('pushes consent_updated as a plain object, not an arguments object or array', () => {
+        commitConsent({ analytics: true, marketing: false }, { persistRemote: false });
+
+        const eventPush = window.dataLayer![1];
+        expect(tag(eventPush)).toBe('[object Object]');
+        expect(Array.isArray(eventPush)).toBe(false);
     });
 });
