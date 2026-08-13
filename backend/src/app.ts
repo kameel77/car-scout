@@ -50,6 +50,7 @@ import { featureTileRoutes } from './routes/feature-tiles.js';
 import { heroBannerRoutes } from './routes/hero-banners.js';
 import { landingPageRoutes } from './routes/landing-pages.js';
 import { consentRoutes } from './routes/consent.js';
+import { cspReportRoutes } from './routes/csp-report.js';
 import { externalListingsRoutes } from './routes/external/listings.js';
 import { marketingFeedsRoutes } from './routes/external/feeds.js';
 import { specificationRoutes } from './routes/specifications.js';
@@ -223,6 +224,9 @@ export async function buildApp(): Promise<FastifyInstance> {
         // all analytics/remarketing tracking. Re-enable with a proper third-party allowlist
         // (googletagmanager.com, google-analytics.com, googleadservices, *.clarity.ms, Thulium)
         // — ideally with nonces instead of 'unsafe-inline'.
+        // The CSP itself now lives in nginx.conf (Content-Security-Policy-Report-Only on
+        // the HTML-serving locations) since this API never serves HTML — nginx is the
+        // source of truth, not this backend.
         contentSecurityPolicy: false,
     });
 
@@ -405,6 +409,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(heroBannerRoutes);
     await fastify.register(landingPageRoutes);
     await fastify.register(consentRoutes);
+    await fastify.register(cspReportRoutes);
     await fastify.register(externalListingsRoutes);
     await fastify.register(marketingFeedsRoutes);
     await fastify.register(specificationRoutes);
@@ -527,6 +532,19 @@ export async function buildApp(): Promise<FastifyInstance> {
         const filePath = getSafeFilePath(baseDir, file);
         if (!filePath) return reply.code(400).send({ error: 'Invalid path' });
         return serveStaticFile(filePath, reply);
+    });
+
+    // Uniform JSON 404 for unknown /api/* paths. Non-API 404s replicate Fastify's own default
+    // not-found response so existing behaviour outside /api/* is unchanged.
+    fastify.setNotFoundHandler((request, reply) => {
+        if (request.url.startsWith('/api/')) {
+            return reply.code(404).send({ statusCode: 404, error: 'Not Found', message: 'Route not found' });
+        }
+        return reply.code(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: `Route ${request.method}:${request.url} not found`
+        });
     });
 
     // Cleanup hook

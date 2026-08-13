@@ -734,6 +734,13 @@ export const settingsApi = {
         return response.json();
     },
 
+    getAdminSettings: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/admin/settings`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return response.json();
+    },
+
     uploadLogo: async (file: File, target: 'header' | 'footer', token: string) => {
         const formData = new FormData();
         formData.append('file', file);

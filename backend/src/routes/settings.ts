@@ -8,6 +8,58 @@ import { pipeline } from 'stream/promises';
 import crypto from 'crypto';
 import sharp from 'sharp';
 
+// Fields the PUBLIC, unauthenticated frontend (and SSR) actually reads. Everything else on
+// AppSettings (smtp*, pdfParser*, leadRecipientUserId, eurExRate/brokerFeePct* margin data, ...)
+// is operational config and must stay behind /api/admin/settings. See settings-public.test.ts.
+const PUBLIC_SETTINGS_FIELDS = [
+    'enabledLanguages',
+    'displayCurrency',
+    'autoRefreshImages',
+    'legalDocuments',
+    'legalCompanyName',
+    'legalAddress',
+    'legalContactEmail',
+    'legalContactPhone',
+    'salesContactPhone',
+    'legalVatId',
+    'legalRegisterNumber',
+    'legalRepresentative',
+    'headerLogoUrl',
+    'headerLogoTextPl',
+    'headerLogoTextEn',
+    'headerLogoTextDe',
+    'footerLogoUrl',
+    'legalSloganPl',
+    'legalSloganEn',
+    'legalSloganDe',
+    'siteNamePl',
+    'siteNameEn',
+    'siteNameDe',
+    'creditRepresentativeExample',
+    'financingCalculatorEnabled',
+    'financingCalculatorLocation',
+    'defaultOgTitle',
+    'defaultOgDescription',
+    'defaultOgImage',
+    'navItemsVisibility',
+    'featuredModulesVisibility',
+    'negotiatePriceEnabled',
+    'defaultSortCars',
+    'defaultSortRental',
+    'searchGridColumns',
+    'splitNewUsed',
+    'rentalCardsFirst',
+    'showRentalsInNew',
+] as const;
+
+function pickPublicSettings(settings: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const key of PUBLIC_SETTINGS_FIELDS) {
+        result[key] = settings[key];
+    }
+    return result;
+}
+
 const LEGAL_LANGUAGES = ['pl', 'en', 'de'] as const;
 const LEGAL_DOC_KEYS = ['imprint', 'privacyPolicy', 'terms', 'cookies'] as const;
 type LegalDocKey = typeof LEGAL_DOC_KEYS[number];
@@ -120,6 +172,25 @@ function normalizeLegalDocuments(raw: any): Record<LegalDocKey, Record<string, s
     return safeDocs;
 }
 
+async function getOrCreateSettings(fastify: FastifyInstance) {
+    let settings = await fastify.prisma.appSettings.findUnique({
+        where: { id: 'default' }
+    });
+
+    // If no settings exist yet, create default entry
+    if (!settings) {
+        fastify.log.info('Settings not found, creating default...');
+        settings = await fastify.prisma.appSettings.create({
+            data: {
+                id: 'default',
+                legalDocuments: normalizeLegalDocuments({})
+            }
+        });
+    }
+
+    return settings;
+}
+
 async function recalculateAllPrices(fastify: FastifyInstance) {
     const settings = await fastify.prisma.appSettings.findUnique({
         where: { id: 'default' }
@@ -150,23 +221,30 @@ async function recalculateAllPrices(fastify: FastifyInstance) {
 }
 
 export async function settingsRoutes(fastify: FastifyInstance) {
-    // Get current settings
+    // Get current settings (PUBLIC — only allowlisted, non-sensitive fields; see PUBLIC_SETTINGS_FIELDS)
     fastify.get('/api/settings', async (request, reply) => {
         try {
-            let settings = await fastify.prisma.appSettings.findUnique({
-                where: { id: 'default' }
-            });
+            const settings = await getOrCreateSettings(fastify);
 
-            // If no settings exist yet, create default entry
-            if (!settings) {
-                fastify.log.info('Settings not found, creating default...');
-                settings = await fastify.prisma.appSettings.create({
-                    data: {
-                        id: 'default',
-                        legalDocuments: normalizeLegalDocuments({})
-                    }
-                });
-            }
+            return {
+                ...pickPublicSettings(settings),
+                legalDocuments: normalizeLegalDocuments(settings.legalDocuments)
+            };
+        } catch (error) {
+            fastify.log.error(error, 'Failed to get settings');
+            return reply.code(500).send({
+                error: 'Failed to fetch settings',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    });
+
+    // Get current settings (ADMIN — full record, smtpPassword masked)
+    fastify.get('/api/admin/settings', {
+        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+    }, async (request, reply) => {
+        try {
+            const settings = await getOrCreateSettings(fastify);
 
             return {
                 ...settings,

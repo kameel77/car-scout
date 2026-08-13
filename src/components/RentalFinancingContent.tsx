@@ -4,6 +4,7 @@ import { User, ClipboardCheck, Wrench, ShieldCheck, Car, TrendingUp } from 'luci
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useBrand } from '@/contexts/BrandContext';
+import { MarkdownText } from '@/components/MarkdownText';
 
 export interface RentalFinancingContentProps {
   vehicle: {
@@ -36,17 +37,12 @@ export const RentalFinancingContent: React.FC<RentalFinancingContentProps> = ({ 
   const isVan = bodyType?.toLowerCase() === 'van' || bodyType?.toLowerCase() === 'minivan';
   const isAuto = transmission?.toLowerCase() === 'automatyczna';
 
-  const renderTextWithHtml = (text: string) => {
-    const htmlText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    return <span dangerouslySetInnerHTML={{ __html: htmlText }} />;
-  };
-
   return (
     <div className="space-y-6 mt-8">
       <div className="bg-muted/50 rounded-xl p-6 border border-border">
         <h2 className="font-heading text-xl font-bold mb-3">{getT('rental.title', `Wynajem długoterminowy w ${config.name} - ${carName} ${year}`, `Abonament Carsalon na ${carName} ${year}`)}</h2>
         <p className="text-muted-foreground leading-relaxed">
-          {renderTextWithHtml(getT('rental.lead', `Wynajem długoterminowy (najem długoterminowy, abonament samochodowy) to najprostszy sposób na korzystanie z nowego samochodu. Zespół Motolia zadba o serwis, ubezpieczenie i przeglądy - Ty płacisz jedną stałą ratę i po prostu jeździsz. Model: **${carDetails}** czeka u nas gotowy do drogi.`, `Auto w abonamencie (wynajem wieloletni) zaspokaja naturalną chęć korzystania z nowiutkiego pojazdu bez brania go na własność. Carsalon udostępnia Ci fabryczny **${carDetails}** - wystarczy opłacić stałą subskrypcję i ruszać w drogę ze spokojną głową i pełnym pakietem serwisowym.`))}
+          <MarkdownText text={getT('rental.lead', `Wynajem długoterminowy (najem długoterminowy, abonament samochodowy) to najprostszy sposób na korzystanie z nowego samochodu. Zespół Motolia zadba o serwis, ubezpieczenie i przeglądy - Ty płacisz jedną stałą ratę i po prostu jeździsz. Model: **${carDetails}** czeka u nas gotowy do drogi.`, `Auto w abonamencie (wynajem wieloletni) zaspokaja naturalną chęć korzystania z nowiutkiego pojazdu bez brania go na własność. Carsalon udostępnia Ci fabryczny **${carDetails}** - wystarczy opłacić stałą subskrypcję i ruszać w drogę ze spokojną głową i pełnym pakietem serwisowym.`)} />
         </p>
         <p className="text-sm mt-3">
           <Link to="/wynajem-dlugoterminowy" className="text-primary underline hover:no-underline">

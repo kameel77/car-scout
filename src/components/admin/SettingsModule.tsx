@@ -118,16 +118,17 @@ Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\
     });
 
     const fetchSettings = React.useCallback(async () => {
+        if (!token) return;
         try {
             setLoading(true);
-            const data = await settingsApi.getSettings();
+            const data = await settingsApi.getAdminSettings(token);
             setSettings(normalizeSettings(data));
         } catch (error) {
             toast.error('Błąd podczas pobierania ustawień');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [token]);
 
     React.useEffect(() => {
         fetchSettings();
