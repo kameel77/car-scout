@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePlatformRole } from '../middleware/authorize.js';
 
 const PAGE_OPTIONS = ['home', 'offers', 'contact', 'faq', 'rental', 'financing', 'business'] as const;
 const PAGE_CONTEXT_OPTIONS = ['offers', 'rental', 'all'] as const;
@@ -79,7 +79,7 @@ export async function faqRoutes(fastify: FastifyInstance) {
 
     // Create or update FAQ entry
     fastify.post('/api/faq', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
+        preHandler: [fastify.authenticate, requirePlatformRole()]
     }, async (request, reply) => {
         const payload = request.body as FaqPayload;
 
@@ -132,7 +132,7 @@ export async function faqRoutes(fastify: FastifyInstance) {
 
     // Delete FAQ entry
     fastify.delete('/api/faq/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
+        preHandler: [fastify.authenticate, requirePlatformRole()]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 

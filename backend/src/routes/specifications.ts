@@ -6,7 +6,7 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 import { getSafeFilePath } from '../utils/path-helpers.js';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePlatformRole } from '../middleware/authorize.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { LiteParse } from '@llamaindex/liteparse';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
@@ -20,7 +20,7 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export async function specificationRoutes(fastify: FastifyInstance) {
 
     fastify.post('/api/specifications', {
-        onRequest: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
+        onRequest: [fastify.authenticate, requirePlatformRole()]
     }, async (request, reply) => {
         const data = (request.body as any) || {};
         const spec = await fastify.prisma.vehicleSpecification.create({

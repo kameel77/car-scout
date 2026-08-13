@@ -1,6 +1,6 @@
 
 import { FastifyInstance } from 'fastify';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePlatformRole } from '../middleware/authorize.js';
 import { resolveBrandCtx } from '../services/seo-meta.js';
 import { generateListingSlug as buildListingSlug } from '../utils/url-utils.js';
 import { getFinancingArticle } from '../content/financing-content.js';
@@ -30,7 +30,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
     // Update SEO Config
     fastify.put('/api/seo', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
+        preHandler: [fastify.authenticate, requirePlatformRole()]
     }, async (request, reply) => {
         const data = request.body as any;
 

@@ -1,10 +1,30 @@
 import { FastifyInstance } from 'fastify';
 import { randomBytes } from 'crypto';
+import { requirePlatformRole } from '../middleware/authorize.js';
+
+function last4(secret: string | null | undefined): string | null {
+    if (!secret || secret.length < 4) return null;
+    return secret.slice(-4);
+}
+
+// Strips the apiKey value from a partner before it goes out over HTTP.
+// Only presence + last 4 chars are exposed.
+function maskPartner(partner: any) {
+    const { apiKey, ...rest } = partner;
+    return {
+        ...rest,
+        hasApiKey: !!apiKey,
+        apiKeyLast4: last4(apiKey),
+    };
+}
 
 export async function partnerManagementRoutes(fastify: FastifyInstance) {
-    
+
     // Tylko dla zalogowanych (Admin panel)
     fastify.addHook('preHandler', fastify.authenticate);
+    // Tylko role platformowe (admin/manager) - partnerzy API i ich klucze
+    // nie są przypisani do dealera, więc DEALER_EMPLOYEE nie ma tu wglądu.
+    fastify.addHook('preHandler', requirePlatformRole());
 
     // GET /api/partners - list all partners
     fastify.get('/api/partners', async (request, reply) => {
@@ -19,7 +39,7 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
                 },
                 orderBy: { createdAt: 'desc' }
             });
-            return { partners };
+            return { partners: partners.map(maskPartner) };
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Failed to fetch partners' });
@@ -56,7 +76,10 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
                     isActive: true
                 }
             });
-            return reply.code(201).send({ partner });
+            // Intentional plaintext exposure: this is the only moment the newly
+            // generated key can ever be shown to the admin, so only the key + id
+            // are returned here (not the whole partner record).
+            return reply.code(201).send({ id: partner.id, apiKey: partner.apiKey });
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Failed to create partner' });
@@ -88,7 +111,7 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
                     isActive: isActive !== undefined ? isActive : undefined
                 }
             });
-            return { partner };
+            return { partner: maskPartner(partner) };
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Failed to update partner' });
@@ -105,7 +128,10 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
                 where: { id },
                 data: { apiKey: newApiKey }
             });
-            return { partner };
+            // Intentional plaintext exposure: this is the only moment the new key
+            // can ever be shown to the admin, so only the key + id are returned
+            // here (not the whole partner record).
+            return { id: partner.id, apiKey: partner.apiKey };
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Failed to regenerate API key' });
