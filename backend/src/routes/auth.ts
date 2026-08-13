@@ -180,6 +180,9 @@ export async function authRoutes(fastify: FastifyInstance) {
             (m.role === MemberRole.SUPERADMIN_PLATFORM || m.role === MemberRole.PLATFORM_MANAGER)
         );
 
+        // Reused below by the scope-existence check so a DEALER lookup isn't done twice.
+        let dealerLookup: { dealerGroupId: string | null } | null = null;
+
         if (!isPlatformUser) {
             // Non-platform users: verify they have a membership in the requested context
             const hasAccess = memberships.some(m =>
@@ -188,13 +191,13 @@ export async function authRoutes(fastify: FastifyInstance) {
 
             // Also check if they have group-level access for a dealer context
             if (!hasAccess && scopeType === ScopeType.DEALER) {
-                const dealer = await fastify.prisma.dealer.findUnique({
+                dealerLookup = await fastify.prisma.dealer.findUnique({
                     where: { id: scopeId },
                     select: { dealerGroupId: true },
                 });
-                if (dealer?.dealerGroupId) {
+                if (dealerLookup?.dealerGroupId) {
                     const hasGroupAccess = memberships.some(m =>
-                        m.scopeType === ScopeType.DEALER_GROUP && m.scopeId === dealer.dealerGroupId
+                        m.scopeType === ScopeType.DEALER_GROUP && m.scopeId === dealerLookup!.dealerGroupId
                     );
                     if (!hasGroupAccess) {
                         return reply.code(403).send({ error: 'No access to this context' });
@@ -207,17 +210,27 @@ export async function authRoutes(fastify: FastifyInstance) {
             }
         }
 
-        // Validate the scope target exists
-        if (scopeType === ScopeType.DEALER_GROUP) {
+        // Validate the scope target exists — for EVERY caller, including platform users, who
+        // otherwise bypass the membership checks above and could mint a token pointing at a
+        // scope that doesn't exist.
+        if (scopeType === ScopeType.PLATFORM) {
+            if (scopeId !== 'PLATFORM') {
+                return reply.code(404).send({ error: 'Platform scope not found' });
+            }
+        } else if (scopeType === ScopeType.DEALER_GROUP) {
             const group = await fastify.prisma.dealerGroup.findUnique({ where: { id: scopeId } });
             if (!group) {
                 return reply.code(404).send({ error: 'Dealer group not found' });
             }
         } else if (scopeType === ScopeType.DEALER) {
-            const dealer = await fastify.prisma.dealer.findUnique({ where: { id: scopeId } });
+            const dealer = dealerLookup !== null
+                ? dealerLookup
+                : await fastify.prisma.dealer.findUnique({ where: { id: scopeId }, select: { dealerGroupId: true } });
             if (!dealer) {
                 return reply.code(404).send({ error: 'Dealer not found' });
             }
+        } else {
+            return reply.code(400).send({ error: 'Invalid scopeType' });
         }
 
         const activeContext: ActiveContext = { scopeType, scopeId };

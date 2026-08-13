@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { authorizeRoles, requirePlatformRole } from '../middleware/authorize.js';
 import { z } from 'zod';
 import { calcInbankInstallment, calcVehisInstallment, FinancingCalcError } from '../services/financing-calc.service.js';
 
@@ -43,6 +43,25 @@ const FinancingCalculateSchema = z.object({
     manufacturingYear: z.number().int().optional(),
     mileageKm: z.number().int().optional(),
 });
+
+function last4(secret: string | null | undefined): string | null {
+    if (!secret || secret.length < 4) return null;
+    return secret.slice(-4);
+}
+
+// Strips secret values from a connection before it goes out over HTTP.
+// Only presence + last 4 chars are exposed; server-side code that actually
+// calls the provider APIs must keep reading apiKey/apiSecret from the DB directly.
+function maskConnection(connection: any) {
+    const { apiKey, apiSecret, ...rest } = connection;
+    return {
+        ...rest,
+        hasApiKey: !!apiKey,
+        apiKeyLast4: last4(apiKey),
+        hasApiSecret: !!apiSecret,
+        apiSecretLast4: last4(apiSecret),
+    };
+}
 
 export async function financingRoutes(fastify: FastifyInstance) {
     // Public: Get active products for calculator
@@ -110,7 +129,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: List all products
     fastify.get('/api/financing/products', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
+        preHandler: [fastify.authenticate, requirePlatformRole()]
     }, async (request, reply) => {
         try {
             const products = await fastify.prisma.financingProduct.findMany({
@@ -217,13 +236,13 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: List all provider connections
     fastify.get('/api/financing/connections', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
+        preHandler: [fastify.authenticate, requirePlatformRole()]
     }, async (request, reply) => {
         try {
             const connections = await fastify.prisma.financingProviderConnection.findMany({
                 orderBy: [{ provider: 'asc' }, { createdAt: 'desc' }]
             });
-            return { connections };
+            return { connections: connections.map(maskConnection) };
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) });
@@ -237,7 +256,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
         try {
             const data = FinancingConnectionSchema.parse(request.body);
             const connection = await fastify.prisma.financingProviderConnection.create({ data });
-            return connection;
+            return maskConnection(connection);
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) });
@@ -255,7 +274,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 where: { id },
                 data
             });
-            return connection;
+            return maskConnection(connection);
         } catch (error) {
             fastify.log.error(error);
             return reply.code(500).send({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) });
@@ -374,13 +393,38 @@ export async function financingRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
     }, async (request, reply) => {
         try {
-            const { provider, apiBaseUrl, apiKey, apiSecret, shopUuid } = request.body as {
+            const reqBody = request.body as {
                 provider?: string;
-                apiBaseUrl: string;
-                apiKey: string;
+                apiBaseUrl?: string;
+                apiKey?: string;
                 apiSecret?: string;
                 shopUuid?: string;
+                connectionId?: string;
             };
+
+            let provider = reqBody.provider;
+            let apiBaseUrl = reqBody.apiBaseUrl;
+            let apiKey = reqBody.apiKey;
+            let apiSecret = reqBody.apiSecret;
+            let shopUuid = reqBody.shopUuid;
+
+            if (apiKey) {
+                // Testing with credentials supplied directly (new/changed key) — use as-is.
+            } else if (reqBody.connectionId) {
+                const connection = await fastify.prisma.financingProviderConnection.findUnique({
+                    where: { id: reqBody.connectionId },
+                });
+
+                if (!connection) {
+                    return reply.code(404).send({ error: 'Connection not found' });
+                }
+
+                provider = provider ?? connection.provider;
+                apiBaseUrl = apiBaseUrl ?? connection.apiBaseUrl;
+                apiKey = connection.apiKey;
+                apiSecret = apiSecret ?? connection.apiSecret ?? undefined;
+                shopUuid = shopUuid ?? connection.shopUuid ?? undefined;
+            }
 
             if (!apiBaseUrl || !apiKey) {
                 return reply.code(400).send({ error: 'Missing required fields' });

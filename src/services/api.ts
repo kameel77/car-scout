@@ -15,7 +15,8 @@ import type { PublicSeoContent, SeoContentPage, SeoContentPayload } from '@/type
 export interface PartnerApiIntegration {
     id: string;
     name: string;
-    apiKey: string;
+    hasApiKey: boolean;
+    apiKeyLast4: string | null;
     nip?: string | null;
     contactPerson?: string | null;
     contactEmail?: string | null;
@@ -1466,7 +1467,7 @@ export const financingApi = {
         return response.json();
     },
 
-    testConnection: async (payload: { provider: string; apiBaseUrl: string; apiKey: string; apiSecret?: string; shopUuid?: string }, token: string) => {
+    testConnection: async (payload: { provider: string; apiBaseUrl: string; apiKey?: string; apiSecret?: string; shopUuid?: string; connectionId?: string }, token: string) => {
         const response = await fetch(`${API_BASE_URL}/api/financing/test-connection`, {
             method: 'POST',
             headers: {
@@ -1699,7 +1700,8 @@ export const partnerManagementApi = {
         if (!response.ok) throw new Error('Failed to fetch partners');
         return response.json();
     },
-    create: async (data: Partial<PartnerApiIntegration>, token: string): Promise<{ partner: PartnerApiIntegration }> => {
+    // Returns only the new plaintext key + id - the one moment it can be shown.
+    create: async (data: Partial<PartnerApiIntegration>, token: string): Promise<{ id: string; apiKey: string }> => {
         const response = await fetch(`${API_BASE_URL}/api/partners`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -1719,7 +1721,8 @@ export const partnerManagementApi = {
         if (!response.ok) throw new Error(json.error || 'Failed to update partner');
         return json;
     },
-    regenerateKey: async (id: string, token: string): Promise<{ partner: PartnerApiIntegration }> => {
+    // Returns only the new plaintext key + id - the one moment it can be shown.
+    regenerateKey: async (id: string, token: string): Promise<{ id: string; apiKey: string }> => {
         const response = await fetch(`${API_BASE_URL}/api/partners/${id}/regenerate-key`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }

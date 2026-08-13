@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePlatformRole } from '../middleware/authorize.js';
 
 export async function translationRoutes(fastify: FastifyInstance) {
     // List translations with optional filtering
@@ -31,7 +31,7 @@ export async function translationRoutes(fastify: FastifyInstance) {
 
     // Create or update translation (admin)
     fastify.post('/api/translations', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
+        preHandler: [fastify.authenticate, requirePlatformRole()]
     }, async (request, reply) => {
         const { id, category, sourceValue, pl, en, de } = request.body as any;
 
@@ -70,7 +70,7 @@ export async function translationRoutes(fastify: FastifyInstance) {
 
     // Delete translation (admin)
     fastify.delete('/api/translations/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin', 'manager'])]
+        preHandler: [fastify.authenticate, requirePlatformRole()]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 

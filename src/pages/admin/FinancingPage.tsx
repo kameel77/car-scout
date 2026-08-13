@@ -103,6 +103,11 @@ export default function FinancingPage() {
     const products = (data?.products || []) as FinancingProduct[];
     const filteredProducts = products.filter(p => p.category === activeTab);
     const connections = (connectionsData?.connections || []) as FinancingProviderConnection[];
+    const editingConnection = connections.find(c => c.id === editingConnectionId) || null;
+    // Klucz API nie jest już zwracany przez backend po zapisie, więc przy edycji
+    // istniejącego połączenia z pustym polem klucza testujemy zapisane dane po
+    // connectionId zamiast wysyłać puste poświadczenia.
+    const usingSavedConnectionForTest = !!editingConnectionId && !connectionFormData.apiKey;
 
     const saveMutation = useMutation({
         mutationFn: (payload: FinancingProductPayload) => {
@@ -155,7 +160,7 @@ export default function FinancingPage() {
     });
 
     const testConnectionMutation = useMutation({
-        mutationFn: (payload: { provider: FinancingProviderConnectionPayload['provider']; apiBaseUrl: string; apiKey: string; apiSecret?: string; shopUuid?: string }) => {
+        mutationFn: (payload: { provider: FinancingProviderConnectionPayload['provider']; apiBaseUrl: string; apiKey?: string; apiSecret?: string; shopUuid?: string; connectionId?: string }) => {
             if (!token) throw new Error('Brak tokenu');
             return financingApi.testConnection(payload, token);
         },
@@ -267,12 +272,16 @@ export default function FinancingPage() {
     const handleOpenConnectionModal = (connection?: FinancingProviderConnection) => {
         if (connection) {
             setEditingConnectionId(connection.id);
+            // apiKey/apiSecret are intentionally left blank here: the backend
+            // never sends the real values back, only a masked hint (see
+            // editingConnection below). Leaving them blank means "keep the
+            // currently stored value" on save; typing a new value replaces it.
             setConnectionFormData({
                 provider: connection.provider,
                 name: connection.name,
                 apiBaseUrl: connection.apiBaseUrl,
-                apiKey: connection.apiKey,
-                apiSecret: connection.apiSecret || '',
+                apiKey: '',
+                apiSecret: '',
                 shopUuid: connection.shopUuid || '',
                 isActive: connection.isActive,
             });
@@ -302,7 +311,13 @@ export default function FinancingPage() {
 
     const handleConnectionSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        saveConnectionMutation.mutate(connectionFormData);
+        // Blank apiKey/apiSecret means "no change" - never send an empty
+        // string (or a masked display value) that would overwrite the real
+        // secret stored on the server.
+        const payload = { ...connectionFormData };
+        if (!payload.apiKey) delete payload.apiKey;
+        if (!payload.apiSecret) delete payload.apiSecret;
+        saveConnectionMutation.mutate(payload);
     };
 
     const updateSettingsMutation = useMutation({
@@ -944,15 +959,31 @@ export default function FinancingPage() {
                                 <Input
                                     value={connectionFormData.apiKey}
                                     onChange={e => setConnectionFormData(p => ({ ...p, apiKey: e.target.value }))}
+                                    placeholder={editingConnection?.hasApiKey ? `Ustawiony ••••${editingConnection.apiKeyLast4 ?? ''}` : undefined}
                                 />
+                                {editingConnection && (
+                                    <p className="text-[10px] text-muted-foreground">
+                                        {editingConnection.hasApiKey
+                                            ? `Ustawiony ••••${editingConnection.apiKeyLast4 ?? ''}. Wpisz nową wartość, aby zmienić - puste pole zachowa obecny klucz.`
+                                            : 'Nie ustawiony.'}
+                                    </p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label>{connectionFormData.provider === 'VEHIS' ? 'Hasło' : 'API Secret (opcjonalnie)'}</Label>
                                 <Input
                                     value={connectionFormData.apiSecret || ''}
                                     onChange={e => setConnectionFormData(p => ({ ...p, apiSecret: e.target.value }))}
+                                    placeholder={editingConnection?.hasApiSecret ? `Ustawiony ••••${editingConnection.apiSecretLast4 ?? ''}` : undefined}
                                     type={connectionFormData.provider === 'VEHIS' ? 'password' : 'text'}
                                 />
+                                {editingConnection && (
+                                    <p className="text-[10px] text-muted-foreground">
+                                        {editingConnection.hasApiSecret
+                                            ? `Ustawiony ••••${editingConnection.apiSecretLast4 ?? ''}. Wpisz nową wartość, aby zmienić - puste pole zachowa obecny sekret.`
+                                            : 'Nie ustawiony.'}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
@@ -969,18 +1000,26 @@ export default function FinancingPage() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => testConnectionMutation.mutate({
-                                    provider: connectionFormData.provider,
-                                    apiBaseUrl: connectionFormData.apiBaseUrl,
-                                    apiKey: connectionFormData.apiKey,
-                                    apiSecret: connectionFormData.apiSecret || '',
-                                    shopUuid: connectionFormData.shopUuid || ''
-                                })}
+                                onClick={() => testConnectionMutation.mutate(usingSavedConnectionForTest
+                                    ? {
+                                        provider: connectionFormData.provider,
+                                        apiBaseUrl: connectionFormData.apiBaseUrl,
+                                        apiSecret: connectionFormData.apiSecret || undefined,
+                                        shopUuid: connectionFormData.shopUuid || undefined,
+                                        connectionId: editingConnectionId!,
+                                    }
+                                    : {
+                                        provider: connectionFormData.provider,
+                                        apiBaseUrl: connectionFormData.apiBaseUrl,
+                                        apiKey: connectionFormData.apiKey || '',
+                                        apiSecret: connectionFormData.apiSecret || '',
+                                        shopUuid: connectionFormData.shopUuid || ''
+                                    })}
                                 disabled={testConnectionMutation.isPending
                                     || !connectionFormData.apiBaseUrl
-                                    || !connectionFormData.apiKey
+                                    || (!usingSavedConnectionForTest && !connectionFormData.apiKey)
                                     || (connectionFormData.provider === 'INBANK' && !connectionFormData.shopUuid)
-                                    || (connectionFormData.provider === 'VEHIS' && !connectionFormData.apiSecret)}
+                                    || (connectionFormData.provider === 'VEHIS' && !connectionFormData.apiSecret && !usingSavedConnectionForTest)}
                             >
                                 {testConnectionMutation.isPending ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                                 Testuj połączenie
