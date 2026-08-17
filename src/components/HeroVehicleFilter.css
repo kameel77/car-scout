@@ -10,16 +10,16 @@
   --hvf-border: hsl(var(--mt-neutral-300));
   --hvf-text: hsl(var(--mt-neutral-600));
   --hvf-text-muted: hsl(var(--mt-neutral-500)); /* 5,94:1 — granica dopuszczalności */
-  --hvf-radius: 14px;
+  --hvf-radius: 20px;
   --hvf-radius-sm: 10px;
 
   background: var(--hvf-bg);
-  border-radius: 24px;
+  border-radius: var(--hvf-radius);
   border: 1px solid var(--hvf-border);
   box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.06),
     0 1px 3px rgba(0, 0, 0, 0.04);
-  padding: 28px;
+  padding: 20px 22px;
   position: relative;
   z-index: 20;
 }
@@ -32,12 +32,12 @@
   padding: 3px;
   background: hsl(var(--mt-neutral-100));
   border-radius: var(--hvf-radius-sm);
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .hvf__toggle-btn {
   flex: 1;
-  padding: 9px 10px;
+  padding: 7px 8px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -64,7 +64,7 @@
 
 .hvf__field {
   position: relative;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .hvf__field-trigger {
@@ -72,12 +72,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 11px 14px;
+  padding: 9px 12px;
   border: 1.5px solid var(--hvf-border);
   border-radius: var(--hvf-radius-sm);
   background: var(--hvf-bg);
   color: var(--hvf-text);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -145,14 +145,14 @@
 .hvf__dropdown-search {
   position: sticky;
   top: 0;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: var(--hvf-bg);
   border-bottom: 1px solid var(--hvf-border);
 }
 
 .hvf__dropdown-search input {
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border: 1.5px solid var(--hvf-border);
   border-radius: 8px;
   font-size: 13px;
@@ -169,7 +169,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   cursor: pointer;
   font-size: 13px;
   color: var(--hvf-text);
@@ -190,7 +190,7 @@
 }
 
 .hvf__dropdown-empty {
-  padding: 16px 14px;
+  padding: 14px 12px;
   text-align: center;
   color: var(--hvf-text-muted);
   font-size: 13px;
@@ -202,14 +202,14 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 0px;
 }
 
 .hvf__range-input {
-  padding: 11px 14px;
+  padding: 9px 12px;
   border: 1.5px solid var(--hvf-border);
   border-radius: var(--hvf-radius-sm);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--hvf-text);
   outline: none;
@@ -232,10 +232,10 @@
 
 .hvf__footer {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 18px;
-  gap: 12px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .hvf__advanced-link {
@@ -246,13 +246,15 @@
   text-underline-offset: 3px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 5px;
   transition: color 0.2s;
   white-space: nowrap;
+  padding: 2px 4px;
 }
 
 .hvf__advanced-link:hover {
-  color: var(--hvf-accent-ink);
+  color: var(--hvf-black);
 }
 
 .hvf__submit-btn {
@@ -260,8 +262,9 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: var(--mt-btn-h);
-  padding: 12px 20px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 20px;
   border: none;
   border-radius: var(--hvf-radius-sm);
   background: var(--hvf-accent);
@@ -310,12 +313,13 @@
 
 .hvf__label {
   display: block;
-  font-size: 12px;            /* Overline — jedyny dopuszczalny rozmiar < 13 px */
+  font-size: 11.5px;          /* Overline — rozmiar < 13 px per Brandbook */
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--hvf-text);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
+  margin-top: 2px;
 }
 
 .hvf__label-hint {
@@ -331,18 +335,6 @@
 @media (max-width: 1024px) {
   .hvf {
     border-radius: 20px;
-    padding: 22px;
-  }
-
-  .hvf__footer {
-    flex-direction: column;
-  }
-
-  .hvf__submit-btn {
-    width: 100%;
-  }
-
-  .hvf__advanced-link {
-    order: 2;
+    padding: 18px;
   }
 }

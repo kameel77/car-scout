@@ -5,6 +5,15 @@ import { resolveBrandCtx } from '../services/seo-meta.js';
 import { generateListingSlug as buildListingSlug } from '../utils/url-utils.js';
 import { getFinancingArticle } from '../content/financing-content.js';
 import { getBrandCatalog, getModelCatalog } from '../services/brand-pages.service.js';
+import { getListingLastMeaningfulChange } from '../services/offer-lifecycle.service.js';
+import { isProductionHost } from '../services/environment.js';
+
+const SITEMAP_TTL_MS = 15 * 60 * 1000; // 15 min TTL
+let sitemapCache: { xml: string; at: number } | null = null;
+
+export function __resetSitemapCache() {
+    sitemapCache = null;
+}
 
 export async function seoRoutes(fastify: FastifyInstance) {
     // Treść filarowa stron finansowania dla frontendu (sekcja pod listingiem), per brand
@@ -36,59 +45,53 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         // Basic validation could be added here if needed
 
+        const updateData: any = {
+            gtmId: data.gtmId,
+            clarityId: data.clarityId,
+            homeTitle: data.homeTitle,
+            homeDescription: data.homeDescription,
+            homeOgImage: data.homeOgImage,
+            listingTitle: data.listingTitle,
+            listingDescription: data.listingDescription,
+            homeDescriptionDe: data.homeDescriptionDe,
+            homeDescriptionEn: data.homeDescriptionEn,
+            homeTitleDe: data.homeTitleDe,
+            homeTitleEn: data.homeTitleEn,
+            listingDescriptionDe: data.listingDescriptionDe,
+            listingDescriptionEn: data.listingDescriptionEn,
+            listingTitleDe: data.listingTitleDe,
+            listingTitleEn: data.listingTitleEn,
+        };
+
         const config = await fastify.prisma.seoConfig.upsert({
             where: { id: 'default' },
-            update: {
-                gtmId: data.gtmId,
-                clarityId: data.clarityId,
-                homeTitle: data.homeTitle,
-                homeTitleEn: data.homeTitleEn,
-                homeTitleDe: data.homeTitleDe,
-                homeDescription: data.homeDescription,
-                homeDescriptionEn: data.homeDescriptionEn,
-                homeDescriptionDe: data.homeDescriptionDe,
-                homeOgImage: data.homeOgImage,
-                listingTitle: data.listingTitle,
-                listingTitleEn: data.listingTitleEn,
-                listingTitleDe: data.listingTitleDe,
-                listingDescription: data.listingDescription,
-                listingDescriptionEn: data.listingDescriptionEn,
-                listingDescriptionDe: data.listingDescriptionDe
-            },
+            update: updateData,
             create: {
                 id: 'default',
-                gtmId: data.gtmId,
-                clarityId: data.clarityId,
-                homeTitle: data.homeTitle,
-                homeTitleEn: data.homeTitleEn,
-                homeTitleDe: data.homeTitleDe,
-                homeDescription: data.homeDescription,
-                homeDescriptionEn: data.homeDescriptionEn,
-                homeDescriptionDe: data.homeDescriptionDe,
-                homeOgImage: data.homeOgImage,
-                listingTitle: data.listingTitle,
-                listingTitleEn: data.listingTitleEn,
-                listingTitleDe: data.listingTitleDe,
-                listingDescription: data.listingDescription,
-                listingDescriptionEn: data.listingDescriptionEn,
-                listingDescriptionDe: data.listingDescriptionDe
+                ...updateData
             }
         });
 
         return config;
     });
 
-    // Sitemap generation
+    // Sitemap generation with accurate lastmod (omitted on static pages) and <= 15 min caching
     fastify.get('/api/sitemap.xml', async (request, reply) => {
+        if (sitemapCache && Date.now() - sitemapCache.at < SITEMAP_TTL_MS) {
+            return reply
+                .header('Content-Type', 'application/xml')
+                .header('Cache-Control', 'public, max-age=900, s-maxage=900')
+                .send(sitemapCache.xml);
+        }
+
         const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://carsalon.pl';
         
         // Helper to format dates
         const formatDate = (date: Date) => date.toISOString().split('T')[0];
-        const formatDateOrUndefined = (date: Date | null) => (date ? formatDate(date) : undefined);
 
         const urls: { loc: string; lastmod?: string; image?: { loc: string } }[] = [];
 
-        // 1. Static Pages (bez lastmod — brak realnej daty modyfikacji jest lepszy niż fałszywy sygnał)
+        // 1. Static Pages — bez lastmod (brak realnej daty modyfikacji jest lepszy niż fałszywy sygnał 'now')
         const staticPages = [
             '/', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
             '/leasing', '/kredyt', '/kalkulator-rat', '/dla-ciebie', '/dla-firm', '/foton', '/faq', '/kontakt',
@@ -98,7 +101,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         staticPages.forEach(path => {
             urls.push({
-                loc: path === '/' ? `${baseUrl}/` : `${baseUrl}${path}`
+                loc: path === '/' ? `${baseUrl}/` : `${baseUrl}${path}`,
             });
         });
 
@@ -135,7 +138,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
             return parts.join('-');
         };
 
-        // 2. Dynamic Pages: Listings
+        // 2. Dynamic Pages: Listings (filtering isArchived: false, lastmod is NOT bumped by price recalc)
         const listings = await fastify.prisma.listing.findMany({
             where: { isArchived: false, pricePln: { gt: 0 } },
             select: {
@@ -147,7 +150,13 @@ export async function seoRoutes(fastify: FastifyInstance) {
                 bodyType: true,
                 fuelType: true,
                 primaryImageUrl: true,
-                updatedAt: true
+                createdAt: true,
+                lastManualEditAt: true,
+                priceHistory: {
+                    orderBy: { changedAt: 'desc' },
+                    take: 1,
+                    select: { changedAt: true },
+                },
             }
         });
 
@@ -157,9 +166,10 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         listings.forEach(listing => {
             const slug = generateListingSlug(listing);
+            const lastMeaningfulChange = getListingLastMeaningfulChange(listing);
             urls.push({
                 loc: `${baseUrl}/oferta/${slug}`,
-                lastmod: formatDate(listing.updatedAt),
+                lastmod: formatDate(lastMeaningfulChange),
                 image: listing.primaryImageUrl ? { loc: toAbsolute(listing.primaryImageUrl) } : undefined
             });
         });
@@ -174,21 +184,17 @@ export async function seoRoutes(fastify: FastifyInstance) {
             if (rental.slug) {
                 urls.push({
                     loc: `${baseUrl}/wynajem-dlugoterminowy/${rental.slug}`,
-                    lastmod: formatDate(rental.updatedAt)
+                    lastmod: rental.updatedAt ? formatDate(rental.updatedAt) : undefined,
                 });
             }
         });
 
         // 4. Dynamic Pages: Brand/Model pages — marka zawsze, model przy >=2 aktywnych ofertach
-        // LUB opublikowanej treści CMS (polityka progowa, spec §1 + poprawka trwałości F2 pkt 4e).
         const brandCatalog = await getBrandCatalog(fastify);
         const modelCatalogs = await Promise.all(
             brandCatalog.map(b => getModelCatalog(fastify, b.rawMakes))
         );
 
-        // Strony /samochody/* z opublikowaną treścią CMS — lastmod uwzględnia treść (max z ofertami);
-        // strony bez żadnej aktywnej oferty (nie ma ich w brandCatalog/modelCatalogs) trafiają do
-        // sitemapy właśnie stąd, inaczej trwałość strony (render.ts) nie miałaby odpowiednika w sitemapie.
         const cmsPages = await fastify.prisma.seoContentPage.findMany({
             where: { isPublished: true, urlPath: { startsWith: '/samochody/' } },
             select: { urlPath: true, updatedAt: true },
@@ -200,18 +206,20 @@ export async function seoRoutes(fastify: FastifyInstance) {
         const emittedPaths = new Set<string>();
         brandCatalog.forEach((brand, i) => {
             const brandPath = `/samochody/${brand.slug}`;
+            const brandLastmod = laterOf(brand.lastmod, cmsUpdatedAtByPath.get(brandPath));
             urls.push({
                 loc: `${baseUrl}${brandPath}`,
-                lastmod: formatDateOrUndefined(laterOf(brand.lastmod, cmsUpdatedAtByPath.get(brandPath))),
+                lastmod: brandLastmod ? formatDate(brandLastmod) : undefined,
             });
             emittedPaths.add(brandPath);
             modelCatalogs[i].forEach(model => {
                 const modelPath = `${brandPath}/${model.slug}`;
                 const modelCms = cmsUpdatedAtByPath.get(modelPath);
                 if (model.count < 2 && !modelCms) return;
+                const modelLastmod = laterOf(model.lastmod, modelCms);
                 urls.push({
                     loc: `${baseUrl}${modelPath}`,
-                    lastmod: formatDateOrUndefined(laterOf(model.lastmod, modelCms)),
+                    lastmod: modelLastmod ? formatDate(modelLastmod) : undefined,
                 });
                 emittedPaths.add(modelPath);
             });
@@ -244,11 +252,22 @@ export async function seoRoutes(fastify: FastifyInstance) {
         
         xml += `</urlset>`;
 
-        return reply.header('Content-Type', 'application/xml').send(xml);
+        sitemapCache = { xml, at: Date.now() };
+
+        return reply
+            .header('Content-Type', 'application/xml')
+            .header('Cache-Control', 'public, max-age=900, s-maxage=900')
+            .send(xml);
     });
 
     // robots.txt — served via nginx proxy at /robots.txt (brand-aware Sitemap line)
-    fastify.get('/api/robots.txt', async (_request, reply) => {
+    fastify.get('/api/robots.txt', async (request, reply) => {
+        if (!isProductionHost(request)) {
+            return reply
+                .header('Content-Type', 'text/plain; charset=utf-8')
+                .send('User-agent: *\nAllow: /\n');
+        }
+
         const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://carsalon.pl';
         const body = `User-agent: *
 Content-Signal: search=yes, ai-input=yes, ai-train=no

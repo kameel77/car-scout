@@ -11,6 +11,8 @@ import {
 import { normalizeBrand } from '../services/brand-normalization.service.js';
 import { computeReferenceInstallments } from '../services/financing-calc.service.js';
 import { sanitizeListing, tryAuthenticate } from '../constants/dealer.js';
+import { resolveOfferLifecycle } from '../services/offer-lifecycle.service.js';
+import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
 
@@ -716,7 +718,30 @@ export async function listingRoutes(fastify: FastifyInstance) {
             } catch { /* ignore */ }
         }
 
-        if (!hasAccess && (listing.isArchived || (listing.pricePln ?? 0) <= 0)) {
+        if (!hasAccess && ((listing.pricePln ?? 0) <= 0 || listing.isArchived)) {
+            if (listing.isArchived) {
+                const lifecycle = await resolveOfferLifecycle(fastify, listing.id);
+                if (lifecycle.state === 'RECENTLY_SOLD') {
+                    return {
+                        listing: sanitizeListing(listing, hasAccess),
+                        isRecentlySold: true,
+                        similarListings: lifecycle.similarListings,
+                    };
+                }
+                if (lifecycle.state === 'LONG_GONE') {
+                    if (lifecycle.redirectUrl) {
+                        return reply.code(200).send({
+                            error: 'Listing permanently archived',
+                            redirectUrl: lifecycle.redirectUrl,
+                            isLongGone: true,
+                        });
+                    }
+                    return reply.code(410).send({
+                        error: 'Listing archived and gone',
+                        isLongGone: true,
+                    });
+                }
+            }
             return reply.code(404).send({ error: 'Listing not found' });
         }
 
@@ -764,7 +789,30 @@ export async function listingRoutes(fastify: FastifyInstance) {
             } catch { /* ignore */ }
         }
 
-        if (!hasAccess && (listing.isArchived || (listing.pricePln ?? 0) <= 0)) {
+        if (!hasAccess && ((listing.pricePln ?? 0) <= 0 || listing.isArchived)) {
+            if (listing.isArchived) {
+                const lifecycle = await resolveOfferLifecycle(fastify, listing.id);
+                if (lifecycle.state === 'RECENTLY_SOLD') {
+                    return {
+                        listing: sanitizeListing(listing, hasAccess),
+                        isRecentlySold: true,
+                        similarListings: lifecycle.similarListings,
+                    };
+                }
+                if (lifecycle.state === 'LONG_GONE') {
+                    if (lifecycle.redirectUrl) {
+                        return reply.code(200).send({
+                            error: 'Listing permanently archived',
+                            redirectUrl: lifecycle.redirectUrl,
+                            isLongGone: true,
+                        });
+                    }
+                    return reply.code(410).send({
+                        error: 'Listing archived and gone',
+                        isLongGone: true,
+                    });
+                }
+            }
             return reply.code(404).send({ error: 'Listing not found' });
         }
 
@@ -798,6 +846,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         });
 
+        await invalidateOfferCache(fastify, {
+            urls: [`/oferta/${listing.slug || listing.id}`],
+            purgeSitemap: true,
+        });
+
         return { listing };
     });
 
@@ -826,6 +879,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         });
 
+        await invalidateOfferCache(fastify, {
+            urls: [`/oferta/${listing.slug || listing.id}`],
+            purgeSitemap: true,
+        });
+
         return { listing: sanitizeListing(listing, true) };
     });
 
@@ -836,8 +894,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const scope = await resolveScope(fastify, request);
 
+        const existing = await fastify.prisma.listing.findUnique({ where: { id }, select: { dealerId: true, slug: true } });
         if (!scope.isPlatform) {
-            const existing = await fastify.prisma.listing.findUnique({ where: { id }, select: { dealerId: true } });
             const allowedDealerIds = scope.dealerFilter.dealerId;
             const dealerId = existing?.dealerId;
             if (!dealerId) return reply.code(403).send({ error: 'Listing has no dealer' });
@@ -849,6 +907,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
             // Due to onDelete: Cascade in schema, related records (leads, priceHistory) will be deleted automatically
             await fastify.prisma.listing.delete({
                 where: { id }
+            });
+
+            await invalidateOfferCache(fastify, {
+                urls: [`/oferta/${existing?.slug || id}`],
+                purgeSitemap: true,
             });
 
             return { success: true, message: 'Listing deleted permanently' };

@@ -40,7 +40,7 @@ import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { formatPrice, formatNumber, formatPhoneForTelLink } from '@/utils/formatters';
-import { trackPhoneClick, trackViewItem } from '@/lib/analytics';
+import { trackPhoneClick, trackViewItem, trackViewArchivedItem } from '@/lib/analytics';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getListingUrlPath, getFinancingTypeFromPath, getFinancingLabel, getFinancingSeoLabel, getFinancingMetaTitle, getFinancingMetaDescription, type FinancingType } from '@/utils/url-utils';
 import type { FaqEntry } from '@/types/faq';
@@ -64,6 +64,9 @@ import { useBrand } from '@/contexts/BrandContext';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ListingCard } from '@/components/ListingCard';
+import { mapBackendListingToFrontend } from '@/utils/listingMapper';
+import { slugifyBrandName } from '@/utils/brand-slug';
 
 export default function ListingDetailPage() {
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
@@ -109,9 +112,11 @@ export default function ListingDetailPage() {
     }
   }, []);
 
+  const isRecentlySold = Boolean(data?.isRecentlySold ?? listing?.is_archived);
+
   React.useEffect(() => {
     if (listing) {
-      trackViewItem({
+      const itemPayload = {
         id: String(listing.listing_id),
         name: `${listing.make} ${listing.model} ${listing.version || ''}`.trim(),
         make: listing.make,
@@ -119,9 +124,15 @@ export default function ListingDetailPage() {
         price: listing.price_pln,
         monthlyRate: getFinancingBasePrice(listing, financingType),
         financingType: financingType || 'leasing',
-      });
+      };
+
+      if (isRecentlySold) {
+        trackViewArchivedItem(itemPayload);
+      } else {
+        trackViewItem(itemPayload);
+      }
     }
-  }, [listing?.listing_id, financingType]);
+  }, [listing?.listing_id, financingType, isRecentlySold]);
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [showArchiveModal, setShowArchiveModal] = React.useState(false);
@@ -296,7 +307,32 @@ export default function ListingDetailPage() {
     );
   }
 
-  if (!listing || (listing.is_archived && !canManage)) {
+  if (data?.isLongGone) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container py-24 text-center max-w-2xl mx-auto space-y-6">
+          <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Info className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold font-heading text-foreground">
+            Ta oferta wygasła i nie jest już dostępna
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Pojazd został zarchiwizowany. Zapraszamy do zapoznania się z aktualną ofertą w naszym katalogu.
+          </p>
+          <Button asChild size="lg" className="mt-8">
+            <Link to={data.redirectUrl || "/samochody"}>
+              {data.redirectUrl ? 'Zobacz dostępne modele' : t('detail.backToResults')}
+            </Link>
+          </Button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!listing) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -465,11 +501,14 @@ export default function ListingDetailPage() {
       .replace('{{fuel}}', listing.fuel_type || '')
     : `${baseTitle} ${listing.production_year} — ${formatNumber(discountedListingPrice)} zł | ${config.name}`;
 
+
   // Use keyword-rich financing-specific title or fall back to default
   const financingMetaTitle = getFinancingMetaTitle(
     financingType, listing.make, listing.model, listing.version, listing.production_year, lang
   );
-  const metaTitle = financingMetaTitle || defaultMetaTitle;
+  const metaTitle = isRecentlySold
+    ? `${baseTitle} (Oferta archiwalna) — ${formatNumber(discountedListingPrice)} zł | ${config.name}`
+    : (financingMetaTitle || defaultMetaTitle);
 
   // Default meta description from SEO config template
   const defaultMetaDesc = listing && listingDescriptionTemplate
@@ -485,7 +524,9 @@ export default function ListingDetailPage() {
   const financingMetaDesc = getFinancingMetaDescription(
     financingType, listing.make, listing.model, listing.production_year, formattedPrice, lang
   );
-  const metaDesc = financingMetaDesc || defaultMetaDesc;
+  const metaDesc = isRecentlySold
+    ? `Oferta archiwalna: ${baseTitle}. Samochód został sprzedany lub wycofany z oferty. Zobacz podobne dostępne samochody na ${config.name}.`
+    : (financingMetaDesc || defaultMetaDesc);
 
   // Prepare Schema.org JSON-LD
   const siteUrl = window.location.origin;
@@ -517,7 +558,7 @@ export default function ListingDetailPage() {
       "priceCurrency": "PLN",
       "price": discountedListingPrice,
       "itemCondition": "https://schema.org/UsedCondition",
-      "availability": "https://schema.org/InStock"
+      "availability": isRecentlySold ? "https://schema.org/Discontinued" : "https://schema.org/InStock"
     }
   } : undefined;
 
@@ -580,11 +621,36 @@ export default function ListingDetailPage() {
           image={listing.primary_image_url || listing.image_urls?.[0]}
           canonical={canonicalPath}
           schema={schema}
+          noindex={isRecentlySold}
         />
       )}
       <Header />
 
       <main className="container py-6 relative">
+        {/* Archival Notice Banner */}
+        {isRecentlySold && (
+          <div className="mb-6 p-5 sm:p-6 bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/60 rounded-2xl shadow-sm space-y-3">
+            <div className="flex items-center gap-2.5 text-amber-900 dark:text-amber-200 font-bold text-lg">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>Oferta archiwalna — pojazd niedostępny</span>
+            </div>
+            <p className="text-amber-800 dark:text-amber-300/90 text-sm leading-relaxed">
+              Ten samochód został sprzedany lub wycofany z oferty u dealera. Poniżej zachowaliśmy specyfikację techniczną tego egzemplarza oraz przygotowaliśmy propozycje podobnych, aktualnie dostępnych samochodów.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Button asChild className="bg-amber-600 hover:bg-amber-700 text-white font-semibold">
+                <Link to={`/samochody/${slugifyBrandName(listing.make)}/${slugifyBrandName(listing.model)}`}>
+                  Zobacz dostępne {listing.make} {listing.model} &rarr;
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="border-amber-300 dark:border-amber-700 font-medium">
+                <Link to="/kalkulator-rat">
+                  Oblicz ratę w kalkulatorze &rarr;
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
         {/* Sole semantic <h1> for the page — includes production year to match the SSR <h1>/<title>.
             Visible titles below (desktop/mobile) are non-heading elements to avoid duplicate <h1>s. */}
         <h1 className="sr-only">{baseTitle} {listing.production_year}</h1>
@@ -912,6 +978,35 @@ export default function ListingDetailPage() {
               </div>
             </section>
 
+            {/* Podobne dostępne samochody dla ofert archiwalnych */}
+            {isRecentlySold && data?.similarListings && data.similarListings.length > 0 && (
+              <section className="space-y-6 p-6 md:p-8 bg-card border rounded-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-heading text-2xl font-bold text-foreground">
+                      Podobne dostępne samochody
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      Aktualne oferty pojazdów o zbliżonych parametrach i cenie
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={`/samochody/${slugifyBrandName(listing.make)}/${slugifyBrandName(listing.model)}`}>
+                      Wszystkie {listing.make} {listing.model} &rarr;
+                    </Link>
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {data.similarListings.map((simListing: any, idx: number) => {
+                    const mappedSim = mapBackendListingToFrontend(simListing);
+                    return mappedSim ? (
+                      <ListingCard key={mappedSim.listing_id || idx} listing={mappedSim} index={idx} />
+                    ) : null;
+                  })}
+                </div>
+              </section>
+            )}
+
             <Separator />
 
             {/* FAQ */}
@@ -1051,8 +1146,17 @@ export default function ListingDetailPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 }}
-                    className="space-y-3"
+                    className="bg-card rounded-xl shadow-card p-6 space-y-4"
                   >
+                    <h3 className="font-heading font-semibold text-foreground">
+                      {isRecentlySold ? 'Szukasz podobnego auta?' : 'Zapytaj o ten samochód'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isRecentlySold
+                        ? 'Ten egzemplarz został sprzedany. Skontaktuj się z nami — sprawdzimy dostępność identycznych modeli w sieci dealerskiej.'
+                        : 'Zadzwoń do naszego doradcy lub zostaw numer — oddzwonimy z ofertą dopasowaną do Twoich potrzeb.'}
+                    </p>
+
                     {salesPhone && (
                       <a
                         href={`tel:${formatPhoneForTelLink(salesPhone)}`}
@@ -1381,12 +1485,16 @@ export default function ListingDetailPage() {
       {/* Callback CTA */}
       <div className="container py-10">
         <CallbackForm
-          title="Masz dodatkowe pytania?"
-          titleHighlight="Zostaw numer, oddzwonimy"
-          description="Nasz doradca skontaktuje się z Tobą w ciągu 24h i pomoże dobrać najlepsze finansowanie."
+          title={isRecentlySold ? "Szukasz podobnego samochodu?" : "Masz dodatkowe pytania?"}
+          titleHighlight={isRecentlySold ? "Zostaw numer, pomożemy" : "Zostaw numer, oddzwonimy"}
+          description={isRecentlySold
+            ? "Ten pojazd został sprzedany, ale nasz doradca bezpłatnie pomoże Ci znaleźć identyczny lub podobny egzemplarz u dealerów."
+            : "Nasz doradca skontaktuje się z Tobą w ciągu 24h i pomoże dobrać najlepsze finansowanie."}
           listingId={listing.listing_id}
           formId="offer_bottom_callback"
-          message={`Prośba o kontakt ws. oferty: ${listing.make} ${listing.model} ${listing.production_year ?? ''}`.trim()}
+          message={isRecentlySold
+            ? `Prośba o kontakt ws. auta podobnego do archiwalnej oferty: ${listing.make} ${listing.model} ${listing.production_year ?? ''}`.trim()
+            : `Prośba o kontakt ws. oferty: ${listing.make} ${listing.model} ${listing.production_year ?? ''}`.trim()}
         />
       </div>
 
@@ -1394,32 +1502,36 @@ export default function ListingDetailPage() {
 
       {/* Mobile Sticky CTA */}
       <div className="sticky-cta">
-        <div className="flex gap-3 items-center">
-          {/* Phone CTA — replaces the mobile-only Thulium chat widget on small screens */}
-          <a
-            href={`tel:${formatPhoneForTelLink(salesPhone)}`}
-            aria-label="Kontakt telefoniczny"
-            onClick={() => trackPhoneClick('offer_sticky_mobile')}
-            className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
-          >
-            <Phone className="h-4 w-4" />
-            Kontakt
-          </a>
-          <Button asChild variant="hero" size="lg" className="flex-1">
-            <Link to={`${getListingUrlPath({
-              id: listing.listing_id,
-              make: listing.make,
-              model: listing.model,
-              version: listing.version,
-              productionYear: listing.production_year,
-              bodyType: listing.body_type,
-              fuelType: listing.fuel_type
-            }, financingType)}/lead`}>
-              {t('detail.sendInquiry')}
-            </Link>
-          </Button>
-          {settings?.negotiatePriceEnabled !== false && (
-            <Button asChild variant="secondary" size="lg" className="flex-1 btn-negotiate">
+        {isRecentlySold ? (
+          <div className="flex gap-3 items-center">
+            <a
+              href={`tel:${formatPhoneForTelLink(salesPhone)}`}
+              aria-label="Kontakt telefoniczny"
+              onClick={() => trackPhoneClick('offer_sticky_mobile')}
+              className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
+            >
+              <Phone className="h-4 w-4" />
+              Zadzwoń do nas
+            </a>
+            <Button asChild variant="hero" size="lg" className="flex-1">
+              <Link to={`/samochody/${slugifyBrandName(listing.make)}/${slugifyBrandName(listing.model)}`}>
+                Dostępne {listing.model} &rarr;
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-3 items-center">
+            {/* Phone CTA — replaces the mobile-only Thulium chat widget on small screens */}
+            <a
+              href={`tel:${formatPhoneForTelLink(salesPhone)}`}
+              aria-label="Kontakt telefoniczny"
+              onClick={() => trackPhoneClick('offer_sticky_mobile')}
+              className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border border-border bg-background text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
+            >
+              <Phone className="h-4 w-4" />
+              Kontakt
+            </a>
+            <Button asChild variant="hero" size="lg" className="flex-1">
               <Link to={`${getListingUrlPath({
                 id: listing.listing_id,
                 make: listing.make,
@@ -1428,13 +1540,27 @@ export default function ListingDetailPage() {
                 productionYear: listing.production_year,
                 bodyType: listing.body_type,
                 fuelType: listing.fuel_type
-              }, financingType)}/negotiate`}>
-                {t('detail.negotiateShort', 'Negocjuj cenę')}
+              }, financingType)}/lead`}>
+                {t('detail.sendInquiry')}
               </Link>
             </Button>
-          )}
-
-        </div>
+            {settings?.negotiatePriceEnabled !== false && (
+              <Button asChild variant="secondary" size="lg" className="flex-1 btn-negotiate">
+                <Link to={`${getListingUrlPath({
+                  id: listing.listing_id,
+                  make: listing.make,
+                  model: listing.model,
+                  version: listing.version,
+                  productionYear: listing.production_year,
+                  bodyType: listing.body_type,
+                  fuelType: listing.fuel_type
+                }, financingType)}/negotiate`}>
+                  {t('detail.negotiateShort', 'Negocjuj cenę')}
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <Dialog open={showArchiveModal} onOpenChange={setShowArchiveModal}>

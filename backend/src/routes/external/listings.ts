@@ -196,13 +196,25 @@ export async function externalListingsRoutes(fastify: FastifyInstance) {
             // po VIN, nie znajdował go i wpadał w INSERT łamiący unique na listing_id.
             const externalListingId = body.listingId ? String(body.listingId) : null;
 
-            let existingListing = null;
+            let existingByListingId = null;
+            let existingByVin = null;
+
+            if (externalListingId) {
+                existingByListingId = await fastify.prisma.listing.findUnique({ where: { listingId: externalListingId } });
+            }
             if (cleanVin) {
-                existingListing = await fastify.prisma.listing.findUnique({ where: { vin: cleanVin } });
+                existingByVin = await fastify.prisma.listing.findUnique({ where: { vin: cleanVin } });
             }
-            if (!existingListing && externalListingId) {
-                existingListing = await fastify.prisma.listing.findUnique({ where: { listingId: externalListingId } });
+
+            if (existingByListingId && existingByVin && existingByListingId.id !== existingByVin.id) {
+                return reply.code(409).send({
+                    error: `VIN ${cleanVin} jest już przypisany do innego ogłoszenia` +
+                        `${existingByVin.listingId ? ` (listingId: ${existingByVin.listingId})` : ''}. ` +
+                        'Popraw VIN albo zarchiwizuj tamto ogłoszenie.'
+                });
             }
+
+            const existingListing = existingByListingId || existingByVin;
 
             if (existingListing && existingListing.dealerId !== internalDealerId) {
                 return reply.code(403).send({ error: 'Forbidden. Listing z tym VIN należy do innego dealera.' });
