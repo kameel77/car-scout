@@ -36,6 +36,22 @@ jobs:
       - name: Unit tests
         run: npm test -- --run
 
+      # Bundler nie był dotąd uruchamiany przed mergem — tsc nie widzi błędów
+      # Vite, PostCSS ani Tailwinda, a pierwszy realny build frontendu działał
+      # dopiero w docker.yml, czyli już na gałęzi wdrożeniowej.
+      # Budujemy obie marki, bo różnią się tokenami i krojem (VITE_BRAND).
+      - name: Build (motolia)
+        run: npm run build
+        env:
+          VITE_API_URL: /api
+          VITE_BRAND: motolia
+
+      - name: Build (carsalon)
+        run: npm run build
+        env:
+          VITE_API_URL: /api
+          VITE_BRAND: carsalon
+
   backend:
     name: Backend (typecheck)
     runs-on: ubuntu-latest
