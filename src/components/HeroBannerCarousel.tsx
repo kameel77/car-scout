@@ -7,9 +7,12 @@ import {
     Carousel, CarouselContent, CarouselItem, type CarouselApi,
 } from '@/components/ui/carousel';
 
-const YELLOW = '#F5C518';
-const YELLOW_DARK = '#D4A90A';
-const BLACK = '#1A1A1A';
+const YELLOW = 'hsl(var(--mt-yellow-500))';
+const YELLOW_HOVER = 'hsl(var(--mt-yellow-600))';
+// Brandbook rozdz. 01: żółć jest kolorem powierzchni, nie liter.
+// Litery i ikony na jasnym tle idą w granacie (12,75:1 zamiast 1,66:1).
+const ACCENT_INK = 'hsl(var(--mt-navy-700))';
+const BLACK = 'hsl(var(--mt-navy-900))';
 
 const ALIGN_CLASS: Record<string, string> = {
     left: 'justify-start',
@@ -91,8 +94,8 @@ export function HeroBannerCarousel() {
                                                 <Link
                                                     to={b.buttonUrl}
                                                     className="inline-flex items-center justify-center px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
-                                                    style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}60` }}
-                                                    onMouseEnter={(e) => (e.currentTarget.style.background = YELLOW_DARK)}
+                                                    style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px hsl(var(--mt-yellow-500) / 0.38)` }}
+                                                    onMouseEnter={(e) => (e.currentTarget.style.background = YELLOW_HOVER)}
                                                     onMouseLeave={(e) => (e.currentTarget.style.background = YELLOW)}
                                                 >
                                                     {b.buttonLabel}

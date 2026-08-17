@@ -158,9 +158,9 @@ export function CallbackForm({
     }
 
     return (
-        <section className={`rounded-2xl bg-[#1a1a1a] px-6 py-10 md:px-12 md:py-14 text-center ${className}`}>
+        <section className={`rounded-2xl bg-brand-navy-deep px-6 py-10 md:px-12 md:py-14 text-center ${className}`}>
             {/* Icon */}
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#2a2a2a] mb-6 mx-auto">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-navy mb-6 mx-auto">
                 <Car className="w-7 h-7 text-accent" />
             </div>
 
@@ -189,7 +189,7 @@ export function CallbackForm({
                             onChange={(e) => setPhone(e.target.value)}
                             placeholder="Wpisz swój numer telefonu"
                             required
-                            className="flex-1 h-12 px-5 rounded-xl bg-[#2a2a2a] border border-[#3a3a3a] text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent text-sm"
+                            className="flex-1 h-12 px-5 rounded-xl bg-brand-navy border border-white/15 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent text-sm"
                         />
                         <button
                             type="submit"

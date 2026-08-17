@@ -25,7 +25,7 @@ export function Footer() {
   const { t, i18n } = useTranslation();
   const { config } = useBrand();
   const isMotolia = config.id === 'motolia';
-  const accentColor = isMotolia ? '#F5C518' : undefined;
+  const accentColor = isMotolia ? 'hsl(var(--mt-yellow-500))' : undefined;
   const lang = normalizeLang(i18n.language);
   const legalDocs = settings?.legalDocuments as Record<string, Record<string, string>> | undefined;
 
@@ -93,7 +93,7 @@ export function Footer() {
 
   return (
     <footer className="mt-12 border-t bg-slate-950 text-slate-100"
-      style={isMotolia ? { borderTopColor: '#F5C51830' } : {}}>
+      style={isMotolia ? { borderTopColor: 'hsl(var(--mt-yellow-500) / 0.3)' } : {}}>
       <div className="container py-10 grid gap-10 lg:grid-cols-4">
         <div className="space-y-4">
           {logo ? (
@@ -105,7 +105,7 @@ export function Footer() {
               decoding="async"
             />
           ) : (
-            <span className="text-xl font-black" style={isMotolia ? { color: '#F5C518' } : { color: '#fff' }}>
+            <span className="text-xl font-black" style={isMotolia ? { color: 'hsl(var(--mt-yellow-500))' } : { color: '#fff' }}>
               {siteName}
             </span>
           )}
@@ -195,7 +195,7 @@ export function Footer() {
                 <a
                   href={`mailto:${settings.legalContactEmail}`}
                   className="flex items-center gap-2 transition-colors hover:text-white"
-                  style={isMotolia ? { color: '#F5C518' } : {}}
+                  style={isMotolia ? { color: 'hsl(var(--mt-yellow-500))' } : {}}
                 >
                   <Mail className="h-4 w-4 text-slate-400" />
                   <span>{settings.legalContactEmail}</span>
@@ -206,7 +206,7 @@ export function Footer() {
                   href={`tel:${formatPhoneForTelLink(settings.legalContactPhone)}`}
                   onClick={() => trackPhoneClick('footer')}
                   className="flex items-center gap-2 transition-colors hover:text-white"
-                  style={isMotolia ? { color: '#F5C518' } : {}}
+                  style={isMotolia ? { color: 'hsl(var(--mt-yellow-500))' } : {}}
                 >
                   <Phone className="h-4 w-4 text-slate-400" />
                   <span>{settings.legalContactPhone}</span>

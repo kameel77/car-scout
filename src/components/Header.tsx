@@ -142,13 +142,13 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
               />
           ) : (
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              <span className="text-[#2D3142]">{part1}</span>
-              {part2 && <span className="text-[#F97316]">{part2}</span>}
+              <span className="text-foreground">{part1}</span>
+              {part2 && <span className="text-primary">{part2}</span>}
             </h1>
           )}
           {headerLogoText && (
             <span
-              className="text-[11px] text-muted-foreground leading-tight border-l pl-2 border-border hidden sm:block max-w-[120px]"
+              className="text-xs text-muted-foreground leading-tight border-l pl-2 border-border hidden sm:block max-w-[140px]"
               dangerouslySetInnerHTML={{ __html: headerLogoText }}
             />
           )}
@@ -162,8 +162,11 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  "text-base font-semibold transition-all hover:text-accent",
-                  location.pathname === link.to ? "text-accent" : "text-[#4A4E69]"
+                  "inline-flex items-center min-h-touch text-base font-semibold transition-all",
+                  "hover:text-primary hover:underline underline-offset-8 decoration-2",
+                  location.pathname === link.to
+                    ? "text-primary underline underline-offset-8 decoration-2 decoration-accent"
+                    : "text-muted-foreground"
                 )}
               >
                 {link.label}
@@ -190,7 +193,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
             {enabledLanguages.length > 1 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2 text-[#4A4E69] hover:bg-slate-100">
+                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:bg-slate-100">
                     <Globe className="h-4 w-4" />
                     <span>{currentLanguage.flag}</span>
                     <span className="hidden xl:inline">{currentLanguage.label}</span>
@@ -251,7 +254,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           )}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-[#2D3142]" aria-label="Menu główne">
+              <Button variant="ghost" size="icon" className="text-foreground" aria-label="Menu główne">
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
@@ -269,8 +272,8 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                     />
                   ) : (
                     <h1 className="text-xl font-bold tracking-tight">
-                      <span className="text-[#2D3142]">{part1}</span>
-                      {part2 && <span className="text-[#F97316]">{part2}</span>}
+                      <span className="text-foreground">{part1}</span>
+                      {part2 && <span className="text-primary">{part2}</span>}
                     </h1>
                   )}
                 </div>
@@ -282,8 +285,10 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                       to={link.to}
                       onClick={() => setIsOpen(false)}
                       className={cn(
-                        "block text-lg font-medium transition-colors p-2 rounded-lg",
-                        location.pathname === link.to ? "bg-accent/10 text-accent" : "text-[#4A4E69] hover:bg-slate-50"
+                        "flex items-center min-h-touch text-lg font-medium transition-colors p-2 rounded-lg",
+                        location.pathname === link.to
+                          ? "bg-accent/15 text-primary font-semibold"
+                          : "text-muted-foreground hover:bg-slate-50"
                       )}
                     >
                       {link.label}

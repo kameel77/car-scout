@@ -36,6 +36,16 @@ export default {
         "4xl": ["3rem", { lineHeight: "1.05", letterSpacing: "-0.03em" }],
       },
       colors: {
+        // Rampa brandbooka wystawiona jako klasy Tailwind, żeby nie było powodu
+        // wpisywać wartości bezpośrednich (bg-brand-navy-deep, text-brand-yellow-ink…).
+        brand: {
+          navy: "hsl(var(--mt-navy-700))",
+          "navy-deep": "hsl(var(--mt-navy-900))",
+          "navy-soft": "hsl(var(--mt-navy-600))",
+          yellow: "hsl(var(--mt-yellow-500))",
+          "yellow-ink": "hsl(var(--mt-yellow-800))",
+          "yellow-soft": "hsl(var(--mt-yellow-50))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

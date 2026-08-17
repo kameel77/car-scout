@@ -29,9 +29,12 @@ import { trackPhoneClick } from '@/lib/analytics';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const YELLOW = '#F5C518';
-const YELLOW_DARK = '#D4A90A';
-const BLACK = '#1A1A1A';
+const YELLOW = 'hsl(var(--mt-yellow-500))';
+const YELLOW_HOVER = 'hsl(var(--mt-yellow-600))';
+// Brandbook rozdz. 01: żółć jest kolorem powierzchni, nie liter.
+// Litery i ikony na jasnym tle idą w granacie (12,75:1 zamiast 1,66:1).
+const ACCENT_INK = 'hsl(var(--mt-navy-700))';
+const BLACK = 'hsl(var(--mt-navy-900))';
 
 const PLN = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 });
 
@@ -265,27 +268,27 @@ export default function MotoliaB2BPage() {
   };
 
   return (
-    <div className="bg-white min-h-screen text-[#1A1A1A] font-inter selection:bg-yellow-200">
+    <div className="bg-white min-h-screen text-foreground font-body selection:bg-yellow-200">
       {faqSchema && <MetaHead schema={faqSchema} />}
       <Header />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#FAFAF8] pt-14 pb-16 lg:pt-32 lg:pb-24">
+      <section className="relative overflow-hidden bg-background pt-14 pb-16 lg:pt-32 lg:pb-24">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${YELLOW}18 0%, transparent 70%)` }} />
+          style={{ background: `radial-gradient(circle, hsl(var(--mt-yellow-500) / 0.09) 0%, transparent 70%)` }} />
         <div className="absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${YELLOW}10 0%, transparent 70%)` }} />
+          style={{ background: `radial-gradient(circle, hsl(var(--mt-yellow-500) / 0.06) 0%, transparent 70%)` }} />
 
         <div className="max-w-4xl mx-auto px-6 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8"
-            style={{ background: `${YELLOW}20`, borderColor: `${YELLOW}60`, color: BLACK }}>
-            <span style={{ color: YELLOW_DARK }}>◆</span>
+            style={{ background: `hsl(var(--mt-yellow-500) / 0.13)`, borderColor: `hsl(var(--mt-yellow-500) / 0.38)`, color: BLACK }}>
+            <span style={{ color: ACCENT_INK }}>◆</span>
             Motolia dla firm
           </div>
 
-          <h1 className="text-4xl lg:text-6xl font-outfit font-bold tracking-tight mb-6 leading-[1.1] text-[#1A1A1A]">
+          <h1 className="text-4xl lg:text-6xl font-heading font-bold tracking-tight mb-6 leading-[1.1] text-foreground">
             Auta dla Twojej firmy. Ważnej dla nas{' '}
-            <span style={{ color: YELLOW_DARK }}>od pierwszego samochodu</span>.
+            <span style={{ color: ACCENT_INK }}>od pierwszego samochodu</span>.
           </h1>
 
           <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light max-w-2xl mx-auto">
@@ -298,8 +301,8 @@ export default function MotoliaB2BPage() {
             <a
               href="#kontakt-firmy"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
-              style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}60` }}
-              onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
+              style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px hsl(var(--mt-yellow-500) / 0.38)` }}
+              onMouseEnter={e => (e.currentTarget.style.background = YELLOW_HOVER)}
               onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
             >
               Porozmawiaj z opiekunem firm
@@ -317,7 +320,7 @@ export default function MotoliaB2BPage() {
           <div className="flex flex-wrap gap-x-8 gap-y-3 justify-center">
             {['Dedykowany opiekun', 'Oferty wielu finansujących', 'Od 1 do 20 aut'].map((badge) => (
               <div key={badge} className="flex items-center gap-2 text-gray-600 text-sm font-medium">
-                <CheckCircle2 size={17} style={{ color: YELLOW_DARK }} />
+                <CheckCircle2 size={17} style={{ color: ACCENT_INK }} />
                 {badge}
               </div>
             ))}
@@ -329,9 +332,9 @@ export default function MotoliaB2BPage() {
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <FadeIn className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-3xl md:text-4xl font-outfit font-bold text-[#1A1A1A]">
+            <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
               Finansujemy auta firm na{' '}
-              <span style={{ color: YELLOW_DARK }}>każdym etapie</span>
+              <span style={{ color: ACCENT_INK }}>każdym etapie</span>
             </h2>
           </FadeIn>
 
@@ -340,10 +343,10 @@ export default function MotoliaB2BPage() {
               <FadeIn key={card.title} delay={idx * 0.08}>
                 <div className="bg-white border border-gray-100 rounded-3xl p-7 h-full hover:shadow-lg hover:border-gray-200 transition-all duration-300">
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
-                    style={{ background: `${YELLOW}20`, border: `1.5px solid ${YELLOW}50` }}>
-                    <card.icon size={24} style={{ color: YELLOW_DARK }} />
+                    style={{ background: `hsl(var(--mt-yellow-500) / 0.13)`, border: `1.5px solid hsl(var(--mt-yellow-500) / 0.31)` }}>
+                    <card.icon size={24} style={{ color: ACCENT_INK }} />
                   </div>
-                  <h3 className="text-lg font-bold text-[#1A1A1A] mb-2">{card.title}</h3>
+                  <h3 className="text-lg font-bold text-foreground mb-2">{card.title}</h3>
                   <p className="text-gray-500 leading-relaxed text-sm">{card.desc}</p>
                 </div>
               </FadeIn>
@@ -355,10 +358,10 @@ export default function MotoliaB2BPage() {
       {/* ── WYRÓŻNIKI — dark section ─────────────────────────────────────── */}
       <section className="py-24 relative overflow-hidden" style={{ background: BLACK }}>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${YELLOW}0a 0%, transparent 70%)` }} />
+          style={{ background: `radial-gradient(circle, hsl(var(--mt-yellow-500) / 0.04) 0%, transparent 70%)` }} />
         <div className="max-w-5xl mx-auto px-6 relative z-10">
           <FadeIn className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-outfit font-bold text-white">
+            <h2 className="text-3xl md:text-4xl font-heading font-bold text-white">
               Dlaczego firmy finansują auta{' '}
               <span style={{ color: YELLOW }}>z Motolią</span>
             </h2>
@@ -367,7 +370,7 @@ export default function MotoliaB2BPage() {
           <div className="grid sm:grid-cols-2 gap-5">
             {WYROZNIKI.map((item, idx) => (
               <FadeIn key={item.title} delay={idx * 0.06}>
-                <div className="p-7 rounded-3xl border h-full" style={{ background: '#262626', borderColor: '#333' }}>
+                <div className="p-7 rounded-3xl border h-full" style={{ background: 'hsl(var(--mt-navy-700))', borderColor: 'hsl(var(--mt-navy-600))' }}>
                   <h3 className="text-base font-bold mb-2 text-white">{item.title}</h3>
                   <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
                 </div>
@@ -378,11 +381,11 @@ export default function MotoliaB2BPage() {
       </section>
 
       {/* ── JAK PRACUJEMY ────────────────────────────────────────────────── */}
-      <section className="py-24 bg-[#FAFAF8]">
+      <section className="py-24 bg-background">
         <div className="max-w-6xl mx-auto px-6">
           <FadeIn className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-3xl md:text-4xl font-outfit font-bold text-[#1A1A1A]">
-              Jak wygląda <span style={{ color: YELLOW_DARK }}>współpraca</span>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
+              Jak wygląda <span style={{ color: ACCENT_INK }}>współpraca</span>
             </h2>
           </FadeIn>
 
@@ -394,7 +397,7 @@ export default function MotoliaB2BPage() {
                     style={{ background: YELLOW, color: BLACK }}>
                     {idx + 1}
                   </div>
-                  <h3 className="text-base font-bold text-[#1A1A1A] mb-2">{step.title}</h3>
+                  <h3 className="text-base font-bold text-foreground mb-2">{step.title}</h3>
                   <p className="text-gray-500 text-sm leading-relaxed">{step.desc}</p>
                 </div>
               </FadeIn>
@@ -407,8 +410,8 @@ export default function MotoliaB2BPage() {
       <section className="py-24 bg-white" id="oferty-dla-firm">
         <div className="max-w-7xl mx-auto px-6">
           <FadeIn className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-3xl md:text-4xl font-outfit font-bold mb-4 text-[#1A1A1A]">
-              Oferty specjalne <span style={{ color: YELLOW_DARK }}>dla firm</span>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4 text-foreground">
+              Oferty specjalne <span style={{ color: ACCENT_INK }}>dla firm</span>
             </h2>
             <p className="text-lg text-gray-500">
               Auta z ratą policzoną dla firmy - nowe modele popularne wśród naszych klientów
@@ -433,8 +436,8 @@ export default function MotoliaB2BPage() {
           <div className="text-center mt-10">
             <Link
               to="/leasing"
-              className="inline-flex items-center gap-1.5 text-sm font-bold transition-colors"
-              style={{ color: YELLOW_DARK }}
+              className="inline-flex items-center gap-1.5 text-sm font-bold underline underline-offset-4 decoration-2 transition-colors hover:no-underline"
+              style={{ color: ACCENT_INK }}
             >
               Zobacz wszystkie auta w leasingu dla firm <ArrowRight size={14} />
             </Link>
@@ -443,11 +446,11 @@ export default function MotoliaB2BPage() {
       </section>
 
       {/* ── LEASING CZY NAJEM ────────────────────────────────────────────── */}
-      <section className="py-24 bg-[#FAFAF8]">
+      <section className="py-24 bg-background">
         <div className="max-w-5xl mx-auto px-6">
           <FadeIn className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-3xl md:text-4xl font-outfit font-bold text-[#1A1A1A]">
-              Leasing czy <span style={{ color: YELLOW_DARK }}>najem dla firmy</span>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
+              Leasing czy <span style={{ color: ACCENT_INK }}>najem dla firmy</span>
             </h2>
           </FadeIn>
 
@@ -457,8 +460,8 @@ export default function MotoliaB2BPage() {
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="text-left p-4 font-semibold text-gray-500"></th>
-                    <th className="text-left p-4 font-bold text-[#1A1A1A]">Leasing operacyjny</th>
-                    <th className="text-left p-4 font-bold text-[#1A1A1A]">Najem długoterminowy</th>
+                    <th className="text-left p-4 font-bold text-foreground">Leasing operacyjny</th>
+                    <th className="text-left p-4 font-bold text-foreground">Najem długoterminowy</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -480,10 +483,10 @@ export default function MotoliaB2BPage() {
               ratę netto obok siebie.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center mt-6 text-sm font-bold">
-              <Link to="/leasing" style={{ color: YELLOW_DARK }} className="inline-flex items-center gap-1.5">
+              <Link to="/leasing" style={{ color: ACCENT_INK }} className="inline-flex items-center gap-1.5 underline underline-offset-4 decoration-2 hover:no-underline">
                 Zobacz, jak działa leasing samochodu dla firm <ArrowRight size={14} />
               </Link>
-              <Link to="/wynajem-dlugoterminowy" style={{ color: YELLOW_DARK }} className="inline-flex items-center gap-1.5">
+              <Link to="/wynajem-dlugoterminowy" style={{ color: ACCENT_INK }} className="inline-flex items-center gap-1.5 underline underline-offset-4 decoration-2 hover:no-underline">
                 Sprawdź najem długoterminowy aut firmowych <ArrowRight size={14} />
               </Link>
             </div>
@@ -497,12 +500,12 @@ export default function MotoliaB2BPage() {
           <FadeIn>
             <div className="rounded-3xl border border-gray-100 p-8 md:p-12">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6"
-                style={{ background: `${YELLOW}20`, border: `1.5px solid ${YELLOW}50` }}>
-                <FileText size={24} style={{ color: YELLOW_DARK }} />
+                style={{ background: `hsl(var(--mt-yellow-500) / 0.13)`, border: `1.5px solid hsl(var(--mt-yellow-500) / 0.31)` }}>
+                <FileText size={24} style={{ color: ACCENT_INK }} />
               </div>
-              <h2 className="text-3xl md:text-4xl font-outfit font-bold mb-6 text-[#1A1A1A]">
+              <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6 text-foreground">
                 Limity kosztów 2026 —{' '}
-                <span style={{ color: YELLOW_DARK }}>ile realnie odliczysz</span>
+                <span style={{ color: ACCENT_INK }}>ile realnie odliczysz</span>
               </h2>
               <p className="text-gray-600 leading-relaxed mb-6">
                 Od 2026 roku limit zaliczenia auta do kosztów uzyskania przychodu zależy od
@@ -535,15 +538,15 @@ export default function MotoliaB2BPage() {
       </section>
 
       {/* ── PRACOWNICZY PROGRAM NAJMU ────────────────────────────────────── */}
-      <section className="py-24 bg-[#FAFAF8]">
+      <section className="py-24 bg-background">
         <div className="max-w-4xl mx-auto px-6">
           <FadeIn>
             <div className="rounded-3xl p-8 md:p-12 text-center" style={{ background: BLACK }}>
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 mx-auto"
-                style={{ background: `${YELLOW}20`, border: `1.5px solid ${YELLOW}40` }}>
+                style={{ background: `hsl(var(--mt-yellow-500) / 0.13)`, border: `1.5px solid hsl(var(--mt-yellow-500) / 0.25)` }}>
                 <Headset size={24} style={{ color: YELLOW }} />
               </div>
-              <h2 className="text-3xl md:text-4xl font-outfit font-bold mb-6 text-white">
+              <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6 text-white">
                 Auto jako <span style={{ color: YELLOW }}>benefit dla pracowników</span>
               </h2>
               <p className="text-gray-400 leading-relaxed mb-8 max-w-2xl mx-auto">
@@ -568,15 +571,15 @@ export default function MotoliaB2BPage() {
         <section className="py-24 bg-white">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-outfit font-bold text-[#1A1A1A]">
-                Zaufały nam firmy <span style={{ color: YELLOW_DARK }}>takie jak Twoja</span>
+              <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
+                Zaufały nam firmy <span style={{ color: ACCENT_INK }}>takie jak Twoja</span>
               </h2>
             </FadeIn>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {SOCIAL_PROOF.map((item) => (
                 <div key={item.author} className="bg-white border border-gray-100 rounded-3xl p-7">
                   <p className="text-gray-600 text-sm leading-relaxed mb-4">„{item.quote}"</p>
-                  <p className="text-sm font-bold text-[#1A1A1A]">{item.author}</p>
+                  <p className="text-sm font-bold text-foreground">{item.author}</p>
                 </div>
               ))}
             </div>
@@ -586,11 +589,11 @@ export default function MotoliaB2BPage() {
 
       {/* ── FAQ ───────────────────────────────────────────────────────────── */}
       {dynamicFaqs.length > 0 && (
-        <section className="py-24 bg-[#FAFAF8]" id="faq">
+        <section className="py-24 bg-background" id="faq">
           <div className="max-w-4xl mx-auto px-6">
             <FadeIn className="text-center mb-10">
-              <h2 className="text-3xl md:text-4xl font-outfit font-bold mb-5 text-[#1A1A1A]">
-                Najczęściej zadawane <span style={{ color: YELLOW_DARK }}>pytania</span>
+              <h2 className="text-3xl md:text-4xl font-heading font-bold mb-5 text-foreground">
+                Najczęściej zadawane <span style={{ color: ACCENT_INK }}>pytania</span>
               </h2>
               <p className="text-lg text-gray-500">
                 Odpowiadamy na najczęstsze pytania firm o leasing, najem długoterminowy i
@@ -606,12 +609,12 @@ export default function MotoliaB2BPage() {
                       onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                       className="w-full flex items-center justify-between p-6 text-left"
                     >
-                      <h3 className="text-base font-semibold text-[#1A1A1A] pr-6">{item.q}</h3>
+                      <h3 className="text-base font-semibold text-foreground pr-6">{item.q}</h3>
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${openFaq === idx ? 'rotate-180' : ''
                         }`}
                         style={{
-                          background: openFaq === idx ? YELLOW : '#F3F4F6',
-                          color: openFaq === idx ? BLACK : '#6B7280',
+                          background: openFaq === idx ? YELLOW : 'hsl(var(--mt-neutral-100))',
+                          color: openFaq === idx ? BLACK : 'hsl(var(--mt-neutral-600))',
                         }}
                       >
                         <ChevronDown size={16} />
@@ -640,21 +643,21 @@ export default function MotoliaB2BPage() {
       )}
 
       {/* ── CTA KOŃCOWE ───────────────────────────────────────────────────── */}
-      <section className="py-24 px-6" id="kontakt-firmy" style={{ background: '#FAFAF8' }}>
+      <section className="py-24 px-6" id="kontakt-firmy" style={{ background: 'hsl(var(--mt-neutral-50))' }}>
         <div className="max-w-5xl mx-auto">
           <div className="relative rounded-[3rem] p-12 text-center overflow-hidden border"
-            style={{ background: BLACK, borderColor: '#2A2A2A' }}>
+            style={{ background: BLACK, borderColor: 'hsl(var(--mt-navy-700))' }}>
             <div className="absolute top-0 right-0 w-72 h-72 rounded-full pointer-events-none"
-              style={{ background: `radial-gradient(circle, ${YELLOW}18 0%, transparent 70%)` }} />
+              style={{ background: `radial-gradient(circle, hsl(var(--mt-yellow-500) / 0.09) 0%, transparent 70%)` }} />
 
             <div className="relative z-10 max-w-2xl mx-auto">
               <FadeIn>
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8"
-                  style={{ background: `${YELLOW}20`, border: `1.5px solid ${YELLOW}40` }}>
+                  style={{ background: `hsl(var(--mt-yellow-500) / 0.13)`, border: `1.5px solid hsl(var(--mt-yellow-500) / 0.25)` }}>
                   <Car size={28} style={{ color: YELLOW }} />
                 </div>
 
-                <h2 className="text-4xl md:text-5xl font-outfit font-bold text-white mb-5">
+                <h2 className="text-4xl md:text-5xl font-heading font-bold text-white mb-5">
                   Porozmawiajmy o autach{' '}
                   <span style={{ color: YELLOW }}>dla Twojej firmy</span>
                 </h2>
@@ -672,16 +675,16 @@ export default function MotoliaB2BPage() {
                     value={quickPhone}
                     onChange={e => setQuickPhone(e.target.value)}
                     className="flex-1 rounded-2xl px-6 py-4 text-white text-lg outline-none transition-all"
-                    style={{ background: '#262626', border: '2px solid #333' }}
+                    style={{ background: 'hsl(var(--mt-navy-700))', border: '2px solid hsl(var(--mt-navy-600))' }}
                     onFocus={e => (e.currentTarget.style.borderColor = YELLOW)}
-                    onBlur={e => (e.currentTarget.style.borderColor = '#333')}
+                    onBlur={e => (e.currentTarget.style.borderColor = 'hsl(var(--mt-navy-600))')}
                   />
                   <button
                     type="submit"
                     disabled={quickStatus === 'loading'}
-                    className="font-bold px-8 py-4 rounded-2xl transition-all duration-200 whitespace-nowrap text-[#1A1A1A] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60"
+                    className="font-bold px-8 py-4 rounded-2xl transition-all duration-200 whitespace-nowrap text-foreground hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60"
                     style={{ background: YELLOW }}
-                    onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
+                    onMouseEnter={e => (e.currentTarget.style.background = YELLOW_HOVER)}
                     onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
                   >
                     {quickStatus === 'loading'
@@ -741,17 +744,17 @@ function BusinessOfferCard({ offer }: { offer: any }) {
       </div>
       <div className="p-6 flex flex-col gap-3 flex-1">
         <div className="inline-flex items-center gap-1.5 self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"
-          style={{ background: `${YELLOW}20`, color: YELLOW_DARK }}>
+          style={{ background: `hsl(var(--mt-yellow-500) / 0.13)`, color: ACCENT_INK }}>
           {isRental ? 'Najem dla firm' : 'Oferta dla firm'}
         </div>
-        <h3 className="font-bold text-lg text-[#1A1A1A] leading-tight">
+        <h3 className="font-bold text-lg text-foreground leading-tight">
           {offer.make} {offer.model} {offer.version ? <span className="font-normal text-gray-500">{offer.version}</span> : null}
         </h3>
         <p className="text-xs text-gray-400">{offer.productionYear}</p>
 
         {netRate ? (
           <div>
-            <div className="text-2xl font-bold text-[#1A1A1A]">{PLN.format(netRate)} zł/mc</div>
+            <div className="text-2xl font-bold text-foreground">{PLN.format(netRate)} zł/mc</div>
             <p className="text-xs text-gray-400">
               {isRental ? 'netto - najem długoterminowy, rata w kosztach' : 'netto - dla firmy rata w kosztach'}
             </p>
