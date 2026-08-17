@@ -337,6 +337,41 @@
 }
 
 @layer utilities {
+  /* ── Wyróżnienie w nagłówku ───────────────────────────────────────────────
+     JEDYNY dopuszczalny mechanizm wyróżniania wyrazów w nagłówkach.
+     Brandbook rozdz. 01: żółć jest kolorem powierzchni, nie liter — więc
+     wyróżniamy tłem, a litery zostają w kolorze reszty nagłówka (17,74:1
+     na bieli, biel na ciemnych sekcjach).
+
+     Dlaczego nie kolorem liter:
+     • żółć jako litery na jasnym tle daje 1,63:1 — tekst przestaje istnieć,
+     • granat wobec Ink 900 daje 1,39:1 — oko nie czyta tego jako wyróżnienia,
+       a dodatkowo granat + pogrubienie to wygląd linku tekstowego, więc
+       wyróżniony wyraz w nagłówku wygląda na klikalny.
+
+     Kolor bierzemy z --accent, więc mechanizm działa też dla CarSalona. */
+  .hl {
+    color: inherit;
+    background-image: linear-gradient(hsl(var(--accent)), hsl(var(--accent)));
+    background-repeat: no-repeat;
+    background-size: 100% 0.3em;
+    background-position: 0 92%;
+    padding: 0 0.06em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  /* Wariant mocny — pełne wypełnienie, litery w granacie (7,66:1).
+     Maksymalnie raz na stronę, w nagłówku hero. */
+  .hl-solid {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+    padding: 0 0.16em;
+    border-radius: var(--mt-radius-sm);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
   /* Brandbook rozdz. 02 — Overline 12 px, wyłącznie krótkie etykiety
      wersalikami o wadze 700 i zwiększonym odstępie. Nigdy dla zdań. */
   .text-overline {

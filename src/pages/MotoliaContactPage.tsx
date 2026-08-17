@@ -131,7 +131,7 @@ export default function MotoliaContactPage() {
                 dangerouslySetInnerHTML={{
                   __html: config.contactPage.title.replace(
                     '<span>',
-                    `<span style="color:hsl(var(--mt-navy-700))">`,
+                    `<span class="hl">`,
                   ),
                 }}
               />
@@ -378,7 +378,7 @@ export default function MotoliaContactPage() {
               {/* Quick links */}
               <FadeIn delay={0.2}>
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-subtle mb-4">
+                  <h3 className="text-overline text-muted-foreground mb-4">
                     Interesuje Cię konkretny produkt?
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
@@ -419,7 +419,7 @@ export default function MotoliaContactPage() {
                   dangerouslySetInnerHTML={{
                     __html: config.contactPage.ctaTitle.replace(
                       '<span>',
-                      `<span style="color:${YELLOW}">`,
+                      `<span class="hl">`,
                     ),
                   }}
                 />

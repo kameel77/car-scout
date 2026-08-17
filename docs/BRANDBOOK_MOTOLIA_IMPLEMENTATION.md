@@ -26,6 +26,37 @@ Branch: `feat/brandbook-motolia`
    powiększamy przyciskiem lub paddingiem, nie samą grafiką.
 5. **Najjaśniejszy dopuszczalny tekst** to `text-subtle` (Neutral 500, 5,94:1).
    Poniżej tej wartości tekst nie istnieje.
+6. **Jedno wyróżnienie, jedna etykieta.** Wyróżniony wyraz w nagłówku dostaje
+   klasę `.hl` (żółty marker pod tekstem, litery bez zmiany koloru). Etykieta
+   nad nagłówkiem to `.text-overline` bez tła. Pigułka z tłem jest zarezerwowana
+   dla plakietek przy ofertach, które niosą informację.
+
+## Trzy sygnały, trzy znaczenia
+
+Po ostatniej zmianie każdy sygnał wizualny znaczy dokładnie jedną rzecz —
+i to jest właściwość, którą trzeba chronić przy każdej kolejnej zmianie:
+
+| Sygnał | Znaczenie |
+|---|---|
+| Granat + pogrubienie + podkreślenie | link, coś klikalnego |
+| Żółty marker pod wyrazem (`.hl`) | wyróżnienie w nagłówku, nieklikalne |
+| Pełna żółta powierzchnia | przycisk główny, jeden na widok |
+
+Wcześniej granat pełnił rolę linku i wyróżnienia jednocześnie, więc wyróżnione
+wyrazy w nagłówkach wyglądały na klikalne. Żółć jako litery dawała 1,63:1
+i wypadała z ekranu.
+
+### Dlaczego nie granat jako wyróżnienie
+Granat `#082D76` i Ink 900 `#111827` różnią się między sobą o **1,39:1**.
+WCAG nie reguluje pary tekst–tekst, ale próg, przy którym oko czyta różnicę
+jako zamierzoną, to około 3:1. Poniżej tego wyróżnienie działa na samym
+odcieniu, nie na jasności.
+
+### Pułapka, która to przepuściła
+`PurchaseProcessStepper.css` kolorował wyróżnienie przez `hsl(var(--accent))` —
+ani wartość bezpośrednia, ani klasa `text-accent`, więc przegląd oparty na
+grepie po jednym i drugim tego nie widział. **Przy audytach kolorystycznych
+trzeba szukać także użyć zmiennych CSS jako `color:`**, nie tylko literałów.
 
 ## Kroje
 
@@ -42,6 +73,8 @@ Branch: `feat/brandbook-motolia`
 - [ ] Panel admina dziedziczy nową skalę typografii i wysokości przycisków.
       Sprawdzić gęste widoki (LeadList, LandingPagesPage) — tam zostały jeszcze
       rozmiary 10–11 px, świadomie nietknięte.
+- [ ] Reguła lintera na `color: hsl(var(--accent))` w CSS — akcent wolno użyć
+      jako `background`, nie jako `color` (poza ciemnymi powierzchniami).
 - [ ] Reguły lintera z rozdz. 05 brandbooka (zakaz wartości bezpośrednich,
       zakaz `font-size` < 13 px) — nie wdrożone, warte dodania do CI.
 - [ ] Automatyczny test kontrastu (axe-core / Pa11y) na sześciu kluczowych widokach.

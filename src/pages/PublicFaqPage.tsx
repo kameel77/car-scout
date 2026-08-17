@@ -169,7 +169,7 @@ export default function PublicFaqPage() {
 
             <h1 className="text-4xl md:text-6xl font-heading font-extrabold mb-6 text-foreground">
               Jak możemy Ci{' '}
-              <span style={{ color: accentInk }}>pomóc?</span>
+              <span className="hl">pomóc?</span>
             </h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
               Znajdź odpowiedzi na najczęściej zadawane pytania dotyczące finansowania,

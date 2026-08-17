@@ -390,7 +390,7 @@ export default function CampaignLandingPage() {
                         <div className="text-center mb-10">
                             <h2 className={`text-3xl md:text-4xl font-heading font-bold ${theme.heading}`}>
                                 Najczęściej zadawane{' '}
-                                <span style={{ color: ACCENT_INK }}>pytania</span>
+                                <span className="hl">pytania</span>
                             </h2>
                         </div>
 
