@@ -21,26 +21,26 @@ export function CustomerTypeToggle({ className }: CustomerTypeToggleProps) {
         type="button"
         onClick={() => setPriceType('gross')}
         className={cn(
-          'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap flex-1 justify-center',
+          'flex items-center gap-2 px-4 min-h-touch rounded-md text-sm font-semibold transition-all whitespace-nowrap flex-1 justify-center',
           priceType === 'gross'
-            ? 'bg-accent shadow-sm text-foreground'
+            ? 'bg-accent shadow-sm text-accent-foreground'
             : 'text-muted-foreground hover:text-foreground'
         )}
       >
-        <User className="w-3.5 h-3.5" />
+        <User className="w-4 h-4" />
         {t('pricing.private', 'Prywatnie')}
       </button>
       <button
         type="button"
         onClick={() => setPriceType('net')}
         className={cn(
-          'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap flex-1 justify-center',
+          'flex items-center gap-2 px-4 min-h-touch rounded-md text-sm font-semibold transition-all whitespace-nowrap flex-1 justify-center',
           priceType === 'net'
-            ? 'bg-accent shadow-sm text-foreground'
+            ? 'bg-accent shadow-sm text-accent-foreground'
             : 'text-muted-foreground hover:text-foreground'
         )}
       >
-        <Building2 className="w-3.5 h-3.5" />
+        <Building2 className="w-4 h-4" />
         {t('pricing.business', 'Na firmę')}
       </button>
     </div>

@@ -10,11 +10,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 function RateNote({ label, text }: { label: string; text: string }) {
   return (
     <span className="flex items-center gap-1 mt-0.5">
-      <span className="text-[10px] text-gray-400">{label}</span>
+      <span className="text-xs text-subtle">{label}</span>
       <TooltipProvider delayDuration={0}>
         <Tooltip>
           <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-            <Info className="h-3 w-3 text-gray-400 cursor-help shrink-0" />
+            <Info className="h-3 w-3 text-subtle cursor-help shrink-0" />
           </TooltipTrigger>
           <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
             {text}
@@ -57,7 +57,7 @@ export function DynamicWidget({
   if (isLoading) {
     const loader = (
       <div className="w-full flex justify-center items-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-subtle" />
       </div>
     );
     if (className) {
@@ -88,14 +88,14 @@ export function DynamicWidget({
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                  <Car className="hidden md:block w-8 h-8 text-accent" />
+                  <Car className="hidden md:block w-8 h-8 text-primary" />
                   {widget.name}
                 </h2>
                 <div className="h-1 w-24 bg-accent rounded mt-4"></div>
               </div>
               <Link 
                 to={viewAllLink} 
-                className="hidden md:flex group items-center text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+                className="hidden md:flex group items-center text-sm font-medium text-primary hover:text-primary/80 underline underline-offset-4 decoration-2 hover:no-underline transition-colors"
                 target={placement === 'EXTERNAL' ? '_parent' : '_self'}
               >
                 Zobacz wszystkie
@@ -123,7 +123,7 @@ export function DynamicWidget({
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <div className="w-full h-full flex items-center justify-center text-subtle">
                           Brak zdjęcia
                         </div>
                       )}
@@ -146,15 +146,15 @@ export function DynamicWidget({
                     <div className="p-5 flex flex-col flex-grow">
                       <div className="mb-2">
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-lg text-gray-900 group-hover:text-accent transition-colors line-clamp-1">
+                          <h3 className="font-bold text-lg text-gray-900 group-hover:text-primary transition-colors line-clamp-1">
                             {v.title}
                           </h3>
                           <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent transition-colors shrink-0">
-                            <ChevronRight className="w-4 h-4 text-accent group-hover:text-white" />
+                            <ChevronRight className="w-4 h-4 text-primary group-hover:text-white" />
                           </div>
                         </div>
                         {v.version && (
-                          <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{v.version}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">{v.version}</p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-3">
                           {v.year && (
@@ -204,7 +204,7 @@ export function DynamicWidget({
                           <>
                             {hasDiscount ? (
                               <div className="flex flex-col">
-                                <span className="text-xs text-gray-400 line-through">{formatNumber(v.catalogPrice)} PLN</span>
+                                <span className="text-xs text-subtle line-through">{formatNumber(v.catalogPrice)} PLN</span>
                                 <span className="text-xl font-black text-gray-900">{formatNumber(v.price)} PLN</span>
                                 <span className="text-xs font-semibold text-green-600">
                                   Rabat {Math.round((v.catalogPrice - v.price) / v.catalogPrice * 100)}%
@@ -212,7 +212,7 @@ export function DynamicWidget({
                               </div>
                             ) : (
                               <div className="flex flex-col">
-                                <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Cena pojazdu</span>
+                                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Cena pojazdu</span>
                                 <span className="text-lg font-bold text-gray-900">
                                   {v.price ? formatNumber(v.price) : '-'} PLN
                                 </span>
@@ -223,7 +223,7 @@ export function DynamicWidget({
                                 <div className="grid grid-cols-2 gap-2 mt-3">
                                   {rates.kredytGross != null && (
                                     <div>
-                                      <span className="text-[10px] text-gray-500 block mb-0.5">Kredyt od</span>
+                                      <span className="text-xs text-muted-foreground block mb-0.5">Kredyt od</span>
                                       <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
                                         {formatNumber(rates.kredytGross)} zł<span className="text-xs font-semibold">/mc</span>
                                       </span>
@@ -232,7 +232,7 @@ export function DynamicWidget({
                                   )}
                                   {rates.leasingNet != null && (
                                     <div>
-                                      <span className="text-[10px] text-gray-500 block mb-0.5">Leasing od</span>
+                                      <span className="text-xs text-muted-foreground block mb-0.5">Leasing od</span>
                                       <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
                                         {formatNumber(rates.leasingNet)} zł<span className="text-xs font-semibold">/mc</span>
                                       </span>

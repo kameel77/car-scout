@@ -49,11 +49,11 @@ export function RentalListingCard({ v, priority = false }: { v: any; priority?: 
     <Link to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} onClick={handleClick} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
       <div className="relative">
         <ImageSwiper images={buildRentalImageList(v)} alt={`${v.make} ${v.model}`} aspectClassName="aspect-[16/10]" imgClassName="group-hover:scale-105" priority={priority} fallback={<img src="/motolia-placeholder.webp" className="w-full h-full object-cover" alt="Placeholder" />} />
-        <div className="absolute top-3 left-3 bg-accent text-accent-foreground text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full z-10">WYNAJEM</div>
+        <div className="absolute top-3 left-3 bg-accent text-accent-foreground text-xs font-bold tracking-wider px-2.5 py-1 rounded-full z-10">WYNAJEM</div>
       </div>
       <div className="p-4 space-y-3 flex-1 flex flex-col">
         <div>
-          <span className={`text-[10px] font-bold tracking-wider ${isNew ? 'text-accent' : 'text-muted-foreground'}`}>{isNew ? t('listing.statusNew') : t('listing.statusUsed')}</span>
+          <span className={`text-xs font-bold tracking-wider ${isNew ? 'text-primary' : 'text-muted-foreground'}`}>{isNew ? t('listing.statusNew') : t('listing.statusUsed')}</span>
           <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{v.make} {v.model}</h3>
           <p className="text-sm font-medium text-muted-foreground line-clamp-1 min-h-[1.25rem]">{v.version || ' '}</p>
         </div>

@@ -190,7 +190,7 @@ export default function RentalLeadFormPage() {
                 <Header onClearFilters={() => {}} hasActiveFilters={false} />
                 <div className="container py-32 flex flex-col items-center justify-center space-y-4">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                    <p className="text-gray-500 animate-pulse">Ładowanie...</p>
+                    <p className="text-muted-foreground animate-pulse">Ładowanie...</p>
                 </div>
                 <Footer />
             </div>
@@ -228,10 +228,10 @@ export default function RentalLeadFormPage() {
                         </div>
                         <div className="space-y-2">
                             <h1 className="text-3xl font-bold">Zapytanie wysłane!</h1>
-                            <p className="text-gray-500">Skontaktujemy się z Tobą w najkrótszym możliwym czasie.</p>
+                            <p className="text-muted-foreground">Skontaktujemy się z Tobą w najkrótszym możliwym czasie.</p>
                         </div>
                         <div className="bg-blue-50 rounded-xl p-6 border border-dashed border-blue-200">
-                            <p className="text-xs uppercase tracking-widest text-gray-500 mb-1 font-semibold">Numer zgłoszenia</p>
+                            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1 font-semibold">Numer zgłoszenia</p>
                             <p className="text-2xl font-black text-blue-600 tracking-tighter">{referenceNumber}</p>
                         </div>
                         <div className="flex flex-col gap-4">
@@ -268,7 +268,7 @@ export default function RentalLeadFormPage() {
                     <div className="lg:col-span-5 order-2 lg:order-1">
                         <div className="sticky top-24 space-y-6">
                             <div className="bg-white rounded-2xl shadow-sm border overflow-hidden p-6">
-                                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">
+                                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
                                     Szczegóły zapytania
                                 </h2>
 
@@ -296,7 +296,7 @@ export default function RentalLeadFormPage() {
                                         {vehicle.make} {vehicle.model}
                                     </h3>
                                     {vehicle.version && (
-                                        <p className="text-gray-500 text-sm line-clamp-1">{vehicle.version}</p>
+                                        <p className="text-muted-foreground text-sm line-clamp-1">{vehicle.version}</p>
                                     )}
 
                                     {/* Calculator config summary */}
@@ -306,24 +306,24 @@ export default function RentalLeadFormPage() {
                                                 <span className="text-3xl font-black text-blue-600 tracking-tighter">
                                                     {rentalData.monthlyRate.toLocaleString('pl-PL')} zł
                                                 </span>
-                                                <span className="text-xs text-gray-500">/ mies. brutto</span>
+                                                <span className="text-xs text-muted-foreground">/ mies. brutto</span>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-center text-xs">
                                                 {rentalData.annualMileageKm && (
                                                     <div className="bg-gray-50 rounded-lg p-2">
-                                                        <div className="text-gray-400 uppercase tracking-wider" style={{fontSize: '9px'}}>Przebieg</div>
+                                                        <div className="text-overline text-muted-foreground">Przebieg</div>
                                                         <div className="font-semibold">{(rentalData.annualMileageKm / 1000).toFixed(0)} tys.</div>
                                                     </div>
                                                 )}
                                                 {rentalData.contractMonths && (
                                                     <div className="bg-gray-50 rounded-lg p-2">
-                                                        <div className="text-gray-400 uppercase tracking-wider" style={{fontSize: '9px'}}>Okres</div>
+                                                        <div className="text-overline text-muted-foreground">Okres</div>
                                                         <div className="font-semibold">{rentalData.contractMonths} mies.</div>
                                                     </div>
                                                 )}
                                                 {(rentalData.initialPaymentPct !== undefined || rentalData.initialPaymentAmountNet !== undefined || rentalData.initialPaymentAmountGross !== undefined) && (
                                                     <div className="bg-gray-50 rounded-lg p-2">
-                                                        <div className="text-gray-400 uppercase tracking-wider" style={{fontSize: '9px'}}>Wpłata</div>
+                                                        <div className="text-overline text-muted-foreground">Wpłata</div>
                                                         <div className="font-semibold">
                                                             {rentalData.initialPaymentAmountNet ? `${(rentalData.offerType === 'business' ? rentalData.initialPaymentAmountNet : rentalData.initialPaymentAmountGross)?.toLocaleString('pl-PL')} zł` : `${rentalData.initialPaymentPct}%`}
                                                         </div>
@@ -343,7 +343,7 @@ export default function RentalLeadFormPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-sm">Szybka odpowiedź</h4>
-                                        <p className="text-xs text-gray-500">Średni czas odpowiedzi: ~45 minut</p>
+                                        <p className="text-xs text-muted-foreground">Średni czas odpowiedzi: ~45 minut</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -352,7 +352,7 @@ export default function RentalLeadFormPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-sm">Bezpieczny kontakt</h4>
-                                        <p className="text-xs text-gray-500">Twoje dane są chronione i użyte tylko do tego zapytania.</p>
+                                        <p className="text-xs text-muted-foreground">Twoje dane są chronione i użyte tylko do tego zapytania.</p>
                                     </div>
                                 </div>
                             </div>
@@ -367,7 +367,7 @@ export default function RentalLeadFormPage() {
                                     <MessageCircle className="h-6 w-6 text-blue-600" />
                                     <h1 className="text-2xl font-bold tracking-tight">Zapytaj o ofertę najmu</h1>
                                 </div>
-                                <p className="text-gray-500">Wypełnij formularz, a nasz doradca skontaktuje się z Tobą.</p>
+                                <p className="text-muted-foreground">Wypełnij formularz, a nasz doradca skontaktuje się z Tobą.</p>
                             </div>
 
                             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -386,7 +386,7 @@ export default function RentalLeadFormPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider">Adres e-mail <span className="normal-case font-normal text-gray-400">(opcjonalnie)</span></Label>
+                                        <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider">Adres e-mail <span className="normal-case font-normal text-subtle">(opcjonalnie)</span></Label>
                                         <Input
                                             id="email"
                                             type="email"
@@ -434,7 +434,7 @@ export default function RentalLeadFormPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">Twoja wiadomość <span className="normal-case font-normal text-gray-400">(opcjonalnie)</span></Label>
+                                    <Label htmlFor="message" className="text-xs font-bold uppercase tracking-wider">Twoja wiadomość <span className="normal-case font-normal text-subtle">(opcjonalnie)</span></Label>
                                     <Textarea
                                         id="message"
                                         {...register('message')}
@@ -454,12 +454,12 @@ export default function RentalLeadFormPage() {
                                             className="mt-1"
                                             onCheckedChange={(v) => setValue('consentPrivacy', v === true)}
                                         />
-                                        <Label htmlFor="consentPrivacy" className="font-normal text-[11px] leading-relaxed cursor-pointer text-gray-500">
+                                        <Label htmlFor="consentPrivacy" className="font-normal text-xs leading-relaxed cursor-pointer text-muted-foreground">
                                             Oświadczam, że zapoznałem się z Regulaminem oraz Polityką Prywatności i akceptuję ich postanowienia. Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania. *
                                         </Label>
                                     </div>
                                     {errors.consentPrivacy && (
-                                        <p className="text-[10px] text-red-500 font-bold uppercase ml-7">Pole wymagane</p>
+                                        <p className="text-overline text-red-500 font-bold uppercase ml-7">Pole wymagane</p>
                                     )}
 
                                     <div className="flex items-start gap-3">
@@ -468,7 +468,7 @@ export default function RentalLeadFormPage() {
                                             className="mt-1"
                                             onCheckedChange={(v) => setValue('consentMarketing', v === true)}
                                         />
-                                        <Label htmlFor="consentMarketing" className="font-normal text-[11px] leading-relaxed cursor-pointer text-gray-500">
+                                        <Label htmlFor="consentMarketing" className="font-normal text-xs leading-relaxed cursor-pointer text-muted-foreground">
                                             Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert najmu i finansowania pojazdów. (opcjonalnie)
                                         </Label>
                                     </div>
@@ -500,7 +500,7 @@ export default function RentalLeadFormPage() {
                                     )}
                                 </Button>
 
-                                <p className="text-center text-[10px] text-gray-500 mt-4 italic">
+                                <p className="text-center text-xs text-muted-foreground mt-4 italic">
                                     * Pola wymagane
                                 </p>
                             </form>

@@ -662,7 +662,7 @@ export default function ListingDetailPage() {
                   {catalogLine && <div className="mt-2">{catalogLine}</div>}
                   <div className="flex items-center gap-3 mt-2">
                     <div className="flex flex-col md:flex-row md:items-baseline md:gap-3 mt-2">
-                      <span className="font-heading text-3xl font-bold text-accent inline-flex items-center gap-1.5">
+                      <span className="price-display text-foreground inline-flex items-center gap-1.5">
                         {priceInfo.primaryLabel}
                         {priceRabatInfo}
                       </span>
@@ -874,7 +874,7 @@ export default function ListingDetailPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15 text-primary">
                     <ShieldCheck className="h-5 w-5" />
                   </span>
                   <div>
@@ -883,7 +883,7 @@ export default function ListingDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15 text-primary">
                     <BadgeCheck className="h-5 w-5" />
                   </span>
                   <div>
@@ -892,7 +892,7 @@ export default function ListingDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15 text-primary">
                     <Users className="h-5 w-5" />
                   </span>
                   <div>
@@ -901,7 +901,7 @@ export default function ListingDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-xl bg-background/70 p-4">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15 text-primary">
                     <Banknote className="h-5 w-5" />
                   </span>
                   <div>
@@ -1059,7 +1059,7 @@ export default function ListingDetailPage() {
                         onClick={() => trackPhoneClick('offer_sidebar')}
                         className="flex items-center justify-center gap-2 h-11 w-full rounded-xl border border-border bg-card shadow-card text-foreground font-semibold text-sm hover:bg-secondary transition-colors"
                       >
-                        <Phone className="h-4 w-4 text-accent" />
+                        <Phone className="h-4 w-4 text-primary" />
                         Zadzwoń: {salesPhone}
                       </a>
                     )}
@@ -1148,7 +1148,7 @@ export default function ListingDetailPage() {
                   <div className="flex flex-col gap-1 items-start">
                     {catalogLine && <div className="w-full">{catalogLine}</div>}
                     <div className="flex items-center gap-2">
-                      <span className="font-heading text-3xl font-bold text-accent inline-flex items-center gap-1.5">
+                      <span className="price-display text-foreground inline-flex items-center gap-1.5">
                         {priceInfo.primaryLabel}
                         {priceRabatInfo}
                       </span>

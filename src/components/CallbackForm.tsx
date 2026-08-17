@@ -114,7 +114,7 @@ export function CallbackForm({
         return (
             <div className={`rounded-xl bg-card shadow-card border-2 border-accent/40 p-4 ${className}`}>
                 {status === 'success' ? (
-                    <div className="flex items-center gap-2 text-green-600 font-semibold text-sm">
+                    <div className="flex items-center gap-2 text-success font-semibold text-sm">
                         <ShieldCheck className="w-4 h-4 shrink-0" />
                         Dziękujemy! Oddzwonimy wkrótce.
                     </div>
@@ -123,9 +123,9 @@ export function CallbackForm({
                         {(title || titleHighlight) && (
                             <p className="font-heading font-bold text-base text-foreground mb-1 flex items-center gap-2">
                                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/15 shrink-0">
-                                    <Phone className="w-4 h-4 text-accent" />
+                                    <Phone className="w-4 h-4 text-primary" />
                                 </span>
-                                <span>{title} <span className="text-accent">{titleHighlight}</span></span>
+                                <span>{title} <span className="text-primary">{titleHighlight}</span></span>
                             </p>
                         )}
                         <p className="text-sm text-muted-foreground mb-3">{description}</p>
@@ -158,9 +158,9 @@ export function CallbackForm({
     }
 
     return (
-        <section className={`rounded-2xl bg-[#1a1a1a] px-6 py-10 md:px-12 md:py-14 text-center ${className}`}>
+        <section className={`rounded-2xl bg-brand-navy-deep px-6 py-10 md:px-12 md:py-14 text-center ${className}`}>
             {/* Icon */}
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#2a2a2a] mb-6 mx-auto">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-navy mb-6 mx-auto">
                 <Car className="w-7 h-7 text-accent" />
             </div>
 
@@ -169,7 +169,7 @@ export function CallbackForm({
                 {title}{' '}
                 <span className="text-accent">{titleHighlight}</span>
             </h2>
-            <p className="text-gray-400 text-sm md:text-base max-w-md mx-auto mb-8">
+            <p className="text-gray-300 text-sm md:text-base max-w-md mx-auto mb-8">
                 {description}
             </p>
 
@@ -189,7 +189,7 @@ export function CallbackForm({
                             onChange={(e) => setPhone(e.target.value)}
                             placeholder="Wpisz swój numer telefonu"
                             required
-                            className="flex-1 h-12 px-5 rounded-xl bg-[#2a2a2a] border border-[#3a3a3a] text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent text-sm"
+                            className="flex-1 h-12 px-5 rounded-xl bg-brand-navy border border-white/15 text-white placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-accent text-sm"
                         />
                         <button
                             type="submit"
@@ -202,7 +202,7 @@ export function CallbackForm({
                     {status === 'error' && (
                         <p className="text-red-400 text-sm mt-3">Coś poszło nie tak. Spróbuj ponownie.</p>
                     )}
-                    <p className="text-gray-500 text-xs mt-4 flex items-center justify-center gap-1.5">
+                    <p className="text-gray-300 text-xs mt-4 flex items-center justify-center gap-1.5">
                         <ShieldCheck className="w-3.5 h-3.5" />
                         Twoje dane są bezpieczne
                     </p>

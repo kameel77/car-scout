@@ -18,10 +18,34 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ["Outfit", "system-ui", "sans-serif"],
-        body: ["Inter", "system-ui", "sans-serif"],
+        // Krój ustawiany per marka przez --font-heading (BrandContext).
+        heading: ["var(--font-heading)", "Outfit", "system-ui", "sans-serif"],
+        body: ["var(--font-body)", "Inter", "system-ui", "sans-serif"],
+      },
+      // Brandbook rozdz. 02 — skala typograficzna. 13 px to podłoga:
+      // text-xs = 13 px (Caption), text-sm = 14 px (Label, minimum dla UI).
+      // Jedyny wyjątek 12 px to Overline — klasa .text-overline w index.css.
+      fontSize: {
+        xs: ["0.8125rem", { lineHeight: "1.45" }],
+        sm: ["0.875rem", { lineHeight: "1.4" }],
+        base: ["1rem", { lineHeight: "1.6" }],
+        lg: ["1.125rem", { lineHeight: "1.55" }],
+        xl: ["1.3125rem", { lineHeight: "1.3", letterSpacing: "-0.012em" }],
+        "2xl": ["1.75rem", { lineHeight: "1.2", letterSpacing: "-0.02em" }],
+        "3xl": ["2.25rem", { lineHeight: "1.1", letterSpacing: "-0.025em" }],
+        "4xl": ["3rem", { lineHeight: "1.05", letterSpacing: "-0.03em" }],
       },
       colors: {
+        // Rampa brandbooka wystawiona jako klasy Tailwind, żeby nie było powodu
+        // wpisywać wartości bezpośrednich (bg-brand-navy-deep, text-brand-yellow-ink…).
+        brand: {
+          navy: "hsl(var(--mt-navy-700))",
+          "navy-deep": "hsl(var(--mt-navy-900))",
+          "navy-soft": "hsl(var(--mt-navy-600))",
+          yellow: "hsl(var(--mt-yellow-500))",
+          "yellow-ink": "hsl(var(--mt-yellow-800))",
+          "yellow-soft": "hsl(var(--mt-yellow-50))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -38,10 +62,16 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          soft: "hsl(var(--destructive-soft))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
+        },
+        // Najjaśniejszy dopuszczalny kolor tekstu (Neutral 500, 5,94:1 na bieli).
+        subtle: {
+          DEFAULT: "hsl(var(--subtle-foreground))",
+          foreground: "hsl(var(--subtle-foreground))",
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",
@@ -50,10 +80,12 @@ export default {
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          soft: "hsl(var(--success-soft))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          soft: "hsl(var(--warning-soft))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -73,6 +105,18 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      minHeight: {
+        touch: "var(--mt-touch-min)",
+        btn: "var(--mt-btn-h)",
+        input: "var(--mt-input-h)",
+      },
+      minWidth: {
+        touch: "var(--mt-touch-min)",
+      },
+      height: {
+        btn: "var(--mt-btn-h)",
+        input: "var(--mt-input-h)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -128,6 +172,7 @@ export default {
       spacing: {
         header: "var(--header-height)",
         filter: "var(--filter-width)",
+        touch: "var(--mt-touch-min)",
       },
     },
   },

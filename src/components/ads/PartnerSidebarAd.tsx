@@ -50,9 +50,9 @@ export function PartnerSidebarAd({
                 <div className="relative p-1 border-b border-border/50 flex justify-between items-center bg-muted/30 px-3">
                     <div className="flex items-center gap-1.5">
                         <Info className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('ads.partner')}</span>
+                        <span className="text-overline font-bold uppercase tracking-wider text-muted-foreground">{t('ads.partner')}</span>
                     </div>
-                    {brandName && <span className="text-[10px] font-medium text-muted-foreground">{brandName}</span>}
+                    {brandName && <span className="text-xs font-medium text-muted-foreground">{brandName}</span>}
                 </div>
             )}
 
@@ -95,7 +95,7 @@ export function PartnerSidebarAd({
                         <ul className="space-y-2">
                             {features.map((feature, i) => (
                                 <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
-                                    <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
+                                    <CheckCircle2 className="h-4 w-4 text-success mt-0.5 shrink-0" />
                                     <span>{feature}</span>
                                 </li>
                             ))}
