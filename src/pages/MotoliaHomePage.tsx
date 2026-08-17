@@ -284,7 +284,7 @@ export default function MotoliaHomePage() {
                     dangerouslySetInnerHTML={{
                       __html: config.homePage.hero.title.replace(
                         '<span>',
-                        `<span style="color:hsl(var(--mt-navy-700))">`,
+                        `<span class="hl">`,
                       ),
                     }}
                   />
@@ -384,12 +384,12 @@ export default function MotoliaHomePage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <FadeIn>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: ACCENT_INK }}>
+              <p className="text-overline text-muted-foreground mb-3">
                 Co oferujemy
               </p>
               <h2 className="text-4xl md:text-5xl font-heading font-bold mb-5 text-foreground">
                 Leasing, kredyt, wynajem i pożyczka w{' '}
-                <span style={{ color: ACCENT_INK }}>jednym serwisie</span>
+                <span className="hl">jednym serwisie</span>
               </h2>
               <p className="text-lg text-muted-foreground">
                 Obsługujemy zarówno osoby prywatne, jak i firmy – każdy znajdzie tu coś dla siebie.
@@ -452,12 +452,12 @@ export default function MotoliaHomePage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <FadeIn>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: ACCENT_INK }}>
+              <p className="text-overline text-muted-foreground mb-3">
                 Oferta
               </p>
               <h2 className="text-4xl md:text-5xl font-heading font-bold mb-4 text-foreground">
                 Samochody nowe i używane,{' '}
-                <span style={{ color: ACCENT_INK }}>praktycznie każda marka</span>
+                <span className="hl">praktycznie każda marka</span>
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Współpracujemy z dealerami wszystkich liczących się producentów –
@@ -468,7 +468,7 @@ export default function MotoliaHomePage() {
 
           {/* EU & JP brands */}
           <FadeIn delay={0.1}>
-            <p className="text-xs font-bold uppercase tracking-widest text-subtle text-center mb-4">
+            <p className="text-overline text-muted-foreground text-center mb-4">
               Marki europejskie i japońskie
             </p>
             <div className="flex flex-wrap justify-center gap-2 mb-8">
@@ -483,7 +483,7 @@ export default function MotoliaHomePage() {
 
           {/* Chinese brands */}
           <FadeIn delay={0.15}>
-            <p className="text-xs font-bold uppercase tracking-widest text-subtle text-center mb-4">
+            <p className="text-overline text-muted-foreground text-center mb-4">
               Topowe marki chińskie
             </p>
             <div className="flex flex-wrap justify-center gap-2 mb-14">
@@ -499,7 +499,7 @@ export default function MotoliaHomePage() {
           {/* Financial partners */}
           <FadeIn delay={0.2}>
             <div className="border-t border-gray-200 pt-10">
-              <p className="text-xs font-bold uppercase tracking-widest text-subtle text-center mb-6">
+              <p className="text-overline text-muted-foreground text-center mb-6">
                 Partnerzy finansowi
               </p>
               <div className="flex flex-wrap justify-center gap-4">
@@ -525,7 +525,7 @@ export default function MotoliaHomePage() {
 
             <div className="lg:w-1/3">
               <FadeIn>
-                <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: YELLOW }}>
+                <p className="text-overline mb-4" style={{ color: YELLOW }}>
                   Nowy standard
                 </p>
                 <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6 text-white">
@@ -578,7 +578,7 @@ export default function MotoliaHomePage() {
             <FadeIn className="text-center mb-14">
               <h2 className="text-4xl md:text-5xl font-heading font-bold mb-5 text-foreground">
                 Najczęściej zadawane{' '}
-                <span style={{ color: ACCENT_INK }}>pytania</span>
+                <span className="hl">pytania</span>
               </h2>
               <p className="text-lg text-muted-foreground">
                 Odpowiadamy na najczęstsze pytania dotyczące finansowania aut.

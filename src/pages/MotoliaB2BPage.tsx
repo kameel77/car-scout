@@ -288,7 +288,7 @@ export default function MotoliaB2BPage() {
 
           <h1 className="text-4xl lg:text-6xl font-heading font-bold tracking-tight mb-6 leading-[1.1] text-foreground">
             Auta dla Twojej firmy. Ważnej dla nas{' '}
-            <span style={{ color: ACCENT_INK }}>od pierwszego samochodu</span>.
+            <span className="hl">od pierwszego samochodu</span>.
           </h1>
 
           <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light max-w-2xl mx-auto">
@@ -334,7 +334,7 @@ export default function MotoliaB2BPage() {
           <FadeIn className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
               Finansujemy auta firm na{' '}
-              <span style={{ color: ACCENT_INK }}>każdym etapie</span>
+              <span className="hl">każdym etapie</span>
             </h2>
           </FadeIn>
 
@@ -385,7 +385,7 @@ export default function MotoliaB2BPage() {
         <div className="max-w-6xl mx-auto px-6">
           <FadeIn className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-              Jak wygląda <span style={{ color: ACCENT_INK }}>współpraca</span>
+              Jak wygląda <span className="hl">współpraca</span>
             </h2>
           </FadeIn>
 
@@ -411,7 +411,7 @@ export default function MotoliaB2BPage() {
         <div className="max-w-7xl mx-auto px-6">
           <FadeIn className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4 text-foreground">
-              Oferty specjalne <span style={{ color: ACCENT_INK }}>dla firm</span>
+              Oferty specjalne <span className="hl">dla firm</span>
             </h2>
             <p className="text-lg text-muted-foreground">
               Auta z ratą policzoną dla firmy - nowe modele popularne wśród naszych klientów
@@ -450,7 +450,7 @@ export default function MotoliaB2BPage() {
         <div className="max-w-5xl mx-auto px-6">
           <FadeIn className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-              Leasing czy <span style={{ color: ACCENT_INK }}>najem dla firmy</span>
+              Leasing czy <span className="hl">najem dla firmy</span>
             </h2>
           </FadeIn>
 
@@ -505,7 +505,7 @@ export default function MotoliaB2BPage() {
               </div>
               <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6 text-foreground">
                 Limity kosztów 2026 —{' '}
-                <span style={{ color: ACCENT_INK }}>ile realnie odliczysz</span>
+                <span className="hl">ile realnie odliczysz</span>
               </h2>
               <p className="text-gray-600 leading-relaxed mb-6">
                 Od 2026 roku limit zaliczenia auta do kosztów uzyskania przychodu zależy od
@@ -572,7 +572,7 @@ export default function MotoliaB2BPage() {
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn className="text-center mb-14">
               <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-                Zaufały nam firmy <span style={{ color: ACCENT_INK }}>takie jak Twoja</span>
+                Zaufały nam firmy <span className="hl">takie jak Twoja</span>
               </h2>
             </FadeIn>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -593,7 +593,7 @@ export default function MotoliaB2BPage() {
           <div className="max-w-4xl mx-auto px-6">
             <FadeIn className="text-center mb-10">
               <h2 className="text-3xl md:text-4xl font-heading font-bold mb-5 text-foreground">
-                Najczęściej zadawane <span style={{ color: ACCENT_INK }}>pytania</span>
+                Najczęściej zadawane <span className="hl">pytania</span>
               </h2>
               <p className="text-lg text-muted-foreground">
                 Odpowiadamy na najczęstsze pytania firm o leasing, najem długoterminowy i
