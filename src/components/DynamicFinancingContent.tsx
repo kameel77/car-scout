@@ -64,7 +64,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Building2 className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -76,7 +76,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <PiggyBank className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -98,7 +98,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Wrench className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -123,7 +123,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -135,7 +135,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Car className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -155,7 +155,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Calculator className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -199,7 +199,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <User className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -211,7 +211,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Key className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -236,7 +236,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Banknote className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -248,7 +248,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Calendar className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -268,7 +268,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Shield className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -288,7 +288,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -332,7 +332,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <User className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -352,7 +352,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <ClipboardCheck className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -372,7 +372,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Wrench className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -392,7 +392,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -404,7 +404,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <Car className="w-5 h-5" />
           </div>
           <div className="space-y-2">
@@ -424,7 +424,7 @@ export const DynamicFinancingContent: React.FC<DynamicFinancingContentProps> = (
         </div>
 
         <div className="flex gap-4">
-          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-accent">
+          <div className="mt-1 bg-accent/10 p-2.5 rounded-lg h-fit text-primary">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div className="space-y-2">

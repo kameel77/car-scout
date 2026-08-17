@@ -12,21 +12,26 @@
 }
 
 .landing-page-root {
-  --orange: #F47920;
-  --orange-light: #FFF3E8;
-  --orange-hover: #E06810;
-  --charcoal: #2D3142;
-  --text: #4A4E69;
-  --text-light: #8D91A5;
-  --bg: #FAFBFD;
-  --white: #FFFFFF;
-  --border: #E8EAF0;
-  --shadow-sm: 0 2px 8px rgba(45, 49, 66, 0.06);
-  --shadow-md: 0 8px 30px rgba(45, 49, 66, 0.08);
-  --shadow-lg: 0 20px 60px rgba(45, 49, 66, 0.12);
+  /* Akcent marki, nie pomarańcz na sztywno — te style obsługują też strony
+     motolii (/dla-firmy, /faq). Trzy role: powierzchnia, tint, litery. */
+  --orange: hsl(var(--accent));            /* wyłącznie powierzchnia */
+  --orange-light: hsl(var(--accent) / 0.16);
+  --orange-hover: hsl(var(--accent) / 0.88);
+  --orange-ink: hsl(var(--primary));       /* litery na bieli i na tincie */
+  --orange-on: hsl(var(--accent-foreground)); /* litery na pełnym akcencie */
+  /* Neutralne z rampy brandbooka. --text-light było #8D91A5 (3,3:1). */
+  --charcoal: hsl(var(--mt-navy-900));
+  --text: hsl(var(--mt-neutral-600));
+  --text-light: hsl(var(--mt-neutral-500));
+  --bg: hsl(var(--mt-neutral-50));
+  --white: hsl(var(--card));
+  --border: hsl(var(--mt-neutral-300));
+  --shadow-sm: 0 2px 8px hsl(var(--mt-navy-700) / 0.06);
+  --shadow-md: 0 8px 30px hsl(var(--mt-navy-700) / 0.08);
+  --shadow-lg: 0 20px 60px hsl(var(--mt-navy-700) / 0.12);
   --radius: 16px;
   --radius-sm: 10px;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body);
   color: var(--charcoal);
   background: var(--bg);
 }
@@ -35,7 +40,7 @@
 .landing-page-root h2,
 .landing-page-root h3,
 .landing-page-root h4 {
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-heading);
   font-weight: 800;
   line-height: 1.15;
 }
@@ -66,7 +71,7 @@
 }
 
 .landing-logo {
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-heading);
   font-weight: 800;
   font-size: 26px;
   color: var(--charcoal);
@@ -74,7 +79,7 @@
 }
 
 .landing-logo span {
-  color: var(--orange);
+  color: var(--orange-ink);
 }
 
 .landing-nav__links {
@@ -92,12 +97,12 @@
 
 .landing-nav__links a:hover,
 .landing-nav__links a.is-active {
-  color: var(--orange);
+  color: var(--orange-ink);
 }
 
 .landing-nav__cta {
   background: var(--orange);
-  color: #fff !important;
+  color: var(--orange-on) !important;
   padding: 10px 22px;
   border-radius: 999px;
   font-weight: 600 !important;
@@ -128,7 +133,7 @@
 .home-hero__badge {
   display: inline-flex;
   background: var(--orange-light);
-  color: var(--orange);
+  color: var(--orange-ink);
   border-radius: 999px;
   padding: 8px 16px;
   font-size: 13px;
@@ -142,7 +147,14 @@
 }
 
 .home-hero h1 span {
-  color: var(--orange);
+  color: inherit;
+  background-image: linear-gradient(hsl(var(--accent)), hsl(var(--accent)));
+  background-repeat: no-repeat;
+  background-size: 100% 0.3em;
+  background-position: 0 92%;
+  padding: 0 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .home-hero__sub {
@@ -172,7 +184,7 @@
 
 .home-btn-primary {
   background: var(--orange);
-  color: #fff;
+  color: var(--orange-on);
 }
 
 .home-btn-primary:hover {
@@ -226,7 +238,7 @@
 
 .home-hero__stat strong {
   font-size: 24px;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-heading);
 }
 
 .home-hero__stat small {
@@ -275,7 +287,7 @@
   height: 44px;
   border-radius: 12px;
   background: var(--orange-light);
-  color: var(--orange);
+  color: var(--orange-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -298,7 +310,7 @@
 .home-section__tag {
   display: inline-block;
   background: var(--orange-light);
-  color: var(--orange);
+  color: var(--orange-ink);
   border-radius: 999px;
   padding: 6px 14px;
   margin-bottom: 16px;
@@ -312,7 +324,14 @@
 }
 
 .home-section__header h2 span {
-  color: var(--orange);
+  color: inherit;
+  background-image: linear-gradient(hsl(var(--accent)), hsl(var(--accent)));
+  background-repeat: no-repeat;
+  background-size: 100% 0.3em;
+  background-position: 0 92%;
+  padding: 0 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .home-steps-grid {
@@ -336,7 +355,7 @@
   height: 46px;
   border-radius: 12px;
   background: var(--orange);
-  color: #fff;
+  color: var(--orange-on);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -391,7 +410,14 @@
 }
 
 .home-cta-box h2 span {
-  color: var(--orange);
+  color: inherit;
+  background-image: linear-gradient(hsl(var(--accent)), hsl(var(--accent)));
+  background-repeat: no-repeat;
+  background-size: 100% 0.3em;
+  background-position: 0 92%;
+  padding: 0 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .home-cta-box p {
@@ -474,7 +500,7 @@
   height: 56px;
   border-radius: 16px;
   background: var(--orange-light);
-  color: var(--orange);
+  color: var(--orange-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -503,7 +529,7 @@
   height: 64px;
   border-radius: 16px;
   background: var(--orange);
-  color: #fff;
+  color: var(--orange-on);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -534,7 +560,7 @@
 }
 
 .home-stars {
-  color: var(--orange);
+  color: var(--orange-ink);
   letter-spacing: 2px;
   margin-bottom: 12px;
 }
@@ -557,7 +583,7 @@
   height: 42px;
   border-radius: 999px;
   background: var(--orange-light);
-  color: var(--orange);
+  color: var(--orange-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -587,7 +613,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 22px 0;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-heading);
   text-align: left;
   cursor: pointer;
 }
@@ -601,7 +627,7 @@
 }
 
 .home-faq-question svg {
-  color: var(--orange);
+  color: var(--orange-ink);
   transition: transform .2s;
 }
 

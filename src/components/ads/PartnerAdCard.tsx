@@ -57,7 +57,7 @@ export function PartnerAdCard({
 
                     {/* Ad Badge */}
                     {!hideUiElements && (
-                        <div className="absolute top-3 left-3 px-2 py-1 bg-background/90 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground border border-border flex items-center gap-1">
+                        <div className="absolute top-3 left-3 px-2 py-1 bg-background/90 backdrop-blur-sm rounded text-overline font-bold uppercase tracking-wider text-muted-foreground border border-border flex items-center gap-1">
                             <Info className="h-3 w-3" />
                             {t('ads.advertisement')}
                         </div>
@@ -86,7 +86,7 @@ export function PartnerAdCard({
                         {features.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mt-1">
                                 {features.slice(0, 3).map((feature, idx) => (
-                                    <span key={idx} className="bg-muted px-2 py-0.5 rounded text-[10px] text-muted-foreground font-medium border border-border/50">
+                                    <span key={idx} className="bg-muted px-2 py-0.5 rounded text-xs text-muted-foreground font-medium border border-border/50">
                                         {feature}
                                     </span>
                                 ))}

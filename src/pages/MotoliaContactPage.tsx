@@ -23,9 +23,12 @@ import { trackPhoneClick } from '@/lib/analytics';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const YELLOW = '#F5C518';
-const YELLOW_DARK = '#D4A90A';
-const BLACK = '#1A1A1A';
+const YELLOW = 'hsl(var(--mt-yellow-500))';
+const YELLOW_HOVER = 'hsl(var(--mt-yellow-600))';
+// Brandbook rozdz. 01: żółć jest kolorem powierzchni, nie liter.
+// Litery i ikony na jasnym tle idą w granacie (12,75:1 zamiast 1,66:1).
+const ACCENT_INK = 'hsl(var(--mt-navy-700))';
+const BLACK = 'hsl(var(--mt-navy-900))';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -100,14 +103,14 @@ export default function MotoliaContactPage() {
   };
 
   return (
-    <div className="bg-white min-h-screen text-[#1A1A1A] font-inter selection:bg-yellow-200">
+    <div className="bg-white min-h-screen text-foreground font-body selection:bg-yellow-200">
       <Header />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-28 pb-20 lg:pt-40 lg:pb-28 bg-[#FAFAF8] overflow-hidden">
+      <section className="relative pt-28 pb-20 lg:pt-40 lg:pb-28 bg-background overflow-hidden">
         <div
           className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${YELLOW}15 0%, transparent 70%)` }}
+          style={{ background: `radial-gradient(circle, hsl(var(--mt-yellow-500) / 0.08) 0%, transparent 70%)` }}
         />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
@@ -115,27 +118,27 @@ export default function MotoliaContactPage() {
             <FadeIn>
               <div
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-8"
-                style={{ background: `${YELLOW}20`, borderColor: `${YELLOW}60`, color: BLACK }}
+                style={{ background: `hsl(var(--mt-yellow-500) / 0.13)`, borderColor: `hsl(var(--mt-yellow-500) / 0.38)`, color: BLACK }}
               >
-                <span style={{ color: YELLOW_DARK }}>◆</span>
+                <span style={{ color: ACCENT_INK }}>◆</span>
                 Kontakt
               </div>
             </FadeIn>
 
             <FadeIn delay={0.1}>
               <h1
-                className="text-4xl lg:text-6xl font-outfit font-bold tracking-tight mb-6 leading-[1.1] text-[#1A1A1A]"
+                className="text-4xl lg:text-6xl font-heading font-bold tracking-tight mb-6 leading-[1.1] text-foreground"
                 dangerouslySetInnerHTML={{
                   __html: config.contactPage.title.replace(
                     '<span>',
-                    `<span style="color:${YELLOW_DARK}">`,
+                    `<span class="hl">`,
                   ),
                 }}
               />
             </FadeIn>
 
             <FadeIn delay={0.2}>
-              <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light">
+              <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
                 {config.contactPage.subtitle}
               </p>
             </FadeIn>
@@ -146,8 +149,8 @@ export default function MotoliaContactPage() {
                 href={`tel:${formatPhoneForTelLink(salesPhone)}`}
                 onClick={() => trackPhoneClick('contact_hero')}
                 className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
-                style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}50` }}
-                onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
+                style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px hsl(var(--mt-yellow-500) / 0.31)` }}
+                onMouseEnter={e => (e.currentTarget.style.background = YELLOW_HOVER)}
                 onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
               >
                 <Phone size={20} />
@@ -162,7 +165,7 @@ export default function MotoliaContactPage() {
               </a>
             </FadeIn>
 
-            <FadeIn delay={0.4} className="flex items-center justify-center gap-2 text-sm text-gray-400 font-medium">
+            <FadeIn delay={0.4} className="flex items-center justify-center gap-2 text-sm text-subtle font-medium">
               <Clock size={14} />
               Pon–Pt, 9:00–17:00
             </FadeIn>
@@ -177,11 +180,11 @@ export default function MotoliaContactPage() {
 
             {/* Left — form */}
             <FadeIn>
-              <div className="bg-[#FAFAF8] border border-gray-100 rounded-3xl p-8 lg:p-10">
-                <h2 className="text-2xl font-outfit font-bold mb-2 text-[#1A1A1A]">
+              <div className="bg-background border border-gray-100 rounded-3xl p-8 lg:p-10">
+                <h2 className="text-2xl font-heading font-bold mb-2 text-foreground">
                   Zostaw kontakt
                 </h2>
-                <p className="text-gray-500 mb-8">
+                <p className="text-muted-foreground mb-8">
                   Oddzwonimy w ciągu 15 minut w godzinach pracy.
                 </p>
 
@@ -193,16 +196,16 @@ export default function MotoliaContactPage() {
                   >
                     <div
                       className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
-                      style={{ background: `${YELLOW}25` }}
+                      style={{ background: `hsl(var(--mt-yellow-500) / 0.15)` }}
                     >
-                      <CheckCircle2 size={32} style={{ color: YELLOW_DARK }} />
+                      <CheckCircle2 size={32} style={{ color: ACCENT_INK }} />
                     </div>
-                    <h3 className="text-xl font-bold text-[#1A1A1A]">Otrzymaliśmy Twój kontakt!</h3>
-                    <p className="text-gray-500">Doradca oddzwoni wkrótce i przedstawi dostępne opcje finansowania.</p>
+                    <h3 className="text-xl font-bold text-foreground">Otrzymaliśmy Twój kontakt!</h3>
+                    <p className="text-muted-foreground">Doradca oddzwoni wkrótce i przedstawi dostępne opcje finansowania.</p>
                     <button
                       onClick={() => setStatus('idle')}
                       className="mt-4 text-sm font-semibold underline underline-offset-2"
-                      style={{ color: YELLOW_DARK }}
+                      style={{ color: ACCENT_INK }}
                     >
                       Wyślij kolejne zgłoszenie
                     </button>
@@ -211,7 +214,7 @@ export default function MotoliaContactPage() {
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Imię <span className="text-gray-400 font-normal">(opcjonalnie)</span>
+                        Imię <span className="text-subtle font-normal">(opcjonalnie)</span>
                       </label>
                       <input
                         type="text"
@@ -219,9 +222,9 @@ export default function MotoliaContactPage() {
                         value={form.name}
                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                         placeholder="Jan Kowalski"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[#1A1A1A] placeholder:text-gray-400 outline-none transition-all text-base bg-white"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-subtle outline-none transition-all text-base bg-white"
                         onFocus={e => (e.currentTarget.style.borderColor = YELLOW)}
-                        onBlur={e => (e.currentTarget.style.borderColor = '#E5E7EB')}
+                        onBlur={e => (e.currentTarget.style.borderColor = 'hsl(var(--mt-neutral-300))')}
                       />
                     </div>
 
@@ -236,15 +239,15 @@ export default function MotoliaContactPage() {
                         value={form.phone}
                         onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                         placeholder="+48 500 000 000"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[#1A1A1A] placeholder:text-gray-400 outline-none transition-all text-base bg-white"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-subtle outline-none transition-all text-base bg-white"
                         onFocus={e => (e.currentTarget.style.borderColor = YELLOW)}
-                        onBlur={e => (e.currentTarget.style.borderColor = '#E5E7EB')}
+                        onBlur={e => (e.currentTarget.style.borderColor = 'hsl(var(--mt-neutral-300))')}
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Czego szukasz? <span className="text-gray-400 font-normal">(opcjonalnie)</span>
+                        Czego szukasz? <span className="text-subtle font-normal">(opcjonalnie)</span>
                       </label>
                       <textarea
                         rows={3}
@@ -252,9 +255,9 @@ export default function MotoliaContactPage() {
                         value={form.message}
                         onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
                         placeholder="np. Toyota Corolla, leasing, budżet do 1500 zł/mies."
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[#1A1A1A] placeholder:text-gray-400 outline-none transition-all text-base resize-none bg-white"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-subtle outline-none transition-all text-base resize-none bg-white"
                         onFocus={e => (e.currentTarget.style.borderColor = YELLOW)}
-                        onBlur={e => (e.currentTarget.style.borderColor = '#E5E7EB')}
+                        onBlur={e => (e.currentTarget.style.borderColor = 'hsl(var(--mt-neutral-300))')}
                       />
                     </div>
 
@@ -263,13 +266,13 @@ export default function MotoliaContactPage() {
                       disabled={status === 'sending'}
                       className="w-full py-4 rounded-2xl font-bold text-lg transition-all duration-200 disabled:opacity-60 hover:-translate-y-0.5 active:translate-y-0"
                       style={{ background: YELLOW, color: BLACK }}
-                      onMouseEnter={e => { if (status !== 'sending') e.currentTarget.style.background = YELLOW_DARK; }}
+                      onMouseEnter={e => { if (status !== 'sending') e.currentTarget.style.background = YELLOW_HOVER; }}
                       onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
                     >
                       {status === 'sending' ? 'Wysyłanie…' : status === 'error' ? 'Błąd – spróbuj ponownie' : 'Zadzwoń do mnie'}
                     </button>
 
-                    <p className="flex items-center gap-1.5 text-xs text-gray-400 justify-center pt-1">
+                    <p className="flex items-center gap-1.5 text-xs text-subtle justify-center pt-1">
                       <ShieldCheck size={13} />
                       Twoje dane są bezpieczne i nie będą udostępniane
                     </p>
@@ -282,7 +285,7 @@ export default function MotoliaContactPage() {
             <div className="space-y-8">
               <FadeIn delay={0.1}>
                 <div className="space-y-5">
-                  <h2 className="text-2xl font-outfit font-bold text-[#1A1A1A]">
+                  <h2 className="text-2xl font-heading font-bold text-foreground">
                     Dane kontaktowe
                   </h2>
 
@@ -290,17 +293,17 @@ export default function MotoliaContactPage() {
                   <a
                     href={`tel:${formatPhoneForTelLink(salesPhone)}`}
                     onClick={() => trackPhoneClick('contact_sales_card')}
-                    className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
+                    className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-background hover:border-gray-300 transition-all group"
                   >
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
-                      style={{ background: `${YELLOW}20` }}
+                      style={{ background: `hsl(var(--mt-yellow-500) / 0.13)` }}
                     >
-                      <Phone size={22} style={{ color: YELLOW_DARK }} />
+                      <Phone size={22} style={{ color: ACCENT_INK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Telefon — Sprzedaż</p>
-                      <p className="text-lg font-bold text-[#1A1A1A]">{salesPhone}</p>
+                      <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Telefon — Sprzedaż</p>
+                      <p className="text-lg font-bold text-foreground">{salesPhone}</p>
                     </div>
                   </a>
 
@@ -309,17 +312,17 @@ export default function MotoliaContactPage() {
                     <a
                       href={`tel:${formatPhoneForTelLink(settings.legalContactPhone)}`}
                       onClick={() => trackPhoneClick('contact_general_card')}
-                      className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
+                      className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-background hover:border-gray-300 transition-all group"
                     >
                       <div
                         className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
-                        style={{ background: `${YELLOW}20` }}
+                        style={{ background: `hsl(var(--mt-yellow-500) / 0.13)` }}
                       >
-                        <Phone size={22} style={{ color: YELLOW_DARK }} />
+                        <Phone size={22} style={{ color: ACCENT_INK }} />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Telefon</p>
-                        <p className="text-lg font-bold text-[#1A1A1A]">{settings.legalContactPhone}</p>
+                        <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Telefon</p>
+                        <p className="text-lg font-bold text-foreground">{settings.legalContactPhone}</p>
                       </div>
                     </a>
                   )}
@@ -327,46 +330,46 @@ export default function MotoliaContactPage() {
                   {/* Email */}
                   <a
                     href={`mailto:${config.contactInfo.email}`}
-                    className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 transition-all group"
+                    className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-background hover:border-gray-300 transition-all group"
                   >
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
-                      style={{ background: `${YELLOW}20` }}
+                      style={{ background: `hsl(var(--mt-yellow-500) / 0.13)` }}
                     >
-                      <Mail size={22} style={{ color: YELLOW_DARK }} />
+                      <Mail size={22} style={{ color: ACCENT_INK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">E-mail</p>
-                      <p className="text-lg font-bold text-[#1A1A1A]">{config.contactInfo.email}</p>
+                      <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">E-mail</p>
+                      <p className="text-lg font-bold text-foreground">{config.contactInfo.email}</p>
                     </div>
                   </a>
 
                   {/* Hours */}
-                  <div className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8]">
+                  <div className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-background">
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${YELLOW}20` }}
+                      style={{ background: `hsl(var(--mt-yellow-500) / 0.13)` }}
                     >
-                      <Clock size={22} style={{ color: YELLOW_DARK }} />
+                      <Clock size={22} style={{ color: ACCENT_INK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Godziny pracy</p>
-                      <p className="text-lg font-bold text-[#1A1A1A]">Pon–Pt, 9:00–17:00</p>
+                      <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Godziny pracy</p>
+                      <p className="text-lg font-bold text-foreground">Pon–Pt, 9:00–17:00</p>
                     </div>
                   </div>
 
                   {/* Address */}
-                  <div className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-[#FAFAF8]">
+                  <div className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-background">
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${YELLOW}20` }}
+                      style={{ background: `hsl(var(--mt-yellow-500) / 0.13)` }}
                     >
-                      <MapPin size={22} style={{ color: YELLOW_DARK }} />
+                      <MapPin size={22} style={{ color: ACCENT_INK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Adres</p>
-                      <p className="text-base font-semibold text-[#1A1A1A]">ul. Jagiellońska 88</p>
-                      <p className="text-sm text-gray-500">03-215 Warszawa</p>
+                      <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Adres</p>
+                      <p className="text-base font-semibold text-foreground">ul. Jagiellońska 88</p>
+                      <p className="text-sm text-muted-foreground">03-215 Warszawa</p>
                     </div>
                   </div>
                 </div>
@@ -375,7 +378,7 @@ export default function MotoliaContactPage() {
               {/* Quick links */}
               <FadeIn delay={0.2}>
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">
+                  <h3 className="text-overline text-muted-foreground mb-4">
                     Interesuje Cię konkretny produkt?
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
@@ -383,9 +386,9 @@ export default function MotoliaContactPage() {
                       <Link
                         key={idx}
                         to={p.href}
-                        className="flex items-center gap-2.5 p-3.5 rounded-xl border border-gray-100 bg-[#FAFAF8] hover:border-gray-300 hover:shadow-sm transition-all group text-sm font-semibold text-[#1A1A1A]"
+                        className="flex items-center gap-2.5 p-3.5 rounded-xl border border-gray-100 bg-background hover:border-gray-300 hover:shadow-sm transition-all group text-sm font-semibold text-foreground"
                       >
-                        <p.icon size={16} style={{ color: YELLOW_DARK }} className="flex-shrink-0 group-hover:scale-110 transition-transform" />
+                        <p.icon size={16} style={{ color: ACCENT_INK }} className="flex-shrink-0 group-hover:scale-110 transition-transform" />
                         {p.label}
                       </Link>
                     ))}
@@ -399,35 +402,35 @@ export default function MotoliaContactPage() {
       </section>
 
       {/* ── CTA — explore cars ────────────────────────────────────────────── */}
-      <section className="py-20 px-6 bg-[#FAFAF8] border-t border-gray-100">
+      <section className="py-20 px-6 bg-background border-t border-gray-100">
         <div className="max-w-5xl mx-auto">
           <FadeIn>
             <div
               className="relative rounded-[3rem] p-10 md:p-14 overflow-hidden border text-center"
-              style={{ background: BLACK, borderColor: '#2A2A2A' }}
+              style={{ background: BLACK, borderColor: 'hsl(var(--mt-navy-700))' }}
             >
               <div
                 className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none"
-                style={{ background: `radial-gradient(circle, ${YELLOW}15 0%, transparent 70%)` }}
+                style={{ background: `radial-gradient(circle, hsl(var(--mt-yellow-500) / 0.08) 0%, transparent 70%)` }}
               />
               <div className="relative z-10 max-w-2xl mx-auto">
                 <h2
-                  className="text-3xl md:text-4xl font-outfit font-bold text-white mb-4"
+                  className="text-3xl md:text-4xl font-heading font-bold text-white mb-4"
                   dangerouslySetInnerHTML={{
                     __html: config.contactPage.ctaTitle.replace(
                       '<span>',
-                      `<span style="color:${YELLOW}">`,
+                      `<span class="hl">`,
                     ),
                   }}
                 />
-                <p className="text-gray-400 text-lg mb-8 font-light">
+                <p className="text-gray-300 text-lg mb-8 font-light">
                   {config.contactPage.ctaSubtitle}
                 </p>
                 <Link
                   to="/samochody"
                   className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
                   style={{ background: YELLOW, color: BLACK }}
-                  onMouseEnter={e => (e.currentTarget.style.background = YELLOW_DARK)}
+                  onMouseEnter={e => (e.currentTarget.style.background = YELLOW_HOVER)}
                   onMouseLeave={e => (e.currentTarget.style.background = YELLOW)}
                 >
                   Przeglądaj dostępne auta

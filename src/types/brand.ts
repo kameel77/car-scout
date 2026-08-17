@@ -7,6 +7,13 @@ export interface BrandColors {
   accentForeground?: string;   // text on accent bg (defaults to white)
 }
 
+export interface BrandFonts {
+  /** Krój nagłówkowy — wstrzykiwany do --font-heading. */
+  heading?: string;
+  /** Krój interfejsu/treści — wstrzykiwany do --font-body. */
+  body?: string;
+}
+
 export interface HeroConfig {
   badge: string;
   title: string; // use <span> for highlighting
@@ -65,6 +72,7 @@ export interface BrandConfig {
   name: string;
   domain: string;
   colors: BrandColors;
+  fonts?: BrandFonts;
   contactInfo: ContactInfo;
   companyInfo?: CompanyInfo;
   logo?: BrandLogo;

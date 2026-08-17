@@ -36,7 +36,7 @@ export function FotonResponsibilityBlock() {
 
           {/* Kolumna 2: Finansowanie (MOTOLIA - WYRÓŻNIONA) */}
           <div className="rounded-xl bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-amber-500/80 p-6 space-y-3 relative shadow-lg shadow-amber-950/20 h-full">
-            <div className="absolute -top-3 right-4 bg-amber-500 text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-wide">
+            <div className="absolute -top-3 right-4 bg-amber-500 text-slate-950 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wide">
               Rola Motolii
             </div>
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">

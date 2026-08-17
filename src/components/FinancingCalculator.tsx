@@ -547,7 +547,7 @@ export function FinancingCalculator({
                                     )}
                                 </div>
                                 {selectedProduct.provider !== 'OWN' && displayInstallment == null && !externalLoading && (
-                                    <div className="flex items-center gap-1 text-[9px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-1">
+                                    <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-1">
                                         <Info className="w-2.5 h-2.5" />
                                         Kalkulacja szacunkowa
                                     </div>
@@ -557,7 +557,7 @@ export function FinancingCalculator({
                                         <span className="text-xs text-muted-foreground">
                                             {priceIsNet ? 'netto (bez VAT)' : 'brutto'}
                                         </span>
-                                        <span className="text-[11px] text-muted-foreground">
+                                        <span className="text-xs text-muted-foreground">
                                             {priceIsNet
                                                 ? `(${formatPrice(Math.round((displayInstallment ?? 0) * vatMultiplier), currency)} brutto)`
                                                 : `(${formatPrice(Math.round((displayInstallment ?? 0) / vatMultiplier), currency)} netto)`}
@@ -592,7 +592,7 @@ export function FinancingCalculator({
                                                                 Przykład reprezentatywny
                                                             </DialogTitle>
                                                         </DialogHeader>
-                                                        <div className="mt-4 text-[11px] leading-relaxed text-slate-600 space-y-3">
+                                                        <div className="mt-4 text-xs leading-relaxed text-slate-600 space-y-3">
                                                             <p className="font-normal text-justify">
                                                                 {getInbankRepresentativeExample()}
                                                             </p>
@@ -602,7 +602,7 @@ export function FinancingCalculator({
                                             </div>
                                         </div>
                                     )}
-                                    <div className="text-[10px] text-muted-foreground text-center pt-1.5 border-t border-slate-100">
+                                    <div className="text-xs text-muted-foreground text-center pt-1.5 border-t border-slate-100">
                                         Rata wyliczana na podstawie kalkulacji partnera. Kalkulacja ma charakter poglądowy, nie stanowi oferty i może zależeć od oceny zdolności kredytowej klienta.
                                     </div>
                                 </div>
