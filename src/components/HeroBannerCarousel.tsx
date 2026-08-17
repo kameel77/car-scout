@@ -121,16 +121,23 @@ export function HeroBannerCarousel() {
             </Carousel>
 
             {banners.length > 1 && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex z-10">
+                    {/* Brandbook rozdz. 03: kropka pozostaje mała, ale pole dotyku ma 44 x 44 px.
+                        Powiększamy obszar klikalny przyciskiem, nie samą grafiką. */}
                     {banners.map((b, i) => (
                         <button
                             key={b.id}
                             type="button"
                             aria-label={`Slajd ${i + 1}`}
+                            aria-current={selected === i}
                             onClick={() => api?.scrollTo(i)}
-                            className="h-2 rounded-full transition-all"
-                            style={{ width: selected === i ? 24 : 8, background: selected === i ? YELLOW : 'rgba(255,255,255,0.6)' }}
-                        />
+                            className="flex min-h-touch min-w-touch items-center justify-center"
+                        >
+                            <span
+                                className="block h-2.5 rounded-full transition-all"
+                                style={{ width: selected === i ? 26 : 10, background: selected === i ? YELLOW : 'rgba(255,255,255,0.75)' }}
+                            />
+                        </button>
                     ))}
                 </div>
             )}

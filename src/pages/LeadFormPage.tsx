@@ -372,11 +372,11 @@ export default function LeadFormPage() {
 
                   <div className="grid grid-cols-2 gap-4 pt-6 border-t mt-6">
                     <div>
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{t('listing.mileage', 'Przebieg')}</p>
+                      <p className="text-overline uppercase font-bold text-muted-foreground tracking-widest">{t('listing.mileage', 'Przebieg')}</p>
                       <p className="font-semibold text-sm">{formatNumber(listing.mileage_km)} km</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{t('listing.location', 'Lokalizacja')}</p>
+                      <p className="text-overline uppercase font-bold text-muted-foreground tracking-widest">{t('listing.location', 'Lokalizacja')}</p>
                       <p className="font-semibold text-sm line-clamp-1">{listing.dealer_city}</p>
                     </div>
                   </div>
@@ -412,14 +412,14 @@ export default function LeadFormPage() {
             {financingData && (
               <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] uppercase font-bold text-indigo-400 tracking-widest leading-none mb-1">Wybrane finansowanie</p>
+                  <p className="text-overline uppercase font-bold text-indigo-400 tracking-widest leading-none mb-1">Wybrane finansowanie</p>
                   <p className="text-sm font-bold text-indigo-900">
                     {formatNumber(financingData.installment)} PLN / mies.
                     <span className="text-indigo-400 font-normal ml-2">({financingData.period} m-cy)</span>
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] uppercase font-bold text-indigo-400 tracking-widest leading-none mb-1">Wpłata własna</p>
+                  <p className="text-overline uppercase font-bold text-indigo-400 tracking-widest leading-none mb-1">Wpłata własna</p>
                   <p className="text-sm font-bold text-indigo-900">{formatNumber(financingData.downPayment)} PLN</p>
                 </div>
               </div>
@@ -536,12 +536,12 @@ export default function LeadFormPage() {
                       className="mt-1"
                       onCheckedChange={(v) => setValue('consentPrivacy', v === true)}
                     />
-                    <Label htmlFor="consentPrivacy" className="font-normal text-[11px] leading-relaxed cursor-pointer text-muted-foreground">
+                    <Label htmlFor="consentPrivacy" className="font-normal text-xs leading-relaxed cursor-pointer text-muted-foreground">
                       {t('lead.consentPrivacy', 'Oświadczam, że zapoznałem się z Regulaminem oraz Polityką Prywatności i akceptuję ich postanowienia. Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania.')} *
                     </Label>
                   </div>
                   {errors.consentPrivacy && (
-                    <p className="text-[10px] text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
+                    <p className="text-overline text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
                   )}
 
                   <div className="flex items-start gap-3">
@@ -550,7 +550,7 @@ export default function LeadFormPage() {
                       className="mt-1"
                       onCheckedChange={(v) => setValue('consentMarketing', v === true)}
                     />
-                    <Label htmlFor="consentMarketing" className="font-normal text-[11px] leading-relaxed cursor-pointer text-muted-foreground">
+                    <Label htmlFor="consentMarketing" className="font-normal text-xs leading-relaxed cursor-pointer text-muted-foreground">
                       {t('lead.consentMarketing', 'Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń.')} (opcjonalnie)
                     </Label>
                   </div>
@@ -582,7 +582,7 @@ export default function LeadFormPage() {
                   )}
                 </Button>
 
-                <p className="text-center text-[10px] text-muted-foreground mt-4 italic">
+                <p className="text-center text-xs text-muted-foreground mt-4 italic">
                   {t('lead.requiredFields')}
                 </p>
               </form>

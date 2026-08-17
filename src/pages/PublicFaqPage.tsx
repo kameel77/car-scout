@@ -85,7 +85,7 @@ function FaqItem({ question, answer, isOpen, onClick, accent, accentOn, isMotoli
         </div>
       </div>
       {isOpen && (
-        <div className="px-5 pb-5 text-gray-500 leading-relaxed text-sm border-t border-gray-100 pt-4 whitespace-pre-line">
+        <div className="px-5 pb-5 text-muted-foreground leading-relaxed text-sm border-t border-gray-100 pt-4 whitespace-pre-line">
           {answer}
         </div>
       )}
@@ -171,14 +171,14 @@ export default function PublicFaqPage() {
               Jak możemy Ci{' '}
               <span style={{ color: accentInk }}>pomóc?</span>
             </h1>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-10">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
               Znajdź odpowiedzi na najczęściej zadawane pytania dotyczące finansowania,
               procesu zakupu i naszych usług.
             </p>
 
             <div className="max-w-xl mx-auto relative">
               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+                <Search className="h-5 w-5 text-subtle" />
               </div>
               <Input
                 type="text"
@@ -216,7 +216,7 @@ export default function PublicFaqPage() {
             </div>
 
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-20 gap-4 text-subtle">
                 <Loader2 className="w-10 h-10 animate-spin" style={{ color: accentInk }} />
                 <p>Ładowanie odpowiedzi…</p>
               </div>
@@ -238,10 +238,10 @@ export default function PublicFaqPage() {
             ) : (
               <div className="text-center py-20">
                 <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-100">
-                  <HelpCircle className="w-10 h-10 text-gray-400" />
+                  <HelpCircle className="w-10 h-10 text-subtle" />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-2">Nie znaleźliśmy odpowiedzi</h3>
-                <p className="text-gray-500">Spróbuj wpisać inne słowo kluczowe lub skontaktuj się z nami.</p>
+                <p className="text-muted-foreground">Spróbuj wpisać inne słowo kluczowe lub skontaktuj się z nami.</p>
                 <button
                   onClick={() => { setSearchQuery(''); setSelectedPage('all'); }}
                   className="mt-6 font-semibold underline underline-offset-4 decoration-2 hover:no-underline"
@@ -268,7 +268,7 @@ export default function PublicFaqPage() {
                 <h2 className={cn('text-3xl font-bold mb-4', isMotolia ? 'text-white' : 'text-foreground')}>
                   Wciąż masz pytania?
                 </h2>
-                <p className={cn('text-lg', isMotolia ? 'text-gray-400' : 'text-gray-500')}>
+                <p className={cn('text-lg', isMotolia ? 'text-gray-300' : 'text-gray-300')}>
                   Nasz zespół ekspertów jest gotowy, aby pomóc Ci w wyborze finansowania.
                 </p>
               </div>

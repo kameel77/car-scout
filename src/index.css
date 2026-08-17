@@ -337,6 +337,26 @@
 }
 
 @layer utilities {
+  /* Brandbook rozdz. 02 — Overline 12 px, wyłącznie krótkie etykiety
+     wersalikami o wadze 700 i zwiększonym odstępie. Nigdy dla zdań. */
+  .text-overline {
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Kwota raty — komponent krytyczny, rozdz. 02 */
+  .price-display {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
   .shadow-card {
     box-shadow: var(--shadow-card);
   }

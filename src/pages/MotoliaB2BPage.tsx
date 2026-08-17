@@ -291,7 +291,7 @@ export default function MotoliaB2BPage() {
             <span style={{ color: ACCENT_INK }}>od pierwszego samochodu</span>.
           </h1>
 
-          <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light max-w-2xl mx-auto">
             Nowe samochody w leasingu i najmie długoterminowym dla JDG i spółek — jedno auto
             czy dwadzieścia. Jeden opiekun, oferty wielu finansujących, rata policzona pod
             podatki Twojej firmy.
@@ -315,7 +315,7 @@ export default function MotoliaB2BPage() {
               Zobacz auta dostępne dla firm
             </a>
           </div>
-          <p className="text-sm text-gray-400 mb-10">Oddzwaniamy tego samego dnia. Bez zobowiązań.</p>
+          <p className="text-sm text-subtle mb-10">Oddzwaniamy tego samego dnia. Bez zobowiązań.</p>
 
           <div className="flex flex-wrap gap-x-8 gap-y-3 justify-center">
             {['Dedykowany opiekun', 'Oferty wielu finansujących', 'Od 1 do 20 aut'].map((badge) => (
@@ -347,7 +347,7 @@ export default function MotoliaB2BPage() {
                     <card.icon size={24} style={{ color: ACCENT_INK }} />
                   </div>
                   <h3 className="text-lg font-bold text-foreground mb-2">{card.title}</h3>
-                  <p className="text-gray-500 leading-relaxed text-sm">{card.desc}</p>
+                  <p className="text-muted-foreground leading-relaxed text-sm">{card.desc}</p>
                 </div>
               </FadeIn>
             ))}
@@ -372,7 +372,7 @@ export default function MotoliaB2BPage() {
               <FadeIn key={item.title} delay={idx * 0.06}>
                 <div className="p-7 rounded-3xl border h-full" style={{ background: 'hsl(var(--mt-navy-700))', borderColor: 'hsl(var(--mt-navy-600))' }}>
                   <h3 className="text-base font-bold mb-2 text-white">{item.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
+                  <p className="text-gray-300 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </FadeIn>
             ))}
@@ -398,7 +398,7 @@ export default function MotoliaB2BPage() {
                     {idx + 1}
                   </div>
                   <h3 className="text-base font-bold text-foreground mb-2">{step.title}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed">{step.desc}</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{step.desc}</p>
                 </div>
               </FadeIn>
             ))}
@@ -413,14 +413,14 @@ export default function MotoliaB2BPage() {
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4 text-foreground">
               Oferty specjalne <span style={{ color: ACCENT_INK }}>dla firm</span>
             </h2>
-            <p className="text-lg text-gray-500">
+            <p className="text-lg text-muted-foreground">
               Auta z ratą policzoną dla firmy - nowe modele popularne wśród naszych klientów
               firmowych, dostępne od ręki. Rata netto, w kosztach uzyskania przychodu.
             </p>
           </FadeIn>
 
           {offersLoading ? (
-            <div className="py-8 text-center text-gray-400">Wczytywanie ofert…</div>
+            <div className="py-8 text-center text-subtle">Wczytywanie ofert…</div>
           ) : offers && offers.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {offers.map((offer, idx) => (
@@ -430,7 +430,7 @@ export default function MotoliaB2BPage() {
               ))}
             </div>
           ) : (
-            <div className="py-8 text-center text-gray-400">Wkrótce nowe oferty dla firm.</div>
+            <div className="py-8 text-center text-subtle">Wkrótce nowe oferty dla firm.</div>
           )}
 
           <div className="text-center mt-10">
@@ -459,7 +459,7 @@ export default function MotoliaB2BPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="text-left p-4 font-semibold text-gray-500"></th>
+                    <th className="text-left p-4 font-semibold text-muted-foreground"></th>
                     <th className="text-left p-4 font-bold text-foreground">Leasing operacyjny</th>
                     <th className="text-left p-4 font-bold text-foreground">Najem długoterminowy</th>
                   </tr>
@@ -467,7 +467,7 @@ export default function MotoliaB2BPage() {
                 <tbody>
                   {LEASING_VS_NAJEM.map((row) => (
                     <tr key={row.label} className="border-b border-gray-50 last:border-0">
-                      <td className="p-4 font-semibold text-gray-500 whitespace-nowrap">{row.label}</td>
+                      <td className="p-4 font-semibold text-muted-foreground whitespace-nowrap">{row.label}</td>
                       <td className="p-4 text-gray-600">{row.leasing}</td>
                       <td className="p-4 text-gray-600">{row.najem}</td>
                     </tr>
@@ -478,7 +478,7 @@ export default function MotoliaB2BPage() {
           </FadeIn>
 
           <FadeIn delay={0.1}>
-            <p className="text-center text-gray-500 mt-8 max-w-2xl mx-auto">
+            <p className="text-center text-muted-foreground mt-8 max-w-2xl mx-auto">
               Nie musisz wybierać sam - doradca policzy oba warianty dla Twojej firmy i pokaże
               ratę netto obok siebie.
             </p>
@@ -528,7 +528,7 @@ export default function MotoliaB2BPage() {
               >
                 Zapytaj doradcę o limity 2026 <ArrowRight size={16} />
               </a>
-              <p className="text-xs text-gray-400 mt-6">
+              <p className="text-xs text-subtle mt-6">
                 Powyższe ma charakter informacyjny i nie stanowi porady podatkowej. Ostateczne
                 rozliczenie zależy od formy opodatkowania Twojej firmy.
               </p>
@@ -549,7 +549,7 @@ export default function MotoliaB2BPage() {
               <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6 text-white">
                 Auto jako <span style={{ color: YELLOW }}>benefit dla pracowników</span>
               </h2>
-              <p className="text-gray-400 leading-relaxed mb-8 max-w-2xl mx-auto">
+              <p className="text-gray-300 leading-relaxed mb-8 max-w-2xl mx-auto">
                 Twoi pracownicy wynajmują nowe auta na preferencyjnych warunkach
                 wynegocjowanych dla firmy - bez angażowania kapitału firmy i z jednym
                 opiekunem po stronie Motolii. Program dla firm od 10 pracowników.
@@ -595,7 +595,7 @@ export default function MotoliaB2BPage() {
               <h2 className="text-3xl md:text-4xl font-heading font-bold mb-5 text-foreground">
                 Najczęściej zadawane <span style={{ color: ACCENT_INK }}>pytania</span>
               </h2>
-              <p className="text-lg text-gray-500">
+              <p className="text-lg text-muted-foreground">
                 Odpowiadamy na najczęstsze pytania firm o leasing, najem długoterminowy i
                 finansowanie samochodów w Motolii - bez żargonu, z konkretami dla JDG i spółek.
               </p>
@@ -629,7 +629,7 @@ export default function MotoliaB2BPage() {
                       }}
                     >
                       <div className="overflow-hidden">
-                        <div className="px-6 pb-6 text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
+                        <div className="px-6 pb-6 text-muted-foreground leading-relaxed border-t border-gray-100 pt-4">
                           {item.a}
                         </div>
                       </div>
@@ -661,7 +661,7 @@ export default function MotoliaB2BPage() {
                   Porozmawiajmy o autach{' '}
                   <span style={{ color: YELLOW }}>dla Twojej firmy</span>
                 </h2>
-                <p className="text-lg text-gray-400 mb-10 font-light">
+                <p className="text-lg text-gray-300 mb-10 font-light">
                   Zostaw numer - opiekun firm oddzwoni tego samego dnia i policzy ratę netto
                   dla Twojego auta. Bez zobowiązań.
                 </p>
@@ -712,7 +712,7 @@ export default function MotoliaB2BPage() {
                   </div>
                 )}
 
-                <div className="mt-6 flex items-center justify-center gap-2 text-gray-500 text-sm">
+                <div className="mt-6 flex items-center justify-center gap-2 text-gray-300 text-sm">
                   <ShieldCheck size={15} /> Twoje dane są bezpieczne
                 </div>
               </FadeIn>
@@ -748,19 +748,19 @@ function BusinessOfferCard({ offer }: { offer: any }) {
           {isRental ? 'Najem dla firm' : 'Oferta dla firm'}
         </div>
         <h3 className="font-bold text-lg text-foreground leading-tight">
-          {offer.make} {offer.model} {offer.version ? <span className="font-normal text-gray-500">{offer.version}</span> : null}
+          {offer.make} {offer.model} {offer.version ? <span className="font-normal text-muted-foreground">{offer.version}</span> : null}
         </h3>
-        <p className="text-xs text-gray-400">{offer.productionYear}</p>
+        <p className="text-xs text-subtle">{offer.productionYear}</p>
 
         {netRate ? (
           <div>
             <div className="text-2xl font-bold text-foreground">{PLN.format(netRate)} zł/mc</div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-subtle">
               {isRental ? 'netto - najem długoterminowy, rata w kosztach' : 'netto - dla firmy rata w kosztach'}
             </p>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Rata netto dopasowana do Twojej firmy — dopytaj doradcę.</p>
+          <p className="text-sm text-muted-foreground">Rata netto dopasowana do Twojej firmy — dopytaj doradcę.</p>
         )}
 
         <Link

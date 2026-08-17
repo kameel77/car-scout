@@ -27,8 +27,8 @@ const THEMES = {
         callbackCard: 'bg-brand-navy border-accent/40',
         heading: 'text-white',
         body: 'text-gray-300',
-        muted: 'text-gray-400',
-        footer: 'bg-brand-navy-deep border-white/10 text-gray-500',
+        muted: 'text-gray-300',
+        footer: 'bg-brand-navy-deep border-white/10 text-gray-300',
         stickyBar: 'bg-brand-navy-deep/95 border-white/10',
         loader: 'bg-brand-navy-deep text-white',
         accentText: 'text-brand-yellow',
@@ -46,15 +46,15 @@ const THEMES = {
         callbackCard: 'bg-white border-accent',
         heading: 'text-gray-900',
         body: 'text-gray-600',
-        muted: 'text-gray-500',
-        footer: 'bg-gray-50 border-gray-200 text-gray-500',
+        muted: 'text-muted-foreground',
+        footer: 'bg-gray-50 border-gray-200 text-muted-foreground',
         stickyBar: 'bg-white/95 border-gray-200',
         loader: 'bg-white text-gray-900',
         accentText: 'text-brand-yellow-ink',
         faqItem: 'border-gray-100 hover:border-gray-200 bg-white',
         faqIconBg: 'hsl(var(--mt-neutral-100))',
         faqIconColor: 'hsl(var(--mt-neutral-600))',
-        faqBody: 'border-gray-100 text-gray-500',
+        faqBody: 'border-gray-100 text-muted-foreground',
     },
 } as const;
 
@@ -465,7 +465,7 @@ export default function CampaignLandingPage() {
                         {' | '}
                         {settings?.legalRegisterNumber || config.companyInfo?.registerNumber || '—'}
                     </p>
-                    <p className="text-[11px] max-w-2xl mx-auto opacity-80">
+                    <p className="text-xs max-w-2xl mx-auto opacity-80">
                         Wysyłając formularz zgadzasz się na kontakt ze strony doradcy w celu przedstawienia spersonalizowanej oferty. Rezygnacja z kontaktu jest możliwa w każdej chwili.
                     </p>
                 </div>

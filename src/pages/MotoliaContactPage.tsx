@@ -138,7 +138,7 @@ export default function MotoliaContactPage() {
             </FadeIn>
 
             <FadeIn delay={0.2}>
-              <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light">
+              <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
                 {config.contactPage.subtitle}
               </p>
             </FadeIn>
@@ -165,7 +165,7 @@ export default function MotoliaContactPage() {
               </a>
             </FadeIn>
 
-            <FadeIn delay={0.4} className="flex items-center justify-center gap-2 text-sm text-gray-400 font-medium">
+            <FadeIn delay={0.4} className="flex items-center justify-center gap-2 text-sm text-subtle font-medium">
               <Clock size={14} />
               Pon–Pt, 9:00–17:00
             </FadeIn>
@@ -184,7 +184,7 @@ export default function MotoliaContactPage() {
                 <h2 className="text-2xl font-heading font-bold mb-2 text-foreground">
                   Zostaw kontakt
                 </h2>
-                <p className="text-gray-500 mb-8">
+                <p className="text-muted-foreground mb-8">
                   Oddzwonimy w ciągu 15 minut w godzinach pracy.
                 </p>
 
@@ -201,7 +201,7 @@ export default function MotoliaContactPage() {
                       <CheckCircle2 size={32} style={{ color: ACCENT_INK }} />
                     </div>
                     <h3 className="text-xl font-bold text-foreground">Otrzymaliśmy Twój kontakt!</h3>
-                    <p className="text-gray-500">Doradca oddzwoni wkrótce i przedstawi dostępne opcje finansowania.</p>
+                    <p className="text-muted-foreground">Doradca oddzwoni wkrótce i przedstawi dostępne opcje finansowania.</p>
                     <button
                       onClick={() => setStatus('idle')}
                       className="mt-4 text-sm font-semibold underline underline-offset-2"
@@ -214,7 +214,7 @@ export default function MotoliaContactPage() {
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Imię <span className="text-gray-400 font-normal">(opcjonalnie)</span>
+                        Imię <span className="text-subtle font-normal">(opcjonalnie)</span>
                       </label>
                       <input
                         type="text"
@@ -222,7 +222,7 @@ export default function MotoliaContactPage() {
                         value={form.name}
                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                         placeholder="Jan Kowalski"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-gray-400 outline-none transition-all text-base bg-white"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-subtle outline-none transition-all text-base bg-white"
                         onFocus={e => (e.currentTarget.style.borderColor = YELLOW)}
                         onBlur={e => (e.currentTarget.style.borderColor = 'hsl(var(--mt-neutral-300))')}
                       />
@@ -239,7 +239,7 @@ export default function MotoliaContactPage() {
                         value={form.phone}
                         onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                         placeholder="+48 500 000 000"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-gray-400 outline-none transition-all text-base bg-white"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-subtle outline-none transition-all text-base bg-white"
                         onFocus={e => (e.currentTarget.style.borderColor = YELLOW)}
                         onBlur={e => (e.currentTarget.style.borderColor = 'hsl(var(--mt-neutral-300))')}
                       />
@@ -247,7 +247,7 @@ export default function MotoliaContactPage() {
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Czego szukasz? <span className="text-gray-400 font-normal">(opcjonalnie)</span>
+                        Czego szukasz? <span className="text-subtle font-normal">(opcjonalnie)</span>
                       </label>
                       <textarea
                         rows={3}
@@ -255,7 +255,7 @@ export default function MotoliaContactPage() {
                         value={form.message}
                         onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
                         placeholder="np. Toyota Corolla, leasing, budżet do 1500 zł/mies."
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-gray-400 outline-none transition-all text-base resize-none bg-white"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-foreground placeholder:text-subtle outline-none transition-all text-base resize-none bg-white"
                         onFocus={e => (e.currentTarget.style.borderColor = YELLOW)}
                         onBlur={e => (e.currentTarget.style.borderColor = 'hsl(var(--mt-neutral-300))')}
                       />
@@ -272,7 +272,7 @@ export default function MotoliaContactPage() {
                       {status === 'sending' ? 'Wysyłanie…' : status === 'error' ? 'Błąd – spróbuj ponownie' : 'Zadzwoń do mnie'}
                     </button>
 
-                    <p className="flex items-center gap-1.5 text-xs text-gray-400 justify-center pt-1">
+                    <p className="flex items-center gap-1.5 text-xs text-subtle justify-center pt-1">
                       <ShieldCheck size={13} />
                       Twoje dane są bezpieczne i nie będą udostępniane
                     </p>
@@ -302,7 +302,7 @@ export default function MotoliaContactPage() {
                       <Phone size={22} style={{ color: ACCENT_INK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Telefon — Sprzedaż</p>
+                      <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Telefon — Sprzedaż</p>
                       <p className="text-lg font-bold text-foreground">{salesPhone}</p>
                     </div>
                   </a>
@@ -321,7 +321,7 @@ export default function MotoliaContactPage() {
                         <Phone size={22} style={{ color: ACCENT_INK }} />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Telefon</p>
+                        <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Telefon</p>
                         <p className="text-lg font-bold text-foreground">{settings.legalContactPhone}</p>
                       </div>
                     </a>
@@ -339,7 +339,7 @@ export default function MotoliaContactPage() {
                       <Mail size={22} style={{ color: ACCENT_INK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">E-mail</p>
+                      <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">E-mail</p>
                       <p className="text-lg font-bold text-foreground">{config.contactInfo.email}</p>
                     </div>
                   </a>
@@ -353,7 +353,7 @@ export default function MotoliaContactPage() {
                       <Clock size={22} style={{ color: ACCENT_INK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Godziny pracy</p>
+                      <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Godziny pracy</p>
                       <p className="text-lg font-bold text-foreground">Pon–Pt, 9:00–17:00</p>
                     </div>
                   </div>
@@ -367,9 +367,9 @@ export default function MotoliaContactPage() {
                       <MapPin size={22} style={{ color: ACCENT_INK }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Adres</p>
+                      <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Adres</p>
                       <p className="text-base font-semibold text-foreground">ul. Jagiellońska 88</p>
-                      <p className="text-sm text-gray-500">03-215 Warszawa</p>
+                      <p className="text-sm text-muted-foreground">03-215 Warszawa</p>
                     </div>
                   </div>
                 </div>
@@ -378,7 +378,7 @@ export default function MotoliaContactPage() {
               {/* Quick links */}
               <FadeIn delay={0.2}>
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-subtle mb-4">
                     Interesuje Cię konkretny produkt?
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
@@ -423,7 +423,7 @@ export default function MotoliaContactPage() {
                     ),
                   }}
                 />
-                <p className="text-gray-400 text-lg mb-8 font-light">
+                <p className="text-gray-300 text-lg mb-8 font-light">
                   {config.contactPage.ctaSubtitle}
                 </p>
                 <Link

@@ -291,7 +291,7 @@ export default function MotoliaHomePage() {
                 </div>
 
                 <div>
-                  <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light">
+                  <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
                     {config.homePage.hero.subtitle}
                   </p>
                 </div>
@@ -391,7 +391,7 @@ export default function MotoliaHomePage() {
                 Leasing, kredyt, wynajem i pożyczka w{' '}
                 <span style={{ color: ACCENT_INK }}>jednym serwisie</span>
               </h2>
-              <p className="text-lg text-gray-500">
+              <p className="text-lg text-muted-foreground">
                 Obsługujemy zarówno osoby prywatne, jak i firmy – każdy znajdzie tu coś dla siebie.
               </p>
             </FadeIn>
@@ -411,7 +411,7 @@ export default function MotoliaHomePage() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 mb-5">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-subtle mb-5">
                       <AudienceIcon size={11} />
                       {product.audience}
                     </div>
@@ -422,9 +422,9 @@ export default function MotoliaHomePage() {
                     </div>
 
                     <h3 className="text-lg font-bold text-foreground mb-2">{product.title}</h3>
-                    <p className="text-gray-500 leading-relaxed text-sm flex-1">{product.desc}</p>
+                    <p className="text-muted-foreground leading-relaxed text-sm flex-1">{product.desc}</p>
 
-                    <div className="flex items-center gap-2 mt-5 text-xs font-semibold text-gray-400">
+                    <div className="flex items-center gap-2 mt-5 text-xs font-semibold text-subtle">
                       <Clock size={12} />
                       {product.time}
                     </div>
@@ -459,7 +459,7 @@ export default function MotoliaHomePage() {
                 Samochody nowe i używane,{' '}
                 <span style={{ color: ACCENT_INK }}>praktycznie każda marka</span>
               </h2>
-              <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Współpracujemy z dealerami wszystkich liczących się producentów –
                 od europejskich klasyków po najlepsze marki chińskie.
               </p>
@@ -468,7 +468,7 @@ export default function MotoliaHomePage() {
 
           {/* EU & JP brands */}
           <FadeIn delay={0.1}>
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 text-center mb-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-subtle text-center mb-4">
               Marki europejskie i japońskie
             </p>
             <div className="flex flex-wrap justify-center gap-2 mb-8">
@@ -483,7 +483,7 @@ export default function MotoliaHomePage() {
 
           {/* Chinese brands */}
           <FadeIn delay={0.15}>
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 text-center mb-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-subtle text-center mb-4">
               Topowe marki chińskie
             </p>
             <div className="flex flex-wrap justify-center gap-2 mb-14">
@@ -499,7 +499,7 @@ export default function MotoliaHomePage() {
           {/* Financial partners */}
           <FadeIn delay={0.2}>
             <div className="border-t border-gray-200 pt-10">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 text-center mb-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-subtle text-center mb-6">
                 Partnerzy finansowi
               </p>
               <div className="flex flex-wrap justify-center gap-4">
@@ -532,7 +532,7 @@ export default function MotoliaHomePage() {
                   Dlaczego <br />
                   <span style={{ color: YELLOW }}>Motolia?</span>
                 </h2>
-                <p className="text-lg text-gray-400 mb-8 leading-relaxed">
+                <p className="text-lg text-gray-300 mb-8 leading-relaxed">
                   Finansowanie auta powinno być proste. Bez zbędnej biurokracji,
                   bez ukrytych kosztów. Jeden doradca, wiele możliwości.
                 </p>
@@ -561,7 +561,7 @@ export default function MotoliaHomePage() {
                       <feature.icon style={{ color: YELLOW }} size={22} />
                     </div>
                     <h3 className="text-lg font-bold mb-2 text-white">{feature.title}</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">{feature.desc}</p>
+                    <p className="text-gray-300 text-sm leading-relaxed">{feature.desc}</p>
                   </div>
                 </FadeIn>
               ))}
@@ -580,7 +580,7 @@ export default function MotoliaHomePage() {
                 Najczęściej zadawane{' '}
                 <span style={{ color: ACCENT_INK }}>pytania</span>
               </h2>
-              <p className="text-lg text-gray-500">
+              <p className="text-lg text-muted-foreground">
                 Odpowiadamy na najczęstsze pytania dotyczące finansowania aut.
               </p>
             </FadeIn>
@@ -614,7 +614,7 @@ export default function MotoliaHomePage() {
                       }}
                     >
                       <div className="overflow-hidden">
-                        <div className="px-6 pb-6 text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
+                        <div className="px-6 pb-6 text-muted-foreground leading-relaxed border-t border-gray-100 pt-4">
                           {item.a}
                         </div>
                       </div>
@@ -647,7 +647,7 @@ export default function MotoliaHomePage() {
                   Znajdź auto i dobierz{' '}
                   <span style={{ color: YELLOW }}>finansowanie</span>
                 </h2>
-                <p className="text-lg text-gray-400 mb-10 font-light">
+                <p className="text-lg text-gray-300 mb-10 font-light">
                   Zostaw numer – doradca oddzwoni i w kilka minut przedstawi oferty z kredytu, leasingu lub wynajmu.
                 </p>
 
@@ -719,7 +719,7 @@ export default function MotoliaHomePage() {
                   </button>
                 </form>
 
-                <div className="mt-6 flex items-center justify-center gap-2 text-gray-500 text-sm">
+                <div className="mt-6 flex items-center justify-center gap-2 text-gray-300 text-sm">
                   <ShieldCheck size={15} /> Twoje dane są bezpieczne
                 </div>
               </FadeIn>

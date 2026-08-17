@@ -189,7 +189,7 @@ export default function RentalDetailPage() {
                 <div className="container py-20 text-center">
                     <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h2 className="text-xl font-semibold">Pojazd nie został znaleziony</h2>
-                    <Link to="/wynajem-dlugoterminowy" className="text-accent hover:underline mt-4 inline-block">
+                    <Link to="/wynajem-dlugoterminowy" className="text-primary underline underline-offset-4 decoration-2 hover:no-underline mt-4 inline-block">
                         Wróć do listy
                     </Link>
                 </div>
@@ -318,7 +318,7 @@ export default function RentalDetailPage() {
                                  return (
                                      <details key={cat.label} className="group">
                                          <summary className="flex items-center gap-2 cursor-pointer text-lg font-bold text-foreground hover:text-accent transition-colors py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md">
-                                             <ChevronDown className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
+                                             <ChevronDown className="w-5 h-5 text-subtle group-open:rotate-180 transition-transform" />
                                              <Icon className="w-5 h-5 text-primary" />
                                              {cat.label}
                                              <span className="text-base font-normal text-muted-foreground ml-1">({cat.items.length})</span>
@@ -326,7 +326,7 @@ export default function RentalDetailPage() {
                                          <div className="pl-9 pt-2 pb-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                                              {cat.items.map((e: string, i: number) => (
                                                  <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-snug">
-                                                     <span className="text-accent font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
+                                                     <span className="text-success font-bold text-sm flex-shrink-0 mt-0.5">✓</span>
                                                      {e}
                                                  </div>
                                              ))}
@@ -520,7 +520,7 @@ export default function RentalDetailPage() {
                                             <div className="flex items-center justify-between mb-2">
                                                 {isLoggedIn ? (
                                                     <div className="flex items-center gap-2">
-                                                        <Building2 className="w-4 h-4 text-gray-500" />
+                                                        <Building2 className="w-4 h-4 text-muted-foreground" />
                                                         <span className="font-medium text-sm">{offer.company.name}</span>
                                                     </div>
                                                 ) : (
@@ -535,11 +535,11 @@ export default function RentalDetailPage() {
                                                     ? `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł`
                                                     : `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł`
                                                 }
-                                                <span className="text-sm font-normal text-gray-500">
+                                                <span className="text-sm font-normal text-muted-foreground">
                                                     {selectedOfferType === 'business' ? ' netto / mies.' : ' brutto / mies.'}
                                                 </span>
                                             </div>
-                                            <div className="text-sm text-gray-500 mt-1">
+                                            <div className="text-sm text-muted-foreground mt-1">
                                                 {selectedOfferType === 'business'
                                                     ? `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł brutto`
                                                     : `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł netto`
@@ -579,7 +579,7 @@ export default function RentalDetailPage() {
                             )}
 
                             {!calcQuery.isLoading && offers.length === 0 && selectedMileage !== null && (
-                                <div className="p-4 bg-gray-50 rounded-xl text-center text-sm text-gray-500">
+                                <div className="p-4 bg-gray-50 rounded-xl text-center text-sm text-muted-foreground">
                                     Brak ofert dla wybranej konfiguracji
                                 </div>
                             )}

@@ -244,7 +244,7 @@ export function StandaloneFinancingCalculator({
                     )}
                     <div className="text-xs">
                         <span className="font-semibold text-slate-800 block">Dołącz bezpłatną wycenę pakietu OC/AC/GAP</span>
-                        <span className="text-muted-foreground text-[11px]">Nasi eksperci dobiorą optymalną stawkę ubezpieczenia dla tego pojazdu.</span>
+                        <span className="text-muted-foreground text-xs">Nasi eksperci dobiorą optymalną stawkę ubezpieczenia dla tego pojazdu.</span>
                     </div>
                 </div>
 
@@ -290,7 +290,7 @@ export function StandaloneFinancingCalculator({
                                                         Przykład reprezentatywny
                                                     </DialogTitle>
                                                 </DialogHeader>
-                                                <div className="mt-4 text-[11px] leading-relaxed text-slate-600 space-y-3 whitespace-pre-wrap">
+                                                <div className="mt-4 text-xs leading-relaxed text-slate-600 space-y-3 whitespace-pre-wrap">
                                                     {repExampleText}
                                                 </div>
                                             </DialogContent>
@@ -302,7 +302,7 @@ export function StandaloneFinancingCalculator({
                     )}
 
                     {/* Generic disclaimer */}
-                    <div className="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400 text-center">
+                    <div className="mt-3 pt-2 border-t border-slate-800 text-xs text-slate-400 text-center">
                         Wyliczenie ma charakter orientacyjny i nie stanowi oferty w rozumieniu Art. 66 § 1 KC. Ostateczna rata zależy od oceny zdolności kredytowej klienta.
                     </div>
                 </div>

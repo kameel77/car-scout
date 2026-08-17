@@ -223,7 +223,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
                 href={`tel:${formatPhoneForTelLink(phoneForSales)}`}
                 aria-label="Zadzwoń do nas"
                 onClick={() => trackPhoneClick('header_desktop')}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 hover:shadow-md hover:shadow-accent/20 active:scale-95"
+                className="flex items-center justify-center min-w-touch min-h-touch rounded-full bg-accent/15 text-primary border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 hover:shadow-md hover:shadow-accent/20 active:scale-95"
               >
                 <Phone className="h-4 w-4" />
               </a>
@@ -247,7 +247,7 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
               href={`tel:${formatPhoneForTelLink(phoneForSales)}`}
               aria-label="Zadzwoń do nas"
               onClick={() => trackPhoneClick('header_mobile')}
-              className="flex items-center justify-center w-9 h-9 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 active:scale-95"
+              className="flex items-center justify-center min-w-touch min-h-touch rounded-full bg-accent/15 text-primary border border-accent/20 hover:bg-accent hover:text-white transition-all duration-200 active:scale-95"
             >
               <Phone className="h-4 w-4" />
             </a>

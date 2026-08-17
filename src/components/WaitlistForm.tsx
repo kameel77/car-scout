@@ -111,12 +111,12 @@ export function WaitlistForm({ make, model }: WaitlistFormProps) {
             className="mt-1"
             onCheckedChange={(v) => setValue('consentPrivacy', v === true)}
           />
-          <Label htmlFor="waitlist-consentPrivacy" className="font-normal text-[11px] leading-relaxed cursor-pointer text-muted-foreground">
+          <Label htmlFor="waitlist-consentPrivacy" className="font-normal text-xs leading-relaxed cursor-pointer text-muted-foreground">
             {t('lead.consentPrivacy', 'Oświadczam, że zapoznałem się z Regulaminem oraz Polityką Prywatności i akceptuję ich postanowienia. Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania.')} *
           </Label>
         </div>
         {errors.consentPrivacy && (
-          <p className="text-[10px] text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
+          <p className="text-overline text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
         )}
 
         <div className="flex items-start gap-3">
@@ -125,12 +125,12 @@ export function WaitlistForm({ make, model }: WaitlistFormProps) {
             className="mt-1"
             onCheckedChange={(v) => setValue('consentMarketing', v === true)}
           />
-          <Label htmlFor="waitlist-consentMarketing" className="font-normal text-[11px] leading-relaxed cursor-pointer text-muted-foreground">
+          <Label htmlFor="waitlist-consentMarketing" className="font-normal text-xs leading-relaxed cursor-pointer text-muted-foreground">
             {t('lead.consentMarketing', 'Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń.')} *
           </Label>
         </div>
         {errors.consentMarketing && (
-          <p className="text-[10px] text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
+          <p className="text-overline text-destructive font-bold uppercase ml-7">{t('validation.required')}</p>
         )}
       </div>
 
