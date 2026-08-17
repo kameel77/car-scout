@@ -5,83 +5,145 @@
 @import '@fontsource/inter/400.css';
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
 
+/* Archivo Variable — krój nagłówkowy marki Motolia (SIL OFL, self-hosted).
+   Brandbook rozdz. 02: kroje hostujemy lokalnie, nie z zewnętrznego CDN. */
+@font-face {
+  font-family: 'Archivo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/archivo-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Archivo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/archivo-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* AutoFinder Design System */
-    /* Deep automotive blue palette */
-    --background: 210 20% 98%;
-    --foreground: 215 25% 15%;
+    /* =====================================================================
+       BRANDBOOK MOTOLIA v1.0 (15.08.2026) — jedyne źródło prawdy dla koloru.
+       Wartości bazowe pochodzą z pliku logo /brands/motolia/logo-header.svg.
+       Zapis w HSL (bez funkcji hsl()), bo Tailwind owija je w hsl(var(--x)).
+       ZAKAZ zapisu koloru wartością bezpośrednią — wyłącznie przez --mt-*.
+       ===================================================================== */
+
+    /* ---- Marka ---- */
+    --mt-navy-900: 221 87% 15%;      /* #051B4A  tła bardzo ciemne, stopka  */
+    --mt-navy-700: 220 87% 25%;      /* #082D76  podstawowy, z logo        */
+    --mt-navy-600: 219 88% 31%;      /* #0A3A96  hover/gradient            */
+    --mt-yellow-500: 45 100% 50%;    /* #FFBE00  akcent — TYLKO wypełnienie */
+    --mt-yellow-600: 45 100% 44%;    /* #E0A800  hover                     */
+    --mt-yellow-800: 44 100% 24%;    /* #7A5A00  tekst na jasnożółtym tle  */
+    --mt-yellow-50: 46 100% 94%;     /* #FFF8E1                            */
+
+    /* ---- Neutralne (rampa z odchyleniem granatowym) ---- */
+    --mt-ink-900: 221 39% 11%;       /* #111827  tekst główny     17,74:1  */
+    --mt-neutral-600: 220 18% 29%;   /* #3D4658  tekst drugorzędny 9,48:1  */
+    --mt-neutral-500: 221 15% 41%;   /* #5A6479  NAJJAŚNIEJSZY TEKST 5,94:1 */
+    --mt-neutral-300: 219 22% 82%;   /* #C7CEDB  tylko obramowania         */
+    --mt-neutral-100: 218 35% 94%;   /* #EAEEF5  powierzchnie wyróżnione   */
+    --mt-neutral-50: 220 37% 97%;    /* #F4F6FA  tło strony                */
+
+    /* ---- Semantyczne ---- */
+    --mt-success-700: 150 78% 27%;   /* #0F7A45 */
+    --mt-success-50: 141 41% 93%;    /* #E7F5EC */
+    --mt-danger-700: 4 76% 40%;      /* #B42318 */
+    --mt-danger-50: 8 85% 95%;       /* #FDEAE7 */
+    --mt-warning-700: 36 100% 27%;   /* #8A5300 */
+    --mt-warning-50: 41 100% 95%;    /* #FFF7E6 */
+
+    /* ---- Role (mapowanie na system shadcn) ---- */
+    --background: var(--mt-neutral-50);
+    --foreground: var(--mt-ink-900);
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: var(--mt-ink-900);
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: var(--mt-ink-900);
 
-    /* Primary - Deep Navy Blue */
-    --primary: 213 45% 22%;
+    /* Nadpisywane per marka w BrandContext */
+    --primary: var(--mt-navy-700);
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Light slate */
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 215 25% 25%;
+    --secondary: var(--mt-neutral-100);
+    --secondary-foreground: var(--mt-neutral-600);
 
-    /* Muted - Soft gray */
-    --muted: 210 15% 93%;
-    --muted-foreground: 215 15% 45%;
+    /* muted-foreground = Neutral 600 (9,48:1). Poprzednio 215 15% 45% ≈ 4,3:1 */
+    --muted: var(--mt-neutral-100);
+    --muted-foreground: var(--mt-neutral-600);
+    /* Najjaśniejszy dopuszczalny kolor tekstu — poniżej tekst nie istnieje */
+    --subtle-foreground: var(--mt-neutral-500);
 
-    /* Accent - Vibrant Orange for CTAs */
-    --accent: 24 95% 53%;
-    --accent-foreground: 0 0% 100%;
+    --accent: var(--mt-yellow-500);
+    --accent-foreground: var(--mt-navy-700);
 
-    /* Success - Green for badges */
-    --success: 142 70% 40%;
+    --success: var(--mt-success-700);
     --success-foreground: 0 0% 100%;
+    --success-soft: var(--mt-success-50);
 
-    /* Warning */
-    --warning: 38 92% 50%;
+    --warning: var(--mt-warning-700);
     --warning-foreground: 0 0% 100%;
+    --warning-soft: var(--mt-warning-50);
 
-    --destructive: 0 84% 60%;
+    --destructive: var(--mt-danger-700);
     --destructive-foreground: 0 0% 100%;
+    --destructive-soft: var(--mt-danger-50);
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 213 45% 22%;
+    --border: var(--mt-neutral-300);
+    --input: var(--mt-neutral-300);
+    --ring: var(--mt-yellow-500);
 
-    --radius: 0.625rem;
+    --radius: 0.625rem;              /* 10px — karty, panele */
+
+    /* ---- Typografia ---- */
+    --font-heading: 'Outfit', system-ui, sans-serif;   /* nadpisywane per marka */
+    --font-body: 'Inter', system-ui, sans-serif;
+
+    /* ---- Wymiary (brandbook rozdz. 03) ---- */
+    --mt-touch-min: 44px;
+    --mt-btn-h: 48px;
+    --mt-btn-h-mobile: 52px;
+    --mt-input-h: 48px;
+    --mt-input-h-mobile: 52px;
 
     /* Custom tokens */
     --header-height: 5rem;
     --filter-width: 320px;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(213, 45%, 22%) 0%, hsl(213, 50%, 30%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(24, 95%, 53%) 0%, hsl(28, 95%, 48%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(210, 20%, 98%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(var(--mt-navy-700)) 0%, hsl(var(--mt-navy-600)) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(var(--mt-yellow-500)) 0%, hsl(var(--mt-yellow-600)) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(var(--mt-neutral-50)) 100%);
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(215 25% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.07), 0 2px 4px -2px hsl(215 25% 15% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.08), 0 4px 6px -4px hsl(215 25% 15% / 0.05);
-    --shadow-xl: 0 20px 25px -5px hsl(215 25% 15% / 0.08), 0 8px 10px -6px hsl(215 25% 15% / 0.05);
-    --shadow-card: 0 1px 3px 0 hsl(215 25% 15% / 0.06), 0 1px 2px -1px hsl(215 25% 15% / 0.06);
-    --shadow-card-hover: 0 10px 20px -5px hsl(215 25% 15% / 0.12), 0 4px 6px -2px hsl(215 25% 15% / 0.05);
+    /* Shadows — brandbook rozdz. 03, poświata w granacie zamiast neutralnej */
+    --shadow-sm: 0 1px 2px 0 hsl(var(--mt-navy-700) / 0.06);
+    --shadow-md: 0 4px 6px -1px hsl(var(--mt-navy-700) / 0.08), 0 2px 4px -2px hsl(var(--mt-navy-700) / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(var(--mt-navy-700) / 0.10), 0 4px 6px -4px hsl(var(--mt-navy-700) / 0.06);
+    --shadow-xl: 0 20px 25px -5px hsl(var(--mt-navy-700) / 0.10), 0 8px 10px -6px hsl(var(--mt-navy-700) / 0.06);
+    --shadow-card: 0 1px 2px hsl(var(--mt-navy-700) / 0.06), 0 8px 20px -14px hsl(var(--mt-navy-700) / 0.30);
+    --shadow-card-hover: 0 2px 6px hsl(var(--mt-navy-700) / 0.08), 0 16px 36px -20px hsl(var(--mt-navy-700) / 0.45);
 
     /* Sidebar variables */
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 215 25% 25%;
-    --sidebar-primary: 213 45% 22%;
+    --sidebar-foreground: var(--mt-neutral-600);
+    --sidebar-primary: var(--mt-navy-700);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 20% 96%;
-    --sidebar-accent-foreground: 215 25% 25%;
-    --sidebar-border: 214 20% 88%;
-    --sidebar-ring: 213 45% 22%;
+    --sidebar-accent: var(--mt-neutral-100);
+    --sidebar-accent-foreground: var(--mt-neutral-600);
+    --sidebar-border: var(--mt-neutral-300);
+    --sidebar-ring: var(--mt-navy-700);
   }
 
   .dark {
@@ -101,19 +163,23 @@
     --secondary-foreground: 210 20% 90%;
 
     --muted: 215 25% 18%;
-    --muted-foreground: 215 15% 55%;
+    --muted-foreground: 215 20% 72%;
+    --subtle-foreground: 215 18% 64%;
 
-    --accent: 24 95% 53%;
-    --accent-foreground: 0 0% 100%;
+    --accent: var(--mt-yellow-500);
+    --accent-foreground: var(--mt-navy-700);
 
-    --success: 142 70% 45%;
+    --success: 150 55% 45%;
     --success-foreground: 0 0% 100%;
+    --success-soft: 150 40% 14%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning: 38 80% 55%;
+    --warning-foreground: 221 39% 11%;
+    --warning-soft: 38 40% 14%;
 
-    --destructive: 0 70% 45%;
+    --destructive: 4 70% 52%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 4 40% 16%;
 
     --border: 215 25% 20%;
     --input: 215 25% 20%;
@@ -137,6 +203,8 @@
 
   body {
     @apply bg-background text-foreground font-body antialiased;
+    font-size: 16px;
+    line-height: 1.6;
   }
 
   h1,
@@ -146,6 +214,38 @@
   h5,
   h6 {
     @apply font-heading font-semibold tracking-tight;
+  }
+
+  /* Brandbook rozdz. 04 — widoczny stan skupienia klawiatury na wszystkim,
+     co jest interaktywne. Na żółtych powierzchniach ring zamienia się na granat,
+     żeby nie znikał. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid hsl(var(--mt-yellow-500));
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+
+  .bg-accent:focus-visible,
+  [data-accent-surface]:focus-visible {
+    outline-color: hsl(var(--mt-navy-700));
+  }
+
+  /* Cyfry tabelaryczne wszędzie, gdzie prezentujemy kwoty i dane techniczne */
+  .tabular,
+  th.num,
+  td.num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 

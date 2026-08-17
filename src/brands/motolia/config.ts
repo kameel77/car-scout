@@ -5,15 +5,22 @@ export const motoliaConfig: BrandConfig = {
   id: 'motolia',
   name: 'Motolia',
   domain: 'motolia.pl',
+  // Brandbook Motolia v1.0 — kolory odczytane z /brands/motolia/logo-header.svg.
+  // Zapis HSL bez funkcji hsl(), bo BrandContext wstrzykuje je do zmiennych,
+  // które Tailwind owija w hsl().
   colors: {
-    // Black — primary surfaces, borders, text
-    primary: '0 0% 10%',
-    primaryHover: '0 0% 16%',
-    primaryForeground: '0 0% 100%',       // white text on black bg
-    // Golden yellow (#F5C518) — all CTAs, highlights, accents
-    accent: '47 92% 53%',
-    accentHover: '47 91% 44%',
-    accentForeground: '0 0% 10%',         // black text on yellow bg
+    // Granat 700 #082D76 — podstawowy: nagłówki, linki, stopka, przycisk drugorzędny
+    primary: '220 87% 25%',
+    primaryHover: '219 88% 31%',          // #0A3A96
+    primaryForeground: '0 0% 100%',       // biel na granacie — 12,75:1
+    // Żółć 500 #FFBE00 — akcent, WYŁĄCZNIE jako wypełnienie, nigdy jako kolor liter
+    accent: '45 100% 50%',
+    accentHover: '45 100% 44%',           // #E0A800
+    accentForeground: '220 87% 25%',      // granat na żółci — 7,66:1
+  },
+  fonts: {
+    heading: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
+    body: "'Inter', system-ui, sans-serif",
   },
   contactInfo: {
     phone: '+48 22 112 09 50',
