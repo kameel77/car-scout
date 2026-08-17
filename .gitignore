@@ -39,3 +39,11 @@ security/
 
 *.tsbuildinfo
 graphify-out/
+scratch/
+_to_delete/
+backend/check_*
+backend/scratch.*
+backend/test_api.*
+backend/scripts/compile-cookies.ts
+patch_nginx.sh
+IDEA.md

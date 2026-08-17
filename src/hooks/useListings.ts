@@ -93,17 +93,39 @@ export function useListings(
     });
 }
 
+export interface UseListingResult {
+    listing: Listing;
+    isRecentlySold?: boolean;
+    similarListings?: any[];
+    isLongGone?: boolean;
+    redirectUrl?: string | null;
+}
+
 export function useListing(id: string | undefined) {
-    return useQuery<{ listing: Listing }>({
+    return useQuery<UseListingResult>({
         queryKey: ['listing', id],
         queryFn: async () => {
             if (!id) throw new Error('Listing ID is required');
             const data = await listingsApi.getListing(id);
+            if (!data?.listing) {
+                if (data?.isLongGone) {
+                    return {
+                        listing: null as any,
+                        isLongGone: true,
+                        redirectUrl: data.redirectUrl || null,
+                    };
+                }
+                throw new Error('Failed to map listing data');
+            }
             const mapped = mapBackendListingToFrontend(data.listing);
             if (!mapped) {
                 throw new Error('Failed to map listing data');
             }
-            return { listing: mapped };
+            return {
+                listing: mapped,
+                isRecentlySold: data.isRecentlySold || mapped.is_archived,
+                similarListings: data.similarListings || [],
+            };
         },
         enabled: !!id
     });

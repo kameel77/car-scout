@@ -356,6 +356,14 @@ export default function HeroVehicleFilter() {
 
       {/* Footer */}
       <div className="hvf__footer">
+        <button
+          type="button"
+          className="hvf__submit-btn"
+          onClick={handleSubmit}
+        >
+          <Search size={16} />
+          Pokaż oferty
+        </button>
         <a
           href="/samochody?openFilters=true"
           className="hvf__advanced-link"
@@ -367,14 +375,6 @@ export default function HeroVehicleFilter() {
           <SlidersHorizontal size={13} />
           Wyszukiwanie zaawansowane
         </a>
-        <button
-          type="button"
-          className="hvf__submit-btn"
-          onClick={handleSubmit}
-        >
-          <Search size={16} />
-          Pokaż oferty
-        </button>
       </div>
     </div>
   );

@@ -17,6 +17,15 @@ describe('GET /api/render', () => {
     beforeAll(async () => {
         app = await buildApp();
         await app.ready();
+        const originalInject = app.inject.bind(app);
+        app.inject = ((opt: any) => {
+            const options = typeof opt === 'string' ? { url: opt } : { ...opt };
+            options.headers = {
+                host: 'motolia.pl',
+                ...(options.headers || {}),
+            };
+            return originalInject(options);
+        }) as any;
     });
 
     afterAll(async () => {
@@ -31,7 +40,7 @@ describe('GET /api/render', () => {
         prevFrontendUrl = process.env.FRONTEND_URL;
         prevInternalFrontendUrl = process.env.INTERNAL_FRONTEND_URL;
         process.env.BRAND = 'motolia';
-        process.env.FRONTEND_URL = 'https://dev.motolia.pl';
+        process.env.FRONTEND_URL = 'https://motolia.pl';
         vi.stubGlobal(
             'fetch',
             vi.fn(async () => new Response(TEMPLATE, { status: 200 }))
@@ -72,7 +81,7 @@ describe('GET /api/render', () => {
         expect(res.statusCode).toBe(200);
         expect(res.headers['content-type']).toContain('text/html');
         expect(res.body).toContain('TEST_RENDER Modelo');
-        expect(res.body).toContain(`rel="canonical" href="https://dev.motolia.pl/oferta/${slug}"`);
+        expect(res.body).toContain(`rel="canonical" href="https://motolia.pl/oferta/${slug}"`);
         expect(res.body).toContain('application/ld+json');
     });
 
@@ -81,7 +90,7 @@ describe('GET /api/render', () => {
         const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
         const res = await app.inject({ method: 'GET', url: `/api/render?path=/leasing/${slug}` });
         expect(res.statusCode).toBe(200);
-        expect(res.body).toContain(`rel="canonical" href="https://dev.motolia.pl/oferta/${slug}"`);
+        expect(res.body).toContain(`rel="canonical" href="https://motolia.pl/oferta/${slug}"`);
         expect(res.body).toContain('— leasing');
     });
 
@@ -94,22 +103,24 @@ describe('GET /api/render', () => {
         expect(res.body).toContain('noindex');
     });
 
-    it('archived listing returns 404', async () => {
+    it('recently archived listing returns 200 with noindex and banner', async () => {
         const l = await createListing();
-        await app.prisma.listing.update({ where: { id: l.id }, data: { isArchived: true } });
+        await app.prisma.listing.update({ where: { id: l.id }, data: { isArchived: true, archivedAt: new Date() } });
         const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
         const res = await app.inject({
             method: 'GET',
             url: `/api/render?path=/oferta/${slug}`,
         });
-        expect(res.statusCode).toBe(404);
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('noindex');
+        expect(res.body).toContain('Oferta archiwalna');
     });
 
     it('static route gets unique title', async () => {
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/uzywane' });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('używane');
-        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/uzywane"');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/uzywane"');
     });
 
     it('home page SEO (no active hero banner): title, description, exactly 1 h1, and JSON-LD (Organization, WebSite)', async () => {
@@ -248,7 +259,7 @@ describe('GET /api/render', () => {
         const bogusSlug = `totally-fake-slug-${l.id}`;
         const res = await app.inject({ method: 'GET', url: `/api/render?path=/oferta/${bogusSlug}` });
         expect(res.statusCode).toBe(200);
-        expect(res.body).toContain(`rel="canonical" href="https://dev.motolia.pl/oferta/${trueSlug}"`);
+        expect(res.body).toContain(`rel="canonical" href="https://motolia.pl/oferta/${trueSlug}"`);
         expect(res.body).not.toContain('totally-fake-slug');
     });
 
@@ -291,6 +302,15 @@ describe('GET /api/render — brand/model pages', () => {
     beforeAll(async () => {
         app = await buildApp();
         await app.ready();
+        const originalInject = app.inject.bind(app);
+        app.inject = ((opt: any) => {
+            const options = typeof opt === 'string' ? { url: opt } : { ...opt };
+            options.headers = {
+                host: 'motolia.pl',
+                ...(options.headers || {}),
+            };
+            return originalInject(options);
+        }) as any;
     });
 
     afterAll(async () => {
@@ -303,7 +323,7 @@ describe('GET /api/render — brand/model pages', () => {
         __resetRenderCache();
         __resetBrandCatalogCache();
         process.env.BRAND = 'motolia';
-        process.env.FRONTEND_URL = 'https://dev.motolia.pl';
+        process.env.FRONTEND_URL = 'https://motolia.pl';
         vi.stubGlobal('fetch', vi.fn(async () => new Response(TEMPLATE, { status: 200 })));
         await app.prisma.listing.deleteMany({ where: { make: 'Test Brand Page' } });
     });
@@ -329,7 +349,7 @@ describe('GET /api/render — brand/model pages', () => {
         await createListing();
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/test-brand-page' });
         expect(res.statusCode).toBe(200);
-        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody/test-brand-page"');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody/test-brand-page"');
         expect(res.body).not.toContain('noindex');
         expect(res.body).toContain('Test Brand Page (1 oferta)');
         expect(res.body).toContain('<h1>Samochody Test Brand Page dostępne od ręki — nowe i używane</h1>');
@@ -346,7 +366,7 @@ describe('GET /api/render — brand/model pages', () => {
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/test-brand-page/test-model-one' });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('noindex');
-        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody/test-brand-page/test-model-one"');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody/test-brand-page/test-model-one"');
         expect(res.body).toContain('Test Brand Page Test Model One');
     });
 
@@ -370,7 +390,7 @@ describe('GET /api/render — brand/model pages', () => {
         await createListing();
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' + encodeURIComponent('?make=Test Brand Page') });
         expect(res.statusCode).toBe(200);
-        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody/test-brand-page"');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody/test-brand-page"');
     });
 
     it('/samochody?make=X&model=Y canonicalizes to the model page', async () => {
@@ -378,7 +398,7 @@ describe('GET /api/render — brand/model pages', () => {
         const url = '/api/render?path=/samochody' + encodeURIComponent('?make=Test Brand Page&model=Test Model One');
         const res = await app.inject({ method: 'GET', url });
         expect(res.statusCode).toBe(200);
-        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody/test-brand-page/test-model-one"');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody/test-brand-page/test-model-one"');
     });
 
     it('/samochody?make=X&make=Y (multiple brands) canonical stays on /samochody', async () => {
@@ -386,7 +406,7 @@ describe('GET /api/render — brand/model pages', () => {
         const url = '/api/render?path=/samochody' + encodeURIComponent('?make=Test Brand Page,BMW');
         const res = await app.inject({ method: 'GET', url });
         expect(res.statusCode).toBe(200);
-        expect(res.body).toContain('rel="canonical" href="https://dev.motolia.pl/samochody"');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody"');
     });
 
     it('/samochody shows a "Popularne marki" internal-linking block linking to brand pages', async () => {
@@ -408,6 +428,15 @@ describe('GET /api/render — brand/model pages with CMS content (F2)', () => {
     beforeAll(async () => {
         app = await buildApp();
         await app.ready();
+        const originalInject = app.inject.bind(app);
+        app.inject = ((opt: any) => {
+            const options = typeof opt === 'string' ? { url: opt } : { ...opt };
+            options.headers = {
+                host: 'motolia.pl',
+                ...(options.headers || {}),
+            };
+            return originalInject(options);
+        }) as any;
     });
 
     afterAll(async () => {
@@ -422,7 +451,7 @@ describe('GET /api/render — brand/model pages with CMS content (F2)', () => {
         __resetBrandCatalogCache();
         __resetSeoContentCache();
         process.env.BRAND = 'motolia';
-        process.env.FRONTEND_URL = 'https://dev.motolia.pl';
+        process.env.FRONTEND_URL = 'https://motolia.pl';
         vi.stubGlobal('fetch', vi.fn(async () => new Response(TEMPLATE, { status: 200 })));
         await app.prisma.listing.deleteMany({ where: { make: 'Test CMS Brand' } });
         await app.prisma.seoContentPage.deleteMany({ where: { urlPath: { in: [BRAND_URL_PATH, MODEL_URL_PATH] } } });
@@ -530,6 +559,15 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
     beforeAll(async () => {
         app = await buildApp();
         await app.ready();
+        const originalInject = app.inject.bind(app);
+        app.inject = ((opt: any) => {
+            const options = typeof opt === 'string' ? { url: opt } : { ...opt };
+            options.headers = {
+                host: 'motolia.pl',
+                ...(options.headers || {}),
+            };
+            return originalInject(options);
+        }) as any;
     });
 
     afterAll(async () => {
@@ -541,7 +579,7 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         __resetRenderCache();
         __resetBrandCatalogCache();
         process.env.BRAND = 'motolia';
-        process.env.FRONTEND_URL = 'https://dev.motolia.pl';
+        process.env.FRONTEND_URL = 'https://motolia.pl';
         vi.stubGlobal('fetch', vi.fn(async () => new Response(SHELL_TEMPLATE, { status: 200 })));
     });
 

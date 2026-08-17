@@ -479,7 +479,8 @@ describe('buildStaticMeta', () => {
     it('home uses brand defaults and Organization JSON-LD', () => {
         const m = buildStaticMeta('/', ctx)!;
         expect(m.title).toBe(ctx.defaultTitle);
-        expect((m.jsonLd as any)['@type']).toBe('Organization');
+        const org = Array.isArray(m.jsonLd) ? m.jsonLd.find((x: any) => x['@type'] === 'Organization') : m.jsonLd;
+        expect(org?.['@type']).toBe('Organization');
     });
 
     it('home bodyHtml has no h1 (avoids duplicate with home-shell h1) and shows title as strong text', () => {
@@ -503,7 +504,7 @@ describe('buildStaticMeta', () => {
 
     it('Organization JSON-LD includes description, alternateName and disambiguatingDescription from brand ctx', () => {
         const m = buildStaticMeta('/', ctx)!;
-        const org = m.jsonLd as any;
+        const org = (Array.isArray(m.jsonLd) ? m.jsonLd.find((x: any) => x['@type'] === 'Organization') : m.jsonLd) as any;
         expect(org.description).toBe(ctx.defaultDescription);
         expect(org.alternateName).toBeUndefined();
         expect(org.disambiguatingDescription).toBeUndefined();
@@ -516,7 +517,7 @@ describe('buildStaticMeta', () => {
         if (prevBrand === undefined) delete process.env.BRAND; else process.env.BRAND = prevBrand;
 
         const mMotolia = buildStaticMeta('/', motoliaCtx)!;
-        const orgMotolia = mMotolia.jsonLd as any;
+        const orgMotolia = (Array.isArray(mMotolia.jsonLd) ? mMotolia.jsonLd.find((x: any) => x['@type'] === 'Organization') : mMotolia.jsonLd) as any;
         expect(orgMotolia.alternateName).toEqual(['Motolia.pl', 'motolia.pl', 'Motoria', 'Motalia', 'Moto lia']);
         expect(orgMotolia.disambiguatingDescription).toContain('Motolia');
     });
@@ -529,7 +530,7 @@ describe('buildStaticMeta', () => {
             legalContactEmail: 'kontakt@motolia.pl',
             legalContactPhone: '+48123456789',
         })!;
-        const org = m.jsonLd as any;
+        const org = (Array.isArray(m.jsonLd) ? m.jsonLd.find((x: any) => x['@type'] === 'Organization') : m.jsonLd) as any;
         expect(org.legalName).toBe('Motolia Sp. z o.o.');
         expect(org.address).toBe('ul. Testowa 1, 00-001 Warszawa');
         expect(org.vatID).toBe('PL1234567890');
@@ -545,21 +546,22 @@ describe('buildStaticMeta', () => {
 
     it('Organization JSON-LD omits legal fields and contactPoint when settings are empty/absent', () => {
         const m = buildStaticMeta('/', ctx, [], [], '/oferta', undefined, undefined, {})!;
-        const org = m.jsonLd as any;
+        const org = (Array.isArray(m.jsonLd) ? m.jsonLd.find((x: any) => x['@type'] === 'Organization') : m.jsonLd) as any;
         expect(org.legalName).toBeUndefined();
         expect(org.address).toBeUndefined();
         expect(org.vatID).toBeUndefined();
         expect(org.contactPoint).toBeUndefined();
 
         const mNoArg = buildStaticMeta('/', ctx)!;
-        expect((mNoArg.jsonLd as any).contactPoint).toBeUndefined();
+        const orgNoArg = (Array.isArray(mNoArg.jsonLd) ? mNoArg.jsonLd.find((x: any) => x['@type'] === 'Organization') : mNoArg.jsonLd) as any;
+        expect(orgNoArg.contactPoint).toBeUndefined();
     });
 
     it('Organization JSON-LD contactPoint appears even with only one of phone/email set', () => {
         const m = buildStaticMeta('/', ctx, [], [], '/oferta', undefined, undefined, {
             legalContactEmail: 'kontakt@motolia.pl',
         })!;
-        const org = m.jsonLd as any;
+        const org = (Array.isArray(m.jsonLd) ? m.jsonLd.find((x: any) => x['@type'] === 'Organization') : m.jsonLd) as any;
         expect(org.contactPoint).toEqual({
             '@type': 'ContactPoint',
             email: 'kontakt@motolia.pl',
