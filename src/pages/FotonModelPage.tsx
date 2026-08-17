@@ -207,7 +207,7 @@ export default function FotonModelPage() {
                       />
                     </div>
                     <div className="p-5 space-y-1">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
                         {sibling.categoryLabel}
                       </span>
                       <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">

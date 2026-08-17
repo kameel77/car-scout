@@ -7,9 +7,12 @@ import {
     Carousel, CarouselContent, CarouselItem, type CarouselApi,
 } from '@/components/ui/carousel';
 
-const YELLOW = '#F5C518';
-const YELLOW_DARK = '#D4A90A';
-const BLACK = '#1A1A1A';
+const YELLOW = 'hsl(var(--mt-yellow-500))';
+const YELLOW_HOVER = 'hsl(var(--mt-yellow-600))';
+// Brandbook rozdz. 01: żółć jest kolorem powierzchni, nie liter.
+// Litery i ikony na jasnym tle idą w granacie (12,75:1 zamiast 1,66:1).
+const ACCENT_INK = 'hsl(var(--mt-navy-700))';
+const BLACK = 'hsl(var(--mt-navy-900))';
 
 const ALIGN_CLASS: Record<string, string> = {
     left: 'justify-start',
@@ -91,8 +94,8 @@ export function HeroBannerCarousel() {
                                                 <Link
                                                     to={b.buttonUrl}
                                                     className="inline-flex items-center justify-center px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
-                                                    style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px ${YELLOW}60` }}
-                                                    onMouseEnter={(e) => (e.currentTarget.style.background = YELLOW_DARK)}
+                                                    style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px hsl(var(--mt-yellow-500) / 0.38)` }}
+                                                    onMouseEnter={(e) => (e.currentTarget.style.background = YELLOW_HOVER)}
                                                     onMouseLeave={(e) => (e.currentTarget.style.background = YELLOW)}
                                                 >
                                                     {b.buttonLabel}
@@ -118,16 +121,23 @@ export function HeroBannerCarousel() {
             </Carousel>
 
             {banners.length > 1 && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex z-10">
+                    {/* Brandbook rozdz. 03: kropka pozostaje mała, ale pole dotyku ma 44 x 44 px.
+                        Powiększamy obszar klikalny przyciskiem, nie samą grafiką. */}
                     {banners.map((b, i) => (
                         <button
                             key={b.id}
                             type="button"
                             aria-label={`Slajd ${i + 1}`}
+                            aria-current={selected === i}
                             onClick={() => api?.scrollTo(i)}
-                            className="h-2 rounded-full transition-all"
-                            style={{ width: selected === i ? 24 : 8, background: selected === i ? YELLOW : 'rgba(255,255,255,0.6)' }}
-                        />
+                            className="flex min-h-touch min-w-touch items-center justify-center"
+                        >
+                            <span
+                                className="block h-2.5 rounded-full transition-all"
+                                style={{ width: selected === i ? 26 : 10, background: selected === i ? YELLOW : 'rgba(255,255,255,0.75)' }}
+                            />
+                        </button>
                     ))}
                 </div>
             )}

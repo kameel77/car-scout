@@ -14,12 +14,34 @@ import './home-page.css';
 
 // ─── Brand accent helper ──────────────────────────────────────────────────────
 
+/**
+ * Kolory akcentu FAQ.
+ * Brandbook Motolia rozdz. 01: żółć jest kolorem powierzchni (przyciski, plakietki),
+ * granat jest kolorem liter. Dlatego `accent` (powierzchnia) i `accentInk` (litery)
+ * to dwa różne tokeny — wcześniej jeden hex pełnił obie role i dawał 1,66:1.
+ */
 function useBrandAccent() {
   const { config } = useBrand();
   if (config.id === 'motolia') {
-    return { accent: '#D4A90A', accentBg: '#F5C51815', accentShadow: '#F5C51820', isMotolia: true };
+    return {
+      accent: 'hsl(var(--mt-yellow-500))',
+      accentInk: 'hsl(var(--mt-navy-700))',
+      accentOn: 'hsl(var(--mt-navy-700))',        // litery na żółtej powierzchni — 7,66:1
+      accentTint: 'hsl(var(--mt-yellow-500) / 0.16)',
+      accentBorder: 'hsl(var(--mt-yellow-500) / 0.45)',
+      accentShadow: 'hsl(var(--mt-navy-700) / 0.22)',
+      isMotolia: true,
+    };
   }
-  return { accent: '#F97316', accentBg: '#FFF7ED', accentShadow: '#FDBA7420', isMotolia: false };
+  return {
+    accent: '#F97316',
+    accentInk: '#9A3412',
+    accentOn: '#FFFFFF',
+    accentTint: '#FFF7ED',
+    accentBorder: '#FDBA74',
+    accentShadow: 'rgba(249,115,22,0.25)',
+    isMotolia: false,
+  };
 }
 
 // ─── FAQ Item ─────────────────────────────────────────────────────────────────
@@ -30,11 +52,11 @@ interface FaqItemProps {
   isOpen: boolean;
   onClick: () => void;
   accent: string;
-  accentBg: string;
+  accentOn: string;
   isMotolia: boolean;
 }
 
-function FaqItem({ question, answer, isOpen, onClick, accent, accentBg, isMotolia }: FaqItemProps) {
+function FaqItem({ question, answer, isOpen, onClick, accent, accentOn, isMotolia }: FaqItemProps) {
   return (
     <div
       className={cn(
@@ -46,7 +68,7 @@ function FaqItem({ question, answer, isOpen, onClick, accent, accentBg, isMotoli
       style={{ cursor: 'pointer' }}
     >
       <div className="flex items-center justify-between p-5 gap-4">
-        <span className={cn('font-semibold text-[#1A1A1A] text-base leading-snug', isOpen && 'text-[#1A1A1A]')}>
+        <span className={cn('font-semibold text-foreground text-base leading-snug', isOpen && 'text-foreground')}>
           {question}
         </span>
         <div
@@ -55,15 +77,15 @@ function FaqItem({ question, answer, isOpen, onClick, accent, accentBg, isMotoli
             isOpen ? 'rotate-180' : '',
           )}
           style={{
-            background: isOpen ? accent : '#F3F4F6',
-            color: isOpen ? '#fff' : '#6B7280',
+            background: isOpen ? accent : 'hsl(var(--mt-neutral-100))',
+            color: isOpen ? accentOn : 'hsl(var(--mt-neutral-600))',
           }}
         >
           <ChevronDown size={16} />
         </div>
       </div>
       {isOpen && (
-        <div className="px-5 pb-5 text-gray-500 leading-relaxed text-sm border-t border-gray-100 pt-4 whitespace-pre-line">
+        <div className="px-5 pb-5 text-muted-foreground leading-relaxed text-sm border-t border-gray-100 pt-4 whitespace-pre-line">
           {answer}
         </div>
       )}
@@ -75,7 +97,7 @@ function FaqItem({ question, answer, isOpen, onClick, accent, accentBg, isMotoli
 
 export default function PublicFaqPage() {
   const { i18n } = useTranslation();
-  const { accent, accentBg, isMotolia } = useBrandAccent();
+  const { accent, accentInk, accentOn, accentTint, accentBorder, accentShadow, isMotolia } = useBrandAccent();
   const { config } = useBrand();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedPage, setSelectedPage] = React.useState<string>('all');
@@ -133,36 +155,36 @@ export default function PublicFaqPage() {
         {/* Hero */}
         <section
           className="pt-32 pb-20 px-6"
-          style={{ background: isMotolia ? '#FAFAF8' : 'linear-gradient(to bottom, #fff, #f8fafc)' }}
+          style={{ background: isMotolia ? 'hsl(var(--mt-neutral-50))' : 'linear-gradient(to bottom, #fff, #f8fafc)' }}
         >
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
             <div
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-7"
-              style={{ background: `${accent}18`, borderColor: `${accent}50`, color: isMotolia ? '#1A1A1A' : '#2D3142' }}
+              style={{ background: accentTint, borderColor: accentBorder, color: 'hsl(var(--mt-ink-900))' }}
             >
-              {isMotolia ? <span style={{ color: accent }}>◆</span> : null}
+              {isMotolia ? <span style={{ color: accentInk }}>◆</span> : null}
               Centrum pomocy
             </div>
 
-            <h1 className="text-4xl md:text-6xl font-outfit font-extrabold mb-6 text-[#1A1A1A]">
+            <h1 className="text-4xl md:text-6xl font-heading font-extrabold mb-6 text-foreground">
               Jak możemy Ci{' '}
-              <span style={{ color: accent }}>pomóc?</span>
+              <span style={{ color: accentInk }}>pomóc?</span>
             </h1>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-10">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
               Znajdź odpowiedzi na najczęściej zadawane pytania dotyczące finansowania,
               procesu zakupu i naszych usług.
             </p>
 
             <div className="max-w-xl mx-auto relative">
               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+                <Search className="h-5 w-5 text-subtle" />
               </div>
               <Input
                 type="text"
                 placeholder="Szukaj w najczęstszych pytaniach…"
                 className="w-full h-14 pl-12 pr-4 rounded-2xl border-gray-200 shadow-sm text-lg"
-                style={{ '--tw-ring-color': accent } as React.CSSProperties}
+                style={{ '--tw-ring-color': accentInk } as React.CSSProperties}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
@@ -182,11 +204,11 @@ export default function PublicFaqPage() {
                   className="px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200"
                   style={
                     selectedPage === cat.id
-                      ? { background: accent, color: isMotolia ? '#1A1A1A' : '#fff', boxShadow: `0 4px 14px ${accent}35` }
-                      : { background: '#F3F4F6', color: '#4B5563' }
+                      ? { background: accent, color: accentOn, boxShadow: `0 4px 14px ${accentShadow}` }
+                      : { background: 'hsl(var(--mt-neutral-100))', color: 'hsl(var(--mt-neutral-600))' }
                   }
-                  onMouseEnter={e => { if (selectedPage !== cat.id) e.currentTarget.style.background = '#E5E7EB'; }}
-                  onMouseLeave={e => { if (selectedPage !== cat.id) e.currentTarget.style.background = '#F3F4F6'; }}
+                  onMouseEnter={e => { if (selectedPage !== cat.id) e.currentTarget.style.background = 'hsl(var(--mt-neutral-300))'; }}
+                  onMouseLeave={e => { if (selectedPage !== cat.id) e.currentTarget.style.background = 'hsl(var(--mt-neutral-100))'; }}
                 >
                   {cat.label}
                 </button>
@@ -194,8 +216,8 @@ export default function PublicFaqPage() {
             </div>
 
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-400">
-                <Loader2 className="w-10 h-10 animate-spin" style={{ color: accent }} />
+              <div className="flex flex-col items-center justify-center py-20 gap-4 text-subtle">
+                <Loader2 className="w-10 h-10 animate-spin" style={{ color: accentInk }} />
                 <p>Ładowanie odpowiedzi…</p>
               </div>
             ) : filteredFaqs.length > 0 ? (
@@ -208,7 +230,7 @@ export default function PublicFaqPage() {
                     isOpen={openId === faq.id}
                     onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
                     accent={accent}
-                    accentBg={accentBg}
+                    accentOn={accentOn}
                     isMotolia={isMotolia}
                   />
                 ))}
@@ -216,14 +238,14 @@ export default function PublicFaqPage() {
             ) : (
               <div className="text-center py-20">
                 <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-100">
-                  <HelpCircle className="w-10 h-10 text-gray-400" />
+                  <HelpCircle className="w-10 h-10 text-subtle" />
                 </div>
-                <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">Nie znaleźliśmy odpowiedzi</h3>
-                <p className="text-gray-500">Spróbuj wpisać inne słowo kluczowe lub skontaktuj się z nami.</p>
+                <h3 className="text-2xl font-bold text-foreground mb-2">Nie znaleźliśmy odpowiedzi</h3>
+                <p className="text-muted-foreground">Spróbuj wpisać inne słowo kluczowe lub skontaktuj się z nami.</p>
                 <button
                   onClick={() => { setSearchQuery(''); setSelectedPage('all'); }}
-                  className="mt-6 font-semibold hover:underline"
-                  style={{ color: accent }}
+                  className="mt-6 font-semibold underline underline-offset-4 decoration-2 hover:no-underline"
+                  style={{ color: accentInk }}
                 >
                   Pokaż wszystkie pytania
                 </button>
@@ -233,20 +255,20 @@ export default function PublicFaqPage() {
         </section>
 
         {/* Contact CTA */}
-        <section className="py-20 px-6" style={{ background: isMotolia ? '#1A1A1A' : '#FAFBFD' }}>
+        <section className="py-20 px-6" style={{ background: isMotolia ? 'hsl(var(--mt-navy-900))' : 'hsl(var(--mt-neutral-50))' }}>
           <div className="max-w-5xl mx-auto">
             <div
               className={cn(
                 'rounded-[2rem] p-8 md:p-14 flex flex-col md:flex-row items-center justify-between gap-10',
                 isMotolia ? 'border' : 'bg-white shadow-xl border border-gray-100',
               )}
-              style={isMotolia ? { borderColor: '#2A2A2A' } : {}}
+              style={isMotolia ? { borderColor: 'hsl(var(--mt-navy-700))' } : {}}
             >
               <div className="text-center md:text-left">
-                <h2 className={cn('text-3xl font-bold mb-4', isMotolia ? 'text-white' : 'text-[#2D3142]')}>
+                <h2 className={cn('text-3xl font-bold mb-4', isMotolia ? 'text-white' : 'text-foreground')}>
                   Wciąż masz pytania?
                 </h2>
-                <p className={cn('text-lg', isMotolia ? 'text-gray-400' : 'text-gray-500')}>
+                <p className={cn('text-lg', isMotolia ? 'text-gray-300' : 'text-gray-300')}>
                   Nasz zespół ekspertów jest gotowy, aby pomóc Ci w wyborze finansowania.
                 </p>
               </div>
@@ -257,7 +279,7 @@ export default function PublicFaqPage() {
                     'flex items-center justify-center gap-2 h-14 px-8 rounded-2xl font-bold transition-all',
                     isMotolia
                       ? 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
-                      : 'bg-gray-50 text-[#2D3142] hover:bg-gray-100',
+                      : 'bg-gray-50 text-foreground hover:bg-gray-100',
                   )}
                 >
                   <MessageSquare className="w-5 h-5" />
@@ -269,8 +291,8 @@ export default function PublicFaqPage() {
                   className="flex items-center justify-center gap-2 h-14 px-8 rounded-2xl font-bold transition-all hover:-translate-y-0.5"
                   style={{
                     background: accent,
-                    color: isMotolia ? '#1A1A1A' : '#fff',
-                    boxShadow: `0 4px 20px ${accent}40`,
+                    color: accentOn,
+                    boxShadow: `0 4px 20px ${accentShadow}`,
                   }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
                   onMouseLeave={e => (e.currentTarget.style.opacity = '1')}

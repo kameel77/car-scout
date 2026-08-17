@@ -12,29 +12,30 @@ import { RentalListingCard } from '@/components/RentalListingCard';
 import { trackLpView, trackPhoneClick } from '@/lib/analytics';
 import { formatPhoneForTelLink } from '@/utils/formatters';
 
-const ACCENT = '#F5C518';
-const ACCENT_DARK = '#D4A017';
+const ACCENT = 'hsl(var(--mt-yellow-500))';
+const ACCENT_HOVER = 'hsl(var(--mt-yellow-600))';
+const ACCENT_INK = 'hsl(var(--mt-navy-700))';
 
 /** Klasy motywu — landing bywa wysyłany do różnych grup, część kampanii wymaga jasnej wersji. */
 const THEMES = {
     dark: {
-        page: 'bg-[#121212] text-white',
-        header: 'bg-[#1a1a1a]/95 border-white/10',
-        heroSection: 'bg-gradient-to-b from-[#1a1a1a] to-[#121212] border-white/5',
-        band: 'bg-[#181818] border-white/5',
-        card: 'bg-[#222222] border-white/5',
-        callbackCard: 'bg-[#222222] border-[#F5C518]/40',
+        page: 'bg-brand-navy-deep text-white',
+        header: 'bg-brand-navy-deep/95 border-white/10',
+        heroSection: 'bg-gradient-to-b from-brand-navy-deep to-brand-navy-deep border-white/5',
+        band: 'bg-brand-navy border-white/5',
+        card: 'bg-brand-navy border-white/5',
+        callbackCard: 'bg-brand-navy border-accent/40',
         heading: 'text-white',
         body: 'text-gray-300',
-        muted: 'text-gray-400',
-        footer: 'bg-[#0e0e0e] border-white/10 text-gray-500',
-        stickyBar: 'bg-[#1a1a1a]/95 border-white/10',
-        loader: 'bg-[#1a1a1a] text-white',
-        accentText: 'text-[#F5C518]',
-        faqItem: 'border-white/10 hover:border-white/20 bg-[#1c1c1c]',
+        muted: 'text-gray-300',
+        footer: 'bg-brand-navy-deep border-white/10 text-gray-300',
+        stickyBar: 'bg-brand-navy-deep/95 border-white/10',
+        loader: 'bg-brand-navy-deep text-white',
+        accentText: 'text-brand-yellow',
+        faqItem: 'border-white/10 hover:border-white/20 bg-brand-navy',
         faqIconBg: 'rgba(255,255,255,0.08)',
-        faqIconColor: '#9CA3AF',
-        faqBody: 'border-white/10 text-gray-400',
+        faqIconColor: 'rgba(255,255,255,0.85)',
+        faqBody: 'border-white/10 text-gray-300',
     },
     light: {
         page: 'bg-white text-gray-900',
@@ -42,18 +43,18 @@ const THEMES = {
         heroSection: 'bg-gradient-to-b from-gray-50 to-white border-gray-200',
         band: 'bg-gray-50 border-gray-200',
         card: 'bg-white border-gray-200',
-        callbackCard: 'bg-white border-[#F5C518]',
+        callbackCard: 'bg-white border-accent',
         heading: 'text-gray-900',
         body: 'text-gray-600',
-        muted: 'text-gray-500',
-        footer: 'bg-gray-50 border-gray-200 text-gray-500',
+        muted: 'text-muted-foreground',
+        footer: 'bg-gray-50 border-gray-200 text-muted-foreground',
         stickyBar: 'bg-white/95 border-gray-200',
         loader: 'bg-white text-gray-900',
-        accentText: 'text-[#8a6d05]',
+        accentText: 'text-brand-yellow-ink',
         faqItem: 'border-gray-100 hover:border-gray-200 bg-white',
-        faqIconBg: '#F3F4F6',
-        faqIconColor: '#6B7280',
-        faqBody: 'border-gray-100 text-gray-500',
+        faqIconBg: 'hsl(var(--mt-neutral-100))',
+        faqIconColor: 'hsl(var(--mt-neutral-600))',
+        faqBody: 'border-gray-100 text-muted-foreground',
     },
 } as const;
 
@@ -132,7 +133,7 @@ export default function CampaignLandingPage() {
         return (
             <div className={`min-h-screen ${theme.loader} flex items-center justify-center`}>
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
                     <p className={`text-sm ${theme.muted}`}>Ładowanie oferty...</p>
                 </div>
             </div>
@@ -149,7 +150,7 @@ export default function CampaignLandingPage() {
                     </p>
                     <a
                         href="/samochody"
-                        className="inline-flex items-center justify-center h-11 px-6 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-semibold text-sm hover:opacity-90 transition-opacity"
+                        className="inline-flex items-center justify-center h-11 px-6 rounded-xl bg-accent text-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
                     >
                         Zobacz wszystkie samochody
                     </a>
@@ -186,7 +187,7 @@ export default function CampaignLandingPage() {
             <div className="max-w-5xl mx-auto">
                 <div className="space-y-4 text-left">
                     {lp.heroBadge && (
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5C518]/15 border border-[#F5C518]/30 text-xs font-semibold uppercase tracking-wider ${theme.accentText}`}>
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/15 border border-accent/30 text-xs font-semibold uppercase tracking-wider ${theme.accentText}`}>
                             <ShieldCheck className="w-3.5 h-3.5" />
                             <span>{lp.heroBadge}</span>
                         </div>
@@ -275,7 +276,7 @@ export default function CampaignLandingPage() {
                                         });
                                     }
                                 }}
-                                className="inline-flex items-center justify-center h-12 px-8 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm hover:opacity-90 transition-opacity shadow-md"
+                                className="inline-flex items-center justify-center h-12 px-8 rounded-xl bg-accent text-foreground font-bold text-sm hover:opacity-90 transition-opacity shadow-md"
                             >
                                 <span>{sections.listings?.ctaLabel || 'Sprawdź całą ofertę'}</span>
                                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -319,7 +320,7 @@ export default function CampaignLandingPage() {
                     <a
                         href={`tel:${formatPhoneForTelLink(contactPhone)}`}
                         onClick={() => handleCallClick('lp_top_header')}
-                        className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-xs md:text-sm hover:opacity-90 transition-opacity"
+                        className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-accent text-foreground font-bold text-xs md:text-sm hover:opacity-90 transition-opacity"
                     >
                         <Phone className="w-4 h-4 shrink-0" />
                         <span>{contactPhone}</span>
@@ -329,7 +330,7 @@ export default function CampaignLandingPage() {
 
             {/* Urgency Banner */}
             {showUrgency && (
-                <div className="bg-[#F5C518] text-[#1a1a1a] px-4 py-2.5 text-center text-xs md:text-sm font-semibold flex items-center justify-center gap-2 shadow-inner">
+                <div className="bg-accent text-foreground px-4 py-2.5 text-center text-xs md:text-sm font-semibold flex items-center justify-center gap-2 shadow-inner">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     <span>{sections.urgency?.text}</span>
                 </div>
@@ -347,7 +348,7 @@ export default function CampaignLandingPage() {
                                 : ['Zaufani dealerzy w całej Polsce', 'Leasing, kredyt i wynajem', 'Przejrzyste warunki', 'Decyzja nawet w 60 minut']
                             ).map((item, idx) => (
                                 <div key={idx} className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${theme.card}`}>
-                                    <CheckCircle2 className="w-4 h-4 text-[#F5C518] shrink-0" />
+                                    <CheckCircle2 className={`w-4 h-4 shrink-0 ${theme.accentText}`} />
                                     <span className={`text-xs md:text-sm font-medium ${theme.body}`}>{item}</span>
                                 </div>
                             ))}
@@ -371,7 +372,7 @@ export default function CampaignLandingPage() {
                             <div className={`grid grid-cols-1 ${howItWorksGridCols} gap-6`}>
                                 {howItWorksSteps.map((step, idx) => (
                                     <div key={idx} className={`p-6 rounded-2xl border space-y-3 text-left relative ${theme.card}`}>
-                                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm">
+                                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-accent text-foreground font-bold text-sm">
                                             {idx + 1}
                                         </div>
                                         <h3 className={`font-bold text-base ${theme.heading}`}>{step.title}</h3>
@@ -387,9 +388,9 @@ export default function CampaignLandingPage() {
                 {showFaq && (
                     <section className="py-16 px-4 max-w-4xl mx-auto" id="faq">
                         <div className="text-center mb-10">
-                            <h2 className={`text-3xl md:text-4xl font-outfit font-bold ${theme.heading}`}>
+                            <h2 className={`text-3xl md:text-4xl font-heading font-bold ${theme.heading}`}>
                                 Najczęściej zadawane{' '}
-                                <span style={{ color: ACCENT_DARK }}>pytania</span>
+                                <span style={{ color: ACCENT_INK }}>pytania</span>
                             </h2>
                         </div>
 
@@ -411,7 +412,7 @@ export default function CampaignLandingPage() {
                                             }`}
                                             style={{
                                                 background: openFaq === idx ? ACCENT : theme.faqIconBg,
-                                                color: openFaq === idx ? '#1A1A1A' : theme.faqIconColor,
+                                                color: openFaq === idx ? 'hsl(var(--mt-navy-900))' : theme.faqIconColor,
                                             }}
                                         >
                                             <ChevronDown size={16} />
@@ -464,7 +465,7 @@ export default function CampaignLandingPage() {
                         {' | '}
                         {settings?.legalRegisterNumber || config.companyInfo?.registerNumber || '—'}
                     </p>
-                    <p className="text-[11px] max-w-2xl mx-auto opacity-80">
+                    <p className="text-xs max-w-2xl mx-auto opacity-80">
                         Wysyłając formularz zgadzasz się na kontakt ze strony doradcy w celu przedstawienia spersonalizowanej oferty. Rezygnacja z kontaktu jest możliwa w każdej chwili.
                     </p>
                 </div>
@@ -478,7 +479,7 @@ export default function CampaignLandingPage() {
                     <a
                         href={`tel:${formatPhoneForTelLink(contactPhone)}`}
                         onClick={() => handleCallClick('lp_sticky_bar')}
-                        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm shadow-lg active:scale-[0.98] transition-transform"
+                        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-accent text-foreground font-bold text-sm shadow-lg active:scale-[0.98] transition-transform"
                     >
                         <Phone className="w-4 h-4 shrink-0" />
                         <span>Zadzwoń: {contactPhone}</span>
@@ -486,7 +487,7 @@ export default function CampaignLandingPage() {
                 ) : (
                     <button
                         onClick={scrollToCallback}
-                        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-[#F5C518] text-[#1a1a1a] font-bold text-sm shadow-lg active:scale-[0.98] transition-transform"
+                        className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-accent text-foreground font-bold text-sm shadow-lg active:scale-[0.98] transition-transform"
                     >
                         <span>Zostaw numer — oddzwonimy w 15 minut</span>
                         <ArrowRight className="w-4 h-4 shrink-0" />

@@ -319,7 +319,7 @@ export default function FotonLandingPage() {
                           decoding="async"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-                        <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-amber-400 border border-amber-500/30 text-[11px] font-bold px-2.5 py-1 rounded-md">
+                        <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-amber-400 border border-amber-500/30 text-xs font-bold px-2.5 py-1 rounded-md">
                           {model.categoryLabel}
                         </span>
                       </div>
@@ -338,24 +338,24 @@ export default function FotonLandingPage() {
                         {/* Quick Specs */}
                         <div className="grid grid-cols-2 gap-2 text-xs bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
                           <div>
-                            <span className="text-slate-400 block text-[10px]">Napęd / Silnik:</span>
+                            <span className="text-slate-400 block text-xs">Napęd / Silnik:</span>
                             <span className="font-semibold text-slate-200 line-clamp-1">{model.engine}</span>
                           </div>
                           {model.drivetrain && (
                             <div>
-                              <span className="text-slate-400 block text-[10px]">Układ napędowy:</span>
+                              <span className="text-slate-400 block text-xs">Układ napędowy:</span>
                               <span className="font-semibold text-slate-200 line-clamp-1">{model.drivetrain}</span>
                             </div>
                           )}
                           {model.range && (
                             <div>
-                              <span className="text-slate-400 block text-[10px]">Zasięg EV:</span>
+                              <span className="text-slate-400 block text-xs">Zasięg EV:</span>
                               <span className="font-semibold text-cyan-400">{model.range}</span>
                             </div>
                           )}
                           {model.volume && (
                             <div>
-                              <span className="text-slate-400 block text-[10px]">Pojemność:</span>
+                              <span className="text-slate-400 block text-xs">Pojemność:</span>
                               <span className="font-semibold text-slate-200">{model.volume}</span>
                             </div>
                           )}

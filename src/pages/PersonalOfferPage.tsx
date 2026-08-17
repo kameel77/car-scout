@@ -57,7 +57,7 @@ export default function PersonalOfferPage() {
                         </p>
                         <Link
                             to="/samochody"
-                            className="inline-flex items-center gap-2 h-11 px-6 rounded-full bg-[#F97316] text-white font-semibold hover:bg-[#EA580C] transition-colors"
+                            className="inline-flex items-center gap-2 h-11 px-6 rounded-full bg-accent text-white font-semibold hover:bg-accent/90 transition-colors"
                         >
                             Przeglądaj wszystkie samochody
                             <ArrowRight className="h-4 w-4" />
@@ -71,7 +71,7 @@ export default function PersonalOfferPage() {
                             </p>
                             <Link
                                 to="/samochody"
-                                className="text-sm text-[#F97316] hover:text-[#EA580C] font-medium flex items-center gap-1 transition-colors"
+                                className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors"
                             >
                                 Zobacz wszystkie samochody
                                 <ArrowRight className="h-3.5 w-3.5" />

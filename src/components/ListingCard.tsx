@@ -281,7 +281,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                 {priceInfo.primaryLabel}
               </span>
               {priceInfo.secondaryLabel && (
-                <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+                <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
                   {priceInfo.secondaryLabel}
                 </span>
               )}
@@ -295,14 +295,14 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
           <div>
             <div className="flex items-center justify-between">
               <span
-                className={`text-[10px] font-bold tracking-wider ${
-                  listing.condition === 'NEW' ? 'text-accent' : 'text-muted-foreground'
+                className={`text-xs font-bold tracking-wider ${
+                  listing.condition === 'NEW' ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
                 {listing.condition === 'NEW' ? t('listing.statusNew') : t('listing.statusUsed')}
               </span>
               {listing.specification && listing.specification.stockCount > 1 && listing.specification.displayMode === 'GROUPED' && (
-                <span className="text-[10px] font-bold text-accent px-1.5 py-0.5 bg-accent/10 rounded-full">
+                <span className="text-xs font-bold text-primary px-2 py-0.5 bg-accent/20 rounded-full">
                   Dostępne: {listing.specification.stockCount} szt.
                 </span>
               )}
@@ -392,10 +392,10 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                         {formatNumber(monthlyRates.kredyt)}
                         <span className="text-base font-semibold ml-0.5">zł</span>
                       </span>
-                      <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                      <span className="text-sm font-semibold text-muted-foreground">{t('listing.perMonth')}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-1">
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-sm font-semibold text-muted-foreground">
                         {monthlyRates.isNet
                           ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
                           : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
@@ -428,10 +428,10 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                         {formatNumber(monthlyRates.leasing)}
                         <span className="text-base font-semibold ml-0.5">zł</span>
                       </span>
-                      <span className="text-xs text-muted-foreground">{t('listing.perMonth')}</span>
+                      <span className="text-sm font-semibold text-muted-foreground">{t('listing.perMonth')}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-1">
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-sm font-semibold text-muted-foreground">
                         {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
                       </span>
                       <TooltipProvider delayDuration={0}>

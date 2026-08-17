@@ -799,7 +799,7 @@ export default function RentalSearchPage() {
                 </div>
                 <div className="p-4 space-y-3 flex-1 flex flex-col">
                   <div>
-                    <span className={`text-[10px] font-bold tracking-wider ${v.condition === 'NEW' ? 'text-accent' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs font-bold tracking-wider ${v.condition === 'NEW' ? 'text-primary' : 'text-muted-foreground'}`}>
                       {v.condition === 'NEW' ? t('listing.statusNew', 'NOWY') : t('listing.statusUsed', 'UŻYWANY')}
                     </span>
                     <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{v.make} {v.model}</h3>
@@ -851,7 +851,7 @@ export default function RentalSearchPage() {
           <div className="text-center py-20">
             <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900">Brak pojazdów</h3>
-            <p className="text-gray-500 mt-1">Zmień filtry lub sprawdź później</p>
+            <p className="text-muted-foreground mt-1">Zmień filtry lub sprawdź później</p>
           </div>
         )}
         </div>
