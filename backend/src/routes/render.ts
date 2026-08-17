@@ -33,6 +33,8 @@ import {
     ModelCatalogEntry,
 } from '../services/brand-pages.service.js';
 import { getSeoContentPage } from '../services/seo-content.js';
+import { resolveOfferLifecycle } from '../services/offer-lifecycle.service.js';
+import { isProductionHost } from '../services/environment.js';
 
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
@@ -220,7 +222,7 @@ const FINANCING_LIST_TAKE = 12; // krótka lista na /leasing i /kredyt
 
 // Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
-const pageCache = new Map<string, { html: string; status: number; noindex?: boolean; at: number }>();
+const pageCache = new Map<string, { html: string; status: number; noindex?: boolean; redirectUrl?: string; at: number }>();
 
 export function __resetRenderCache() {
     templateCache = null;
@@ -231,9 +233,20 @@ export function __resetRenderCache() {
     heroBannersCache = null;
 }
 
+export function evictPageCacheKeys(keysOrPrefixes: string[]) {
+    for (const key of keysOrPrefixes) {
+        pageCache.delete(key);
+        for (const cachedKey of pageCache.keys()) {
+            if (cachedKey === key || cachedKey.startsWith(`${key}?`) || cachedKey.startsWith(`${key}/`)) {
+                pageCache.delete(cachedKey);
+            }
+        }
+    }
+}
+
 // exported for tests
 export function __evictPageCache(
-    cache: Map<string, { html: string; status: number; noindex?: boolean; at: number }>,
+    cache: Map<string, { html: string; status: number; noindex?: boolean; redirectUrl?: string; at: number }>,
     max: number,
     ttlMs: number,
     now: number,
@@ -412,55 +425,51 @@ async function resolveMeta(
 
     const lm = path.match(LISTING_RE);
     if (lm) {
-        const id = extractListingIdFromSlug(lm[2]);
-        const listing = id
-            ? await fastify.prisma.listing.findFirst({
-                  where: { id, isArchived: false },
-                  select: {
-                      make: true,
-                      model: true,
-                      version: true,
-                      productionYear: true,
-                      pricePln: true,
-                      mileageKm: true,
-                      condition: true,
-                      fuelType: true,
-                      bodyType: true,
-                      transmission: true,
-                      primaryImageUrl: true,
-                      additionalInfoContent: true,
-                      equipmentSafety: true,
-                      equipmentAudioMultimedia: true,
-                      equipmentComfortExtras: true,
-                      equipmentOther: true,
-                  },
-              })
-            : null;
-        if (!id || !listing) return defaultMeta(ctx, { noindex: true, status: 404 });
+        const lifecycle = await resolveOfferLifecycle(fastify, lm[2]);
 
-        // Fetch related listings (same make or just latest)
-        const relatedRaw = await fastify.prisma.listing.findMany({
-            where: { isArchived: false, NOT: { id } },
-            take: 5,
-            orderBy: { createdAt: 'desc' },
-            select: {
-                id: true,
-                make: true,
-                model: true,
-                version: true,
-                productionYear: true,
-                pricePln: true,
-                bodyType: true,
-                fuelType: true,
-            },
-        });
+        if (lifecycle.state === 'NOT_FOUND') {
+            return defaultMeta(ctx, { noindex: true, status: 404 });
+        }
 
-        const related: RelatedListing[] = relatedRaw.map(r => ({
-            ...r,
-            slug: generateListingSlug(r.make, r.model, r.version, r.productionYear, r.bodyType, r.fuelType, r.id)
-        }));
+        if (lifecycle.state === 'LONG_GONE') {
+            if (lifecycle.redirectUrl) {
+                return {
+                    ...defaultMeta(ctx, { noindex: true, status: 301 }),
+                    redirectUrl: lifecycle.redirectUrl,
+                    status: 301,
+                };
+            }
+            return defaultMeta(ctx, { noindex: true, status: 410 });
+        }
 
+        const listing = lifecycle.listing;
         const variant = lm[1] as ListingVariant;
+        const isRecentlySold = lifecycle.state === 'RECENTLY_SOLD';
+
+        // Fetch related listings (if active)
+        let related: RelatedListing[] = [];
+        if (!isRecentlySold) {
+            const relatedRaw = await fastify.prisma.listing.findMany({
+                where: { isArchived: false, NOT: { id: listing.id } },
+                take: 5,
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    make: true,
+                    model: true,
+                    version: true,
+                    productionYear: true,
+                    pricePln: true,
+                    bodyType: true,
+                    fuelType: true,
+                },
+            });
+
+            related = relatedRaw.map(r => ({
+                ...r,
+                slug: generateListingSlug(r.make, r.model, r.version, r.productionYear, r.bodyType, r.fuelType, r.id),
+            }));
+        }
 
         // FAQ jak na froncie: page=offers; dla wariantów finansowych dodatkowo filtr financingType
         const variantFaq = await fastify.prisma.faqEntry.findMany({
@@ -477,16 +486,32 @@ async function resolveMeta(
         });
 
         // Slug z URL bywa zmanipulowany — canonical liczymy z danych, nie z requestu
-        const canonicalSlug = generateListingSlug(
+        const canonicalSlug = lifecycle.canonicalSlug || generateListingSlug(
             listing.make,
             listing.model,
             listing.version,
             listing.productionYear,
             listing.bodyType,
             listing.fuelType,
-            id
+            listing.id
         );
-        return buildListingMeta(listing, canonicalSlug, variant, ctx, related, variantFaq);
+
+        const similarListings: RelatedListing[] = lifecycle.similarListings.map(s => ({
+            id: s.id,
+            make: s.make,
+            model: s.model,
+            version: s.version,
+            productionYear: s.productionYear,
+            pricePln: s.pricePln,
+            bodyType: s.bodyType,
+            fuelType: s.fuelType,
+            slug: s.slug,
+        }));
+
+        return buildListingMeta(listing, canonicalSlug, variant, ctx, related, variantFaq, {
+            isRecentlySold,
+            similarListings: isRecentlySold ? similarListings : undefined,
+        });
     }
 
     const rm = path.match(RENTAL_RE);
@@ -943,9 +968,11 @@ export async function renderRoutes(fastify: FastifyInstance) {
             if (Number.isFinite(parsed)) page = Math.min(Math.max(parsed, 1), 10000);
         }
 
+        const isProd = isProductionHost(request);
+
         // Na /samochody make/model wpływają na canonical (patrz resolveSamochodyQueryCanonical),
         // więc muszą różnicować cache — inaczej różne filtry dzieliłyby ten sam wpis.
-        let cacheKey = page > 1 ? `${path}?page=${page}` : path;
+        let cacheKey = (isProd ? '' : 'nonprod:') + (page > 1 ? `${path}?page=${page}` : path);
         if (path === '/samochody' && searchParams) {
             const makeParam = searchParams.get('make');
             const modelParam = searchParams.get('model');
@@ -955,6 +982,13 @@ export async function renderRoutes(fastify: FastifyInstance) {
         const cached = pageCache.get(cacheKey);
         if (cached) {
             if (Date.now() - cached.at < PAGE_TTL_MS) {
+                if (cached.status === 301 && cached.redirectUrl) {
+                    return reply
+                        .code(301)
+                        .header('Location', cached.redirectUrl)
+                        .header('Cache-Control', 'public, max-age=86400')
+                        .send();
+                }
                 const cacheControl = getCacheControlHeader(request, cached.status, path, cached.noindex);
                 return reply
                     .code(cached.status)
@@ -1026,6 +1060,20 @@ export async function renderRoutes(fastify: FastifyInstance) {
         }
 
         const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
+        if (!isProd) {
+            meta.noindex = true;
+        }
+
+        if (meta.status === 301 && meta.redirectUrl) {
+            __evictPageCache(pageCache, PAGE_CACHE_MAX, PAGE_TTL_MS, Date.now());
+            pageCache.set(cacheKey, { html: '', status: 301, redirectUrl: meta.redirectUrl, noindex: true, at: Date.now() });
+            return reply
+                .code(301)
+                .header('Location', meta.redirectUrl)
+                .header('Cache-Control', 'public, max-age=86400')
+                .send();
+        }
+
         let html = injectHead(template, meta);
 
         // Modulepreload chunka trasy — zdejmuje pełne RTT z łańcucha krytycznego FCP

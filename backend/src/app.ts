@@ -55,6 +55,7 @@ import { externalListingsRoutes } from './routes/external/listings.js';
 import { marketingFeedsRoutes } from './routes/external/feeds.js';
 import { specificationRoutes } from './routes/specifications.js';
 import { closeBrowser } from './services/puppeteer.js';
+import { isProductionHost, getCanonicalProductionHosts } from './services/environment.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -169,6 +170,15 @@ export async function buildApp(): Promise<FastifyInstance> {
             'request completed'
         );
         done();
+    });
+
+    // Non-production de-indexing guard: emit X-Robots-Tag and private, no-store on every response for non-canonical hosts
+    fastify.addHook('onSend', async (request, reply, payload) => {
+        if (!isProductionHost(request)) {
+            reply.header('X-Robots-Tag', 'noindex, nofollow, noarchive');
+            reply.header('Cache-Control', 'private, no-store');
+        }
+        return payload;
     });
 
     // Register plugins
@@ -293,9 +303,16 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.decorate('prisma', prisma);
     fastify.decorate('redis', redis);
 
-    // Bootstrap default Motolia Chrome Exporter partner key safely after database connection is ready
+    // Bootstrap default Motolia Chrome Exporter partner key and log production hosts configuration
     fastify.addHook('onReady', async () => {
         try {
+            const canonicalHosts = Array.from(getCanonicalProductionHosts());
+            if (canonicalHosts.length === 0) {
+                fastify.log.warn('Canonical production hosts set is EMPTY! All requests will be treated as non-production (X-Robots-Tag: noindex, Cache-Control: private, no-store).');
+            } else {
+                fastify.log.info({ canonicalHosts }, 'Canonical production hosts initialized');
+            }
+
             const defaultPartnerKey = process.env.DEFAULT_PARTNER_KEY || process.env.MOTOLIA_PARTNER_KEY || ['cs_partner_', '74e07e9d6903146d', '650ebcf3478eae7e'].join('');
             await prisma.partner.upsert({
                 where: { apiKey: defaultPartnerKey },
@@ -308,7 +325,7 @@ export async function buildApp(): Promise<FastifyInstance> {
                 }
             });
         } catch (err) {
-            fastify.log.error(err, 'Failed to bootstrap default partner key');
+            fastify.log.error(err, 'Failed in onReady hook initialization');
         }
     });
 

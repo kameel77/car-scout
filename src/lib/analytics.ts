@@ -90,6 +90,24 @@ export const trackViewItem = (item: DynamicRemarketingItem) => {
   }
 };
 
+export const trackViewArchivedItem = (item: DynamicRemarketingItem) => {
+  const dl = getWindowDataLayer();
+  if (dl) {
+    dl.push({ ecommerce: null });
+    dl.push({
+      event: 'view_archived_item',
+      ecommerce: {
+        currency: 'PLN',
+        value: item.price || item.monthlyRate || 0,
+        items: [mapItemToGa4(item)],
+      },
+      dynx_itemid: item.id,
+      dynx_totalvalue: item.price || item.monthlyRate || 0,
+      dynx_pagetype: 'archived_offer',
+    });
+  }
+};
+
 export const trackViewItemList = (items: DynamicRemarketingItem[], listName = 'Search Results') => {
   const dl = getWindowDataLayer();
   if (dl && items.length > 0) {

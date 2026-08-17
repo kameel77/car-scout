@@ -511,3 +511,39 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Zachowanie**: `commitConsent` w `src/lib/consent.ts` po wysłaniu aktualizacji Consent Mode (`gtag('consent', 'update', ...)`) wypycha do `window.dataLayer` zwykły obiekt `{ event: 'consent_updated' }`. Kolejność jest istotna - tag odpalony na tym zdarzeniu widzi już zaktualizowany stan zgód.
 - **Kiedy leci**: wyłącznie przy realnej decyzji użytkownika (banner zgód i okno ustawień zgód, oba przez hook `useConsent`). Nie leci przy zwykłym wejściu na stronę - start serwisu ustawia tylko `gtag('consent', 'default', ...)` w `SeoManager`.
 - **Uwaga dla utrzymania**: te dwa pushe celowo mają różny kształt. Consent Mode rozpoznaje wyłącznie obiekt `arguments` (stąd helper `gtag`), a trigger custom event w GTM łapie wyłącznie zwykły obiekt z kluczem `event`. Ujednolicenie ich zepsuje jedno albo drugie. Kolejność i kształt są zabezpieczone testem w `src/lib/__tests__/consent.test.ts`.
+
+## 44. Optymalizacja rozmiaru i rozmieszczenia mini-wyszukiwarki hero na stronie głównej
+- **Cel**: Wyeliminowanie problemu wystawania/przepełnienia karty wyszukiwarki poza kontener banera hero na stronie głównej oraz poprawa hierarchii wizualnej przycisków akcji.
+- **Zachowanie i zmiany wizualne**:
+  - **Ułożenie stopki wyszukiwarki**: Główny przycisk CTA "Pokaż oferty" (żółty, pełna szerokość, wyrazisty) został umieszczony na górze stopki, a odnośnik "Wyszukiwanie zaawansowane" z ikoną został wyśrodkowany pod przyciskiem jako czytelna akcja drugorzędna. Zapobiega to ściśnięciu elementów w poziomie i zawijaniu tekstu.
+  - **Kompaktowa siatka i marginesy**: Zoptymalizowano pionowe marginesy i dopełnienia (padding karty z 28px do 20px 22px, selektory i pola z 11px do 9px), dzięki czemu całkowita wysokość karty zmalała z ~477px do ~414px.
+  - **Bezpieczny odstęp w banerze**: Na ekranach desktopowych (`lg:h-[520px]`) karta posiada teraz ponad 50px bezpiecznego marginesu od góry i dołu banera, dzięki czemu nie koliduje z zaokrągleniami rogów (`rounded-3xl`) ani wskaźnikami slajdów karuzeli.
+
+## 45. Cykl życia wygasłych ofert i higiena sitemapy (SEO P0)
+- **Cel**: Wyeliminowanie ostrzeżeń w Google Search Console (404/błędy indeksacji), zapobieganie powstawaniu soft 404 (nigdy nie przekierowujemy starych ofert na stronę główną `/`), utrzymanie 100% czystej sitemapy oraz zatrzymanie ruchu i intencji zakupowej użytkowników wchodzących na zarchiwizowane ogłoszenia.
+- **Zasady cyklu życia ogłoszeń (`/oferta/*`)**:
+  - **Aktywna oferta (`isArchived: false`)**:
+    - HTTP 200, `<meta name="robots" content="index, follow">`.
+    - Obecna w `sitemap.xml` z precyzyjnym tagiem `<lastmod>`.
+  - **Niedawno sprzedane auto (`isArchived: true` i czas od archiwizacji $\le$ 90 dni)**:
+    - HTTP 200, `<meta name="robots" content="noindex, follow">`.
+    - Usunięta z `sitemap.xml`.
+    - Widoczny u góry strony wyrazisty baner informacyjny: *„Oferta archiwalna - pojazd niedostępny. Ten samochód został sprzedany lub wycofany z oferty u dealera”*.
+    - Przyciski CTA: link do strony modelu (`/samochody/<make>/<model>`) oraz kalkulatora rat (`/kalkulator-rat`).
+    - Dedykowana sekcja 6 - 12 podobnych, aktualnie dostępnych samochodów (priorytetyzacja: 1. ta sama marka i model, 2. ta sama marka i nadwozie, 3. cena $\pm 20\%$).
+    - Zachowana pełna specyfikacja techniczna, galeria i parametry pojazdu. Formularz kontaktowy dostosowany do poszukiwania podobnego auta.
+    - Schema.org: `availability: "https://schema.org/Discontinued"`.
+  - **Trwale wygasła oferta (`isArchived: true` i czas od archiwizacji > 90 dni)**:
+    - Przekierowanie 301 na stronę modelu `/samochody/<make>/<model>` (jeśli istnieje aktywny katalog modelu), w przeciwnym razie na stronę marki `/samochody/<make>` (jeśli istnieje aktywny katalog marki).
+    - Jeśli ani marka, ani model nie posiadają aktywnych stron w katalogu - zwracany jest kod **HTTP 410 Gone**.
+    - **Żadne wygasłe ogłoszenie nie jest przekierowywane na stronę główną `/`** (likwidacja soft 404).
+  - **Nieistniejący slug**:
+    - Zwraca kod HTTP 404.
+- **Higiena Sitemapy (`/sitemap.xml`)**:
+  - Sitemap zawiera wyłącznie aktywne ogłoszenia (`isArchived: false`, `pricePln > 0`).
+  - 100% adresów URL w mapie witryny posiada tag `<lastmod>`.
+  - Sygnał świeżości dla ogłoszeń wyznaczany jest jako `max(lastManualEditAt, latestPriceHistory.changedAt, createdAt)`. Nocne automatyczne przeliczanie rat referencyjnych (`referenceCalcAt`) **nie** podbija tagu `<lastmod>`.
+  - Sitemap jest buforowana w pamięci z TTL $\le$ 15 minut i natychmiast unieważniana przy zmianach w bazie.
+- **Unieważnianie pamięci podręcznej i integracja z Cloudflare**:
+  - Moduł `cache-invalidation.service.ts` automatycznie czyści lokalną pamięć podręczną SSR i sitemapy oraz wysyła zapytanie do API Cloudflare (`purge_cache` dla konkretnych URL-i ogłoszenia, sitemapy oraz stron marki/modelu) w momencie archiwizacji, przywrócenia, usunięcia lub synchronizacji CSFlow.
+

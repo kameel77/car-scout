@@ -10,8 +10,24 @@ describe('SEO content (CMS) routes', () => {
     beforeAll(async () => {
         app = await buildApp();
         await app.ready();
-        adminToken = app.jwt.sign({ userId: 'admin-test', email: 'a@test.com', role: 'admin' });
-        managerToken = app.jwt.sign({ userId: 'manager-test', email: 'm@test.com', role: 'manager' });
+        adminToken = app.jwt.sign({
+            userId: 'admin-test',
+            email: 'a@test.com',
+            role: 'admin',
+            memberships: [
+                { id: 'm1', scopeType: 'PLATFORM', scopeId: 'PLATFORM', role: 'SUPERADMIN_PLATFORM', isDefaultContext: true }
+            ],
+            activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' }
+        });
+        managerToken = app.jwt.sign({
+            userId: 'manager-test',
+            email: 'm@test.com',
+            role: 'manager',
+            memberships: [
+                { id: 'm2', scopeType: 'PLATFORM', scopeId: 'PLATFORM', role: 'PLATFORM_MANAGER', isDefaultContext: true }
+            ],
+            activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' }
+        });
     });
 
     afterAll(async () => {

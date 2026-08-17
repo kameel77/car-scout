@@ -3,6 +3,7 @@ import { getCSFlowCars, getCSFlowCarDetails } from '../utils/csflow-client.js';
 import { generateListingSlug } from '../utils/url-utils.js';
 import { downloadAndCacheImages, queueListingImagesDownload } from './csflow-image-downloader.js';
 import { normalizeBrand } from './brand-normalization.service.js';
+import { invalidateOfferCache } from './cache-invalidation.service.js';
 import cron from 'node-cron';
 
 // Pomocnicza funkcja mapowania CSFlow -> Prisma
@@ -53,7 +54,22 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
         // Zbieranie wszystkich już zapisanych ofert tego źródła CSFlow w bazie
         const existingListings = await prisma.listing.findMany({
             where: { csflowSourceId: source.id },
-            select: { id: true, vin: true, listingId: true, csflowCarId: true, isArchived: true, pricePln: true, lastManualEditAt: true, entrySource: true }
+            select: {
+                id: true,
+                vin: true,
+                listingId: true,
+                csflowCarId: true,
+                isArchived: true,
+                pricePln: true,
+                lastManualEditAt: true,
+                entrySource: true,
+                make: true,
+                model: true,
+                version: true,
+                productionYear: true,
+                bodyType: true,
+                fuelType: true,
+            }
         });
 
         // Mapa WSZYSTKICH VIN-ów w bazie (nie tylko CSFlow) — zapobiega duplikatom
@@ -385,6 +401,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
             }
         }
 
+        const affectedUrls: string[] = [];
+
         // Archiwizowanie nieobecnych na aktualnej liście CSFlow API
         for (const l of existingListings) {
             if (!l.isArchived && l.csflowCarId !== null && !currentCarIds.has(l.csflowCarId)) {
@@ -397,6 +415,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                     }
                 });
                 result.archived++;
+                const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+                affectedUrls.push(`/oferta/${slug}`);
             }
         }
 
@@ -440,6 +460,14 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
         console.log(`[CSFlow:${source.slug}] Synchronizacja zakończona w ${duration}ms. Wstawiono: ${result.inserted}, Aktualiz: ${result.updated}, Zarch: ${result.archived}, Błędy: ${result.failed}`);
 
         await prisma.csflowSource.update({ where: { id: source.id }, data: { lastSyncAt: new Date() } });
+
+        if (result.inserted > 0 || result.updated > 0 || result.archived > 0) {
+            try {
+                await invalidateOfferCache(undefined, { urls: affectedUrls, purgeSitemap: true });
+            } catch (err: any) {
+                console.warn('[CSFlow] Cache invalidation notice:', err?.message);
+            }
+        }
 
         return result;
 

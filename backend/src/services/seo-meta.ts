@@ -12,6 +12,7 @@ export interface PageMeta {
     /** Obrazy LCP do <link rel="preload" as="image" fetchpriority="high"> w <head> */
     preloadImages?: PreloadImage[];
     status: number;
+    redirectUrl?: string; // for 301/302 redirects
 }
 
 export interface PreloadImage {
@@ -230,8 +231,10 @@ export function buildListingMeta(
     variant: ListingVariant,
     ctx: BrandCtx,
     related: RelatedListing[] = [],
-    faq: FaqItem[] = []
+    faq: FaqItem[] = [],
+    opts?: { isRecentlySold?: boolean; similarListings?: RelatedListing[] }
 ): PageMeta {
+    const isRecentlySold = opts?.isRecentlySold ?? false;
     const name = [l.make, l.model, l.version, String(l.productionYear)].filter(Boolean).join(' ');
     const price = l.pricePln.toLocaleString('pl-PL');
     const variantLabel = variant === 'leasing' ? ' — leasing' : variant === 'kredyt' ? ' — kredyt' : '';
@@ -244,7 +247,7 @@ export function buildListingMeta(
             : { name: 'Samochody', path: '/samochody' };
     const detale = [
         `cena ${price} zł`,
-        `przebieg ${l.mileageKm.toLocaleString('pl-PL')} km`,
+        l.mileageKm != null ? `przebieg ${l.mileageKm.toLocaleString('pl-PL')} km` : null,
         l.fuelType,
         l.bodyType,
     ]
@@ -263,6 +266,29 @@ export function buildListingMeta(
     const safeBrand = escapeHtml(brandName);
     const safeBrandModel = escapeHtml(`${brandName} ${modelName}`);
 
+    const archivedBannerHtml = isRecentlySold
+        ? `
+<aside class="archived-banner" style="background:#fffbeb;border:1.5px solid #f59e0b;color:#92400e;padding:16px 20px;border-radius:12px;margin-bottom:24px;">
+  <strong style="font-size:16px;display:block;margin-bottom:6px;">⚠️ Oferta archiwalna — pojazd niedostępny</strong>
+  <p style="margin:0 0 10px 0;">Ten samochód został już sprzedany lub wycofany z oferty u dealera. Poniżej znajdziesz aktualnie dostępne, podobne samochody oraz parametry techniczne tego egzemplarza.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    <a href="/samochody/${brandSlug}/${modelSlug}" style="display:inline-block;background:#f59e0b;color:#1e293b;padding:8px 14px;border-radius:8px;font-weight:bold;text-decoration:none;">Zobacz wszystkie dostępne ${safeBrandModel} &rarr;</a>
+    <a href="/kalkulator-rat" style="display:inline-block;background:#f1f5f9;color:#1e293b;padding:8px 14px;border-radius:8px;font-weight:600;text-decoration:none;">Oblicz ratę w kalkulatorze &rarr;</a>
+  </div>
+</aside>`
+        : '';
+
+    const similarListingsSection = isRecentlySold && opts?.similarListings && opts.similarListings.length > 0
+        ? `
+<section class="similar-available-cars" style="margin:32px 0;">
+  <h2>Podobne dostępne samochody</h2>
+  <ul>
+    ${opts.similarListings.map(r => listingLinkHtml(r, '/oferta')).join('\n')}
+  </ul>
+  <p><a href="/samochody/${brandSlug}/${modelSlug}">Przeglądaj wszystkie modele ${safeBrandModel} w ofercie</a> | <a href="/kalkulator-rat">Kalkulator rat leasingu i kredytu</a></p>
+</section>`
+        : '';
+
     const bodyHtml = `
 <nav aria-label="Breadcrumb">
   <ol>
@@ -274,7 +300,8 @@ export function buildListingMeta(
   </ol>
 </nav>
 <article>
-  <h1>${safeName}${variantLabel}</h1>
+  ${archivedBannerHtml}
+  <h1>${safeName}${variantLabel}${isRecentlySold ? ' (Oferta archiwalna)' : ''}</h1>
   ${imageUrl ? `<img src="${escapeHtml(mdVariantUrl(imageUrl))}" alt="${safeName}" loading="lazy" style="max-width:100%;height:auto;"/>` : ''}
   <table>
     <tbody>
@@ -282,7 +309,7 @@ export function buildListingMeta(
       <tr><td>Model</td><td>${escapeHtml(l.model)}</td></tr>
       ${l.version ? `<tr><td>Wersja</td><td>${escapeHtml(l.version)}</td></tr>` : ''}
       <tr><td>Rocznik</td><td>${l.productionYear}</td></tr>
-      <tr><td>Przebieg</td><td>${l.mileageKm.toLocaleString('pl-PL')} km</td></tr>
+      ${l.mileageKm != null ? `<tr><td>Przebieg</td><td>${l.mileageKm.toLocaleString('pl-PL')} km</td></tr>` : ''}
       <tr><td>Cena</td><td>${price} zł</td></tr>
       ${l.fuelType ? `<tr><td>Paliwo</td><td>${escapeHtml(l.fuelType)}</td></tr>` : ''}
       ${l.bodyType ? `<tr><td>Nadwozie</td><td>${escapeHtml(l.bodyType)}</td></tr>` : ''}
@@ -291,7 +318,8 @@ export function buildListingMeta(
   </table>
   ${l.additionalInfoContent ? `<div class="description">${htmlToText(l.additionalInfoContent)}</div>` : ''}
   ${equipmentSectionHtml(l)}
-  ${variant === 'oferta' ? `
+  ${similarListingsSection}
+  ${!isRecentlySold && variant === 'oferta' ? `
   <section>
     <h2>Jak kupić ten samochód?</h2>
     <ol>
@@ -300,7 +328,7 @@ export function buildListingMeta(
       <li>Podpisz umowę i odbierz samochód u dealera.</li>
     </ol>
   </section>` : ''}
-  ${variant === 'kredyt' ? `
+  ${!isRecentlySold && variant === 'kredyt' ? `
   <section>
     <h2>Kredyt samochodowy na ten pojazd</h2>
     <p>${safeName} w cenie ${price} zł możesz sfinansować kredytem samochodowym przez ${escapeHtml(ctx.brandName)} — wniosek online, decyzja bez wizyty w banku, auto dostępne od ręki u dealera.</p>
@@ -311,7 +339,7 @@ export function buildListingMeta(
     </ol>
     <p>Zobacz, jak działa <a href="/kredyt">kredyt samochodowy</a> — warunki, RRSO i wniosek o finansowanie.</p>
   </section>` : ''}
-  ${variant === 'leasing' ? `
+  ${!isRecentlySold && variant === 'leasing' ? `
   <section>
     <h2>Leasing tego pojazdu</h2>
     <p>${safeName} w cenie ${price} zł dostępny w leasingu przez ${escapeHtml(ctx.brandName)} — minimum formalności, decyzja online, auto od ręki u dealera. Oferta dla firm i przedsiębiorców.</p>
@@ -323,7 +351,7 @@ export function buildListingMeta(
     <p>Zobacz, jak działa <a href="/leasing">leasing samochodu</a> — operacyjny i konsumencki, rata i wniosek.</p>
   </section>` : ''}
   ${faqSectionHtml(faq, variant === 'kredyt' ? 'Najczęstsze pytania o kredyt' : variant === 'leasing' ? 'Najczęstsze pytania o leasing' : 'Najczęstsze pytania')}
-  ${related.length > 0 ? `
+  ${!isRecentlySold && related.length > 0 ? `
   <section>
     <h2>Podobne oferty</h2>
     <ul>
@@ -364,7 +392,7 @@ export function buildListingMeta(
                 '@type': 'Offer',
                 price: l.pricePln,
                 priceCurrency: 'PLN',
-                availability: 'https://schema.org/InStock',
+                availability: isRecentlySold ? 'https://schema.org/Discontinued' : 'https://schema.org/InStock',
                 url: canonical,
                 itemCondition: schemaCondition,
             },
@@ -385,14 +413,19 @@ export function buildListingMeta(
     });
 
     return {
-        title: `${name}${variantLabel} — ${price} zł | ${ctx.brandName}`,
-        description: `${name}: ${detale}. Samochód dostępny od ręki u dealera — sprawdź finansowanie: leasing, kredyt lub najem.`,
+        title: isRecentlySold
+            ? `${name}${variantLabel} (Oferta archiwalna) — ${price} zł | ${ctx.brandName}`
+            : `${name}${variantLabel} — ${price} zł | ${ctx.brandName}`,
+        description: isRecentlySold
+            ? `Oferta archiwalna: ${name}. Samochód został sprzedany lub wycofany z oferty. Sprawdź podobne dostępne samochody na ${ctx.brandName}.`
+            : `${name}: ${detale}. Samochód dostępny od ręki u dealera — sprawdź finansowanie: leasing, kredyt lub najem.`,
         canonical,
         ogImage: imageUrl || undefined,
         preloadImages: l.primaryImageUrl ? [buildImagePreload(l.primaryImageUrl, HERO_IMAGE_SIZES, ctx.baseUrl)] : undefined,
         bodyHtml,
         jsonLd: jsonLd.length === 1 ? jsonLd[0] : jsonLd,
         status: 200,
+        noindex: isRecentlySold ? true : undefined,
     };
 }
 
