@@ -547,3 +547,10 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Unieważnianie pamięci podręcznej i integracja z Cloudflare**:
   - Moduł `cache-invalidation.service.ts` automatycznie czyści lokalną pamięć podręczną SSR i sitemapy oraz wysyła zapytanie do API Cloudflare (`purge_cache` dla konkretnych URL-i ogłoszenia, sitemapy oraz stron marki/modelu) w momencie archiwizacji, przywrócenia, usunięcia lub synchronizacji CSFlow.
 
+## 46. Higiena typograficzna i formatowanie kwot (spacje niełamliwe, tabular-nums i brak łamania)
+- **Cel**: Wyeliminowanie nieestetycznych i mylących łamań wierszy wewnątrz liczb (np. rozbicie tysięcy w `2 739` na dwie linijki) oraz w dopiskach walutowych i finansowych (`zł`, `/mies.`, `brutto`, `netto`) po wdrożeniu skali brandbooka Motolia.
+- **Zastosowane rozwiązania**:
+  - **Spacje niełamliwe (NBSP / `\u00A0`) w `formatNumber` i `formatPrice`**: Funkcje formatujące liczby i ceny zachowują spacje niełamliwe zamiast zamieniać je na zwykłe spacje ASCII. Dzięki temu przeglądarka nigdy nie przełamuje liczby pomiędzy rzędami wielkości ani między kwotą a symbolem waluty.
+  - **Klasy `tabular-nums` i `whitespace-nowrap`**: Nałożone na wszystkie kluczowe elementy prezentujące raty, ceny i parametry (karty ogłoszeń `ListingCard`, `RentalListingCard`, strona oferty `ListingDetailPage`, kalkulator finansowy `FinancingCalculator`, widgety `DynamicWidget`, siatka specyfikacji `SpecsGrid` oraz formularze leadowe `LeadFormPage`).
+  - **Struktura siatki rat na kartach ogłoszeń**: W `ListingCard` i `RentalListingCard` kolumny rat otrzymały właściwość `min-w-0` oraz elastyczne zawijanie wierszy z zachowaniem niepodzielności poszczególnych etykiet (`whitespace-nowrap`), zapobiegając rozpychaniu lub niekontrolowanemu łamaniu dopisków `zł brutto` / `zł netto` i `/mies.`.
+

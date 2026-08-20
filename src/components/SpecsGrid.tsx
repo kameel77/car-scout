@@ -56,7 +56,7 @@ export function SpecsGrid(props: SpecsGridProps) {
               <Icon className="h-4 w-4 text-primary" />
               <span className="spec-label">{spec.label}</span>
             </div>
-            <span className="spec-value capitalize">{spec.value}</span>
+            <span className="spec-value capitalize tabular-nums whitespace-nowrap">{spec.value}</span>
           </motion.div>
         );
       })}

@@ -413,14 +413,14 @@ export default function LeadFormPage() {
               <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-overline uppercase font-bold text-indigo-400 tracking-widest leading-none mb-1">Wybrane finansowanie</p>
-                  <p className="text-sm font-bold text-indigo-900">
+                  <p className="text-sm font-bold text-indigo-900 tabular-nums whitespace-nowrap">
                     {formatNumber(financingData.installment)} PLN / mies.
                     <span className="text-indigo-400 font-normal ml-2">({financingData.period} m-cy)</span>
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-overline uppercase font-bold text-indigo-400 tracking-widest leading-none mb-1">Wpłata własna</p>
-                  <p className="text-sm font-bold text-indigo-900">{formatNumber(financingData.downPayment)} PLN</p>
+                  <p className="text-sm font-bold text-indigo-900 tabular-nums whitespace-nowrap">{formatNumber(financingData.downPayment)} PLN</p>
                 </div>
               </div>
             )}

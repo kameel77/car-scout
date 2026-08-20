@@ -539,7 +539,7 @@ export function FinancingCalculator({
                             <div className="flex flex-col items-center justify-center text-center space-y-1">
                                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Miesięczna rata</span>
                                 <div className="relative flex items-center justify-center gap-2 min-h-[40px]">
-                                    <span className={cn("text-3xl font-bold text-primary transition-all duration-200", externalLoading && "opacity-40 scale-[0.98]")}>
+                                    <span className={cn("text-3xl font-bold text-primary transition-all duration-200 tabular-nums whitespace-nowrap", externalLoading && "opacity-40 scale-[0.98]")}>
                                         {formatPrice(displayInstallment ?? monthlyInstallment, currency)}
                                     </span>
                                     {externalLoading && (
@@ -557,7 +557,7 @@ export function FinancingCalculator({
                                         <span className="text-xs text-muted-foreground">
                                             {priceIsNet ? 'netto (bez VAT)' : 'brutto'}
                                         </span>
-                                        <span className="text-xs text-muted-foreground">
+                                        <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                                             {priceIsNet
                                                 ? `(${formatPrice(Math.round((displayInstallment ?? 0) * vatMultiplier), currency)} brutto)`
                                                 : `(${formatPrice(Math.round((displayInstallment ?? 0) / vatMultiplier), currency)} netto)`}
