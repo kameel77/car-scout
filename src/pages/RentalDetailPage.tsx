@@ -530,16 +530,16 @@ export default function RentalDetailPage() {
                                                     <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full font-medium">Najlepsza</span>
                                                 )}
                                             </div>
-                                            <div className="text-3xl font-bold text-gray-900">
+                                            <div className="text-3xl font-bold text-gray-900 tabular-nums whitespace-nowrap">
                                                 {selectedOfferType === 'business'
                                                     ? `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł`
                                                     : `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł`
                                                 }
-                                                <span className="text-sm font-normal text-muted-foreground">
+                                                <span className="text-sm font-normal text-muted-foreground whitespace-nowrap">
                                                     {selectedOfferType === 'business' ? ' netto / mies.' : ' brutto / mies.'}
                                                 </span>
                                             </div>
-                                            <div className="text-sm text-muted-foreground mt-1">
+                                            <div className="text-sm text-muted-foreground mt-1 tabular-nums whitespace-nowrap">
                                                 {selectedOfferType === 'business'
                                                     ? `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł brutto`
                                                     : `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł netto`

@@ -1,6 +1,6 @@
 /**
  * Formats a number with thousands separators according to the Polish locale.
- * Ensures that even 4-digit numbers have a separator.
+ * Uses non-breaking space (U+00A0) to prevent line breaks within numbers.
  */
 export const formatNumber = (value: number | string): string => {
     const numValue = typeof value === 'string' ? parseFloat(value.replace(/\s/g, '').replace(',', '.')) : value;
@@ -9,14 +9,14 @@ export const formatNumber = (value: number | string): string => {
         useGrouping: true,
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
-    }).format(numValue).replace(/\u00A0/g, ' '); // Replace non-breaking space with regular space for better visibility if needed
+    }).format(numValue).replace(/[\s\u202F]/g, '\u00A0');
 };
 
 /**
- * Formats a price with currency.
+ * Formats a price with currency using a non-breaking space.
  */
 export const formatPrice = (price: number, currency: string): string => {
-    return `${formatNumber(price)} ${currency}`;
+    return `${formatNumber(price)}\u00A0${currency}`;
 };
 
 /**
