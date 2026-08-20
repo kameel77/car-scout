@@ -6,6 +6,7 @@ import { MapPin, Calendar, Gauge, Fuel, ArrowRight, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
+import { cn } from '@/lib/utils';
 
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
@@ -277,7 +278,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
           {/* Price Badge — hidden for Motolia (price shown as tag in spec pills) */}
           {!isMotolia && (
             <div className="absolute top-3 right-3 px-3 py-1.5 bg-card/95 backdrop-blur-sm rounded-lg shadow-md flex flex-col md:flex-row md:items-baseline md:gap-2 items-end md:items-baseline">
-              <span className="font-heading text-lg font-bold text-foreground">
+              <span className="font-heading text-lg font-bold text-foreground tabular-nums whitespace-nowrap">
                 {priceInfo.primaryLabel}
               </span>
               {priceInfo.secondaryLabel && (
@@ -302,7 +303,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                 {listing.condition === 'NEW' ? t('listing.statusNew') : t('listing.statusUsed')}
               </span>
               {listing.specification && listing.specification.stockCount > 1 && listing.specification.displayMode === 'GROUPED' && (
-                <span className="text-xs font-bold text-primary px-2 py-0.5 bg-accent/20 rounded-full">
+                <span className="text-xs font-bold text-primary px-2 py-0.5 bg-accent/20 rounded-full whitespace-nowrap">
                   Dostępne: {listing.specification.stockCount} szt.
                 </span>
               )}
@@ -320,20 +321,20 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
           {/* Spec pills — rok, przebieg, paliwo, skrzynia, moc */}
           <div className="flex flex-wrap gap-1.5">
             {/* Year */}
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium tabular-nums whitespace-nowrap">
               <Calendar className="h-3.5 w-3.5 shrink-0" />
               {listing.production_year}
             </span>
 
             {/* Mileage */}
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium tabular-nums whitespace-nowrap">
               <Gauge className="h-3.5 w-3.5 shrink-0" />
               {listing.mileage_km.toLocaleString('pl-PL')} {t('listing.km')}
             </span>
 
             {/* Fuel */}
             {listing.fuel_type && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium whitespace-nowrap">
                 <Fuel className="h-3.5 w-3.5 shrink-0" />
                 {translateTechnicalValue('fuel', listing.fuel_type, t)}
               </span>
@@ -341,7 +342,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
             {/* Transmission */}
             {listing.transmission && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium whitespace-nowrap">
                 <GearboxIcon className="h-3.5 w-3.5 shrink-0" />
                 {getTransmissionShortLabel(listing.transmission, t)}
               </span>
@@ -349,7 +350,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
             {/* Power — neutral (no accent color, no bold) */}
             {listing.engine_power_hp && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium tabular-nums whitespace-nowrap">
                 <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
@@ -359,7 +360,7 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
             {/* Price tag — Motolia only: show price as a small inline tag */}
             {isMotolia && priceInfo.primaryLabel && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium tabular-nums whitespace-nowrap">
                 {priceInfo.primaryLabel}
               </span>
             )}
@@ -377,25 +378,25 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
           <div className="flex-1" />
           {monthlyRates && (
             <div className="pt-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className={cn("grid gap-3", monthlyRates.kredyt != null && monthlyRates.leasing != null ? "grid-cols-2" : "grid-cols-1")}>
                 {/* Kredyt */}
                 {monthlyRates.kredyt != null && (
-                  <div>
+                  <div className="min-w-0">
                     <span className="text-xs text-muted-foreground block mb-1">
                       {t('listing.kredytFrom')}
                     </span>
-                    <div className="flex items-baseline gap-1.5">
+                    <div className="flex items-baseline gap-1.5 flex-wrap">
                       <span
-                        className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
+                        className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl tabular-nums whitespace-nowrap"
                         style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                       >
                         {formatNumber(monthlyRates.kredyt)}
                         <span className="text-base font-semibold ml-0.5">zł</span>
                       </span>
-                      <span className="text-sm font-semibold text-muted-foreground">{t('listing.perMonth')}</span>
+                      <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{t('listing.perMonth')}</span>
                     </div>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-sm font-semibold text-muted-foreground">
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <span className="text-sm font-semibold text-muted-foreground tabular-nums whitespace-nowrap">
                         {monthlyRates.isNet
                           ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
                           : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
@@ -416,22 +417,22 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
 
                 {/* Leasing */}
                 {monthlyRates.leasing != null && (
-                  <div>
+                  <div className="min-w-0">
                     <span className="text-xs text-muted-foreground block mb-1">
                       {t('listing.leasingFrom')}
                     </span>
-                    <div className="flex items-baseline gap-1.5">
+                    <div className="flex items-baseline gap-1.5 flex-wrap">
                       <span
-                        className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl"
+                        className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl tabular-nums whitespace-nowrap"
                         style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
                       >
                         {formatNumber(monthlyRates.leasing)}
                         <span className="text-base font-semibold ml-0.5">zł</span>
                       </span>
-                      <span className="text-sm font-semibold text-muted-foreground">{t('listing.perMonth')}</span>
+                      <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{t('listing.perMonth')}</span>
                     </div>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-sm font-semibold text-muted-foreground">
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <span className="text-sm font-semibold text-muted-foreground tabular-nums whitespace-nowrap">
                         {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
                       </span>
                       <TooltipProvider delayDuration={0}>

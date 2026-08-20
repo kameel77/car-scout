@@ -704,19 +704,19 @@ export default function ListingDetailPage() {
                 /* Motolia mobile: minimized price */
                 <div className="mt-2">
                   {catalogLine}
-                  <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 text-sm text-muted-foreground tabular-nums whitespace-nowrap">
                     Cena pojazdu {priceType === 'net' ? 'netto:' : 'brutto:'} {priceInfo.primaryLabel}
                     {priceRabatInfo}
                   </span>
                   {priceInfo.secondaryLabel && (
-                    <span className="text-xs text-muted-foreground ml-2">
+                    <span className="text-xs text-muted-foreground ml-2 tabular-nums whitespace-nowrap">
                       {priceInfo.secondaryLabel}
                     </span>
                   )}
                   {hasSpecialOffer && (
                     <div className="flex items-center gap-2 mt-1">
                       <SpecialOfferTag className="" />
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                         (rabat: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
                       </span>
                     </div>
@@ -1110,18 +1110,18 @@ export default function ListingDetailPage() {
                           priceSlot={
                             <div className="pt-2 border-t border-slate-200 mt-2">
                               {catalogLine}
-                              <div className="flex items-baseline justify-between">
-                                <span className="text-xs text-muted-foreground">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
                                   Cena pojazdu {priceType === 'net' ? 'netto:' : 'brutto:'}
                                 </span>
-                                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground font-medium">
+                                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground font-medium tabular-nums whitespace-nowrap">
                                   {priceInfo.primaryLabel}
                                   {priceRabatInfo}
                                 </span>
                               </div>
                               {priceInfo.secondaryLabel && (
                                 <div className="text-right">
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                                     {priceInfo.secondaryLabel}
                                   </span>
                                 </div>
@@ -1129,7 +1129,7 @@ export default function ListingDetailPage() {
                               {hasSpecialOffer && (
                                 <div className="flex items-center justify-end gap-1.5 mt-1">
                                   <SpecialOfferTag />
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                                     (rabat: {formatPrice(discount, settings?.displayCurrency || 'PLN')})
                                   </span>
                                 </div>

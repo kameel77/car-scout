@@ -189,23 +189,23 @@ export function DynamicWidget({
                         {v.installment ? (
                           <>
                             {v.price && (
-                              <span className="text-xs text-gray-600 font-medium tracking-wide">
+                              <span className="text-xs text-gray-600 font-medium tracking-wide tabular-nums whitespace-nowrap">
                                 Cena katalogowa: {formatNumber(v.price)} PLN
                               </span>
                             )}
                             <div className="flex items-baseline gap-2 mt-1">
-                              <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-accent text-gray-900 shadow-sm">
+                              <span className="inline-flex items-baseline gap-1 px-3 py-1 rounded-lg font-black text-2xl bg-accent text-gray-900 shadow-sm tabular-nums whitespace-nowrap">
                                 {formatNumber(Math.round(v.installment))} zł
                               </span>
-                              <span className="text-xs font-medium text-gray-600">brutto / mies.</span>
+                              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">brutto / mies.</span>
                             </div>
                           </>
                         ) : (
                           <>
                             {hasDiscount ? (
                               <div className="flex flex-col">
-                                <span className="text-xs text-subtle line-through">{formatNumber(v.catalogPrice)} PLN</span>
-                                <span className="text-xl font-black text-gray-900">{formatNumber(v.price)} PLN</span>
+                                <span className="text-xs text-subtle line-through tabular-nums whitespace-nowrap">{formatNumber(v.catalogPrice)} PLN</span>
+                                <span className="text-xl font-black text-gray-900 tabular-nums whitespace-nowrap">{formatNumber(v.price)} PLN</span>
                                 <span className="text-xs font-semibold text-green-600">
                                   Rabat {Math.round((v.catalogPrice - v.price) / v.catalogPrice * 100)}%
                                 </span>
@@ -213,7 +213,7 @@ export function DynamicWidget({
                             ) : (
                               <div className="flex flex-col">
                                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Cena pojazdu</span>
-                                <span className="text-lg font-bold text-gray-900">
+                                <span className="text-lg font-bold text-gray-900 tabular-nums whitespace-nowrap">
                                   {v.price ? formatNumber(v.price) : '-'} PLN
                                 </span>
                               </div>
@@ -222,19 +222,19 @@ export function DynamicWidget({
                               <>
                                 <div className="grid grid-cols-2 gap-2 mt-3">
                                   {rates.kredytGross != null && (
-                                    <div>
+                                    <div className="min-w-0">
                                       <span className="text-xs text-muted-foreground block mb-0.5">Kredyt od</span>
-                                      <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
-                                        {formatNumber(rates.kredytGross)} zł<span className="text-xs font-semibold">/mc</span>
+                                      <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg tabular-nums whitespace-nowrap">
+                                        {formatNumber(rates.kredytGross)} zł<span className="text-xs font-semibold ml-0.5">/mies.</span>
                                       </span>
                                       <RateNote label="brutto" text="Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania." />
                                     </div>
                                   )}
                                   {rates.leasingNet != null && (
-                                    <div>
+                                    <div className="min-w-0">
                                       <span className="text-xs text-muted-foreground block mb-0.5">Leasing od</span>
-                                      <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg">
-                                        {formatNumber(rates.leasingNet)} zł<span className="text-xs font-semibold">/mc</span>
+                                      <span className="inline-flex items-baseline gap-0.5 bg-accent text-gray-900 rounded-lg px-2.5 py-1 font-black text-lg tabular-nums whitespace-nowrap">
+                                        {formatNumber(rates.leasingNet)} zł<span className="text-xs font-semibold ml-0.5">/mies.</span>
                                       </span>
                                       <RateNote label="netto" text="Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania." />
                                     </div>

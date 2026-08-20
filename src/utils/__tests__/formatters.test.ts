@@ -1,5 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { formatPhoneForTelLink } from '../formatters';
+import { formatPhoneForTelLink, formatNumber, formatPrice } from '../formatters';
+
+describe('formatNumber', () => {
+    it('formats numbers with non-breaking spaces for thousands', () => {
+        expect(formatNumber(1000)).toBe('1\u00A0000');
+        expect(formatNumber(2739)).toBe('2\u00A0739');
+        expect(formatNumber(158900)).toBe('158\u00A0900');
+    });
+
+    it('handles numeric strings with spaces or commas', () => {
+        expect(formatNumber('158 900')).toBe('158\u00A0900');
+        expect(formatNumber('1234,5')).toBe('1\u00A0235');
+    });
+
+    it('returns original string if not a number', () => {
+        expect(formatNumber('abc')).toBe('abc');
+    });
+});
+
+describe('formatPrice', () => {
+    it('formats price with non-breaking space between amount and currency', () => {
+        expect(formatPrice(2739, 'zł')).toBe('2\u00A0739\u00A0zł');
+        expect(formatPrice(158900, 'PLN')).toBe('158\u00A0900\u00A0PLN');
+    });
+});
 
 describe('formatPhoneForTelLink', () => {
     it('returns empty string if phone is not provided', () => {
