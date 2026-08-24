@@ -53,7 +53,7 @@ function rowLabel(row: Pick<SourceRow, 'source' | 'csflowSourceId' | 'csflowSour
 }
 
 export function BulkSourceManager() {
-    const { token, user } = useAuth();
+    const { token, can } = useAuth();
     const [sources, setSources] = useState<SourceRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export function BulkSourceManager() {
 
     useEffect(() => { fetchSources(); }, [fetchSources]);
 
-    if (user?.role !== 'admin') return null;
+    if (!can('stock:sources:write')) return null;
 
     const openArchiveDialog = (source: string | null, csflowSourceId?: string | null) => {
         setSelectedSource(source);

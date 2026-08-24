@@ -1,10 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { Prisma } from '@prisma/client';
 import { analyticsConfig } from '../config/analytics.config.js';
+import { requirePermission } from '../middleware/permissions.js';
 
 export async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get('/api/analytics/price-trends', {
-    preHandler: [fastify.authenticate],
+    preHandler: [fastify.authenticate, requirePermission('analytics:read')],
     schema: {
       querystring: {
         type: 'object',

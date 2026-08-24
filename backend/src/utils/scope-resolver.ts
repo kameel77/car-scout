@@ -13,6 +13,7 @@ import {
     buildScopeFilter,
     getEffectiveRole,
     isPlatformRole,
+    getAccessibleDealerIds,
     type MembershipInfo,
     type ActiveContext,
 } from '../middleware/permissions.js';
@@ -23,6 +24,7 @@ export interface ResolvedScope {
     activeContext: ActiveContext;
     effectiveRole: MemberRole | null;
     isPlatform: boolean;
+    accessibleDealerIds: string[];
     /** Prisma where fragment for dealerId filtering */
     dealerFilter: ReturnType<typeof buildScopeFilter>;
 }
@@ -86,6 +88,12 @@ export async function resolveScope(
         dealerIdsInGroup = dealers.map(d => d.id);
     }
 
+    const accessible = getAccessibleDealerIds(memberships);
+    let accessibleDealerIds = accessible.dealerIds;
+    if (dealerIdsInGroup) {
+        accessibleDealerIds = [...new Set([...accessibleDealerIds, ...dealerIdsInGroup])];
+    }
+
     const dealerFilter = buildScopeFilter(memberships, activeContext, dealerIdsInGroup);
 
     return {
@@ -93,6 +101,7 @@ export async function resolveScope(
         activeContext,
         effectiveRole,
         isPlatform,
+        accessibleDealerIds,
         dealerFilter,
     };
 }

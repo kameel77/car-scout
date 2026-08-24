@@ -6,6 +6,7 @@ describe('SEO content (CMS) routes', () => {
     let app: FastifyInstance;
     let adminToken: string;
     let managerToken: string;
+    let contentManagerToken: string;
 
     beforeAll(async () => {
         app = await buildApp();
@@ -28,6 +29,15 @@ describe('SEO content (CMS) routes', () => {
             ],
             activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' }
         });
+        contentManagerToken = app.jwt.sign({
+            userId: 'cm-test',
+            email: 'cm@test.com',
+            role: 'manager',
+            memberships: [
+                { id: 'm3', scopeType: 'PLATFORM', scopeId: 'PLATFORM', role: 'CONTENT_MANAGER_PLATFORM', isDefaultContext: true }
+            ],
+            activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' }
+        });
     });
 
     afterAll(async () => {
@@ -43,40 +53,59 @@ describe('SEO content (CMS) routes', () => {
         it('returns html/metaTitle/metaDescription for a published page', async () => {
             await app.prisma.seoContentPage.create({
                 data: {
-                    urlPath: '/samochody/test-seo-content-pub',
+                    urlPath: '/samochody/test-seo-content-published',
                     contentMd: '## Nagłówek\n\nTreść.',
                     metaTitle: 'Tytuł CMS',
                     metaDescription: 'Opis CMS',
                     isPublished: true,
                 },
             });
-            const res = await app.inject({ method: 'GET', url: '/api/seo-content?path=/samochody/test-seo-content-pub' });
+
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/seo-content?path=/samochody/test-seo-content-published',
+            });
+
             expect(res.statusCode).toBe(200);
-            const body = res.json();
-            expect(body.html).toContain('<h2>Nagłówek</h2>');
-            expect(body.metaTitle).toBe('Tytuł CMS');
-            expect(body.metaDescription).toBe('Opis CMS');
+            const json = res.json();
+            expect(json.html).toContain('<h2>Nagłówek</h2>');
+            expect(json.html).toContain('<p>Treść.</p>');
+            expect(json.metaTitle).toBe('Tytuł CMS');
+            expect(json.metaDescription).toBe('Opis CMS');
         });
 
-        it('returns 404 for an unpublished page', async () => {
+        it('returns 404 for an unpublished (draft) page', async () => {
             await app.prisma.seoContentPage.create({
                 data: {
                     urlPath: '/samochody/test-seo-content-draft',
-                    contentMd: 'Szkic.',
+                    contentMd: '# Draft',
                     isPublished: false,
                 },
             });
-            const res = await app.inject({ method: 'GET', url: '/api/seo-content?path=/samochody/test-seo-content-draft' });
+
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/seo-content?path=/samochody/test-seo-content-draft',
+            });
+
             expect(res.statusCode).toBe(404);
         });
 
-        it('returns 404 for a path with no CMS entry at all', async () => {
-            const res = await app.inject({ method: 'GET', url: '/api/seo-content?path=/samochody/nie-ma-takiej-tresci' });
+        it('returns 404 for a non-existent page', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/seo-content?path=/samochody/non-existent-xyz',
+            });
+
             expect(res.statusCode).toBe(404);
         });
 
-        it('returns 400 when path query param is missing', async () => {
-            const res = await app.inject({ method: 'GET', url: '/api/seo-content' });
+        it('returns 400 when path query is missing', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/seo-content',
+            });
+
             expect(res.statusCode).toBe(400);
         });
     });
@@ -87,11 +116,20 @@ describe('SEO content (CMS) routes', () => {
             expect(res.statusCode).toBe(401);
         });
 
-        it('creates, lists, updates and deletes a page for admin/manager', async () => {
+        it('rejects PLATFORM_MANAGER with 403 (lacks content permissions)', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/admin/seo-content',
+                headers: { authorization: `Bearer ${managerToken}` },
+            });
+            expect(res.statusCode).toBe(403);
+        });
+
+        it('creates, lists, updates and deletes a page for content manager / admin', async () => {
             const create = await app.inject({
                 method: 'POST',
                 url: '/api/admin/seo-content',
-                headers: { authorization: `Bearer ${adminToken}` },
+                headers: { authorization: `Bearer ${contentManagerToken}` },
                 payload: { urlPath: '/samochody/test-seo-content-crud', contentMd: '## Q?\nA.', isPublished: false },
             });
             expect(create.statusCode).toBe(200);
@@ -102,7 +140,7 @@ describe('SEO content (CMS) routes', () => {
             const list = await app.inject({
                 method: 'GET',
                 url: '/api/admin/seo-content',
-                headers: { authorization: `Bearer ${managerToken}` },
+                headers: { authorization: `Bearer ${contentManagerToken}` },
             });
             expect(list.statusCode).toBe(200);
             expect(list.json().pages.some((p: any) => p.id === created.id)).toBe(true);
@@ -110,7 +148,7 @@ describe('SEO content (CMS) routes', () => {
             const update = await app.inject({
                 method: 'PUT',
                 url: `/api/admin/seo-content/${created.id}`,
-                headers: { authorization: `Bearer ${adminToken}` },
+                headers: { authorization: `Bearer ${contentManagerToken}` },
                 payload: { isPublished: true, metaTitle: 'Nowy tytuł' },
             });
             expect(update.statusCode).toBe(200);

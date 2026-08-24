@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { requirePermission } from '../middleware/permissions.js';
 
 function generateCompanySlug(name: string): string {
     const translitMap: Record<string, string> = {
@@ -18,7 +19,7 @@ function generateCompanySlug(name: string): string {
 export async function rentalCompanyRoutes(fastify: FastifyInstance) {
     // List all rental companies
     fastify.get('/api/rental-companies', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:read')]
     }, async (request, reply) => {
         const companies = await fastify.prisma.rentalCompany.findMany({
             orderBy: { name: 'asc' },
@@ -34,7 +35,7 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
 
     // Get single rental company
     fastify.get('/api/rental-companies/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:read')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
@@ -61,7 +62,7 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
 
     // Create rental company
     fastify.post('/api/rental-companies', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
         const { name, contactEmail, contactPhone, logoUrl, includedServices, insuranceAddMode } = request.body as {
             name: string;
@@ -95,7 +96,7 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
 
     // Update rental company
     fastify.patch('/api/rental-companies/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as {
@@ -135,7 +136,7 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
 
     // Delete rental company
     fastify.delete('/api/rental-companies/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 

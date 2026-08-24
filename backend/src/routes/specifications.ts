@@ -6,7 +6,7 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 import { getSafeFilePath } from '../utils/path-helpers.js';
-import { requirePlatformRole } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { LiteParse } from '@llamaindex/liteparse';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
@@ -20,7 +20,7 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export async function specificationRoutes(fastify: FastifyInstance) {
 
     fastify.post('/api/specifications', {
-        onRequest: [fastify.authenticate, requirePlatformRole()]
+        onRequest: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const data = (request.body as any) || {};
         const spec = await fastify.prisma.vehicleSpecification.create({
@@ -36,7 +36,7 @@ export async function specificationRoutes(fastify: FastifyInstance) {
 
     // 1. Get specifications list (with filters)
     fastify.get('/api/specifications', {
-        preValidation: [fastify.authenticate]
+        preValidation: [fastify.authenticate, requirePermission('stock:read')]
     }, async (request, reply) => {
         try {
             // resolveScope(fastify, request);
@@ -55,7 +55,7 @@ export async function specificationRoutes(fastify: FastifyInstance) {
 
     // 2. Get specific specification details
     fastify.get('/api/specifications/:id', {
-        preValidation: [fastify.authenticate]
+        preValidation: [fastify.authenticate, requirePermission('stock:read')]
     }, async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
@@ -76,7 +76,7 @@ export async function specificationRoutes(fastify: FastifyInstance) {
 
     // 3. Update specification (displayMode, equipment, etc.)
     fastify.patch('/api/specifications/:id', {
-        preValidation: [fastify.authenticate]
+        preValidation: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
@@ -116,7 +116,7 @@ export async function specificationRoutes(fastify: FastifyInstance) {
 
     // 4. Parse PDF using LiteParse and OpenRouter
     fastify.post('/api/specifications/parse-pdf', {
-        preValidation: [fastify.authenticate]
+        preValidation: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         try {
             const fileData = await request.file();
@@ -233,7 +233,7 @@ Uwagi:
 
     // 5. Upload images for specification
     fastify.post('/api/specifications/:id/images', {
-        preValidation: [fastify.authenticate]
+        preValidation: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const parts = request.parts();
@@ -301,7 +301,7 @@ Uwagi:
 
     // 6. Delete a specific image from specification
     fastify.delete('/api/specifications/:id/images', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { imageUrl } = request.body as { imageUrl: string };
@@ -344,7 +344,7 @@ Uwagi:
 
     // 7. Reorder images
     fastify.patch('/api/specifications/:id/images/reorder', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { imageUrls } = request.body as { imageUrls: string[] };
@@ -364,7 +364,7 @@ Uwagi:
 
     // 8. Add image by URL
     fastify.post('/api/specifications/:id/images/url', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { url } = request.body as { url: string };
@@ -386,7 +386,7 @@ Uwagi:
 
     // 9. Delete specification
     fastify.delete('/api/specifications/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         try {
@@ -400,7 +400,7 @@ Uwagi:
 
     // 10. Archive / Restore specification
     fastify.patch('/api/specifications/:id/archive', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { isArchived } = request.body as { isArchived: boolean };
@@ -418,7 +418,7 @@ Uwagi:
 
     // 11. Duplicate specification
     fastify.post('/api/specifications/:id/duplicate', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         try {

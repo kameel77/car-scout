@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { ScopeType, MemberRole } from '@prisma/client';
-import type { ActiveContext, MembershipInfo } from '../middleware/permissions.js';
+import { getEffectivePermissions, type ActiveContext, type MembershipInfo } from '../middleware/permissions.js';
 import { sendPasswordResetEmail } from '../services/email.js';
 
 export async function authRoutes(fastify: FastifyInstance) {
@@ -68,7 +68,7 @@ export async function authRoutes(fastify: FastifyInstance) {
                 ? { scopeType: defaultMembership.scopeType, scopeId: defaultMembership.scopeId }
                 : { scopeType: ScopeType.PLATFORM, scopeId: 'PLATFORM' };
 
-            // Generate JWT v2 with memberships + active context
+            // Generate JWT v2 with memberships + active context (WITHOUT permissions to prevent stale/bloated token)
             const token = fastify.jwt.sign(
                 {
                     userId: user.id,
@@ -80,6 +80,8 @@ export async function authRoutes(fastify: FastifyInstance) {
                 { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
             );
 
+            const permissions = Array.from(getEffectivePermissions(memberships, activeContext));
+
             return {
                 token,
                 user: {
@@ -89,6 +91,7 @@ export async function authRoutes(fastify: FastifyInstance) {
                     role: user.role, // legacy compat
                     memberships,
                     activeContext,
+                    permissions,
                 },
             };
         } catch (error) {
@@ -135,11 +138,14 @@ export async function authRoutes(fastify: FastifyInstance) {
             scopeId: 'PLATFORM',
         };
 
+        const permissions = Array.from(getEffectivePermissions(memberships, activeContext));
+
         return {
             user: {
                 ...user,
                 memberships,
                 activeContext,
+                permissions,
             },
         };
     });
@@ -247,7 +253,9 @@ export async function authRoutes(fastify: FastifyInstance) {
             { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
         );
 
-        return { token, activeContext };
+        const permissions = Array.from(getEffectivePermissions(memberships, activeContext));
+
+        return { token, activeContext, permissions };
     });
 
     // Logout

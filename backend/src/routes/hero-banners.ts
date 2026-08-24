@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
@@ -62,7 +62,7 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
 
   // Admin: list all
   fastify.get('/api/hero-banners', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:read')],
   }, async () => {
     const banners = await fastify.prisma.heroBanner.findMany({
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -72,7 +72,7 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
 
   // Admin: create
   fastify.post('/api/hero-banners', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request) => {
     const body = request.body as BannerBody;
     const max = await fastify.prisma.heroBanner.aggregate({ _max: { sortOrder: true } });
@@ -93,7 +93,7 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
 
   // Admin: update
   fastify.put('/api/hero-banners/:id', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as BannerBody;
@@ -119,7 +119,7 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
 
   // Admin: delete (+ remove image files)
   fastify.delete('/api/hero-banners/:id', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const banner = await fastify.prisma.heroBanner.findUnique({ where: { id } });
@@ -132,7 +132,7 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
 
   // Admin: reorder — body: { order: [id, id, ...] }
   fastify.post('/api/hero-banners/reorder', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { order } = request.body as { order?: string[] };
     if (!Array.isArray(order)) {
@@ -148,7 +148,7 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
 
   // Admin: upload image for a banner — ?slot=desktop|mobile (default desktop)
   fastify.post('/api/hero-banners/:id/image', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const { slot } = request.query as { slot?: string };

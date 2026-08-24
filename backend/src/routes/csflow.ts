@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { syncAllCSFlowSources, syncCSFlowAPI } from '../services/csflow.service.js';
 
 function slugify(name: string): string {
@@ -24,7 +24,7 @@ function isValidCsflowUrl(apiUrl: string): boolean {
 export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
     // Ręczna synchronizacja WSZYSTKICH włączonych źródeł CSFlow
     fastify.post('/api/csflow/sync', {
-        onRequest: [fastify.authenticate, authorizeRoles(['admin'])]
+        onRequest: [fastify.authenticate, requirePermission('stock:sources:write')]
     }, async (request, reply) => {
         try {
             const user = request.user as { userId: string };
@@ -47,7 +47,7 @@ export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Lista źródeł z licznikiem aktywnych ofert
     fastify.get('/api/csflow/sources', {
-        onRequest: [fastify.authenticate, authorizeRoles(['admin'])]
+        onRequest: [fastify.authenticate, requirePermission('stock:sources:write')]
     }, async (_request, reply) => {
         const sources = await fastify.prisma.csflowSource.findMany({
             orderBy: { createdAt: 'asc' },
@@ -63,7 +63,7 @@ export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Nowe źródło
     fastify.post('/api/csflow/sources', {
-        onRequest: [fastify.authenticate, authorizeRoles(['admin'])]
+        onRequest: [fastify.authenticate, requirePermission('stock:sources:write')]
     }, async (request, reply) => {
         const body = request.body as { name?: string; apiUrl?: string; slug?: string; dealerGroupId?: string | null };
         if (!body.name?.trim() || !body.apiUrl?.trim()) {
@@ -109,7 +109,7 @@ export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Edycja źródła (slug niezmienialny — stabilność identyfikatorów ofert)
     fastify.patch('/api/csflow/sources/:id', {
-        onRequest: [fastify.authenticate, authorizeRoles(['admin'])]
+        onRequest: [fastify.authenticate, requirePermission('stock:sources:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as { name?: string; apiUrl?: string; dealerGroupId?: string | null; isEnabled?: boolean };
@@ -159,7 +159,7 @@ export const csflowRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Ręczna synchronizacja jednego źródła
     fastify.post('/api/csflow/sources/:id/sync', {
-        onRequest: [fastify.authenticate, authorizeRoles(['admin'])]
+        onRequest: [fastify.authenticate, requirePermission('stock:sources:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const settings = await fastify.prisma.appSettings.findUnique({ where: { id: 'default' } });

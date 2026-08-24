@@ -7,16 +7,19 @@ import { ScopeType, MemberRole } from '@prisma/client';
  * Roles that can be assigned at each scope level
  */
 const ASSIGNABLE_ROLES: Record<ScopeType, MemberRole[]> = {
-    PLATFORM: [MemberRole.SUPERADMIN_PLATFORM, MemberRole.PLATFORM_MANAGER],
+    PLATFORM: [MemberRole.SUPERADMIN_PLATFORM, MemberRole.PLATFORM_MANAGER, MemberRole.CONTENT_MANAGER_PLATFORM],
     DEALER_GROUP: [MemberRole.DEALER_GROUP_ADMIN],
     DEALER: [MemberRole.DEALER_ADMIN, MemberRole.DEALER_EMPLOYEE],
 };
 
 async function validateAssignmentScope(fastify: FastifyInstance, callerMemberships: MembershipInfo[], targetScopeType: ScopeType, targetScopeId: string): Promise<boolean> {
-    const isPlatform = callerMemberships.some(m => m.scopeType === ScopeType.PLATFORM);
-    if (isPlatform) return true;
+    const isSuperAdmin = callerMemberships.some(m => m.scopeType === ScopeType.PLATFORM && m.role === MemberRole.SUPERADMIN_PLATFORM);
+    if (targetScopeType === ScopeType.PLATFORM) {
+        return isSuperAdmin;
+    }
 
-    if (targetScopeType === ScopeType.PLATFORM) return false;
+    const isPlatform = isSuperAdmin || callerMemberships.some(m => m.scopeType === ScopeType.PLATFORM && m.role === MemberRole.PLATFORM_MANAGER);
+    if (isPlatform) return true;
 
     if (targetScopeType === ScopeType.DEALER_GROUP) {
         return callerMemberships.some(m => m.scopeType === ScopeType.DEALER_GROUP && m.scopeId === targetScopeId);
@@ -49,7 +52,7 @@ export async function userRoutes(fastify: FastifyInstance) {
 
         const isPlatform = memberships.some(m =>
             m.scopeType === ScopeType.PLATFORM &&
-            (m.role === MemberRole.SUPERADMIN_PLATFORM || m.role === MemberRole.PLATFORM_MANAGER)
+            m.role === MemberRole.SUPERADMIN_PLATFORM
         );
 
         let memberFilter: any = {};

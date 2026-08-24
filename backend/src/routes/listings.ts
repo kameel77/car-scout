@@ -13,6 +13,7 @@ import { computeReferenceInstallments } from '../services/financing-calc.service
 import { sanitizeListing, tryAuthenticate } from '../constants/dealer.js';
 import { resolveOfferLifecycle } from '../services/offer-lifecycle.service.js';
 import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
+import { requirePermission } from '../middleware/permissions.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
 
@@ -72,26 +73,24 @@ export async function listingRoutes(fastify: FastifyInstance) {
         return result;
     });
 
-    fastify.post('/api/listings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-        try {
-            const body = request.body as any;
-            const scope = await resolveScope(fastify, request);
+    // Create listing (manual entry)
+    fastify.post('/api/listings', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
+        const body = request.body as any;
+        const scope = await resolveScope(fastify, request);
 
-            let dealerId = body.dealerId;
-            if (!dealerId && scope && scope.activeContext && scope.activeContext.scopeType === 'DEALER') {
-                dealerId = scope.activeContext.scopeId;
-            }
+        let dealerId = body.dealerId;
+
+        if (scope.isPlatform) {
             if (!dealerId) {
                 return reply.code(400).send({ error: 'dealerId is required' });
             }
-
-        if (!scope.isPlatform) {
-            const allowed = scope.dealerFilter.dealerId;
-            if (typeof allowed === 'string' && dealerId !== allowed) {
+        } else {
+            if (dealerId && !scope.accessibleDealerIds.includes(dealerId)) {
                 return reply.code(403).send({ error: 'Forbidden' });
             }
-            if (allowed && typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(dealerId)) {
-                return reply.code(403).send({ error: 'Forbidden' });
+            dealerId = dealerId || scope.accessibleDealerIds[0];
+            if (!dealerId) {
+                return reply.code(403).send({ error: 'No accessible dealer' });
             }
         }
 
@@ -102,7 +101,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const dealer = await fastify.prisma.dealer.findUnique({ where: { id: dealerId } });
         if (!dealer) {
-            return reply.code(400).send({ error: 'Dealer not found' });
+            return reply.code(404).send({ error: 'Dealer not found' });
         }
 
         if (body.vin) {
@@ -146,13 +145,9 @@ export async function listingRoutes(fastify: FastifyInstance) {
             .catch(err => fastify.log.error({ err, listingId: updated.id }, 'Nie udało się przeliczyć rat referencyjnych po utworzeniu oferty'));
 
         return reply.code(201).send({ listing: updated });
-        } catch (err: any) {
-            fastify.log.error(err);
-            return reply.code(500).send({ error: 'Błąd dodawania ogłoszenia: ' + (err.message || String(err)) });
-        }
     });
 
-    fastify.patch('/api/listings/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    fastify.patch('/api/listings/:id', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as any;
         const scope = await resolveScope(fastify, request);
@@ -821,7 +816,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Archive listing (admin only, scope-aware)
     fastify.post('/api/listings/:id/archive', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { reason } = request.body as { reason?: string };
@@ -856,7 +851,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Restore from archive (admin only, scope-aware)
     fastify.post('/api/listings/:id/restore', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const scope = await resolveScope(fastify, request);
@@ -889,7 +884,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Delete listing permanently (admin only, scope-aware)
     fastify.delete('/api/listings/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const scope = await resolveScope(fastify, request);
@@ -926,7 +921,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Get listing counts grouped by importSource (platform admin only)
     fastify.get('/api/listings/sources', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:read')]
     }, async (request, reply) => {
         const scope = await resolveScope(fastify, request);
         if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
@@ -1047,7 +1042,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Bulk archive all listings by importSource (platform admin only)
     fastify.post('/api/listings/bulk/archive-by-source', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const scope = await resolveScope(fastify, request);
         if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
@@ -1076,7 +1071,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Bulk delete all listings by importSource (platform admin only)
     fastify.post('/api/listings/bulk/delete-by-source', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const scope = await resolveScope(fastify, request);
         if (!scope.isPlatform) return reply.code(403).send({ error: 'Forbidden' });
@@ -1105,7 +1100,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Duplicate model (technical specs only)
     fastify.post('/api/listings/:id/duplicate-model', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const scope = await resolveScope(fastify, request);
@@ -1168,7 +1163,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
     // Duplicate offer (full copy without unique fields and state)
     fastify.post('/api/listings/:id/duplicate-offer', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const scope = await resolveScope(fastify, request);

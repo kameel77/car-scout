@@ -4,6 +4,7 @@ import { syncListingsFromCSV } from '../services/sync.service.js';
 import { importVehisCSV } from '../services/vehis-import.service.js';
 import type { CSVRow, ImportMode } from '../types/csv.types.js';
 import { resolveScope } from '../utils/scope-resolver.js';
+import { requirePermission } from '../middleware/permissions.js';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -39,7 +40,7 @@ export async function importRoutes(fastify: FastifyInstance) {
 
     // Get list of existing unique import sources
     fastify.get('/api/import/sources', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:import')]
     }, async (request, reply) => {
         try {
             const sourcesRaw = await fastify.prisma.listing.findMany({
@@ -57,7 +58,7 @@ export async function importRoutes(fastify: FastifyInstance) {
     
     // ─── CHUNK UPLOAD: receive individual chunk ───
     fastify.post('/api/import/csv-chunk', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:import')]
     }, async (request, reply) => {
         try {
             const uploadId = request.headers['x-upload-id'] as string;
@@ -124,7 +125,7 @@ export async function importRoutes(fastify: FastifyInstance) {
 
     // ─── FINALIZE: reassemble chunks and run import ───
     fastify.post('/api/import/csv-finalize', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:import')]
     }, async (request, reply) => {
         try {
             const { uploadId, mode, source } = request.query as { uploadId: string; mode?: string; source?: string };
@@ -212,7 +213,7 @@ export async function importRoutes(fastify: FastifyInstance) {
 
     // ─── OPCJA A: Upload pliku CSV (single request — for files <90MB) ───
     fastify.post('/api/import/csv', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:import')]
     }, async (request, reply) => {
         try {
             const data = await request.file();
@@ -285,9 +286,10 @@ export async function importRoutes(fastify: FastifyInstance) {
                 return;
             }
             
-            // Otherwise fallback to standard JWT auth
+            // Otherwise fallback to standard JWT auth with stock:import permission check
             try {
                 await request.jwtVerify();
+                await requirePermission('stock:import')(request, reply);
             } catch (err) {
                 reply.code(401).send({ error: 'Unauthorized' });
             }
@@ -398,7 +400,7 @@ export async function importRoutes(fastify: FastifyInstance) {
 
     // Get import history (scope-aware)
     fastify.get('/api/import/history', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:read')]
     }, async (request, reply) => {
         try {
             const scope = await resolveScope(fastify, request);
@@ -429,7 +431,7 @@ export async function importRoutes(fastify: FastifyInstance) {
 
     // Get import details
     fastify.get('/api/import/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:read')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
@@ -450,7 +452,7 @@ export async function importRoutes(fastify: FastifyInstance) {
     });
 
     fastify.post('/api/dealers/:dealerId/import-vehis-csv', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:import')]
     }, async (request, reply) => {
         try {
             const { dealerId } = request.params as { dealerId: string };

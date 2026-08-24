@@ -20,6 +20,7 @@ type ScopeType = 'PLATFORM' | 'DEALER_GROUP' | 'DEALER';
 type MemberRole =
     | 'SUPERADMIN_PLATFORM'
     | 'PLATFORM_MANAGER'
+    | 'CONTENT_MANAGER_PLATFORM'
     | 'DEALER_GROUP_ADMIN'
     | 'DEALER_ADMIN'
     | 'DEALER_EMPLOYEE';
@@ -52,6 +53,7 @@ const SCOPE_ROLES: Record<ScopeType, { value: MemberRole; label: string }[]> = {
     PLATFORM: [
         { value: 'SUPERADMIN_PLATFORM', label: 'Super Admin' },
         { value: 'PLATFORM_MANAGER', label: 'Manager Platformy' },
+        { value: 'CONTENT_MANAGER_PLATFORM', label: 'Content Manager' },
     ],
     DEALER_GROUP: [
         { value: 'DEALER_GROUP_ADMIN', label: 'Admin Grupy' },
@@ -65,6 +67,7 @@ const SCOPE_ROLES: Record<ScopeType, { value: MemberRole; label: string }[]> = {
 const ROLE_LABELS: Record<string, string> = {
     SUPERADMIN_PLATFORM: 'Super Admin',
     PLATFORM_MANAGER: 'Manager',
+    CONTENT_MANAGER_PLATFORM: 'Content Manager',
     DEALER_GROUP_ADMIN: 'Admin Grupy',
     DEALER_ADMIN: 'Admin Dealera',
     DEALER_EMPLOYEE: 'Pracownik',
@@ -73,6 +76,7 @@ const ROLE_LABELS: Record<string, string> = {
 const ROLE_COLORS: Record<string, string> = {
     SUPERADMIN_PLATFORM: 'text-purple-700 bg-purple-50 border-purple-200',
     PLATFORM_MANAGER: 'text-blue-700 bg-blue-50 border-blue-200',
+    CONTENT_MANAGER_PLATFORM: 'text-indigo-700 bg-indigo-50 border-indigo-200',
     DEALER_GROUP_ADMIN: 'text-orange-700 bg-orange-50 border-orange-200',
     DEALER_ADMIN: 'text-emerald-700 bg-emerald-50 border-emerald-200',
     DEALER_EMPLOYEE: 'text-gray-700 bg-gray-50 border-gray-200',

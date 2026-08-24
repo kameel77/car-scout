@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { requirePlatformRole } from '../middleware/authorize.js';
+import { requirePermission, hasPermission } from '../middleware/permissions.js';
 
 const PAGE_OPTIONS = ['home', 'offers', 'contact', 'faq', 'rental', 'financing', 'business'] as const;
 const PAGE_CONTEXT_OPTIONS = ['offers', 'rental', 'all'] as const;
@@ -25,12 +25,15 @@ export async function faqRoutes(fastify: FastifyInstance) {
         const { page } = request.query as { page?: string };
 
         // Try to authenticate; if missing/invalid token, proceed as public
-        let role: string | undefined;
+        let canReadUnpublished = false;
         try {
             await request.jwtVerify();
-            role = (request as any).user?.role;
+            const user = (request as any).user;
+            if (user && (user.role === 'admin' || hasPermission(user.memberships, user.activeContext, 'content:read'))) {
+                canReadUnpublished = true;
+            }
         } catch {
-            role = undefined;
+            canReadUnpublished = false;
         }
 
         const normalizedPage = PAGE_OPTIONS.find((opt) => opt === page);
@@ -52,8 +55,8 @@ export async function faqRoutes(fastify: FastifyInstance) {
             ];
         }
 
-        // Only admins/managers can see unpublished entries
-        if (role !== 'admin' && role !== 'manager') {
+        // Only users with content:read can see unpublished entries
+        if (!canReadUnpublished) {
             where.isPublished = true;
         }
 
@@ -79,7 +82,7 @@ export async function faqRoutes(fastify: FastifyInstance) {
 
     // Create or update FAQ entry
     fastify.post('/api/faq', {
-        preHandler: [fastify.authenticate, requirePlatformRole()]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const payload = request.body as FaqPayload;
 
@@ -132,7 +135,7 @@ export async function faqRoutes(fastify: FastifyInstance) {
 
     // Delete FAQ entry
     fastify.delete('/api/faq/:id', {
-        preHandler: [fastify.authenticate, requirePlatformRole()]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 

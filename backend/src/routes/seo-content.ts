@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { requirePlatformRole } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { getSeoContentPage } from '../services/seo-content.js';
 import { slugifyBrandName } from '../services/brand-pages.service.js';
 
@@ -38,7 +38,7 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
 
     // Admin: list all (published + draft)
     fastify.get('/api/admin/seo-content', {
-        preHandler: [fastify.authenticate, requirePlatformRole()]
+        preHandler: [fastify.authenticate, requirePermission('content:read')]
     }, async () => {
         const pages = await fastify.prisma.seoContentPage.findMany({ orderBy: { urlPath: 'asc' } });
         return { pages };
@@ -46,7 +46,7 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
 
     // Admin: create
     fastify.post('/api/admin/seo-content', {
-        preHandler: [fastify.authenticate, requirePlatformRole()]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const body = request.body as {
             urlPath?: string;
@@ -83,7 +83,7 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
 
     // Admin: update
     fastify.put('/api/admin/seo-content/:id', {
-        preHandler: [fastify.authenticate, requirePlatformRole()]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as {
@@ -127,7 +127,7 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
 
     // Admin: delete
     fastify.delete('/api/admin/seo-content/:id', {
-        preHandler: [fastify.authenticate, requirePlatformRole()]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         try {

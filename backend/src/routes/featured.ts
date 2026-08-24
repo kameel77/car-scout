@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { sanitizeListing } from '../constants/dealer.js';
 
@@ -53,7 +53,7 @@ export async function featuredRoutes(fastify: FastifyInstance) {
 
     // Toggle featured status for a listing
     fastify.post('/api/listings/:id/featured', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         // isBusinessFeatured: wyróżnienie w ofercie dla firm (/dla-firm) — oba pola opcjonalne
@@ -88,7 +88,7 @@ export async function featuredRoutes(fastify: FastifyInstance) {
 
     // Toggle featured status for a rental vehicle
     fastify.post('/api/rental-vehicles/:id/featured', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { isFeatured, isBusinessFeatured } = request.body as { isFeatured?: boolean; isBusinessFeatured?: boolean };
@@ -111,7 +111,7 @@ export async function featuredRoutes(fastify: FastifyInstance) {
 
     // Toggle published (frontend visibility) status for a rental vehicle
     fastify.post('/api/rental-vehicles/:id/published', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { isPublished } = request.body as { isPublished: boolean };

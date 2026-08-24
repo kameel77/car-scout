@@ -159,7 +159,7 @@ const App = () => (
                         <Route
                           path="/admin/dashboard"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute>
                               <AdminDashboard />
                             </ProtectedRoute>
                           }
@@ -167,7 +167,7 @@ const App = () => (
                         <Route
                           path="/admin/leads"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="leads:read">
                               <LeadsPage />
                             </ProtectedRoute>
                           }
@@ -175,7 +175,7 @@ const App = () => (
                         <Route
                           path="/admin/listings"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="stock:read">
                               <ListingManagementPage />
                             </ProtectedRoute>
                           }
@@ -183,7 +183,7 @@ const App = () => (
                         <Route
                           path="/admin/listings/new"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="stock:write">
                               <ListingNewPage />
                             </ProtectedRoute>
                           }
@@ -191,7 +191,7 @@ const App = () => (
                         <Route
                           path="/admin/listings/:id/edit"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="stock:write">
                               <ListingEditPage />
                             </ProtectedRoute>
                           }
@@ -199,7 +199,7 @@ const App = () => (
                         <Route
                           path="/admin/translations"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <TranslationsPage />
                             </ProtectedRoute>
                           }
@@ -207,7 +207,7 @@ const App = () => (
                         <Route
                           path="/admin/seo"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <SeoPage />
                             </ProtectedRoute>
                           }
@@ -215,7 +215,7 @@ const App = () => (
                         <Route
                           path="/admin/faq"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <FaqPage />
                             </ProtectedRoute>
                           }
@@ -223,7 +223,7 @@ const App = () => (
                         <Route
                           path="/admin/seo-content"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <SeoContentPage />
                             </ProtectedRoute>
                           }
@@ -231,7 +231,7 @@ const App = () => (
                         <Route
                           path="/admin/feature-tiles"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <AdminFeatureTilesPage />
                             </ProtectedRoute>
                           }
@@ -239,7 +239,7 @@ const App = () => (
                         <Route
                           path="/admin/hero-banners"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <AdminHeroBannersPage />
                             </ProtectedRoute>
                           }
@@ -247,7 +247,7 @@ const App = () => (
                         <Route
                           path="/admin/landing-pages"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <AdminLandingPagesPage />
                             </ProtectedRoute>
                           }
@@ -255,7 +255,7 @@ const App = () => (
                         <Route
                           path="/admin/partners"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <AdminPartnersPage />
                             </ProtectedRoute>
                           }
@@ -263,7 +263,7 @@ const App = () => (
                         <Route
                           path="/admin/api-partners"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="platform:settings:read">
                               <AdminApiPartnersPage />
                             </ProtectedRoute>
                           }
@@ -271,7 +271,7 @@ const App = () => (
                         <Route
                           path="/admin/financing"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="platform:settings:read">
                               <FinancingPage />
                             </ProtectedRoute>
                           }
@@ -279,7 +279,7 @@ const App = () => (
                         <Route
                           path="/admin/import"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="stock:import">
                               <ImportPage />
                             </ProtectedRoute>
                           }
@@ -287,7 +287,7 @@ const App = () => (
                         <Route
                           path="/admin/analytics"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="analytics:read">
                               <PriceAnalyticsPage />
                             </ProtectedRoute>
                           }
@@ -295,7 +295,7 @@ const App = () => (
                         <Route
                           path="/admin/users"
                           element={
-                            <ProtectedRoute allowedRoles={['admin']}>
+                            <ProtectedRoute permission="users:read">
                               <UsersPage />
                             </ProtectedRoute>
                           }
@@ -303,7 +303,7 @@ const App = () => (
                         <Route
                           path="/admin/rental-vehicles"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="rental:read">
                               <RentalVehiclesPage />
                             </ProtectedRoute>
                           }
@@ -311,7 +311,7 @@ const App = () => (
                         <Route
                           path="/admin/rental-companies"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="rental:config:write">
                               <RentalCompaniesPage />
                             </ProtectedRoute>
                           }
@@ -319,7 +319,7 @@ const App = () => (
                         <Route
                           path="/admin/rental-matrix"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="rental:config:write">
                               <RentalMatrixPage />
                             </ProtectedRoute>
                           }
@@ -327,7 +327,7 @@ const App = () => (
                         <Route
                           path="/admin/dealer-groups"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="dealer_groups:read">
                               <DealerGroupsPage />
                             </ProtectedRoute>
                           }
@@ -335,7 +335,7 @@ const App = () => (
                         <Route
                           path="/admin/dealers"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="dealers:read">
                               <DealersPage />
                             </ProtectedRoute>
                           }
@@ -343,7 +343,7 @@ const App = () => (
                         <Route
                           path="/admin/specifications"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="stock:read">
                               <SpecificationsPage />
                             </ProtectedRoute>
                           }
@@ -351,7 +351,7 @@ const App = () => (
                         <Route
                           path="/admin/specifications/:id/edit"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="stock:write">
                               <SpecificationEditPage />
                             </ProtectedRoute>
                           }
@@ -359,7 +359,7 @@ const App = () => (
                         <Route
                           path="/admin/widgets"
                           element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute permission="content:read">
                               <WidgetsPage />
                             </ProtectedRoute>
                           }

@@ -6,6 +6,7 @@ describe('PartnerAds Admin Routes Authz', () => {
     let app: FastifyInstance;
     let managerToken: string;
     let adminToken: string;
+    let contentManagerToken: string;
     let testAdId: string;
 
     beforeAll(async () => {
@@ -16,6 +17,9 @@ describe('PartnerAds Admin Routes Authz', () => {
             userId: 'manager-test',
             email: 'm@test.com',
             role: 'manager',
+            memberships: [
+                { id: 'm1', scopeType: 'PLATFORM', scopeId: 'PLATFORM', role: 'PLATFORM_MANAGER', isDefaultContext: true }
+            ],
             activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' }
         });
 
@@ -23,6 +27,19 @@ describe('PartnerAds Admin Routes Authz', () => {
             userId: 'admin-test',
             email: 'a@test.com',
             role: 'admin',
+            memberships: [
+                { id: 'm2', scopeType: 'PLATFORM', scopeId: 'PLATFORM', role: 'SUPERADMIN_PLATFORM', isDefaultContext: true }
+            ],
+            activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' }
+        });
+
+        contentManagerToken = app.jwt.sign({
+            userId: 'cm-test',
+            email: 'cm@test.com',
+            role: 'manager',
+            memberships: [
+                { id: 'm3', scopeType: 'PLATFORM', scopeId: 'PLATFORM', role: 'CONTENT_MANAGER_PLATFORM', isDefaultContext: true }
+            ],
             activeContext: { scopeType: 'PLATFORM', scopeId: 'PLATFORM' }
         });
     });
@@ -34,7 +51,7 @@ describe('PartnerAds Admin Routes Authz', () => {
         await app.close();
     });
 
-    it('rejects POST /api/admin/partner-ads for non-admin', async () => {
+    it('rejects POST /api/admin/partner-ads for PLATFORM_MANAGER (lacks content:write)', async () => {
         const res = await app.inject({
             method: 'POST',
             url: '/api/admin/partner-ads',
@@ -53,7 +70,18 @@ describe('PartnerAds Admin Routes Authz', () => {
         expect(res.statusCode).toBe(401);
     });
     
-    it('accepts POST /api/admin/partner-ads for admin', async () => {
+    it('accepts POST /api/admin/partner-ads for CONTENT_MANAGER_PLATFORM (has content:write)', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/api/admin/partner-ads',
+            headers: { authorization: `Bearer ${contentManagerToken}` },
+            payload: { placement: 'SEARCH_GRID', url: 'https://test.com' }
+        });
+        expect(res.statusCode).toBe(200);
+        testAdId = res.json().ad.id;
+    });
+
+    it('accepts POST /api/admin/partner-ads for SUPERADMIN_PLATFORM', async () => {
         const res = await app.inject({
             method: 'POST',
             url: '/api/admin/partner-ads',
@@ -61,6 +89,6 @@ describe('PartnerAds Admin Routes Authz', () => {
             payload: { placement: 'SEARCH_GRID', url: 'https://test.com' }
         });
         expect(res.statusCode).toBe(200);
-        testAdId = res.json().ad.id;
+        await app.prisma.partnerAd.deleteMany({ where: { id: res.json().ad.id } });
     });
 });

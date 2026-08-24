@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { resolveScope } from '../utils/scope-resolver.js';
+import { requirePermission } from '../middleware/permissions.js';
 
 function generateSlug(make: string, model: string, version: string | null, productionYear: number | null | undefined, bodyType: string | null, fuelType: string | null, id: string): string {
     const translitMap: Record<string, string> = {
@@ -23,7 +24,7 @@ function generateSlug(make: string, model: string, version: string | null, produ
 export async function rentalVehicleRoutes(fastify: FastifyInstance) {
     // List rental vehicles (admin)
     fastify.get('/api/rental-vehicles', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:read')]
     }, async (request, reply) => {
         const {
             page = '1',
@@ -101,7 +102,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Get single rental vehicle (admin)
     fastify.get('/api/rental-vehicles/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:read')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
@@ -134,7 +135,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Create rental vehicle
     fastify.post('/api/rental-vehicles', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const body = request.body as any;
 
@@ -245,7 +246,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Update rental vehicle
     fastify.patch('/api/rental-vehicles/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as any;
@@ -308,7 +309,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Archive (soft delete) rental vehicle
     fastify.post('/api/rental-vehicles/:id/archive', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
@@ -335,7 +336,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Restore rental vehicle
     fastify.post('/api/rental-vehicles/:id/restore', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
@@ -362,7 +363,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Delete rental vehicle permanently
     fastify.delete('/api/rental-vehicles/:id', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
@@ -386,7 +387,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Assign rental company to vehicle
     fastify.post('/api/rental-vehicles/:id/assignments', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { rentalCompanyId, externalVehicleId, calculationId, includedServicesOverride, insuranceAddModeOverride } = request.body as {
@@ -446,7 +447,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Update assignment
     fastify.patch('/api/rental-vehicles/:id/assignments/:assignmentId', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { assignmentId } = request.params as { id: string; assignmentId: string };
         const body = request.body as {
@@ -484,7 +485,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Delete assignment
     fastify.delete('/api/rental-vehicles/:id/assignments/:assignmentId', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { assignmentId } = request.params as { id: string; assignmentId: string };
 
@@ -516,6 +517,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             // Otherwise fallback to standard JWT auth
             try {
                 await request.jwtVerify();
+                await requirePermission('rental:write')(request, reply);
             } catch (err) {
                 reply.code(401).send({ error: 'Unauthorized' });
             }
@@ -648,7 +650,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Duplicate model (technical specs only)
     fastify.post('/api/rental-vehicles/:id/duplicate-model', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
@@ -716,7 +718,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
     // Duplicate offer (full copy without assignments)
     fastify.post('/api/rental-vehicles/:id/duplicate-offer', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const vehicle = await fastify.prisma.rentalVehicle.findUnique({ where: { id } });
