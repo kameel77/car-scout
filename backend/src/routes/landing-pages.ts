@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 import { sanitizeListing } from '../constants/dealer.js';
 import { calculateRatesWithInsurance } from './rental-public.js';
@@ -366,7 +366,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: GET /api/landing-pages (list all LPs with 30-day leads count)
   fastify.get('/api/landing-pages', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:read')],
   }, async () => {
     const pages = await fastify.prisma.landingPage.findMany({
       orderBy: { createdAt: 'desc' },
@@ -402,7 +402,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: GET /api/landing-pages/:id
   fastify.get('/api/landing-pages/:id', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:read')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const lp = await fastify.prisma.landingPage.findUnique({ where: { id } });
@@ -412,7 +412,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: POST /api/landing-pages
   fastify.post('/api/landing-pages', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const body = request.body as any;
 
@@ -470,7 +470,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: PUT /api/landing-pages/:id
   fastify.put('/api/landing-pages/:id', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as any;
@@ -528,7 +528,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: DELETE /api/landing-pages/:id
   fastify.delete('/api/landing-pages/:id', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const lp = await fastify.prisma.landingPage.findUnique({ where: { id } });
@@ -542,7 +542,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
   // Admin Endpoint: POST /api/landing-pages/:id/duplicate
   // Kopiuje też pliki na dysku — inaczej usunięcie oryginału zabrałoby kopii obraz i regulamin.
   fastify.post('/api/landing-pages/:id/duplicate', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const source = await fastify.prisma.landingPage.findUnique({ where: { id } });
@@ -579,7 +579,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: DELETE /api/landing-pages/:id/hero-image
   fastify.delete('/api/landing-pages/:id/hero-image', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const lp = await fastify.prisma.landingPage.findUnique({ where: { id } });
@@ -598,7 +598,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: POST /api/landing-pages/:id/hero-image
   fastify.post('/api/landing-pages/:id/hero-image', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const lp = await fastify.prisma.landingPage.findUnique({ where: { id } });
@@ -632,7 +632,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: POST /api/landing-pages/:id/terms-file
   fastify.post('/api/landing-pages/:id/terms-file', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const lp = await fastify.prisma.landingPage.findUnique({ where: { id } });
@@ -674,7 +674,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: DELETE /api/landing-pages/:id/terms-file
   fastify.delete('/api/landing-pages/:id/terms-file', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:write')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const lp = await fastify.prisma.landingPage.findUnique({ where: { id } });
@@ -693,7 +693,7 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
 
   // Admin Endpoint: GET /api/landing-pages/:id/preview-listings
   fastify.get('/api/landing-pages/:id/preview-listings', {
-    preHandler: [fastify.authenticate, authorizeRoles(['admin'])],
+    preHandler: [fastify.authenticate, requirePermission('content:read')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const lp = await fastify.prisma.landingPage.findUnique({ where: { id } });

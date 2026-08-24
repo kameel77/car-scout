@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { parse } from 'csv-parse/sync';
+import { requirePermission } from '../middleware/permissions.js';
 import {
     detectCSVFormat,
     mapCSVRowToMatrixEntry,
@@ -13,7 +14,7 @@ import {
 export async function rentalMatrixRoutes(fastify: FastifyInstance) {
     // Import matrix CSV for a specific rental company
     fastify.post('/api/rental-matrix/import', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
         const { rentalCompanyId } = request.query as { rentalCompanyId: string };
 
@@ -310,7 +311,7 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
 
     // Get matrix entries for a specific assignment
     fastify.get('/api/rental-matrix/:assignmentId', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
         const { assignmentId } = request.params as { assignmentId: string };
 
@@ -328,7 +329,7 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
 
     // Get dynamic options from matrix for a specific vehicle
     fastify.get('/api/rental-matrix/options/:vehicleId', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
         const { vehicleId } = request.params as { vehicleId: string };
 
@@ -361,7 +362,7 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
 
     // Delete all matrix entries for an assignment (reset matrix)
     fastify.delete('/api/rental-matrix/:assignmentId', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
         const { assignmentId } = request.params as { assignmentId: string };
 

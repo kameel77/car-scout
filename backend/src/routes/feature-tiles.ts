@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import crypto from 'crypto';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
@@ -196,7 +196,7 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
 
     // Admin: list all tiles
     fastify.get('/api/feature-tiles', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:read')]
     }, async () => {
         const tiles = await fastify.prisma.featureTile.findMany({
             orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -206,7 +206,7 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
 
     // Admin: create tile
     fastify.post('/api/feature-tiles', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { title, imageUrl, targetUrl, isActive } = request.body as {
             title?: string; imageUrl?: string | null; targetUrl?: string; isActive?: boolean;
@@ -229,7 +229,7 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
 
     // Admin: update tile
     fastify.put('/api/feature-tiles/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { title, imageUrl, targetUrl, isActive } = request.body as {
@@ -253,7 +253,7 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
 
     // Admin: delete tile (also delete image file if hosted)
     fastify.delete('/api/feature-tiles/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const tile = await fastify.prisma.featureTile.findUnique({ where: { id } });
@@ -274,7 +274,7 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
 
     // Admin: reorder — body: { order: [tileId, tileId, ...] }
     fastify.post('/api/feature-tiles/reorder', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { order } = request.body as { order?: string[] };
         if (!Array.isArray(order)) {
@@ -293,7 +293,7 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
 
     // Admin: upload image for a tile (multipart)
     fastify.post('/api/feature-tiles/:id/image', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const tile = await fastify.prisma.featureTile.findUnique({ where: { id } });

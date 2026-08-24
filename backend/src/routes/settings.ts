@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { recomputeAll } from '../services/financing-calc.service.js';
 import path from 'path';
 import fs from 'fs/promises';
@@ -241,7 +241,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
     // Get current settings (ADMIN — full record, smtpPassword masked)
     fastify.get('/api/admin/settings', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:read')]
     }, async (request, reply) => {
         try {
             const settings = await getOrCreateSettings(fastify);
@@ -262,7 +262,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
     // Update settings
     fastify.post('/api/settings', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         const data = request.body as SettingsPayload;
 
@@ -503,7 +503,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
     // Recalculate all listing prices based on current settings (Manual Trigger)
     fastify.post('/api/settings/recalculate', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         const updatedCount = await recalculateAllPrices(fastify);
 
@@ -515,7 +515,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
     // Upload logo (header/footer)
     fastify.post('/api/settings/logo', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         const file = await request.file();
         if (!file) {
@@ -569,7 +569,7 @@ export async function settingsRoutes(fastify: FastifyInstance) {
 
     // Upload legal document PDF (imprint / privacyPolicy / terms / cookies × pl/en/de)
     fastify.post('/api/settings/legal-doc', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         const parts = request.parts();
         let key: string | undefined;

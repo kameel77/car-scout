@@ -7,16 +7,19 @@ import { ScopeType, MemberRole } from '@prisma/client';
  * Roles that can be assigned at each scope level
  */
 const ASSIGNABLE_ROLES: Record<ScopeType, MemberRole[]> = {
-    PLATFORM: [MemberRole.SUPERADMIN_PLATFORM, MemberRole.PLATFORM_MANAGER],
+    PLATFORM: [MemberRole.SUPERADMIN_PLATFORM, MemberRole.PLATFORM_MANAGER, MemberRole.CONTENT_MANAGER_PLATFORM],
     DEALER_GROUP: [MemberRole.DEALER_GROUP_ADMIN],
     DEALER: [MemberRole.DEALER_ADMIN, MemberRole.DEALER_EMPLOYEE],
 };
 
 async function validateAssignmentScope(fastify: FastifyInstance, callerMemberships: MembershipInfo[], targetScopeType: ScopeType, targetScopeId: string): Promise<boolean> {
-    const isPlatform = callerMemberships.some(m => m.scopeType === ScopeType.PLATFORM);
-    if (isPlatform) return true;
+    const isSuperAdmin = callerMemberships.some(m => m.scopeType === ScopeType.PLATFORM && m.role === MemberRole.SUPERADMIN_PLATFORM);
+    if (targetScopeType === ScopeType.PLATFORM) {
+        return isSuperAdmin;
+    }
 
-    if (targetScopeType === ScopeType.PLATFORM) return false;
+    const isPlatform = isSuperAdmin || callerMemberships.some(m => m.scopeType === ScopeType.PLATFORM && m.role === MemberRole.PLATFORM_MANAGER);
+    if (isPlatform) return true;
 
     if (targetScopeType === ScopeType.DEALER_GROUP) {
         return callerMemberships.some(m => m.scopeType === ScopeType.DEALER_GROUP && m.scopeId === targetScopeId);
@@ -49,7 +52,7 @@ export async function userRoutes(fastify: FastifyInstance) {
 
         const isPlatform = memberships.some(m =>
             m.scopeType === ScopeType.PLATFORM &&
-            (m.role === MemberRole.SUPERADMIN_PLATFORM || m.role === MemberRole.PLATFORM_MANAGER)
+            m.role === MemberRole.SUPERADMIN_PLATFORM
         );
 
         let memberFilter: any = {};
@@ -127,11 +130,27 @@ export async function userRoutes(fastify: FastifyInstance) {
     fastify.post('/api/users', {
         preHandler: [fastify.authenticate, requirePermission('users:write')]
     }, async (request, reply) => {
-        const { email, name, password, membershipScopeType, membershipScopeId, membershipRole } =
+        const { email, name, password, membershipScopeType, membershipScopeId, membershipRole, isActive } =
             request.body as any;
 
         if (!email || !password) {
             return reply.code(400).send({ error: 'email and password are required' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const trimmedName = typeof name === 'string' ? name.trim() : null;
+
+        // Check if user with this email already exists (case-insensitive)
+        const existing = await fastify.prisma.user.findFirst({
+            where: {
+                email: {
+                    equals: normalizedEmail,
+                    mode: 'insensitive',
+                },
+            },
+        });
+        if (existing) {
+            return reply.code(409).send({ error: 'Email already exists' });
         }
 
         // Determine membership params
@@ -171,10 +190,11 @@ export async function userRoutes(fastify: FastifyInstance) {
         try {
             const user = await fastify.prisma.user.create({
                 data: {
-                    email,
-                    name,
+                    email: normalizedEmail,
+                    name: trimmedName,
                     password: hashedPassword,
                     role: legacyRole,
+                    isActive: isActive !== undefined ? Boolean(isActive) : true,
                     memberships: {
                         create: {
                             scopeType,
@@ -296,11 +316,31 @@ export async function userRoutes(fastify: FastifyInstance) {
         const { email, name, password, isActive } = request.body as any;
 
         const updateData: any = {};
-        if (email !== undefined) updateData.email = email;
-        if (name !== undefined) updateData.name = name;
-        if (isActive !== undefined) updateData.isActive = isActive;
+        if (email !== undefined) {
+            const normalizedEmail = email.trim().toLowerCase();
+            // Check if another user has this email
+            const duplicate = await fastify.prisma.user.findFirst({
+                where: {
+                    email: {
+                        equals: normalizedEmail,
+                        mode: 'insensitive',
+                    },
+                    id: { not: id },
+                },
+            });
+            if (duplicate) {
+                return reply.code(409).send({ error: 'Email already exists' });
+            }
+            updateData.email = normalizedEmail;
+        }
+        if (name !== undefined) {
+            updateData.name = typeof name === 'string' ? name.trim() : null;
+        }
+        if (isActive !== undefined) {
+            updateData.isActive = Boolean(isActive);
+        }
 
-        if (password) {
+        if (password && typeof password === 'string' && password.trim().length > 0) {
             updateData.password = await bcrypt.hash(password, 10);
         }
 

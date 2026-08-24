@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { sendLeadEmail } from '../services/email.js';
 import { resolveScope } from '../utils/scope-resolver.js';
+import { requirePermission } from '../middleware/permissions.js';
 import fetch from 'node-fetch';
 
 async function verifyTurnstile(token: string | undefined, ip: string, log: any): Promise<boolean> {
@@ -507,7 +508,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
 
     // Get leads for backoffice (requires auth, scope-aware)
     fastify.get('/api/leads', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('leads:read')]
     }, async (request) => {
         const { leadType } = request.query as { leadType?: string };
         const scope = await resolveScope(fastify, request);

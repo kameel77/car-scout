@@ -10,9 +10,33 @@ export type ScopeType = 'PLATFORM' | 'DEALER_GROUP' | 'DEALER';
 export type MemberRole =
     | 'SUPERADMIN_PLATFORM'
     | 'PLATFORM_MANAGER'
+    | 'CONTENT_MANAGER_PLATFORM'
     | 'DEALER_GROUP_ADMIN'
     | 'DEALER_ADMIN'
     | 'DEALER_EMPLOYEE';
+
+export type Permission =
+    | 'platform:settings:read'
+    | 'platform:settings:write'
+    | 'dealer_groups:read'
+    | 'dealer_groups:write'
+    | 'dealers:read'
+    | 'dealers:write'
+    | 'users:read'
+    | 'users:write'
+    | 'stock:read'
+    | 'stock:write'
+    | 'stock:import'
+    | 'stock:sources:write'
+    | 'rental:read'
+    | 'rental:write'
+    | 'rental:config:write'
+    | 'leads:read'
+    | 'leads:write'
+    | 'analytics:read'
+    | 'content:read'
+    | 'content:write'
+    | 'context:switch';
 
 export interface MembershipInfo {
     id: string;
@@ -36,15 +60,18 @@ interface User {
     role: string; // legacy
     memberships?: MembershipInfo[];
     activeContext?: ActiveContext;
+    permissions?: Permission[];
 }
 
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: (email: string, password: string) => Promise<boolean>;
+    login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
     logout: () => void;
     switchContext: (scopeType: ScopeType, scopeId: string, label?: string) => Promise<boolean>;
     isLoading: boolean;
+    // Permission helper
+    can: (permission: Permission) => boolean;
     // Computed helpers
     effectiveRole: MemberRole | null;
     isPlatformUser: boolean;
@@ -61,6 +88,7 @@ const PLATFORM_ROLES = new Set<MemberRole>(['SUPERADMIN_PLATFORM', 'PLATFORM_MAN
 const ROLE_PRIORITY: MemberRole[] = [
     'SUPERADMIN_PLATFORM',
     'PLATFORM_MANAGER',
+    'CONTENT_MANAGER_PLATFORM',
     'DEALER_GROUP_ADMIN',
     'DEALER_ADMIN',
     'DEALER_EMPLOYEE',
@@ -69,6 +97,7 @@ const ROLE_PRIORITY: MemberRole[] = [
 export const ROLE_LABELS: Record<MemberRole, string> = {
     SUPERADMIN_PLATFORM: 'Superadmin',
     PLATFORM_MANAGER: 'Manager',
+    CONTENT_MANAGER_PLATFORM: 'Content Manager',
     DEALER_GROUP_ADMIN: 'Admin grupy',
     DEALER_ADMIN: 'Admin dealera',
     DEALER_EMPLOYEE: 'Pracownik',
@@ -119,17 +148,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyToken();
     }, [token]);
 
-    const login = async (email: string, password: string): Promise<boolean> => {
+    const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
         try {
             const { token: newToken, user: newUser } = await authApi.login(email, password);
             localStorage.setItem('auth_token', newToken);
             localStorage.removeItem('context_label');
             setToken(newToken);
             setUser(newUser);
-            return true;
-        } catch (error) {
+            return { success: true };
+        } catch (error: any) {
             console.error('Login failed:', error);
-            return false;
+            return { success: false, error: error?.message || 'Login failed' };
         }
     };
 
@@ -170,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(prev => prev ? {
                 ...prev,
                 activeContext: { ...data.activeContext, label },
+                permissions: data.permissions,
             } : null);
             return true;
         } catch (error) {
@@ -177,6 +207,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return false;
         }
     }, [token]);
+
+    const can = useCallback((permission: Permission): boolean => {
+        return user?.permissions?.includes(permission) ?? false;
+    }, [user?.permissions]);
 
     // Computed values
     const memberships = user?.memberships || [];
@@ -195,6 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logout,
             switchContext,
             isLoading,
+            can,
             effectiveRole,
             isPlatformUser,
             isGroupAdmin,

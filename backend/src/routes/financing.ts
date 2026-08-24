@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { authorizeRoles, requirePlatformRole } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { z } from 'zod';
 import { calcInbankInstallment, calcVehisInstallment, FinancingCalcError } from '../services/financing-calc.service.js';
 
@@ -129,7 +129,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: List all products
     fastify.get('/api/financing/products', {
-        preHandler: [fastify.authenticate, requirePlatformRole()]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:read')]
     }, async (request, reply) => {
         try {
             const products = await fastify.prisma.financingProduct.findMany({
@@ -148,7 +148,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: Create product
     fastify.post('/api/financing/products', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         try {
             const rawData = FinancingProductSchema.parse(request.body);
@@ -178,7 +178,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: Update product
     fastify.patch('/api/financing/products/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
@@ -218,7 +218,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: Delete product
     fastify.delete('/api/financing/products/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
@@ -236,7 +236,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: List all provider connections
     fastify.get('/api/financing/connections', {
-        preHandler: [fastify.authenticate, requirePlatformRole()]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:read')]
     }, async (request, reply) => {
         try {
             const connections = await fastify.prisma.financingProviderConnection.findMany({
@@ -251,7 +251,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: Create provider connection
     fastify.post('/api/financing/connections', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         try {
             const data = FinancingConnectionSchema.parse(request.body);
@@ -265,7 +265,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: Update provider connection
     fastify.patch('/api/financing/connections/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
@@ -284,7 +284,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
     // Admin: Delete provider connection
     // Admin: Submit application to provider
     fastify.post('/api/financing/apply/:leadId', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('leads:write')]
     }, async (request, reply) => {
         try {
             const { leadId } = request.params as { leadId: string };
@@ -390,7 +390,7 @@ export async function financingRoutes(fastify: FastifyInstance) {
 
     // Admin: Test provider connection
     fastify.post('/api/financing/test-connection', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         try {
             const reqBody = request.body as {
