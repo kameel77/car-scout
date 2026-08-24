@@ -561,7 +561,7 @@ export default function UsersPage() {
             ) : (
                 <div className="grid gap-3">
                     <p className="text-sm text-gray-500">
-                        {users.length} {users.length === 1 ? 'użytkownik' : (users.length % 10 >= 2 && users.length % 10 <= 4 && (users.length % 100 < 10 || users.length % 100 >= 20)) ? 'użytkowników' && 'użytkownicy' : 'użytkowników'}
+                        {users.length} {users.length === 1 ? 'użytkownik' : (users.length % 10 >= 2 && users.length % 10 <= 4 && (users.length % 100 < 10 || users.length % 100 >= 20)) ? 'użytkownicy' : 'użytkowników'}
                     </p>
                     {users.map(u => {
                         const primaryRole = getPrimaryRole(u);
