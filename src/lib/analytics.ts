@@ -154,3 +154,43 @@ export const trackLeadSubmit = (payload: LeadSubmitPayload) => {
     });
   }
 };
+
+/**
+ * Query params worth keeping in `page_location`. Everything else is filter and
+ * sorting state that the pages append to the URL after mount — keeping it only
+ * fragments the GA4 page reports into variants like /leasing?status=new.
+ */
+const PRESERVED_QUERY_PARAMS = new Set([
+  'gclid', 'gbraid', 'wbraid', 'dclid', 'gad_source', 'gclsrc',
+  'fbclid', 'msclkid', 'ttclid', 'twclid', 'li_fat_id', 'epik', 'srsltid',
+]);
+
+export const cleanPageLocation = (href: string): string => {
+  try {
+    const url = new URL(href);
+    const kept = new URLSearchParams();
+    url.searchParams.forEach((value, key) => {
+      const name = key.toLowerCase();
+      if (name.startsWith('utm_') || PRESERVED_QUERY_PARAMS.has(name)) {
+        kept.append(key, value);
+      }
+    });
+    url.search = kept.toString();
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return href;
+  }
+};
+
+export const trackPageView = (pageLocation: string, pageReferrer: string) => {
+  const dl = getWindowDataLayer();
+  if (dl) {
+    dl.push({
+      event: 'spa_page_view',
+      page_location: pageLocation,
+      page_title: document.title,
+      page_referrer: pageReferrer,
+    });
+  }
+};

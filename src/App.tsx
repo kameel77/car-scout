@@ -17,6 +17,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { SeoManager } from '@/components/seo/SeoManager';
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
 import { ClarityPageTracker } from './components/seo/ClarityPageTracker';
+import { PageViewTracker } from './components/seo/PageViewTracker';
 import { ScrollToTop } from './components/ScrollToTop';
 import './i18n';
 
@@ -98,6 +99,7 @@ const App = () => (
               <BrowserRouter>
                 <ScrollToTop />
                 <ClarityPageTracker />
+                <PageViewTracker />
                 <SpecialOfferProvider>
                   <CrmTrackingProvider>
                   <PersonalOfferProvider>
