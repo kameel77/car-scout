@@ -554,3 +554,10 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Klasy `tabular-nums` i `whitespace-nowrap`**: Nałożone na wszystkie kluczowe elementy prezentujące raty, ceny i parametry (karty ogłoszeń `ListingCard`, `RentalListingCard`, strona oferty `ListingDetailPage`, kalkulator finansowy `FinancingCalculator`, widgety `DynamicWidget`, siatka specyfikacji `SpecsGrid` oraz formularze leadowe `LeadFormPage`).
   - **Struktura siatki rat na kartach ogłoszeń**: W `ListingCard` i `RentalListingCard` kolumny rat otrzymały właściwość `min-w-0` oraz elastyczne zawijanie wierszy z zachowaniem niepodzielności poszczególnych etykiet (`whitespace-nowrap`), zapobiegając rozpychaniu lub niekontrolowanemu łamaniu dopisków `zł brutto` / `zł netto` i `/mies.`.
 
+## 47. Normalizacja adresów email i zarządzanie statusem kont użytkowników
+- **Cel**: Wyeliminowanie błędów autoryzacji (401 Invalid credentials) wynikających z wielkości liter w adresie email, białych znaków lub braku kontroli nad statusem aktywności konta.
+- **Zastosowane rozwiązania**:
+  - **Case-insensitive i trimowanie adresów email**: Przy tworzeniu (`POST /api/users`), edycji (`PATCH /api/users/:id`), logowaniu (`POST /api/auth/login`) oraz resetowaniu hasła adresy email są automatycznie trimowane i konwertowane do małych liter (`toLowerCase()`), a wyszukiwanie w bazie danych odbywa się w trybie `mode: 'insensitive'`.
+  - **Jawny status aktywności konta (`isActive`)**: Panel zarządzania użytkownikami (`UsersPage`) oraz endpointy API w pełni wspierają pole wyboru statusu (Aktywny / Nieaktywny) przy tworzeniu i edycji konta.
+  - **Precyzyjne komunikaty błędów**: Logowanie na konto dezaktywowane zwraca kod HTTP 403 z jednoznacznym komunikatem informującym o blokadzie konta, a formularz logowania wyświetla dokładną informację z backendu zamiast ogólnego błędu.
+

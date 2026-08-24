@@ -10,7 +10,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     fastify.post('/api/auth/login', {
         config: {
             rateLimit: {
-                max: 5,
+                max: process.env.NODE_ENV === 'test' ? 1000 : (Number(process.env.AUTH_RATE_LIMIT_MAX) || 15),
                 timeWindow: '1 minute'
             }
         }
@@ -27,16 +27,29 @@ export async function authRoutes(fastify: FastifyInstance) {
                 });
             }
 
-            const user = await fastify.prisma.user.findUnique({
-                where: { email },
+            const normalizedEmail = email.trim().toLowerCase();
+
+            const user = await fastify.prisma.user.findFirst({
+                where: {
+                    email: {
+                        equals: normalizedEmail,
+                        mode: 'insensitive'
+                    }
+                },
                 include: {
                     memberships: true,
                 },
             });
 
-            if (!user || !user.isActive) {
+            if (!user) {
                 return reply.code(401).send({
                     error: 'Invalid credentials'
+                });
+            }
+
+            if (!user.isActive) {
+                return reply.code(403).send({
+                    error: 'Twoje konto jest nieaktywne. Skontaktuj się z administratorem.'
                 });
             }
 
@@ -286,8 +299,15 @@ export async function authRoutes(fastify: FastifyInstance) {
             return reply.code(400).send({ error: 'Email is required' });
         }
 
-        const user = await fastify.prisma.user.findUnique({
-            where: { email }
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const user = await fastify.prisma.user.findFirst({
+            where: {
+                email: {
+                    equals: normalizedEmail,
+                    mode: 'insensitive'
+                }
+            }
         });
 
         if (!user) {

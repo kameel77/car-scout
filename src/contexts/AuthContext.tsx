@@ -66,7 +66,7 @@ interface User {
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: (email: string, password: string) => Promise<boolean>;
+    login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
     logout: () => void;
     switchContext: (scopeType: ScopeType, scopeId: string, label?: string) => Promise<boolean>;
     isLoading: boolean;
@@ -148,17 +148,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyToken();
     }, [token]);
 
-    const login = async (email: string, password: string): Promise<boolean> => {
+    const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
         try {
             const { token: newToken, user: newUser } = await authApi.login(email, password);
             localStorage.setItem('auth_token', newToken);
             localStorage.removeItem('context_label');
             setToken(newToken);
             setUser(newUser);
-            return true;
-        } catch (error) {
+            return { success: true };
+        } catch (error: any) {
             console.error('Login failed:', error);
-            return false;
+            return { success: false, error: error?.message || 'Login failed' };
         }
     };
 
