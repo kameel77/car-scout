@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { randomBytes } from 'crypto';
-import { requirePlatformRole } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 
 function last4(secret: string | null | undefined): string | null {
     if (!secret || secret.length < 4) return null;
@@ -22,9 +22,8 @@ export async function partnerManagementRoutes(fastify: FastifyInstance) {
 
     // Tylko dla zalogowanych (Admin panel)
     fastify.addHook('preHandler', fastify.authenticate);
-    // Tylko role platformowe (admin/manager) - partnerzy API i ich klucze
-    // nie są przypisani do dealera, więc DEALER_EMPLOYEE nie ma tu wglądu.
-    fastify.addHook('preHandler', requirePlatformRole());
+    // Tylko uprawnieni do konfiguracji platformy (Superadmin)
+    fastify.addHook('preHandler', requirePermission('platform:settings:write'));
 
     // GET /api/partners - list all partners
     fastify.get('/api/partners', async (request, reply) => {

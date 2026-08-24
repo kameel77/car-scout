@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Settings } from 'lucide-react';
 
 export default function AdminDashboard() {
-    const { user } = useAuth();
+    const { can } = useAuth();
     return (
         <div className="space-y-12">
             <div>
@@ -14,8 +14,8 @@ export default function AdminDashboard() {
                     Zarządzaj danymi i analizuj wyniki.
                 </p>
             </div>
-            {/* Settings Section (Admin only) */}
-            {user?.role === 'admin' && (
+            {/* Settings Section — platform configuration, superadmin only */}
+            {can('platform:settings:read') && (
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <Settings className="w-5 h-5 text-blue-600" />

@@ -50,12 +50,12 @@ export const authApi = {
         const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email: email.trim().toLowerCase(), password })
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Login failed');
+            const error = await response.json().catch(() => ({ error: 'Login failed' }));
+            throw new Error(error.error || error.message || 'Login failed');
         }
 
         return response.json();

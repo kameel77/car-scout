@@ -31,78 +31,64 @@ import {
     FileEdit,
     Target,
 } from 'lucide-react';
-import { useAuth, MemberRole, ROLE_LABELS } from '@/contexts/AuthContext';
+import { useAuth, MemberRole, ROLE_LABELS, Permission } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useBrand } from '@/contexts/BrandContext';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
- * Defines which MemberRoles can see each nav item.
- * Platform roles see everything, others are filtered.
+ * Defines which permissions can see each nav item.
  */
 type NavItem = {
     href: string;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
-    /** Minimum role level required (lower index = higher privilege) */
-    visibleTo: MemberRole[];
+    permission?: Permission;
     dividerBefore?: boolean;
 };
 
-const ALL_ROLES: MemberRole[] = [
-    'SUPERADMIN_PLATFORM',
-    'PLATFORM_MANAGER',
-    'DEALER_GROUP_ADMIN',
-    'DEALER_ADMIN',
-    'DEALER_EMPLOYEE',
-];
-
-const PLATFORM_ONLY: MemberRole[] = ['SUPERADMIN_PLATFORM', 'PLATFORM_MANAGER'];
-const ADMIN_AND_UP: MemberRole[] = ['SUPERADMIN_PLATFORM', 'PLATFORM_MANAGER', 'DEALER_GROUP_ADMIN', 'DEALER_ADMIN'];
-const STOCK_ACCESS: MemberRole[] = ALL_ROLES;
-
 const NAV_ITEMS: NavItem[] = [
-    // Dashboard – everyone
-    { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, visibleTo: ALL_ROLES },
-    { href: '/admin/leads', label: 'Leady', icon: MessageSquare, visibleTo: ALL_ROLES },
+    // Dashboard – everyone authenticated
+    { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/leads', label: 'Leady', icon: MessageSquare, permission: 'leads:read' },
 
-    // Stock management – everyone with stock access
-    { href: '/admin/listings', label: 'Pojazdy', icon: Car, visibleTo: STOCK_ACCESS },
-    { href: '/admin/specifications', label: 'Specyfikacje', icon: FileText, visibleTo: STOCK_ACCESS },
-    { href: '/admin/import', label: 'Import', icon: Upload, visibleTo: STOCK_ACCESS },
-    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, visibleTo: PLATFORM_ONLY },
+    // Stock management
+    { href: '/admin/listings', label: 'Pojazdy', icon: Car, permission: 'stock:read' },
+    { href: '/admin/specifications', label: 'Specyfikacje', icon: FileText, permission: 'stock:read' },
+    { href: '/admin/import', label: 'Import', icon: Upload, permission: 'stock:import' },
+    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, permission: 'analytics:read' },
 
-    // Rental – admin and up
-    { href: '/admin/rental-vehicles', label: 'Pojazdy najmu', icon: ClipboardList, visibleTo: STOCK_ACCESS, dividerBefore: true },
-    { href: '/admin/rental-companies', label: 'Firmy najmowe', icon: Building2, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/rental-matrix', label: 'Matryca najmu', icon: FileSpreadsheet, visibleTo: PLATFORM_ONLY },
+    // Rental
+    { href: '/admin/rental-vehicles', label: 'Pojazdy najmu', icon: ClipboardList, permission: 'rental:read', dividerBefore: true },
+    { href: '/admin/rental-companies', label: 'Firmy najmowe', icon: Building2, permission: 'rental:config:write' },
+    { href: '/admin/rental-matrix', label: 'Matryca najmu', icon: FileSpreadsheet, permission: 'rental:config:write' },
 
-    // Platform admin only
-    { href: '/admin/dealer-groups', label: 'Grupy dealerskie', icon: Network, visibleTo: PLATFORM_ONLY, dividerBefore: true },
-    { href: '/admin/dealers', label: 'Dealerzy', icon: Store, visibleTo: [...PLATFORM_ONLY, 'DEALER_GROUP_ADMIN'] },
+    // Platform admin & dealer management
+    { href: '/admin/dealer-groups', label: 'Grupy dealerskie', icon: Network, permission: 'dealer_groups:read', dividerBefore: true },
+    { href: '/admin/dealers', label: 'Dealerzy', icon: Store, permission: 'dealers:read' },
 
-    // Users – admin levels
-    { href: '/admin/users', label: 'Użytkownicy', icon: Users, visibleTo: ADMIN_AND_UP, dividerBefore: true },
+    // Users
+    { href: '/admin/users', label: 'Użytkownicy', icon: Users, permission: 'users:read', dividerBefore: true },
 
-    // Platform settings
-    { href: '/admin/translations', label: 'Tłumaczenia', icon: Languages, visibleTo: PLATFORM_ONLY, dividerBefore: true },
-    { href: '/admin/financing', label: 'Finansowanie', icon: Banknote, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/seo', label: 'SEO', icon: Search, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/seo-content', label: 'Treści SEO', icon: FileEdit, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/partners', label: 'Reklamy partnerskie', icon: Handshake, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/api-partners', label: 'Klucze API', icon: Network, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/widgets', label: 'Widgety', icon: Blocks, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/feature-tiles', label: 'Kafle home', icon: LayoutGrid, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/hero-banners', label: 'Banery hero', icon: Images, visibleTo: PLATFORM_ONLY },
-    { href: '/admin/landing-pages', label: 'Landing Pages', icon: Target, visibleTo: PLATFORM_ONLY },
+    // Platform settings & CMS
+    { href: '/admin/translations', label: 'Tłumaczenia', icon: Languages, permission: 'content:read', dividerBefore: true },
+    { href: '/admin/financing', label: 'Finansowanie', icon: Banknote, permission: 'platform:settings:read' },
+    { href: '/admin/seo', label: 'SEO', icon: Search, permission: 'content:read' },
+    { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, permission: 'content:read' },
+    { href: '/admin/seo-content', label: 'Treści SEO', icon: FileEdit, permission: 'content:read' },
+    { href: '/admin/partners', label: 'Reklamy partnerskie', icon: Handshake, permission: 'content:read' },
+    { href: '/admin/api-partners', label: 'Klucze API', icon: Network, permission: 'platform:settings:read' },
+    { href: '/admin/widgets', label: 'Widgety', icon: Blocks, permission: 'content:read' },
+    { href: '/admin/feature-tiles', label: 'Kafle home', icon: LayoutGrid, permission: 'content:read' },
+    { href: '/admin/hero-banners', label: 'Banery hero', icon: Images, permission: 'content:read' },
+    { href: '/admin/landing-pages', label: 'Landing Pages', icon: Target, permission: 'content:read' },
 ];
 
 export function AdminSidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const location = useLocation();
-    const { user, effectiveRole, activeContext, isPlatformUser } = useAuth();
+    const { user, effectiveRole, activeContext, isPlatformUser, can } = useAuth();
     const { data: settings } = useAppSettings();
     const { config } = useBrand();
     const { i18n } = useTranslation();
@@ -125,18 +111,10 @@ export function AdminSidebar() {
     const initial = siteName.charAt(0).toUpperCase();
     const initials = siteName.split(' ').map(s => s.charAt(0)).join('').toUpperCase().slice(0, 2);
 
-    // Filter nav items by effective role
+    // Filter nav items by permissions
     const filteredItems = NAV_ITEMS.filter(item => {
-        if (!effectiveRole) {
-            // Fallback to legacy role check
-            const legacyRole = user?.role;
-            if (legacyRole === 'admin') return true;
-            if (legacyRole === 'manager') {
-                return !item.visibleTo.every(r => PLATFORM_ONLY.includes(r) && r !== 'PLATFORM_MANAGER');
-            }
-            return false;
-        }
-        return item.visibleTo.includes(effectiveRole);
+        if (!item.permission) return true;
+        return can(item.permission);
     });
 
     // Context display

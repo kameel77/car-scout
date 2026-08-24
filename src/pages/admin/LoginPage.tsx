@@ -39,13 +39,13 @@ export default function LoginPage() {
         e.preventDefault();
         setIsLoading(true);
 
-        const success = await login(email, password);
+        const result = await login(email.trim(), password);
 
-        if (success) {
+        if (result.success) {
             toast.success('Logged in successfully');
             navigate('/admin/dashboard');
         } else {
-            toast.error('Invalid credentials');
+            toast.error(result.error || 'Invalid credentials');
         }
 
         setIsLoading(false);

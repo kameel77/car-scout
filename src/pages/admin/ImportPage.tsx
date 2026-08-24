@@ -7,7 +7,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Upload, History, Database } from 'lucide-react';
 
 export default function ImportPage() {
-    const { user } = useAuth();
+    const { can } = useAuth();
+
+    // Feed sources and bulk operations by source are platform-wide configuration
+    // (and destructive) — they stay with the superadmin, unlike ordinary CSV import.
+    const canManageSources = can('stock:sources:write');
 
     return (
         <div className="space-y-12">
@@ -20,22 +24,26 @@ export default function ImportPage() {
                 </p>
             </div>
 
-            {user?.role === 'admin' && (
+            {can('stock:import') && (
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <Upload className="w-5 h-5 text-blue-600" />
                         <h2 className="text-xl font-semibold">Dane Pojazdów</h2>
                     </div>
                     <div>
-                        <CSFlowImporter />
-                        <CSFlowSourcesManager />
+                        {canManageSources && (
+                            <>
+                                <CSFlowImporter />
+                                <CSFlowSourcesManager />
+                            </>
+                        )}
                         <CSVUploader />
                     </div>
                 </section>
             )}
 
             {/* Bulk source management */}
-            {user?.role === 'admin' && (
+            {canManageSources && (
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <Database className="w-5 h-5 text-rose-500" />

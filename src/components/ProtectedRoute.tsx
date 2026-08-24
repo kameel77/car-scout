@@ -1,34 +1,22 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth, MemberRole } from '@/contexts/AuthContext';
+import { useAuth, Permission } from '@/contexts/AuthContext';
 
 interface Props {
     children: React.ReactNode;
-    /** Legacy: allowed roles by User.role string */
-    allowedRoles?: string[];
-    /** New: minimum effective MemberRole required */
-    minRole?: MemberRole;
+    /**
+     * Permission required to access this route.
+     * Omit it only for routes every authenticated admin user may open (e.g. the dashboard).
+     *
+     * Do NOT reintroduce role-based props here. Roles are not a linear hierarchy:
+     * CONTENT_MANAGER_PLATFORM sits next to PLATFORM_MANAGER, not below it.
+     * Authorization is permission-based, and the API remains the source of truth —
+     * this guard only decides what gets rendered.
+     */
+    permission?: Permission;
 }
 
-/**
- * Role hierarchy — lower index = higher privilege.
- */
-const ROLE_HIERARCHY: MemberRole[] = [
-    'SUPERADMIN_PLATFORM',
-    'PLATFORM_MANAGER',
-    'DEALER_GROUP_ADMIN',
-    'DEALER_ADMIN',
-    'DEALER_EMPLOYEE',
-];
-
-function roleAtLeast(currentRole: MemberRole | null, minRole: MemberRole): boolean {
-    if (!currentRole) return false;
-    const curIdx = ROLE_HIERARCHY.indexOf(currentRole);
-    const minIdx = ROLE_HIERARCHY.indexOf(minRole);
-    return curIdx >= 0 && curIdx <= minIdx;
-}
-
-export function ProtectedRoute({ children, allowedRoles, minRole }: Props) {
-    const { user, isLoading, effectiveRole } = useAuth();
+export function ProtectedRoute({ children, permission }: Props) {
+    const { user, isLoading, can } = useAuth();
 
     if (isLoading) {
         return (
@@ -42,28 +30,8 @@ export function ProtectedRoute({ children, allowedRoles, minRole }: Props) {
         return <Navigate to="/admin/login" replace />;
     }
 
-    // New role-based check
-    if (minRole) {
-        if (!roleAtLeast(effectiveRole, minRole)) {
-            return <Navigate to="/admin/dashboard" replace />;
-        }
-        return <>{children}</>;
-    }
-
-    // Legacy role-based check (backward compat)
-    if (allowedRoles) {
-        // Map new effective roles to legacy strings for backward compat
-        const legacyRole = user.role;
-        const effectiveLegacy = effectiveRole === 'SUPERADMIN_PLATFORM' ? 'admin'
-            : effectiveRole === 'PLATFORM_MANAGER' ? 'manager'
-                : effectiveRole === 'DEALER_GROUP_ADMIN' ? 'manager'
-                    : effectiveRole === 'DEALER_ADMIN' ? 'manager'
-                        : effectiveRole === 'DEALER_EMPLOYEE' ? 'manager'
-                            : legacyRole;
-
-        if (!allowedRoles.includes(effectiveLegacy) && !allowedRoles.includes(legacyRole)) {
-            return <Navigate to="/admin/dashboard" replace />;
-        }
+    if (permission && !can(permission)) {
+        return <Navigate to="/admin/dashboard" replace />;
     }
 
     return <>{children}</>;

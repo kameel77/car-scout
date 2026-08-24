@@ -74,8 +74,8 @@ export default function ListingDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { user, token, isPlatformUser } = useAuth();
-  const canManage = user?.role === 'admin' || user?.role === 'manager';
+  const { user, token, isPlatformUser, can } = useAuth();
+  const canManage = can('stock:write');
 
   const financingType = getFinancingTypeFromPath(location.pathname);
 

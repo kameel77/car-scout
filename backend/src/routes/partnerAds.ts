@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { authorizeRoles } from '../middleware/authorize.js';
+import { requirePermission } from '../middleware/permissions.js';
 
 export async function partnerAdsRoutes(fastify: FastifyInstance) {
     // Schema for Ad validation
@@ -52,7 +52,7 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
 
     // Admin: List all ads (including inactive)
     fastify.get('/api/admin/partner-ads', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:read')]
     }, async (request, reply) => {
         const ads = await fastify.prisma.partnerAd.findMany({
             orderBy: [
@@ -65,7 +65,7 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
 
     // Admin: Create new ad
     fastify.post('/api/admin/partner-ads', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         try {
             const data = adSchema.parse(request.body);
@@ -89,7 +89,7 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
 
     // Admin: Update ad
     fastify.patch('/api/admin/partner-ads/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         try {
             const { id } = request.params as { id: string };
@@ -118,7 +118,7 @@ export async function partnerAdsRoutes(fastify: FastifyInstance) {
 
     // Admin: Delete ad
     fastify.delete('/api/admin/partner-ads/:id', {
-        preHandler: [fastify.authenticate, authorizeRoles(['admin'])]
+        preHandler: [fastify.authenticate, requirePermission('content:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 

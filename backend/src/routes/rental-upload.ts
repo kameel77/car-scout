@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { getSafeFilePath } from '../utils/path-helpers.js';
+import { requirePermission } from '../middleware/permissions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +36,7 @@ function generateBaseFilename(): string {
 export async function rentalUploadRoutes(fastify: FastifyInstance) {
     // Upload images for a rental vehicle
     fastify.post('/api/rental-vehicles/:id/images', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
@@ -120,7 +121,7 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
 
     // Delete a specific image from a rental vehicle
     fastify.delete('/api/rental-vehicles/:id/images', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { imageUrl } = request.body as { imageUrl: string };
@@ -174,7 +175,7 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
 
     // Set primary image for a rental vehicle
     fastify.patch('/api/rental-vehicles/:id/primary-image', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { imageUrl } = request.body as { imageUrl: string };
@@ -201,7 +202,7 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
 
     // Add image by URL (external link, no file upload)
     fastify.post('/api/rental-vehicles/:id/images/url', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { url } = request.body as { url: string };
@@ -224,7 +225,7 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
 
     // Reorder images
     fastify.patch('/api/rental-vehicles/:id/images/reorder', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { imageUrls } = request.body as { imageUrls: string[] };
@@ -244,7 +245,7 @@ export async function rentalUploadRoutes(fastify: FastifyInstance) {
 
     // Upload specification for a rental vehicle
     fastify.post('/api/rental-vehicles/:id/specs', {
-        preHandler: [fastify.authenticate]
+        preHandler: [fastify.authenticate, requirePermission('rental:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
 

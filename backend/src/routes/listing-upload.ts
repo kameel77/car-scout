@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { getSafeFilePath } from '../utils/path-helpers.js';
+import { requirePermission } from '../middleware/permissions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,7 +30,7 @@ function generateBaseFilename(): string {
 }
 
 export async function listingUploadRoutes(fastify: FastifyInstance) {
-    fastify.post('/api/listings/:id/images', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    fastify.post('/api/listings/:id/images', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
         const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
@@ -89,7 +90,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
         return reply.send({ listing: updated, uploadedUrls });
     });
 
-    fastify.delete('/api/listings/:id/images', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    fastify.delete('/api/listings/:id/images', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { url } = request.body as { url: string };
 
@@ -137,7 +138,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
     });
 
     // Set primary image
-    fastify.patch('/api/listings/:id/images/primary', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    fastify.patch('/api/listings/:id/images/primary', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { url } = request.body as { url: string };
 
@@ -159,7 +160,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
     });
 
     // Add image by URL (external link, no file upload)
-    fastify.post('/api/listings/:id/images/url', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    fastify.post('/api/listings/:id/images/url', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { url } = request.body as { url: string };
 
@@ -185,7 +186,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
     });
 
     // Reorder images
-    fastify.patch('/api/listings/:id/images/reorder', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    fastify.patch('/api/listings/:id/images/reorder', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { imageUrls } = request.body as { imageUrls: string[] };
 
@@ -207,7 +208,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
     });
 
     // Upload specification PDF for a listing
-    fastify.post('/api/listings/:id/specs', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    fastify.post('/api/listings/:id/specs', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
         const { id } = request.params as { id: string };
 
         const listing = await fastify.prisma.listing.findFirst({ where: { id, ...(await resolveScope(fastify, request)).dealerFilter } });
@@ -262,7 +263,7 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
     });
 
     // Save spec URL (external link) or clear it for a listing
-    fastify.patch('/api/listings/:id/specs', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    fastify.patch('/api/listings/:id/specs', { preHandler: [fastify.authenticate, requirePermission('stock:write')] }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const { specificationUrl } = request.body as { specificationUrl: string | null };
 

@@ -1,7 +1,7 @@
 /**
  * Multi-tenant Permission Engine
  *
- * Central authorization module that replaces the legacy `authorizeRoles`.
+ * Central authorization module.
  * Provides scope-aware permissions based on Membership records.
  */
 
@@ -42,9 +42,20 @@ export type Permission =
     | 'stock:read'
     | 'stock:write'
     | 'stock:import'
+    // Import feed sources (CSFlow) — platform-wide configuration
+    | 'stock:sources:write'
+    // Rental
+    | 'rental:read'
+    | 'rental:write'
+    | 'rental:config:write'
     // Leads
     | 'leads:read'
     | 'leads:write'
+    // Analytics
+    | 'analytics:read'
+    // Content / CMS
+    | 'content:read'
+    | 'content:write'
     // Context switching
     | 'context:switch';
 
@@ -52,39 +63,49 @@ export type Permission =
 // Role → Permission matrix
 // ==========================================
 
-const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
+export const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
     SUPERADMIN_PLATFORM: [
         'platform:settings:read', 'platform:settings:write',
         'dealer_groups:read', 'dealer_groups:write',
         'dealers:read', 'dealers:write',
         'users:read', 'users:write',
-        'stock:read', 'stock:write', 'stock:import',
+        'stock:read', 'stock:write', 'stock:import', 'stock:sources:write',
+        'rental:read', 'rental:write', 'rental:config:write',
         'leads:read', 'leads:write',
+        'analytics:read',
+        'content:read', 'content:write',
         'context:switch',
     ],
     PLATFORM_MANAGER: [
         'dealer_groups:read', 'dealer_groups:write',
         'dealers:read', 'dealers:write',
-        'users:read', 'users:write',
-        'stock:read', 'stock:write', 'stock:import',
+        'stock:read', 'stock:write', 'stock:import', 'stock:sources:write',
+        'rental:read', 'rental:write', 'rental:config:write',
         'leads:read', 'leads:write',
+        'analytics:read',
         'context:switch',
+    ],
+    CONTENT_MANAGER_PLATFORM: [
+        'content:read', 'content:write',
     ],
     DEALER_GROUP_ADMIN: [
         'dealer_groups:read',  // read own group only
         'dealers:read', 'dealers:write',  // within own group
         'users:read', 'users:write',      // within own group
         'stock:read', 'stock:write', 'stock:import',
+        'rental:read', 'rental:write',
         'leads:read', 'leads:write',
     ],
     DEALER_ADMIN: [
         'dealers:read',        // read own dealer only
         'users:read', 'users:write',  // within own dealer
         'stock:read', 'stock:write', 'stock:import',
+        'rental:read', 'rental:write',
         'leads:read', 'leads:write',
     ],
     DEALER_EMPLOYEE: [
         'stock:read', 'stock:write', 'stock:import',
+        'rental:read', 'rental:write',
         'leads:read',
     ],
 };
@@ -94,6 +115,15 @@ const PLATFORM_ROLES = new Set<MemberRole>([
     MemberRole.SUPERADMIN_PLATFORM,
     MemberRole.PLATFORM_MANAGER,
 ]);
+
+export const ROLE_PRIORITY: MemberRole[] = [
+    MemberRole.SUPERADMIN_PLATFORM,
+    MemberRole.PLATFORM_MANAGER,
+    MemberRole.CONTENT_MANAGER_PLATFORM,
+    MemberRole.DEALER_GROUP_ADMIN,
+    MemberRole.DEALER_ADMIN,
+    MemberRole.DEALER_EMPLOYEE,
+];
 
 // ==========================================
 // Core permission check
@@ -108,21 +138,12 @@ export function roleHasPermission(role: MemberRole, permission: Permission): boo
 
 /**
  * Get the effective role for a user's active context from their memberships.
- * Returns the highest-privilege role matching the active context.
+ * Returns the highest-priority role matching the active context (used for UI labels and scoping).
  */
 export function getEffectiveRole(
     memberships: MembershipInfo[],
     activeContext: ActiveContext
 ): MemberRole | null {
-    // Priority order (highest first)
-    const rolePriority: MemberRole[] = [
-        MemberRole.SUPERADMIN_PLATFORM,
-        MemberRole.PLATFORM_MANAGER,
-        MemberRole.DEALER_GROUP_ADMIN,
-        MemberRole.DEALER_ADMIN,
-        MemberRole.DEALER_EMPLOYEE,
-    ];
-
     const matchingMemberships = memberships.filter(m => {
         // Platform-level memberships always match any context
         if (m.scopeType === ScopeType.PLATFORM && m.scopeId === 'PLATFORM') {
@@ -132,18 +153,46 @@ export function getEffectiveRole(
         if (m.scopeType === activeContext.scopeType && m.scopeId === activeContext.scopeId) {
             return true;
         }
-        // Group-level membership matches dealer context if dealer belongs to group
-        // (this must be resolved externally via DB lookup — handled in middleware)
         return false;
     });
 
     const roles = new Set(matchingMemberships.map(m => m.role));
 
-    for (const role of rolePriority) {
+    for (const role of ROLE_PRIORITY) {
         if (roles.has(role)) return role;
     }
 
     return null;
+}
+
+/**
+ * Get effective permissions for a user given their memberships and active context.
+ * Calculates the UNION of all permissions granted by all memberships matching the active context.
+ */
+export function getEffectivePermissions(
+    memberships: MembershipInfo[],
+    activeContext: ActiveContext
+): Set<Permission> {
+    const matchingMemberships = memberships.filter(m => {
+        // Platform-level memberships always match any context
+        if (m.scopeType === ScopeType.PLATFORM && m.scopeId === 'PLATFORM') {
+            return true;
+        }
+        // Exact scope match
+        if (m.scopeType === activeContext.scopeType && m.scopeId === activeContext.scopeId) {
+            return true;
+        }
+        return false;
+    });
+
+    const permissions = new Set<Permission>();
+    for (const m of matchingMemberships) {
+        const perms = ROLE_PERMISSIONS[m.role] || [];
+        for (const p of perms) {
+            permissions.add(p);
+        }
+    }
+    return permissions;
 }
 
 /**
@@ -154,9 +203,7 @@ export function hasPermission(
     activeContext: ActiveContext,
     permission: Permission
 ): boolean {
-    const effectiveRole = getEffectiveRole(memberships, activeContext);
-    if (!effectiveRole) return false;
-    return roleHasPermission(effectiveRole, permission);
+    return getEffectivePermissions(memberships, activeContext).has(permission);
 }
 
 // ==========================================

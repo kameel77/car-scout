@@ -20,6 +20,7 @@ type ScopeType = 'PLATFORM' | 'DEALER_GROUP' | 'DEALER';
 type MemberRole =
     | 'SUPERADMIN_PLATFORM'
     | 'PLATFORM_MANAGER'
+    | 'CONTENT_MANAGER_PLATFORM'
     | 'DEALER_GROUP_ADMIN'
     | 'DEALER_ADMIN'
     | 'DEALER_EMPLOYEE';
@@ -52,6 +53,7 @@ const SCOPE_ROLES: Record<ScopeType, { value: MemberRole; label: string }[]> = {
     PLATFORM: [
         { value: 'SUPERADMIN_PLATFORM', label: 'Super Admin' },
         { value: 'PLATFORM_MANAGER', label: 'Manager Platformy' },
+        { value: 'CONTENT_MANAGER_PLATFORM', label: 'Content Manager' },
     ],
     DEALER_GROUP: [
         { value: 'DEALER_GROUP_ADMIN', label: 'Admin Grupy' },
@@ -65,6 +67,7 @@ const SCOPE_ROLES: Record<ScopeType, { value: MemberRole; label: string }[]> = {
 const ROLE_LABELS: Record<string, string> = {
     SUPERADMIN_PLATFORM: 'Super Admin',
     PLATFORM_MANAGER: 'Manager',
+    CONTENT_MANAGER_PLATFORM: 'Content Manager',
     DEALER_GROUP_ADMIN: 'Admin Grupy',
     DEALER_ADMIN: 'Admin Dealera',
     DEALER_EMPLOYEE: 'Pracownik',
@@ -73,6 +76,7 @@ const ROLE_LABELS: Record<string, string> = {
 const ROLE_COLORS: Record<string, string> = {
     SUPERADMIN_PLATFORM: 'text-purple-700 bg-purple-50 border-purple-200',
     PLATFORM_MANAGER: 'text-blue-700 bg-blue-50 border-blue-200',
+    CONTENT_MANAGER_PLATFORM: 'text-indigo-700 bg-indigo-50 border-indigo-200',
     DEALER_GROUP_ADMIN: 'text-orange-700 bg-orange-50 border-orange-200',
     DEALER_ADMIN: 'text-emerald-700 bg-emerald-50 border-emerald-200',
     DEALER_EMPLOYEE: 'text-gray-700 bg-gray-50 border-gray-200',
@@ -167,10 +171,15 @@ export default function UsersPage() {
     /* ─── Mutations ─── */
     const createMutation = useMutation({
         mutationFn: async () => {
+            const payload = {
+                ...form,
+                email: form.email.trim().toLowerCase(),
+                name: form.name.trim() || undefined,
+            };
             const res = await fetch(`${API_BASE_URL}/api/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(form),
+                body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Create failed');
@@ -188,7 +197,11 @@ export default function UsersPage() {
     const updateMutation = useMutation({
         mutationFn: async ({ id, data }: { id: string; data: any }) => {
             const payload = { ...data };
-            if (!payload.password) delete payload.password;
+            if (payload.email) payload.email = payload.email.trim().toLowerCase();
+            if (payload.name !== undefined) payload.name = payload.name.trim();
+            if (!payload.password || typeof payload.password !== 'string' || !payload.password.trim()) {
+                delete payload.password;
+            }
             const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -488,6 +501,23 @@ export default function UsersPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {/* Status */}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Status</Label>
+                                <Select
+                                    value={form.isActive ? 'active' : 'inactive'}
+                                    onValueChange={(v) => setForm(f => ({ ...f, isActive: v === 'active' }))}
+                                >
+                                    <SelectTrigger className="bg-white">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="active">Aktywny</SelectItem>
+                                        <SelectItem value="inactive">Nieaktywny</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         <div className="flex gap-2 mt-5">
@@ -531,7 +561,7 @@ export default function UsersPage() {
             ) : (
                 <div className="grid gap-3">
                     <p className="text-sm text-gray-500">
-                        {users.length} {users.length === 1 ? 'użytkownik' : users.length < 5 ? 'użytkowników' : 'użytkowników'}
+                        {users.length} {users.length === 1 ? 'użytkownik' : (users.length % 10 >= 2 && users.length % 10 <= 4 && (users.length % 100 < 10 || users.length % 100 >= 20)) ? 'użytkownicy' : 'użytkowników'}
                     </p>
                     {users.map(u => {
                         const primaryRole = getPrimaryRole(u);
@@ -632,7 +662,7 @@ export default function UsersPage() {
                                             style={{ animation: 'slideDown 0.25s ease-out' }}
                                         >
                                             <div className="px-4 pb-4 pt-2 border-t border-blue-100 bg-gradient-to-b from-blue-50/60 to-white">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
                                                     <div className="space-y-1">
                                                         <Label className="text-xs text-gray-400">Email</Label>
                                                         <Input
@@ -666,6 +696,21 @@ export default function UsersPage() {
                                                             placeholder="••••••"
                                                             className="bg-white"
                                                         />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label className="text-xs text-gray-400">Status</Label>
+                                                        <Select
+                                                            value={editForm.isActive ? 'active' : 'inactive'}
+                                                            onValueChange={v => setEditForm(f => ({ ...f, isActive: v === 'active' }))}
+                                                        >
+                                                            <SelectTrigger className="bg-white">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="active">Aktywny</SelectItem>
+                                                                <SelectItem value="inactive">Nieaktywny</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
                                                 </div>
 
