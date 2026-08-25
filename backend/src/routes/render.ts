@@ -969,10 +969,12 @@ export async function renderRoutes(fastify: FastifyInstance) {
         }
 
         const isProd = isProductionHost(request);
+        const modulepreloadEnabled = process.env.SSR_MODULEPRELOAD !== 'off';
 
         // Na /samochody make/model wpływają na canonical (patrz resolveSamochodyQueryCanonical),
         // więc muszą różnicować cache — inaczej różne filtry dzieliłyby ten sam wpis.
-        let cacheKey = (isProd ? '' : 'nonprod:') + (page > 1 ? `${path}?page=${page}` : path);
+        // Flaga modulepreload różnicuje cache, aby przełączenie ENV nie serwowało HTML-a z poprzedniego stanu.
+        let cacheKey = (isProd ? '' : 'nonprod:') + (!modulepreloadEnabled ? 'nopreload:' : '') + (page > 1 ? `${path}?page=${page}` : path);
         if (path === '/samochody' && searchParams) {
             const makeParam = searchParams.get('make');
             const modelParam = searchParams.get('model');
@@ -1077,11 +1079,16 @@ export async function renderRoutes(fastify: FastifyInstance) {
         let html = injectHead(template, meta);
 
         // Modulepreload chunka trasy — zdejmuje pełne RTT z łańcucha krytycznego FCP
-        const manifest = await getViteManifest();
-        if (manifest) {
-            const chunkLinks = routeChunkLinks(path, manifest);
-            if (chunkLinks.length) {
-                html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
+        // Eksperyment (docs/BRIEF_AG_MODULEPRELOAD_EXPERIMENT.md): 24 tagi modulepreload na
+        // trasach katalogowych konkurują ze strumieniem HTML o pasmo, zanim cokolwiek się
+        // namaluje. Flaga pozwala zmierzyć wariant bez nich bez zmiany kodu.
+        if (modulepreloadEnabled) {
+            const manifest = await getViteManifest();
+            if (manifest) {
+                const chunkLinks = routeChunkLinks(path, manifest);
+                if (chunkLinks.length) {
+                    html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
+                }
             }
         }
 
