@@ -20,7 +20,7 @@ export default {
       fontFamily: {
         // Krój ustawiany per marka przez --font-heading (BrandContext).
         heading: ["var(--font-heading)", "Outfit", "system-ui", "sans-serif"],
-        body: ["var(--font-body)", "Inter", "system-ui", "sans-serif"],
+        body: ["var(--font-body)", "Inter Variable", "Inter", "system-ui", "sans-serif"],
       },
       // Brandbook rozdz. 02 — skala typograficzna. 13 px to podłoga:
       // text-xs = 13 px (Caption), text-sm = 14 px (Label, minimum dla UI).

@@ -561,3 +561,12 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Jawny status aktywności konta (`isActive`)**: Panel zarządzania użytkownikami (`UsersPage`) oraz endpointy API w pełni wspierają pole wyboru statusu (Aktywny / Nieaktywny) przy tworzeniu i edycji konta.
   - **Precyzyjne komunikaty błędów**: Logowanie na konto dezaktywowane zwraca kod HTTP 403 z jednoznacznym komunikatem informującym o blokadzie konta, a formularz logowania wyświetla dokładną informację z backendu zamiast ogólnego błędu.
 
+## 48. Optymalizacja wydajności mobile - Etap 1 (Hero Picture i Fonty per-brand)
+- **Cel**: Zmniejszenie payloadu sieciowego i eliminacja zjawiska podwójnego pobierania obrazu hero na urządzeniach mobilnych oraz redukcja liczby i wagi fontów dla marki Motolia.
+- **Zastosowane rozwiązania**:
+  - **Jeden obrazek per viewport w Hero (`<picture>`)**: Komponent `OptimizedImage` obsługuje opcjonalny prop `mobileSrc`. W przypadku przekazania wariantu mobilnego renderuje element `<picture><source media="(max-width: 767px)" ... />{img}</picture>`, eliminując konieczność renderowania dwóch osobnych tagów `<img>` (desktop i mobile ukrytych przez CSS `md:hidden` / `md:block`). Zapewnia to pełną zgodność z preloadami SSR i likwiduje niepotrzebne pobranie grafiki desktopowej na telefonach.
+  - **Wydzielenie fontów per-brand**: Zamiast globalnego importowania 16 plików fontów w `index.css`, utworzono dedykowane arkusze `src/styles/fonts-motolia.css` (zmienna `Inter Variable` + `Archivo Variable`) oraz `src/styles/fonts-carsalon.css` (`Outfit` + `Inter`).
+  - **Brand-aware preloading fontów**: Konfiguracja `vite.config.ts` wstrzykuje preloody fontów precyzyjnie dopasowane do aktywnej marki (dla Motolii: `inter-latin-wght-normal-*.woff2` oraz `/fonts/archivo-latin-wght-normal.woff2`).
+
+
+
