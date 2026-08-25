@@ -41,7 +41,6 @@ export function useListings(
     return useQuery<ListingsResponse>({
         queryKey: ['listings', filters, sortBy, page, perPage, currency, adminFilters, scopeKey],
         queryFn: async () => {
-            console.log('Fetching listings with filters:', filters, 'sortBy:', sortBy, 'page:', page);
             try {
                 const data = await listingsApi.getListings({
                     ...filters,
@@ -51,12 +50,6 @@ export function useListings(
                     perPage,
                     ...adminFilters,
                 }, authToken);
-                console.log('API response received:', {
-                    hasData: !!data,
-                    listingsCount: data?.listings?.length || 0,
-                    totalCount: data?.count || 0
-                });
-                console.log('Raw API response:', data);
 
                 let mappedListings: any[] = [];
                 try {
@@ -70,7 +63,6 @@ export function useListings(
                         })
                         .filter((listing: any) => listing !== null); // Filter out failed mappings
 
-                    console.log(`Successfully mapped ${mappedListings.length} out of ${data.listings.length} listings`);
                 } catch (error) {
                     console.error('Failed to map listings:', error);
                     mappedListings = [];
