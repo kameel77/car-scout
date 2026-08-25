@@ -969,10 +969,14 @@ export async function renderRoutes(fastify: FastifyInstance) {
         }
 
         const isProd = isProductionHost(request);
+        // Modulepreload domyślnie wyłączony (docs/BRIEF_AG_MODULEPRELOAD_EXPERIMENT.md).
+        // Wyjście awaryjne przez SSR_MODULEPRELOAD=on.
+        const modulepreloadEnabled = process.env.SSR_MODULEPRELOAD === 'on';
 
         // Na /samochody make/model wpływają na canonical (patrz resolveSamochodyQueryCanonical),
         // więc muszą różnicować cache — inaczej różne filtry dzieliłyby ten sam wpis.
-        let cacheKey = (isProd ? '' : 'nonprod:') + (page > 1 ? `${path}?page=${page}` : path);
+        // Flaga modulepreload różnicuje cache, aby przełączenie ENV nie serwowało HTML-a z poprzedniego stanu.
+        let cacheKey = (isProd ? '' : 'nonprod:') + (modulepreloadEnabled ? 'preload:' : '') + (page > 1 ? `${path}?page=${page}` : path);
         if (path === '/samochody' && searchParams) {
             const makeParam = searchParams.get('make');
             const modelParam = searchParams.get('model');
@@ -1076,12 +1080,16 @@ export async function renderRoutes(fastify: FastifyInstance) {
 
         let html = injectHead(template, meta);
 
-        // Modulepreload chunka trasy — zdejmuje pełne RTT z łańcucha krytycznego FCP
-        const manifest = await getViteManifest();
-        if (manifest) {
-            const chunkLinks = routeChunkLinks(path, manifest);
-            if (chunkLinks.length) {
-                html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
+        // Modulepreload chunka trasy — domyślnie wyłączony po eksperymencie (docs/BRIEF_AG_MODULEPRELOAD_EXPERIMENT.md),
+        // w którym wykazano, że emisja tagów modulepreload na trasach katalogowych opóźniała FCP o ponad 1 s.
+        // Wyjście awaryjne: SSR_MODULEPRELOAD=on.
+        if (modulepreloadEnabled) {
+            const manifest = await getViteManifest();
+            if (manifest) {
+                const chunkLinks = routeChunkLinks(path, manifest);
+                if (chunkLinks.length) {
+                    html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
+                }
             }
         }
 

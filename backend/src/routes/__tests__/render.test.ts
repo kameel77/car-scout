@@ -195,12 +195,24 @@ describe('GET /api/render', () => {
                     : new Response(TEMPLATE, { status: 200 })
             )
         );
-        const res = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
-        expect(res.statusCode).toBe(200);
-        expect(res.body).toContain('<link rel="modulepreload" href="/assets/ConditionPage-abc.js" />');
-        expect(res.body).toContain('<link rel="modulepreload" href="/assets/shared-xyz.js" />');
-        // Główny bundle jest już w <script> szablonu — nie może być dublowany preloadem
-        expect(res.body).not.toContain('index-main.js');
+        // Domyślnie SSR_MODULEPRELOAD jest wyłączony
+        const resDefault = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(resDefault.statusCode).toBe(200);
+        expect(resDefault.body).not.toContain('<link rel="modulepreload"');
+
+        // Wyjście awaryjne: SSR_MODULEPRELOAD=on
+        const prevEnv = process.env.SSR_MODULEPRELOAD;
+        try {
+            process.env.SSR_MODULEPRELOAD = 'on';
+            const resOn = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+            expect(resOn.statusCode).toBe(200);
+            expect(resOn.body).toContain('<link rel="modulepreload" href="/assets/ConditionPage-abc.js" />');
+            expect(resOn.body).toContain('<link rel="modulepreload" href="/assets/shared-xyz.js" />');
+            // Główny bundle jest już w <script> szablonu — nie może być dublowany preloadem
+            expect(resOn.body).not.toContain('index-main.js');
+        } finally {
+            process.env.SSR_MODULEPRELOAD = prevEnv;
+        }
     });
 
     it('listing detail gets LCP image preload with srcset variants', async () => {

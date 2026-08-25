@@ -20,7 +20,7 @@ export const motoliaConfig: BrandConfig = {
   },
   fonts: {
     heading: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
-    body: "'Inter', system-ui, sans-serif",
+    body: "'Inter Variable', 'Inter', system-ui, sans-serif",
   },
   contactInfo: {
     phone: '+48 22 112 09 50',
