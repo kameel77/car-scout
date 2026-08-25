@@ -61,24 +61,16 @@ export function HeroBannerCarousel() {
                     {banners.map((b, idx) => (
                         <CarouselItem key={b.id} className="basis-full">
                             <div className="relative w-full h-[360px] md:h-[460px] lg:h-[520px] bg-slate-100">
-                                {b.imageUrlDesktop && (
+                                {(b.imageUrlDesktop || b.imageUrlMobile) && (
                                     <OptimizedImage
-                                        src={b.imageUrlDesktop}
+                                        src={b.imageUrlDesktop ?? b.imageUrlMobile ?? undefined}
+                                        mobileSrc={b.imageUrlDesktop ? b.imageUrlMobile : null}
                                         alt={b.altText}
                                         width="1600"
                                         height="700"
+                                        sizes="100vw"
                                         priority={idx === 0}
-                                        className={`absolute inset-0 w-full h-full object-cover ${b.imageUrlMobile ? 'hidden md:block' : ''}`}
-                                    />
-                                )}
-                                {b.imageUrlMobile && (
-                                    <OptimizedImage
-                                        src={b.imageUrlMobile}
-                                        alt={b.altText}
-                                        width="800"
-                                        height="800"
-                                        priority={idx === 0}
-                                        className="absolute inset-0 w-full h-full object-cover md:hidden"
+                                        className="absolute inset-0 w-full h-full object-cover"
                                     />
                                 )}
 

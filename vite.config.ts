@@ -113,17 +113,25 @@ export default defineConfig(({ mode }) => {
           if (!htmlChunk || htmlChunk.type !== 'asset') return;
           const asset = htmlChunk as unknown as { source: string | Uint8Array };
 
-          // Fonty elementu LCP (H1: Outfit 700) i tekstu bazowego (Inter 400) —
-          // preload zamiast czekania, aż przeglądarka sparsuje inline'owany CSS
-          const criticalFonts = Object.keys(bundle).filter(
-            (k) => /(-|\/)(outfit-latin-700|inter-latin-400)-normal-[^/]*\.woff2$/.test(k),
-          );
+          // Fonty elementu LCP i tekstu bazowego — preload zamiast czekania,
+          // aż przeglądarka sparsuje inline'owany CSS. Motolia używa Archivo + Inter Variable,
+          // Carsalon używa Outfit 700 + Inter 400.
+          const CRITICAL_FONT_RE = brand === 'motolia'
+            ? /(-|\/)inter-latin-wght-normal-[^/]*\.woff2$/
+            : /(-|\/)(outfit-latin-700|inter-latin-400)-normal-[^/]*\.woff2$/;
+
+          const criticalFonts = Object.keys(bundle).filter((k) => CRITICAL_FONT_RE.test(k));
           if (criticalFonts.length === 0) return;
 
           const links = criticalFonts
-            .map((f) => `<link rel="preload" href="/${f}" as="font" type="font/woff2" crossorigin>`)
-            .join('\n    ');
-          asset.source = asset.source.toString().replace('</title>', `</title>\n    ${links}`);
+            .map((f) => `<link rel="preload" href="/${f}" as="font" type="font/woff2" crossorigin>`);
+
+          if (brand === 'motolia') {
+            links.push('<link rel="preload" href="/fonts/archivo-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>');
+          }
+
+          const linksHtml = links.join('\n    ');
+          asset.source = asset.source.toString().replace('</title>', `</title>\n    ${linksHtml}`);
         },
       },
       {
@@ -155,6 +163,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        "@brand-fonts": path.resolve(__dirname, `./src/styles/fonts-${brand}.css`),
         "@brand-home": path.resolve(__dirname, `./src/pages/${brand === 'motolia' ? 'MotoliaHomePage' : 'CarsalonHomePage'}.tsx`),
         "@brand-contact": path.resolve(__dirname, `./src/pages/${brand === 'motolia' ? 'MotoliaContactPage' : 'CarsalonContactPage'}.tsx`),
       },

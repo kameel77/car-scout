@@ -7,6 +7,8 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
     forceThumbnail?: boolean;
     /** Obraz nad foldem (LCP): eager + fetchpriority=high zamiast lazy */
     priority?: boolean;
+    /** Wariant mobile (<768px). Gdy podany, renderujemy <picture> zamiast dwóch <img>. */
+    mobileSrc?: string | null;
 }
 
 // Pipeline (image-optimizer.ts) zachowuje proporcje oryginału; zdjęcia aut to
@@ -17,10 +19,17 @@ const DEFAULT_HEIGHT = 675;
 const THUMB_W = 600;
 const THUMB_H = 338;
 
+function localVariants(src: string): string | null {
+    if (!src.startsWith('/uploads/') || !src.endsWith('.webp')) return null;
+    const base = src.slice(0, -'.webp'.length);
+    return `${base}-thumb.webp ${THUMB_W}w, ${base}-md.webp 1200w, ${src} 1920w`;
+}
+
 type Mode = 'srcset' | 'plain' | 'fallback';
 
 export function OptimizedImage({
     src,
+    mobileSrc,
     alt = '',
     fallbackSrc = '/motolia-placeholder.webp',
     forceThumbnail = false,
@@ -32,6 +41,9 @@ export function OptimizedImage({
     // Degradacja per-src: srcset (pełen zestaw wariantów) → plain (sam duży plik,
     // gdy wariant -md/-thumb nie istnieje na dysku) → fallback (placeholder).
     // Klucz po src, żeby błąd jednego zdjęcia nie psuł kolejnych w swiperze.
+    // Znany edge case: jeśli wariant obrazka zwróci 404, onError degraduje do trybu plain
+    // i gubi <picture> (mobile pobiera wtedy plik desktopowy podany w src).
+    // Warunek wyzwalający wywróciłby też SSR, więc to zachowanie zamierzone/akceptowalne.
     const [failed, setFailed] = useState<{ src: string; mode: Mode } | null>(null);
     const mode: Mode = failed && failed.src === src ? failed.mode : 'srcset';
     const degradeTo = (m: Mode) => setFailed({ src: src ?? '', mode: m });
@@ -60,7 +72,6 @@ export function OptimizedImage({
     if (isLocalUpload && isWebp && mode === 'srcset') {
         const base = src.slice(0, -'.webp'.length);
         const thumbSrc = `${base}-thumb.webp`;
-        const mediumSrc = `${base}-md.webp`;
 
         if (forceThumbnail) {
             return (
@@ -77,10 +88,10 @@ export function OptimizedImage({
             );
         }
 
-        return (
+        const img = (
             <img
                 src={src}
-                srcSet={`${thumbSrc} ${THUMB_W}w, ${mediumSrc} 1200w, ${src} 1920w`}
+                srcSet={localVariants(src) ?? undefined}
                 sizes={sizes ?? '100vw'}
                 alt={alt}
                 className={className}
@@ -91,6 +102,17 @@ export function OptimizedImage({
                 {...props}
             />
         );
+
+        if (mobileSrc) {
+            return (
+                <picture>
+                    <source media="(max-width: 767px)" srcSet={localVariants(mobileSrc) ?? mobileSrc} />
+                    {img}
+                </picture>
+            );
+        }
+
+        return img;
     }
 
     return (

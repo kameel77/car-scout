@@ -14,6 +14,7 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 - [ ] Panel administratora: wybór partnera finansowego przy dodawaniu nowego produktu kredytowego (np. Inbank, Produkt własny) wraz z konfiguracją widoczności na karcie oferty.
 
 ## 3. Optymalizacje
+- [ ] **Re-subsetting fontów PL dla Motolii (pyftsubset)**: Zamiast podziału na warianty latin i latin-ext w `unicode-range` (który na polskojęzycznej stronie wymusza pobieranie 4 osobnych plików WOFF2 o łącznej wadze ~201 KB, z czego 118 KB wariantów latin-ext dociera z opóźnieniem), wygenerowanie pojedynczych plików WOFF2 zoptymalizowanych pod język polski (Latin basic + 18 polskich znaków diakrytycznych + interpunkcja i znaki walut) dla `Inter Variable` (~40 KB) i `Archivo Variable` (~32 KB). Łącznie 2 pliki (~72 KB), oba w pełni preloadowalne w `<head>`, z eliminacją zjawiska późnego swapu/FOUT i oszczędnością ~130 KB na ścieżce krytycznej mobile.
 - [ ] **Optymalizacja zapisu ustawień (Bulk Update)**: Zmiana sposobu aktualizacji cen ofert w `recalculateAllPrices` na zapytanie zbiorcze, aby uniknąć problemów z wydajnością przy dużej liczbie ofert.
 - [ ] **Przetwarzanie w tle dla ciężkich operacji**: Przeniesienie długotrwałych procesów (jak przeliczanie wszystkich cen) do kolejki zadań w tle (np. BullMQ/Redis), aby nie blokować interfejsu administratora.
 
