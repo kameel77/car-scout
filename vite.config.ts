@@ -127,7 +127,14 @@ export default defineConfig(({ mode }) => {
             .map((f) => `<link rel="preload" href="/${f}" as="font" type="font/woff2" crossorigin>`);
 
           if (brand === 'motolia') {
-            links.push('<link rel="preload" href="/fonts/archivo-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>');
+            // Archivo + subsety CE (latin-ext-pl). Subsety mają ~15 KB, więc preload
+            // zdejmuje je ze ścieżki krytycznej zamiast ją obciążać — polskie znaki
+            // (ą, ę, ł, ż) i Škoda występują nad foldem, więc i tak zawsze się pobiorą.
+            links.push(
+              '<link rel="preload" href="/fonts/archivo-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>',
+              '<link rel="preload" href="/fonts/archivo-latin-ext-pl-wght-normal.woff2" as="font" type="font/woff2" crossorigin>',
+              '<link rel="preload" href="/fonts/inter-latin-ext-pl-wght-normal.woff2" as="font" type="font/woff2" crossorigin>',
+            );
           }
 
           const linksHtml = links.join('\n    ');
