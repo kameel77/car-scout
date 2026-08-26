@@ -54,7 +54,7 @@ export async function cspReportRoutes(fastify: FastifyInstance) {
     fastify.addContentTypeParser('application/reports+json', { parseAs: 'string', bodyLimit: 64 * 1024 }, rawJsonParser);
 
     fastify.post('/api/csp-report', {
-        config: { rateLimit: { max: 30, timeWindow: '1 minute' } }
+        config: { rateLimit: { max: 300, timeWindow: '1 minute' } }
     }, async (request, reply) => {
         try {
             const fields = extractCspReport(request.body);
