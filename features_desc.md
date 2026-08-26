@@ -568,5 +568,11 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Wydzielenie fontów per-brand**: Zamiast globalnego importowania 16 plików fontów w `index.css`, utworzono dedykowane arkusze `src/styles/fonts-motolia.css` (zmienna `Inter Variable` + `Archivo Variable`) oraz `src/styles/fonts-carsalon.css` (`Outfit` + `Inter`).
   - **Brand-aware preloading fontów**: Konfiguracja `vite.config.ts` wstrzykuje preloody fontów precyzyjnie dopasowane do aktywnej marki (dla Motolii: `inter-latin-wght-normal-*.woff2` oraz `/fonts/archivo-latin-wght-normal.woff2`).
 
+## 49. Optymalizacja kafelków funkcyjnych (Feature Tiles) na stronie głównej
+- **Cel**: Drastyczna redukcja wagi grafik kafelków funkcyjnych (`/uploads/feature-tiles/`) na stronie głównej bez straty jakości wizualnej.
+- **Zastosowane rozwiązania**:
+  - **Dedykowane parametry optymalizatora w backendzie (`feature-tiles.ts`)**: Zmniejszono docelowe szerokości generowanych wariantów obrazów dopasowane do siatki 5-kolumnowej na desktopie i 2-kolumnowej na mobile (`largeWidth: 900`, `mediumWidth: 600`, `thumbWidth: 400`, `quality: 72`).
+  - **Responsywny `sizes` i usunięcie `forceThumbnail` na froncie (`FeatureTilesSection.tsx`)**: Komponent renderuje pełny `srcset` z precyzyjną definicją `sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"`, pozwalając urządzeniom mobilnym na wybór miniatury 400w zamiast wymuszonego pliku 600w.
+
 
 
