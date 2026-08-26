@@ -141,8 +141,12 @@ export class StockSyncEngine {
 
         // Pobranie ofert z całej bazy mających VIN obecny w pobranym feedzie (Cross-source VIN match)
         const feedVins = fetchedCars.map(c => c.vin).filter(Boolean) as string[];
-        const existingListingsByVin = feedVins.length > 0 ? await this.prisma.listing.findMany({
-            where: { vin: { in: feedVins } },
+        const feedVinsUpper = feedVins.map(v => v.trim().toUpperCase());
+        const feedVinsLower = feedVins.map(v => v.trim().toLowerCase());
+        const allVinsToQuery = Array.from(new Set([...feedVinsUpper, ...feedVinsLower]));
+
+        const existingListingsByVin = allVinsToQuery.length > 0 ? await this.prisma.listing.findMany({
+            where: { vin: { in: allVinsToQuery } },
             select: {
                 id: true,
                 listingId: true,
@@ -176,7 +180,7 @@ export class StockSyncEngine {
         const globalVinMap = new Map<string, typeof existingListingsByVin[0]>();
         for (const l of existingListingsByVin) {
             if (l.vin) {
-                globalVinMap.set(l.vin.toUpperCase(), l);
+                globalVinMap.set(l.vin.trim().toUpperCase(), l);
             }
         }
 

@@ -714,7 +714,11 @@ export default function ListingDetailPage() {
               <div className="absolute top-3 right-3 z-10 px-2.5 py-1 bg-white/90 backdrop-blur-sm border text-slate-800 text-xs font-bold rounded-lg shadow-sm pointer-events-none">
                 {listing.vatMargin ? 'VAT Marża' : 'Faktura VAT 23%'}
               </div>
-              <ImageGallery images={listing.image_urls} title={title} />
+              <ImageGallery
+                images={listing.image_urls}
+                title={title}
+                isReserved={Boolean(listing.is_reserved || listing.isReserved)}
+              />
             </div>
 
             {/* Title & Price - Mobile */}
