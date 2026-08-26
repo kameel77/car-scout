@@ -5,6 +5,11 @@ import {
     parseDealerCodeAndName,
     mapPewneAutoFuel,
     mapRawCarToNormalized,
+    extractPowerHp,
+    extractEngineCapacity,
+    extractTransmission,
+    extractDrive,
+    extractBodyType,
     PewneAutoProvider
 } from '../providers/pewneauto.provider.js';
 import { StockSyncEngine } from '../stock-sync-engine.service.js';
@@ -507,5 +512,37 @@ describe('StockSyncEngine — Integracja PewneAuto', () => {
             where: { vin: 'VINTESTPEWNEAUTO003' }
         });
         expect(checkListing).toBeNull();
+    });
+
+    it('PewneAuto Parsers: poprawnie ekstrahują moc, pojemność, skrzynię, napęd i typ nadwozia', () => {
+        // Moc
+        expect(extractPowerHp('1.8 Hybrid 140 KM')).toBe(140);
+        expect(extractPowerHp('1.5 130KM Executive')).toBe(130);
+        expect(extractPowerHp('1.6 132 hp')).toBe(132);
+        expect(extractPowerHp('Brak mocy w tekście')).toBeNull();
+
+        // Pojemność
+        expect(extractEngineCapacity('Corolla 1.8 Hybrid')).toBe(1798);
+        expect(extractEngineCapacity('Yaris 1.5 Dynamic Force')).toBe(1490);
+        expect(extractEngineCapacity('RAV4 2.5 Hybrid')).toBe(2487);
+        expect(extractEngineCapacity('Camry 2.0')).toBe(1987);
+
+        // Skrzynia
+        expect(extractTransmission('Hybryda', 1, 0, '')).toBe('Automatyczna');
+        expect(extractTransmission('Benzyna', 0, 0, '1.6 6MT Manual')).toBe('Manualna');
+        expect(extractTransmission('Elektryczny', 0, 1, '')).toBe('Automatyczna');
+
+        // Napęd
+        expect(extractDrive('1.5 Hybrid 130KM Executive AWD-i')).toBe('4x4 (AWD)');
+        expect(extractDrive('2.0 Hybrid 4x4')).toBe('4x4 (AWD)');
+        expect(extractDrive('1.8 Hybrid FWD')).toBe('Napęd na przednie koła (FWD)');
+
+        // Nadwozie
+        expect(extractBodyType('Corolla', 'Sedan Comfort', 4)).toBe('Sedan');
+        expect(extractBodyType('Corolla', 'Touring Sports TS Kombi', 5)).toBe('Kombi');
+        expect(extractBodyType('RAV4', 'RAV4 Executive', 5)).toBe('SUV');
+        expect(extractBodyType('Yaris Cross', '1.5 Hybrid', 5)).toBe('SUV');
+        expect(extractBodyType('Yaris', '1.5 Style', 5)).toBe('Hatchback');
+        expect(extractBodyType('Proace Max', 'Furgon Heavy', 4)).toBe('Dostawczy / Van');
     });
 });

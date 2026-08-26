@@ -22,6 +22,7 @@ export interface NormalizedFeedCar {
     transmission?: string | null;
     enginePowerHp?: number | null;
     engineCapacityCm3?: number | null;
+    drive?: string | null;
     doors?: number | null;
     seats?: number | null;
     bodyType?: string | null;

@@ -331,6 +331,11 @@ export class StockSyncEngine {
                 const shouldUnarchive = !existing.isArchived
                     || (existing.archivedReason?.startsWith('pewneauto_') ?? false);
 
+                const rawDrive = (feedCar.rawSpecs?.drive || (feedCar as any).drive) as string | undefined;
+                const galleryUrls = (feedCar.galleryImageUrls && feedCar.galleryImageUrls.length > 0)
+                    ? feedCar.galleryImageUrls
+                    : (feedCar.primaryImageUrl ? [feedCar.primaryImageUrl] : []);
+
                 const updateData: Prisma.ListingUpdateInput = {
                     make: hasManualEdit ? undefined : normMake,
                     model: hasManualEdit ? undefined : feedCar.model,
@@ -338,6 +343,14 @@ export class StockSyncEngine {
                     productionYear: feedCar.productionYear,
                     mileageKm: feedCar.mileageKm,
                     fuelType: feedCar.fuelType || undefined,
+                    transmission: feedCar.transmission || undefined,
+                    enginePowerHp: feedCar.enginePowerHp || undefined,
+                    engineCapacityCm3: feedCar.engineCapacityCm3 || undefined,
+                    drive: rawDrive || undefined,
+                    bodyType: feedCar.bodyType || undefined,
+                    seats: feedCar.seats || undefined,
+                    color: feedCar.color || undefined,
+                    registrationNumber: feedCar.registrationNumber || undefined,
                     doors: feedCar.doors || undefined,
                     firstRegistrationDate: feedCar.firstRegistrationDate || undefined,
                     condition: feedCar.condition,
@@ -345,7 +358,13 @@ export class StockSyncEngine {
                     omnibusLowest30dPln: omnibusPrice,
                     isReserved: feedCar.isReserved,
                     ...(shouldUnarchive ? { isArchived: false, archivedAt: null, archivedReason: null } : {}),
-                    primaryImageUrl: feedCar.primaryImageUrl || undefined,
+                    primaryImageUrl: feedCar.primaryImageUrl || (galleryUrls[0] || undefined),
+                    imageUrls: galleryUrls,
+                    imageCount: galleryUrls.length,
+                    equipmentAudioMultimedia: feedCar.equipmentAudioMultimedia || [],
+                    equipmentSafety: feedCar.equipmentSafety || [],
+                    equipmentComfortExtras: feedCar.equipmentComfortExtras || [],
+                    equipmentOther: feedCar.equipmentOther || [],
                     entrySource: 'PEWNEAUTO',
                     pewneautoSource: { connect: { id: options.sourceId } },
                     pewneautoCarId: isNaN(carNumId) ? undefined : carNumId,
@@ -382,6 +401,10 @@ export class StockSyncEngine {
                 const listingId = `pewneauto-${options.sourceSlug}-${feedCar.externalId}`;
                 const slug = generateListingSlug(normMake, feedCar.model, feedCar.version, feedCar.productionYear, undefined, feedCar.fuelType, feedCar.externalId);
                 const dealerId = feedCar.dealer ? dealerIdMap.get(feedCar.dealer.rawCode || feedCar.dealer.rawName) : undefined;
+                const rawDrive = (feedCar.rawSpecs?.drive || (feedCar as any).drive) as string | undefined;
+                const galleryUrls = (feedCar.galleryImageUrls && feedCar.galleryImageUrls.length > 0)
+                    ? feedCar.galleryImageUrls
+                    : (feedCar.primaryImageUrl ? [feedCar.primaryImageUrl] : []);
 
                 const createData: Prisma.ListingCreateInput = {
                     listingId,
@@ -393,14 +416,27 @@ export class StockSyncEngine {
                     productionYear: feedCar.productionYear,
                     mileageKm: feedCar.mileageKm,
                     fuelType: feedCar.fuelType || undefined,
+                    transmission: feedCar.transmission || undefined,
+                    enginePowerHp: feedCar.enginePowerHp || undefined,
+                    engineCapacityCm3: feedCar.engineCapacityCm3 || undefined,
+                    drive: rawDrive || undefined,
+                    bodyType: feedCar.bodyType || undefined,
+                    seats: feedCar.seats || undefined,
+                    color: feedCar.color || undefined,
+                    registrationNumber: feedCar.registrationNumber || undefined,
                     doors: feedCar.doors || undefined,
                     firstRegistrationDate: feedCar.firstRegistrationDate || undefined,
                     condition: feedCar.condition,
                     pricePln: feedCar.pricePln,
                     omnibusLowest30dPln: feedCar.omnibusLowest30dPln || feedCar.pricePln,
                     isReserved: feedCar.isReserved,
-                    primaryImageUrl: feedCar.primaryImageUrl || undefined,
-                    imageUrls: feedCar.galleryImageUrls || (feedCar.primaryImageUrl ? [feedCar.primaryImageUrl] : []),
+                    primaryImageUrl: feedCar.primaryImageUrl || (galleryUrls[0] || undefined),
+                    imageUrls: galleryUrls,
+                    imageCount: galleryUrls.length,
+                    equipmentAudioMultimedia: feedCar.equipmentAudioMultimedia || [],
+                    equipmentSafety: feedCar.equipmentSafety || [],
+                    equipmentComfortExtras: feedCar.equipmentComfortExtras || [],
+                    equipmentOther: feedCar.equipmentOther || [],
                     entrySource: 'PEWNEAUTO',
                     pewneautoSource: { connect: { id: options.sourceId } },
                     pewneautoCarId: isNaN(carNumId) ? undefined : carNumId,
