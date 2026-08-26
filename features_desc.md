@@ -574,5 +574,17 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Dedykowane parametry optymalizatora w backendzie (`feature-tiles.ts`)**: Zmniejszono docelowe szerokości generowanych wariantów obrazów dopasowane do siatki 5-kolumnowej na desktopie i 2-kolumnowej na mobile (`largeWidth: 900`, `mediumWidth: 600`, `thumbWidth: 400`, `quality: 72`).
   - **Responsywny `sizes` i usunięcie `forceThumbnail` na froncie (`FeatureTilesSection.tsx`)**: Komponent renderuje pełny `srcset` z precyzyjną definicją `sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"`, pozwalając urządzeniom mobilnym na wybór miniatury 400w zamiast wymuszonego pliku 600w.
 
+## 50. Integracja API PewneAuto (Toyota / Lexus) i generyczny silnik StockSyncEngine
+- **Cel**: Zautomatyzowanie zasilania bazy pojazdów bezpośrednio z panelu PewneAuto (Toyota / Lexus) dla grup dealerskich (np. Toyota Chodzeń), eliminacja konieczności ręcznego wgrywania plików CSV oraz zabezpieczenie bazy przed awariami i anomaliami zewnętrznych serwisów.
+- **Zastosowane rozwiązania**:
+  - **Generyczny silnik giełdowy `StockSyncEngine` (Wzorzec Provider)**: Architektura oddziela silnik transakcyjny (CRUD, historia cen, archiwizacja, inwalidacja cache) od konkretnego formatu dostawcy (`PewneAutoProvider` implementujący `StockFeedProvider`).
+  - **Szyfrowanie at-rest (`AES-256-GCM`) i maskowanie sekretów**: Poświadczenia API (`clientSecret`) są szyfrowane w bazie danych z użyciem klucza AES-256-GCM, a w API panelu administratora są zawsze zwracane w formie zamaskowanej (`••••••••`). Dostęp chroniony uprawnieniem `stock:sources:write`.
+  - **Bezpiecznik wolumenowy (Circuit Breaker)**: Chroni przed masowym wykasowaniem lub zarchiwizowaniem bazy ofert w przypadku błędu API dostawcy (spadek liczby aut o >20% w stosunku do ostatniego udanego syncu wstrzymuje automatyczną synchronizację i wymaga świadomego zatwierdzenia przez administratora).
+  - **Symulacja Dry-Run**: Dedykowany tryb symulacji weryfikuje pobrany feed, liczbę aut do dodania, aktualizacji, archiwizacji oraz dopasowania po VIN bez dokonywania żadnych zmian w bazie danych.
+  - **Deduplikacja międzyźródłowa (Cross-source VIN match)**: Pojazdy uprzednio zaimportowane z CSV są automatycznie kojarzone po numerze VIN i przejmowane przez integrację API bez tworzenia duplikatów, z zachowaniem oryginalnego sluga URL i pozycji SEO.
+  - **Obsługa rezerwacji (`isReserved`)**: Samochody z aktywną rezerwacją u dealera nie są archiwizowane - otrzymują odznakę „Zarezerwowane” w katalogu oraz dedykowany baner informacyjny na karcie pojedynczej oferty z zachowaniem linkowania do podobnych dostępnych aut.
+  - **Historia cen i Omnibus 30d**: Każda zmiana ceny jest rejestrowana w tabeli `PriceHistory`, z której dynamicznie wyznaczana jest najniższa cena z ostatnich 30 dni w przypadku braku takiego parametru w zewnętrznym feedzie.
+  - **Automatyczny harmonogram CRON**: Cykliczna synchronizacja w tle co 60 minut w godzinach 6:00 - 22:00.
+
 
 

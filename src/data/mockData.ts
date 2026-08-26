@@ -75,6 +75,8 @@ export interface Listing {
   } | null;
   is_archived?: boolean;
   is_featured?: boolean;
+  is_reserved?: boolean;
+  isReserved?: boolean;
   catalogPrice?: number | null;
   motoliaDiscountPln?: number | null;
   showMotoliaDiscount?: boolean;

@@ -79,7 +79,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
             where: { vin: { not: null } }
         });
         const allVinToListingId = new Map<string, string | null>(
-            allVinEntries.map(l => [l.vin as string, l.listingId])
+            allVinEntries.map(l => [(l.vin as string).trim().toUpperCase(), l.listingId])
         );
 
         const currentCarIds = new Set<number>();
@@ -239,8 +239,9 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                 const existingByCsflowId = existingListings.find(l => l.csflowCarId === carId);
                 
                 // Sprawdź VIN w CAŁEJ bazie (nie tylko w CSFlow)
-                const vinConflictListingId = car.vin ? allVinToListingId.get(car.vin) : undefined;
-                const isVinConflict = !existingByCsflowId && car.vin && vinConflictListingId !== undefined;
+                const normalizedCarVin = car.vin ? car.vin.trim().toUpperCase() : undefined;
+                const vinConflictListingId = normalizedCarVin ? allVinToListingId.get(normalizedCarVin) : undefined;
+                const isVinConflict = !existingByCsflowId && normalizedCarVin && vinConflictListingId !== undefined;
 
                 if (isVinConflict) {
                     console.log(`[CSFlow:${source.slug}] Pominięto auto id ${car.id} ponieważ VIN ${car.vin} już istnieje (oferta: ${vinConflictListingId || 'brak ID'}).`);
@@ -388,7 +389,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                     priceHistoryEntries.push({ listingId: savedListing.id, pricePln: price });
                     result.inserted++;
                     // Dodaj VIN do mapy, żeby duplikaty w tym samym batchu też były wykryte
-                    if (car.vin) allVinToListingId.set(car.vin, listingId);
+                    if (car.vin) allVinToListingId.set(car.vin.trim().toUpperCase(), listingId);
 
                     // Dodaj pobieranie i zcachowanie zdjęć do kolejki w tle
                     if (externalPhotos.length > 0) {

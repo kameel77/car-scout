@@ -373,6 +373,108 @@ export const csflowApi = {
     },
 };
 
+// PewneAuto Sources API
+export const pewneautoApi = {
+    getSources: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/pewneauto/sources`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Nie udało się pobrać źródeł PewneAuto');
+        return response.json();
+    },
+
+    createSource: async (data: {
+        name: string;
+        clientId: string;
+        clientSecret: string;
+        slug?: string;
+        dealerGroupId?: string | null;
+        tokenUrl?: string;
+        apiUrl?: string;
+    }, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/pewneauto/sources`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Nie udało się utworzyć źródła PewneAuto');
+        }
+        return response.json();
+    },
+
+    updateSource: async (id: string, data: {
+        name?: string;
+        clientId?: string;
+        clientSecret?: string;
+        dealerGroupId?: string | null;
+        isEnabled?: boolean;
+        tokenUrl?: string;
+        apiUrl?: string;
+    }, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/pewneauto/sources/${id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Nie udało się zaktualizować źródła PewneAuto');
+        }
+        return response.json();
+    },
+
+    deleteSource: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/pewneauto/sources/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Nie udało się usunąć źródła PewneAuto');
+        }
+        return response.json();
+    },
+
+    runDryRun: async (id: string, token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/pewneauto/sources/${id}/dry-run`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Symulacja Dry-Run nie powiodła się');
+        }
+        return response.json();
+    },
+
+    syncSource: async (id: string, token: string, forceSync: boolean = false) => {
+        const response = await fetch(`${API_BASE_URL}/api/pewneauto/sources/${id}/sync`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ forceSync })
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Synchronizacja źródła PewneAuto nie powiodła się');
+        }
+        return response.json();
+    },
+
+    syncAll: async (token: string) => {
+        const response = await fetch(`${API_BASE_URL}/api/pewneauto/sync`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Globalna synchronizacja PewneAuto nie powiodła się');
+        }
+        return response.json();
+    },
+};
+
 // Analytics API
 export const analyticsApi = {
     getPriceTrends: async (params: {
