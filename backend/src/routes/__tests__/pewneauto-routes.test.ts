@@ -34,6 +34,7 @@ describe('PewneAuto routes CRUD & RBAC', () => {
     });
 
     it('POST /api/pewneauto/sources — tworzy nowe źródło z zaszyfrowanym sekretem (v1) i maskuje go w odpowiedzi', async () => {
+        const testSecret = 'dummy-secret-value-12345'; // gitleaks:allow
         const res = await app.inject({
             method: 'POST',
             url: '/api/pewneauto/sources',
@@ -41,7 +42,7 @@ describe('PewneAuto routes CRUD & RBAC', () => {
             payload: {
                 name: 'Toyota Chodzeń Route Test',
                 clientId: 'test-client-id-123',
-                clientSecret: 'tajny-klucz-api-456'
+                clientSecret: testSecret
             }
         });
 
@@ -54,7 +55,7 @@ describe('PewneAuto routes CRUD & RBAC', () => {
 
         // Sprawdź w bazie czy w kolumnie clientSecretEncrypted jest wersjonowany szyfrogram (v1:iv:tag:ct)
         const inDb = await app.prisma.pewneAutoSource.findUnique({ where: { id: source.id } });
-        expect(inDb?.clientSecretEncrypted).not.toBe('tajny-klucz-api-456');
+        expect(inDb?.clientSecretEncrypted).not.toBe(testSecret);
         const parts = inDb?.clientSecretEncrypted.split(':');
         expect(parts?.length).toBe(4);
         expect(parts?.[0]).toBe('v1');
