@@ -75,7 +75,7 @@ export function RentalOperatorOfferModal({
                     </div>
 
                     {/* Stawka prowizji */}
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50/60 border border-amber-200/80">
+                    <div className="flex items-center p-3 rounded-xl bg-amber-50/60 border border-amber-200/80">
                         <div className="flex items-center gap-2.5">
                             <div className="p-2 rounded-lg bg-amber-100 text-amber-900">
                                 <BadgePercent className="w-4 h-4" />
@@ -85,11 +85,6 @@ export function RentalOperatorOfferModal({
                                 <p className="text-base font-bold font-mono text-amber-950">{feeDisplay}</p>
                             </div>
                         </div>
-                        {feePct !== undefined && feePct !== null && (
-                            <span className="text-xs bg-amber-200/80 text-amber-900 font-semibold px-2 py-0.5 rounded">
-                                fee: {feePct}%
-                            </span>
-                        )}
                     </div>
 
                     {/* Dostawca pojazdu / Właściciel floty */}
