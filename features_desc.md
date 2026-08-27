@@ -586,5 +586,12 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Historia cen i Omnibus 30d**: Każda zmiana ceny jest rejestrowana w tabeli `PriceHistory`, z której dynamicznie wyznaczana jest najniższa cena z ostatnich 30 dni w przypadku braku takiego parametru w zewnętrznym feedzie.
   - **Automatyczny harmonogram CRON**: Cykliczna synchronizacja w tle co 60 minut w godzinach 6:00 - 22:00.
 
-
-
+## 51. Prowizja Motolia (fee_pct) w matrycy rentalowej
+- **Cel**: Rozszerzenie matrycy najmu długoterminowego o dodatkowy wymiar - stawkę prowizji Motolia (`fee_pct`), służący do rozliczeń z firmami CFM oraz stanowiący informację o buforze negocjacyjnym dla sprzedawców platformy.
+- **Zastosowane rozwiązania**:
+  - **Model bazy Prisma**: Dodano pole `feePct Float? @map("fee_pct")` w tabeli `rental_matrix_entries` (nullable, zachowujące 100% kompatybilności wstecznej z dotychczasowymi wpisami).
+  - **Kontrakt kolumny CSV i deterministyczny parser**: Obsługa 28. kolumny `fee_pct` w formacie CSV (skala 0-100, separator kropka, bez znaku %). Wartości powyżej 30% oraz niejednoznaczne ułamki poniżej 1 bez znaku % (np. 0.065) są odrzucane z jawnym raportem błędu wiersza zamiast zgadywania.
+  - **Dedykowany endpoint i ochrona tajemnicy handlowej (RBAC)**: Utworzono chronioną końcówkę `GET /api/rental/vehicles/:slug/operator-financials` z uprawnieniem `rental:financials:read` (dostępnym wyłącznie dla ról `SUPERADMIN_PLATFORM` i `PLATFORM_MANAGER`). Publiczne endpointy ofert i kalkulatora nie zwracają ani nie ujawniają stawki prowizji anonimowym użytkownikom ani pracownikom dealerów.
+  - **Panel sprzedawcy na karcie pojazdu (`RentalDetailPage.tsx`)**: Dla zalogowanego i uprawnionego operatora w karcie wybranej oferty renderowany jest dyskretny, domyślnie zwinięty panel informacyjny `Prowizja Motolia: X% [WEWNĘTRZNE]`.
+  - **Podgląd w panelu administracyjnym (`RentalMatrixPage.tsx`)**: Komórki macierzy przestawnej (Pivot Table) wyświetlają etykietę `fee: X%`, co pozwala na natychmiastową kontrolę stawek wprowadzonych w matrycy.
+  - **Generator Arval (`process_arval.py` i `AGENT.md`)**: Zaktualizowano generator ofert Arval o zapis kolumny `fee_pct` i dokumentację 28-kolumnowego formatu CSV.

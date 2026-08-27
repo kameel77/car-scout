@@ -789,6 +789,7 @@ model RentalMatrixEntry {
   initialPaymentAmountGross Float                   @default(0) @map("initial_payment_amount_gross")
   initialPaymentAmountNet   Float                   @default(0) @map("initial_payment_amount_net")
   insuranceNet              Float?                  @map("insurance_net")
+  feePct                    Float?                  @map("fee_pct")
   assignment                VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct, initialPaymentAmountNet, initialPaymentAmountGross, offerType])

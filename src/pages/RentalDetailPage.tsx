@@ -49,8 +49,9 @@ export default function RentalDetailPage() {
     const { t } = useTranslation();
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
-    const { token } = useAuth();
+    const { token, can } = useAuth();
     const isLoggedIn = !!token;
+    const canViewFinancials = can('rental:financials:read') && !!token;
     const { config } = useBrand();
 
     const { data, isLoading } = useQuery({
@@ -146,6 +147,23 @@ export default function RentalDetailPage() {
     });
 
     const offers = calcQuery.data?.offers || [];
+
+    // Operator financials query (for logged-in authorized operators)
+    const operatorFinancialsQuery = useQuery({
+        queryKey: ['rental-operator-financials', slug, selectedMileage, selectedMonths, selectedPayment, selectedOfferType, token],
+        queryFn: () => rentalPublicApi.getOperatorFinancials(slug!, {
+            annualMileageKm: selectedMileage!,
+            contractMonths: selectedMonths!,
+            initialPaymentPct: selectedPayment!.pct,
+            initialPaymentAmountNet: selectedPayment!.amountNet,
+            initialPaymentAmountGross: selectedPayment!.amountGross,
+            offerType: selectedOfferType
+        }, token!),
+        enabled: canViewFinancials && !!slug && selectedMileage !== null && selectedMonths !== null && selectedPayment !== null,
+        placeholderData: (prev) => prev
+    });
+
+    const financialsByCompanyId = operatorFinancialsQuery.data?.financialsByCompanyId || {};
 
     // Images for gallery — normalize URLs to handle legacy data (bare filename without path)
     const vehicleId = vehicle?.id;
@@ -565,6 +583,24 @@ export default function RentalDetailPage() {
                                                         })}
                                                     </div>
                                                 </div>
+                                            )}
+
+                                            {canViewFinancials && financialsByCompanyId[offer.company?.id]?.feePct !== undefined && financialsByCompanyId[offer.company?.id]?.feePct !== null && (
+                                                <details className="mt-3 group border border-amber-200/80 bg-amber-50/50 rounded-lg text-xs overflow-hidden">
+                                                    <summary className="px-3 py-2 cursor-pointer select-none flex items-center justify-between font-medium text-amber-900 hover:bg-amber-100/50 transition-colors">
+                                                        <span className="flex items-center gap-1.5">
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">WEWNĘTRZNE</span>
+                                                            <span>Prowizja Motolia</span>
+                                                        </span>
+                                                        <span className="text-muted-foreground group-open:rotate-180 transition-transform text-[11px]">▼</span>
+                                                    </summary>
+                                                    <div className="px-3 pb-2.5 pt-1 border-t border-amber-200/60 text-amber-950 flex items-center justify-between">
+                                                        <span className="text-amber-800">Stawka prowizji (fee):</span>
+                                                        <span className="font-bold text-sm font-mono text-amber-950 bg-amber-100 px-2 py-0.5 rounded">
+                                                            {financialsByCompanyId[offer.company.id].feePct}%
+                                                        </span>
+                                                    </div>
+                                                </details>
                                             )}
 
                                             <Button

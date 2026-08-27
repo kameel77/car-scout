@@ -91,6 +91,7 @@ export interface RentalMatrixEntry {
     insuranceNoLimit: number | null;
     tiresNoLimit: number | null;
     insuranceNet?: number | null;
+    feePct?: number | null;
     offerType?: string;
 }
 
@@ -360,6 +361,27 @@ export const rentalPublicApi = {
         const response = await fetch(`${API_BASE_URL}/api/rental/vehicles/${slug}/calculate?${queryParams}`);
         if (!response.ok) throw new Error('Calculation failed');
         return response.json();
+    },
+
+    getOperatorFinancials: async (slug: string, params: { annualMileageKm: number; contractMonths: number; initialPaymentPct: number; initialPaymentAmountNet?: number; initialPaymentAmountGross?: number; offerType?: string }, token: string): Promise<{
+        vehicleId: string;
+        offers: Array<{ companyId: string; companyName: string; feePct: number | null }>;
+        financialsByCompanyId: Record<string, { feePct: number | null }>;
+    }> => {
+        const queryParams = new URLSearchParams({
+            annualMileageKm: params.annualMileageKm.toString(),
+            contractMonths: params.contractMonths.toString(),
+            initialPaymentPct: params.initialPaymentPct.toString()
+        });
+        if (params.initialPaymentAmountNet !== undefined) {
+            queryParams.append('initialPaymentAmountNet', params.initialPaymentAmountNet.toString());
+        }
+        if (params.initialPaymentAmountGross !== undefined) {
+            queryParams.append('initialPaymentAmountGross', params.initialPaymentAmountGross.toString());
+        }
+        if (params.offerType) queryParams.set('offerType', params.offerType);
+
+        return fetchWithAuth(`${API_BASE_URL}/api/rental/vehicles/${slug}/operator-financials?${queryParams}`, token);
     },
 
     submitLead: async (data: {

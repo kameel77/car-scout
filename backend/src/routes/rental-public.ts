@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { sanitizeListing, sanitizeDealer, tryAuthenticate } from '../constants/dealer.js';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
+import { requirePermission } from '../middleware/permissions.js';
 
 export const calculateRatesWithInsurance = (entry: any, assignment: any) => {
     const insuranceAddMode = assignment.insuranceAddModeOverride || assignment.rentalCompany?.insuranceAddMode || 'INSURANCE_23';
@@ -26,6 +27,28 @@ export const calculateRatesWithInsurance = (entry: any, assignment: any) => {
     }
     return { ...entry, monthlyRateNet: finalNet, monthlyRateGross: finalGross, servicesIncluded };
 };
+
+export function selectBestMatrixEntry<T extends { id?: string; offerType?: string; feePct?: number | null; [key: string]: any }>(
+    entries: T[],
+    calcOfferType?: string
+): T | null {
+    if (!entries || entries.length === 0) return null;
+    if (entries.length === 1) return entries[0];
+
+    return [...entries].sort((a, b) => {
+        // Priority 1: Exact match on requested offerType (e.g. 'business' or 'consumer')
+        const getRank = (entry: T) => {
+            if (calcOfferType && entry.offerType === calcOfferType) return 0;
+            if (entry.offerType === 'all') return 1;
+            return 2;
+        };
+        const rankDiff = getRank(a) - getRank(b);
+        if (rankDiff !== 0) return rankDiff;
+
+        // Priority 2: Deterministic tiebreaker by ID
+        return (a.id || '').localeCompare(b.id || '');
+    })[0];
+}
 
 export async function rentalPublicRoutes(fastify: FastifyInstance) {
     // Public: List active rental vehicles with minimum rates
@@ -567,7 +590,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                                 ...(calcOfferType && calcOfferType !== 'all'
                                     ? { offerType: { in: [calcOfferType, 'all'] } }
                                     : {})
-                            }
+                            },
+                            orderBy: [
+                                { offerType: 'asc' },
+                                { id: 'asc' }
+                            ]
                         }
                     }
                 }
@@ -578,11 +605,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Rental vehicle not found' });
         }
 
-        // Build offers from each company
+        // Build offers from each company with deterministic entry selection
         const offers = vehicle.rentalAssignments
-            .filter((a: any) => a.matrixEntries.length > 0)
             .map((a: any) => {
-                const calculatedEntry = calculateRatesWithInsurance(a.matrixEntries[0], a);
+                const bestEntry = selectBestMatrixEntry(a.matrixEntries, calcOfferType);
+                if (!bestEntry) return null;
+                const calculatedEntry = calculateRatesWithInsurance(bestEntry, a);
                 return {
                     company: a.rentalCompany,
                     monthlyRateNet: Math.ceil(calculatedEntry.monthlyRateNet),
@@ -592,7 +620,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     initialPaymentAmountGross: calculatedEntry.initialPaymentAmountGross
                 };
             })
-            .sort((a: any, b: any) => a.monthlyRateGross - b.monthlyRateGross);
+            .filter((o): o is NonNullable<typeof o> => o !== null)
+            .sort((a, b) => a.monthlyRateGross - b.monthlyRateGross);
 
         return {
             vehicleId: vehicle.id,
@@ -603,6 +632,95 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             },
             offers,
             cheapest: offers.length > 0 ? offers[0] : null
+        };
+    });
+
+    // Operator only: Get operator financials (feePct) for vehicle offers with permission check
+    fastify.get('/api/rental/vehicles/:slug/operator-financials', {
+        preHandler: [fastify.authenticate, requirePermission('rental:financials:read')]
+    }, async (request, reply) => {
+        const { slug } = request.params as { slug: string };
+        const { annualMileageKm, contractMonths, initialPaymentPct, initialPaymentAmountNet, initialPaymentAmountGross, offerType } = request.query as {
+            annualMileageKm?: string;
+            contractMonths?: string;
+            initialPaymentPct?: string;
+            initialPaymentAmountNet?: string;
+            initialPaymentAmountGross?: string;
+            offerType?: string;
+        };
+
+        if (!annualMileageKm || !contractMonths || !initialPaymentPct) {
+            return reply.code(400).send({
+                error: 'Required query params: annualMileageKm, contractMonths, initialPaymentPct'
+            });
+        }
+
+        let calcOfferType = offerType?.trim().toLowerCase();
+        if (calcOfferType && ['b2b', 'firma', 'business'].includes(calcOfferType)) calcOfferType = 'business';
+        if (calcOfferType && ['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(calcOfferType)) calcOfferType = 'consumer';
+
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({
+            where: {
+                OR: [{ slug }, { id: slug }],
+                isActive: true
+            },
+            select: {
+                id: true,
+                rentalAssignments: {
+                    where: { isActive: true },
+                    select: {
+                        rentalCompany: {
+                            select: { id: true, name: true }
+                        },
+                        matrixEntries: {
+                            where: {
+                                annualMileageKm: parseInt(annualMileageKm),
+                                contractMonths: parseInt(contractMonths),
+                                initialPaymentPct: parseFloat(initialPaymentPct),
+                                ...(initialPaymentAmountNet && { initialPaymentAmountNet: parseFloat(initialPaymentAmountNet) }),
+                                ...(initialPaymentAmountGross && { initialPaymentAmountGross: parseFloat(initialPaymentAmountGross) }),
+                                ...(calcOfferType && calcOfferType !== 'all'
+                                    ? { offerType: { in: [calcOfferType, 'all'] } }
+                                    : {})
+                            },
+                            select: {
+                                id: true,
+                                offerType: true,
+                                feePct: true
+                            },
+                            orderBy: [
+                                { offerType: 'asc' },
+                                { id: 'asc' }
+                            ]
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        const financialsByCompanyId: Record<string, { feePct: number | null }> = {};
+        const offers = vehicle.rentalAssignments
+            .map((a: any) => {
+                const bestEntry = selectBestMatrixEntry(a.matrixEntries, calcOfferType);
+                if (!bestEntry) return null;
+                const feePct = bestEntry.feePct ?? null;
+                financialsByCompanyId[a.rentalCompany.id] = { feePct };
+                return {
+                    companyId: a.rentalCompany.id,
+                    companyName: a.rentalCompany.name,
+                    feePct
+                };
+            })
+            .filter((o): o is NonNullable<typeof o> => o !== null);
+
+        return {
+            vehicleId: vehicle.id,
+            offers,
+            financialsByCompanyId
         };
     });
 }

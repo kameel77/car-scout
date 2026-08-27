@@ -132,8 +132,9 @@ export default function RentalMatrixPage() {
                 </div>
 
                 <div className="text-xs text-gray-500 space-y-1">
-                    <p><strong>Format 1 (wewnętrzny):</strong> vehicle_id, annual_mileage_km, contract_months, initial_payment_pct, monthly_rate_net, monthly_rate_gross</p>
-                    <p><strong>Format 2 (dostawca):</strong> car_id, term_months, mileage_yearly, monthly_cost_net (brutto = netto × 1.23)</p>
+                    <p><strong>Format 1 (wewnętrzny):</strong> vehicle_id, annual_mileage_km, contract_months, initial_payment_pct, monthly_rate_net, monthly_rate_gross [, fee_pct]</p>
+                    <p><strong>Format 2 (dostawca):</strong> car_id, term_months, mileage_yearly, monthly_cost_net (brutto = netto × 1.23) ... [, fee_pct]</p>
+                    <p><strong>fee_pct (opcjonalnie):</strong> stawka prowizji Motolia (0–30, np. <code>7</code>, <code>6.5</code>) na końcu wiersza</p>
                     <p><strong>car_id / vehicle_id:</strong> odpowiada External Vehicle ID w przypisaniu pojazdu do firmy (<em>Pojazdy najmu → Edytuj → Firmy najmowe</em>)</p>
                     <p><strong>Separatory:</strong> przecinek, średnik lub tab (auto-detekcja)</p>
                 </div>
@@ -279,6 +280,11 @@ export default function RentalMatrixPage() {
                                                                     <div>
                                                                         <div className="font-semibold">{entry.monthlyRateGross.toLocaleString('pl-PL')} zł</div>
                                                                         <div className="text-gray-400">{entry.monthlyRateNet.toLocaleString('pl-PL')} netto</div>
+                                                                        {entry.feePct !== null && entry.feePct !== undefined && (
+                                                                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 font-mono text-[10px] border border-amber-200">
+                                                                                fee: {entry.feePct}%
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 ) : (
                                                                     <span className="text-gray-300">—</span>
