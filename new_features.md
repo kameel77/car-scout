@@ -29,6 +29,9 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 
 - 2026-04-01: Rozbudować panel admina o dedykowany widok/filtry dla leadów typu `price_negotiation` (priorytety, SLA, statusy negocjacji i szablony odpowiedzi).
 - 2026-07-29: **Dedykowany system landing page'y dla kampanii płatnych i QR (/promo/:slug)**: Pełny moduł Landing Page'y pod ruchem płatnym (Meta/Google Ads, QR, mailingi) z zero conversion leak, dedykowanym panelem zarządczym `/admin/landing-pages`, generatorem kodów QR 1024px oraz atrybucją leadów i analityką dataLayer (`lp_view`, `phone_click`, `generate_lead`).
+- 2026-08-27: **Prowizja Motolia (fee_pct) i panel operatora (modal '?') na karcie wynajmu**: pole `fee_pct` w 28. kolumnie CSV, chronione endpointy `GET /api/rental/vehicles/:slug/operator-financials` oraz `GET /api/rental/vehicles/:slug/operator-info` z uprawnieniem `rental:financials:read`, dyskretny żółty przycisk `?` z Tooltipem i wycentrowany modal operatora na karcie oferty, kalendarze `DatePicker` dla „Data pierwszej rejestracji” oraz „Dostępny od” (`available_from`) w formularzu pojazdu najmu.
+- [ ] **Lead.rentalFeePctSnapshot**: snapshot stawki prowizji w momencie tworzenia leada z kalkulatora najmu do celów rozliczeniowych.
+- [ ] **Standaryzowane progi fee per dealer dla nowych/używanych**: reguły prowizyjne per dealer/kategoria.
 
 ## 5. Dług techniczny - bezpieczeństwo
 - [ ] **Token sesji admina w `localStorage` -> ciasteczko `HttpOnly`** (świadomie odłożone 2026-08-13). `AuthContext` trzyma `auth_token` w `localStorage`, więc dowolny skrypt wykonany w kontekście strony może go odczytać. Migracja na `HttpOnly; Secure; SameSite=Strict` dotyka `backend/src/routes/auth.ts`, `src/contexts/AuthContext.tsx`, `ProtectedRoute`, przełączania kontekstu (`/api/auth/context`) oraz wymaga dołożenia ochrony CSRF - stąd wysokie ryzyko regresji.

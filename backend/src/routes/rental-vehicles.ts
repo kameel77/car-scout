@@ -21,6 +21,17 @@ function generateSlug(make: string, model: string, version: string | null, produ
     return parts.join('-').replace(/-{2,}/g, '-');
 }
 
+function isValidDateString(val: any): boolean {
+    if (typeof val !== 'string') return false;
+    const trimmed = val.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return false;
+    const [year, month, day] = trimmed.split('-').map(Number);
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    const d = new Date(year, month - 1, day);
+    return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day;
+}
+
 export async function rentalVehicleRoutes(fastify: FastifyInstance) {
     // List rental vehicles (admin)
     fastify.get('/api/rental-vehicles', {
@@ -187,6 +198,13 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(dealerId)) return reply.code(403).send({ error: 'Forbidden' });
         }
 
+        if (body.firstRegistrationDate && !isValidDateString(body.firstRegistrationDate)) {
+            return reply.code(400).send({ error: 'firstRegistrationDate must be a valid date in YYYY-MM-DD format' });
+        }
+        if (body.availableFrom && !isValidDateString(body.availableFrom)) {
+            return reply.code(400).send({ error: 'availableFrom must be a valid date in YYYY-MM-DD format' });
+        }
+
         const vehicle = await fastify.prisma.rentalVehicle.create({
             data: {
                 dealerId: dealerId || null,
@@ -220,7 +238,8 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
                 condition: body.condition || 'NEW',
                 vin: body.vin || null,
                 mileageKm: body.mileageKm != null ? parseInt(body.mileageKm) : null,
-                firstRegistrationDate: body.firstRegistrationDate || null,
+                firstRegistrationDate: body.firstRegistrationDate ? String(body.firstRegistrationDate).trim() : null,
+                availableFrom: body.availableFrom ? String(body.availableFrom).trim() : null,
                 registrationNumber: body.registrationNumber || null
             }
         });
@@ -266,19 +285,66 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
         // Build update data — only include provided fields
         const updateData: any = {};
-        const stringFields = ['make', 'model', 'version', 'bodyType', 'fuelType', 'transmission',
-            'color', 'paintType', 'drive', 'primaryImageUrl', 'additionalInfoHeader', 'additionalInfoContent', 'specificationUrl',
-            'condition', 'vin', 'firstRegistrationDate', 'registrationNumber'];
+
+        // Explicit validation for required non-nullable fields
+        if (body.make !== undefined) {
+            if (typeof body.make !== 'string' || body.make.trim() === '') {
+                return reply.code(400).send({ error: 'make cannot be empty' });
+            }
+            updateData.make = body.make.trim();
+        }
+        if (body.model !== undefined) {
+            if (typeof body.model !== 'string' || body.model.trim() === '') {
+                return reply.code(400).send({ error: 'model cannot be empty' });
+            }
+            updateData.model = body.model.trim();
+        }
+        if (body.condition !== undefined) {
+            if (!['NEW', 'USED'].includes(body.condition)) {
+                return reply.code(400).send({ error: 'condition must be NEW or USED' });
+            }
+            updateData.condition = body.condition;
+        }
+
+        // Nullable string fields coerced from '' to null
+        const nullableStringFields = [
+            'version', 'bodyType', 'fuelType', 'transmission',
+            'color', 'paintType', 'drive', 'primaryImageUrl',
+            'additionalInfoHeader', 'additionalInfoContent', 'specificationUrl',
+            'vin', 'registrationNumber', 'carClass', 'modelCode'
+        ];
+
+        for (const field of nullableStringFields) {
+            if (body[field] !== undefined) {
+                updateData[field] = (body[field] !== null && body[field] !== '') ? body[field] : null;
+            }
+        }
+
         const intFields = ['enginePowerHp', 'engineCapacityCm3', 'productionYear', 'catalogPrice',
             'sellingPrice', 'doors', 'seats', 'mileageKm'];
         const arrayFields = ['imageUrls', 'equipmentAudioMultimedia', 'equipmentSafety',
             'equipmentComfortExtras', 'equipmentOther'];
 
-        for (const field of stringFields) {
-            if (body[field] !== undefined) updateData[field] = body[field];
+        if (body.firstRegistrationDate !== undefined) {
+            if (body.firstRegistrationDate === null || body.firstRegistrationDate === '') {
+                updateData.firstRegistrationDate = null;
+            } else if (isValidDateString(body.firstRegistrationDate)) {
+                updateData.firstRegistrationDate = String(body.firstRegistrationDate).trim();
+            } else {
+                return reply.code(400).send({ error: 'firstRegistrationDate must be a valid date in YYYY-MM-DD format' });
+            }
+        }
+        if (body.availableFrom !== undefined) {
+            if (body.availableFrom === null || body.availableFrom === '') {
+                updateData.availableFrom = null;
+            } else if (isValidDateString(body.availableFrom)) {
+                updateData.availableFrom = String(body.availableFrom).trim();
+            } else {
+                return reply.code(400).send({ error: 'availableFrom must be a valid date in YYYY-MM-DD format' });
+            }
         }
         for (const field of intFields) {
-            if (body[field] !== undefined) updateData[field] = body[field] !== null ? parseInt(body[field]) : null;
+            if (body[field] !== undefined) updateData[field] = (body[field] !== null && body[field] !== '') ? parseInt(body[field]) : null;
         }
         for (const field of arrayFields) {
             if (body[field] !== undefined) updateData[field] = body[field];

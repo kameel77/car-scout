@@ -11,6 +11,8 @@ import { ImageGallery } from '@/components/ImageGallery';
 import { rentalPublicApi } from '@/services/rental-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { RentalOperatorOfferModal } from '@/components/rental/RentalOperatorOfferModal';
 import {
     Accordion,
     AccordionContent,
@@ -49,8 +51,9 @@ export default function RentalDetailPage() {
     const { t } = useTranslation();
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
-    const { token } = useAuth();
+    const { token, can } = useAuth();
     const isLoggedIn = !!token;
+    const canViewFinancials = can('rental:financials:read') && !!token;
     const { config } = useBrand();
 
     const { data, isLoading } = useQuery({
@@ -146,6 +149,35 @@ export default function RentalDetailPage() {
     });
 
     const offers = calcQuery.data?.offers || [];
+
+    // Operator financials query (for logged-in authorized operators)
+    const operatorFinancialsQuery = useQuery({
+        queryKey: ['rental-operator-financials', slug, selectedMileage, selectedMonths, selectedPayment, selectedOfferType, token],
+        queryFn: () => rentalPublicApi.getOperatorFinancials(slug!, {
+            annualMileageKm: selectedMileage!,
+            contractMonths: selectedMonths!,
+            initialPaymentPct: selectedPayment!.pct,
+            initialPaymentAmountNet: selectedPayment!.amountNet,
+            initialPaymentAmountGross: selectedPayment!.amountGross,
+            offerType: selectedOfferType
+        }, token!),
+        enabled: canViewFinancials && !!slug && selectedMileage !== null && selectedMonths !== null && selectedPayment !== null,
+        placeholderData: (prev) => prev
+    });
+
+    const financialsByCompanyId = operatorFinancialsQuery.data?.financialsByCompanyId || {};
+
+    // Vehicle-level operator info query (dealer, ownerRentalCompany, availableFrom, vin)
+    const operatorInfoQuery = useQuery({
+        queryKey: ['rental-operator-info', slug, token],
+        queryFn: () => rentalPublicApi.getOperatorInfo(slug!, token!),
+        enabled: canViewFinancials && !!slug,
+        staleTime: 5 * 60 * 1000,
+    });
+    const operatorInfo = operatorInfoQuery.data;
+
+    // State for single page-level operator modal
+    const [selectedOperatorOffer, setSelectedOperatorOffer] = useState<any | null>(null);
 
     // Images for gallery — normalize URLs to handle legacy data (bare filename without path)
     const vehicleId = vehicle?.id;
@@ -521,7 +553,29 @@ export default function RentalDetailPage() {
                                                 {isLoggedIn ? (
                                                     <div className="flex items-center gap-2">
                                                         <Building2 className="w-4 h-4 text-muted-foreground" />
-                                                        <span className="font-medium text-sm">{offer.company.name}</span>
+                                                        <span className="font-medium text-sm">{offer.company?.name}</span>
+                                                        {canViewFinancials && (
+                                                            <TooltipProvider delayDuration={150}>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setSelectedOperatorOffer(offer);
+                                                                            }}
+                                                                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-300 hover:bg-amber-400 text-amber-950 text-xs font-bold transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1"
+                                                                            aria-label="Informacje wewnętrzne dla operatora"
+                                                                        >
+                                                                            ?
+                                                                        </button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent className="bg-slate-900 text-white text-xs py-1 px-2.5 rounded shadow-lg z-50">
+                                                                        Informacje wewnętrzne dla operatora
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <div></div>
@@ -591,6 +645,18 @@ export default function RentalDetailPage() {
 
 
             {/* Lightbox is handled by ImageGallery component */}
+
+            {canViewFinancials && (
+                <RentalOperatorOfferModal
+                    isOpen={!!selectedOperatorOffer}
+                    onClose={() => setSelectedOperatorOffer(null)}
+                    vehicle={vehicle}
+                    offer={selectedOperatorOffer}
+                    feePct={selectedOperatorOffer ? financialsByCompanyId[selectedOperatorOffer.company?.id]?.feePct : null}
+                    operatorInfo={operatorInfo}
+                    isLoadingInfo={operatorInfoQuery.isLoading}
+                />
+            )}
 
             <ScrollToTopButton />
 

@@ -61,7 +61,7 @@ export function FeatureTilesSection({ heading, className }: FeatureTilesSectionP
                                         width="400"
                                         height="500"
                                         loading="lazy"
-                                        forceThumbnail={true}
+                                        sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"
                                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     />
                                 ) : (

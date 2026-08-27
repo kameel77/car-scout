@@ -651,6 +651,26 @@ export default function ListingDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Reservation Notice Banner */}
+        {!isRecentlySold && Boolean(listing.is_reserved || listing.isReserved) && (
+          <div className="mb-6 p-5 sm:p-6 bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/60 rounded-2xl shadow-sm space-y-3">
+            <div className="flex items-center gap-2.5 text-amber-900 dark:text-amber-200 font-bold text-lg">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>Pojazd zarezerwowany u dealera</span>
+            </div>
+            <p className="text-amber-800 dark:text-amber-300/90 text-sm leading-relaxed">
+              Ten egzemplarz jest obecnie zarezerwowany przez innego klienta. Skontaktuj się z nami, aby potwierdzić aktualny status dostępności lub otrzymać dedykowaną propozycję podobnego samochodu.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Button asChild className="bg-amber-600 hover:bg-amber-700 text-white font-semibold">
+                <Link to={`/samochody/${slugifyBrandName(listing.make)}/${slugifyBrandName(listing.model)}`}>
+                  Zobacz dostępne {listing.make} {listing.model} &rarr;
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
         {/* Sole semantic <h1> for the page — includes production year to match the SSR <h1>/<title>.
             Visible titles below (desktop/mobile) are non-heading elements to avoid duplicate <h1>s. */}
         <h1 className="sr-only">{baseTitle} {listing.production_year}</h1>
@@ -694,7 +714,11 @@ export default function ListingDetailPage() {
               <div className="absolute top-3 right-3 z-10 px-2.5 py-1 bg-white/90 backdrop-blur-sm border text-slate-800 text-xs font-bold rounded-lg shadow-sm pointer-events-none">
                 {listing.vatMargin ? 'VAT Marża' : 'Faktura VAT 23%'}
               </div>
-              <ImageGallery images={listing.image_urls} title={title} />
+              <ImageGallery
+                images={listing.image_urls}
+                title={title}
+                isReserved={Boolean(listing.is_reserved || listing.isReserved)}
+              />
             </div>
 
             {/* Title & Price - Mobile */}

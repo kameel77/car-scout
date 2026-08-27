@@ -35,7 +35,8 @@ export interface VehicleFormState {
     catalogPrice: string;
     sellingPrice: string;              // rental only
     mileageKm: string;                 // sale only
-    firstRegistrationDate: string;     // sale only
+    firstRegistrationDate: string;
+    availableFrom: string;             // rental only — Dostępny od
     registrationNumber: string;        // sale only
 
     // Flags — sale

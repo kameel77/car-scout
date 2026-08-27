@@ -31,6 +31,7 @@ export type Permission =
     | 'rental:read'
     | 'rental:write'
     | 'rental:config:write'
+    | 'rental:financials:read'
     | 'leads:read'
     | 'leads:write'
     | 'analytics:read'

@@ -10,9 +10,10 @@ import { OptimizedImage } from '@/components/OptimizedImage';
 interface ImageGalleryProps {
   images: string[];
   title: string;
+  isReserved?: boolean;
 }
 
-export function ImageGallery({ images, title }: ImageGalleryProps) {
+export function ImageGallery({ images, title, isReserved }: ImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
   const thumbsRef = React.useRef<HTMLDivElement>(null);
@@ -93,6 +94,16 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               />
             </motion.div>
           </AnimatePresence>
+
+          {/* Reservation Badge */}
+          {isReserved && (
+            <div className="absolute top-3.5 left-3.5 z-10">
+              <span className="px-3 py-1.5 bg-amber-500 text-white text-xs sm:text-sm font-bold rounded-lg shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                Zarezerwowane
+              </span>
+            </div>
+          )}
 
           {/* Navigation Arrows */}
           {images.length > 1 && (
@@ -200,6 +211,15 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
             >
               <X className="h-6 w-6" />
             </Button>
+
+            {isReserved && (
+              <div className="absolute top-4 left-4 z-10">
+                <span className="px-3.5 py-1.5 bg-amber-500 text-white text-sm font-bold rounded-lg shadow-xl flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  Zarezerwowane
+                </span>
+              </div>
+            )}
 
             <AnimatePresence mode="wait">
               <motion.div

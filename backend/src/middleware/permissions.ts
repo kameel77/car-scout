@@ -48,6 +48,7 @@ export type Permission =
     | 'rental:read'
     | 'rental:write'
     | 'rental:config:write'
+    | 'rental:financials:read'
     // Leads
     | 'leads:read'
     | 'leads:write'
@@ -70,7 +71,7 @@ export const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
         'dealers:read', 'dealers:write',
         'users:read', 'users:write',
         'stock:read', 'stock:write', 'stock:import', 'stock:sources:write',
-        'rental:read', 'rental:write', 'rental:config:write',
+        'rental:read', 'rental:write', 'rental:config:write', 'rental:financials:read',
         'leads:read', 'leads:write',
         'analytics:read',
         'content:read', 'content:write',
@@ -80,7 +81,7 @@ export const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
         'dealer_groups:read', 'dealer_groups:write',
         'dealers:read', 'dealers:write',
         'stock:read', 'stock:write', 'stock:import', 'stock:sources:write',
-        'rental:read', 'rental:write', 'rental:config:write',
+        'rental:read', 'rental:write', 'rental:config:write', 'rental:financials:read',
         'leads:read', 'leads:write',
         'analytics:read',
         'context:switch',
