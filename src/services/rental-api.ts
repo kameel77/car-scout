@@ -43,9 +43,36 @@ export interface RentalVehicle {
     isPublished?: boolean;
     createdAt: string;
     updatedAt: string;
+    condition?: 'NEW' | 'USED';
+    vin?: string | null;
+    mileageKm?: number | null;
+    firstRegistrationDate?: string | null;
+    availableFrom?: string | null;
+    registrationNumber?: string | null;
     dealer?: { id: string; name: string; addressLine1?: string; city?: string } | null;
     ownerRentalCompany?: { id: string; name: string; slug?: string | null } | null;
     rentalAssignments?: VehicleRentalAssignment[];
+}
+
+export interface RentalOperatorInfo {
+    vehicleId: string;
+    slug: string;
+    vin: string | null;
+    firstRegistrationDate: string | null;
+    availableFrom: string | null;
+    dealer: {
+        id: string;
+        name: string;
+        city?: string;
+        addressLine1?: string;
+        contactPhone?: string;
+    } | null;
+    ownerRentalCompany: {
+        id: string;
+        name: string;
+        slug?: string | null;
+        logoUrl?: string | null;
+    } | null;
 }
 
 export interface RentalCompany {
@@ -382,6 +409,10 @@ export const rentalPublicApi = {
         if (params.offerType) queryParams.set('offerType', params.offerType);
 
         return fetchWithAuth(`${API_BASE_URL}/api/rental/vehicles/${slug}/operator-financials?${queryParams}`, token);
+    },
+
+    getOperatorInfo: async (slug: string, token: string): Promise<RentalOperatorInfo> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental/vehicles/${slug}/operator-info`, token);
     },
 
     submitLead: async (data: {

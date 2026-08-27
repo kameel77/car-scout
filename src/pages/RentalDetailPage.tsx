@@ -11,6 +11,8 @@ import { ImageGallery } from '@/components/ImageGallery';
 import { rentalPublicApi } from '@/services/rental-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { RentalOperatorOfferModal } from '@/components/rental/RentalOperatorOfferModal';
 import {
     Accordion,
     AccordionContent,
@@ -164,6 +166,18 @@ export default function RentalDetailPage() {
     });
 
     const financialsByCompanyId = operatorFinancialsQuery.data?.financialsByCompanyId || {};
+
+    // Vehicle-level operator info query (dealer, ownerRentalCompany, availableFrom, vin)
+    const operatorInfoQuery = useQuery({
+        queryKey: ['rental-operator-info', slug, token],
+        queryFn: () => rentalPublicApi.getOperatorInfo(slug!, token!),
+        enabled: canViewFinancials && !!slug,
+        staleTime: 5 * 60 * 1000,
+    });
+    const operatorInfo = operatorInfoQuery.data;
+
+    // State for single page-level operator modal
+    const [selectedOperatorOffer, setSelectedOperatorOffer] = useState<any | null>(null);
 
     // Images for gallery — normalize URLs to handle legacy data (bare filename without path)
     const vehicleId = vehicle?.id;
@@ -539,7 +553,29 @@ export default function RentalDetailPage() {
                                                 {isLoggedIn ? (
                                                     <div className="flex items-center gap-2">
                                                         <Building2 className="w-4 h-4 text-muted-foreground" />
-                                                        <span className="font-medium text-sm">{offer.company.name}</span>
+                                                        <span className="font-medium text-sm">{offer.company?.name}</span>
+                                                        {canViewFinancials && (
+                                                            <TooltipProvider delayDuration={150}>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setSelectedOperatorOffer(offer);
+                                                                            }}
+                                                                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-300 hover:bg-amber-400 text-amber-950 text-xs font-bold transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1"
+                                                                            aria-label="Informacje wewnętrzne dla operatora"
+                                                                        >
+                                                                            ?
+                                                                        </button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent className="bg-slate-900 text-white text-xs py-1 px-2.5 rounded shadow-lg z-50">
+                                                                        Informacje wewnętrzne dla operatora
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <div></div>
@@ -585,24 +621,6 @@ export default function RentalDetailPage() {
                                                 </div>
                                             )}
 
-                                            {canViewFinancials && financialsByCompanyId[offer.company?.id]?.feePct !== undefined && financialsByCompanyId[offer.company?.id]?.feePct !== null && (
-                                                <details className="mt-3 group border border-amber-200/80 bg-amber-50/50 rounded-lg text-xs overflow-hidden">
-                                                    <summary className="px-3 py-2 cursor-pointer select-none flex items-center justify-between font-medium text-amber-900 hover:bg-amber-100/50 transition-colors">
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">WEWNĘTRZNE</span>
-                                                            <span>Prowizja Motolia</span>
-                                                        </span>
-                                                        <span className="text-muted-foreground group-open:rotate-180 transition-transform text-[11px]">▼</span>
-                                                    </summary>
-                                                    <div className="px-3 pb-2.5 pt-1 border-t border-amber-200/60 text-amber-950 flex items-center justify-between">
-                                                        <span className="text-amber-800">Stawka prowizji (fee):</span>
-                                                        <span className="font-bold text-sm font-mono text-amber-950 bg-amber-100 px-2 py-0.5 rounded">
-                                                            {financialsByCompanyId[offer.company.id].feePct}%
-                                                        </span>
-                                                    </div>
-                                                </details>
-                                            )}
-
                                             <Button
                                                 className="w-full mt-4 bg-accent text-accent-foreground hover:opacity-90"
                                                 onClick={() => navigate(`/wynajem-dlugoterminowy/${slug}/zapytanie`, { state: buildRentalState(offer) })}
@@ -627,6 +645,18 @@ export default function RentalDetailPage() {
 
 
             {/* Lightbox is handled by ImageGallery component */}
+
+            {canViewFinancials && (
+                <RentalOperatorOfferModal
+                    isOpen={!!selectedOperatorOffer}
+                    onClose={() => setSelectedOperatorOffer(null)}
+                    vehicle={vehicle}
+                    offer={selectedOperatorOffer}
+                    feePct={selectedOperatorOffer ? financialsByCompanyId[selectedOperatorOffer.company?.id]?.feePct : null}
+                    operatorInfo={operatorInfo}
+                    isLoadingInfo={operatorInfoQuery.isLoading}
+                />
+            )}
 
             <ScrollToTopButton />
 

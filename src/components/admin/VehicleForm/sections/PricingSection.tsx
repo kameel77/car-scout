@@ -1,4 +1,5 @@
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import type { SectionProps } from '../types';
 
 export function PricingSection({ form, setField, mode, isImported, errors }: SectionProps) {
@@ -127,8 +128,23 @@ export function PricingSection({ form, setField, mode, isImported, errors }: Sec
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Data pierwszej rejestracji</label>
-                        <Input type="text" value={form.firstRegistrationDate} onChange={e => setField('firstRegistrationDate', e.target.value)} placeholder="YYYY-MM-DD" />
+                        <DatePicker
+                            value={form.firstRegistrationDate}
+                            onChange={val => setField('firstRegistrationDate', val)}
+                            placeholder="Wybierz datę (YYYY-MM-DD)"
+                            disabled={mode === 'sale' && technicalDisabled}
+                        />
                     </div>
+                    {mode === 'rental' && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Dostępny od</label>
+                            <DatePicker
+                                value={form.availableFrom}
+                                onChange={val => setField('availableFrom', val)}
+                                placeholder="Wybierz datę (YYYY-MM-DD)"
+                            />
+                        </div>
+                    )}
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Numer rejestracyjny</label>
                         <Input value={form.registrationNumber} onChange={e => setField('registrationNumber', e.target.value)} />

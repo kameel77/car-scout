@@ -712,6 +712,7 @@ model RentalVehicle {
   modelCode                String?                   @map("model_code")
   condition                ListingCondition          @default(NEW) @map("condition")
   firstRegistrationDate    String?                   @map("first_registration_date")
+  availableFrom            String?                   @map("available_from")
   mileageKm                Int?                      @map("mileage_km")
   registrationNumber       String?                   @map("registration_number")
   vin                      String?                   @map("vin")

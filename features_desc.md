@@ -586,12 +586,19 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Historia cen i Omnibus 30d**: Każda zmiana ceny jest rejestrowana w tabeli `PriceHistory`, z której dynamicznie wyznaczana jest najniższa cena z ostatnich 30 dni w przypadku braku takiego parametru w zewnętrznym feedzie.
   - **Automatyczny harmonogram CRON**: Cykliczna synchronizacja w tle co 60 minut w godzinach 6:00 - 22:00.
 
-## 51. Prowizja Motolia (fee_pct) w matrycy rentalowej
-- **Cel**: Rozszerzenie matrycy najmu długoterminowego o dodatkowy wymiar - stawkę prowizji Motolia (`fee_pct`), służący do rozliczeń z firmami CFM oraz stanowiący informację o buforze negocjacyjnym dla sprzedawców platformy.
+## 51. Prowizja Motolia (fee_pct) i panel operatora na karcie wynajmu
+- **Cel**: Rozszerzenie matrycy najmu długoterminowego o stawkę prowizji Motolia (`fee_pct`) oraz dostarczenie sprzedawcy/operatorowi platformy przejrzystego, kompaktowego narzędzia podglądu informacji wewnętrznych o ofercie i dostawcy bez zaburzania interfejsu publicznego.
 - **Zastosowane rozwiązania**:
-  - **Model bazy Prisma**: Dodano pole `feePct Float? @map("fee_pct")` w tabeli `rental_matrix_entries` (nullable, zachowujące 100% kompatybilności wstecznej z dotychczasowymi wpisami).
-  - **Kontrakt kolumny CSV i deterministyczny parser**: Obsługa 28. kolumny `fee_pct` w formacie CSV (skala 0-100, separator kropka, bez znaku %). Wartości powyżej 30% oraz niejednoznaczne ułamki poniżej 1 bez znaku % (np. 0.065) są odrzucane z jawnym raportem błędu wiersza zamiast zgadywania.
-  - **Dedykowany endpoint i ochrona tajemnicy handlowej (RBAC)**: Utworzono chronioną końcówkę `GET /api/rental/vehicles/:slug/operator-financials` z uprawnieniem `rental:financials:read` (dostępnym wyłącznie dla ról `SUPERADMIN_PLATFORM` i `PLATFORM_MANAGER`). Publiczne endpointy ofert i kalkulatora nie zwracają ani nie ujawniają stawki prowizji anonimowym użytkownikom ani pracownikom dealerów.
-  - **Panel sprzedawcy na karcie pojazdu (`RentalDetailPage.tsx`)**: Dla zalogowanego i uprawnionego operatora w karcie wybranej oferty renderowany jest dyskretny, domyślnie zwinięty panel informacyjny `Prowizja Motolia: X% [WEWNĘTRZNE]`.
-  - **Podgląd w panelu administracyjnym (`RentalMatrixPage.tsx`)**: Komórki macierzy przestawnej (Pivot Table) wyświetlają etykietę `fee: X%`, co pozwala na natychmiastową kontrolę stawek wprowadzonych w matrycy.
-  - **Generator Arval (`process_arval.py` i `AGENT.md`)**: Zaktualizowano generator ofert Arval o zapis kolumny `fee_pct` i dokumentację 28-kolumnowego formatu CSV.
+  - **Model bazy Prisma**: Dodano pole `feePct Float? @map("fee_pct")` w tabeli `rental_matrix_entries` oraz pole `availableFrom String? @map("available_from")` w tabeli `rental_vehicles` (format `YYYY-MM-DD` jako świadomy, niskokosztowy kompromis zapewniający poprawne sortowanie leksykograficzne i prostą integrację).
+  - **Kontrakt kolumny CSV i deterministyczny parser**: Obsługa 28. kolumny `fee_pct` w formacie CSV (skala 0-100, separator kropka, bez znaku %).
+  - **Dedykowane chronione endpointy RBAC i whitelisting pól publicznych**:
+    - `GET /api/rental/vehicles/:slug/operator-info`: zwraca dane pojazdu dostępne tylko dla operatora (pełny obiekt dealera, CFM / firmę właścicielską `ownerRentalCompany`, `availableFrom`, `firstRegistrationDate`, `vin`).
+    - `GET /api/rental/vehicles/:slug/operator-financials`: zwraca kalkulowane stawki prowizji (`feePct`) per partner.
+    - Dostęp do powyższych wymaga uprawnienia `rental:financials:read`.
+    - Publiczny endpoint `GET /api/rental/vehicles/:slug` stosuje jawną białą listę kolumn (`select`), dzięki czemu kolumny wewnętrzne (`vin`, `registrationNumber`, `ownerRentalCompanyId`, `dealerId`, `availableFrom`, `specsJson`, `isPublished`) nie są w ogóle pobierane z bazy danych ani ujawniane użytkownikom publicznym. Dodatkowo funkcja `sanitizeListing` bezwzględnie filtruje dane handlowe.
+  - **Kompaktowy przycisk '?' (WCAG 24x24px) i wycentrowany modal operatora (`RentalDetailPage.tsx` + `RentalOperatorOfferModal.tsx`)**:
+    - Zastąpiono duży rozwijany panel małym, żółtym przyciskiem `?` (24x24px, zgodnym z WCAG 2.5.8) z Tooltipem (`Informacje wewnętrzne dla operatora`), widocznym wyłącznie dla zalogowanych użytkowników z uprawnieniem `rental:financials:read`.
+    - Kliknięcie przycisku otwiera wycentrowany modal (`Dialog`) prezentujący: Partnera wynajmu (CFM), Stawkę prowizji Motolia oraz Dostawcę pojazdu (Dealer / Salon dostarczający oraz ewentualny Właściciel floty CFM).
+  - **Komponent wyboru z kalendarza (`DatePicker.tsx`) w formularzu pojazdu**:
+    - W sekcji „Ceny i stan” formularza edycji/dodawania pojazdu najmu dodano pole „Dostępny od” oraz wyposażono pola daty („Data pierwszej rejestracji” i „Dostępny od”) w komponent wyboru z kalendarza oparty o `date-fns` z lokalizacją `pl`, listą rozwijaną lat/miesięcy (`captionLayout="dropdown-buttons"`) i odpornością na przesunięcia stref czasowych.
+  - **Podgląd w panelu administracyjnym (`RentalMatrixPage.tsx`)**: Komórki macierzy przestawnej (Pivot Table) wyświetlają etykietę `fee: X%`.

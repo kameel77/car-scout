@@ -494,17 +494,47 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 isActive: true,
                 isPublished: true
             },
-            include: {
+            select: {
+                id: true,
+                slug: true,
+                make: true,
+                model: true,
+                version: true,
+                bodyType: true,
+                fuelType: true,
+                transmission: true,
+                drive: true,
+                doors: true,
+                seats: true,
+                color: true,
+                paintType: true,
+                enginePowerHp: true,
+                engineCapacityCm3: true,
+                productionYear: true,
+                catalogPrice: true,
+                sellingPrice: true,
+                condition: true,
+                primaryImageUrl: true,
+                imageUrls: true,
+                additionalInfoHeader: true,
+                additionalInfoContent: true,
+                specificationUrl: true,
+                equipmentAudioMultimedia: true,
+                equipmentSafety: true,
+                equipmentComfortExtras: true,
+                equipmentOther: true,
+                createdAt: true,
+                updatedAt: true,
                 dealer: {
                     select: { id: true, name: true, addressLine1: true, city: true, contactPhone: true }
                 },
                 rentalAssignments: {
                     where: { isActive: true },
-                    include: {
+                    select: {
+                        id: true,
                         rentalCompany: {
                             select: { id: true, name: true, slug: true, logoUrl: true, contactEmail: true, contactPhone: true }
                         }
-                        // Explicitly NOT including all matrixEntries here to avoid JSON bloat and OOM
                     }
                 }
             }
@@ -721,6 +751,58 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             vehicleId: vehicle.id,
             offers,
             financialsByCompanyId
+        };
+    });
+
+    // Operator only: Get vehicle-level operator information (supplier: dealer / ownerRentalCompany, availableFrom, firstRegistrationDate, vin)
+    fastify.get('/api/rental/vehicles/:slug/operator-info', {
+        preHandler: [fastify.authenticate, requirePermission('rental:financials:read')]
+    }, async (request, reply) => {
+        const { slug } = request.params as { slug: string };
+
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({
+            where: {
+                OR: [{ slug }, { id: slug }],
+                isActive: true
+            },
+            select: {
+                id: true,
+                slug: true,
+                vin: true,
+                firstRegistrationDate: true,
+                availableFrom: true,
+                dealer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        city: true,
+                        addressLine1: true,
+                        contactPhone: true
+                    }
+                },
+                ownerRentalCompany: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        logoUrl: true
+                    }
+                }
+            }
+        });
+
+        if (!vehicle) {
+            return reply.code(404).send({ error: 'Rental vehicle not found' });
+        }
+
+        return {
+            vehicleId: vehicle.id,
+            slug: vehicle.slug,
+            vin: vehicle.vin,
+            firstRegistrationDate: vehicle.firstRegistrationDate,
+            availableFrom: vehicle.availableFrom,
+            dealer: vehicle.dealer,
+            ownerRentalCompany: vehicle.ownerRentalCompany
         };
     });
 }
