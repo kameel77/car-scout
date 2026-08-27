@@ -125,8 +125,11 @@ model Listing {
   vatMargin                Boolean               @default(false) @map("vat_margin")
   specificationId          String?               @map("specification_id")
   isRepresentative         Boolean               @default(true) @map("is_representative")
+  isReserved               Boolean               @default(false) @map("is_reserved")
   csflowSourceId           String?               @map("csflow_source_id")
   csflowCarId              Int?                  @map("csflow_car_id")
+  pewneautoSourceId        String?               @map("pewneauto_source_id")
+  pewneautoCarId           Int?                  @map("pewneauto_car_id")
   referenceCreditInstallment  Int?              @map("reference_credit_installment")
   referenceLeasingInstallment Int?              @map("reference_leasing_installment")
   referenceCalcAt             DateTime?         @map("reference_calc_at")
@@ -137,10 +140,13 @@ model Listing {
   ownerUser                User?                 @relation("ListingOwner", fields: [ownerUserId], references: [id])
   specification            VehicleSpecification? @relation(fields: [specificationId], references: [id])
   csflowSource             CsflowSource?         @relation(fields: [csflowSourceId], references: [id])
+  pewneautoSource          PewneAutoSource?      @relation(fields: [pewneautoSourceId], references: [id])
   priceHistory             PriceHistory[]
 
   @@unique([csflowSourceId, csflowCarId])
+  @@unique([pewneautoSourceId, pewneautoCarId])
   @@index([csflowSourceId])
+  @@index([pewneautoSourceId])
   @@index([make, model])
   @@index([pricePln])
   @@index([productionYear])
@@ -228,16 +234,21 @@ model Dealer {
   dealerGroupId       String?                @map("dealer_group_id")
   postalCode          String?                @map("postal_code")
   csflowSourceId      String?                @map("csflow_source_id")
+  pewneautoDealerCode String?                @map("pewneauto_dealer_code")
+  pewneautoSourceId   String?                @map("pewneauto_source_id")
   settings            DealerSettings?
   dealerGroup         DealerGroup?           @relation(fields: [dealerGroupId], references: [id])
   csflowSource        CsflowSource?          @relation(fields: [csflowSourceId], references: [id])
+  pewneautoSource     PewneAutoSource?       @relation(fields: [pewneautoSourceId], references: [id])
   listings            Listing[]
   partnerMappings     PartnerDealerMapping[]
   rentalVehicles      RentalVehicle[]
 
   @@unique([name, addressLine1])
   @@unique([csflowSourceId, csflowDealerId])
+  @@unique([pewneautoSourceId, pewneautoDealerCode])
   @@index([dealerGroupId])
+  @@index([pewneautoSourceId])
   @@map("dealers")
 }
 
@@ -531,22 +542,46 @@ model CsflowSource {
   @@map("csflow_sources")
 }
 
+model PewneAutoSource {
+  id                      String       @id @default(cuid())
+  name                    String
+  slug                    String       @unique
+  clientId                String       @map("client_id")
+  clientSecretEncrypted   String       @map("client_secret_encrypted")
+  tokenUrl                String       @default("https://panel.pewneauto.pl/oauth2/server/access-token") @map("token_url")
+  apiUrl                  String       @default("https://panel.pewneauto.pl/api/data-cars-list/get") @map("api_url")
+  domainHeader            String       @default("pewneauto.pl") @map("domain_header")
+  isEnabled               Boolean      @default(true) @map("is_enabled")
+  dealerGroupId           String?      @map("dealer_group_id")
+  lastSyncAt              DateTime?    @map("last_sync_at")
+  lastSuccessfulSyncAt    DateTime?    @map("last_successful_sync_at")
+  lastSuccessfulSyncCount Int?         @map("last_successful_sync_count")
+  createdAt               DateTime     @default(now()) @map("created_at")
+  updatedAt               DateTime     @updatedAt @map("updated_at")
+  dealerGroup             DealerGroup? @relation(fields: [dealerGroupId], references: [id])
+  dealers                 Dealer[]
+  listings                Listing[]
+
+  @@map("pewneauto_sources")
+}
+
 model DealerGroup {
-  id            String               @id @default(cuid())
-  name          String               @unique
-  slug          String               @unique
-  contactName   String?              @map("contact_name")
-  contactEmail  String?              @map("contact_email")
-  contactPhone  String?              @map("contact_phone")
-  addressLine1  String?              @map("address_line1")
-  city          String?
-  nip           String?
-  isActive      Boolean              @default(true) @map("is_active")
-  createdAt     DateTime             @default(now()) @map("created_at")
-  updatedAt     DateTime             @updatedAt @map("updated_at")
-  settings      DealerGroupSettings?
-  dealers       Dealer[]
-  csflowSources CsflowSource[]
+  id               String            @id @default(cuid())
+  name             String            @unique
+  slug             String            @unique
+  contactName      String?           @map("contact_name")
+  contactEmail     String?           @map("contact_email")
+  contactPhone     String?           @map("contact_phone")
+  addressLine1     String?           @map("address_line1")
+  city             String?
+  nip              String?
+  isActive         Boolean           @default(true) @map("is_active")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  settings         DealerGroupSettings?
+  dealers          Dealer[]
+  csflowSources    CsflowSource[]
+  pewneautoSources PewneAutoSource[]
 
   @@map("dealer_groups")
 }
@@ -677,6 +712,7 @@ model RentalVehicle {
   modelCode                String?                   @map("model_code")
   condition                ListingCondition          @default(NEW) @map("condition")
   firstRegistrationDate    String?                   @map("first_registration_date")
+  availableFrom            String?                   @map("available_from")
   mileageKm                Int?                      @map("mileage_km")
   registrationNumber       String?                   @map("registration_number")
   vin                      String?                   @map("vin")
@@ -754,6 +790,7 @@ model RentalMatrixEntry {
   initialPaymentAmountGross Float                   @default(0) @map("initial_payment_amount_gross")
   initialPaymentAmountNet   Float                   @default(0) @map("initial_payment_amount_net")
   insuranceNet              Float?                  @map("insurance_net")
+  feePct                    Float?                  @map("fee_pct")
   assignment                VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct, initialPaymentAmountNet, initialPaymentAmountGross, offerType])
@@ -870,6 +907,7 @@ enum ListingCondition {
 enum EntrySource {
   CSV
   CSFLOW
+  PEWNEAUTO
   MANUAL
   AGENT
 }

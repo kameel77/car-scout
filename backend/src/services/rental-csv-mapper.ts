@@ -14,6 +14,8 @@ export interface RentalMatrixCSVRow {
     amounts_type?: string;
     services_included?: string;
     offer_type?: string; // "business" | "consumer" | "all" — defaults to "all"
+    fee_pct?: string;
+    fee?: string;
 }
 
 /** Provider format (car_id, term_months, monthly_cost_net, …) */
@@ -46,6 +48,8 @@ export interface ProviderCSVRow {
     initial_payment_pct?: string;
     initial_payment_amount?: string;
     amounts_type?: string;
+    fee_pct?: string;
+    fee?: string;
 }
 
 export interface RentalMatrixImportResult {
@@ -144,6 +148,45 @@ function parseServiceFlags(row: ProviderCSVRow): string[] {
     return services;
 }
 
+export function parseFeePct(raw: string | undefined | null, rowIndex?: number): { value: number | null; error: string | null } {
+    if (raw === undefined || raw === null) {
+        return { value: null, error: null };
+    }
+    const str = raw.toString().trim();
+    if (str === '') {
+        return { value: null, error: null };
+    }
+
+    const rowPrefix = rowIndex !== undefined ? `Row ${rowIndex}: ` : '';
+
+    // Match exact numeric pattern with optional trailing %:
+    // Allows e.g. "7", "6.5", "6,5", "7%", "6.5%", "6,5%", "0.5%"
+    // Rejects "1,234.5", "7zl", "7.5.5", "1,2,3", "abc"
+    const match = str.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*(%?)$/);
+    if (!match) {
+        return { value: null, error: `${rowPrefix}invalid fee_pct "${raw}"` };
+    }
+
+    const numberStr = match[1].replace(',', '.');
+    const hasPct = match[2] === '%';
+    const num = Number(numberStr);
+
+    if (isNaN(num)) {
+        return { value: null, error: `${rowPrefix}invalid fee_pct "${raw}"` };
+    }
+
+    // Numbers strictly below 1 without % (e.g. 0.065) are ambiguous and rejected per specification
+    if (!hasPct && num > 0 && num < 1) {
+        return { value: null, error: `${rowPrefix}ambiguous fee_pct "${raw}" (values below 1 without % are rejected to prevent fraction ambiguity)` };
+    }
+
+    if (num < 0 || num > 30) {
+        return { value: null, error: `${rowPrefix}fee_pct out of range 0-30% ("${raw}")` };
+    }
+
+    return { value: Math.round(num * 100) / 100, error: null };
+}
+
 // ── Internal format mapper ────────────────────────────────────────
 
 export interface MappedMatrixEntry {
@@ -163,6 +206,7 @@ export interface MappedMatrixEntry {
     insuranceNoLimit: number | null;
     tiresNoLimit: number | null;
     insuranceNet: number | null;
+    feePct: number | null;
     // Provider-only vehicle metadata (used to update vehicle record optionally)
     vehicleMeta?: {
         carClass: string | null;
@@ -247,6 +291,12 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
     const validOfferTypes = ['business', 'consumer', 'all'];
     const offerType = validOfferTypes.includes(rawOfferType) ? rawOfferType : 'all';
 
+    const rawFee = row.fee_pct ?? row.fee;
+    const feeParsed = parseFeePct(rawFee, rowIndex);
+    if (feeParsed.error) {
+        return { data: null, error: feeParsed.error };
+    }
+
     return {
         data: {
             vehicleId,
@@ -264,7 +314,8 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
             insuranceExcess500: null,
             insuranceNoLimit: null,
             tiresNoLimit: null,
-            insuranceNet: null
+            insuranceNet: null,
+            feePct: feeParsed.value
         },
         error: null
     };
@@ -343,6 +394,13 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
     const tiresNoLimit = safeFloat(row.tires_nolim);
     const insuranceNet = safeFloat(row.insurance_net);
 
+    // Parse fee_pct
+    const rawFee = row.fee_pct ?? row.fee;
+    const feeParsed = parseFeePct(rawFee, rowIndex);
+    if (feeParsed.error) {
+        return { entries: [], error: feeParsed.error };
+    }
+
     // Vehicle metadata
     const vehicleMeta = {
         carClass: row.car_class?.trim() || null,
@@ -369,6 +427,7 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
         insuranceNoLimit,
         tiresNoLimit,
         insuranceNet,
+        feePct: feeParsed.value,
         vehicleMeta
     }));
 

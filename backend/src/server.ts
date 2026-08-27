@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { buildApp } from './app.js';
 import { initCSFlowCron } from './services/csflow.service.js';
+import { initPewneAutoCron } from './services/pewneauto.service.js';
 import { bootstrapCsflowSources } from './services/csflow-bootstrap.js';
 import { initReferenceInstallmentsCron } from './services/financing-calc.service.js';
 
@@ -90,6 +91,7 @@ const start = async () => {
         }
 
         initCSFlowCron(app.prisma);
+        initPewneAutoCron(app.prisma);
         initReferenceInstallmentsCron(app.prisma);
 
         // Graceful shutdown

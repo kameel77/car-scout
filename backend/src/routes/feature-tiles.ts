@@ -316,6 +316,12 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
         const { largeFilename } = await optimizeAndSaveImage(buffer, {
             targetDir: TILES_DIR,
             baseFilename,
+            // Kafelek renderuje się najwyżej ~280 px CSS (5 kolumn w .container na desktopie),
+            // więc domyślne 1920/1200/600 z pipeline'u fotografii aut są tu bezużyteczne.
+            largeWidth: 900,
+            mediumWidth: 600,
+            thumbWidth: 400,
+            quality: 72,
         });
         const url = `/uploads/feature-tiles/${largeFilename}`;
 

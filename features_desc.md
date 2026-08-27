@@ -568,5 +568,37 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Wydzielenie fontów per-brand**: Zamiast globalnego importowania 16 plików fontów w `index.css`, utworzono dedykowane arkusze `src/styles/fonts-motolia.css` (zmienna `Inter Variable` + `Archivo Variable`) oraz `src/styles/fonts-carsalon.css` (`Outfit` + `Inter`).
   - **Brand-aware preloading fontów**: Konfiguracja `vite.config.ts` wstrzykuje preloody fontów precyzyjnie dopasowane do aktywnej marki (dla Motolii: `inter-latin-wght-normal-*.woff2` oraz `/fonts/archivo-latin-wght-normal.woff2`).
 
+## 49. Optymalizacja kafelków funkcyjnych (Feature Tiles) na stronie głównej
+- **Cel**: Drastyczna redukcja wagi grafik kafelków funkcyjnych (`/uploads/feature-tiles/`) na stronie głównej bez straty jakości wizualnej.
+- **Zastosowane rozwiązania**:
+  - **Dedykowane parametry optymalizatora w backendzie (`feature-tiles.ts`)**: Zmniejszono docelowe szerokości generowanych wariantów obrazów dopasowane do siatki 5-kolumnowej na desktopie i 2-kolumnowej na mobile (`largeWidth: 900`, `mediumWidth: 600`, `thumbWidth: 400`, `quality: 72`).
+  - **Responsywny `sizes` i usunięcie `forceThumbnail` na froncie (`FeatureTilesSection.tsx`)**: Komponent renderuje pełny `srcset` z precyzyjną definicją `sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"`, pozwalając urządzeniom mobilnym na wybór miniatury 400w zamiast wymuszonego pliku 600w.
 
+## 50. Integracja API PewneAuto (Toyota / Lexus) i generyczny silnik StockSyncEngine
+- **Cel**: Zautomatyzowanie zasilania bazy pojazdów bezpośrednio z panelu PewneAuto (Toyota / Lexus) dla grup dealerskich (np. Toyota Chodzeń), eliminacja konieczności ręcznego wgrywania plików CSV oraz zabezpieczenie bazy przed awariami i anomaliami zewnętrznych serwisów.
+- **Zastosowane rozwiązania**:
+  - **Generyczny silnik giełdowy `StockSyncEngine` (Wzorzec Provider)**: Architektura oddziela silnik transakcyjny (CRUD, historia cen, archiwizacja, inwalidacja cache) od konkretnego formatu dostawcy (`PewneAutoProvider` implementujący `StockFeedProvider`).
+  - **Szyfrowanie at-rest (`AES-256-GCM`) i maskowanie sekretów**: Poświadczenia API (`clientSecret`) są szyfrowane w bazie danych z użyciem klucza AES-256-GCM, a w API panelu administratora są zawsze zwracane w formie zamaskowanej (`••••••••`). Dostęp chroniony uprawnieniem `stock:sources:write`.
+  - **Bezpiecznik wolumenowy (Circuit Breaker)**: Chroni przed masowym wykasowaniem lub zarchiwizowaniem bazy ofert w przypadku błędu API dostawcy (spadek liczby aut o >20% w stosunku do ostatniego udanego syncu wstrzymuje automatyczną synchronizację i wymaga świadomego zatwierdzenia przez administratora).
+  - **Symulacja Dry-Run**: Dedykowany tryb symulacji weryfikuje pobrany feed, liczbę aut do dodania, aktualizacji, archiwizacji oraz dopasowania po VIN bez dokonywania żadnych zmian w bazie danych.
+  - **Deduplikacja międzyźródłowa (Cross-source VIN match)**: Pojazdy uprzednio zaimportowane z CSV są automatycznie kojarzone po numerze VIN i przejmowane przez integrację API bez tworzenia duplikatów, z zachowaniem oryginalnego sluga URL i pozycji SEO.
+  - **Obsługa rezerwacji (`isReserved`)**: Samochody z aktywną rezerwacją u dealera nie są archiwizowane - otrzymują odznakę „Zarezerwowane” w katalogu oraz dedykowany baner informacyjny na karcie pojedynczej oferty z zachowaniem linkowania do podobnych dostępnych aut.
+  - **Historia cen i Omnibus 30d**: Każda zmiana ceny jest rejestrowana w tabeli `PriceHistory`, z której dynamicznie wyznaczana jest najniższa cena z ostatnich 30 dni w przypadku braku takiego parametru w zewnętrznym feedzie.
+  - **Automatyczny harmonogram CRON**: Cykliczna synchronizacja w tle co 60 minut w godzinach 6:00 - 22:00.
 
+## 51. Prowizja Motolia (fee_pct) i panel operatora na karcie wynajmu
+- **Cel**: Rozszerzenie matrycy najmu długoterminowego o stawkę prowizji Motolia (`fee_pct`) oraz dostarczenie sprzedawcy/operatorowi platformy przejrzystego, kompaktowego narzędzia podglądu informacji wewnętrznych o ofercie i dostawcy bez zaburzania interfejsu publicznego.
+- **Zastosowane rozwiązania**:
+  - **Model bazy Prisma**: Dodano pole `feePct Float? @map("fee_pct")` w tabeli `rental_matrix_entries` oraz pole `availableFrom String? @map("available_from")` w tabeli `rental_vehicles` (format `YYYY-MM-DD` jako świadomy, niskokosztowy kompromis zapewniający poprawne sortowanie leksykograficzne i prostą integrację).
+  - **Kontrakt kolumny CSV i deterministyczny parser**: Obsługa 28. kolumny `fee_pct` w formacie CSV (skala 0-100, separator kropka, bez znaku %).
+  - **Dedykowane chronione endpointy RBAC i whitelisting pól publicznych**:
+    - `GET /api/rental/vehicles/:slug/operator-info`: zwraca dane pojazdu dostępne tylko dla operatora (pełny obiekt dealera, CFM / firmę właścicielską `ownerRentalCompany`, `availableFrom`, `firstRegistrationDate`, `vin`).
+    - `GET /api/rental/vehicles/:slug/operator-financials`: zwraca kalkulowane stawki prowizji (`feePct`) per partner.
+    - Dostęp do powyższych wymaga uprawnienia `rental:financials:read`.
+    - Publiczny endpoint `GET /api/rental/vehicles/:slug` stosuje jawną białą listę kolumn (`select`), dzięki czemu kolumny wewnętrzne (`vin`, `registrationNumber`, `ownerRentalCompanyId`, `dealerId`, `availableFrom`, `specsJson`, `isPublished`) nie są w ogóle pobierane z bazy danych ani ujawniane użytkownikom publicznym. Dodatkowo funkcja `sanitizeListing` bezwzględnie filtruje dane handlowe.
+  - **Kompaktowy przycisk '?' (WCAG 24x24px) i wycentrowany modal operatora (`RentalDetailPage.tsx` + `RentalOperatorOfferModal.tsx`)**:
+    - Zastąpiono duży rozwijany panel małym, żółtym przyciskiem `?` (24x24px, zgodnym z WCAG 2.5.8) z Tooltipem (`Informacje wewnętrzne dla operatora`), widocznym wyłącznie dla zalogowanych użytkowników z uprawnieniem `rental:financials:read`.
+    - Kliknięcie przycisku otwiera wycentrowany modal (`Dialog`) prezentujący: Partnera wynajmu (CFM), Stawkę prowizji Motolia oraz Dostawcę pojazdu (Dealer / Salon dostarczający oraz ewentualny Właściciel floty CFM).
+  - **Komponent wyboru z kalendarza (`DatePicker.tsx`) w formularzu pojazdu**:
+    - W sekcji „Ceny i stan” formularza edycji/dodawania pojazdu najmu dodano pole „Dostępny od” oraz wyposażono pola daty („Data pierwszej rejestracji” i „Dostępny od”) w komponent wyboru z kalendarza oparty o `date-fns` z lokalizacją `pl`, listą rozwijaną lat/miesięcy (`captionLayout="dropdown-buttons"`) i odpornością na przesunięcia stref czasowych.
+  - **Podgląd w panelu administracyjnym (`RentalMatrixPage.tsx`)**: Komórki macierzy przestawnej (Pivot Table) wyświetlają etykietę `fee: X%`.

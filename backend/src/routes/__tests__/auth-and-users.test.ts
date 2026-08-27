@@ -5,11 +5,25 @@ import { buildApp } from '../../app.js';
 describe('Auth & User Creation / Login Integration Tests', () => {
     let app: FastifyInstance;
     let adminToken: string;
-    const testEmailsToCleanup: string[] = [];
+    const testEmailsToCleanup: string[] = [
+        'jan.nowak.test@motolia.pl',
+        'anna.kowalska.test@motolia.pl',
+        'inactive.user.test@motolia.pl',
+        'update.pass.test@motolia.pl',
+        'duplicate.test@motolia.pl',
+        'DUPLICATE.TEST@MOTOLIA.PL'
+    ];
 
     beforeAll(async () => {
         app = await buildApp();
         await app.ready();
+
+        await app.prisma.importLog.deleteMany({
+            where: { user: { email: { in: testEmailsToCleanup } } }
+        }).catch(() => {});
+        await app.prisma.user.deleteMany({
+            where: { email: { in: testEmailsToCleanup } }
+        }).catch(() => {});
 
         adminToken = app.jwt.sign({
             userId: 'admin-test-user-id',
@@ -24,6 +38,11 @@ describe('Auth & User Creation / Login Integration Tests', () => {
 
     afterAll(async () => {
         if (testEmailsToCleanup.length > 0) {
+            await app.prisma.importLog.deleteMany({
+                where: {
+                    user: { email: { in: testEmailsToCleanup } }
+                }
+            }).catch(() => {});
             await app.prisma.user.deleteMany({
                 where: {
                     email: { in: testEmailsToCleanup }

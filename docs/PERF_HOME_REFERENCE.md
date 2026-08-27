@@ -36,6 +36,45 @@ before reading a single metric. See §5.
 
 ---
 
+## 0.5 Which number answers which question
+
+**Priorities come from CrUX (field), never from Lighthouse (lab).** This distinction cost a
+day and a half before it was written down.
+
+| | Lab (Lighthouse / PSI bottom half) | Field (CrUX / PSI top half) |
+|---|---|---|
+| What it is | one synthetic run: 1.6 Mbps, 150 ms RTT, 4x CPU | p75 of real visitors, trailing 28 days |
+| Good for | *why* something is slow — element identity, waterfalls, breakdowns | *whether* it is worth fixing at all |
+| Reacts to a deploy | immediately | after weeks, and only partially |
+
+Measured 2026-08-26: catalog lab LCP was 9–10 s while field LCP on the same routes was
+**2.2–2.7 s, green**. A planned change to inject listings server-side — half a day of work
+plus `fastify.inject()` in the SSR request path — was cancelled on that evidence alone.
+
+Use the lab to diagnose. Use the field to decide. If a lab audit screams and the field metric
+is green, the audit is describing the emulation, not your users.
+
+### Traps that produced wrong numbers here
+
+- **Chrome extensions.** Cost 43 points on identical code (31 → 74). Lighthouse prints the
+  warning at the top of its own report — read it before reading the score.
+- **`localhost:8080` is the Vite dev server**, not a build. Never measure it.
+- **`dev` and `prod` run different GTM containers** (`GTM-M93CF6GJ` vs `GTM-MQB44KPS`).
+  Production carries Meta Pixel (137.9 KB), Clarity, Google Ads and Thulium; dev does not.
+  **Third-party impact, TBT and INP can only be measured on production.**
+- **"Server responded slowly (observed 801 ms)"** was mostly emulated connection setup —
+  DNS + TCP + TLS at 150 ms RTT. Measured directly, TTFB was 86–158 ms warm *and* on a
+  forced cache miss. Check before optimising a server that is already fast:
+  ```js
+  (async()=>{const t0=performance.now();const r=await fetch(location.href,{cache:'reload'});
+   await r.body.getReader().read();console.log('TTFB ~', Math.round(performance.now()-t0),'ms')})()
+  ```
+- **A dev SEO score of 100 is a red flag**, not a win — see §3.
+- **PSI medians are per metric.** A row of medians does not describe any single run, so it
+  will not reconcile against the score. Fine for comparing arms, useless for sanity checks.
+
+---
+
 ## 1. The LCP element must be in the initial HTML
 
 The home page LCP is the hero banner image. It reaches the browser through three

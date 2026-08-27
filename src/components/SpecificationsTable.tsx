@@ -57,11 +57,7 @@ export function SpecificationsTable({
               const firstRegSpec = specifications.find(s => s.label === 'specs.firstRegistration');
               const firstRegValue = firstRegSpec?.value;
 
-              let displayValue = translatedValue;
-              if (spec.label === 'specs.registrationNumber' && firstRegValue) {
-                const firstRegLabel = t('specs.firstRegistration').toLowerCase();
-                displayValue = `${translatedValue} (${firstRegLabel}: ${firstRegValue})`;
-              }
+              const displayValue = translatedValue;
 
               return (
                 <motion.tr

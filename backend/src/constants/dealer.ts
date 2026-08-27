@@ -62,8 +62,16 @@ export function sanitizeListing<T extends Record<string, any>>(listing: T | null
 
     const sanitizedDealer = listing.dealer ? sanitizeDealer(listing.dealer, false) : listing.dealer;
 
+    const {
+        availableFrom, available_from,
+        ownerRentalCompany, owner_rental_company,
+        ownerRentalCompanyId, owner_rental_company_id,
+        vin, registrationNumber, registration_number,
+        ...safeListing
+    } = listing;
+
     return {
-        ...listing,
+        ...safeListing,
         ...(listing.dealerName !== undefined ? { dealerName: ANONYMOUS_DEALER_NAME } : {}),
         ...(listing.dealer_name !== undefined ? { dealer_name: ANONYMOUS_DEALER_NAME } : {}),
         ...(sanitizedDealer !== undefined ? { dealer: sanitizedDealer } : {}),

@@ -39,6 +39,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS}
       INTERNAL_FRONTEND_URL: ${INTERNAL_FRONTEND_URL:-http://${COMPOSE_PROJECT_NAME}-frontend:80}
       BRAND: ${BRAND:-carsalon}
+      FEED_ENCRYPTION_KEY: ${FEED_ENCRYPTION_KEY}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s

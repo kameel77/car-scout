@@ -1,6 +1,7 @@
 import { CSVUploader } from '@/components/admin/CSVUploader';
 import { CSFlowImporter } from '@/components/admin/CSFlowImporter';
 import { CSFlowSourcesManager } from '@/components/admin/CSFlowSourcesManager';
+import { PewneAutoSourcesManager } from '@/components/admin/PewneAutoSourcesManager';
 import { ImportHistory } from '@/components/admin/ImportHistory';
 import { BulkSourceManager } from '@/components/admin/BulkSourceManager';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +21,7 @@ export default function ImportPage() {
                     Import
                 </h1>
                 <p className="text-gray-600">
-                    Importuj dane ofert z plików CSV i przeglądaj historię.
+                    Importuj dane ofert z plików CSV, integruj API zewnętrzne (PewneAuto, CSFlow) i przeglądaj historię.
                 </p>
             </div>
 
@@ -33,6 +34,7 @@ export default function ImportPage() {
                     <div>
                         {canManageSources && (
                             <>
+                                <PewneAutoSourcesManager />
                                 <CSFlowImporter />
                                 <CSFlowSourcesManager />
                             </>

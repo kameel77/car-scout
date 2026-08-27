@@ -47,6 +47,8 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             is_archived: backendListing.isArchived || false,
             is_featured: backendListing.isFeatured || false,
             is_business_featured: backendListing.isBusinessFeatured || false,
+            is_reserved: Boolean(backendListing.isReserved ?? backendListing.is_reserved),
+            isReserved: Boolean(backendListing.isReserved ?? backendListing.is_reserved),
 
             // Calculated Prices
             dealer_price_net_pln: backendListing.dealerPriceNetPln,
