@@ -314,7 +314,7 @@ export function mapRawCarToNormalized(raw: PewneAutoCarRaw, enriched?: PewneAuto
 
     // Zdjęcia: preferowana pełna galeria HD, fallback do pojedynczego zdjęcia img
     const primaryImageUrl = raw.img ? raw.img.trim() : null;
-    let galleryImageUrls = enriched?.galleryImageUrls && enriched.galleryImageUrls.length > 0
+    const galleryImageUrls = enriched?.galleryImageUrls && enriched.galleryImageUrls.length > 0
         ? enriched.galleryImageUrls
         : (primaryImageUrl ? [primaryImageUrl] : []);
 
