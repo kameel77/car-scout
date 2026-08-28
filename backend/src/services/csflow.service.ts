@@ -1,9 +1,9 @@
 import { PrismaClient, CsflowSource } from '@prisma/client';
 import { getCSFlowCars, getCSFlowCarDetails } from '../utils/csflow-client.js';
-import { generateListingSlug } from '../utils/url-utils.js';
+import { generateListingSlug, sanitizeForSlug } from '../utils/url-utils.js';
 import { downloadAndCacheImages, queueListingImagesDownload } from './csflow-image-downloader.js';
 import { normalizeBrand } from './brand-normalization.service.js';
-import { invalidateOfferCache } from './cache-invalidation.service.js';
+import { invalidateOfferCache, LISTING_AGGREGATE_URLS } from './cache-invalidation.service.js';
 import cron from 'node-cron';
 
 // Pomocnicza funkcja mapowania CSFlow -> Prisma
@@ -56,6 +56,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
             where: { csflowSourceId: source.id },
             select: {
                 id: true,
+                slug: true,
                 vin: true,
                 listingId: true,
                 csflowCarId: true,
@@ -69,6 +70,8 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                 productionYear: true,
                 bodyType: true,
                 fuelType: true,
+                mileageKm: true,
+                primaryImageUrl: true,
             }
         });
 
@@ -83,6 +86,7 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
         );
 
         const currentCarIds = new Set<number>();
+        const affectedUrls: string[] = [];
 
         // Do śledzenia historii cen z transaction
         const priceHistoryEntries: any[] = [];
@@ -362,9 +366,27 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                             data: { ...updatePayload, isArchived: false, archivedAt: null, archivedReason: null, entrySource: 'CSFLOW' as const }
                         });
 
-                        if (existingByCsflowId.pricePln !== price) {
+                        const priceChanged = (existingByCsflowId.pricePln ?? null) !== (price ?? null);
+                        const newMileage = car.mileage ? parseInt(car.mileage) : 0;
+                        const mileageChanged = (existingByCsflowId.mileageKm ?? 0) !== (newMileage ?? 0);
+                        const wasArchived = Boolean(existingByCsflowId.isArchived);
+                        const oldImg = existingByCsflowId.primaryImageUrl ?? null;
+                        const newImg = primaryImage ?? null;
+                        const imageChanged = oldImg !== newImg;
+                        const hasChanges = wasArchived || priceChanged || mileageChanged || imageChanged;
+
+                        if (priceChanged) {
                             priceHistoryEntries.push({ listingId: savedListing.id, pricePln: price });
                         }
+
+                        if (hasChanges) {
+                            const updateSlug = savedListing.slug || generateListingSlug(make, model, version, prodYear, bodyType, fuelType, savedListing.id);
+                            affectedUrls.push(`/oferta/${updateSlug}`);
+                            affectedUrls.push(`/samochody/${sanitizeForSlug(make)}/${sanitizeForSlug(model)}/${updateSlug}`);
+                            affectedUrls.push(`/samochody/${sanitizeForSlug(make)}`);
+                            affectedUrls.push(`/samochody/${sanitizeForSlug(make)}/${sanitizeForSlug(model)}`);
+                        }
+
                         result.updated++;
                         // Dodaj pobieranie i zcachowanie zdjęć do kolejki w tle
                         if (externalPhotos.length > 0) {
@@ -395,14 +417,17 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                     if (externalPhotos.length > 0) {
                         queueListingImagesDownload(savedListing.listingId as string, externalPhotos, prisma);
                     }
+
+                    affectedUrls.push(`/oferta/${finalSlug}`);
+                    affectedUrls.push(`/samochody/${sanitizeForSlug(make)}/${sanitizeForSlug(model)}/${finalSlug}`);
+                    affectedUrls.push(`/samochody/${sanitizeForSlug(make)}`);
+                    affectedUrls.push(`/samochody/${sanitizeForSlug(make)}/${sanitizeForSlug(model)}`);
                 }
             } catch (err: any) {
                 console.error(`[CSFlow:${source.slug}] Błąd zapisu ID ${car.id}: ${err.message}`);
                 result.failed++;
             }
         }
-
-        const affectedUrls: string[] = [];
 
         // Archiwizowanie nieobecnych na aktualnej liście CSFlow API
         for (const l of existingListings) {
@@ -416,8 +441,11 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
                     }
                 });
                 result.archived++;
-                const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+                const slug = l.slug || generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
                 affectedUrls.push(`/oferta/${slug}`);
+                affectedUrls.push(`/samochody/${sanitizeForSlug(l.make)}/${sanitizeForSlug(l.model)}/${slug}`);
+                affectedUrls.push(`/samochody/${sanitizeForSlug(l.make)}`);
+                affectedUrls.push(`/samochody/${sanitizeForSlug(l.make)}/${sanitizeForSlug(l.model)}`);
             }
         }
 
@@ -464,7 +492,10 @@ export async function syncCSFlowAPI(prisma: PrismaClient, source: CsflowSource, 
 
         if (result.inserted > 0 || result.updated > 0 || result.archived > 0) {
             try {
-                await invalidateOfferCache(undefined, { urls: affectedUrls, purgeSitemap: true });
+                const uniqueUrls = [...new Set([...LISTING_AGGREGATE_URLS, ...affectedUrls])];
+                if (uniqueUrls.length > 0) {
+                    await invalidateOfferCache(undefined, { urls: uniqueUrls, purgeSitemap: true });
+                }
             } catch (err: any) {
                 console.warn('[CSFlow] Cache invalidation notice:', err?.message);
             }

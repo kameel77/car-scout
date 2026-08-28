@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
-import { __resetRenderCache, __evictPageCache } from '../render';
+import { __resetRenderCache } from '../render';
 import { generateListingSlug } from '../../utils/url-utils.js';
 import { __resetBrandCatalogCache } from '../../services/brand-pages.service.js';
 import { __resetSeoContentCache } from '../../services/seo-content.js';
+import { setSsrCache } from '../../services/ssr-cache.js';
 
 const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"><!--home-shell--><h1>Szeroki wybór aut.<br><span>Proste finansowanie.</span></h1><!--/home-shell--></div></body></html>`;
 
@@ -34,13 +35,13 @@ describe('GET /api/render', () => {
     });
 
     beforeEach(async () => {
-        __resetRenderCache();
-        __resetBrandCatalogCache();
         prevBrand = process.env.BRAND;
         prevFrontendUrl = process.env.FRONTEND_URL;
         prevInternalFrontendUrl = process.env.INTERNAL_FRONTEND_URL;
         process.env.BRAND = 'motolia';
         process.env.FRONTEND_URL = 'https://motolia.pl';
+        await __resetRenderCache();
+        __resetBrandCatalogCache();
         vi.stubGlobal(
             'fetch',
             vi.fn(async () => new Response(TEMPLATE, { status: 200 }))
@@ -300,7 +301,7 @@ describe('GET /api/render', () => {
         expect(home.statusCode).toBe(200);
         expect(home.body).toContain('Szeroki wybór aut');
 
-        __resetRenderCache();
+        await __resetRenderCache();
         const other = await app.inject({ method: 'GET', url: '/api/render?path=/uzywane' });
         expect(other.statusCode).toBe(200);
         expect(other.body).not.toContain('Szeroki wybór aut');
@@ -332,7 +333,7 @@ describe('GET /api/render — brand/model pages', () => {
     });
 
     beforeEach(async () => {
-        __resetRenderCache();
+        await __resetRenderCache();
         __resetBrandCatalogCache();
         process.env.BRAND = 'motolia';
         process.env.FRONTEND_URL = 'https://motolia.pl';
@@ -459,7 +460,7 @@ describe('GET /api/render — brand/model pages with CMS content (F2)', () => {
     });
 
     beforeEach(async () => {
-        __resetRenderCache();
+        await __resetRenderCache();
         __resetBrandCatalogCache();
         __resetSeoContentCache();
         process.env.BRAND = 'motolia';
@@ -588,7 +589,7 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
     });
 
     beforeEach(async () => {
-        __resetRenderCache();
+        await __resetRenderCache();
         __resetBrandCatalogCache();
         process.env.BRAND = 'motolia';
         process.env.FRONTEND_URL = 'https://motolia.pl';
@@ -660,12 +661,12 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         const original = await app.prisma.appSettings.findUnique({ where: { id: 'default' } });
         try {
             await app.prisma.appSettings.update({ where: { id: 'default' }, data: { searchGridColumns: 3 } });
-            __resetRenderCache();
+            await __resetRenderCache();
             const res3 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
             expect(res3.body).toContain('xl:grid-cols-3');
 
             await app.prisma.appSettings.update({ where: { id: 'default' }, data: { searchGridColumns: 4 } });
-            __resetRenderCache();
+            await __resetRenderCache();
             const res4 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
             expect(res4.body).toContain('xl:grid-cols-4');
         } finally {
@@ -711,11 +712,13 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         }
     });
 
-    it('deletes expired entry from pageCache on read and re-renders page', async () => {
+    it('caches rendered page in Redis SSR cache and serves repeated requests', async () => {
         const fetchSpy = vi.fn(async () => new Response(TEMPLATE, { status: 200 }));
         vi.stubGlobal('fetch', fetchSpy);
 
-        // 1. First request fills pageCache
+        await __resetRenderCache();
+
+        // 1. First request fills Redis SSR cache
         const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
         expect(res1.statusCode).toBe(200);
         const fetchCallsCountInitial = fetchSpy.mock.calls.length;
@@ -725,33 +728,75 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         expect(res2.statusCode).toBe(200);
         expect(fetchSpy.mock.calls.length).toBe(fetchCallsCountInitial);
 
-        // 3. Advance Date.now past PAGE_TTL_MS (60s) and TEMPLATE_TTL_MS (5 min)
-        const realNow = Date.now();
-        const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(realNow + 365_000);
+        // 3. Resetting cache forces a new render
+        await __resetRenderCache();
+        const res3 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(res3.statusCode).toBe(200);
+        expect(fetchSpy.mock.calls.length).toBeGreaterThan(fetchCallsCountInitial);
+    });
 
-        try {
-            // Third request after TTL: expired entry is deleted from cache on read and re-rendered
-            const res3 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
-            expect(res3.statusCode).toBe(200);
-            expect(fetchSpy.mock.calls.length).toBeGreaterThan(fetchCallsCountInitial);
-        } finally {
-            dateSpy.mockRestore();
+    it('serves stale cached HTML immediately and triggers background revalidation', async () => {
+        const fetchSpy = vi.fn(async () => new Response(TEMPLATE, { status: 200 }));
+        vi.stubGlobal('fetch', fetchSpy);
+
+        const staleAt = Date.now() - (8 * 3600 * 1000); // 8 hours old (stale > 6h)
+        await setSsrCache('/nowe', {
+            html: '<!doctype html><html><body>STALE CONTENT</body></html>',
+            status: 200,
+            noindex: false,
+            at: staleAt
+        });
+
+        // Request should return the STALE content immediately with 200
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('STALE CONTENT');
+
+        // Wait for background async render to execute (polling with 1s timeout to prevent CI flakes)
+        const start = Date.now();
+        while (fetchSpy.mock.calls.length === 0 && Date.now() - start < 1000) {
+            await new Promise(resolve => setTimeout(resolve, 20));
         }
+        expect(fetchSpy.mock.calls.length).toBeGreaterThan(0);
+    });
+
+    it('serves cached 301 redirect directly from Redis SSR cache', async () => {
+        await setSsrCache('/oferta/old-slug', {
+            html: '',
+            status: 301,
+            redirectUrl: '/oferta/new-slug',
+            noindex: false,
+            at: Date.now()
+        });
+
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/oferta/old-slug' });
+        expect(res.statusCode).toBe(301);
+        expect(res.headers['location']).toBe('/oferta/new-slug');
+        expect(res.headers['cache-control']).toBe('public, max-age=86400');
     });
 
     describe('Cache-Control headers for Edge Caching', () => {
-        it('emits public s-maxage=300 for anonymous 200 GET requests (fresh & cached)', async () => {
+        it('emits public s-maxage=3600 for anonymous 200 GET and HEAD requests (fresh & cached)', async () => {
             const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
             expect(res1.statusCode).toBe(200);
             expect(res1.headers['cache-control']).toBe(
-                'public, max-age=0, s-maxage=300, stale-while-revalidate=86400'
+                'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
             );
+            expect(res1.headers['vary']).toBe('Accept-Encoding');
 
-            // Repeated request (pageCache hit)
+            // Repeated request (cache hit)
             const res2 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
             expect(res2.statusCode).toBe(200);
             expect(res2.headers['cache-control']).toBe(
-                'public, max-age=0, s-maxage=300, stale-while-revalidate=86400'
+                'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
+            );
+            expect(res2.headers['vary']).toBe('Accept-Encoding');
+
+            // HEAD request
+            const resHead = await app.inject({ method: 'HEAD', url: '/api/render?path=/' });
+            expect(resHead.statusCode).toBe(200);
+            expect(resHead.headers['cache-control']).toBe(
+                'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
             );
         });
 
@@ -765,16 +810,13 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         });
 
         it('remains cacheable for requests with an analytics cookie', async () => {
-            // Regression guard for F2: the old cookie-sniffing regex matched anywhere in the
-            // Cookie header, so an analytics/consent cookie whose value happens to contain
-            // "sid" or "token" (e.g. Clarity's _clsk) used to falsely trip the private branch.
             const res = await app.inject({
                 method: 'GET',
                 url: '/api/render?path=/',
                 headers: { cookie: '_ga=GA1.1.123.456; _clsk=abc123sid456' },
             });
             expect(res.headers['cache-control']).toBe(
-                'public, max-age=0, s-maxage=300, stale-while-revalidate=86400'
+                'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
             );
         });
 
@@ -794,59 +836,6 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
             expect(res.statusCode).toBe(404);
             expect(res.headers['cache-control']).toBe('private, no-store');
         });
-    });
-});
-
-describe('__evictPageCache unit tests', () => {
-    const TTL = 60_000;
-    const MAX = 300;
-
-    it('no-op when cache size is below max limit', () => {
-        const cache = new Map<string, { html: string; status: number; at: number }>();
-        const now = 100_000;
-        for (let i = 0; i < MAX - 1; i++) {
-            cache.set(`/page-${i}`, { html: `<html>${i}</html>`, status: 200, at: now });
-        }
-        __evictPageCache(cache, MAX, TTL, now);
-        expect(cache.size).toBe(MAX - 1);
-    });
-
-    it('purges expired entries first when cache reaches max limit', () => {
-        const cache = new Map<string, { html: string; status: number; at: number }>();
-        const now = 100_000;
-        // 150 expired entries
-        for (let i = 0; i < 150; i++) {
-            cache.set(`/stale-${i}`, { html: 'stale', status: 200, at: now - TTL - 1000 });
-        }
-        // 150 fresh entries (total = 300 = MAX)
-        for (let i = 0; i < 150; i++) {
-            cache.set(`/fresh-${i}`, { html: 'fresh', status: 200, at: now });
-        }
-        expect(cache.size).toBe(300);
-        __evictPageCache(cache, MAX, TTL, now);
-        expect(cache.size).toBe(150);
-        expect(cache.has('/stale-0')).toBe(false);
-        expect(cache.has('/fresh-0')).toBe(true);
-    });
-
-    it('uses FIFO fallback when all entries are fresh and cache is at max limit', () => {
-        const cache = new Map<string, { html: string; status: number; at: number }>();
-        const now = 100_000;
-        for (let i = 0; i < MAX; i++) {
-            cache.set(`/fresh-${i}`, { html: 'fresh', status: 200, at: now });
-        }
-        expect(cache.size).toBe(300);
-        __evictPageCache(cache, MAX, TTL, now);
-        // Drops the oldest inserted key (/fresh-0) so size < MAX
-        expect(cache.size).toBe(MAX - 1);
-        expect(cache.has('/fresh-0')).toBe(false);
-        expect(cache.has('/fresh-1')).toBe(true);
-    });
-
-    it('terminates cleanly on an empty map', () => {
-        const cache = new Map<string, { html: string; status: number; at: number }>();
-        expect(() => __evictPageCache(cache, MAX, TTL, Date.now())).not.toThrow();
-        expect(cache.size).toBe(0);
     });
 });
 

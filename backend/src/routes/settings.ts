@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requirePermission } from '../middleware/permissions.js';
 import { recomputeAll } from '../services/financing-calc.service.js';
+import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
 import path from 'path';
 import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
@@ -490,6 +491,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             const updatedCount = await recalculateAllPrices(fastify);
             fastify.log.info({ updatedCount }, 'Automatic price recalculation triggered by settings change');
 
+            await invalidateOfferCache(fastify, { purgeAll: true, purgeEverything: true, purgeSitemap: true }).catch(err => {
+                fastify.log.warn({ err }, 'Failed to invalidate cache after settings update');
+            });
+
             return {
                 ...settings,
                 smtpPassword: settings.smtpPassword ? '••••••••' : null,
@@ -506,6 +511,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, requirePermission('platform:settings:write')]
     }, async (request, reply) => {
         const updatedCount = await recalculateAllPrices(fastify);
+
+        await invalidateOfferCache(fastify, { purgeAll: true, purgeEverything: true, purgeSitemap: true }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after manual recalculate');
+        });
 
         return {
             success: true,
@@ -562,6 +571,10 @@ export async function settingsRoutes(fastify: FastifyInstance) {
                 headerLogoUrl: target === 'header' ? url : null,
                 footerLogoUrl: target === 'footer' ? url : null
             }
+        });
+
+        await invalidateOfferCache(fastify, { purgeAll: true, purgeEverything: true, purgeSitemap: false }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after logo upload');
         });
 
         return { url };

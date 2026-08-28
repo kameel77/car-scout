@@ -35,6 +35,14 @@ import {
 import { getSeoContentPage } from '../services/seo-content.js';
 import { resolveOfferLifecycle } from '../services/offer-lifecycle.service.js';
 import { isProductionHost } from '../services/environment.js';
+import {
+    getSsrCache,
+    setSsrCache,
+    isSsrFresh,
+    markRevalidating,
+    clearRevalidating,
+    resetSsrCache,
+} from '../services/ssr-cache.js';
 
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
@@ -44,8 +52,6 @@ const FINANCING_FAQ_TYPE: Record<string, string> = {
 };
 
 const TEMPLATE_TTL_MS = 5 * 60 * 1000;
-const PAGE_TTL_MS = 60 * 1000;
-const PAGE_CACHE_MAX = 300; // Limit do 300 stron w RAM (~45MB max zamiast 750MB przy 5000)
 
 // Strony katalogowe z paginacją SSR (?page=N) — crawlery bez JS widzą kolejne porcje ofert.
 // /leasing i /kredyt celowo bez paginacji: oferty są te same co w /samochody (każde auto
@@ -222,50 +228,19 @@ const FINANCING_LIST_TAKE = 12; // krótka lista na /leasing i /kredyt
 
 // Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
-const pageCache = new Map<string, { html: string; status: number; noindex?: boolean; redirectUrl?: string; at: number }>();
 
-export function __resetRenderCache() {
-    templateCache = null;
-    pageCache.clear();
-    carsOrderByCache = null;
-    manifestCache = null;
+export function __resetComponentCaches() {
     gridColumnsCache = null;
     heroBannersCache = null;
+    ssrPerPageCache = null;
 }
 
-export function evictPageCacheKeys(keysOrPrefixes: string[]) {
-    for (const key of keysOrPrefixes) {
-        pageCache.delete(key);
-        for (const cachedKey of pageCache.keys()) {
-            if (cachedKey === key || cachedKey.startsWith(`${key}?`) || cachedKey.startsWith(`${key}/`)) {
-                pageCache.delete(cachedKey);
-            }
-        }
-    }
-}
-
-// exported for tests
-export function __evictPageCache(
-    cache: Map<string, { html: string; status: number; noindex?: boolean; redirectUrl?: string; at: number }>,
-    max: number,
-    ttlMs: number,
-    now: number,
-): void {
-    if (cache.size >= max) {
-        for (const [k, v] of cache.entries()) {
-            if (now - v.at >= ttlMs) {
-                cache.delete(k);
-            }
-        }
-        while (cache.size >= max) {
-            const oldestKey = cache.keys().next().value;
-            if (oldestKey !== undefined) {
-                cache.delete(oldestKey);
-            } else {
-                break;
-            }
-        }
-    }
+export async function __resetRenderCache() {
+    templateCache = null;
+    carsOrderByCache = null;
+    manifestCache = null;
+    __resetComponentCaches();
+    await resetSsrCache().catch(() => {});
 }
 
 // Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
@@ -929,7 +904,7 @@ function getCacheControlHeader(
     path: string,
     noindex?: boolean
 ): string {
-    if (request.method !== 'GET') {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
         return 'private, no-store';
     }
     if (status !== 200) {
@@ -941,7 +916,135 @@ function getCacheControlHeader(
     if (request.headers.authorization) {
         return 'private, no-store';
     }
-    return 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400';
+    return 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400';
+}
+
+interface RenderResult {
+    html: string;
+    status: number;
+    noindex?: boolean;
+    redirectUrl?: string;
+}
+
+async function renderPage(
+    fastify: FastifyInstance,
+    path: string,
+    page: number,
+    searchParams: URLSearchParams | undefined,
+    isProd: boolean,
+    modulepreloadEnabled: boolean
+): Promise<RenderResult | null> {
+    let template = await getTemplate();
+    if (!template) {
+        return null;
+    }
+
+    // Preload /api/rental/vehicles?limit=1 (index.html) jest oznaczony jako "globalny", ale
+    // realnie czyta go tylko strona główna i /wynajem-dlugoterminowy* — na resztę tras (w tym
+    // /oferta/*) kradnie pasmo bez żadnego zysku, więc wycinamy go tam.
+    const usesRentalPreload = path === '/' || path === '/wynajem-dlugoterminowy' || path.startsWith('/wynajem-dlugoterminowy/');
+    if (!usesRentalPreload) {
+        template = template.replace(/\s*<link rel="preload" href="\/api\/rental\/vehicles\?limit=1"[^>]*\/>/, () => '');
+    }
+
+    // Mini-wyszukiwarka hero na / pobiera opcje zawężone do stanu (?status=new), więc globalny
+    // preload bez parametru trafiłby w próżnię. Na pozostałych trasach (/samochody, /nowe,
+    // /uzywane) wołany jest wariant bez parametru, więc podmieniamy tylko dla /.
+    if (path === '/') {
+        template = template.replace(
+            /<link rel="preload" href="\/api\/listings\/options"([^>]*)\/>/,
+            (_m, rest) => `<link rel="preload" href="/api/listings/options?status=new"${rest}/>`,
+        );
+    }
+
+    const ctx = resolveBrandCtx();
+    const heroBanners = path === '/' ? await getHomeHeroBanners(fastify) : [];
+
+    // Statyczny shell hero (vite.config, znaczniki home-shell) jest tylko dla
+    // strony głównej — na innych trasach usuwamy go, żeby hero nie migało
+    // przed zamontowaniem SPA. Strony katalogowe (isPaginatedPath) dostają w zamian
+    // statyczny skeleton (nagłówek + placeholdery kart) zamiast białego ekranu do
+    // montażu Reacta. Na / z aktywnym bannerem CMS podmieniamy tekstowy shell na SSR
+    // pierwszego banera (ten sam obrazek co preload/LCP) — bez banerów zostaje bez zmian.
+    // Podmiana funkcyjna — markup skeletonu/banera może zawierać `$`.
+    if (path !== '/') {
+        // Home-only preloady API (hero-banners/feature-tiles/faq-home/widgets-HOME) są
+        // nieużywane poza / i na dławionym mobile kradną pasmo entry JS + obrazkowi LCP.
+        template = template.replace(/<!--home-preload-->[\s\S]*?<!--\/home-preload-->/, () => '');
+        // Strony katalogowe → skeleton siatki kart; strony detalu (oferta/najem) → skeleton
+        // galerii + sidebara; reszta (formularze, noindex) → pusto do montażu React.
+        const skeleton = isPaginatedPath(path)
+            ? catalogSkeletonHtml(await getGridColumns(fastify))
+            : (LISTING_RE.test(path) || RENTAL_RE.test(path))
+                ? detailSkeletonHtml()
+                : '';
+        template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
+    } else if (heroBanners.length > 0) {
+        const heroShell = homeHeroShellHtml(
+            heroBanners[0],
+            ctx.baseUrl,
+            ctx.homeH1
+        );
+        template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => heroShell);
+    }
+
+    const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
+    if (!isProd) {
+        meta.noindex = true;
+    }
+
+    if (meta.status === 301 && meta.redirectUrl) {
+        return {
+            html: '',
+            status: 301,
+            redirectUrl: meta.redirectUrl,
+            noindex: true,
+        };
+    }
+
+    let html = injectHead(template, meta);
+
+    // Modulepreload chunka trasy — domyślnie wyłączony po eksperymencie (docs/BRIEF_AG_MODULEPRELOAD_EXPERIMENT.md),
+    // w którym wykazano, że emisja tagów modulepreload na trasach katalogowych opóźniała FCP o ponad 1 s.
+    // Wyjście awaryjne: SSR_MODULEPRELOAD=on.
+    if (modulepreloadEnabled) {
+        const manifest = await getViteManifest();
+        if (manifest) {
+            const chunkLinks = routeChunkLinks(path, manifest);
+            if (chunkLinks.length) {
+                html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
+            }
+        }
+    }
+
+    // window.__HERO_BANNERS__ — initialData React Query dla frontu (#3), tylko na /,
+    // żeby hasHeroBanners/carousel nie czekały na rundę do API na krytycznej ścieżce.
+    if (path === '/' && heroBanners.length > 0) {
+        const heroBannersJson = JSON.stringify(heroBanners).replace(/</g, '\\u003c');
+        html = html.replace('</head>', () => `<script>window.__HERO_BANNERS__=${heroBannersJson};</script>\n</head>`);
+    }
+
+    return {
+        html,
+        status: meta.status,
+        noindex: meta.noindex,
+    };
+}
+
+async function renderAndCache(
+    fastify: FastifyInstance,
+    path: string,
+    page: number,
+    searchParams: URLSearchParams | undefined,
+    cacheKey: string,
+    isProd: boolean,
+    modulepreloadEnabled: boolean
+): Promise<RenderResult | null> {
+    const result = await renderPage(fastify, path, page, searchParams, isProd, modulepreloadEnabled);
+    if (result) {
+        await setSsrCache(cacheKey, result);
+    }
+    return result;
 }
 
 export async function renderRoutes(fastify: FastifyInstance) {
@@ -973,145 +1076,75 @@ export async function renderRoutes(fastify: FastifyInstance) {
         // Wyjście awaryjne przez SSR_MODULEPRELOAD=on.
         const modulepreloadEnabled = process.env.SSR_MODULEPRELOAD === 'on';
 
-        // Na /samochody make/model wpływają na canonical (patrz resolveSamochodyQueryCanonical),
-        // więc muszą różnicować cache — inaczej różne filtry dzieliłyby ten sam wpis.
-        // Flaga modulepreload różnicuje cache, aby przełączenie ENV nie serwowało HTML-a z poprzedniego stanu.
+        // Na /samochody make/model wpływają na canonical tylko jeśli pasują do katalogu (resolveSamochodyQueryCanonical).
+        // Włączamy canonical do klucza tylko gdy się rozwiązuje, chroniąc Redis przed losowymi parametrami ?make=...
         let cacheKey = (isProd ? '' : 'nonprod:') + (modulepreloadEnabled ? 'preload:' : '') + (page > 1 ? `${path}?page=${page}` : path);
         if (path === '/samochody' && searchParams) {
-            const makeParam = searchParams.get('make');
-            const modelParam = searchParams.get('model');
-            if (makeParam) cacheKey += `${cacheKey.includes('?') ? '&' : '?'}make=${makeParam}`;
-            if (modelParam) cacheKey += `&model=${modelParam}`;
-        }
-        const cached = pageCache.get(cacheKey);
-        if (cached) {
-            if (Date.now() - cached.at < PAGE_TTL_MS) {
-                if (cached.status === 301 && cached.redirectUrl) {
-                    return reply
-                        .code(301)
-                        .header('Location', cached.redirectUrl)
-                        .header('Cache-Control', 'public, max-age=86400')
-                        .send();
-                }
-                const cacheControl = getCacheControlHeader(request, cached.status, path, cached.noindex);
-                return reply
-                    .code(cached.status)
-                    .header('Content-Type', 'text/html; charset=utf-8')
-                    .header('Cache-Control', cacheControl)
-                    // Global @fastify/cors (app.ts) sets `Vary: Origin` on every response via an
-                    // onRequest hook, which runs before this handler. /api/render is never called
-                    // cross-origin (nginx proxies to it server-side), and Cloudflare only honours
-                    // `Vary: Accept-Encoding` — any other Vary value makes edge caching unreliable.
-                    // Overwrite it here, scoped to this route only.
-                    .header('Vary', 'Accept-Encoding')
-                    .send(cached.html);
+            const canonicalResolved = await resolveSamochodyQueryCanonical(fastify, searchParams);
+            if (canonicalResolved) {
+                cacheKey += `${cacheKey.includes('?') ? '&' : '?'}canonical=${canonicalResolved}`;
             }
-            pageCache.delete(cacheKey);
         }
 
-        let template = await getTemplate();
-        if (!template) {
+        const cached = await getSsrCache(cacheKey);
+        if (cached) {
+            if (!isSsrFresh(cached)) {
+                if (markRevalidating(cacheKey)) {
+                    (async () => {
+                        try {
+                            await renderAndCache(fastify, path, page, searchParams, cacheKey, isProd, modulepreloadEnabled);
+                        } catch (err: any) {
+                            fastify.log.warn({ err: err?.message, cacheKey }, '[SsrCache] Background revalidation failed');
+                        } finally {
+                            clearRevalidating(cacheKey);
+                        }
+                    })();
+                }
+            }
+
+            if (cached.status === 301 && cached.redirectUrl) {
+                return reply
+                    .code(301)
+                    .header('Location', cached.redirectUrl)
+                    .header('Cache-Control', 'public, max-age=86400')
+                    .send();
+            }
+            const cacheControl = getCacheControlHeader(request, cached.status, path, cached.noindex);
+            return reply
+                .code(cached.status)
+                .header('Content-Type', 'text/html; charset=utf-8')
+                .header('Cache-Control', cacheControl)
+                // Global @fastify/cors (app.ts) sets `Vary: Origin` on every response via an
+                // onRequest hook, which runs before this handler. /api/render is never called
+                // cross-origin (nginx proxies to it server-side), and Cloudflare only honours
+                // `Vary: Accept-Encoding` — any other Vary value makes edge caching unreliable.
+                // Overwrite it here, scoped to this route only.
+                .header('Vary', 'Accept-Encoding')
+                .send(cached.html);
+        }
+
+        const result = await renderAndCache(fastify, path, page, searchParams, cacheKey, isProd, modulepreloadEnabled);
+        if (!result) {
             return reply.code(503).send({ error: 'template unavailable' });
         }
 
-        // Preload /api/rental/vehicles?limit=1 (index.html) jest oznaczony jako "globalny", ale
-        // realnie czyta go tylko strona główna i /wynajem-dlugoterminowy* — na resztę tras (w tym
-        // /oferta/*) kradnie pasmo bez żadnego zysku, więc wycinamy go tam.
-        const usesRentalPreload = path === '/' || path === '/wynajem-dlugoterminowy' || path.startsWith('/wynajem-dlugoterminowy/');
-        if (!usesRentalPreload) {
-            template = template.replace(/\s*<link rel="preload" href="\/api\/rental\/vehicles\?limit=1"[^>]*\/>/, () => '');
-        }
-
-        // Mini-wyszukiwarka hero na / pobiera opcje zawężone do stanu (?status=new), więc globalny
-        // preload bez parametru trafiłby w próżnię. Na pozostałych trasach (/samochody, /nowe,
-        // /uzywane) wołany jest wariant bez parametru, więc podmieniamy tylko dla /.
-        if (path === '/') {
-            template = template.replace(
-                /<link rel="preload" href="\/api\/listings\/options"([^>]*)\/>/,
-                (_m, rest) => `<link rel="preload" href="/api/listings/options?status=new"${rest}/>`,
-            );
-        }
-
-        const ctx = resolveBrandCtx();
-        const heroBanners = path === '/' ? await getHomeHeroBanners(fastify) : [];
-
-        // Statyczny shell hero (vite.config, znaczniki home-shell) jest tylko dla
-        // strony głównej — na innych trasach usuwamy go, żeby hero nie migało
-        // przed zamontowaniem SPA. Strony katalogowe (isPaginatedPath) dostają w zamian
-        // statyczny skeleton (nagłówek + placeholdery kart) zamiast białego ekranu do
-        // montażu Reacta. Na / z aktywnym bannerem CMS podmieniamy tekstowy shell na SSR
-        // pierwszego banera (ten sam obrazek co preload/LCP) — bez banerów zostaje bez zmian.
-        // Podmiana funkcyjna — markup skeletonu/banera może zawierać `$`.
-        if (path !== '/') {
-            // Home-only preloady API (hero-banners/feature-tiles/faq-home/widgets-HOME) są
-            // nieużywane poza / i na dławionym mobile kradną pasmo entry JS + obrazkowi LCP.
-            template = template.replace(/<!--home-preload-->[\s\S]*?<!--\/home-preload-->/, () => '');
-            // Strony katalogowe → skeleton siatki kart; strony detalu (oferta/najem) → skeleton
-            // galerii + sidebara; reszta (formularze, noindex) → pusto do montażu React.
-            const skeleton = isPaginatedPath(path)
-                ? catalogSkeletonHtml(await getGridColumns(fastify))
-                : (LISTING_RE.test(path) || RENTAL_RE.test(path))
-                    ? detailSkeletonHtml()
-                    : '';
-            template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
-        } else if (heroBanners.length > 0) {
-            const heroShell = homeHeroShellHtml(
-                heroBanners[0],
-                ctx.baseUrl,
-                ctx.homeH1
-            );
-            template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => heroShell);
-        }
-
-        const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
-        if (!isProd) {
-            meta.noindex = true;
-        }
-
-        if (meta.status === 301 && meta.redirectUrl) {
-            __evictPageCache(pageCache, PAGE_CACHE_MAX, PAGE_TTL_MS, Date.now());
-            pageCache.set(cacheKey, { html: '', status: 301, redirectUrl: meta.redirectUrl, noindex: true, at: Date.now() });
+        if (result.status === 301 && result.redirectUrl) {
             return reply
                 .code(301)
-                .header('Location', meta.redirectUrl)
+                .header('Location', result.redirectUrl)
                 .header('Cache-Control', 'public, max-age=86400')
                 .send();
         }
 
-        let html = injectHead(template, meta);
-
-        // Modulepreload chunka trasy — domyślnie wyłączony po eksperymencie (docs/BRIEF_AG_MODULEPRELOAD_EXPERIMENT.md),
-        // w którym wykazano, że emisja tagów modulepreload na trasach katalogowych opóźniała FCP o ponad 1 s.
-        // Wyjście awaryjne: SSR_MODULEPRELOAD=on.
-        if (modulepreloadEnabled) {
-            const manifest = await getViteManifest();
-            if (manifest) {
-                const chunkLinks = routeChunkLinks(path, manifest);
-                if (chunkLinks.length) {
-                    html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
-                }
-            }
-        }
-
-        // window.__HERO_BANNERS__ — initialData React Query dla frontu (#3), tylko na /,
-        // żeby hasHeroBanners/carousel nie czekały na rundę do API na krytycznej ścieżce.
-        if (path === '/' && heroBanners.length > 0) {
-            const heroBannersJson = JSON.stringify(heroBanners).replace(/</g, '\\u003c');
-            html = html.replace('</head>', () => `<script>window.__HERO_BANNERS__=${heroBannersJson};</script>\n</head>`);
-        }
-
-        __evictPageCache(pageCache, PAGE_CACHE_MAX, PAGE_TTL_MS, Date.now());
-        pageCache.set(cacheKey, { html, status: meta.status, noindex: meta.noindex, at: Date.now() });
-
-        const cacheControl = getCacheControlHeader(request, meta.status, path, meta.noindex);
+        const cacheControl = getCacheControlHeader(request, result.status, path, result.noindex);
 
         return reply
-            .code(meta.status)
+            .code(result.status)
             .header('Content-Type', 'text/html; charset=utf-8')
             .header('Cache-Control', cacheControl)
             // See comment on the pageCache-hit send above: overwrite CORS's `Vary: Origin`
             // with `Vary: Accept-Encoding` for Cloudflare edge-cache compatibility.
             .header('Vary', 'Accept-Encoding')
-            .send(html);
+            .send(result.html);
     });
 }

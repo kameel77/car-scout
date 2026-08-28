@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { sanitizeListing, sanitizeDealer, tryAuthenticate } from '../constants/dealer.js';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
 import { requirePermission } from '../middleware/permissions.js';
+import { getOrSetJson, getJsonFromCache, setJsonInCache, buildRentalVehiclesQueryCacheKey, buildRentalVehicleSlugCacheKey, parseRentalVehiclesQuery } from '../services/api-cache.js';
 
 export const calculateRatesWithInsurance = (entry: any, assignment: any) => {
     const insuranceAddMode = assignment.insuranceAddModeOverride || assignment.rentalCompany?.insuranceAddMode || 'INSURANCE_23';
@@ -53,188 +54,155 @@ export function selectBestMatrixEntry<T extends { id?: string; offerType?: strin
 export async function rentalPublicRoutes(fastify: FastifyInstance) {
     // Public: List active rental vehicles with minimum rates
     fastify.get('/api/rental/vehicles', async (request, reply) => {
-        const {
-            page = '1',
-            limit = '12',
-            make,
-            model,
-            bodyType,
-            fuelType,
-            transmission,
-            drive,
-            search,
-            sortBy = 'createdAt',
-            sortOrder = 'desc',
-            offerType,
-            yearFrom,
-            yearTo,
-            priceFrom,
-            priceTo,
-            priceBasis,
-            mileageFrom,
-            mileageTo,
-            powerFrom,
-            powerTo,
-            capacityFrom,
-            capacityTo,
-            condition
-        } = request.query as Record<string, string | undefined>;
+        const hasAuthHeader = Boolean(request.headers.authorization);
+        const isAuthenticated = hasAuthHeader && await tryAuthenticate(fastify, request);
 
-        // priceBasis controls whether priceFrom/priceTo are compared against monthlyRateNet or monthlyRateGross.
-        // Default gross preserves prior behaviour for callers that omit it.
-        const rateField: 'monthlyRateNet' | 'monthlyRateGross' =
-            priceBasis === 'net' ? 'monthlyRateNet' : 'monthlyRateGross';
+        const runQuery = async (auth: boolean) => {
+            const parsed = parseRentalVehiclesQuery(request.query as Record<string, any>);
 
-        const pageNum = Math.max(1, parseInt(page || '1'));
-        const limitNum = Math.min(50, Math.max(1, parseInt(limit || '12')));
-        const skip = (pageNum - 1) * limitNum;
+            // priceBasis controls whether priceFrom/priceTo are compared against monthlyRateNet or monthlyRateGross.
+            // Default gross preserves prior behaviour for callers that omit it.
+            const rateField: 'monthlyRateNet' | 'monthlyRateGross' =
+                parsed.priceBasis === 'net' ? 'monthlyRateNet' : 'monthlyRateGross';
 
-        const toArray = (val: unknown): string[] | undefined => {
-            if (!val) return undefined;
-            if (Array.isArray(val)) return val.map(String);
-            return String(val).split(',');
-        };
+            const pageNum = parsed.page;
+            const limitNum = Math.min(50, parsed.limit);
+            const skip = (pageNum - 1) * limitNum;
 
-        const makes = toArray(make);
-        const models = toArray(model);
-        const bodyTypes = toArray(bodyType);
-        const fuelTypesRaw = toArray(fuelType);
-        const transmissionsRaw = toArray(transmission);
-        const drives = toArray(drive);
+            const makes = parsed.make;
+            const models = parsed.model;
+            const bodyTypes = parsed.bodyType;
+            const fuelTypesRaw = parsed.fuelType;
+            const transmissionsRaw = parsed.transmission;
+            const drives = parsed.drive;
+            const statuses = parsed.condition;
 
-        // Canonical fuel buckets (mirrors listings.ts).
-        const FUEL_CANONICALS = new Set(['petrol', 'diesel', 'hybrid', 'hybrid_plugin', 'petrol_lpg', 'electric', 'lpg', 'cng']);
-        const fuelCanonical = (raw: string): string => {
-            const lower = raw.toLowerCase();
-            if (lower.includes('plug') && lower.includes('hybryd')) return 'hybrid_plugin';
-            if (lower.includes('plug-in')) return 'hybrid_plugin';
-            if (lower.startsWith('hybryd') || lower.startsWith('hybrid')) return 'hybrid';
-            if (/benzyn.*gaz|benzyn.*lpg|gaz.*benzyn|petrol.*lpg/.test(lower)) return 'petrol_lpg';
-            if (lower.startsWith('benzyn') || lower === 'pb' || lower === 'petrol') return 'petrol';
-            if (lower.startsWith('diesel') || lower === 'on') return 'diesel';
-            if (lower.startsWith('elektry') || lower === 'ev' || lower === 'bev' || lower === 'electric') return 'electric';
-            if (lower === 'lpg' || lower === 'gaz') return 'lpg';
-            if (lower === 'cng') return 'cng';
-            return raw;
-        };
+            // Canonical fuel buckets (mirrors listings.ts).
+            const FUEL_CANONICALS = new Set(['petrol', 'diesel', 'hybrid', 'hybrid_plugin', 'petrol_lpg', 'electric', 'lpg', 'cng']);
+            const fuelCanonical = (raw: string): string => {
+                const lower = raw.toLowerCase();
+                if (lower.includes('plug') && lower.includes('hybryd')) return 'hybrid_plugin';
+                if (lower.includes('plug-in')) return 'hybrid_plugin';
+                if (lower.startsWith('hybryd') || lower.startsWith('hybrid')) return 'hybrid';
+                if (/benzyn.*gaz|benzyn.*lpg|gaz.*benzyn|petrol.*lpg/.test(lower)) return 'petrol_lpg';
+                if (lower.startsWith('benzyn') || lower === 'pb' || lower === 'petrol') return 'petrol';
+                if (lower.startsWith('diesel') || lower === 'on') return 'diesel';
+                if (lower.startsWith('elektry') || lower === 'ev' || lower === 'bev' || lower === 'electric') return 'electric';
+                if (lower === 'lpg' || lower === 'gaz') return 'lpg';
+                if (lower === 'cng') return 'cng';
+                return raw;
+            };
 
-        // Expand canonical transmission tokens ('manual'/'automatic') into raw DB values
-        // matching the corresponding prefix. Anything else passes through unchanged.
-        let transmissions: string[] | undefined = transmissionsRaw;
-        if (transmissionsRaw && transmissionsRaw.some((t) => t === 'manual' || t === 'automatic')) {
-            const distinct = await fastify.prisma.rentalVehicle.findMany({
-                where: { isActive: true, transmission: { not: null } },
-                select: { transmission: true },
-                distinct: ['transmission'],
-            });
-            const allRaw = distinct.map((d) => d.transmission).filter((v): v is string => !!v);
-            transmissions = transmissionsRaw.flatMap((token) => {
-                const lower = token.toLowerCase();
-                if (lower === 'manual') return allRaw.filter((v) => v.toLowerCase().startsWith('manual'));
-                if (lower === 'automatic') return allRaw.filter((v) => v.toLowerCase().startsWith('automat'));
-                return [token];
-            });
-        }
+            // Expand canonical transmission tokens ('manual'/'automatic') into raw DB values
+            // matching the corresponding prefix. Anything else passes through unchanged.
+            let transmissions: string[] | undefined = transmissionsRaw;
+            if (transmissionsRaw && transmissionsRaw.some((t) => t.toLowerCase() === 'manual' || t.toLowerCase() === 'automatic')) {
+                const distinct = await fastify.prisma.rentalVehicle.findMany({
+                    where: { isActive: true, transmission: { not: null } },
+                    select: { transmission: true },
+                    distinct: ['transmission'],
+                });
+                const allRaw = distinct.map((d) => d.transmission).filter((v): v is string => !!v);
+                transmissions = transmissionsRaw.flatMap((token) => {
+                    const lower = token.toLowerCase();
+                    if (lower === 'manual') return allRaw.filter((v) => v.toLowerCase().startsWith('manual'));
+                    if (lower === 'automatic') return allRaw.filter((v) => v.toLowerCase().startsWith('automat'));
+                    return [token];
+                });
+            }
 
-        // Expand canonical fuel tokens to matching raw DB values.
-        let fuelTypes: string[] | undefined = fuelTypesRaw;
-        if (fuelTypesRaw && fuelTypesRaw.some((t) => FUEL_CANONICALS.has(t))) {
-            const distinctFuel = await fastify.prisma.rentalVehicle.findMany({
-                where: { isActive: true, fuelType: { not: null } },
-                select: { fuelType: true },
-                distinct: ['fuelType'],
-            });
-            const allRawFuel = distinctFuel.map((d) => d.fuelType).filter((v): v is string => !!v);
-            fuelTypes = fuelTypesRaw.flatMap((token) => {
-                if (FUEL_CANONICALS.has(token)) {
-                    return allRawFuel.filter((v) => fuelCanonical(v) === token);
-                }
-                return [token];
-            });
-        }
-        const statuses = toArray(condition)
-            ?.map((c) => c.toUpperCase())
-            .filter((c) => c === 'NEW' || c === 'USED') as ('NEW' | 'USED')[] | undefined;
+            // Expand canonical fuel tokens to matching raw DB values.
+            let fuelTypes: string[] | undefined = fuelTypesRaw;
+            if (fuelTypesRaw && fuelTypesRaw.some((t) => FUEL_CANONICALS.has(t.toLowerCase()))) {
+                const distinctFuel = await fastify.prisma.rentalVehicle.findMany({
+                    where: { isActive: true, fuelType: { not: null } },
+                    select: { fuelType: true },
+                    distinct: ['fuelType'],
+                });
+                const allRawFuel = distinctFuel.map((d) => d.fuelType).filter((v): v is string => !!v);
+                fuelTypes = fuelTypesRaw.flatMap((token) => {
+                    const lower = token.toLowerCase();
+                    if (FUEL_CANONICALS.has(lower)) {
+                        return allRawFuel.filter((v) => fuelCanonical(v) === lower);
+                    }
+                    return [token];
+                });
+            }
 
-        // Normalize offerType (frontend sends b2b/b2c, DB stores business/consumer)
-        let normalizedOfferType = offerType?.trim().toLowerCase();
-        if (normalizedOfferType && ['b2b', 'firma', 'business'].includes(normalizedOfferType)) normalizedOfferType = 'business';
-        if (normalizedOfferType && ['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(normalizedOfferType)) normalizedOfferType = 'consumer';
+            // Build matrix entry filter for offerType
+            const matrixEntryFilter: any = {};
+            if (parsed.offerType) {
+                matrixEntryFilter.offerType = { in: [parsed.offerType, 'all'] };
+            }
 
-        // Build matrix entry filter for offerType
-        const matrixEntryFilter: any = {};
-        if (normalizedOfferType && normalizedOfferType !== 'all') {
-            matrixEntryFilter.offerType = { in: [normalizedOfferType, 'all'] };
-        }
-
-        const where: any = {
-            isActive: true,
-            isPublished: true,
-            rentalAssignments: {
-                some: {
-                    isActive: true,
-                    matrixEntries: {
-                        some: matrixEntryFilter // Must have at least one matrix entry matching offerType
+            const where: any = {
+                isActive: true,
+                isPublished: true,
+                rentalAssignments: {
+                    some: {
+                        isActive: true,
+                        matrixEntries: {
+                            some: matrixEntryFilter // Must have at least one matrix entry matching offerType
+                        }
                     }
                 }
+            };
+
+            if (makes) where.make = { in: makes, mode: 'insensitive' as const };
+            if (models) where.model = { in: models, mode: 'insensitive' as const };
+            if (bodyTypes) where.bodyType = { in: bodyTypes, mode: 'insensitive' as const };
+            if (fuelTypes) where.fuelType = { in: fuelTypes, mode: 'insensitive' as const };
+            if (transmissions) where.transmission = { in: transmissions, mode: 'insensitive' as const };
+            if (drives) where.drive = { in: drives, mode: 'insensitive' as const };
+
+            // Condition filter (NEW / USED)
+            if (statuses) {
+                where.condition = { in: statuses };
             }
-        };
 
-        if (makes) where.make = { in: makes, mode: 'insensitive' as const };
-        if (models) where.model = { in: models, mode: 'insensitive' as const };
-        if (bodyTypes) where.bodyType = { in: bodyTypes, mode: 'insensitive' as const };
-        if (fuelTypes) where.fuelType = { in: fuelTypes, mode: 'insensitive' as const };
-        if (transmissions) where.transmission = { in: transmissions, mode: 'insensitive' as const };
-        if (drives) where.drive = { in: drives, mode: 'insensitive' as const };
+            // Year range filter
+            if (parsed.yearFrom !== undefined || parsed.yearTo !== undefined) {
+                where.productionYear = {};
+                if (parsed.yearFrom !== undefined) where.productionYear.gte = parsed.yearFrom;
+                if (parsed.yearTo !== undefined) where.productionYear.lte = parsed.yearTo;
+            }
 
-        // Condition filter (NEW / USED)
-        if (statuses) {
-            where.condition = { in: statuses };
-        }
+            // Mileage range filter
+            if (parsed.mileageFrom !== undefined || parsed.mileageTo !== undefined) {
+                where.mileageKm = {};
+                if (parsed.mileageFrom !== undefined) where.mileageKm.gte = parsed.mileageFrom;
+                if (parsed.mileageTo !== undefined) where.mileageKm.lte = parsed.mileageTo;
+            }
 
-        // Year range filter
-        if (yearFrom || yearTo) {
-            where.productionYear = {};
-            if (yearFrom) where.productionYear.gte = parseInt(yearFrom);
-            if (yearTo) where.productionYear.lte = parseInt(yearTo);
-        }
+            // Power range filter
+            if (parsed.powerFrom !== undefined || parsed.powerTo !== undefined) {
+                where.enginePowerHp = {};
+                if (parsed.powerFrom !== undefined) where.enginePowerHp.gte = parsed.powerFrom;
+                if (parsed.powerTo !== undefined) where.enginePowerHp.lte = parsed.powerTo;
+            }
 
-        // Mileage range filter
-        if (mileageFrom || mileageTo) {
-            where.mileageKm = {};
-            if (mileageFrom) where.mileageKm.gte = parseInt(mileageFrom);
-            if (mileageTo) where.mileageKm.lte = parseInt(mileageTo);
-        }
+            // Engine capacity range filter
+            if (parsed.capacityFrom !== undefined || parsed.capacityTo !== undefined) {
+                where.engineCapacityCm3 = {};
+                if (parsed.capacityFrom !== undefined) where.engineCapacityCm3.gte = parsed.capacityFrom;
+                if (parsed.capacityTo !== undefined) where.engineCapacityCm3.lte = parsed.capacityTo;
+            }
 
-        // Power range filter
-        if (powerFrom || powerTo) {
-            where.enginePowerHp = {};
-            if (powerFrom) where.enginePowerHp.gte = parseInt(powerFrom);
-            if (powerTo) where.enginePowerHp.lte = parseInt(powerTo);
-        }
+            if (parsed.search) {
+                where.OR = [
+                    { make: { contains: parsed.search, mode: 'insensitive' } },
+                    { model: { contains: parsed.search, mode: 'insensitive' } },
+                    { version: { contains: parsed.search, mode: 'insensitive' } }
+                ];
+            }
 
-        // Engine capacity range filter
-        if (capacityFrom || capacityTo) {
-            where.engineCapacityCm3 = {};
-            if (capacityFrom) where.engineCapacityCm3.gte = parseInt(capacityFrom);
-            if (capacityTo) where.engineCapacityCm3.lte = parseInt(capacityTo);
-        }
+            const isRateSort = parsed.sortBy === 'minMonthlyRateNet' || parsed.sortBy === 'minMonthlyRateGross';
+            const isPriceFilter = parsed.priceFrom !== undefined || parsed.priceTo !== undefined;
 
-        if (search) {
-            where.OR = [
-                { make: { contains: search, mode: 'insensitive' } },
-                { model: { contains: search, mode: 'insensitive' } },
-                { version: { contains: search, mode: 'insensitive' } }
-            ];
-        }
-
-        const isRateSort = sortBy === 'minMonthlyRateNet' || sortBy === 'minMonthlyRateGross';
-        const isPriceFilter = !!(priceFrom || priceTo);
-
-        const orderBy: any = {};
-        const validSortFields = ['createdAt', 'sellingPrice', 'make', 'productionYear', 'catalogPrice'];
-        const sortField = validSortFields.includes(sortBy || '') ? sortBy : 'createdAt';
-        orderBy[sortField!] = sortOrder === 'asc' ? 'asc' : 'desc';
+            const orderBy: any = {};
+            const validSortFields = ['createdAt', 'sellingPrice', 'make', 'productionYear', 'catalogPrice'];
+            const sortField = validSortFields.includes(parsed.sortBy) ? parsed.sortBy : 'createdAt';
+            orderBy[sortField] = parsed.sortOrder;
 
         const fullSelect = {
             id: true,
@@ -358,8 +326,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
             // 3. Filter by price (comparing against monthlyRateNet or monthlyRateGross per priceBasis)
             if (isPriceFilter) {
-                const from = priceFrom ? parseInt(priceFrom) : 0;
-                const to = priceTo ? parseInt(priceTo) : Infinity;
+                const from = parsed.priceFrom ?? 0;
+                const to = parsed.priceTo ?? Infinity;
                 mapped = mapped.filter(v => v.minRate !== null && v.minRate >= from && v.minRate <= to);
 
                 // Compute byCondition from the post-filter set so tab counts match what the user sees.
@@ -375,16 +343,16 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             if (isRateSort) {
                 mapped.sort((a, b) => {
                     const diff = (a.minRate ?? Infinity) - (b.minRate ?? Infinity);
-                    return sortOrder === 'asc' ? diff : -diff;
+                    return parsed.sortOrder === 'asc' ? diff : -diff;
                 });
             } else {
                 mapped.sort((a, b) => {
                     const valA = a.sortFieldValue;
                     const valB = b.sortFieldValue;
-                    if (valA === null || valA === undefined) return sortOrder === 'asc' ? 1 : -1;
-                    if (valB === null || valB === undefined) return sortOrder === 'asc' ? -1 : 1;
-                    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-                    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+                    if (valA === null || valA === undefined) return parsed.sortOrder === 'asc' ? 1 : -1;
+                    if (valB === null || valB === undefined) return parsed.sortOrder === 'asc' ? -1 : 1;
+                    if (valA < valB) return parsed.sortOrder === 'asc' ? -1 : 1;
+                    if (valA > valB) return parsed.sortOrder === 'asc' ? 1 : -1;
                     return 0;
                 });
             }
@@ -465,8 +433,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             filterOptions.byCondition = byConditionOverride;
         }
 
-        const isAuthenticated = await tryAuthenticate(fastify, request);
-        const sanitizedVehicles = vehiclesWithRates.map((v: any) => sanitizeListing(v, isAuthenticated));
+        const sanitizedVehicles = vehiclesWithRates.map((v: any) => sanitizeListing(v, auth));
 
         return {
             vehicles: sanitizedVehicles,
@@ -479,93 +446,138 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             filters: filterOptions,
             facets
         };
+    };
+
+    if (isAuthenticated) {
+        const data = await runQuery(true);
+        return reply.header('Cache-Control', 'private, no-store').send(data);
+    }
+
+    const cacheKey = buildRentalVehiclesQueryCacheKey(request.query as Record<string, any>);
+    const data = await getOrSetJson(cacheKey, 180, () => runQuery(false));
+
+    return reply
+            .header('Cache-Control', 'public, max-age=0, s-maxage=180')
+            .header('Vary', 'Origin, Accept-Encoding')
+            .send(data);
     });
 
     // Public: Get vehicle details with dynamic options from the matrix
     fastify.get('/api/rental/vehicles/:slug', async (request, reply) => {
         const { slug } = request.params as { slug: string };
+        const hasAuthHeader = Boolean(request.headers.authorization);
+        const isAuthenticated = hasAuthHeader && await tryAuthenticate(fastify, request);
 
-        const vehicle = await fastify.prisma.rentalVehicle.findFirst({
-            where: {
-                OR: [
-                    { slug },
-                    { id: slug } // Fallback to ID
-                ],
-                isActive: true,
-                isPublished: true
-            },
-            select: {
-                id: true,
-                slug: true,
-                make: true,
-                model: true,
-                version: true,
-                bodyType: true,
-                fuelType: true,
-                transmission: true,
-                drive: true,
-                doors: true,
-                seats: true,
-                color: true,
-                paintType: true,
-                enginePowerHp: true,
-                engineCapacityCm3: true,
-                productionYear: true,
-                catalogPrice: true,
-                sellingPrice: true,
-                condition: true,
-                primaryImageUrl: true,
-                imageUrls: true,
-                additionalInfoHeader: true,
-                additionalInfoContent: true,
-                specificationUrl: true,
-                equipmentAudioMultimedia: true,
-                equipmentSafety: true,
-                equipmentComfortExtras: true,
-                equipmentOther: true,
-                createdAt: true,
-                updatedAt: true,
-                dealer: {
-                    select: { id: true, name: true, addressLine1: true, city: true, contactPhone: true }
+        const fetchDetail = async (auth: boolean) => {
+            const vehicle = await fastify.prisma.rentalVehicle.findFirst({
+                where: {
+                    OR: [
+                        { slug },
+                        { id: slug } // Fallback to ID
+                    ],
+                    isActive: true,
+                    isPublished: true
                 },
-                rentalAssignments: {
-                    where: { isActive: true },
-                    select: {
-                        id: true,
-                        rentalCompany: {
-                            select: { id: true, name: true, slug: true, logoUrl: true, contactEmail: true, contactPhone: true }
+                select: {
+                    id: true,
+                    slug: true,
+                    make: true,
+                    model: true,
+                    version: true,
+                    bodyType: true,
+                    fuelType: true,
+                    transmission: true,
+                    drive: true,
+                    doors: true,
+                    seats: true,
+                    color: true,
+                    paintType: true,
+                    enginePowerHp: true,
+                    engineCapacityCm3: true,
+                    productionYear: true,
+                    catalogPrice: true,
+                    sellingPrice: true,
+                    condition: true,
+                    primaryImageUrl: true,
+                    imageUrls: true,
+                    additionalInfoHeader: true,
+                    additionalInfoContent: true,
+                    specificationUrl: true,
+                    equipmentAudioMultimedia: true,
+                    equipmentSafety: true,
+                    equipmentComfortExtras: true,
+                    equipmentOther: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    dealer: {
+                        select: { id: true, name: true, addressLine1: true, city: true, contactPhone: true }
+                    },
+                    rentalAssignments: {
+                        where: { isActive: true },
+                        select: {
+                            id: true,
+                            rentalCompany: {
+                                select: { id: true, name: true, slug: true, logoUrl: true, contactEmail: true, contactPhone: true }
+                            }
                         }
                     }
                 }
+            });
+
+            if (!vehicle) {
+                return null;
             }
-        });
 
-        if (!vehicle) {
-            return reply.code(404).send({ error: 'Rental vehicle not found' });
-        }
+            const assignmentIds = vehicle.rentalAssignments.map((a: any) => a.id);
+            
+            // Fetch explicit distinct options from the DB rather than mapping thousands of entries in memory
+            const assignmentOptions = await fastify.prisma.rentalMatrixEntry.findMany({
+                where: { assignmentId: { in: assignmentIds } },
+                select: { annualMileageKm: true, contractMonths: true, initialPaymentPct: true, initialPaymentAmountNet: true, initialPaymentAmountGross: true, offerType: true },
+                distinct: ['annualMileageKm', 'contractMonths', 'initialPaymentPct', 'initialPaymentAmountNet', 'initialPaymentAmountGross', 'offerType']
+            });
 
-        const assignmentIds = vehicle.rentalAssignments.map((a: any) => a.id);
-        
-        // Fetch explicit distinct options from the DB rather than mapping thousands of entries in memory
-        const assignmentOptions = await fastify.prisma.rentalMatrixEntry.findMany({
-            where: { assignmentId: { in: assignmentIds } },
-            select: { annualMileageKm: true, contractMonths: true, initialPaymentPct: true, initialPaymentAmountNet: true, initialPaymentAmountGross: true, offerType: true },
-            distinct: ['annualMileageKm', 'contractMonths', 'initialPaymentPct', 'initialPaymentAmountNet', 'initialPaymentAmountGross', 'offerType']
-        });
+            const initialPayments = assignmentOptions.map(e => ({ pct: e.initialPaymentPct, amountNet: e.initialPaymentAmountNet, amountGross: e.initialPaymentAmountGross }));
+            const uniqueInitialPayments = Array.from(new Set(initialPayments.map(p => JSON.stringify(p)))).map(p => JSON.parse(p));
+            uniqueInitialPayments.sort((a, b) => (a.pct === b.pct) ? (a.amountNet - b.amountNet) : (a.pct - b.pct));
 
-        const initialPayments = assignmentOptions.map(e => ({ pct: e.initialPaymentPct, amountNet: e.initialPaymentAmountNet, amountGross: e.initialPaymentAmountGross }));
-        const uniqueInitialPayments = Array.from(new Set(initialPayments.map(p => JSON.stringify(p)))).map(p => JSON.parse(p));
-        uniqueInitialPayments.sort((a, b) => (a.pct === b.pct) ? (a.amountNet - b.amountNet) : (a.pct - b.pct));
+            const options = {
+                annualMileageOptions: [...new Set(assignmentOptions.map(e => e.annualMileageKm))].sort((a, b) => a - b),
+                contractMonthOptions: [...new Set(assignmentOptions.map(e => e.contractMonths))].sort((a, b) => a - b),
+                initialPaymentOptions: uniqueInitialPayments,
+                offerTypeOptions: [...new Set(assignmentOptions.map(e => e.offerType))].sort()
+            };
 
-        const options = {
-            annualMileageOptions: [...new Set(assignmentOptions.map(e => e.annualMileageKm))].sort((a, b) => a - b),
-            contractMonthOptions: [...new Set(assignmentOptions.map(e => e.contractMonths))].sort((a, b) => a - b),
-            initialPaymentOptions: uniqueInitialPayments,
-            offerTypeOptions: [...new Set(assignmentOptions.map(e => e.offerType))].sort()
+            return { vehicle: sanitizeListing(vehicle, auth), options };
         };
 
-        const isAuthenticated = await tryAuthenticate(fastify, request);
-        return { vehicle: sanitizeListing(vehicle, isAuthenticated), options };
+        if (isAuthenticated) {
+            const data = await fetchDetail(true);
+            if (!data) return reply.code(404).header('Cache-Control', 'private, no-store').send({ error: 'Rental vehicle not found' });
+            return reply.code(200).header('Cache-Control', 'private, no-store').send(data);
+        }
+
+        const cacheKey = buildRentalVehicleSlugCacheKey(slug);
+        const cached = await getJsonFromCache<any>(cacheKey);
+        if (cached) {
+            return reply
+                .code(200)
+                .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                .header('Vary', 'Origin, Accept-Encoding')
+                .send(cached);
+        }
+
+        const fresh = await fetchDetail(false);
+        if (!fresh) {
+            return reply.code(404).header('Cache-Control', 'private, no-store').send({ error: 'Rental vehicle not found' });
+        }
+
+        await setJsonInCache(cacheKey, fresh, 300);
+        return reply
+            .code(200)
+            .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+            .header('Vary', 'Origin, Accept-Encoding')
+            .send(fresh);
     });
 
     // Public: Calculate rate lookup

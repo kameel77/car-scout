@@ -22,12 +22,12 @@ describe('De-indexing non-production environments guard', () => {
         vi.unstubAllGlobals();
     });
 
-    beforeEach(() => {
+    beforeEach(async () => {
         process.env.BRAND = 'motolia';
         process.env.FRONTEND_URL = 'https://motolia.pl';
         __resetSitemapCache();
         __resetBrandCatalogCache();
-        __resetRenderCache();
+        await __resetRenderCache();
         vi.stubGlobal(
             'fetch',
             vi.fn(async () => new Response(TEMPLATE, { status: 200 }))
