@@ -24,6 +24,14 @@ describe('POST /api/leads/waitlist', () => {
 
     beforeEach(async () => {
         await app.prisma.lead.deleteMany({ where: { email: TEST_EMAIL } });
+        if (app.redis) {
+            let cursor = '0';
+            do {
+                const [nextCursor, keys] = await app.redis.scan(cursor, 'MATCH', '*rate-limit*', 'COUNT', 100);
+                cursor = nextCursor;
+                if (keys.length > 0) await app.redis.del(...keys);
+            } while (cursor !== '0');
+        }
     });
 
     it('creates a lead tagged leadType=waitlist with make/model in the message, no listing attached', async () => {

@@ -9,7 +9,7 @@ import {
 } from '../types/stock-sync.types.js';
 import { normalizeBrand } from './brand-normalization.service.js';
 import { generateListingSlug, sanitizeForSlug } from '../utils/url-utils.js';
-import { invalidateOfferCache } from './cache-invalidation.service.js';
+import { invalidateOfferCache, LISTING_AGGREGATE_URLS } from './cache-invalidation.service.js';
 
 const DEFAULT_CIRCUIT_BREAKER_DROP = 0.20; // 20% max drop
 const BATCH_SIZE = 150;
@@ -135,7 +135,9 @@ export class StockSyncEngine {
                 fuelType: true,
                 dealerId: true,
                 entrySource: true,
-                lastManualEditAt: true
+                lastManualEditAt: true,
+                mileageKm: true,
+                primaryImageUrl: true,
             }
         });
 
@@ -165,7 +167,9 @@ export class StockSyncEngine {
                 fuelType: true,
                 dealerId: true,
                 entrySource: true,
-                lastManualEditAt: true
+                lastManualEditAt: true,
+                mileageKm: true,
+                primaryImageUrl: true,
             }
         }) : [];
 
@@ -379,13 +383,22 @@ export class StockSyncEngine {
                     data: updateData
                 });
 
-                const effectiveSlug = existing.slug || generateListingSlug(normMake, feedCar.model, feedCar.version, feedCar.productionYear, undefined, feedCar.fuelType, existing.id);
-                affectedUrls.push(`/oferta/${effectiveSlug}`);
-                affectedUrls.push(`/samochody/${sanitizeForSlug(normMake)}/${sanitizeForSlug(feedCar.model)}/${effectiveSlug}`);
-                affectedUrls.push(`/samochody/${sanitizeForSlug(normMake)}`);
-                affectedUrls.push(`/samochody/${sanitizeForSlug(normMake)}/${sanitizeForSlug(feedCar.model)}`);
+                const priceChanged = (oldPrice ?? null) !== (feedCar.pricePln ?? null);
+                const mileageChanged = (existing.mileageKm ?? 0) !== (feedCar.mileageKm ?? 0);
+                const oldImg = existing.primaryImageUrl ?? null;
+                const newImg = (feedCar.primaryImageUrl || galleryUrls[0]) ?? null;
+                const imageChanged = oldImg !== newImg;
+                const hasChanges = shouldUnarchive || priceChanged || mileageChanged || imageChanged;
 
-                if (oldPrice !== feedCar.pricePln) {
+                if (hasChanges) {
+                    const effectiveSlug = existing.slug || generateListingSlug(normMake, feedCar.model, feedCar.version, feedCar.productionYear, undefined, feedCar.fuelType, existing.id);
+                    affectedUrls.push(`/oferta/${effectiveSlug}`);
+                    affectedUrls.push(`/samochody/${sanitizeForSlug(normMake)}/${sanitizeForSlug(feedCar.model)}/${effectiveSlug}`);
+                    affectedUrls.push(`/samochody/${sanitizeForSlug(normMake)}`);
+                    affectedUrls.push(`/samochody/${sanitizeForSlug(normMake)}/${sanitizeForSlug(feedCar.model)}`);
+                }
+
+                if (priceChanged) {
                     priceHistoryEntries.push({
                         listingId: existing.id,
                         pricePln: feedCar.pricePln,
@@ -529,14 +542,16 @@ export class StockSyncEngine {
             }
         }
 
-        // 8. Inwalidacja cache (P0.4: przekazanie dedykowanych URL-i + sitemap)
+        // 8. Inwalidacja cache (Etap 1: przekazanie dedykowanych URL-i + agregaty + sitemap)
         if (toInsert.length > 0 || toUpdate.length > 0 || toArchive.length > 0) {
             try {
-                const uniqueUrls = [...new Set(affectedUrls)];
-                await invalidateOfferCache(undefined, {
-                    urls: uniqueUrls,
-                    purgeSitemap: (toInsert.length + toArchive.length) > 0
-                });
+                const uniqueUrls = [...new Set([...LISTING_AGGREGATE_URLS, ...affectedUrls])];
+                if (uniqueUrls.length > 0) {
+                    await invalidateOfferCache(undefined, {
+                        urls: uniqueUrls,
+                        purgeSitemap: (toInsert.length + toArchive.length) > 0
+                    });
+                }
             } catch (cacheErr: any) {
                 console.warn('[StockSyncEngine] Błąd inwalidacji cache:', cacheErr.message);
             }

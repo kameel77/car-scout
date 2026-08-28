@@ -33,7 +33,7 @@ describe('Offer Lifecycle & Sitemap Hygiene (SEO P0)', () => {
     });
 
     beforeEach(async () => {
-        __resetRenderCache();
+        await __resetRenderCache();
         __resetSitemapCache();
         __resetBrandCatalogCache();
         prevBrand = process.env.BRAND;

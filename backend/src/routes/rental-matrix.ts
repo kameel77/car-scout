@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { parse } from 'csv-parse/sync';
 import { requirePermission } from '../middleware/permissions.js';
+import { invalidateOfferCache, RENTAL_AGGREGATE_URLS } from '../services/cache-invalidation.service.js';
 import {
     detectCSVFormat,
     mapCSVRowToMatrixEntry,
@@ -303,6 +304,14 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             }
         }
 
+        await invalidateOfferCache(fastify, {
+            urls: [...RENTAL_AGGREGATE_URLS],
+            apiPatterns: ['rental:vehicles:*'],
+            purgeSitemap: false
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after matrix import');
+        });
+
         return {
             ...result,
             format: formatDetection.format,
@@ -370,6 +379,14 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
 
         const deleted = await fastify.prisma.rentalMatrixEntry.deleteMany({
             where: { assignmentId }
+        });
+
+        await invalidateOfferCache(fastify, {
+            urls: [...RENTAL_AGGREGATE_URLS],
+            apiPatterns: ['rental:vehicles:*'],
+            purgeSitemap: false
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after matrix delete');
         });
 
         return { success: true, deleted: deleted.count };

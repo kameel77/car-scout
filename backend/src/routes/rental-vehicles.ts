@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { requirePermission } from '../middleware/permissions.js';
+import { invalidateOfferCache, RENTAL_AGGREGATE_URLS } from '../services/cache-invalidation.service.js';
 
 function generateSlug(make: string, model: string, version: string | null, productionYear: number | null | undefined, bodyType: string | null, fuelType: string | null, id: string): string {
     const translitMap: Record<string, string> = {
@@ -260,6 +261,13 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             data: { slug }
         });
 
+        await invalidateOfferCache(fastify, {
+            urls: [...RENTAL_AGGREGATE_URLS, ...(slug ? [`/wynajem-dlugoterminowy/${slug}`] : [])],
+            purgeSitemap: true
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle create');
+        });
+
         return reply.code(201).send({ vehicle: updatedVehicle });
     });
 
@@ -283,8 +291,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             if (typeof allowed === 'object' && 'in' in allowed && !allowed.in.includes(existing.dealerId)) return reply.code(403).send({ error: 'Forbidden' });
         }
 
-        // Build update data — only include provided fields
-        const updateData: any = {};
+        const updateData: Record<string, any> = {};
 
         // Explicit validation for required non-nullable fields
         if (body.make !== undefined) {
@@ -370,6 +377,14 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             data: updateData
         });
 
+        const activeSlug = vehicle.slug || existing.slug;
+        await invalidateOfferCache(fastify, {
+            urls: [...RENTAL_AGGREGATE_URLS, ...(activeSlug ? [`/wynajem-dlugoterminowy/${activeSlug}`] : [])],
+            purgeSitemap: false
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle update');
+        });
+
         return { vehicle };
     });
 
@@ -395,6 +410,13 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         await fastify.prisma.rentalVehicle.update({
             where: { id },
             data: { isActive: false }
+        });
+
+        await invalidateOfferCache(fastify, {
+            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`] : [])],
+            purgeSitemap: true
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle archive');
         });
 
         return { success: true };
@@ -424,6 +446,13 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
             data: { isActive: true }
         });
 
+        await invalidateOfferCache(fastify, {
+            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`] : [])],
+            purgeSitemap: true
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle restore');
+        });
+
         return { success: true };
     });
 
@@ -447,6 +476,13 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         }
 
         await fastify.prisma.rentalVehicle.delete({ where: { id } });
+
+        await invalidateOfferCache(fastify, {
+            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`] : [])],
+            purgeSitemap: true
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle delete');
+        });
 
         return { success: true };
     });

@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { requirePermission } from '../middleware/permissions.js';
 import { getSeoContentPage } from '../services/seo-content.js';
 import { slugifyBrandName } from '../services/brand-pages.service.js';
+import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
 
 // urlPath admin CRUD musi pasować do wzorca stron marek/modeli (spec §5): /samochody/<segment>
 // lub /samochody/<segment>/<segment>. Segmenty są normalizowane tym samym slugifierem co
@@ -73,6 +74,9 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
                     isPublished: body.isPublished ?? false,
                 },
             });
+            await invalidateOfferCache(fastify, { urls: [normalizedUrlPath], purgeSitemap: false }).catch(err => {
+                fastify.log.warn({ err }, 'Failed to invalidate cache after seo content create');
+            });
             return { page };
         } catch (error: any) {
             if (error?.code === 'P2002') return reply.code(409).send({ error: 'urlPath already exists' });
@@ -116,6 +120,9 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
                     ...(body.isPublished !== undefined ? { isPublished: body.isPublished } : {}),
                 },
             });
+            await invalidateOfferCache(fastify, { urls: [page.urlPath], purgeSitemap: false }).catch(err => {
+                fastify.log.warn({ err }, 'Failed to invalidate cache after seo content update');
+            });
             return { page };
         } catch (error: any) {
             if (error?.code === 'P2002') return reply.code(409).send({ error: 'urlPath already exists' });
@@ -131,7 +138,13 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
         try {
+            const existing = await fastify.prisma.seoContentPage.findUnique({ where: { id } });
             await fastify.prisma.seoContentPage.delete({ where: { id } });
+            if (existing) {
+                await invalidateOfferCache(fastify, { urls: [existing.urlPath], purgeSitemap: false }).catch(err => {
+                    fastify.log.warn({ err }, 'Failed to invalidate cache after seo content delete');
+                });
+            }
             return { success: true };
         } catch {
             return reply.code(404).send({ error: 'Not found' });

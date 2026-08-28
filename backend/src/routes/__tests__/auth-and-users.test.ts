@@ -38,16 +38,21 @@ describe('Auth & User Creation / Login Integration Tests', () => {
 
     afterAll(async () => {
         if (testEmailsToCleanup.length > 0) {
-            await app.prisma.importLog.deleteMany({
-                where: {
-                    user: { email: { in: testEmailsToCleanup } }
-                }
-            }).catch(() => {});
+            const users = await app.prisma.user.findMany({
+                where: { email: { in: testEmailsToCleanup } },
+                select: { id: true }
+            });
+            const userIds = users.map(u => u.id);
+            if (userIds.length > 0) {
+                await app.prisma.importLog.deleteMany({
+                    where: { importedBy: { in: userIds } }
+                }).catch(() => {});
+            }
             await app.prisma.user.deleteMany({
                 where: {
                     email: { in: testEmailsToCleanup }
                 }
-            });
+            }).catch(() => {});
         }
         await app.close();
     });
