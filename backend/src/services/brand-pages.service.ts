@@ -108,6 +108,7 @@ export function buildModelCatalog(rows: { model: string; count: number; lastmod?
 
 const CATALOG_TTL_MS = 60 * 1000;
 let brandCatalogCache: { value: BrandCatalogEntry[]; at: number } | null = null;
+const modelCatalogCache = new Map<string, { value: ModelCatalogEntry[]; at: number }>();
 
 export async function getBrandCatalog(fastify: FastifyInstance): Promise<BrandCatalogEntry[]> {
     if (brandCatalogCache && Date.now() - brandCatalogCache.at < CATALOG_TTL_MS) {
@@ -126,17 +127,25 @@ export async function getBrandCatalog(fastify: FastifyInstance): Promise<BrandCa
 
 export async function getModelCatalog(fastify: FastifyInstance, rawMakes: string[]): Promise<ModelCatalogEntry[]> {
     if (rawMakes.length === 0) return [];
+    const cacheKey = rawMakes.slice().sort().join(',').toLowerCase();
+    const cached = modelCatalogCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < CATALOG_TTL_MS) {
+        return cached.value;
+    }
     const rows = await fastify.prisma.listing.groupBy({
         by: ['model'],
         where: { isArchived: false, make: { in: rawMakes, mode: 'insensitive' } },
         _count: { _all: true },
         _max: { updatedAt: true },
     });
-    return buildModelCatalog(rows.map(r => ({ model: r.model, count: r._count._all, lastmod: r._max.updatedAt })));
+    const value = buildModelCatalog(rows.map(r => ({ model: r.model, count: r._count._all, lastmod: r._max.updatedAt })));
+    modelCatalogCache.set(cacheKey, { value, at: Date.now() });
+    return value;
 }
 
 export function __resetBrandCatalogCache() {
     brandCatalogCache = null;
+    modelCatalogCache.clear();
 }
 
 // Fallback dla trwałości stron marek/modeli z opublikowaną treścią CMS (F2, spec §1 pkt 4e):

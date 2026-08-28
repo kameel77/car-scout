@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import crypto from 'crypto';
 import { requirePermission } from '../middleware/permissions.js';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
+import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 const BANNERS_DIR = path.join(UPLOADS_DIR, 'hero-banners');
@@ -88,6 +89,9 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
         sortOrder: (max._max.sortOrder ?? 0) + 1,
       },
     });
+    await invalidateOfferCache(fastify, { urls: ['/'], purgeSitemap: false }).catch(err => {
+      fastify.log.warn({ err }, 'Failed to invalidate cache after banner create');
+    });
     return { banner };
   });
 
@@ -111,6 +115,9 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
           ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
         },
       });
+      await invalidateOfferCache(fastify, { urls: ['/'], purgeSitemap: false }).catch(err => {
+        fastify.log.warn({ err }, 'Failed to invalidate cache after banner update');
+      });
       return { banner };
     } catch {
       return reply.code(404).send({ error: 'Banner not found' });
@@ -127,6 +134,9 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
     await unlinkBannerImage(banner.imageUrlDesktop);
     await unlinkBannerImage(banner.imageUrlMobile);
     await fastify.prisma.heroBanner.delete({ where: { id } });
+    await invalidateOfferCache(fastify, { urls: ['/'], purgeSitemap: false }).catch(err => {
+      fastify.log.warn({ err }, 'Failed to invalidate cache after banner delete');
+    });
     return { success: true };
   });
 
@@ -143,6 +153,9 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
         fastify.prisma.heroBanner.update({ where: { id }, data: { sortOrder: idx + 1 } })
       )
     );
+    await invalidateOfferCache(fastify, { urls: ['/'], purgeSitemap: false }).catch(err => {
+      fastify.log.warn({ err }, 'Failed to invalidate cache after banner reorder');
+    });
     return { success: true };
   });
 
@@ -178,6 +191,9 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
     const updated = await fastify.prisma.heroBanner.update({
       where: { id },
       data: isMobile ? { imageUrlMobile: url } : { imageUrlDesktop: url },
+    });
+    await invalidateOfferCache(fastify, { urls: ['/'], purgeSitemap: false }).catch(err => {
+      fastify.log.warn({ err }, 'Failed to invalidate cache after banner image upload');
     });
     return { banner: updated, url };
   });

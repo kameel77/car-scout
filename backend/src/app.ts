@@ -57,6 +57,8 @@ import { marketingFeedsRoutes } from './routes/external/feeds.js';
 import { specificationRoutes } from './routes/specifications.js';
 import { closeBrowser } from './services/puppeteer.js';
 import { isProductionHost, getCanonicalProductionHosts } from './services/environment.js';
+import { initSsrCache } from './services/ssr-cache.js';
+import { initApiCache } from './services/api-cache.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,6 +133,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     redis.on('error', (err) => {
         console.error('❌ Redis Connection Error:', err);
     });
+
+    initSsrCache(redis);
+    initApiCache(redis);
 
     const fastify = Fastify({
         bodyLimit: 2 * 1024 * 1024, // Reduced from 500MB to 2MB for JSON APIs. Multipart handles large files.

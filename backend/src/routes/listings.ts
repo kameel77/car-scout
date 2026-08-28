@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { refreshListingImages } from '../services/image-refresh.service.js';
-import { generateListingSlug, extractListingIdFromSlug } from '../utils/url-utils.js';
+import { generateListingSlug, extractListingIdFromSlug, sanitizeForSlug } from '../utils/url-utils.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import {
     mapManualPayloadToListing,
@@ -12,10 +12,24 @@ import { normalizeBrand } from '../services/brand-normalization.service.js';
 import { computeReferenceInstallments } from '../services/financing-calc.service.js';
 import { sanitizeListing, tryAuthenticate } from '../constants/dealer.js';
 import { resolveOfferLifecycle } from '../services/offer-lifecycle.service.js';
-import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
+import { invalidateOfferCache, LISTING_AGGREGATE_URLS } from '../services/cache-invalidation.service.js';
 import { requirePermission } from '../middleware/permissions.js';
+import { getOrSetJson, getJsonFromCache, setJsonInCache, buildListingsQueryCacheKey, buildListingSlugCacheKey, parseListingsQuery } from '../services/api-cache.js';
 
 export async function listingRoutes(fastify: FastifyInstance) {
+    function getListingInvalidationUrls(listing: { id: string; slug?: string | null; make?: string | null; model?: string | null }): string[] {
+        const slugOrId = listing.slug || listing.id;
+        return [
+            `/oferta/${slugOrId}`,
+            ...(listing.slug ? [`/oferta/${listing.id}`] : []),
+            ...(listing.make && listing.model ? [
+                `/samochody/${sanitizeForSlug(listing.make)}/${sanitizeForSlug(listing.model)}/${slugOrId}`,
+                `/samochody/${sanitizeForSlug(listing.make)}`,
+                `/samochody/${sanitizeForSlug(listing.make)}/${sanitizeForSlug(listing.model)}`
+            ] : []),
+            ...LISTING_AGGREGATE_URLS
+        ];
+    }
 
     // Get filter options (makes and models) - only active listings
     fastify.get('/api/listings/options', async (request, reply) => {
@@ -144,6 +158,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
         computeReferenceInstallments({ prisma: fastify.prisma, log: fastify.log }, updated.id)
             .catch(err => fastify.log.error({ err, listingId: updated.id }, 'Nie udało się przeliczyć rat referencyjnych po utworzeniu oferty'));
 
+        const offerUrls = getListingInvalidationUrls(updated);
+        await invalidateOfferCache(fastify, { urls: offerUrls, purgeSitemap: true }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after listing creation');
+        });
+
         return reply.code(201).send({ listing: updated });
     });
 
@@ -217,10 +236,14 @@ export async function listingRoutes(fastify: FastifyInstance) {
             computeReferenceInstallments({ prisma: fastify.prisma, log: fastify.log }, updated.id)
                 .catch(err => fastify.log.error({ err, listingId: updated.id }, 'Nie udało się przeliczyć rat referencyjnych po edycji oferty'));
         }
-
         if (updateData.isBusinessFeatured !== undefined) {
             await fastify.redis.del('business:offers').catch(() => {});
         }
+
+        const offerUrls = [...new Set([...getListingInvalidationUrls(existing), ...getListingInvalidationUrls(updated)])];
+        await invalidateOfferCache(fastify, { urls: offerUrls, purgeSitemap: false }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after listing PATCH');
+        });
 
         return reply.send({ listing: updated });
     });
@@ -228,9 +251,9 @@ export async function listingRoutes(fastify: FastifyInstance) {
     // Get all listings (with filters)
     // If an authenticated user with a scoped context calls this, results are filtered.
     fastify.get('/api/listings', async (request, reply) => {
-        // Optionally resolve scope if user is authenticated
+        const hasAuthHeader = Boolean(request.headers.authorization);
         let scopeDealerFilter: Record<string, any> = {};
-        const isAuthenticated = await tryAuthenticate(fastify, request);
+        const isAuthenticated = hasAuthHeader && await tryAuthenticate(fastify, request);
         if (isAuthenticated) {
             try {
                 const scope = await resolveScope(fastify, request);
@@ -240,382 +263,356 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         }
 
-        const {
-            q, // Search query
-            make, model,
-            priceMin, priceMax,
-            yearMin, yearMax,
-            mileageMin, mileageMax,
-            powerMin, powerMax,
-            capacityMin, capacityMax,
-            fuelType, transmission, bodyType, drive,
-            status,
-            sortBy,
-            includeArchived,
-            currency, // Added currency parameter
-            page: pageParam,
-            perPage: perPageParam,
-            entrySource,
-            lastManualEditBefore,
-            // Rate filter (translated to price filter on the fly)
-            rateMin, rateMax, rateType, rateBasis,
-            city,
-        } = request.query as any;
+        const runQuery = async (authenticated: boolean, dealerFilter: Record<string, any>) => {
+            const parsed = parseListingsQuery(request.query as Record<string, any>);
 
-        // Helper to parse comma-separated lists into array or undefined
-        const toArray = (val: unknown): string[] | undefined => {
-            if (!val) return undefined;
-            if (Array.isArray(val)) return val.map(String);
-            return String(val).split(',');
-        };
+            const fuelTypesRaw = parsed.fuelType;
+            const transmissionsRaw = parsed.transmission;
+            const bodyTypes = parsed.bodyType;
+            const drives = parsed.drive;
+            const makes = parsed.make;
+            const models = parsed.model;
+            const cities = parsed.city;
+            const statuses = parsed.status;
 
-        const fuelTypesRaw = toArray(fuelType);
-        const transmissionsRaw = toArray(transmission);
-        const bodyTypes = toArray(bodyType);
-        const drives = toArray(drive);
-        const makes = toArray(make);
-        const models = toArray(model);
-        const cities = toArray(city);
-
-        // Canonical fuel buckets. Order matters in the if-chain below.
-        const FUEL_CANONICALS = new Set(['petrol', 'diesel', 'hybrid', 'hybrid_plugin', 'petrol_lpg', 'electric', 'lpg', 'cng']);
-        const fuelCanonical = (raw: string): string => {
-            const lower = raw.toLowerCase();
-            if (lower.includes('plug') && lower.includes('hybryd')) return 'hybrid_plugin';
-            if (lower.includes('plug-in')) return 'hybrid_plugin';
-            if (lower.startsWith('hybryd') || lower.startsWith('hybrid')) return 'hybrid';
-            if (/benzyn.*gaz|benzyn.*lpg|gaz.*benzyn|petrol.*lpg/.test(lower)) return 'petrol_lpg';
-            if (lower.startsWith('benzyn') || lower === 'pb' || lower === 'petrol') return 'petrol';
-            if (lower.startsWith('diesel') || lower === 'on') return 'diesel';
-            if (lower.startsWith('elektry') || lower === 'ev' || lower === 'bev' || lower === 'electric') return 'electric';
-            if (lower === 'lpg' || lower === 'gaz') return 'lpg';
-            if (lower === 'cng') return 'cng';
-            return raw;
-        };
-
-        // Expand canonical transmission tokens ('manual'/'automatic') into the set of raw
-        // DB values that start with the corresponding prefix. Anything else (raw values,
-        // e.g. from legacy bookmarks) passes through unchanged.
-        let transmissions: string[] | undefined = transmissionsRaw;
-        if (transmissionsRaw && transmissionsRaw.some((t) => t === 'manual' || t === 'automatic')) {
-            const distinct = await fastify.prisma.listing.findMany({
-                where: { isArchived: false, transmission: { not: null } },
-                select: { transmission: true },
-                distinct: ['transmission'],
-            });
-            const allRaw = distinct.map((d) => d.transmission).filter((v): v is string => !!v);
-            transmissions = transmissionsRaw.flatMap((token) => {
-                const lower = token.toLowerCase();
-                if (lower === 'manual') return allRaw.filter((v) => v.toLowerCase().startsWith('manual'));
-                if (lower === 'automatic') return allRaw.filter((v) => v.toLowerCase().startsWith('automat'));
-                return [token];
-            });
-        }
-
-        // Expand canonical fuel tokens to the set of raw DB values matching the bucket.
-        let fuelTypes: string[] | undefined = fuelTypesRaw;
-        if (fuelTypesRaw && fuelTypesRaw.some((t) => FUEL_CANONICALS.has(t))) {
-            const distinctFuel = await fastify.prisma.listing.findMany({
-                where: { isArchived: false, fuelType: { not: null } },
-                select: { fuelType: true },
-                distinct: ['fuelType'],
-            });
-            const allRawFuel = distinctFuel.map((d) => d.fuelType).filter((v): v is string => !!v);
-            fuelTypes = fuelTypesRaw.flatMap((token) => {
-                if (FUEL_CANONICALS.has(token)) {
-                    return allRawFuel.filter((v) => fuelCanonical(v) === token);
-                }
-                return [token];
-            });
-        }
-        // status: 'new' | 'used' (case-insensitive); maps to Prisma `condition` enum NEW | USED
-        const statuses = toArray(status)
-            ?.map((c) => c.toUpperCase())
-            .filter((c) => c === 'NEW' || c === 'USED') as ('NEW' | 'USED')[] | undefined;
-
-        const isEur = currency === 'EUR';
-        const priceField = isEur ? 'brokerPriceEur' : 'brokerPricePln';
-
-        // Translate monthly rate filter into broker price filter (PLN only, mirrors ListingCard formula).
-        // - credit gross rate = price * 0.014
-        // - credit net rate   = price * 0.014 / 1.23
-        // - lease  net rate   = price * 0.012 / 1.23
-        // - lease  gross rate = price * 0.012
-        let rateAsPriceMin: number | undefined;
-        let rateAsPriceMax: number | undefined;
-        if (!isEur && (rateMin || rateMax)) {
-            const factor = rateType === 'lease' ? 0.012 : 0.014;
-            const vatMul = rateBasis === 'net' ? 1.23 : 1;
-            if (rateMin) rateAsPriceMin = Math.floor((parseInt(rateMin) * vatMul) / factor);
-            if (rateMax) rateAsPriceMax = Math.ceil((parseInt(rateMax) * vatMul) / factor);
-        }
-
-        const page = Math.max(1, parseInt(pageParam) || 1);
-        const parsedPerPage = parseInt(perPageParam);
-        const perPage = [30, 60].includes(parsedPerPage) ? parsedPerPage : 30;
-
-        const orderBy: any = {};
-        switch (sortBy) {
-            case 'cheapest':
-            case 'price_asc': orderBy[priceField] = 'asc'; break;
-            case 'expensive':
-            case 'price_desc': orderBy[priceField] = 'desc'; break;
-            case 'year_asc': orderBy.productionYear = 'asc'; break;
-            case 'year_desc': orderBy.productionYear = 'desc'; break;
-            case 'mileage':
-            case 'mileage_asc': orderBy.mileageKm = 'asc'; break;
-            case 'mileage_desc': orderBy.mileageKm = 'desc'; break;
-            case 'newest': orderBy.createdAt = 'desc'; break;
-            default: orderBy.productionYear = 'desc'; break; // Default to newest production year
-        }
-
-        // Search logic
-        const searchTerms = q ? (q as string).trim().split(/\s+/).filter(Boolean) : [];
-        const searchFilter = searchTerms.length > 0 ? {
-            AND: searchTerms.map(term => {
-                const isNumber = !isNaN(parseInt(term));
-                const termFilter: any[] = [
-                    { make: { contains: term, mode: 'insensitive' } },
-                    { model: { contains: term, mode: 'insensitive' } },
-                    { version: { contains: term, mode: 'insensitive' } },
-                    { fuelType: { contains: term, mode: 'insensitive' } },
-                    { transmission: { contains: term, mode: 'insensitive' } },
-                    { bodyType: { contains: term, mode: 'insensitive' } },
-                    // Check equipment arrays for exact matches (limit of Prisma)
-                    { equipmentAudioMultimedia: { has: term } },
-                    { equipmentSafety: { has: term } },
-                    { equipmentComfortExtras: { has: term } },
-                    { equipmentOther: { has: term } }
-                ];
-
-                if (isNumber) {
-                    termFilter.push({ productionYear: { equals: parseInt(term) } });
-                }
-
-                return { OR: termFilter };
-            })
-        } : {};
-
-        const where = {
-            ...searchFilter,
-            make: makes ? { in: makes, mode: 'insensitive' as const } : undefined,
-            model: models ? { in: models, mode: 'insensitive' as const } : undefined,
-
-            [priceField]: {
-                gte: (() => {
-                    const fromPrice = priceMin ? parseInt(priceMin) : undefined;
-                    if (rateAsPriceMin !== undefined && fromPrice !== undefined) return Math.max(fromPrice, rateAsPriceMin);
-                    return fromPrice ?? rateAsPriceMin;
-                })(),
-                lte: (() => {
-                    const toPrice = priceMax ? parseInt(priceMax) : undefined;
-                    if (rateAsPriceMax !== undefined && toPrice !== undefined) return Math.min(toPrice, rateAsPriceMax);
-                    return toPrice ?? rateAsPriceMax;
-                })()
-            },
-            productionYear: {
-                gte: yearMin ? parseInt(yearMin) : undefined,
-                lte: yearMax ? parseInt(yearMax) : undefined
-            },
-            mileageKm: {
-                gte: mileageMin ? parseInt(mileageMin) : undefined,
-                lte: mileageMax ? parseInt(mileageMax) : undefined
-            },
-            enginePowerHp: {
-                gte: powerMin ? parseInt(powerMin) : undefined,
-                lte: powerMax ? parseInt(powerMax) : undefined
-            },
-            engineCapacityCm3: {
-                gte: capacityMin ? parseInt(capacityMin) : undefined,
-                lte: capacityMax ? parseInt(capacityMax) : undefined
-            },
-
-            fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' as const } : undefined,
-            transmission: transmissions ? { in: transmissions, mode: 'insensitive' as const } : undefined,
-            bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' as const } : undefined,
-            drive: drives ? { in: drives, mode: 'insensitive' as const } : undefined,
-            condition: statuses && statuses.length ? { in: statuses } : undefined,
-            isArchived: includeArchived === 'true' ? undefined : false,
-            entrySource: lastManualEditBefore
-                ? ('MANUAL' as const)
-                : (entrySource && ['CSV', 'CSFLOW', 'MANUAL', 'AGENT'].includes(String(entrySource))
-                    ? (String(entrySource) as 'CSV' | 'CSFLOW' | 'MANUAL' | 'AGENT')
-                    : undefined),
-            lastManualEditAt: lastManualEditBefore
-                ? { lt: new Date(String(lastManualEditBefore)) }
-                : undefined,
-            dealer: cities ? { city: { in: cities, mode: 'insensitive' as const } } : undefined,
-            // Apply scope-based dealerId filter (if authenticated with scoped context)
-            ...scopeDealerFilter,
-            ...(isAuthenticated ? {} : { pricePln: { gt: 0 } }),
-            
-            // Display Mode logic
-            OR: [
-                { specificationId: null },
-                { specification: { displayMode: 'ALL' } },
-                { AND: [{ specification: { displayMode: 'GROUPED' } }, { isRepresentative: true }] }
-            ]
-        };
-
-        // For per-dimension facets, count vehicles grouped by that dimension IGNORING
-        // the filter on that dimension (so the user sees "BMW (24)" even after selecting BMW).
-        // byCondition ignores the condition filter.
-        const { condition: _conditionFilter, ...whereWithoutCondition } = where;
-        const { make: _makeFilter, ...whereWithoutMake } = where;
-        const { model: _modelFilter, ...whereWithoutModel } = where;
-        const { fuelType: _fuelFilter, ...whereWithoutFuel } = where;
-        const { transmission: _transmissionFilter, ...whereWithoutTransmission } = where;
-        const { bodyType: _bodyFilter, ...whereWithoutBody } = where;
-        const { drive: _driveFilter, ...whereWithoutDrive } = where;
-        const { dealer: _cityFilter, ...whereWithoutCity } = where;
-
-        const [
-            listings,
-            totalCount,
-            byConditionRaw,
-            byMakeRaw,
-            byModelRaw,
-            byFuelRaw,
-            byTransmissionRaw,
-            byBodyRaw,
-            byDriveRaw,
-            byCityRaw,
-        ] = await Promise.all([
-            fastify.prisma.listing.findMany({
-                where,
-                include: {
-                    dealer: true,
-                    specification: true
-                },
-                orderBy,
-                skip: (page - 1) * perPage,
-                take: perPage
-            }),
-            fastify.prisma.listing.count({ where }),
-            fastify.prisma.listing.groupBy({
-                by: ['condition'],
-                where: whereWithoutCondition,
-                _count: { _all: true },
-            }),
-            fastify.prisma.listing.groupBy({
-                by: ['make'],
-                where: whereWithoutMake,
-                _count: { _all: true },
-            }),
-            fastify.prisma.listing.groupBy({
-                by: ['model'],
-                where: whereWithoutModel,
-                _count: { _all: true },
-            }),
-            fastify.prisma.listing.groupBy({
-                by: ['fuelType'],
-                where: whereWithoutFuel,
-                _count: { _all: true },
-            }),
-            fastify.prisma.listing.groupBy({
-                by: ['transmission'],
-                where: whereWithoutTransmission,
-                _count: { _all: true },
-            }),
-            fastify.prisma.listing.groupBy({
-                by: ['bodyType'],
-                where: whereWithoutBody,
-                _count: { _all: true },
-            }),
-            fastify.prisma.listing.groupBy({
-                by: ['drive'],
-                where: whereWithoutDrive,
-                _count: { _all: true },
-            }),
-            fastify.prisma.dealer.findMany({
-                where: {
-                    city: { not: null },
-                    listings: { some: whereWithoutCity }
-                },
-                select: {
-                    city: true,
-                    _count: { select: { listings: { where: whereWithoutCity } } }
-                }
-            }),
-        ]);
-
-        const byCondition = { NEW: 0, USED: 0 };
-        for (const row of byConditionRaw) {
-            if (row.condition === 'NEW' || row.condition === 'USED') {
-                byCondition[row.condition] = row._count._all;
-            }
-        }
-
-        // Canonical bucket for transmission: collapse vendor variants under "manual"/"automatic".
-        const transmissionCanonical = (raw: string): string => {
-            const lower = raw.toLowerCase();
-            if (lower.startsWith('manual')) return 'manual';
-            if (lower.startsWith('automat')) return 'automatic';
-            return raw;
-        };
-
-        // Build facet maps. Keys preserve the first-seen original case (e.g. "Benzynowy"),
-        // but rows with different casings collapse into one bucket. Frontend matching
-        // against these keys must be case-insensitive. For 'transmission' and 'fuelType',
-        // raw values are bucketed under canonical keys so the UI shows clean unified
-        // options (e.g. all vendor "automatic" variants roll up to one "automatic",
-        // and "benzynowy"/"benzyna"/"PB" all roll up to "petrol").
-        const toFacetMap = (rows: any[], key: string): Record<string, number> => {
-            const out: Record<string, number> = {};
-            const canonical: Record<string, string> = {};
-            for (const r of rows) {
-                const v = r[key];
-                if (v == null || v === '') continue;
-                const raw = String(v);
-                if (key === 'transmission') {
-                    const k = transmissionCanonical(raw);
-                    out[k] = (out[k] || 0) + r._count._all;
-                    continue;
-                }
-                if (key === 'fuelType') {
-                    const k = fuelCanonical(raw);
-                    out[k] = (out[k] || 0) + r._count._all;
-                    continue;
-                }
-                if (key === 'make') {
-                    const k = normalizeBrand(raw);
-                    out[k] = (out[k] || 0) + r._count._all;
-                    continue;
-                }
+            // Canonical fuel buckets. Order matters in the if-chain below.
+            const FUEL_CANONICALS = new Set(['petrol', 'diesel', 'hybrid', 'hybrid_plugin', 'petrol_lpg', 'electric', 'lpg', 'cng']);
+            const fuelCanonical = (raw: string): string => {
                 const lower = raw.toLowerCase();
-                if (!canonical[lower]) canonical[lower] = raw;
-                const k = canonical[lower];
-                out[k] = (out[k] || 0) + r._count._all;
-            }
-            return out;
-        };
+                if (lower.includes('plug') && lower.includes('hybryd')) return 'hybrid_plugin';
+                if (lower.includes('plug-in')) return 'hybrid_plugin';
+                if (lower.startsWith('hybryd') || lower.startsWith('hybrid')) return 'hybrid';
+                if (/benzyn.*gaz|benzyn.*lpg|gaz.*benzyn|petrol.*lpg/.test(lower)) return 'petrol_lpg';
+                if (lower.startsWith('benzyn') || lower === 'pb' || lower === 'petrol') return 'petrol';
+                if (lower.startsWith('diesel') || lower === 'on') return 'diesel';
+                if (lower.startsWith('elektry') || lower === 'ev' || lower === 'bev' || lower === 'electric') return 'electric';
+                if (lower === 'lpg' || lower === 'gaz') return 'lpg';
+                if (lower === 'cng') return 'cng';
+                return raw;
+            };
 
-        const facets = {
-            make: toFacetMap(byMakeRaw, 'make'),
-            model: toFacetMap(byModelRaw, 'model'),
-            fuelType: toFacetMap(byFuelRaw, 'fuelType'),
-            transmission: toFacetMap(byTransmissionRaw, 'transmission'),
-            bodyType: toFacetMap(byBodyRaw, 'bodyType'),
-            drive: toFacetMap(byDriveRaw, 'drive'),
-            city: (() => {
+            // Expand canonical transmission tokens ('manual'/'automatic') into the set of raw
+            // DB values that start with the corresponding prefix. Anything else passes through unchanged.
+            let transmissions: string[] | undefined = transmissionsRaw;
+            if (transmissionsRaw && transmissionsRaw.some((t) => t.toLowerCase() === 'manual' || t.toLowerCase() === 'automatic')) {
+                const distinct = await fastify.prisma.listing.findMany({
+                    where: { isArchived: false, transmission: { not: null } },
+                    select: { transmission: true },
+                    distinct: ['transmission'],
+                });
+                const allRaw = distinct.map((d) => d.transmission).filter((v): v is string => !!v);
+                transmissions = transmissionsRaw.flatMap((token) => {
+                    const lower = token.toLowerCase();
+                    if (lower === 'manual') return allRaw.filter((v) => v.toLowerCase().startsWith('manual'));
+                    if (lower === 'automatic') return allRaw.filter((v) => v.toLowerCase().startsWith('automat'));
+                    return [token];
+                });
+            }
+
+            // Expand canonical fuel tokens to the set of raw DB values matching the bucket.
+            let fuelTypes: string[] | undefined = fuelTypesRaw;
+            if (fuelTypesRaw && fuelTypesRaw.some((t) => FUEL_CANONICALS.has(t.toLowerCase()))) {
+                const distinctFuel = await fastify.prisma.listing.findMany({
+                    where: { isArchived: false, fuelType: { not: null } },
+                    select: { fuelType: true },
+                    distinct: ['fuelType'],
+                });
+                const allRawFuel = distinctFuel.map((d) => d.fuelType).filter((v): v is string => !!v);
+                fuelTypes = fuelTypesRaw.flatMap((token) => {
+                    const lower = token.toLowerCase();
+                    if (FUEL_CANONICALS.has(lower)) {
+                        return allRawFuel.filter((v) => fuelCanonical(v) === lower);
+                    }
+                    return [token];
+                });
+            }
+
+            const isEur = parsed.currency === 'EUR';
+            const priceField = isEur ? 'brokerPriceEur' : 'brokerPricePln';
+
+            // Translate monthly rate filter into broker price filter (PLN only, mirrors ListingCard formula).
+            // - credit gross rate = price * 0.014
+            // - credit net rate   = price * 0.014 / 1.23
+            // - lease  net rate   = price * 0.012 / 1.23
+            // - lease  gross rate = price * 0.012
+            let rateAsPriceMin: number | undefined;
+            let rateAsPriceMax: number | undefined;
+            if (!isEur && (parsed.rateMin !== undefined || parsed.rateMax !== undefined)) {
+                const factor = parsed.rateType === 'lease' ? 0.012 : 0.014;
+                const vatMul = parsed.rateBasis === 'net' ? 1.23 : 1;
+                if (parsed.rateMin !== undefined) rateAsPriceMin = Math.floor((parsed.rateMin * vatMul) / factor);
+                if (parsed.rateMax !== undefined) rateAsPriceMax = Math.ceil((parsed.rateMax * vatMul) / factor);
+            }
+
+            const page = parsed.page;
+            const perPage = parsed.perPage;
+
+            const orderBy: any = {};
+            switch (parsed.sortBy) {
+                case 'cheapest':
+                case 'price_asc': orderBy[priceField] = 'asc'; break;
+                case 'expensive':
+                case 'price_desc': orderBy[priceField] = 'desc'; break;
+                case 'year_asc': orderBy.productionYear = 'asc'; break;
+                case 'year_desc': orderBy.productionYear = 'desc'; break;
+                case 'mileage':
+                case 'mileage_asc': orderBy.mileageKm = 'asc'; break;
+                case 'mileage_desc': orderBy.mileageKm = 'desc'; break;
+                case 'newest': orderBy.createdAt = 'desc'; break;
+                default: orderBy.productionYear = 'desc'; break; // Default to newest production year
+            }
+
+            // Search logic (limit query length to 100 characters to prevent memory/CPU attacks)
+            const searchTerms = parsed.q ? parsed.q.split(/\s+/).filter(Boolean) : [];
+            const searchFilter = searchTerms.length > 0 ? {
+                AND: searchTerms.map(term => {
+                    const isNumber = !isNaN(parseInt(term));
+                    const termFilter: any[] = [
+                        { make: { contains: term, mode: 'insensitive' } },
+                        { model: { contains: term, mode: 'insensitive' } },
+                        { version: { contains: term, mode: 'insensitive' } },
+                        { fuelType: { contains: term, mode: 'insensitive' } },
+                        { transmission: { contains: term, mode: 'insensitive' } },
+                        { bodyType: { contains: term, mode: 'insensitive' } },
+                        // Check equipment arrays for exact matches (limit of Prisma)
+                        { equipmentAudioMultimedia: { has: term } },
+                        { equipmentSafety: { has: term } },
+                        { equipmentComfortExtras: { has: term } },
+                        { equipmentOther: { has: term } }
+                    ];
+
+                    if (isNumber) {
+                        termFilter.push({ productionYear: { equals: parseInt(term) } });
+                    }
+
+                    return { OR: termFilter };
+                })
+            } : {};
+
+            const where = {
+                ...searchFilter,
+                make: makes ? { in: makes, mode: 'insensitive' as const } : undefined,
+                model: models ? { in: models, mode: 'insensitive' as const } : undefined,
+
+                [priceField]: {
+                    gte: (() => {
+                        const fromPrice = parsed.priceMin;
+                        if (rateAsPriceMin !== undefined && fromPrice !== undefined) return Math.max(fromPrice, rateAsPriceMin);
+                        return fromPrice ?? rateAsPriceMin;
+                    })(),
+                    lte: (() => {
+                        const toPrice = parsed.priceMax;
+                        if (rateAsPriceMax !== undefined && toPrice !== undefined) return Math.min(toPrice, rateAsPriceMax);
+                        return toPrice ?? rateAsPriceMax;
+                    })()
+                },
+                productionYear: {
+                    gte: parsed.yearMin,
+                    lte: parsed.yearMax
+                },
+                mileageKm: {
+                    gte: parsed.mileageMin,
+                    lte: parsed.mileageMax
+                },
+                enginePowerHp: {
+                    gte: parsed.powerMin,
+                    lte: parsed.powerMax
+                },
+                engineCapacityCm3: {
+                    gte: parsed.capacityMin,
+                    lte: parsed.capacityMax
+                },
+                fuelType: fuelTypes ? { in: fuelTypes, mode: 'insensitive' as const } : undefined,
+                transmission: transmissions ? { in: transmissions, mode: 'insensitive' as const } : undefined,
+                bodyType: bodyTypes ? { in: bodyTypes, mode: 'insensitive' as const } : undefined,
+                drive: drives ? { in: drives, mode: 'insensitive' as const } : undefined,
+                condition: statuses && statuses.length ? { in: statuses } : undefined,
+                entrySource: parsed.lastManualEditBefore
+                    ? ('MANUAL' as const)
+                    : (parsed.entrySource ? (parsed.entrySource as any) : undefined),
+                lastManualEditAt: parsed.lastManualEditBefore
+                    ? { lt: new Date(parsed.lastManualEditBefore) }
+                    : undefined,
+                dealer: cities ? { city: { in: cities, mode: 'insensitive' as const } } : undefined,
+                ...dealerFilter,
+                ...(parsed.includeArchived ? {} : { isArchived: false }),
+                ...(authenticated ? {} : { pricePln: { gt: 0 } }),
+                
+                // Display Mode logic
+                OR: [
+                    { specificationId: null },
+                    { specification: { displayMode: 'ALL' } },
+                    { AND: [{ specification: { displayMode: 'GROUPED' } }, { isRepresentative: true }] }
+                ]
+            };
+
+            // For per-dimension facets, count vehicles grouped by that dimension IGNORING
+            // the filter on that dimension (so the user sees "BMW (24)" even after selecting BMW).
+            // byCondition ignores the condition filter.
+            const { condition: _conditionFilter, ...whereWithoutCondition } = where;
+            const { make: _makeFilter, ...whereWithoutMake } = where;
+            const { model: _modelFilter, ...whereWithoutModel } = where;
+            const { fuelType: _fuelFilter, ...whereWithoutFuel } = where;
+            const { transmission: _transmissionFilter, ...whereWithoutTransmission } = where;
+            const { bodyType: _bodyFilter, ...whereWithoutBody } = where;
+            const { drive: _driveFilter, ...whereWithoutDrive } = where;
+            const { dealer: _cityFilter, ...whereWithoutCity } = where;
+
+            const [
+                listings,
+                totalCount,
+                byConditionRaw,
+                byMakeRaw,
+                byModelRaw,
+                byFuelRaw,
+                byTransmissionRaw,
+                byBodyRaw,
+                byDriveRaw,
+                byCityRaw,
+            ] = await Promise.all([
+                fastify.prisma.listing.findMany({
+                    where,
+                    include: {
+                        dealer: true,
+                        specification: true
+                    },
+                    orderBy,
+                    skip: (page - 1) * perPage,
+                    take: perPage
+                }),
+                fastify.prisma.listing.count({ where }),
+                fastify.prisma.listing.groupBy({
+                    by: ['condition'],
+                    where: whereWithoutCondition,
+                    _count: { _all: true },
+                }),
+                fastify.prisma.listing.groupBy({
+                    by: ['make'],
+                    where: whereWithoutMake,
+                    _count: { _all: true },
+                }),
+                fastify.prisma.listing.groupBy({
+                    by: ['model'],
+                    where: whereWithoutModel,
+                    _count: { _all: true },
+                }),
+                fastify.prisma.listing.groupBy({
+                    by: ['fuelType'],
+                    where: whereWithoutFuel,
+                    _count: { _all: true },
+                }),
+                fastify.prisma.listing.groupBy({
+                    by: ['transmission'],
+                    where: whereWithoutTransmission,
+                    _count: { _all: true },
+                }),
+                fastify.prisma.listing.groupBy({
+                    by: ['bodyType'],
+                    where: whereWithoutBody,
+                    _count: { _all: true },
+                }),
+                fastify.prisma.listing.groupBy({
+                    by: ['drive'],
+                    where: whereWithoutDrive,
+                    _count: { _all: true },
+                }),
+                fastify.prisma.dealer.findMany({
+                    where: {
+                        city: { not: null },
+                        listings: { some: whereWithoutCity }
+                    },
+                    select: {
+                        city: true,
+                        _count: { select: { listings: { where: whereWithoutCity } } }
+                    }
+                }),
+            ]);
+
+            const byCondition = { NEW: 0, USED: 0 };
+            for (const row of byConditionRaw) {
+                if (row.condition === 'NEW' || row.condition === 'USED') {
+                    byCondition[row.condition] = row._count._all;
+                }
+            }
+
+            // Canonical bucket for transmission: collapse vendor variants under "manual"/"automatic".
+            const transmissionCanonical = (raw: string): string => {
+                const lower = raw.toLowerCase();
+                if (lower.startsWith('manual')) return 'manual';
+                if (lower.startsWith('automat')) return 'automatic';
+                return raw;
+            };
+
+            const toFacetMap = (rows: any[], key: string): Record<string, number> => {
                 const out: Record<string, number> = {};
-                for (const r of byCityRaw) {
-                    const c = r.city;
-                    if (c) out[c] = (out[c] || 0) + r._count.listings;
+                const canonical: Record<string, string> = {};
+                for (const r of rows) {
+                    const v = r[key];
+                    if (v == null || v === '') continue;
+                    const raw = String(v);
+                    if (key === 'transmission') {
+                        const k = transmissionCanonical(raw);
+                        out[k] = (out[k] || 0) + r._count._all;
+                        continue;
+                    }
+                    if (key === 'fuelType') {
+                        const k = fuelCanonical(raw);
+                        out[k] = (out[k] || 0) + r._count._all;
+                        continue;
+                    }
+                    if (key === 'make') {
+                        const k = normalizeBrand(raw);
+                        out[k] = (out[k] || 0) + r._count._all;
+                        continue;
+                    }
+                    const lower = raw.toLowerCase();
+                    if (!canonical[lower]) canonical[lower] = raw;
+                    const k = canonical[lower];
+                    out[k] = (out[k] || 0) + r._count._all;
                 }
                 return out;
-            })(),
+            };
+
+            const facets = {
+                make: toFacetMap(byMakeRaw, 'make'),
+                model: toFacetMap(byModelRaw, 'model'),
+                fuelType: toFacetMap(byFuelRaw, 'fuelType'),
+                transmission: toFacetMap(byTransmissionRaw, 'transmission'),
+                bodyType: toFacetMap(byBodyRaw, 'bodyType'),
+                drive: toFacetMap(byDriveRaw, 'drive'),
+                city: (() => {
+                    const out: Record<string, number> = {};
+                    for (const r of byCityRaw) {
+                        const c = r.city;
+                        if (c) out[c] = (out[c] || 0) + r._count.listings;
+                    }
+                    return out;
+                })(),
+            };
+
+            return {
+                listings: listings.map(l => sanitizeListing(l, authenticated)),
+                count: totalCount,
+                byCondition,
+                facets,
+                page,
+                perPage,
+                totalPages: Math.max(1, Math.ceil(totalCount / perPage))
+            };
         };
 
-        return {
-            listings: listings.map(l => sanitizeListing(l, isAuthenticated)),
-            count: totalCount,
-            byCondition,
-            facets,
-            page,
-            perPage,
-            totalPages: Math.max(1, Math.ceil(totalCount / perPage))
-        };
+        if (isAuthenticated) {
+            const data = await runQuery(true, scopeDealerFilter);
+            return reply.header('Cache-Control', 'private, no-store').send(data);
+        }
+
+        const cacheKey = buildListingsQueryCacheKey(request.query as Record<string, any>);
+        const data = await getOrSetJson(cacheKey, 180, () => runQuery(false, {}));
+
+        return reply
+            .header('Cache-Control', 'public, max-age=0, s-maxage=180')
+            .header('Vary', 'Origin, Accept-Encoding')
+            .send(data);
     });
 
     // Get multiple listings by IDs (for personal offer / CRM selection)
@@ -652,56 +649,60 @@ export async function listingRoutes(fastify: FastifyInstance) {
     // Get single listing by slug with price history
     fastify.get('/api/listings/by-slug/:slug', async (request, reply) => {
         const { slug } = request.params as { slug: string };
+        const authHeader = request.headers.authorization;
+        const hasAuthHeader = Boolean(authHeader);
 
-        // Try to find by slug first
-        let listing = await fastify.prisma.listing.findUnique({
-            where: { slug },
-            include: {
-                dealer: {
-                    include: { settings: true }
-                },
-                specification: true,
-                creditProduct: true,
-                leasingProduct: true,
-                priceHistory: {
-                    orderBy: { changedAt: 'desc' },
-                    take: 30
+        const fetchListingRecord = async () => {
+            let listing = await fastify.prisma.listing.findUnique({
+                where: { slug },
+                include: {
+                    dealer: {
+                        include: { settings: true }
+                    },
+                    specification: true,
+                    creditProduct: true,
+                    leasingProduct: true,
+                    priceHistory: {
+                        orderBy: { changedAt: 'desc' },
+                        take: 30
+                    }
+                }
+            });
+
+            if (!listing) {
+                const idFromSlug = extractListingIdFromSlug(slug);
+                if (idFromSlug) {
+                    listing = await fastify.prisma.listing.findUnique({
+                        where: { id: idFromSlug },
+                        include: {
+                            dealer: {
+                                include: { settings: true }
+                            },
+                            specification: true,
+                            creditProduct: true,
+                            leasingProduct: true,
+                            priceHistory: {
+                                orderBy: { changedAt: 'desc' },
+                                take: 30
+                            }
+                        }
+                    });
                 }
             }
-        });
 
-        // If not found by slug, try to extract ID from slug and find by ID
-        if (!listing) {
-            const idFromSlug = extractListingIdFromSlug(slug);
-            if (idFromSlug) {
-                listing = await fastify.prisma.listing.findUnique({
-                    where: { id: idFromSlug },
-                    include: {
-                        dealer: {
-                            include: { settings: true }
-                        },
-                        specification: true,
-                        creditProduct: true,
-                        leasingProduct: true,
-                        priceHistory: {
-                            orderBy: { changedAt: 'desc' },
-                            take: 30
-                        }
-                    }
-                });
+            return listing;
+        };
+
+        const isAuthenticated = hasAuthHeader && await tryAuthenticate(fastify, request);
+
+        if (isAuthenticated) {
+            const listing = await fetchListingRecord();
+            if (!listing) {
+                return reply.code(404).header('Cache-Control', 'private, no-store').send({ error: 'Listing not found' });
             }
-        }
 
-        if (!listing) {
-            return reply.code(404).send({ error: 'Listing not found' });
-        }
-
-        // Check visibility
-        let hasAccess = false;
-        const authHeader = request.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
+            let hasAccess = false;
             try {
-                await request.jwtVerify();
                 const scope = await resolveScope(fastify, request);
                 if (scope.isPlatform) {
                     hasAccess = true;
@@ -711,36 +712,106 @@ export async function listingRoutes(fastify: FastifyInstance) {
                     if (allowed && typeof allowed === 'object' && 'in' in allowed && allowed.in.includes(listing.dealerId)) hasAccess = true;
                 }
             } catch { /* ignore */ }
-        }
 
-        if (!hasAccess && ((listing.pricePln ?? 0) <= 0 || listing.isArchived)) {
-            if (listing.isArchived) {
-                const lifecycle = await resolveOfferLifecycle(fastify, listing.id);
-                if (lifecycle.state === 'RECENTLY_SOLD') {
-                    return {
-                        listing: sanitizeListing(listing, hasAccess),
-                        isRecentlySold: true,
-                        similarListings: lifecycle.similarListings,
-                    };
-                }
-                if (lifecycle.state === 'LONG_GONE') {
-                    if (lifecycle.redirectUrl) {
-                        return reply.code(200).send({
-                            error: 'Listing permanently archived',
-                            redirectUrl: lifecycle.redirectUrl,
+            if (!hasAccess && ((listing.pricePln ?? 0) <= 0 || listing.isArchived)) {
+                if (listing.isArchived) {
+                    const lifecycle = await resolveOfferLifecycle(fastify, listing.id);
+                    if (lifecycle.state === 'RECENTLY_SOLD') {
+                        return reply.code(200).header('Cache-Control', 'private, no-store').send({
+                            listing: sanitizeListing(listing, hasAccess),
+                            isRecentlySold: true,
+                            similarListings: lifecycle.similarListings,
+                        });
+                    }
+                    if (lifecycle.state === 'LONG_GONE') {
+                        if (lifecycle.redirectUrl) {
+                            return reply.code(200).header('Cache-Control', 'private, no-store').send({
+                                error: 'Listing permanently archived',
+                                redirectUrl: lifecycle.redirectUrl,
+                                isLongGone: true,
+                            });
+                        }
+                        return reply.code(410).header('Cache-Control', 'private, no-store').send({
+                            error: 'Listing archived and gone',
                             isLongGone: true,
                         });
                     }
-                    return reply.code(410).send({
-                        error: 'Listing archived and gone',
-                        isLongGone: true,
-                    });
                 }
+                return reply.code(404).header('Cache-Control', 'private, no-store').send({ error: 'Listing not found' });
             }
-            return reply.code(404).send({ error: 'Listing not found' });
+
+            return reply.code(200).header('Cache-Control', 'private, no-store').send({ listing: sanitizeListing(listing, hasAccess) });
         }
 
-        return { listing: sanitizeListing(listing, hasAccess) };
+        const resolvePublicResponse = async () => {
+            const listing = await fetchListingRecord();
+            if (!listing) {
+                return { status: 404, data: { error: 'Listing not found' } };
+            }
+
+            if ((listing.pricePln ?? 0) <= 0 || listing.isArchived) {
+                if (listing.isArchived) {
+                    const lifecycle = await resolveOfferLifecycle(fastify, listing.id);
+                    if (lifecycle.state === 'RECENTLY_SOLD') {
+                        return {
+                            status: 200,
+                            data: {
+                                listing: sanitizeListing(listing, false),
+                                isRecentlySold: true,
+                                similarListings: lifecycle.similarListings,
+                            }
+                        };
+                    }
+                    if (lifecycle.state === 'LONG_GONE') {
+                        if (lifecycle.redirectUrl) {
+                            return {
+                                status: 200,
+                                data: {
+                                    error: 'Listing permanently archived',
+                                    redirectUrl: lifecycle.redirectUrl,
+                                    isLongGone: true,
+                                }
+                            };
+                        }
+                        return {
+                            status: 410,
+                            data: {
+                                error: 'Listing archived and gone',
+                                isLongGone: true,
+                            }
+                        };
+                    }
+                }
+                return { status: 404, data: { error: 'Listing not found' } };
+            }
+
+            return { status: 200, data: { listing: sanitizeListing(listing, false) } };
+        };
+
+        const cacheKey = buildListingSlugCacheKey(slug);
+        const cached = await getJsonFromCache<{ status: number; data: any }>(cacheKey);
+        if (cached && cached.status === 200) {
+            return reply
+                .code(200)
+                .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                .header('Vary', 'Origin, Accept-Encoding')
+                .send(cached.data);
+        }
+
+        const fresh = await resolvePublicResponse();
+        if (fresh.status === 200 && !fresh.data.isRecentlySold && !fresh.data.isLongGone) {
+            await setJsonInCache(cacheKey, fresh, 300);
+            return reply
+                .code(200)
+                .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                .header('Vary', 'Origin, Accept-Encoding')
+                .send(fresh.data);
+        }
+
+        return reply
+            .code(fresh.status)
+            .header('Cache-Control', 'private, no-store')
+            .send(fresh.data);
     });
 
     // Get single listing by ID with price history (for backward compatibility)
@@ -819,7 +890,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
         preHandler: [fastify.authenticate, requirePermission('stock:write')]
     }, async (request, reply) => {
         const { id } = request.params as { id: string };
-        const { reason } = request.body as { reason?: string };
+        const { reason } = (request.body as { reason?: string }) || {};
         const scope = await resolveScope(fastify, request);
 
         // Verify ownership — non-platform users can only archive their own listings
@@ -841,9 +912,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         });
 
+        const listingUrls = getListingInvalidationUrls(listing);
         await invalidateOfferCache(fastify, {
-            urls: [`/oferta/${listing.slug || listing.id}`],
+            urls: listingUrls,
             purgeSitemap: true,
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after listing archive');
         });
 
         return { listing };
@@ -874,9 +948,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         });
 
+        const restoreUrls = getListingInvalidationUrls(listing);
         await invalidateOfferCache(fastify, {
-            urls: [`/oferta/${listing.slug || listing.id}`],
+            urls: restoreUrls,
             purgeSitemap: true,
+        }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after listing restore');
         });
 
         return { listing: sanitizeListing(listing, true) };
@@ -889,7 +966,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const scope = await resolveScope(fastify, request);
 
-        const existing = await fastify.prisma.listing.findUnique({ where: { id }, select: { dealerId: true, slug: true } });
+        const existing = await fastify.prisma.listing.findUnique({ where: { id }, select: { id: true, dealerId: true, slug: true, make: true, model: true } });
         if (!scope.isPlatform) {
             const allowedDealerIds = scope.dealerFilter.dealerId;
             const dealerId = existing?.dealerId;
@@ -904,9 +981,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 where: { id }
             });
 
+            const deleteUrls = existing ? getListingInvalidationUrls(existing) : [`/oferta/${id}`, ...LISTING_AGGREGATE_URLS];
             await invalidateOfferCache(fastify, {
-                urls: [`/oferta/${existing?.slug || id}`],
+                urls: deleteUrls,
                 purgeSitemap: true,
+            }).catch(err => {
+                fastify.log.warn({ err }, 'Failed to invalidate cache after listing delete');
             });
 
             return { success: true, message: 'Listing deleted permanently' };
@@ -1066,6 +1146,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
             }
         });
 
+        if (result.count > 0) {
+            await invalidateOfferCache(fastify, { purgeAll: true, purgeEverything: true, purgeSitemap: true }).catch(err => {
+                fastify.log.warn({ err }, 'Failed to invalidate cache after bulk archive');
+            });
+        }
+
         return { success: true, count: result.count };
     });
 
@@ -1088,6 +1174,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         try {
             const result = await fastify.prisma.listing.deleteMany({ where });
+            if (result.count > 0) {
+                await invalidateOfferCache(fastify, { purgeAll: true, purgeEverything: true, purgeSitemap: true }).catch(err => {
+                    fastify.log.warn({ err }, 'Failed to invalidate cache after bulk delete');
+                });
+            }
             return { success: true, count: result.count };
         } catch (error) {
             fastify.log.error(error);
@@ -1158,6 +1249,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
             data: { slug }
         });
 
+        const offerUrls = getListingInvalidationUrls(updated);
+        await invalidateOfferCache(fastify, { urls: offerUrls, purgeSitemap: true }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after duplicate model');
+        });
+
         return reply.code(201).send({ listing: updated });
     });
 
@@ -1217,6 +1313,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
             data: { slug }
         });
 
+        const offerUrls = getListingInvalidationUrls(updated);
+        await invalidateOfferCache(fastify, { urls: offerUrls, purgeSitemap: true }).catch(err => {
+            fastify.log.warn({ err }, 'Failed to invalidate cache after duplicate offer');
+        });
+
         return reply.code(201).send({ listing: updated });
     });
 
@@ -1248,6 +1349,10 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         try {
             const listing = await refreshListingImages(fastify.prisma, id);
+            const offerUrls = getListingInvalidationUrls(listing);
+            await invalidateOfferCache(fastify, { urls: offerUrls, purgeSitemap: false }).catch(err => {
+                fastify.log.warn({ err }, 'Failed to invalidate cache after image refresh');
+            });
             return { success: true, listing };
         } catch (error) {
             fastify.log.error(error);

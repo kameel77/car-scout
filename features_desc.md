@@ -602,3 +602,34 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - **Komponent wyboru z kalendarza (`DatePicker.tsx`) w formularzu pojazdu**:
     - W sekcji „Ceny i stan” formularza edycji/dodawania pojazdu najmu dodano pole „Dostępny od” oraz wyposażono pola daty („Data pierwszej rejestracji” i „Dostępny od”) w komponent wyboru z kalendarza oparty o `date-fns` z lokalizacją `pl`, listą rozwijaną lat/miesięcy (`captionLayout="dropdown-buttons"`) i odpornością na przesunięcia stref czasowych.
   - **Podgląd w panelu administracyjnym (`RentalMatrixPage.tsx`)**: Komórki macierzy przestawnej (Pivot Table) wyświetlają etykietę `fee: X%`.
+
+## 52. Dwuwarstwowy system buforowania Redis SSR Cache i API Cache
+- **Cel**: Drastyczne skrócenie czasu odpowiedzi (TTFB < 10ms z bufora Redis) dla stron renderowanych po stronie serwera (SSR HTML) oraz publicznych zapytań API JSON (katalog ofert i pojazdów najmu), optymalizacja zużycia RAM instancji i pełna integracja z krawędzią Cloudflare Edge Cache dla stron HTML.
+- **Zastosowane rozwiązania**:
+  - **Dedykowany serwis SSR Cache (`ssr-cache.ts`)**:
+    - Przechowywanie skompresowanego bufora HTML (`gzip Buffer`) w Redisie pod kluczami `${brand}:${env}:${host}:ssr:v1:<cacheKey>`.
+    - Dwuetapowy model TTL: twardy czas wygaśnięcia 24h (`HARD_TTL_SECONDS = 86400`) oraz próg świeżości 6h (`FRESH_TTL_MS = 6 * 3600 * 1000`).
+    - Wzorzec Stale-While-Revalidate (SWR): żądania trafiające na wpis starszy niż 6h natychmiast otrzymują stary HTML z bufora, podczas gdy odświeżenie w tle wykonuje się asynchronicznie.
+    - Ochrona przed Cache Stampede (`revalidatingKeys` z 60s timeoutem i okresowym czyszczeniem mapy): blokada równoległego uruchamiania wielu renderów dla tej samej trasy.
+    - Krótki czas życia (5 min) dla odpowiedzi z kodami błędów lub stron z dyrektywą `noindex`.
+    - Dla tras `/samochody` kanoniczne rozwiązywanie parametrów query opiera się na 60-sekundowym in-memory buforze katalogu marek i modeli (`getBrandCatalog`, `getModelCatalog`), zapobiegając zanieczyszczeniu kluczy w Redisie i pętlom przekierowań 301.
+  - **Dedykowany serwis API Cache (`api-cache.ts`)**:
+    - Buforowanie zserializowanych i skompresowanych obiektów JSON (gzip dla >512B) pod kluczami `${brand}:${env}:${host}:api:v1:...` dla `GET /api/listings` i `GET /api/rental/vehicles` (180s TTL) oraz detali ofert/pojazdów po slugu (300s TTL).
+    - Ochrona Singleflight przed Cache Stampede (`inFlightRequests` Map): jednoczesne zapytania o ten sam wygasły klucz dzielą jedną operację pobrania z bazy danych SQL.
+    - Kanoniczne budowanie kluczy (`buildListingsQueryCacheKey`, `buildRentalVehiclesQueryCacheKey`) z alfabetycznym sortowaniem parametrów query, klampowaniem paginacji do 10000, bezpiecznym zakresem numerycznym (np. cena do 100 mln PLN, przebieg do 2 mln km), sanitizacją długości fraz wyszukiwania (`q`/`search` do 100 znaków) oraz precyzyjną normalizacją walut (`currency === 'EUR'`) i zachowaniem pól sortowania camelCase (np. `minMonthlyRateNet`).
+    - Zachowanie wielkości liter w zapytaniu `parsed.q` do bazy danych (poprawne działanie zapytań wielkich liter, np. "ABS", w polach wyposażenia).
+  - **Bezpieczeństwo i izolacja autoryzacji**:
+    - Żądania zweryfikowanych użytkowników (np. zalogowany dealer, administrator) bezwzględnie omijają bufor Redis (odczyt i zapis) i zwracają nagłówek `Cache-Control: private, no-store`.
+    - Trasy administracyjne (`/admin/*`) oraz kody 404/500 nigdy nie są buforowane na krawędzi publicznej.
+  - **Zero blokowania Event Loopa (Kursor SCAN)**:
+    - Eliminacja komendy `KEYS` na rzecz nieblokującej pętli `SCAN` (`COUNT 200`) i batchowego usuwania kluczy (`DEL` w paczkach po 100).
+  - **Pełne pokrycie inwalidacji we wszystkich ścieżkach zapisu (`cache-invalidation.service.ts`)**:
+    - Rozdzielenie stron agregacyjnych na `LISTING_AGGREGATE_URLS` (sprzedaż) i `RENTAL_AGGREGATE_URLS` (najem), co zapobiega zbędnemu czyszczeniu katalogu najmu przy modyfikacji aut sprzedaży.
+    - Natychmiastowe czyszczenie lokalnych buforów komponentów (`__resetComponentCaches()`) przy każdej operacji inwalidacji, co chroni przed serwowaniem starych banerów lub ustawień siatki.
+    - Selektywna inwalidacja zmienionych ofert (zarówno sluga, jak i ID, oraz starych i nowych adresów przy edycji PATCH), stron marek/modeli i agregatów w silnikach `CSFlow` i `StockSyncEngine` (wyzwalana wyłącznie przy rzeczywistych zmianach pól/ceny ze znormalizowanym porównaniem null/undefined).
+    - Globalna inwalidacja strefy (`purgeEverything: true`) przy masowym przeliczeniu cen wszystkich ofert w ustawieniach (`settings.ts`) oraz masowym usuwaniu/archiwizowaniu według źródła (`listings.ts`).
+    - Asynchroniczne oczekiwanie (`await`) na wykonanie inwalidacji we wszystkich trasach mutacji (`listings.ts`, `rental-vehicles.ts`, `rental-matrix.ts`, `settings.ts`, `hero-banners.ts`, `seo-content.ts`).
+  - **Poprawność nagłówków CORS i Cloudflare**:
+    - Ustawianie `Vary: Origin, Accept-Encoding` na publicznych endpointach API JSON.
+    - Wewnętrzny endpoint SSR `/api/render` używa `Vary: Accept-Encoding` i `s-maxage=3600` do optymalnego buforowania HTML na krawędzi Cloudflare.
+

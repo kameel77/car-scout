@@ -16,13 +16,18 @@ Enabling edge caching for SSR HTML serves HTML directly from Cloudflare PoP loca
 5. Under **When incoming requests match...** (Expression Builder / Custom filter):
    - Set condition:
      ```text
-     (http.host eq "motolia.pl" or http.host eq "www.motolia.pl")
-     and not (http.request.uri.path starts_with "/admin")
-     and not (http.request.uri.path starts_with "/api/")
+     (http.host eq "motolia.pl" or http.host eq "www.motolia.pl") and not starts_with(http.request.uri.path, "/admin") and not starts_with(http.request.uri.path, "/api/")
      ```
      (`/api/render` is internal-only — nginx's `@render` location rewrites public URLs like
      `/`, `/samochody`, `/oferta/...` to it server-side, it is never requested directly by a
      browser or Cloudflare, so excluding all of `/api/` is simpler and equally correct.)
+
+     > `starts_with` is a **function** in the Cloudflare Rules language, not an infix
+     > operator — `http.request.uri.path starts_with "/admin"` fails to parse with
+     > *"expected ComparisonOp"*. Keep the parentheses around the host alternation too:
+     > `and` binds tighter than `or`, so without them the exclusions would not apply to
+     > the apex host. Do not rewrite this as `matches` with a regex — regex in rule
+     > expressions requires a Business plan; this zone is on Free.
 6. Under **Cache eligibility**:
    - Select **Eligible for cache**.
 7. Under **Setting overrides**:
