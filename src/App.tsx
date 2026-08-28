@@ -89,19 +89,19 @@ const App = () => (
           <TooltipProvider>
             <BrandProvider>
               <BrowserRouter>
+                <SeoManager />
+                <DynamicTranslationsLoader />
+                <LanguageSync />
+                <Toaster />
+                <Suspense fallback={null}>
+                  <Sonner />
+                </Suspense>
                 <ScrollToTop />
                 <ClarityPageTracker />
                 <PageViewTracker />
                 <SpecialOfferProvider>
                   <CrmTrackingProvider>
                     <PersonalOfferProvider>
-                      <SeoManager />
-                      <DynamicTranslationsLoader />
-                      <LanguageSync />
-                      <Toaster />
-                      <Suspense fallback={null}>
-                        <Sonner />
-                      </Suspense>
                       <ChunkErrorBoundary>
                         <Suspense fallback={null}>
                           <Routes>
