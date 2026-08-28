@@ -101,9 +101,10 @@ describe('buildListingMeta', () => {
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
         expect(m.preloadImages).toHaveLength(1);
         const p = m.preloadImages![0];
-        expect(p.href).toBe('https://dev.motolia.pl/uploads/listings/puma.webp');
-        expect(p.imagesrcset).toContain('puma-thumb.webp 600w');
-        expect(p.imagesrcset).toContain('puma-md.webp 1200w');
+        expect(p.href).toBe('https://dev.motolia.pl/uploads/listings/puma.avif');
+        expect(p.imagesrcset).toContain('puma-thumb.avif 600w');
+        expect(p.imagesrcset).toContain('puma-md.avif 1200w');
+        expect((p as any).type).toBe('image/avif');
         expect(p.imagesizes).toContain('100vw');
     });
 
@@ -899,7 +900,7 @@ describe('injectHead', () => {
         const html = injectHead(TEMPLATE, m);
         expect(html).toContain('<link rel="preload" as="image" fetchpriority="high"');
         expect(html).toContain('imagesrcset=');
-        expect(html).toContain('puma-thumb.webp 600w');
+        expect(html).toContain('puma-thumb.avif 600w');
     });
 
     it('escapes </script> in JSON-LD', () => {

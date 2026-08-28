@@ -235,8 +235,8 @@ describe('GET /api/render', () => {
         const res = await app.inject({ method: 'GET', url: `/api/render?path=/oferta/${slug}` });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('rel="preload" as="image" fetchpriority="high"');
-        expect(res.body).toContain('test-render-thumb.webp 600w');
-        expect(res.body).toContain('test-render-md.webp 1200w');
+        expect(res.body).toContain('test-render-thumb.avif 600w');
+        expect(res.body).toContain('test-render-md.avif 1200w');
     });
 
     it('unknown path: 404 + noindex + brand default title', async () => {
