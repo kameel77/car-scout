@@ -24,7 +24,9 @@ export function getApiNamespace(): string {
             const parsed = new URL(process.env.FRONTEND_URL).hostname.replace(/\./g, '_');
             if (parsed) host = `:${parsed}`;
         }
-    } catch {}
+    } catch (_err) {
+        host = '';
+    }
     return `${brand}:${env}${host}`;
 }
 
