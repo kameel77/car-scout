@@ -21,7 +21,7 @@ import { PageViewTracker } from './components/seo/PageViewTracker';
 import { ScrollToTop } from './components/ScrollToTop';
 import './i18n';
 
-import HomePage from "./pages/HomePage";
+const HomePage = lazy(() => import("./pages/HomePage"));
 
 // Poza ścieżką krytyczną strony głównej: layout admina i sonner (~45 KB min)
 // nie mają prawa siedzieć w głównym chunku.

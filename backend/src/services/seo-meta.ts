@@ -20,6 +20,7 @@ export interface PreloadImage {
     imagesrcset?: string;
     imagesizes?: string;
     media?: string;
+    type?: string;
 }
 
 export interface BrandCtx {
@@ -106,9 +107,10 @@ function buildImagePreload(url: string, sizes: string, baseUrl: string): Preload
     if (hasLocalVariants(url)) {
         const base = abs.slice(0, -'.webp'.length);
         return {
-            href: abs,
-            imagesrcset: `${base}-thumb.webp 600w, ${base}-md.webp 1200w, ${abs} 1920w`,
+            href: `${base}.avif`,
+            imagesrcset: `${base}-thumb.avif 600w, ${base}-md.avif 1200w, ${base}.avif 1920w`,
             imagesizes: sizes,
+            type: 'image/avif',
         };
     }
     return { href: abs };
@@ -1559,6 +1561,7 @@ export function injectHead(template: string, meta: PageMeta): string {
             (p.imagesrcset ? ` imagesrcset="${escapeAttr(p.imagesrcset)}"` : '') +
             (p.imagesizes ? ` imagesizes="${escapeAttr(p.imagesizes)}"` : '') +
             (p.media ? ` media="${escapeAttr(p.media)}"` : '') +
+            (p.type ? ` type="${escapeAttr(p.type)}"` : '') +
             ` />`
         );
     }
