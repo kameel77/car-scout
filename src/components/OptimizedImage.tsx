@@ -9,6 +9,8 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
     priority?: boolean;
     /** Wariant mobile (<768px). Gdy podany, renderujemy <picture> zamiast dwóch <img>. */
     mobileSrc?: string | null;
+    /** Czy pokazywać szary placeholder motolii gdy brak src lub błąd ładowania */
+    allowPlaceholder?: boolean;
 }
 
 // Pipeline (image-optimizer.ts) zachowuje proporcje oryginału; zdjęcia aut to
@@ -35,6 +37,7 @@ export function OptimizedImage({
     fallbackSrc = '/motolia-placeholder.webp',
     forceThumbnail = false,
     priority = false,
+    allowPlaceholder = true,
     className,
     sizes,
     ...props
@@ -54,6 +57,7 @@ export function OptimizedImage({
         : { loading: 'lazy' as const, decoding: 'async' as const };
 
     if (!src || mode === 'fallback') {
+        if (!allowPlaceholder) return null;
         return (
             <img
                 src={fallbackSrc}
