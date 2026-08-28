@@ -30,16 +30,26 @@ const Sonner = lazy(() =>
   import("@/components/ui/sonner").then((m) => ({ default: m.Toaster })),
 );
 
+const HomePage = lazy(() => import("./pages/HomePage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const ListingDetailPage = lazy(() => import("./pages/ListingDetailPage"));
-const LeadFormPage = lazy(() => import("./pages/LeadFormPage"));
+const RentalSearchPage = lazy(() => import("./pages/RentalSearchPage"));
+const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
+const ConditionPage = lazy(() => import("./pages/ConditionPage"));
+const CalculatorPage = lazy(() => import("./pages/CalculatorPage"));
+const PublicFaqPage = lazy(() => import("./pages/PublicFaqPage"));
+const MotoliaB2BPage = lazy(() => import("./pages/MotoliaB2BPage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
+const PersonalOfferPage = lazy(() => import("./pages/PersonalOfferPage"));
+const FotonLandingPage = lazy(() => import("./pages/FotonLandingPage"));
+const FotonModelPage = lazy(() => import("./pages/FotonModelPage"));
 const CampaignLandingPage = lazy(() => import("./pages/CampaignLandingPage"));
+const LeadFormPage = lazy(() => import("./pages/LeadFormPage"));
+const RentalLeadFormPage = lazy(() => import("./pages/RentalLeadFormPage"));
+const WidgetEmbedPage = lazy(() => import("./pages/WidgetEmbedPage"));
+const B2BOnepagerPage = lazy(() => import("./pages/B2BOnepagerPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-// Lazy load non-critical page components to enable code splitting
-const ContactPage = lazy(() => import("./pages/ContactPage"));
-const PublicFaqPage = lazy(() => import("./pages/PublicFaqPage"));
-const CalculatorPage = lazy(() => import("./pages/CalculatorPage"));
 const LoginPage = lazy(() => import("./pages/admin/LoginPage"));
 const AdminDashboard = lazy(() => import("./pages/admin/DashboardPage"));
 const LeadsPage = lazy(() => import("./pages/admin/LeadsPage"));
@@ -66,51 +76,46 @@ const SeoPage = lazy(() => import("./pages/admin/SeoPage"));
 const RentalVehiclesPage = lazy(() => import("./pages/admin/RentalVehiclesPage"));
 const RentalCompaniesPage = lazy(() => import("./pages/admin/RentalCompaniesPage"));
 const RentalMatrixPage = lazy(() => import("./pages/admin/RentalMatrixPage"));
-const PersonalOfferPage = lazy(() => import("./pages/PersonalOfferPage"));
-const B2BOnepagerPage = lazy(() => import("./pages/B2BOnepagerPage"));
-const MotoliaB2BPage = lazy(() => import("./pages/MotoliaB2BPage"));
-const FotonLandingPage = lazy(() => import("./pages/FotonLandingPage"));
-const FotonModelPage = lazy(() => import("./pages/FotonModelPage"));
-const RentalSearchPage = lazy(() => import("./pages/RentalSearchPage"));
-const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
-const ConditionPage = lazy(() => import("./pages/ConditionPage"));
-const RentalLeadFormPage = lazy(() => import("./pages/RentalLeadFormPage"));
 const DealerGroupsPage = lazy(() => import("./pages/admin/DealerGroupsPage"));
 const DealersPage = lazy(() => import("./pages/admin/DealersPage"));
 const WidgetsPage = lazy(() => import("./pages/admin/WidgetsPage"));
-const WidgetEmbedPage = lazy(() => import("./pages/WidgetEmbedPage"));
 
 const queryClient = new QueryClient();
+
+function AdminProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider>
+      <PriceSettingsProvider>
+        {children}
+      </PriceSettingsProvider>
+    </AuthProvider>
+  );
+}
 
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PriceSettingsProvider>
-          <TooltipProvider>
-            <BrandProvider>
-              <SeoManager />
-              <DynamicTranslationsLoader />
-              <LanguageSync />
-              <Toaster />
-              <Suspense fallback={null}>
-                <Sonner />
-              </Suspense>
-              <BrowserRouter>
-                <ScrollToTop />
-                <ClarityPageTracker />
-                <PageViewTracker />
-                <SpecialOfferProvider>
-                  <CrmTrackingProvider>
-                  <PersonalOfferProvider>
-                    <ChunkErrorBoundary>
-                      <Suspense fallback={null}>
-                        <Routes>
-                        {/* Public routes */}
-                        <Route path="/" element={<HomePage />} />
-                      {/* key wymusza remount przy nawigacji SPA między trasami dzielącymi
-                          ten sam komponent — bez niego stan (np. filters.statuses) zostaje
-                          z poprzedniej trasy i lista pokazuje złe auta do czasu odświeżenia */}
+      <TooltipProvider>
+        <BrandProvider>
+          <SeoManager />
+          <DynamicTranslationsLoader />
+          <LanguageSync />
+          <Toaster />
+          <Suspense fallback={null}>
+            <Sonner />
+          </Suspense>
+          <BrowserRouter>
+            <ScrollToTop />
+            <ClarityPageTracker />
+            <PageViewTracker />
+            <SpecialOfferProvider>
+              <CrmTrackingProvider>
+              <PersonalOfferProvider>
+                <ChunkErrorBoundary>
+                  <Suspense fallback={null}>
+                    <Routes>
+                      {/* Public routes */}
+                      <Route path="/" element={<HomePage />} />
                       <Route path="/samochody" element={<SearchPage key="samochody" />} />
                       <Route path="/samochody/:marka" element={<SearchPage key="samochody-marka" />} />
                       <Route path="/samochody/:marka/:model" element={<SearchPage key="samochody-marka-model" />} />
@@ -152,12 +157,12 @@ const App = () => (
                       <Route path="/listing/:id/lead" element={<LeadFormPage />} />
                       <Route path="/listing/:id/negotiate" element={<LeadFormPage />} />
 
-                      {/* Admin routes */}
-                      <Route path="/admin/login" element={<LoginPage />} />
-                      <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
-                      <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
+                      {/* Admin routes wrapped in AdminProviders */}
+                      <Route path="/admin/login" element={<AdminProviders><LoginPage /></AdminProviders>} />
+                      <Route path="/admin/forgot-password" element={<AdminProviders><ForgotPasswordPage /></AdminProviders>} />
+                      <Route path="/admin/reset-password" element={<AdminProviders><ResetPasswordPage /></AdminProviders>} />
 
-                      <Route element={<AdminLayout />}>
+                      <Route element={<AdminProviders><AdminLayout /></AdminProviders>}>
                         <Route
                           path="/admin/dashboard"
                           element={
@@ -370,19 +375,17 @@ const App = () => (
 
                       <Route path="*" element={<NotFound />} />
                     </Routes>
-                    </Suspense>
-                    </ChunkErrorBoundary>
-                    <ConsentBanner />
-                  </PersonalOfferProvider>
-                </CrmTrackingProvider>
-              </SpecialOfferProvider>
-            </BrowserRouter>
-          </BrandProvider>
-        </TooltipProvider>
-      </PriceSettingsProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  </HelmetProvider>
+                  </Suspense>
+                </ChunkErrorBoundary>
+                <ConsentBanner />
+              </PersonalOfferProvider>
+            </CrmTrackingProvider>
+          </SpecialOfferProvider>
+        </BrowserRouter>
+      </BrandProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+</HelmetProvider>
 );
 
 export default App;
