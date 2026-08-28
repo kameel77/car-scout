@@ -9,20 +9,25 @@ export interface OptimizeImageOptions {
     thumbWidth?: number; // domyślnie 600
     quality?: number; // domyślnie 80
     generateThumbnail?: boolean; // domyślnie true
+    generateAvif?: boolean; // domyślnie true
+    generateLqip?: boolean; // domyślnie true
 }
 
 export interface OptimizeImageResult {
     largeFilename: string; // np. "12345-hash.webp"
-    mediumFilename?: string; // np. "12345-hash-md.webp" (jeśli wygenerowano)
-    thumbFilename?: string; // np. "12345-hash-thumb.webp" (jeśli wygenerowano)
+    mediumFilename?: string; // np. "12345-hash-md.webp"
+    thumbFilename?: string; // np. "12345-hash-thumb.webp"
+    avifLargeFilename?: string;
+    avifMediumFilename?: string;
+    avifThumbFilename?: string;
+    lqip?: string; // base64 blurhash/placeholder
 }
 
 /**
  * Optymalizuje obraz w locie:
- * - Konwertuje do WebP
- * - Skaluje do max szerokości (główne zdjęcie)
- * - Skaluje do małej szerokości (miniatura)
- * - Zapisuje pliki w docelowym folderze.
+ * - Konwertuje do WebP i AVIF
+ * - Skaluje do wariantów szerokości
+ * - Generuje LQIP (Low Quality Image Placeholder)
  */
 export async function optimizeAndSaveImage(
     inputBuffer: Buffer,
@@ -36,55 +41,68 @@ export async function optimizeAndSaveImage(
         thumbWidth = 600,
         quality = 80,
         generateThumbnail = true,
+        generateAvif = true,
+        generateLqip = true,
     } = options;
 
-    const largeFilename = `${baseFilename}.webp`;
-    const largePath = path.join(targetDir, largeFilename);
-
-    const image = sharp(inputBuffer);
+    const image = sharp(inputBuffer).rotate(); // auto-rotate based on EXIF
     const metadata = await image.metadata();
 
-    // Główny obraz
-    const largeProcessor = image.clone();
-    if (metadata.width && metadata.width > largeWidth) {
-        largeProcessor.resize(largeWidth, null, { withoutEnlargement: true });
-    }
-    await largeProcessor
-        .webp({ quality })
-        .toFile(largePath);
+    const result: OptimizeImageResult = {
+        largeFilename: `${baseFilename}.webp`,
+    };
 
-    const result: OptimizeImageResult = { largeFilename };
-
-    // Wariant średni (do srcset na kartach ofert)
-    if (generateThumbnail) {
-        const mediumFilename = `${baseFilename}-md.webp`;
-        const mediumPath = path.join(targetDir, mediumFilename);
-
-        const mediumProcessor = image.clone();
-        if (metadata.width && metadata.width > mediumWidth) {
-            mediumProcessor.resize(mediumWidth, null, { withoutEnlargement: true });
+    // --- WebP Pipeline ---
+    const webpPipe = async (width: number, suffix: string = '') => {
+        const filename = `${baseFilename}${suffix}.webp`;
+        const p = path.join(targetDir, filename);
+        let instance = image.clone();
+        if (metadata.width && metadata.width > width) {
+            instance = instance.resize(width, null, { withoutEnlargement: true });
         }
-        await mediumProcessor
-            .webp({ quality })
-            .toFile(mediumPath);
+        await instance.webp({ quality }).toFile(p);
+        return filename;
+    };
 
-        result.mediumFilename = mediumFilename;
+    await webpPipe(largeWidth);
+    if (generateThumbnail) {
+        result.mediumFilename = await webpPipe(mediumWidth, '-md');
+        result.thumbFilename = await webpPipe(thumbWidth, '-thumb');
     }
 
-    // Miniatura
-    if (generateThumbnail) {
-        const thumbFilename = `${baseFilename}-thumb.webp`;
-        const thumbPath = path.join(targetDir, thumbFilename);
+    // --- AVIF Pipeline ---
+    if (generateAvif) {
+        const avifPipe = async (width: number, suffix: string = '') => {
+            const filename = `${baseFilename}${suffix}.avif`;
+            const p = path.join(targetDir, filename);
+            let instance = image.clone();
+            if (metadata.width && metadata.width > width) {
+                instance = instance.resize(width, null, { withoutEnlargement: true });
+            }
+            // AVIF quality 60-70 is usually comparable to WebP 80 but smaller
+            await instance.avif({ quality: Math.max(quality - 15, 50) }).toFile(p);
+            return filename;
+        };
 
-        const thumbProcessor = image.clone();
-        if (metadata.width && metadata.width > thumbWidth) {
-            thumbProcessor.resize(thumbWidth, null, { withoutEnlargement: true });
+        result.avifLargeFilename = await avifPipe(largeWidth);
+        if (generateThumbnail) {
+            result.avifMediumFilename = await avifPipe(mediumWidth, '-md');
+            result.avifThumbFilename = await avifPipe(thumbWidth, '-thumb');
         }
-        await thumbProcessor
-            .webp({ quality })
-            .toFile(thumbPath);
-            
-        result.thumbFilename = thumbFilename;
+    }
+
+    // --- LQIP Pipeline ---
+    if (generateLqip) {
+        try {
+            const lqipBuffer = await image
+                .clone()
+                .resize(20, null, { fit: 'inside' })
+                .webp({ quality: 20 })
+                .toBuffer();
+            result.lqip = `data:image/webp;base64,${lqipBuffer.toString('base64')}`;
+        } catch (err) {
+            console.error('[ImageOptimizer] Failed to generate LQIP:', err);
+        }
     }
 
     return result;

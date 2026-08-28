@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -21,16 +21,15 @@ import { faqApi, leadsApi, heroBannersApi } from '@/services/api';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useBrand } from '@/contexts/BrandContext';
-import { DynamicWidget } from '@/components/public/DynamicWidget';
-import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import HeroVehicleFilter from '@/components/HeroVehicleFilter';
-import { FeatureTilesSection } from '@/components/FeatureTilesSection';
 import { CallbackForm } from '@/components/CallbackForm';
 // Import statyczny, NIE React.lazy: baner hero jest elementem LCP strony głównej.
-// Lazy-chunk dokładał trzeci skok do łańcucha krytycznego (HTML → index.js → chunk,
-// ~1036 ms w Lighthouse) i podmieniał wymalowany przez SSR <picture> na szary
-// placeholder Suspense, przez co LCP liczyło się od ponownego namalowania.
 import { HeroBannerCarousel } from '@/components/HeroBannerCarousel';
+
+// Sekcje poniżej folda: lazy load, żeby odciążyć główny bundle
+const FeatureTilesSection = lazy(() => import('@/components/FeatureTilesSection').then(m => ({ default: m.FeatureTilesSection })));
+const DynamicWidget = lazy(() => import('@/components/public/DynamicWidget').then(m => ({ default: m.DynamicWidget })));
+const PurchaseProcessStepper = lazy(() => import('@/components/PurchaseProcessStepper').then(m => ({ default: m.PurchaseProcessStepper })));
 
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -344,7 +343,9 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── FEATURE TILES (CMS-managed) ──────────────────────────────────── */}
-      <FeatureTilesSection className="py-12 bg-white border-b border-gray-100" />
+      <Suspense fallback={<div className="h-48" />}>
+        <FeatureTilesSection className="py-12 bg-white border-b border-gray-100" />
+      </Suspense>
 
       {/* ── TRUST BAR ────────────────────────────────────────────────────── */}
       <section className="border-y border-gray-100 bg-white">
@@ -367,11 +368,13 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── WYBRANE OFERTY (WIDGETY) ─────────────────────────────────────── */}
-      <DynamicWidget 
-        placement="HOME" 
-        className="bg-white hover:bg-gray-50/50 transition-colors py-12 md:py-16"
-        innerClassName="max-w-7xl mx-auto px-6 w-full"
-      />
+      <Suspense fallback={<div className="h-96" />}>
+        <DynamicWidget 
+          placement="HOME" 
+          className="bg-white hover:bg-gray-50/50 transition-colors py-12 md:py-16"
+          innerClassName="max-w-7xl mx-auto px-6 w-full"
+        />
+      </Suspense>
 
       {/* ── PRODUKTY ─────────────────────────────────────────────────────── */}
       <section className="py-28 bg-background" id="produkty">
@@ -438,8 +441,10 @@ export default function MotoliaHomePage() {
         </div>
       </section>
 
-      {/* ── JAK TO DZIAŁA ────────────────────────────────────────────────── */}
-      <PurchaseProcessStepper variant="full" />
+      {/* ── PROCES ZAKUPU ────────────────────────────────────────────────── */}
+      <Suspense fallback={<div className="h-48" />}>
+        <PurchaseProcessStepper variant="full" />
+      </Suspense>
 
       {/* ── MARKI I PARTNERZY ─────────────────────────────────────────────── */}
       <section className="py-24 bg-background border-y border-gray-100">

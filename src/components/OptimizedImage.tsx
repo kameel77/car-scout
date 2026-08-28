@@ -9,6 +9,8 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
     priority?: boolean;
     /** Wariant mobile (<768px). Gdy podany, renderujemy <picture> zamiast dwóch <img>. */
     mobileSrc?: string | null;
+    /** Czy pokazywać szary placeholder motolii gdy brak src lub błąd ładowania */
+    allowPlaceholder?: boolean;
 }
 
 // Pipeline (image-optimizer.ts) zachowuje proporcje oryginału; zdjęcia aut to
@@ -19,10 +21,11 @@ const DEFAULT_HEIGHT = 675;
 const THUMB_W = 600;
 const THUMB_H = 338;
 
-function localVariants(src: string): string | null {
+function localVariants(src: string, format: 'webp' | 'avif' = 'webp'): string | null {
     if (!src.startsWith('/uploads/') || !src.endsWith('.webp')) return null;
     const base = src.slice(0, -'.webp'.length);
-    return `${base}-thumb.webp ${THUMB_W}w, ${base}-md.webp 1200w, ${src} 1920w`;
+    const ext = `.${format}`;
+    return `${base}-thumb${ext} ${THUMB_W}w, ${base}-md${ext} 1200w, ${base}${ext} 1920w`;
 }
 
 type Mode = 'srcset' | 'plain' | 'fallback';
@@ -34,6 +37,7 @@ export function OptimizedImage({
     fallbackSrc = '/motolia-placeholder.webp',
     forceThumbnail = false,
     priority = false,
+    allowPlaceholder = true,
     className,
     sizes,
     ...props
@@ -53,6 +57,7 @@ export function OptimizedImage({
         : { loading: 'lazy' as const, decoding: 'async' as const };
 
     if (!src || mode === 'fallback') {
+        if (!allowPlaceholder) return null;
         return (
             <img
                 src={fallbackSrc}
@@ -103,10 +108,28 @@ export function OptimizedImage({
             />
         );
 
+        const avifSource = localVariants(src, 'avif');
+        const webpSource = localVariants(src);
+
         if (mobileSrc) {
+            const mobileAvif = localVariants(mobileSrc, 'avif');
+            const mobileWebp = localVariants(mobileSrc);
             return (
                 <picture>
-                    <source media="(max-width: 767px)" srcSet={localVariants(mobileSrc) ?? mobileSrc} />
+                    {mobileAvif && <source media="(max-width: 767px)" type="image/avif" srcSet={mobileAvif} sizes={sizes ?? '100vw'} />}
+                    {mobileWebp && <source media="(max-width: 767px)" type="image/webp" srcSet={mobileWebp} sizes={sizes ?? '100vw'} />}
+                    {avifSource && <source type="image/avif" srcSet={avifSource} sizes={sizes ?? '100vw'} />}
+                    {webpSource && <source type="image/webp" srcSet={webpSource} sizes={sizes ?? '100vw'} />}
+                    {img}
+                </picture>
+            );
+        }
+
+        if (avifSource || webpSource) {
+            return (
+                <picture>
+                    {avifSource && <source type="image/avif" srcSet={avifSource} sizes={sizes ?? '100vw'} />}
+                    {webpSource && <source type="image/webp" srcSet={webpSource} sizes={sizes ?? '100vw'} />}
                     {img}
                 </picture>
             );
