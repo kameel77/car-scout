@@ -633,3 +633,23 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - Ustawianie `Vary: Origin, Accept-Encoding` na publicznych endpointach API JSON.
     - Wewnętrzny endpoint SSR `/api/render` używa `Vary: Accept-Encoding` i `s-maxage=3600` do optymalnego buforowania HTML na krawędzi Cloudflare.
 
+## 53. Stabilna ścieżka LCP strony głównej i responsywne obrazy katalogu
+- Strona główna zachowuje statyczny import `HomePage`, zgodny shell SSR oraz pojedynczy preload obrazu LCP. Zapobiega to miganiu hero i zerwaniu obrazu podczas montowania Reacta.
+- Szczegółowe niezmienniki i checklistę opisuje `docs/HOMEPAGE_PERFORMANCE_ARCHITECTURE.md`.
+- Katalogi `/nowe` i `/uzywane` preloadują tylko obraz pierwszej karty i używają istniejących wariantów WebP `-thumb`, `-md` oraz pełnego obrazu.
+- Nieistniejące warianty AVIF nie są już wybierane przez przeglądarkę. Usuwa to 404 przed pobraniem właściwego obrazu i pozwala użyć mniejszego wariantu WebP na mobile.
+- Tylko pierwsza karta otrzymuje `loading="eager"` i `fetchpriority="high"`; pozostałe obrazy są ładowane leniwie.
+- Widoki kondycji czekają na ustawienia siatki przed pierwszym zapytaniem o oferty, dzięki czemu nie pobierają kolejno 32 i 30 tych samych rekordów.
+- Gdy pierwsza oferta katalogu nie ma zdjęcia, SSR preloaduje używany przez kartę placeholder zamiast obrazu późniejszej oferty. Dzięki temu preload pozostaje zgodny z rzeczywistym elementem LCP.
+
+## 54. Izolacja grafu zależności `/nowe` i `/uzywane`
+- Trasy `/nowe` i `/uzywane` nie importują już komponentów, klienta API ani logiki scalania ofert najmu, ponieważ w tych widokach najem jest stale ukryty. Zmniejsza to chunk trasy i liczbę zależności wykonywanych przed wyrenderowaniem pierwszej karty.
+- Zmiana jest zamknięta w lazy chunku `ConditionPage`: nie modyfikuje globalnego `App`, statycznego shellu, preloadów ani entry bundle homepage.
+- Pełne drzewo `modulepreload` pozostaje domyślnie wyłączone, ponieważ wcześniejszy eksperyment wykazał opóźnienie strumienia HTML i FCP. Optymalizacja redukuje zależności u źródła zamiast podnosić ich priorytet.
+
+## 55. Optymalizacja ścieżki krytycznej katalogów (`/nowe` i `/uzywane`)
+- **Usunięcie martwego preloadu `/api/geo`**: Usunięto nieużywany tag `<link rel="preload" href="/api/geo">` z `index.html`.
+- **Wstrzykiwanie ustawień aplikacji w SSR (`window.__APP_SETTINGS__`)**: `render.ts` wstrzykuje publiczne ustawienia aplikacji bezpośrednio do tagu `<head>` w dokumencie HTML. `useAppSettings` konsumuje je natychmiast jako `initialData` z `initialDataUpdatedAt: 0` (rewalidacja w tle bez blokowania). Bramki `useListings` i `ConditionPage` nie blokują się już na zapytaniu sieciowym o ustawienia (`settings !== undefined` zamiast oczekiwania na `isFetched`).
+- **Prefetch katalogu w nagłówku HTML (`window.__CATALOG_PREFETCH__`)**: Dla pierwszej strony tras `/nowe` oraz `/uzywane` serwer SSR generuje jedno-linijkowy skrypt z asynchronicznym wywołaniem `fetch()` dla domyślnego zapytania `/api/listings?...`. Zapytanie sieciowe o listę ofert rozpoczyna się równolegle z parsowaniem dokumentu HTML, na sekundy przed pobraniem i wykonaniem bundle'a JS. Funkcja `listingsApi.getListings` natychmiast konsumuje przechowywany promise przy zgodności adresu URL.
+
+

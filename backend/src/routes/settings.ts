@@ -221,16 +221,19 @@ async function recalculateAllPrices(fastify: FastifyInstance) {
     return result;
 }
 
+export async function getPublicSettings(fastify: FastifyInstance) {
+    const settings = await getOrCreateSettings(fastify);
+    return {
+        ...pickPublicSettings(settings),
+        legalDocuments: normalizeLegalDocuments(settings.legalDocuments)
+    };
+}
+
 export async function settingsRoutes(fastify: FastifyInstance) {
     // Get current settings (PUBLIC — only allowlisted, non-sensitive fields; see PUBLIC_SETTINGS_FIELDS)
     fastify.get('/api/settings', async (request, reply) => {
         try {
-            const settings = await getOrCreateSettings(fastify);
-
-            return {
-                ...pickPublicSettings(settings),
-                legalDocuments: normalizeLegalDocuments(settings.legalDocuments)
-            };
+            return await getPublicSettings(fastify);
         } catch (error) {
             fastify.log.error(error, 'Failed to get settings');
             return reply.code(500).send({
