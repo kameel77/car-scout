@@ -142,7 +142,7 @@ interface ConditionPageProps {
 export default function ConditionPage({ condition }: ConditionPageProps) {
   const { t, i18n } = useTranslation();
   const { config } = useBrand();
-  const { data: settings, isFetched: settingsFetched } = useAppSettings();
+  const { data: settings } = useAppSettings();
   const { data: seoConfig } = useSeoConfig();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -302,7 +302,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   );
   // Wyłączone zapytanie ma w TanStack Query v5 isLoading=false. Traktujemy oczekiwanie
   // na settings jako loading, aby SSR skeleton nie mignął pustym stanem przed requestem.
-  const saleLoading = !settingsFetched || saleQueryLoading;
+  const saleLoading = !settings || saleQueryLoading;
   const { data: options } = useListingOptions();
   const saleListings = saleData?.listings || [];
   const saleTotalCount = saleData?.count ?? saleListings.length;

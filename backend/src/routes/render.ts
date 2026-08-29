@@ -43,6 +43,7 @@ import {
     clearRevalidating,
     resetSsrCache,
 } from '../services/ssr-cache.js';
+import { getPublicSettings } from './settings.js';
 
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
@@ -1015,6 +1016,16 @@ async function renderPage(
                 html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
             }
         }
+    }
+
+    // window.__APP_SETTINGS__ — SSR-inject settings for all routes, exactly like __HERO_BANNERS__,
+    // to eliminate the client-side /api/settings request hop before /api/listings.
+    try {
+        const publicSettings = await getPublicSettings(fastify);
+        const appSettingsJson = JSON.stringify(publicSettings).replace(/</g, '\\u003c');
+        html = html.replace('</head>', () => `<script>window.__APP_SETTINGS__=${appSettingsJson};</script>\n</head>`);
+    } catch (err) {
+        fastify.log.error(err, 'Failed to inject __APP_SETTINGS__');
     }
 
     // window.__HERO_BANNERS__ — initialData React Query dla frontu (#3), tylko na /,

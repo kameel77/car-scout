@@ -32,7 +32,7 @@ export function useListings(
     scoped: boolean = false,
     waitForSettings: boolean = false,
 ) {
-    const { data: settings, isFetched: settingsFetched } = useAppSettings();
+    const { data: settings } = useAppSettings();
     const { token, activeContext } = useAuth();
     const currency = settings?.displayCurrency || 'PLN';
 
@@ -83,7 +83,7 @@ export function useListings(
                 throw error;
             }
         },
-        enabled: !waitForSettings || settingsFetched,
+        enabled: !waitForSettings || (settings !== undefined),
     });
 }
 
