@@ -640,4 +640,5 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - Nieistniejące warianty AVIF nie są już wybierane przez przeglądarkę. Usuwa to 404 przed pobraniem właściwego obrazu i pozwala użyć mniejszego wariantu WebP na mobile.
 - Tylko pierwsza karta otrzymuje `loading="eager"` i `fetchpriority="high"`; pozostałe obrazy są ładowane leniwie.
 - Widoki kondycji czekają na ustawienia siatki przed pierwszym zapytaniem o oferty, dzięki czemu nie pobierają kolejno 32 i 30 tych samych rekordów.
+- Gdy pierwsza oferta katalogu nie ma zdjęcia, SSR preloaduje używany przez kartę placeholder zamiast obrazu późniejszej oferty. Dzięki temu preload pozostaje zgodny z rzeczywistym elementem LCP.
 

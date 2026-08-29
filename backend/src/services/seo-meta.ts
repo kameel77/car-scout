@@ -121,14 +121,12 @@ function mdVariantUrl(url: string): string {
     return hasLocalVariants(url) ? `${url.slice(0, -'.webp'.length)}-md.webp` : url;
 }
 
-// Preload wyłącznie zdjęcia pierwszej karty (LCP na mobile). Kolejne obrazy mają lazy-load;
-// ich preload konkurowałby z LCP o pasmo na dławionym połączeniu.
+// Preload wyłącznie obrazu pierwszej karty (LCP na mobile), również placeholdera gdy oferta
+// nie ma zdjęcia. Pomijanie pustej pierwszej karty preloadowało niewidoczny obraz dalszej oferty.
 function cardPreloads(listings: { primaryImageUrl?: string | null }[], baseUrl: string): PreloadImage[] | undefined {
-    const imgs = listings
-        .filter(l => l.primaryImageUrl)
-        .slice(0, 1)
-        .map(l => buildImagePreload(l.primaryImageUrl!, CARD_IMAGE_SIZES, baseUrl));
-    return imgs.length ? imgs : undefined;
+    const firstCard = listings[0];
+    if (!firstCard) return undefined;
+    return [buildImagePreload(firstCard.primaryImageUrl || '/motolia-placeholder.webp', CARD_IMAGE_SIZES, baseUrl)];
 }
 
 // Preload zdjęcia LCP pierwszego banera hero na / — media query zgodny z md:hidden/hidden md:block

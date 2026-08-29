@@ -492,6 +492,25 @@ describe('buildStaticMeta', () => {
         expect(m.preloadImages![0].imagesrcset).not.toContain('second');
     });
 
+    it('catalog preloads the placeholder when the first card has no image', () => {
+        const listings = [
+            {
+                id: 'first', make: 'Test', model: 'No image', version: null,
+                productionYear: 2025, pricePln: 100000, slug: 'test-no-image',
+                primaryImageUrl: null,
+            },
+            {
+                id: 'second', make: 'Ford', model: 'Puma', version: null,
+                productionYear: 2025, pricePln: 120000, slug: 'ford-puma-second',
+                primaryImageUrl: '/uploads/listings/second.webp',
+            },
+        ];
+        const m = buildStaticMeta('/uzywane', ctx, listings)!;
+        expect(m.preloadImages).toEqual([
+            { href: 'https://dev.motolia.pl/motolia-placeholder.webp' },
+        ]);
+    });
+
     it('without article: route.description stays the intro <p> right after <h1> (unchanged behavior)', () => {
         const m = buildStaticMeta('/uzywane', ctx)!;
         expect(m.bodyHtml).toContain(
