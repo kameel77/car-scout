@@ -30,6 +30,7 @@ export function useListings(
     perPage: number,
     adminFilters?: AdminListingFilters,
     scoped: boolean = false,
+    waitForSettings: boolean = false,
 ) {
     const { data: settings } = useAppSettings();
     const { token, activeContext } = useAuth();
@@ -81,7 +82,8 @@ export function useListings(
                 console.error('Failed to fetch listings:', error);
                 throw error;
             }
-        }
+        },
+        enabled: !waitForSettings || (settings !== undefined),
     });
 }
 
