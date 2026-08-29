@@ -1,13 +1,11 @@
 /**
- * ConditionPage – combined listing page that shows BOTH sale vehicles
- * and rental vehicles filtered by condition (NEW or USED).
+ * ConditionPage - sale listing page filtered by condition (NEW or USED).
  *
  * Routes: /nowe → condition="NEW"   /uzywane → condition="USED"
  */
 import React from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Car, Building2, User, ArrowUpDown, Check } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -20,7 +18,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { ListingPagination } from '@/components/ListingPagination';
-import { RentalListingCard } from '@/components/RentalListingCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
@@ -28,11 +25,9 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { useBrand } from '@/contexts/BrandContext';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useSeoConfig } from '@/components/seo/SeoManager';
-import { rentalPublicApi } from '@/services/rental-api';
 import { cn } from '@/lib/utils';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
 import { usePriceSettings } from '@/contexts/PriceSettingsContext';
-import { mergeFacets, mergeMakes, mergeModels } from '@/utils/listingMerge';
 const PLN_FMT = new Intl.NumberFormat('pl-PL');
 
 /* ── helpers ── */
@@ -313,69 +308,13 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const saleTotalCount = saleData?.count ?? saleListings.length;
   const saleTotalPages = saleData?.totalPages ?? Math.max(1, Math.ceil((saleTotalCount || 1) / perPage));
 
-  /* ── Data: rental vehicles (hidden on /nowe and /uzywane - rentals appear only in /wynajem-dlugoterminowy) ── */
-  const hideRentals = true;
-  const rentalOfferType = priceType === 'net' ? 'b2b' : 'b2c';
-  const rentalRateMin = filters.rateFrom || undefined;
-  const rentalRateMax = filters.rateTo || undefined;
-  const rentalRateBasis = (filters.rateFrom || filters.rateTo) ? filters.rateBasis : undefined;
-  // Map the sale sortBy onto rental-backend sort fields so rentals reorder with the user's choice.
-  // For price-based sorts, use the matching rate basis (gross for Prywatnie, net for Firma).
-  const rentalRateField = priceType === 'net' ? 'minMonthlyRateNet' : 'minMonthlyRateGross';
-  const rentalSort: { sortBy: string; sortOrder: 'asc' | 'desc' } = (() => {
-    switch (sortBy) {
-      case 'year_desc': return { sortBy: 'productionYear', sortOrder: 'desc' };
-      case 'year_asc': return { sortBy: 'productionYear', sortOrder: 'asc' };
-      case 'price_asc': return { sortBy: rentalRateField, sortOrder: 'asc' };
-      case 'price_desc': return { sortBy: rentalRateField, sortOrder: 'desc' };
-      default: return { sortBy: 'createdAt', sortOrder: 'desc' };
-    }
-  })();
-  const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-condition', condition, filters.makes, filters.models, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
-    queryFn: () => rentalPublicApi.listVehicles({
-      page: '1',
-      limit: '50',
-      search: filters.query || undefined,
-      make: filters.makes.length ? filters.makes.join(',') : undefined,
-      model: filters.models.length ? filters.models.join(',') : undefined,
-      fuelType: filters.fuelTypes.length ? filters.fuelTypes.join(',') : undefined,
-      bodyType: filters.bodyTypes.length ? filters.bodyTypes.join(',') : undefined,
-      yearFrom: filters.yearFrom || undefined,
-      yearTo: filters.yearTo || undefined,
-      condition,
-      offerType: rentalOfferType,
-      priceFrom: rentalRateMin,
-      priceTo: rentalRateMax,
-      priceBasis: rentalRateBasis,
-      sortBy: rentalSort.sortBy,
-      sortOrder: rentalSort.sortOrder,
-    }),
-    enabled: !hideRentals,
-  });
-
-  const rentalVehicles = hideRentals ? [] : (rentalData?.vehicles || []);
-  const rentalByCondition = hideRentals
-    ? undefined
-    : (rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined);
-  const mergedByCondition = saleData?.byCondition
-    ? {
-        NEW: saleData.byCondition.NEW + (rentalByCondition?.NEW ?? 0),
-        USED: saleData.byCondition.USED + (rentalByCondition?.USED ?? 0),
-      }
-    : undefined;
-  const mergedMakes = React.useMemo(
-    () => mergeMakes(options?.makes || [], rentalData?.filters?.makes || []),
-    [options?.makes, rentalData?.filters?.makes],
-  );
-  const mergedModels = React.useMemo(
-    () => mergeModels(options?.models || [], rentalData?.filters?.models || []),
-    [options?.models, rentalData?.filters?.models],
-  );
-  const mergedFacets = React.useMemo(
-    () => mergeFacets(saleData?.facets, rentalData?.facets),
-    [saleData?.facets, rentalData?.facets],
-  );
+  // /nowe and /uzywane intentionally contain sale listings only. Keeping rental hooks and
+  // components here pulled the complete rental graph into this lazy route despite never
+  // rendering it, delaying route evaluation and the first card LCP.
+  const availableMakes = options?.makes || [];
+  const availableModels = options?.models || [];
+  const facets = saleData?.facets;
+  const byCondition = saleData?.byCondition;
 
   /* ── Handlers ── */
   const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
@@ -456,7 +395,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
     return `${location.pathname}${qs ? `?${qs}` : ''}`;
   }, [searchParams, location.pathname]);
 
-  const totalCombined = saleTotalCount + rentalVehicles.length;
+  const totalCombined = saleTotalCount;
 
   /* ── SEO ── */
   const lang = i18n.language;
@@ -532,9 +471,9 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               onFilterChange={handleFilterChange}
               onClear={handleClearFilters}
               resultCount={totalCombined}
-              availableMakes={mergedMakes}
-              availableModels={mergedModels}
-              facets={mergedFacets}
+              availableMakes={availableMakes}
+              availableModels={availableModels}
+              facets={facets}
               onApply={() => setAllFiltersOpen(false)}
             />
           </div>
@@ -553,15 +492,15 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
           <TopFilterBar
             filters={filters}
             onFilterChange={handleFilterChange}
-            availableMakes={mergedMakes}
-            availableModels={mergedModels}
+            availableMakes={availableMakes}
+            availableModels={availableModels}
             onOpenAllFilters={() => setAllFiltersOpen(true)}
             query={desktopSearch}
             onQueryChange={(v) => {
               setIsDesktopTyping(true);
               setDesktopSearch(v);
             }}
-            facets={mergedFacets}
+            facets={facets}
           />
 
           {/* Tabs: Nowy / Używany – navigate between /nowe and /uzywane */}
@@ -569,7 +508,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
             <ConditionNavTabs
               condition={condition}
               resultCount={totalCombined}
-              byCondition={mergedByCondition}
+              byCondition={byCondition}
               sortBy={sortBy}
               onSortChange={(value) => {
                 setSortBy(value);
@@ -587,29 +526,19 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
                 setSortBy(value);
                 setPage(1);
               }}
-              availableMakes={mergedMakes}
-              availableModels={mergedModels}
+              availableMakes={availableMakes}
+              availableModels={availableModels}
             />
 
-            {/* ── UNIFIED GRID ── */}
-            {(() => {
-              // Kolejność kart najmu vs sprzedaży sterowana ustawieniem backoffice (domyślnie najem pierwszy)
-              const rentalCardsFirst = settings?.rentalCardsFirst !== false;
-              const rentalCards = rentalVehicles.map((v: any, i: number) => (
-                <RentalListingCard key={`r-${v.id}`} v={v} priority={rentalCardsFirst && i < 3} />
-              ));
-              const saleCards = saleLoading ? Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={i} />) : saleListings.map((listing, index) => <ListingCard key={listing.listing_id} listing={listing} index={index} />);
-
-              return (
-                <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
-                  {rentalCardsFirst && rentalCards}
-                  {saleCards}
-                  {!rentalCardsFirst && rentalCards}
-                </div>
-              );
-            })()}
+            <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
+              {saleLoading
+                ? Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={i} />)
+                : saleListings.map((listing, index) => (
+                    <ListingCard key={listing.listing_id} listing={listing} index={index} />
+                  ))}
+            </div>
             {/* Empty state */}
-            {!saleLoading && !rentalLoading && saleListings.length === 0 && rentalVehicles.length === 0 && (
+            {!saleLoading && saleListings.length === 0 && (
               <div className="col-span-full py-16 text-center">
                 <Car className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
                 <p className="text-lg font-medium text-foreground">{t('empty.noResults')}</p>
