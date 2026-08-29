@@ -647,3 +647,9 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - Zmiana jest zamknięta w lazy chunku `ConditionPage`: nie modyfikuje globalnego `App`, statycznego shellu, preloadów ani entry bundle homepage.
 - Pełne drzewo `modulepreload` pozostaje domyślnie wyłączone, ponieważ wcześniejszy eksperyment wykazał opóźnienie strumienia HTML i FCP. Optymalizacja redukuje zależności u źródła zamiast podnosić ich priorytet.
 
+## 55. Optymalizacja ścieżki krytycznej katalogów (`/nowe` i `/uzywane`)
+- **Usunięcie martwego preloadu `/api/geo`**: Usunięto nieużywany tag `<link rel="preload" href="/api/geo">` z `index.html`.
+- **Wstrzykiwanie ustawień aplikacji w SSR (`window.__APP_SETTINGS__`)**: `render.ts` wstrzykuje publiczne ustawienia aplikacji bezpośrednio do tagu `<head>` w dokumencie HTML. `useAppSettings` konsumuje je natychmiast jako `initialData` z `initialDataUpdatedAt: 0` (rewalidacja w tle bez blokowania). Bramki `useListings` i `ConditionPage` nie blokują się już na zapytaniu sieciowym o ustawienia (`settings !== undefined` zamiast oczekiwania na `isFetched`).
+- **Prefetch katalogu w nagłówku HTML (`window.__CATALOG_PREFETCH__`)**: Dla pierwszej strony tras `/nowe` oraz `/uzywane` serwer SSR generuje jedno-linijkowy skrypt z asynchronicznym wywołaniem `fetch()` dla domyślnego zapytania `/api/listings?...`. Zapytanie sieciowe o listę ofert rozpoczyna się równolegle z parsowaniem dokumentu HTML, na sekundy przed pobraniem i wykonaniem bundle'a JS. Funkcja `listingsApi.getListings` natychmiast konsumuje przechowywany promise przy zgodności adresu URL.
+
+
