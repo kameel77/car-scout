@@ -101,10 +101,10 @@ describe('buildListingMeta', () => {
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
         expect(m.preloadImages).toHaveLength(1);
         const p = m.preloadImages![0];
-        expect(p.href).toBe('https://dev.motolia.pl/uploads/listings/puma.avif');
-        expect(p.imagesrcset).toContain('puma-thumb.avif 600w');
-        expect(p.imagesrcset).toContain('puma-md.avif 1200w');
-        expect((p as any).type).toBe('image/avif');
+        expect(p.href).toBe('https://dev.motolia.pl/uploads/listings/puma.webp');
+        expect(p.imagesrcset).toContain('puma-thumb.webp 600w');
+        expect(p.imagesrcset).toContain('puma-md.webp 1200w');
+        expect((p as any).type).toBe('image/webp');
         expect(p.imagesizes).toContain('100vw');
     });
 
@@ -467,6 +467,29 @@ describe('buildStaticMeta', () => {
 
     it('/search canonicalizes to /samochody', () => {
         expect(buildStaticMeta('/search', ctx)!.canonical).toBe('https://dev.motolia.pl/samochody');
+    });
+
+    it('catalog preloads only the first card and matches WebP responsive variants', () => {
+        const listings = [
+            {
+                id: 'first', make: 'Ford', model: 'Puma', version: 'ST-Line',
+                productionYear: 2025, pricePln: 120000, slug: 'ford-puma-first',
+                primaryImageUrl: '/uploads/listings/first.webp',
+            },
+            {
+                id: 'second', make: 'Skoda', model: 'Kamiq', version: 'Style',
+                productionYear: 2025, pricePln: 125000, slug: 'skoda-kamiq-second',
+                primaryImageUrl: '/uploads/listings/second.webp',
+            },
+        ];
+        const m = buildStaticMeta('/nowe', ctx, listings)!;
+        expect(m.preloadImages).toHaveLength(1);
+        expect(m.preloadImages![0]).toMatchObject({
+            href: 'https://dev.motolia.pl/uploads/listings/first.webp',
+            type: 'image/webp',
+        });
+        expect(m.preloadImages![0].imagesrcset).toContain('first-thumb.webp 600w');
+        expect(m.preloadImages![0].imagesrcset).not.toContain('second');
     });
 
     it('without article: route.description stays the intro <p> right after <h1> (unchanged behavior)', () => {
@@ -900,7 +923,7 @@ describe('injectHead', () => {
         const html = injectHead(TEMPLATE, m);
         expect(html).toContain('<link rel="preload" as="image" fetchpriority="high"');
         expect(html).toContain('imagesrcset=');
-        expect(html).toContain('puma-thumb.avif 600w');
+        expect(html).toContain('puma-thumb.webp 600w');
     });
 
     it('escapes </script> in JSON-LD', () => {

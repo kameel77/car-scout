@@ -30,8 +30,9 @@ export function useListings(
     perPage: number,
     adminFilters?: AdminListingFilters,
     scoped: boolean = false,
+    waitForSettings: boolean = false,
 ) {
-    const { data: settings } = useAppSettings();
+    const { data: settings, isFetched: settingsFetched } = useAppSettings();
     const { token, activeContext } = useAuth();
     const currency = settings?.displayCurrency || 'PLN';
 
@@ -81,7 +82,8 @@ export function useListings(
                 console.error('Failed to fetch listings:', error);
                 throw error;
             }
-        }
+        },
+        enabled: !waitForSettings || settingsFetched,
     });
 }
 

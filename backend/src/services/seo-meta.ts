@@ -107,10 +107,10 @@ function buildImagePreload(url: string, sizes: string, baseUrl: string): Preload
     if (hasLocalVariants(url)) {
         const base = abs.slice(0, -'.webp'.length);
         return {
-            href: `${base}.avif`,
-            imagesrcset: `${base}-thumb.avif 600w, ${base}-md.avif 1200w, ${base}.avif 1920w`,
+            href: `${base}.webp`,
+            imagesrcset: `${base}-thumb.webp 600w, ${base}-md.webp 1200w, ${base}.webp 1920w`,
             imagesizes: sizes,
-            type: 'image/avif',
+            type: 'image/webp',
         };
     }
     return { href: abs };
@@ -121,11 +121,12 @@ function mdVariantUrl(url: string): string {
     return hasLocalVariants(url) ? `${url.slice(0, -'.webp'.length)}-md.webp` : url;
 }
 
-// Preload zdjęć pierwszych kart listy (LCP na mobile) — max 2, tylko oferty ze zdjęciem
+// Preload wyłącznie zdjęcia pierwszej karty (LCP na mobile). Kolejne obrazy mają lazy-load;
+// ich preload konkurowałby z LCP o pasmo na dławionym połączeniu.
 function cardPreloads(listings: { primaryImageUrl?: string | null }[], baseUrl: string): PreloadImage[] | undefined {
     const imgs = listings
         .filter(l => l.primaryImageUrl)
-        .slice(0, 2)
+        .slice(0, 1)
         .map(l => buildImagePreload(l.primaryImageUrl!, CARD_IMAGE_SIZES, baseUrl));
     return imgs.length ? imgs : undefined;
 }

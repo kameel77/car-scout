@@ -633,3 +633,11 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - Ustawianie `Vary: Origin, Accept-Encoding` na publicznych endpointach API JSON.
     - Wewnętrzny endpoint SSR `/api/render` używa `Vary: Accept-Encoding` i `s-maxage=3600` do optymalnego buforowania HTML na krawędzi Cloudflare.
 
+## 53. Stabilna ścieżka LCP strony głównej i responsywne obrazy katalogu
+- Strona główna zachowuje statyczny import `HomePage`, zgodny shell SSR oraz pojedynczy preload obrazu LCP. Zapobiega to miganiu hero i zerwaniu obrazu podczas montowania Reacta.
+- Szczegółowe niezmienniki i checklistę opisuje `docs/HOMEPAGE_PERFORMANCE_ARCHITECTURE.md`.
+- Katalogi `/nowe` i `/uzywane` preloadują tylko obraz pierwszej karty i używają istniejących wariantów WebP `-thumb`, `-md` oraz pełnego obrazu.
+- Nieistniejące warianty AVIF nie są już wybierane przez przeglądarkę. Usuwa to 404 przed pobraniem właściwego obrazu i pozwala użyć mniejszego wariantu WebP na mobile.
+- Tylko pierwsza karta otrzymuje `loading="eager"` i `fetchpriority="high"`; pozostałe obrazy są ładowane leniwie.
+- Widoki kondycji czekają na ustawienia siatki przed pierwszym zapytaniem o oferty, dzięki czemu nie pobierają kolejno 32 i 30 tych samych rekordów.
+

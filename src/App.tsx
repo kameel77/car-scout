@@ -8,7 +8,6 @@ import { PriceSettingsProvider } from "@/contexts/PriceSettingsContext";
 import { SpecialOfferProvider } from "@/contexts/SpecialOfferContext";
 import { CrmTrackingProvider } from "@/contexts/CrmTrackingContext";
 import { PersonalOfferProvider } from "@/contexts/PersonalOfferContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BrandProvider } from "@/contexts/BrandContext";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
@@ -19,17 +18,15 @@ import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
 import { ClarityPageTracker } from './components/seo/ClarityPageTracker';
 import { PageViewTracker } from './components/seo/PageViewTracker';
 import { ScrollToTop } from './components/ScrollToTop';
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import './i18n';
 
 // Import statyczny dla strony głównej (LCP)
 import HomePage from "./pages/HomePage";
 
-// Poza ścieżką krytyczną: layout admina i sonner
+// Lazy-loaded pages
 const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
-const Sonner = lazy(() =>
-  import("@/components/ui/sonner").then((m) => ({ default: m.Toaster })),
-);
-
+const Sonner = lazy(() => import("@/components/ui/sonner").then((m) => ({ default: m.Toaster })));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const ListingDetailPage = lazy(() => import("./pages/ListingDetailPage"));
 const RentalSearchPage = lazy(() => import("./pages/RentalSearchPage"));
@@ -49,6 +46,7 @@ const WidgetEmbedPage = lazy(() => import("./pages/WidgetEmbedPage"));
 const B2BOnepagerPage = lazy(() => import("./pages/B2BOnepagerPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Admin pages
 const LoginPage = lazy(() => import("./pages/admin/LoginPage"));
 const AdminDashboard = lazy(() => import("./pages/admin/DashboardPage"));
 const LeadsPage = lazy(() => import("./pages/admin/LeadsPage"));
@@ -89,6 +87,9 @@ const App = () => (
           <TooltipProvider>
             <BrandProvider>
               <BrowserRouter>
+                <ScrollToTop />
+                <ClarityPageTracker />
+                <PageViewTracker />
                 <SeoManager />
                 <DynamicTranslationsLoader />
                 <LanguageSync />
@@ -96,16 +97,12 @@ const App = () => (
                 <Suspense fallback={null}>
                   <Sonner />
                 </Suspense>
-                <ScrollToTop />
-                <ClarityPageTracker />
-                <PageViewTracker />
                 <SpecialOfferProvider>
                   <CrmTrackingProvider>
                     <PersonalOfferProvider>
                       <ChunkErrorBoundary>
                         <Suspense fallback={null}>
                           <Routes>
-                            {/* Public routes */}
                             <Route path="/" element={<HomePage />} />
                             <Route path="/samochody" element={<SearchPage key="samochody" />} />
                             <Route path="/samochody/:marka" element={<SearchPage key="samochody-marka" />} />
@@ -116,7 +113,6 @@ const App = () => (
                             <Route path="/kontakt" element={<ContactPage />} />
                             <Route path="/faq" element={<PublicFaqPage />} />
                             <Route path="/kalkulator-rat" element={<CalculatorPage />} />
-
                             <Route path="/leasing" element={<SearchPage key="leasing" />} />
                             <Route path="/kredyt" element={<SearchPage key="kredyt" />} />
                             <Route path="/leasing/:slug" element={<ListingDetailPage />} />
@@ -125,7 +121,6 @@ const App = () => (
                             <Route path="/kredyt/:slug" element={<ListingDetailPage />} />
                             <Route path="/kredyt/:slug/lead" element={<LeadFormPage />} />
                             <Route path="/kredyt/:slug/negotiate" element={<LeadFormPage />} />
-
                             <Route path="/oferta/:slug" element={<ListingDetailPage />} />
                             <Route path="/oferta/:slug/lead" element={<LeadFormPage />} />
                             <Route path="/oferta/:slug/negotiate" element={<LeadFormPage />} />
@@ -138,18 +133,13 @@ const App = () => (
                             <Route path="/wynajem-dlugoterminowy" element={<RentalSearchPage />} />
                             <Route path="/wynajem-dlugoterminowy/:slug" element={<RentalDetailPage />} />
                             <Route path="/wynajem-dlugoterminowy/:slug/zapytanie" element={<RentalLeadFormPage />} />
-                            
                             <Route path="/embed/widget/:id" element={<WidgetEmbedPage />} />
-
                             <Route path="/listing/:id" element={<ListingDetailPage />} />
                             <Route path="/listing/:id/lead" element={<LeadFormPage />} />
                             <Route path="/listing/:id/negotiate" element={<LeadFormPage />} />
-
-                            {/* Admin routes */}
                             <Route path="/admin/login" element={<LoginPage />} />
                             <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
                             <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
-
                             <Route element={<AdminLayout />}>
                               <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
                               <Route path="/admin/leads" element={<ProtectedRoute permission="leads:read"><LeadsPage /></ProtectedRoute>} />
@@ -178,15 +168,14 @@ const App = () => (
                               <Route path="/admin/specifications/:id/edit" element={<ProtectedRoute permission="stock:write"><SpecificationEditPage /></ProtectedRoute>} />
                               <Route path="/admin/widgets" element={<ProtectedRoute permission="content:read"><WidgetsPage /></ProtectedRoute>} />
                             </Route>
-
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </Suspense>
                       </ChunkErrorBoundary>
-                      <ConsentBanner />
                     </PersonalOfferProvider>
                   </CrmTrackingProvider>
                 </SpecialOfferProvider>
+                <ConsentBanner />
               </BrowserRouter>
             </BrandProvider>
           </TooltipProvider>
