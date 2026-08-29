@@ -564,6 +564,22 @@ export const listingsApi = {
         const url = `${API_BASE_URL}/api/listings?${params.toString()}`;
         console.log('Making API call to:', url);
 
+        // Check for catalog prefetch injected by SSR (#Task 3)
+        if (typeof window !== 'undefined' && (window as any).__CATALOG_PREFETCH__) {
+            const prefetch = (window as any).__CATALOG_PREFETCH__;
+            if (prefetch && prefetch.url === url && prefetch.p) {
+                (window as any).__CATALOG_PREFETCH__ = null;
+                try {
+                    const data = await prefetch.p;
+                    if (data) {
+                        return data;
+                    }
+                } catch {
+                    // Fall through to normal fetch
+                }
+            }
+        }
+
         try {
             const headers: Record<string, string> = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;

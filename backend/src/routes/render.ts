@@ -1020,12 +1020,34 @@ async function renderPage(
 
     // window.__APP_SETTINGS__ — SSR-inject settings for all routes, exactly like __HERO_BANNERS__,
     // to eliminate the client-side /api/settings request hop before /api/listings.
+    let publicSettings: Record<string, unknown> | null = null;
     try {
-        const publicSettings = await getPublicSettings(fastify);
+        publicSettings = await getPublicSettings(fastify);
         const appSettingsJson = JSON.stringify(publicSettings).replace(/</g, '\\u003c');
         html = html.replace('</head>', () => `<script>window.__APP_SETTINGS__=${appSettingsJson};</script>\n</head>`);
     } catch (err) {
         fastify.log.error(err, 'Failed to inject __APP_SETTINGS__');
+    }
+
+    // window.__CATALOG_PREFETCH__ — fetch-ahead of the default catalog query (#Task 3)
+    if ((path === '/nowe' || path === '/uzywane') && page === 1) {
+        const condition = path === '/nowe' ? 'NEW' : 'USED';
+        const ssrPerPage = await getSsrPerPage(fastify);
+        const sortKey = (publicSettings as any)?.defaultSortCars || 'price_asc';
+        const currency = (publicSettings as any)?.displayCurrency || 'PLN';
+
+        const prefetchParams = new URLSearchParams();
+        prefetchParams.append('status', condition);
+        prefetchParams.append('rateType', 'credit');
+        prefetchParams.append('rateBasis', 'gross');
+        prefetchParams.append('sortBy', sortKey);
+        prefetchParams.append('currency', currency);
+        prefetchParams.append('page', '1');
+        prefetchParams.append('perPage', ssrPerPage.toString());
+
+        const prefetchUrl = `/api/listings?${prefetchParams.toString()}`;
+        const prefetchScript = `<script>window.__CATALOG_PREFETCH__={url:${JSON.stringify(prefetchUrl)},p:fetch(${JSON.stringify(prefetchUrl)}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})};</script>\n`;
+        html = html.replace('</head>', () => `${prefetchScript}</head>`);
     }
 
     // window.__HERO_BANNERS__ — initialData React Query dla frontu (#3), tylko na /,

@@ -216,6 +216,31 @@ describe('GET /api/render', () => {
         }
     });
 
+    it('injects window.__APP_SETTINGS__ and window.__CATALOG_PREFETCH__ correctly', async () => {
+        const resHome = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+        expect(resHome.statusCode).toBe(200);
+        expect(resHome.body).toContain('window.__APP_SETTINGS__=');
+        expect(resHome.body).not.toContain('window.__CATALOG_PREFETCH__=');
+
+        const resNowe = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(resNowe.statusCode).toBe(200);
+        expect(resNowe.body).toContain('window.__APP_SETTINGS__=');
+        expect(resNowe.body).toContain('window.__CATALOG_PREFETCH__=');
+        expect(resNowe.body).toContain('status=NEW&rateType=credit&rateBasis=gross');
+
+        const resUzywane = await app.inject({ method: 'GET', url: '/api/render?path=/uzywane' });
+        expect(resUzywane.statusCode).toBe(200);
+        expect(resUzywane.body).toContain('window.__CATALOG_PREFETCH__=');
+        expect(resUzywane.body).toContain('status=USED&rateType=credit&rateBasis=gross');
+
+        const resNowePage2 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe&page=2' });
+        expect(resNowePage2.body).not.toContain('window.__CATALOG_PREFETCH__=');
+
+        const resSamochody = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
+        expect(resSamochody.statusCode).toBe(200);
+        expect(resSamochody.body).not.toContain('window.__CATALOG_PREFETCH__=');
+    });
+
     it('listing detail gets LCP image preload with srcset variants', async () => {
         const l = await app.prisma.listing.create({
             data: {
