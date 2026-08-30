@@ -110,13 +110,38 @@ export function SeoManager() {
                 return;
             }
 
-            // Inject GTM as soon as the main thread is idle (instead of waiting for
-            // user interaction / 5s). The old lazy path made GA4 blind to sessions
-            // that bounced within 5s without interacting — see docs/CRO_AUDIT_MOTOLIA_2026-07.md (P0.6).
-            if ('requestIdleCallback' in window) {
-                (window as any).requestIdleCallback(injectGTM, { timeout: 2000 });
+            // Arm C: Defer GTM until first user interaction or window load + idle.
+            // This prevents GTM (616ms CPU, 331KB JS) from executing during the FCP/LCP critical path.
+            const interactionEvents = ['scroll', 'mousemove', 'touchstart', 'click', 'keydown'];
+            const onInteraction = () => {
+                cleanupListeners();
+                injectGTM();
+            };
+
+            const cleanupListeners = () => {
+                interactionEvents.forEach(e => window.removeEventListener(e, onInteraction));
+            };
+
+            interactionEvents.forEach(e => window.addEventListener(e, onInteraction, { passive: true, once: true }));
+
+            const scheduleIdle = () => {
+                if ('requestIdleCallback' in window) {
+                    (window as any).requestIdleCallback(() => {
+                        cleanupListeners();
+                        injectGTM();
+                    }, { timeout: 3500 });
+                } else {
+                    setTimeout(() => {
+                        cleanupListeners();
+                        injectGTM();
+                    }, 3500);
+                }
+            };
+
+            if (document.readyState === 'complete') {
+                scheduleIdle();
             } else {
-                setTimeout(injectGTM, 200);
+                window.addEventListener('load', scheduleIdle, { once: true });
             }
         })();
 
