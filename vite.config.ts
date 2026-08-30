@@ -73,9 +73,6 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules/lucide-react')) {
               return 'vendor-lucide';
             }
-            if (id.includes('node_modules/@radix-ui')) {
-              return 'vendor-radix';
-            }
           },
         },
       },
