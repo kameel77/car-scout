@@ -562,7 +562,6 @@ export const listingsApi = {
         }
 
         const url = `${API_BASE_URL}/api/listings?${params.toString()}`;
-        console.log('Making API call to:', url);
 
         // Check for catalog prefetch injected by SSR (#Task 3)
         if (typeof window !== 'undefined' && (window as any).__CATALOG_PREFETCH__) {
@@ -584,7 +583,6 @@ export const listingsApi = {
             const headers: Record<string, string> = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
             const response = await fetch(url, { headers });
-            console.log('API response status:', response.status);
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -593,7 +591,6 @@ export const listingsApi = {
             }
 
             const data = await response.json();
-            console.log('API data received:', data);
             return data;
         } catch (error) {
             console.error('API call failed:', error);
