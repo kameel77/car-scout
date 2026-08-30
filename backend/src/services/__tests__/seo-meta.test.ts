@@ -103,7 +103,7 @@ describe('buildListingMeta', () => {
         const p = m.preloadImages![0];
         expect(p.href).toBe('https://dev.motolia.pl/uploads/listings/puma.webp');
         expect(p.imagesrcset).toContain('puma-thumb.webp 600w');
-        expect(p.imagesrcset).toContain('puma-md.webp 1200w');
+        expect(p.imagesrcset).toContain('puma-md.webp 900w');
         expect((p as any).type).toBe('image/webp');
         expect(p.imagesizes).toContain('100vw');
     });
