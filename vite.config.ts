@@ -67,6 +67,18 @@ export default defineConfig(({ mode }) => {
       // Manifest chunków dla backendu (render.ts): SSR wstrzykuje <link rel="modulepreload">
       // chunka trasy, żeby przeglądarka nie czekała z jego pobraniem na wykonanie index.js
       manifest: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/lucide-react')) {
+              return 'vendor-lucide';
+            }
+            if (id.includes('node_modules/@radix-ui')) {
+              return 'vendor-radix';
+            }
+          },
+        },
+      },
     },
     server: {
       host: "::",
