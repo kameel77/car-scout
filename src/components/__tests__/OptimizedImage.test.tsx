@@ -19,7 +19,7 @@ describe('OptimizedImage', () => {
     expect(source).toHaveAttribute('type', 'image/webp');
     expect(source).toHaveAttribute(
       'srcset',
-      '/uploads/csflow-images/135/0-thumb.webp 600w, /uploads/csflow-images/135/0-md.webp 1200w, /uploads/csflow-images/135/0.webp 1920w',
+      '/uploads/csflow-images/135/0-thumb.webp 600w, /uploads/csflow-images/135/0-md.webp 900w, /uploads/csflow-images/135/0.webp 1920w',
     );
     expect(container.querySelector('source[type="image/avif"]')).toBeNull();
     expect(image).toHaveAttribute('loading', 'eager');

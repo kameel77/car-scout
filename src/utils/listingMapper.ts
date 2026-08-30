@@ -15,8 +15,6 @@ export function mapBackendListingToFrontend(backendListing: any): Listing | null
             return null;
         }
 
-        console.log('Mapping listing:', backendListing.id, backendListing.make, backendListing.model);
-
         return {
             listing_id: backendListing.id,
             listing_url: backendListing.listingUrl || '#',

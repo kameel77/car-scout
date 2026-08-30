@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import i18n from '@/i18n';
-import { translations as staticTranslations } from '@/i18n/translations';
+import { pl as staticPlTranslations } from '@/i18n/translations/pl';
 import { translationsApi } from '@/services/api';
 import { getFeatureKey, getTechnicalTranslationKey } from '@/utils/i18n-utils';
 import type { TranslationEntry } from '@/types/translations';
@@ -28,7 +28,8 @@ function setNestedValue(target: any, path: string, value: string) {
 }
 
 function buildMergedBundle(language: string, entries: TranslationEntry[]) {
-  const base = cloneDeep((staticTranslations as any)[language]?.translation || {});
+  const staticSource = language === 'pl' ? staticPlTranslations : (i18n.getResourceBundle(language, 'translation') || {});
+  const base = cloneDeep(staticSource);
 
   entries.forEach((entry) => {
     const key =
@@ -66,8 +67,11 @@ export function DynamicTranslationsLoader() {
     const entries = data.translations as TranslationEntry[];
 
     SUPPORTED_LANGS.forEach((lang) => {
-      const mergedBundle = buildMergedBundle(lang, entries);
-      i18n.addResourceBundle(lang, 'translation', mergedBundle, true, true);
+      // Only merge bundles for loaded languages
+      if (lang === 'pl' || i18n.hasResourceBundle(lang, 'translation')) {
+        const mergedBundle = buildMergedBundle(lang, entries);
+        i18n.addResourceBundle(lang, 'translation', mergedBundle, true, true);
+      }
     });
   }, [data?.translations]);
 

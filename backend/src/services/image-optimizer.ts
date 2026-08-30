@@ -5,7 +5,7 @@ export interface OptimizeImageOptions {
     targetDir: string;
     baseFilename: string; // bez rozszerzenia, np. "12345-hash"
     largeWidth?: number; // domyślnie 1920
-    mediumWidth?: number; // domyślnie 1200
+    mediumWidth?: number; // domyślnie 900
     thumbWidth?: number; // domyślnie 600
     quality?: number; // domyślnie 80
     generateThumbnail?: boolean; // domyślnie true
@@ -37,7 +37,7 @@ export async function optimizeAndSaveImage(
         targetDir,
         baseFilename,
         largeWidth = 1920,
-        mediumWidth = 1200,
+        mediumWidth = 900,
         thumbWidth = 600,
         quality = 80,
         generateThumbnail = true,

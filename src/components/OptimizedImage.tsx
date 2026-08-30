@@ -24,7 +24,7 @@ const THUMB_H = 338;
 function localVariants(src: string): string | null {
     if (!src.startsWith('/uploads/') || !src.endsWith('.webp')) return null;
     const base = src.slice(0, -'.webp'.length);
-    return `${base}-thumb.webp ${THUMB_W}w, ${base}-md.webp 1200w, ${base}.webp 1920w`;
+    return `${base}-thumb.webp ${THUMB_W}w, ${base}-md.webp 900w, ${base}.webp 1920w`;
 }
 
 type Mode = 'srcset' | 'plain' | 'fallback';
