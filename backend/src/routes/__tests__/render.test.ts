@@ -261,7 +261,7 @@ describe('GET /api/render', () => {
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('rel="preload" as="image" fetchpriority="high"');
         expect(res.body).toContain('test-render-thumb.webp 600w');
-        expect(res.body).toContain('test-render-md.webp 1200w');
+        expect(res.body).toContain('test-render-md.webp 900w');
     });
 
     it('unknown path: 404 + noindex + brand default title', async () => {

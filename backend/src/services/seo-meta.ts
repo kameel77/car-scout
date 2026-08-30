@@ -108,7 +108,7 @@ function buildImagePreload(url: string, sizes: string, baseUrl: string): Preload
         const base = abs.slice(0, -'.webp'.length);
         return {
             href: `${base}.webp`,
-            imagesrcset: `${base}-thumb.webp 600w, ${base}-md.webp 1200w, ${base}.webp 1920w`,
+            imagesrcset: `${base}-thumb.webp 600w, ${base}-md.webp 900w, ${base}.webp 1920w`,
             imagesizes: sizes,
             type: 'image/webp',
         };
@@ -1494,7 +1494,7 @@ export function homeHeroShellHtml(
     if (banner.imageUrlMobile) {
         const absMobile = absoluteUrl(banner.imageUrlMobile, baseUrl);
         const srcsetMobile = hasLocalVariants(banner.imageUrlMobile)
-            ? `${absMobile.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absMobile.slice(0, -'.webp'.length)}-md.webp 1200w, ${absMobile} 1920w`
+            ? `${absMobile.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absMobile.slice(0, -'.webp'.length)}-md.webp 900w, ${absMobile} 1920w`
             : absMobile;
         mobileSource = `<source media="(max-width: 767px)" srcset="${escapeAttr(srcsetMobile)}">`;
     }
@@ -1503,7 +1503,7 @@ export function homeHeroShellHtml(
     if (banner.imageUrlDesktop) {
         const absDesktop = absoluteUrl(banner.imageUrlDesktop, baseUrl);
         const srcsetDesktop = hasLocalVariants(banner.imageUrlDesktop)
-            ? `${absDesktop.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absDesktop.slice(0, -'.webp'.length)}-md.webp 1200w, ${absDesktop} 1920w`
+            ? `${absDesktop.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absDesktop.slice(0, -'.webp'.length)}-md.webp 900w, ${absDesktop} 1920w`
             : absDesktop;
         img = `<img src="${escapeAttr(absDesktop)}" srcset="${escapeAttr(srcsetDesktop)}" sizes="100vw" width="1600" height="700" fetchpriority="high" decoding="async" loading="eager" alt="${alt}" class="absolute inset-0 w-full h-full object-cover">`;
     }

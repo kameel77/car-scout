@@ -652,4 +652,11 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Wstrzykiwanie ustawień aplikacji w SSR (`window.__APP_SETTINGS__`)**: `render.ts` wstrzykuje publiczne ustawienia aplikacji bezpośrednio do tagu `<head>` w dokumencie HTML. `useAppSettings` konsumuje je natychmiast jako `initialData` z `initialDataUpdatedAt: 0` (rewalidacja w tle bez blokowania). Bramki `useListings` i `ConditionPage` nie blokują się już na zapytaniu sieciowym o ustawienia (`settings !== undefined` zamiast oczekiwania na `isFetched`).
 - **Prefetch katalogu w nagłówku HTML (`window.__CATALOG_PREFETCH__`)**: Dla pierwszej strony tras `/nowe` oraz `/uzywane` serwer SSR generuje jedno-linijkowy skrypt z asynchronicznym wywołaniem `fetch()` dla domyślnego zapytania `/api/listings?...`. Zapytanie sieciowe o listę ofert rozpoczyna się równolegle z parsowaniem dokumentu HTML, na sekundy przed pobraniem i wykonaniem bundle'a JS. Funkcja `listingsApi.getListings` natychmiast konsumuje przechowywany promise przy zgodności adresu URL.
 
+## 56. Optymalizacja czasu wątku głównego (Main Thread) i wariantów obrazów
+- **Warianty obrazów i deskryptor `-md` 900w**: Zmieniono domyślną szerokość wariantu pośredniego `mediumWidth` z 1200 na 900 px w `image-optimizer.ts`. Zaktualizowano deskryptory srcset w `OptimizedImage.tsx` oraz `seo-meta.ts` (`buildImagePreload` i `homeHeroShellHtml`) z `1200w` na `900w`. Zapobiega to nadmiarowemu pobieraniu plików 1200 px dla slotów kart 422 CSS px na urządzeniach mobilnych (DPR 1.75–2.0). Odchudzono również statyczny placeholder `public/motolia-placeholder.webp` o ponad 57% do 9 KB.
+- **Konsolidacja mikro-chunków (`vendor-lucide` i `vendor-radix`)**: W konfiguracji `vite.config.ts` wdrożono regułę `build.rollupOptions.output.manualChunks`, która grupuje ikony `lucide-react` oraz komponenty bazowe `@radix-ui/*` w dwa stabilne, współdzielone chunki zamiast ponad 20 pojedynczych mikro-plików 0.3–0.7 KB.
+- **Czyszczenie operacji I/O w wątku głównym**: Usunięto deweloperskie wywołania `console.log` ze ścieżki mapowania 32 kart katalogu (`listingMapper.ts`) oraz zapytań API (`api.ts`).
+
+
+
 
