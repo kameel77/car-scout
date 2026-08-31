@@ -88,23 +88,54 @@ export const sendLeadEmail = async (
 
     const isPriceNegotiation = lead.leadType === 'price_negotiation';
     const isWaitlist = lead.leadType === 'waitlist';
-    const isQuickContact = !lead.listingId && !isPriceNegotiation && !isWaitlist;
-    const isFinancingLead = !!lead.financingProductId;
+    const isRental = lead.leadType === 'rental' || !!lead.rentalVehicleId;
+    const isQuickContact = lead.leadType === 'quick_contact' || (!lead.listingId && !lead.rentalVehicleId && !isPriceNegotiation && !isWaitlist);
+    const isFinancingLead = !!lead.financingProductId || !!lead.financingAmount;
 
-    let subjectTitle = 'Nowy szybki kontakt';
-    if (isPriceNegotiation) {
-        subjectTitle = 'Negocjacja ceny pojazdu';
-    } else if (isWaitlist) {
-        subjectTitle = 'Zgłoszenie na listę oczekujących';
-    } else if (!isQuickContact) {
-        subjectTitle = isFinancingLead ? 'Zgłoszenie finansowania auta' : 'Nowe zapytanie o auto';
+    // Name formatting: if empty, placeholder, or not provided, format as literal 'null'
+    const rawName = lead.name ? lead.name.trim() : '';
+    const isPlaceholderName = !rawName || rawName.toLowerCase() === 'szybki kontakt' || rawName.toLowerCase() === 'null' || rawName.toLowerCase() === 'brak' || rawName.toLowerCase() === 'undefined';
+    const formattedName = isPlaceholderName ? 'null' : rawName;
+    const safeFormattedName = formattedName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const cleanPhone = (lead.phone || '').replace(/[^0-9]/g, '');
+
+    // Reply-To header: set ONLY if a real customer email address is provided.
+    // Do NOT generate synthetic/fake email addresses, as Thulium would attempt to reply to them and bounce.
+    let replyTo: string | undefined;
+    if (lead.email && lead.email.trim()) {
+        replyTo = formattedName !== 'null'
+            ? `"${formattedName}" <${lead.email.trim()}>`
+            : `<${lead.email.trim()}>`;
     }
 
-    const subject = isQuickContact
-        ? `[${siteName}] ${subjectTitle} (Tel): ${lead.name}`
-        : isWaitlist
-        ? `[${siteName}] ${subjectTitle}: ${lead.name}`
-        : `[${siteName}] ${subjectTitle}: ${lead.listing?.make} ${lead.listing?.model}`;
+    // Unique Subject creation (recommendation: [SiteName] [ReferenceNumber] Title: Entity/Phone)
+    let subjectTitle = 'Szybki kontakt';
+    let subjectEntity = lead.phone ? lead.phone : (formattedName !== 'null' ? formattedName : 'Nowe zgłoszenie');
+
+    if (isPriceNegotiation) {
+        subjectTitle = 'Negocjacja ceny';
+        subjectEntity = lead.listing ? `${lead.listing.make} ${lead.listing.model}` : (lead.phone || (formattedName !== 'null' ? formattedName : 'Oferta'));
+    } else if (isWaitlist) {
+        subjectTitle = 'Lista oczekujących';
+        subjectEntity = formattedName !== 'null' ? formattedName : (lead.phone || lead.email || 'Nowe zgłoszenie');
+    } else if (isRental) {
+        subjectTitle = 'Zapytanie o wynajem';
+        subjectEntity = lead.rentalVehicle ? `${lead.rentalVehicle.make} ${lead.rentalVehicle.model}` : (lead.phone || (formattedName !== 'null' ? formattedName : 'Pojazd'));
+    } else if (!isQuickContact) {
+        if (isFinancingLead) {
+            subjectTitle = 'Zgłoszenie finansowania auta';
+            subjectEntity = lead.listing ? `${lead.listing.make} ${lead.listing.model}` : (lead.phone || (formattedName !== 'null' ? formattedName : 'Auto'));
+        } else {
+            subjectTitle = 'Nowe zapytanie o auto';
+            subjectEntity = lead.listing ? `${lead.listing.make} ${lead.listing.model}` : (lead.phone || (formattedName !== 'null' ? formattedName : 'Auto'));
+        }
+    } else {
+        subjectTitle = 'Szybki kontakt';
+        subjectEntity = lead.phone ? lead.phone : (formattedName !== 'null' ? formattedName : 'Zgłoszenie');
+    }
+
+    const subject = `[${siteName}] [${lead.referenceNumber}] ${subjectTitle}: ${subjectEntity}`;
 
     const listingSlug = lead.listing?.slug || [
         lead.listing?.make,
@@ -119,57 +150,122 @@ export const sendLeadEmail = async (
         .map(s => String(s).toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-'))
         .join('-');
 
+    const rentalSlug = lead.rentalVehicle?.slug || [
+        lead.rentalVehicle?.make,
+        lead.rentalVehicle?.model,
+        lead.rentalVehicle?.modelCode,
+        lead.rentalVehicle?.productionYear,
+        lead.rentalVehicle?.id
+    ]
+        .filter(Boolean)
+        .map(s => String(s).toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-'))
+        .join('-');
+
+    let leadTypeDescription = 'Zapytanie ogólne / Szybki kontakt';
+    if (isPriceNegotiation) {
+        leadTypeDescription = 'Negocjacja ceny pojazdu';
+    } else if (isWaitlist) {
+        leadTypeDescription = 'Lista oczekujących - powiadomienie o nowej ofercie';
+    } else if (isRental) {
+        leadTypeDescription = 'Wynajem długoterminowy';
+    } else if (isFinancingLead) {
+        leadTypeDescription = 'Finansowanie (Kalkulator)';
+    } else if (lead.listing) {
+        leadTypeDescription = 'Zapytanie o ofertę pojazdu';
+    }
+
     const listingDetails = lead.listing ? `
         <h3>Szczegóły pojazdu</h3>
         <ul>
             <li><strong>Auto:</strong> ${lead.listing.make} ${lead.listing.model} ${lead.listing.version || ''}</li>
             <li><strong>Rocznik:</strong> ${lead.listing.productionYear}</li>
             <li><strong>VIN:</strong> ${lead.listing.vin || 'Brak'}</li>
-            <li><strong>Cena (PLN):</strong> ${lead.listing.pricePln}</li>
-            <li><strong>Przebieg:</strong> ${lead.listing.mileageKm} km</li>
+            <li><strong>Cena (PLN):</strong> ${lead.listing.pricePln ? Number(lead.listing.pricePln).toLocaleString('pl-PL') : 'Brak'} zł</li>
+            <li><strong>Przebieg:</strong> ${lead.listing.mileageKm ? Number(lead.listing.mileageKm).toLocaleString('pl-PL') : 0} km</li>
             <li><strong>Dealer:</strong> ID: ${lead.listing.dealerId || 'Brak'}</li>
         </ul>
-        <p><a href="${frontendUrl}/oferta/${listingSlug}">Link do ogłoszenia</a></p>
-    ` : isWaitlist
-        ? '<p><strong>Typ zgłoszenia:</strong> Lista oczekujących — brak aktywnych ofert dla poszukiwanej marki/modelu</p>'
-        : '<p><strong>Typ zgłoszenia:</strong> Zapytanie ogólne / Szybki kontakt ze strony głównej</p>';
+        <p><a href="${frontendUrl}/oferta/${listingSlug}">Otwórz ofertę na stronie</a></p>
+    ` : '';
 
-    const financingDetails = lead.financingProductId ? `
+    const rentalDetails = (lead.rentalVehicle || lead.rentalContractMonths || lead.rentalMonthlyRate) ? `
+        <h3>Szczegóły wynajmu długoterminowego</h3>
+        <ul>
+            ${lead.rentalVehicle ? `<li><strong>Pojazd:</strong> ${lead.rentalVehicle.make} ${lead.rentalVehicle.model} ${lead.rentalVehicle.productionYear ? `(${lead.rentalVehicle.productionYear})` : ''}</li>` : ''}
+            ${lead.rentalCompanyName ? `<li><strong>Firma / Nazwa:</strong> ${lead.rentalCompanyName}</li>` : ''}
+            ${lead.rentalContractMonths ? `<li><strong>Okres umowy:</strong> ${lead.rentalContractMonths} mies.</li>` : ''}
+            ${lead.rentalAnnualMileageKm ? `<li><strong>Roczny limit przebiegu:</strong> ${Number(lead.rentalAnnualMileageKm).toLocaleString('pl-PL')} km</li>` : ''}
+            ${lead.rentalInitialPaymentAmountGross ? `<li><strong>Wpłata wstępna (brutto):</strong> ${Number(lead.rentalInitialPaymentAmountGross).toLocaleString('pl-PL')} PLN</li>` : ''}
+            ${lead.rentalMonthlyRate ? `<li><strong>Miesięczna rata:</strong> ${Number(lead.rentalMonthlyRate).toLocaleString('pl-PL')} PLN</li>` : ''}
+        </ul>
+        ${lead.rentalVehicle ? `<p><a href="${frontendUrl}/wynajem/${rentalSlug}">Otwórz ofertę wynajmu na stronie</a></p>` : ''}
+    ` : '';
+
+    const financingDetails = (lead.financingProductId || lead.financingAmount) ? `
         <h3>Informacje o finansowaniu wybrane w kalkulatorze</h3>
         <ul>
             ${lead.financingProduct ? `<li><strong>Wybrany produkt:</strong> ${lead.financingProduct.name || lead.financingProduct.category} (Provider: ${lead.financingProduct.provider})</li>` : ''}
-            <li><strong>Kwota finansowania:</strong> ${lead.financingAmount} PLN</li>
-            <li><strong>Deklarowany okres:</strong> ${lead.financingPeriod} mies.</li>
-            <li><strong>Pierwsza wpłata:</strong> ${lead.financingDownPayment} PLN</li>
-            <li><strong>Miesięczna Rata:</strong> ${lead.financingInstallment} PLN</li>
-            <li><strong>Ostatnia Rata (Wykup):</strong> ${lead.financingFinalPayment} PLN</li>
+            ${lead.financingAmount ? `<li><strong>Kwota finansowania:</strong> ${Number(lead.financingAmount).toLocaleString('pl-PL')} PLN</li>` : ''}
+            ${lead.financingPeriod ? `<li><strong>Deklarowany okres:</strong> ${lead.financingPeriod} mies.</li>` : ''}
+            ${lead.financingDownPayment !== null && lead.financingDownPayment !== undefined ? `<li><strong>Pierwsza wpłata:</strong> ${Number(lead.financingDownPayment).toLocaleString('pl-PL')} PLN</li>` : ''}
+            ${lead.financingInstallment ? `<li><strong>Miesięczna Rata:</strong> ${Number(lead.financingInstallment).toLocaleString('pl-PL')} PLN</li>` : ''}
+            ${lead.financingFinalPayment !== null && lead.financingFinalPayment !== undefined ? `<li><strong>Ostatnia Rata (Wykup):</strong> ${Number(lead.financingFinalPayment).toLocaleString('pl-PL')} PLN</li>` : ''}
         </ul>
     ` : '';
 
+    let headingTitle = 'Nowe zapytanie od klienta';
+    if (isPriceNegotiation) {
+        headingTitle = 'Nowa propozycja negocjacji ceny';
+    } else if (isWaitlist) {
+        headingTitle = 'Nowe zgłoszenie na listę oczekujących';
+    } else if (isRental) {
+        headingTitle = 'Nowe zapytanie o wynajem';
+    } else if (isQuickContact) {
+        headingTitle = 'Nowy szybki kontakt';
+    } else if (isFinancingLead) {
+        headingTitle = 'Nowe zgłoszenie finansowania';
+    }
+
+    const headingSubtitle = formattedName !== 'null'
+        ? safeFormattedName
+        : (lead.phone || lead.referenceNumber);
+
+    const safeMessage = lead.message
+        ? lead.message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')
+        : 'Brak wiadomości';
+
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h2>${isPriceNegotiation ? 'Nowa propozycja negocjacji ceny' : 'Nowe zapytanie od klienta'}: ${lead.name}</h2>
+            <h2>${headingTitle}: ${headingSubtitle}</h2>
             
             <h3>Dane kontaktowe</h3>
             <ul>
-                <li><strong>Imię i nazwisko:</strong> ${lead.name}</li>
-                <li><strong>Telefon:</strong> ${lead.phone || 'Brak'}</li>
-                <li><strong>E-mail:</strong> ${lead.email || 'Brak'}</li>
-                <li><strong>Preferowany kontakt:</strong> ${lead.preferredContact}</li>
+                <li><strong>Imię i nazwisko:</strong> ${safeFormattedName}</li>
+                <li><strong>Telefon:</strong> ${lead.phone ? `<a href="tel:${cleanPhone}">${lead.phone}</a>` : 'null'}</li>
+                <li><strong>E-mail:</strong> ${lead.email && lead.email.trim() ? `<a href="mailto:${lead.email.trim()}">${lead.email.trim()}</a>` : 'null'}</li>
+                <li><strong>Preferowany kontakt:</strong> ${lead.preferredContact || (lead.phone ? 'phone' : 'email')}</li>
             </ul>
 
             <h3>Wiadomość zostawiona przez klienta:</h3>
-            <blockquote style="background-color: #f9f9f9; border-left: 4px solid #ccc; padding: 10px; margin: 10px 0;">
-                ${lead.message || 'Brak wiadomości'}
+            <blockquote style="background-color: #f9f9f9; border-left: 4px solid #007bff; padding: 10px; margin: 10px 0;">
+                ${safeMessage}
             </blockquote>
 
+            <h3>Kontekst zgłoszenia</h3>
+            <ul>
+                <li><strong>Typ zgłoszenia:</strong> ${leadTypeDescription}</li>
+                <li><strong>Numer referencyjny:</strong> <code>${lead.referenceNumber}</code></li>
+                ${lead.trafficSource ? `<li><strong>Źródło ruchu (Source/UTM):</strong> ${lead.trafficSource}</li>` : ''}
+                ${lead.landingPageId ? `<li><strong>Landing Page ID:</strong> ${lead.landingPageId}</li>` : ''}
+            </ul>
+
             ${listingDetails}
+            ${rentalDetails}
             ${financingDetails}
 
             <br/>
-            <p style="font-size: 12px; color: #999;">
+            <p style="font-size: 12px; color: #999; margin-top: 24px; border-top: 1px solid #eee; padding-top: 12px;">
                 Wiadomość wygenerowana automatycznie przez system ${siteName}.<br/>
-                Numer referencyjny leada: ${lead.referenceNumber}
+                Numer referencyjny leada: ${lead.referenceNumber} | ID leada: ${lead.id}
             </p>
         </div>
     `;
@@ -179,9 +275,13 @@ export const sendLeadEmail = async (
         await transporter.sendMail({
             from: `"${siteName} Powiadomienia" <${settings.smtpFromEmail || settings.smtpUser}>`,
             to: recipientEmail,
-            replyTo: lead.email ? `"${lead.name}" <${lead.email}>` : undefined,
+            replyTo,
             subject,
-            html: htmlContent
+            html: htmlContent,
+            headers: {
+                'Auto-Submitted': 'auto-generated',
+                'X-Auto-Response-Suppress': 'All'
+            }
         });
         fastify.log.info(`Email notification sent for lead ${lead.id} to ${recipientEmail}`);
     } catch (error) {
