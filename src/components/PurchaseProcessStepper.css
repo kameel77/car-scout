@@ -207,9 +207,10 @@
 
 .purchase-process__connector {
   position: absolute;
-  top: 29px; /* Vertical center of 58px icon wrapper */
-  left: calc(50% + 35px);
-  width: calc(100% - 70px);
+  top: 29px; /* Exact vertical center of 58px icon */
+  transform: translateY(-50%);
+  left: calc(50% + 38px);
+  width: calc(100% - 76px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -238,7 +239,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: -2px;
+  margin: 0 4px;
   flex-shrink: 0;
   box-shadow: 0 1px 3px hsl(var(--primary) / 0.08);
   transition: transform 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
@@ -338,14 +339,16 @@
 }
 
 .purchase-process--compact .purchase-process__connector {
-  top: 22px;
-  left: calc(50% + 26px);
-  width: calc(100% - 52px);
+  top: 22px; /* Exact vertical center of 44px icon */
+  transform: translateY(-50%);
+  left: calc(50% + 28px);
+  width: calc(100% - 56px);
 }
 
 .purchase-process--compact .purchase-process__connector-arrow {
   width: 18px;
   height: 18px;
+  margin: 0 3px;
 }
 
 .purchase-process--compact .purchase-process__title {
@@ -413,17 +416,20 @@
   /* Vertical connector on mobile */
   .purchase-process__connector {
     top: 48px;
+    bottom: 2px;
     left: 23px; /* centered below 46px icon (23px) */
     width: 2px;
-    height: calc(100% - 46px);
+    height: auto;
+    transform: translateX(-50%);
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
   }
 
   .purchase-process__connector-line {
     width: 2px;
-    height: 100%;
+    height: auto;
+    flex: 1;
     background: linear-gradient(
       180deg,
       hsl(var(--accent) / 0.75) 0%,
@@ -434,13 +440,12 @@
   .purchase-process__connector-arrow {
     width: 18px;
     height: 18px;
-    margin-left: 0;
-    margin-top: -2px;
+    margin: 2px 0;
     transform: rotate(90deg);
   }
 
   .purchase-process__step:hover .purchase-process__connector-arrow {
-    transform: rotate(90deg) translateX(2px);
+    transform: rotate(90deg) translateY(-2px);
   }
 
   /* Compact mobile tweaks */
@@ -457,8 +462,8 @@
 
   .purchase-process--compact .purchase-process__connector {
     top: 42px;
+    bottom: 2px;
     left: 20px;
-    height: calc(100% - 40px);
   }
 
   .purchase-process--compact .purchase-process__title {

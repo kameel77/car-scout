@@ -142,8 +142,9 @@ export function PurchaseProcessStepper({
                   <div className="purchase-process__connector" aria-hidden="true">
                     <div className="purchase-process__connector-line" />
                     <div className="purchase-process__connector-arrow">
-                      <ChevronRight size={isCompact ? 13 : 15} strokeWidth={2.5} />
+                      <ChevronRight size={isCompact ? 12 : 14} strokeWidth={2.5} />
                     </div>
+                    <div className="purchase-process__connector-line" />
                   </div>
                 )}
 
