@@ -11,6 +11,7 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 6. **Weryfikacja**: Proponuj i przeprowadzaj weryfikację zmian (testy, przeglądarka).
 7. **Formatowanie treści**: Kiedy tworzysz lub edytujesz treści tekstowe, używaj zwykłych myślników ( - ) zamiast podwójnych/długich ( — ).
 8. **Treści SEO na motolia.pl**: Każda treść serwisu (artykuły CMS marek/modeli, filary finansowania, blog) musi być zgodna ze strategią linkowania i konwencjami z [docs/SEO_LINKING_STRATEGY_MOTOLIA.md](docs/SEO_LINKING_STRATEGY_MOTOLIA.md) (hierarchia marka - model - oferta, anchory z encją, zakaz linkowania wariantów finansowania i stron noindex, FAQ bez linków, nagłówki bez `?` poza FAQ).
+9. **Obowiązkowy Audyt Subagenta (Pre-Delivery Code Audit)**: Za każdym razem przy tworzeniu lub modyfikacji kodu, przed oddaniem zadania użytkownikowi, bezwzględnie wywołaj niezależnego subagenta audytora (`code_audit_subagent`) i uzyskaj werdykt `[APPROVED]` (zgodnie z protokołem w `~/.gemini/GEMINI.md`).
 
 ## 2. Technologie i Architektura
 - **Backend**: Fastify, Prisma, PostgreSQL.
