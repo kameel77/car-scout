@@ -8,6 +8,7 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 - [ ] Integracje produktów kredytowych (np. Inbank) z modułem finansowania, z możliwością wyboru dostawcy i produktu na karcie oferty przez administratora (lista z priorytetem/warunkami).
 - [ ] Moduł konfiguracji połączeń z instytucjami finansowymi (produkcyjne środowiska i klucze API).
 - [x] Integracja VASH (Vehis Tools) do kalkulacji leasingu dla pojazdów zewnętrznych, działająca równolegle do produktów własnych i Inbank (pobieranie subjectId, zakresów wykupu/opłaty wstępnej i kalkulacji rat).
+- [ ] Integracja Thulium REST API (v2 Tickets / Callbacks): bezpośrednie tworzenie ticketów w Thulium i zasilanie kolejki dialera oddzwonień po numerze telefonu z pominięciem pośrednictwa poczty e-mail.
 - [ ] Integracja CRM/CMS: link z zaszyfrowanym UUID klienta (i parametrami kalkulatora) + cookie zbierające odwiedzane URL-e z timestampami + API do odczytu danych dla CMS.
 
 ## 2. UI i UX
