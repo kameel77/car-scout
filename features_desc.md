@@ -657,6 +657,26 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Konsolidacja mikro-chunków (`vendor-lucide` i `vendor-radix`)**: W konfiguracji `vite.config.ts` wdrożono regułę `build.rollupOptions.output.manualChunks`, która grupuje ikony `lucide-react` oraz komponenty bazowe `@radix-ui/*` w dwa stabilne, współdzielone chunki zamiast ponad 20 pojedynczych mikro-plików 0.3–0.7 KB.
 - **Czyszczenie operacji I/O w wątku głównym**: Usunięto deweloperskie wywołania `console.log` ze ścieżki mapowania 32 kart katalogu (`listingMapper.ts`) oraz zapytań API (`api.ts`).
 
+## 57. Nowoczesny stepper procesu zakupu (PurchaseProcessStepper)
+- **Cel**: Uproszczenie i unowocześnienie prezentacji etapów zakupu na stronie głównej oraz na kartach ofert i wynajmu długoterminowego.
+- **Zmiany w interfejsie**:
+  - Usunięcie zdublowanego, osobnego rzędu żółtych kółek z numerami 1-5 nad ikonami.
+  - Zintegrowanie mikro-badge'a numerycznego bezpośrednio w narożniku kafelka ikony (`rounded-2xl` z motywem Motolia Soft Yellow).
+  - Wprowadzenie eleganckich łączników procesowych w postaci linii z gradientem i okrągłych szewronów kierunkowych (`ChevronRight`), precyzyjnie wyśrodkowanych w osi poziomej ikon.
+  - Na desktopie i tabletach wszystkie 5 kroków układa się zawsze w 1 ciągły wiersz (`grid-template-columns: repeat(5, minmax(0, 1fr))`).
+  - Na urządzeniach mobilnych (<= 768px) stepper automatycznie przełącza się w pionowy łańcuch ze strzałkami skierowanymi w dół.
+  - W wariancie kompaktowym (`variant="compact"` na kartach pojazdów) wdrożono zoptymalizowane hasła Smart Micro-Copy zbijające obiekcje (np. „100% zdalnie, minimum formalności”, „Wygodnie online lub przez kuriera”), zachowując kompaktowy profil bez spychania kalkulatora i formularzy kontaktowych.
 
-
+## 58. Obsługa powiadomień e-mail dla leadów i separacja zgłoszeń w Thulium / Helpdesk
+- **Cel**: Wyeliminowanie problemu łączenia (scalania) wiadomości e-mail w jeden wątek w systemach helpdesk/CRM (np. Thulium) przy zgłoszeniach typu szybki kontakt bez adresu e-mail klienta.
+- **Unikalny temat wiadomości**: Każdy e-mail powiadomienia o leadzie posiada teraz unikalny temat z numerem referencyjnym leada (np. `[Motolia] [AF-73267175] Szybki kontakt: 512 655 885`). Zapobiega to automatycznemu grupowaniu ticketów po stronie systemów pocztowych i CRM.
+- **Nagłówek Reply-To**: Nagłówek `Reply-To` jest ustawiany wyłącznie wtedy, gdy klient podał prawdziwy adres e-mail. Przy zgłoszeniach telefonicznych bez adresu e-mail nagłówek nie jest dodawany (brak sztucznych adresów, co zapobiega błędom zwrotnym / bounce w Thulium).
+- **Prezentacja danych w treści e-maila**:
+  - Pole imię i nazwisko: jeśli puste lub domyślny placeholder, wyświetla wartość `null`.
+  - Pole e-mail: jeśli brak, wyświetla wartość `null`.
+  - Dane kontaktowe: klikalne linki `tel:` oraz `mailto:` (jeśli obecny), preferowany kanał kontaktu.
+  - Kontekst zgłoszenia: typ leada, unikalny numer referencyjny, źródło ruchu (UTM/trafficSource), ID landing page.
+  - Dane pojazdu / wynajmu: marka, model, rocznik, VIN, cena, przebieg, dealer, bezpośredni link do oferty.
+  - Dane kalkulatora finansowania: wybrany produkt finansowy, kwota, okres, pierwsza wpłata, miesięczna rata, wykup.
+  - Wiadomość klienta: zabezpieczony przed HTML injection blok cytatu z zachowaniem formatowania.
 

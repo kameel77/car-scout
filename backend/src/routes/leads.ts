@@ -494,7 +494,8 @@ export async function leadRoutes(fastify: FastifyInstance) {
             include: {
                 listing: {
                     include: { dealer: true }
-                }
+                },
+                financingProduct: true
             }
         });
 
