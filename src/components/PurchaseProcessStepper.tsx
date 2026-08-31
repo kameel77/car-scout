@@ -18,33 +18,43 @@ const STEPS = [
   {
     icon: Search,
     title: 'Wybierz auto i policz ratę',
+    compactTitle: 'Dopasuj ratę',
     description:
       'Przeglądaj ofertę, wybierz model i sprawdź wstępną kalkulację finansowania.',
+    compactDescription: 'Ustaw suwaki w kalkulatorze',
   },
   {
     icon: PhoneIncoming,
     title: 'Konsultant oddzwania',
+    compactTitle: 'Konsultant oddzwania',
     description:
       'Nasz doradca skontaktuje się, odpowie na pytania i pomoże doprecyzować ofertę.',
+    compactDescription: 'Oddzwonimy i odpowiemy na pytania',
   },
   {
     icon: FileText,
     title: 'Wniosek o finansowanie',
+    compactTitle: 'Wniosek online',
     description:
       'Wypełnij krótki wniosek - pomożemy Ci z formalnościami.',
+    compactDescription: '100% zdalnie, minimum formalności',
   },
   {
     icon: PenLine,
     title: 'Podpisz umowę',
+    compactTitle: 'Podpisz umowę',
     description:
       'Finalizacja warunków i podpisanie umowy - szybko i wygodnie.',
+    compactDescription: 'Wygodnie online lub przez kuriera',
   },
   {
     icon: Car,
     secondaryIcon: Fuel,
     title: 'Odbierz auto i kartę paliwową',
+    compactTitle: 'Odbierz auto',
     description:
       'Gotowe! Odbierasz kluczyki i ruszasz w drogę.',
+    compactDescription: 'Kluczyki + karta paliwowa',
   },
 ];
 
@@ -150,10 +160,12 @@ export function PurchaseProcessStepper({
 
                 {/* Text Content */}
                 <div className="purchase-process__content">
-                  <h4 className="purchase-process__title">{step.title}</h4>
-                  {!isCompact && (
-                    <p className="purchase-process__desc">{step.description}</p>
-                  )}
+                  <h4 className="purchase-process__title">
+                    {isCompact ? step.compactTitle : step.title}
+                  </h4>
+                  <p className="purchase-process__desc">
+                    {isCompact ? step.compactDescription : step.description}
+                  </p>
                 </div>
               </div>
             );

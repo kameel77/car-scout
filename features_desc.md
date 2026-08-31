@@ -665,7 +665,7 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Wprowadzenie eleganckich łączników procesowych w postaci linii z gradientem i okrągłych szewronów kierunkowych (`ChevronRight`), precyzyjnie wyśrodkowanych w osi poziomej ikon.
   - Na desktopie i tabletach wszystkie 5 kroków układa się zawsze w 1 ciągły wiersz (`grid-template-columns: repeat(5, minmax(0, 1fr))`).
   - Na urządzeniach mobilnych (<= 768px) stepper automatycznie przełącza się w pionowy łańcuch ze strzałkami skierowanymi w dół.
-  - W wariancie kompaktowym (`variant="compact"` na kartach pojazdów) komponent zajmuje o ~45% mniej przestrzeni pionowej, nie spychając kalkulatora i formularzy kontaktowych.
+  - W wariancie kompaktowym (`variant="compact"` na kartach pojazdów) wdrożono zoptymalizowane hasła Smart Micro-Copy zbijające obiekcje (np. „100% zdalnie, minimum formalności”, „Wygodnie online lub przez kuriera”), zachowując kompaktowy profil bez spychania kalkulatora i formularzy kontaktowych.
 
 
 

@@ -354,7 +354,16 @@
 .purchase-process--compact .purchase-process__title {
   font-size: 12.5px;
   line-height: 1.25;
-  font-weight: 600;
+  font-weight: 700;
+  margin: 0 0 3px;
+}
+
+.purchase-process--compact .purchase-process__desc {
+  font-size: 11px;
+  line-height: 1.35;
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+  max-width: 135px;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -467,6 +476,11 @@
   }
 
   .purchase-process--compact .purchase-process__title {
-    font-size: 13.5px;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+
+  .purchase-process--compact .purchase-process__desc {
+    font-size: 12.5px;
   }
 }
