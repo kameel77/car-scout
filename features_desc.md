@@ -657,6 +657,17 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Konsolidacja mikro-chunków (`vendor-lucide` i `vendor-radix`)**: W konfiguracji `vite.config.ts` wdrożono regułę `build.rollupOptions.output.manualChunks`, która grupuje ikony `lucide-react` oraz komponenty bazowe `@radix-ui/*` w dwa stabilne, współdzielone chunki zamiast ponad 20 pojedynczych mikro-plików 0.3–0.7 KB.
 - **Czyszczenie operacji I/O w wątku głównym**: Usunięto deweloperskie wywołania `console.log` ze ścieżki mapowania 32 kart katalogu (`listingMapper.ts`) oraz zapytań API (`api.ts`).
 
+## 57. Nowoczesny stepper procesu zakupu (PurchaseProcessStepper)
+- **Cel**: Uproszczenie i unowocześnienie prezentacji etapów zakupu na stronie głównej oraz na kartach ofert i wynajmu długoterminowego.
+- **Zmiany w interfejsie**:
+  - Usunięcie zdublowanego, osobnego rzędu żółtych kółek z numerami 1-5 nad ikonami.
+  - Zintegrowanie mikro-badge'a numerycznego bezpośrednio w narożniku kafelka ikony (`rounded-2xl` z motywem Motolia Soft Yellow).
+  - Wprowadzenie eleganckich łączników procesowych w postaci linii z gradientem i okrągłych szewronów kierunkowych (`ChevronRight`), precyzyjnie wyśrodkowanych w osi poziomej ikon.
+  - Na desktopie i tabletach wszystkie 5 kroków układa się zawsze w 1 ciągły wiersz (`grid-template-columns: repeat(5, minmax(0, 1fr))`).
+  - Na urządzeniach mobilnych (<= 768px) stepper automatycznie przełącza się w pionowy łańcuch ze strzałkami skierowanymi w dół.
+  - W wariancie kompaktowym (`variant="compact"` na kartach pojazdów) komponent zajmuje o ~45% mniej przestrzeni pionowej, nie spychając kalkulatora i formularzy kontaktowych.
+
+
 
 
 
