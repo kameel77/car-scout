@@ -303,8 +303,21 @@ export function mapRawCarToNormalized(raw: PewneAutoCarRaw, enriched?: PewneAuto
     const isReserved = Number(raw.reserved) === 1;
     const fuelMapped = mapPewneAutoFuel(raw.fuel, raw.isHybrid, raw.isElectric);
 
-    // Heurystyki / Wzbogacenie
+    // Określenie rodzaju faktury / podatku VAT (Faktura VAT 23% vs Faktura VAT Marża)
     const combinedTexts = `${raw.subname || ''} ${raw.subtitle || ''} ${raw.name || ''}`;
+    const combinedTextsLower = combinedTexts.toLowerCase();
+    let vatMargin = true; // domyślnie dla aut używanych jeśli brak pełnego VAT
+    if (raw.netPriceFormattedToInteger !== null && raw.netPriceFormattedToInteger !== undefined && raw.netPriceFormattedToInteger !== '') {
+        vatMargin = false;
+    } else if (combinedTextsLower.includes('fv23') || combinedTextsLower.includes('fv 23') || combinedTextsLower.includes('faktura vat 23') || combinedTextsLower.includes('vat 23%') || combinedTextsLower.includes('vat23%')) {
+        vatMargin = false;
+    } else if (raw.car_type_class === 'new' || raw.car_type_text?.toLowerCase() === 'nowy') {
+        vatMargin = false;
+    } else if (raw.taxtype === 'netto' || combinedTextsLower.includes('marża') || combinedTextsLower.includes('marza')) {
+        vatMargin = true;
+    }
+
+    // Heurystyki / Wzbogacenie
     const enginePowerHp = enriched?.enginePowerHp || extractPowerHp(combinedTexts);
     const engineCapacityCm3 = enriched?.engineCapacityCm3 || extractEngineCapacity(combinedTexts);
     const transmission = enriched?.transmission || extractTransmission(fuelMapped, raw.isHybrid, raw.isElectric, combinedTexts);
@@ -340,6 +353,7 @@ export function mapRawCarToNormalized(raw: PewneAutoCarRaw, enriched?: PewneAuto
         pricePln: priceGross,
         priceGross,
         priceType: isNetto ? 'netto' : 'brutto',
+        vatMargin,
         omnibusLowest30dPln: raw.lowest_price_30_days ? Number(raw.lowest_price_30_days) : null,
         isReserved,
         primaryImageUrl,
