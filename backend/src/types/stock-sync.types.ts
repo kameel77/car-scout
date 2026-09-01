@@ -33,6 +33,7 @@ export interface NormalizedFeedCar {
     pricePln: number;
     priceGross?: number | null;
     priceType?: 'brutto' | 'netto';
+    vatMargin?: boolean;
     omnibusLowest30dPln?: number | null;
     omnibusText?: string | null;
     isReserved: boolean;

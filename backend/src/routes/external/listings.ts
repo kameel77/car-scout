@@ -7,9 +7,9 @@ import crypto from 'crypto';
 
 // Mapuje różne warianty opisu napędu (np. z Otomoto: "Na przednie koła",
 // "Na tylne koła", "4x4 (stały)") na wartości oczekiwane przez formularz
-// edycji w panelu (select: "Przedni" | "Tylny" | "4x4"). Nieznane -> null.
-function normalizeDrive(raw: unknown): string | null {
-    if (!raw) return null;
+// edycji w panelu (select: "Przedni" | "Tylny" | "4x4"). Jeśli brak lub nieznane -> domyślnie "Przedni".
+function normalizeDrive(raw: unknown): string {
+    if (!raw) return 'Przedni';
     const s = String(raw).toLowerCase();
     if (s.includes('4x4') || s.includes('cztery') || s.includes('awd') ||
         s.includes('all-wheel') || s.includes('all wheel') || s.includes('quattro') ||
@@ -22,7 +22,7 @@ function normalizeDrive(raw: unknown): string | null {
     if (s.includes('przod') || s.includes('przedn') || s.includes('fwd') || s.includes('front')) {
         return 'Przedni';
     }
-    return null;
+    return 'Przedni';
 }
 
 export async function externalListingsRoutes(fastify: FastifyInstance) {
