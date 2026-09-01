@@ -680,3 +680,10 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Dane kalkulatora finansowania: wybrany produkt finansowy, kwota, okres, pierwsza wpłata, miesięczna rata, wykup.
   - Wiadomość klienta: zabezpieczony przed HTML injection blok cytatu z zachowaniem formatowania.
 
+## 59. Domyślny rodzaj napędu („Przedni”) przy imporcie ogłoszeń i ekstrakcji AI
+- **Cel**: Wyeliminowanie sytuacji, w których brak podania napędu przez sprzedawcę na Otomoto powodował błędną interpretację (np. halucynację AI klasyfikującą wersje z literą „X”, mHEV lub standardowe wersje jako napęd 4x4) lub pozostawianie pustej wartości.
+- **Zachowanie**:
+  - **Parser wtyczki (`content.js` / `popup.js`)**: W przypadku braku parametru napędu na Otomoto lub braku dopasowania, parser oraz formularz wtyczki Chrome ustawiają domyślnie wartość `'Przedni'`.
+  - **Warstwa AI (`ai.js`)**: Prompt systemowy precyzuje, że klasyfikacja jako `'4x4'` lub `'Tylny'` jest dozwolona wyłącznie, gdy rodzaj napędu jest wprost wymieniony w opisie lub specyfikacji ogłoszenia. W przeciwnym razie AI zwraca `'Przedni'`.
+  - **Backend CarScout (`listings.ts` - trasy `/api/v1/external/listings`)**: Funkcja `normalizeDrive` w przypadku braku parametru napędu lub nierozpoznanej wartości przypisuje domyślnie `'Przedni'`.
+
