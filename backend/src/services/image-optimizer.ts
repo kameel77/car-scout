@@ -1,6 +1,14 @@
 import sharp from 'sharp';
 import path from 'path';
 
+// Domyślnie libvips odpala jeden wątek na rdzeń, a kolejka CSFlow woła
+// optimizeAndSaveImage równolegle dla wielu ofert — iloczyn tych dwóch liczb
+// wysycił CPU serwera 2026-09-02 i zagłodził pulę wątków libuv (zawisł
+// getaddrinfo, SSR przestał się mieścić w 60-sekundowym limicie nginxa).
+// Kosztem jest nieco wolniejszy pojedynczy upload z panelu — akceptowalny,
+// bo generowanie AVIF zostało już wyłączone i ścieżka jest ~3,7x szybsza niż wcześniej.
+sharp.concurrency(1);
+
 export interface OptimizeImageOptions {
     targetDir: string;
     baseFilename: string; // bez rozszerzenia, np. "12345-hash"
