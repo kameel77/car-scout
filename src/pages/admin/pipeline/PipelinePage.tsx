@@ -16,6 +16,7 @@ import {
   FinancingType,
   LeadSourceChannel,
   LEAD_SOURCES,
+  PIPELINE_PHASES,
   StageGateViolationErrorData,
 } from './types';
 import { StageGateAlertModal } from './components/StageGateAlertModal';
