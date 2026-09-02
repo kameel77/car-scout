@@ -10,7 +10,7 @@ export interface OptimizeImageOptions {
     thumbWidth?: number; // domyślnie 600
     quality?: number; // domyślnie 75
     generateThumbnail?: boolean; // domyślnie true
-    generateAvif?: boolean; // domyślnie true
+    generateAvif?: boolean; // domyślnie false — patrz komentarz przy wartości domyślnej
     generateLqip?: boolean; // domyślnie true
 }
 
@@ -48,7 +48,14 @@ export async function optimizeAndSaveImage(
         thumbWidth = 600,
         quality = 75,
         generateThumbnail = true,
-        generateAvif = true,
+        // Domyślnie WYŁĄCZONE. Warianty .avif nie są dziś serwowane: front nie emituje
+        // <source type="image/avif"> (OptimizedImage.test.tsx wprost tego pilnuje), a żaden
+        // konsument nie czyta pól avif*Filename z wyniku. Kodowanie AVIF to ~73% czasu CPU
+        // całej optymalizacji (pomiar: master 1600x1200 → WebP x4 322 ms, AVIF x3 866 ms),
+        // czyli kilkadziesiąt sekund oczekiwania przy zapisie pojazdu z kilkoma zdjęciami.
+        // Włączyć razem z realnym serwowaniem AVIF — wtedy trzeba też dorobić -lg.avif
+        // i zejść z quality (przy q60 przewaga nad serwowanym WebP q75 jest znikoma).
+        generateAvif = false,
         generateLqip = true,
     } = options;
 
