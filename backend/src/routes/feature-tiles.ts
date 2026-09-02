@@ -262,10 +262,12 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
             const oldPath = path.join(process.cwd(), tile.imageUrl.replace(/^\//, ''));
             const mediumPath = oldPath.replace('.webp', '-md.webp');
             const thumbPath = oldPath.replace('.webp', '-thumb.webp');
+            const cardPath = oldPath.replace('.webp', '-lg.webp');
             try {
                 await fs.unlink(oldPath);
                 await fs.unlink(mediumPath).catch(() => {});
                 await fs.unlink(thumbPath).catch(() => {});
+                await fs.unlink(cardPath).catch(() => {});
             } catch { /* ignore */ }
         }
         await fastify.prisma.featureTile.delete({ where: { id } });
@@ -330,10 +332,12 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
             const oldPath = path.join(process.cwd(), tile.imageUrl.replace(/^\//, ''));
             const mediumPath = oldPath.replace('.webp', '-md.webp');
             const thumbPath = oldPath.replace('.webp', '-thumb.webp');
+            const cardPath = oldPath.replace('.webp', '-lg.webp');
             try {
                 await fs.unlink(oldPath);
                 await fs.unlink(mediumPath).catch(() => {});
                 await fs.unlink(thumbPath).catch(() => {});
+                await fs.unlink(cardPath).catch(() => {});
             } catch { /* ignore */ }
         }
 

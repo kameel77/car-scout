@@ -16,6 +16,82 @@ import { invalidateOfferCache, LISTING_AGGREGATE_URLS } from '../services/cache-
 import { requirePermission } from '../middleware/permissions.js';
 import { getOrSetJson, getJsonFromCache, setJsonInCache, buildListingsQueryCacheKey, buildListingSlugCacheKey, parseListingsQuery } from '../services/api-cache.js';
 
+/**
+ * Pola zwracane przez publiczny katalog (/api/listings) dla niezalogowanych.
+ *
+ * Karta oferty konsumuje dane wyłącznie przez mapBackendListingToFrontend
+ * (src/utils/listingMapper.ts) — ten select to dokładnie zbiór pól, które mapper
+ * czyta, MINUS ciężkie pola widoczne tylko na stronie oferty (specsJson,
+ * equipment*), która i tak pobiera je osobno przez /api/listings/by-slug.
+ *
+ * Bez tego jedna strona katalogu (30 pozycji) ważyła 277 KB, z czego ~6,3 KB
+ * na pozycję to specsJson + equipment* — nieużywane w katalogu, a parsowane
+ * na main threadzie przed wyrenderowaniem elementu LCP.
+ */
+const PUBLIC_LIST_SELECT = {
+    id: true,
+    listingUrl: true,
+    make: true,
+    model: true,
+    version: true,
+    vin: true,
+    pricePln: true,
+    priceDisplay: true,
+    productionYear: true,
+    mileageKm: true,
+    fuelType: true,
+    transmission: true,
+    drive: true,
+    enginePowerHp: true,
+    engineCapacityCm3: true,
+    bodyType: true,
+    doors: true,
+    seats: true,
+    color: true,
+    paintType: true,
+    firstRegistrationDate: true,
+    registrationNumber: true,
+    primaryImageUrl: true,
+    imageUrls: true,
+    isArchived: true,
+    isFeatured: true,
+    isBusinessFeatured: true,
+    isReserved: true,
+    dealerPriceNetPln: true,
+    dealerPriceNetEur: true,
+    brokerPricePln: true,
+    brokerPriceEur: true,
+    pricePrivateCreditPln: true,
+    pricePrivateLeasingPln: true,
+    priceCompanyCreditPln: true,
+    priceCompanyLeasingPln: true,
+    availableForPrivate: true,
+    availableForCompany: true,
+    creditAvailable: true,
+    leasingAvailable: true,
+    creditProductId: true,
+    leasingProductId: true,
+    referenceCreditInstallment: true,
+    referenceLeasingInstallment: true,
+    catalogPrice: true,
+    motoliaDiscountPln: true,
+    showMotoliaDiscount: true,
+    displaySalePrice: true,
+    condition: true,
+    marketingTags: true,
+    financingPriceBase: true,
+    isChineseBrand: true,
+    lastManualEditAt: true,
+    entrySource: true,
+    vatMargin: true,
+    dealer: true,
+    // Tylko pola, o które pyta ListingCard (badge "Dostępne: N szt.").
+    // Pełna relacja ciągnęła 48,6 KB na stronę katalogu — m.in. własne
+    // tablice equipment* i imageUrls, czyli dokładnie ten ciężki content,
+    // który ten select ma wycinać.
+    specification: { select: { stockCount: true, displayMode: true } },
+} as const;
+
 export async function listingRoutes(fastify: FastifyInstance) {
     function getListingInvalidationUrls(listing: { id: string; slug?: string | null; make?: string | null; model?: string | null }): string[] {
         const slugOrId = listing.slug || listing.id;
@@ -458,6 +534,25 @@ export async function listingRoutes(fastify: FastifyInstance) {
             const { drive: _driveFilter, ...whereWithoutDrive } = where;
             const { dealer: _cityFilter, ...whereWithoutCity } = where;
 
+            // Niezalogowani dostają wyłącznie pola karty (PUBLIC_LIST_SELECT); panel
+            // admina korzysta z pełnego rekordu jak dotychczas. Dwa osobne wywołania,
+            // bo Prisma nie typuje poprawnie rozgałęzienia select/include przez spread.
+            const listingsQuery: Promise<any[]> = authenticated
+                ? fastify.prisma.listing.findMany({
+                    where,
+                    include: { dealer: true, specification: true },
+                    orderBy,
+                    skip: (page - 1) * perPage,
+                    take: perPage
+                })
+                : fastify.prisma.listing.findMany({
+                    where,
+                    select: PUBLIC_LIST_SELECT,
+                    orderBy,
+                    skip: (page - 1) * perPage,
+                    take: perPage
+                });
+
             const [
                 listings,
                 totalCount,
@@ -470,16 +565,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 byDriveRaw,
                 byCityRaw,
             ] = await Promise.all([
-                fastify.prisma.listing.findMany({
-                    where,
-                    include: {
-                        dealer: true,
-                        specification: true
-                    },
-                    orderBy,
-                    skip: (page - 1) * perPage,
-                    take: perPage
-                }),
+                listingsQuery,
                 fastify.prisma.listing.count({ where }),
                 fastify.prisma.listing.groupBy({
                     by: ['condition'],

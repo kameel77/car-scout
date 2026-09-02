@@ -484,11 +484,18 @@ describe('buildStaticMeta', () => {
         ];
         const m = buildStaticMeta('/nowe', ctx, listings)!;
         expect(m.preloadImages).toHaveLength(1);
+        // Karta używa drabinki bez mastera (600/900/1400) — href wskazuje -lg,
+        // bo to największy kandydat, jaki karta może wybrać.
         expect(m.preloadImages![0]).toMatchObject({
-            href: 'https://dev.motolia.pl/uploads/listings/first.webp',
+            href: 'https://dev.motolia.pl/uploads/listings/first-lg.webp',
             type: 'image/webp',
         });
         expect(m.preloadImages![0].imagesrcset).toContain('first-thumb.webp 600w');
+        expect(m.preloadImages![0].imagesrcset).toContain('first-md.webp 900w');
+        expect(m.preloadImages![0].imagesrcset).toContain('first-lg.webp 1400w');
+        // master 1920w nie może trafić do karty — to on powodował, że telefony
+        // o DPR >= 2,4 pobierały pełny plik zamiast wariantu
+        expect(m.preloadImages![0].imagesrcset).not.toContain('1920w');
         expect(m.preloadImages![0].imagesrcset).not.toContain('second');
     });
 
@@ -923,6 +930,27 @@ describe('injectHead', () => {
         expect(html).toContain('application/ld+json');
         expect(html).toContain('og:url" content="https://dev.motolia.pl/oferta/ford-puma-abc123"');
         expect(html).not.toContain('noindex');
+    });
+
+    it('puts the LCP image preload before font and API preloads', () => {
+        // Fonty (wstrzykiwane przez vite po </title>) i preloady API (index.html)
+        // mają ten sam priorytet High co obrazek LCP, a w obrębie priorytetu
+        // przeglądarka wysyła żądania w kolejności dokumentu. Obrazek musi być pierwszy.
+        const TPL = `<!doctype html><html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><title>OLD</title>`
+            + `<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>`
+            + `<link rel="preload" href="/api/settings" as="fetch" crossorigin="anonymous" />`
+            + `</head><body><div id="root"></div></body></html>`;
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        const html = injectHead(TPL, m);
+
+        const img = html.indexOf('rel="preload" as="image"');
+        const font = html.indexOf('as="font"');
+        const api = html.indexOf('/api/settings');
+        expect(img).toBeGreaterThan(-1);
+        expect(img).toBeLessThan(font);
+        expect(img).toBeLessThan(api);
+        // i nadal za charsetem/viewportem — te muszą zostać na początku <head>
+        expect(img).toBeGreaterThan(html.indexOf('name="viewport"'));
     });
 
     it('wraps bodyHtml in a hidden prerender container inside #root', () => {
