@@ -102,13 +102,17 @@ function hasLocalVariants(url: string): boolean {
     return url.includes('/uploads/') && url.endsWith('.webp');
 }
 
-function buildImagePreload(url: string, sizes: string, baseUrl: string): PreloadImage {
+// 'card' pomija mastera — musi być zgodne z drabinką <img> w OptimizedImage,
+// inaczej preload i element trafiłyby w różne warianty (podwójne pobranie).
+function buildImagePreload(url: string, sizes: string, baseUrl: string, ladder: 'card' | 'full' = 'full'): PreloadImage {
     const abs = absoluteUrl(url, baseUrl);
     if (hasLocalVariants(url)) {
         const base = abs.slice(0, -'.webp'.length);
+        const steps = [`${base}-thumb.webp 600w`, `${base}-md.webp 900w`, `${base}-lg.webp 1400w`];
+        if (ladder === 'full') steps.push(`${base}.webp 1920w`);
         return {
-            href: `${base}.webp`,
-            imagesrcset: `${base}-thumb.webp 600w, ${base}-md.webp 900w, ${base}.webp 1920w`,
+            href: ladder === 'card' ? `${base}-lg.webp` : `${base}.webp`,
+            imagesrcset: steps.join(', '),
             imagesizes: sizes,
             type: 'image/webp',
         };
@@ -126,7 +130,7 @@ function mdVariantUrl(url: string): string {
 function cardPreloads(listings: { primaryImageUrl?: string | null }[], baseUrl: string): PreloadImage[] | undefined {
     const firstCard = listings[0];
     if (!firstCard) return undefined;
-    return [buildImagePreload(firstCard.primaryImageUrl || '/motolia-placeholder.webp', CARD_IMAGE_SIZES, baseUrl)];
+    return [buildImagePreload(firstCard.primaryImageUrl || '/motolia-placeholder.webp', CARD_IMAGE_SIZES, baseUrl, 'card')];
 }
 
 // Preload zdjęcia LCP pierwszego banera hero na / — media query zgodny z md:hidden/hidden md:block
@@ -1494,7 +1498,7 @@ export function homeHeroShellHtml(
     if (banner.imageUrlMobile) {
         const absMobile = absoluteUrl(banner.imageUrlMobile, baseUrl);
         const srcsetMobile = hasLocalVariants(banner.imageUrlMobile)
-            ? `${absMobile.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absMobile.slice(0, -'.webp'.length)}-md.webp 900w, ${absMobile} 1920w`
+            ? `${absMobile.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absMobile.slice(0, -'.webp'.length)}-md.webp 900w, ${absMobile.slice(0, -'.webp'.length)}-lg.webp 1400w, ${absMobile} 1920w`
             : absMobile;
         mobileSource = `<source media="(max-width: 767px)" srcset="${escapeAttr(srcsetMobile)}">`;
     }
@@ -1503,7 +1507,7 @@ export function homeHeroShellHtml(
     if (banner.imageUrlDesktop) {
         const absDesktop = absoluteUrl(banner.imageUrlDesktop, baseUrl);
         const srcsetDesktop = hasLocalVariants(banner.imageUrlDesktop)
-            ? `${absDesktop.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absDesktop.slice(0, -'.webp'.length)}-md.webp 900w, ${absDesktop} 1920w`
+            ? `${absDesktop.slice(0, -'.webp'.length)}-thumb.webp 600w, ${absDesktop.slice(0, -'.webp'.length)}-md.webp 900w, ${absDesktop.slice(0, -'.webp'.length)}-lg.webp 1400w, ${absDesktop} 1920w`
             : absDesktop;
         img = `<img src="${escapeAttr(absDesktop)}" srcset="${escapeAttr(srcsetDesktop)}" sizes="100vw" width="1600" height="700" fetchpriority="high" decoding="async" loading="eager" alt="${alt}" class="absolute inset-0 w-full h-full object-cover">`;
     }
@@ -1551,11 +1555,15 @@ export function injectHead(template: string, meta: PageMeta): string {
         );
     }
 
-    const extra: string[] = [];
     // Preload scanner rusza obrazek LCP od pierwszej milisekundy, zanim React się zamontuje —
-    // imagesrcset/imagesizes zgodne z <img> na froncie, żeby trafić w ten sam wariant
+    // imagesrcset/imagesizes zgodne z <img> na froncie, żeby trafić w ten sam wariant.
+    // Wstawiamy zaraz za </title>, PRZED preloadami fontów (vite) i API (index.html):
+    // wszystkie te zasoby mają priorytet High, a w obrębie jednego priorytetu przeglądarka
+    // wysyła żądania w kolejności dokumentu. Dopisywany na końcu <head> obrazek LCP stał
+    // w kolejce za ~114 KB fontów i czterema preloadami API.
+    const imagePreloads: string[] = [];
     for (const p of meta.preloadImages ?? []) {
-        extra.push(
+        imagePreloads.push(
             `<link rel="preload" as="image" fetchpriority="high" href="${escapeAttr(p.href)}"` +
             (p.imagesrcset ? ` imagesrcset="${escapeAttr(p.imagesrcset)}"` : '') +
             (p.imagesizes ? ` imagesizes="${escapeAttr(p.imagesizes)}"` : '') +
@@ -1564,6 +1572,15 @@ export function injectHead(template: string, meta: PageMeta): string {
             ` />`
         );
     }
+    if (imagePreloads.length) {
+        const block = `\n    ${imagePreloads.join('\n    ')}`;
+        // Fallback na </head>, żeby szablon bez <title> nie gubił preloadu LCP po cichu.
+        html = html.includes('</title>')
+            ? html.replace('</title>', () => `</title>${block}`)
+            : html.replace('</head>', () => `${block}\n</head>`);
+    }
+
+    const extra: string[] = [];
     if (meta.canonical) extra.push(`<link rel="canonical" href="${escapeAttr(meta.canonical)}" />`);
     if (meta.noindex) extra.push(`<meta name="robots" content="noindex" />`);
     if (meta.jsonLd) {

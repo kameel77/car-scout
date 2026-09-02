@@ -33,10 +33,12 @@ async function unlinkBannerImage(imageUrl: string | null) {
   const oldPath = path.join(process.cwd(), imageUrl.replace(/^\//, ''));
   const mediumPath = oldPath.replace('.webp', '-md.webp');
   const thumbPath = oldPath.replace('.webp', '-thumb.webp');
+  const cardPath = oldPath.replace('.webp', '-lg.webp');
   try {
     await fs.unlink(oldPath);
     await fs.unlink(mediumPath).catch(() => {});
     await fs.unlink(thumbPath).catch(() => {});
+    await fs.unlink(cardPath).catch(() => {});
   } catch { /* ignore */ }
 }
 
@@ -182,7 +184,9 @@ export async function heroBannerRoutes(fastify: FastifyInstance) {
     }
 
     const baseFilename = `${id}-${slot ?? 'desktop'}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
-    const { largeFilename } = await optimizeAndSaveImage(buffer, { targetDir: BANNERS_DIR, baseFilename });
+    // Baner full-bleed 1920 px na stronie głównej — domyślne q75 (dobrane pod
+    // kadry aut w kartach) potrafi tu dać banding na gradientach.
+    const { largeFilename } = await optimizeAndSaveImage(buffer, { targetDir: BANNERS_DIR, baseFilename, quality: 82 });
     const url = `/uploads/hero-banners/${largeFilename}`;
 
     const prevUrl = isMobile ? banner.imageUrlMobile : banner.imageUrlDesktop;

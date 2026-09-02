@@ -79,6 +79,7 @@ export function ImageSwiper({
                     draggable={false}
                     priority={priority && index === 0}
                     sizes={sizes}
+                    ladder="card"
                     className={cn('h-full w-full object-cover transition-transform duration-500', imgClassName)}
                 />
             )}

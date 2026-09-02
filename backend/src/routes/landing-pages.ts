@@ -173,10 +173,12 @@ async function unlinkLandingPageHeroImage(imageUrl: string | null) {
   const oldPath = path.join(process.cwd(), imageUrl.replace(/^\//, ''));
   const mediumPath = oldPath.replace('.webp', '-md.webp');
   const thumbPath = oldPath.replace('.webp', '-thumb.webp');
+  const cardPath = oldPath.replace('.webp', '-lg.webp');
   try {
     await fs.unlink(oldPath);
     await fs.unlink(mediumPath).catch(() => {});
     await fs.unlink(thumbPath).catch(() => {});
+    await fs.unlink(cardPath).catch(() => {});
   } catch { /* ignore */ }
 }
 

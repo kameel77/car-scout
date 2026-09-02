@@ -114,10 +114,12 @@ export async function listingUploadRoutes(fastify: FastifyInstance) {
             if (filepath) {
                 const mediumPath = filepath.replace('.webp', '-md.webp'); // Usuwamy też warianty, jeśli istnieją
                 const thumbPath = filepath.replace('.webp', '-thumb.webp');
+                const cardPath = filepath.replace('.webp', '-lg.webp');
                 try {
                     await fs.unlink(filepath);
                     await fs.unlink(mediumPath).catch(() => {});
                     await fs.unlink(thumbPath).catch(() => {});
+                    await fs.unlink(cardPath).catch(() => {});
                 } catch {
                     // file already gone — ignore
                 }
