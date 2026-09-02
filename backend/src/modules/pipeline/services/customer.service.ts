@@ -16,7 +16,7 @@ const UNMATCHABLE_PHONES = new Set([
  */
 export function normalizePhone(phone: string | null | undefined): string | null {
   if (!phone) return null;
-  const cleaned = phone.replace(/[\s\-\(\)\.]/g, '').trim();
+  const cleaned = phone.replace(/[\s\-().]/g, '').trim();
   if (!cleaned) return null;
 
   if (cleaned.startsWith('+')) {
@@ -58,7 +58,7 @@ export function normalizeEmail(email: string | null | undefined): string | null 
 
 export function normalizeNip(nip: string | null | undefined): string | null {
   if (!nip) return null;
-  const digits = nip.replace(/[\s\-]/g, '').replace(/^PL/i, '').trim();
+  const digits = nip.replace(/[\s-]/g, '').replace(/^PL/i, '').trim();
   return digits.length > 0 ? digits : null;
 }
 

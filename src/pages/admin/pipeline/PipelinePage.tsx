@@ -54,7 +54,7 @@ import { addDays } from 'date-fns';
 export default function PipelinePage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { setNextAction, transitionPhase } = usePipelineMutations();
+  const { setNextAction, transitionPhase, dismissLead } = usePipelineMutations();
 
   // View state: 'queue' (default) | 'board'
   const [activeView, setActiveView] = useState<'queue' | 'board'>('queue');
@@ -334,7 +334,7 @@ export default function PipelinePage() {
           onQualifyLead={(lead) => setSelectedLeadForQualify(lead)}
           onDismissLead={async (lead) => {
             if (confirm(`Czy na pewno odrzucić lead od "${lead.name}" jako spam?`)) {
-              await usePipelineMutations().dismissLead.mutateAsync({
+              await dismissLead.mutateAsync({
                 leadId: lead.id,
                 data: { comment: 'Odrzucony z kolejki doradcy' },
               });

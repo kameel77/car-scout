@@ -368,7 +368,7 @@ export async function logContact(
   const isFirstContact = !opportunity.firstContactAt;
   const firstContactAt = opportunity.firstContactAt ?? now;
 
-  let updateData: Prisma.PipelineOpportunityUpdateInput = {};
+  const updateData: Prisma.PipelineOpportunityUpdateInput = {};
   if (isFirstContact) {
     updateData.firstContactAt = firstContactAt;
   }
