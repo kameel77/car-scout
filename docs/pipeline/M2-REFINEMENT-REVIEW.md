@@ -116,3 +116,76 @@ index, create the index on `reroute_from_id`, add `contracted_application_id` (�
 - Test list is the right one. Add two cases: a `JOIN_CURRENT` add landing in the current round rather
   than a new one (§1), and a contract signature naming one of two approved applications and withdrawing
   the other with `CONTRACTED_ELSEWHERE` (§2.2, §3).
+
+---
+
+## 7. Implementation review — commit `529eeab`
+
+**Verdict: ACCEPTED WITH CHANGES.** Nothing blocking. One modelling defect that will misreport in M3
+(§7.2), one item from §3 not implemented, two nits.
+
+### 7.1 Verified
+
+| Item | Result |
+|---|---|
+| Migration | ✅ Exactly the expected statements: `RENAME COLUMN`, both constraints dropped, new `(opportunity, financier, round)` unique index, `reroute_from_id` index, `contracted_application_id` with `ON DELETE SET NULL`. Nothing outside the module. |
+| §1 `roundMode` | ✅ `JOIN_CURRENT` / `NEW_ROUND` explicit, reroute passes `NEW_ROUND`. Good defensive touch: `JOIN_CURRENT` escalates to a new round when that financier is already present in the current one, so the unique key can't be violated by a legitimate action. |
+| §2.1 withdrawal trigger | ✅ Fires on `contractSignedAt` + `contractedApplicationId`, not on entering `CONTRACT`. |
+| §2.2 contracted application named | ✅ `contractedApplicationId` on the opportunity, FK in place. |
+| §4 completeness | ✅ Measures `PIPELINE_PHASES[current + 1]`, returns `nextPhase: null` in the last phase; requirements are passed in pre-loaded rather than fetched per row. |
+| Commission | ✅ Only `updateMany` attaching `applicationId` to existing records — no commission is created in M2, so M3's derivation stays where it belongs. |
+| `M2-REVIEW.md` §2.2 | ✅ `rerouteApplication` now calls `changePhase`; the inline copy is gone. |
+
+### 7.2 `CONTRACTED_ELSEWHERE` is modelled as a loss reason — fix before M3
+
+Two related choices, both wrong in the same direction:
+
+```ts
+// seeds/pipeline.ts
+{ code: 'CONTRACTED_ELSEWHERE', label: 'Wybrano innego finansującego',
+  category: 'APPLICATION_WITHDRAWN', … }
+
+// opportunity.service.ts
+data: { state: WITHDRAWN, rejectionReasonCode: 'CONTRACTED_ELSEWHERE', … }
+```
+
+1. It sits in `pipeline_loss_reasons`, whose categories are `FINANCIER` / `CUSTOMER` / `QUALIFICATION`,
+   under an invented fourth. That table feeds the `closeLost` dictionary, so "Wybrano innego
+   finansującego" becomes selectable as a reason to **lose** a case — while in reality it only ever
+   occurs on a case that was **won**.
+2. It is written into `rejectionReasonCode`. At row level a withdrawal is now indistinguishable from a
+   refusal, so any M3 query of the shape *"rejections at this financier"* counts a financier who never
+   refused anything. That is exactly the misreading `PARALLEL-APPLICATIONS.md` §5 exists to prevent —
+   and it is now in the state table, not just in an event payload where a filter could still catch it.
+
+**Fix:** a dedicated `withdrawalReasonCode` column on `PipelineApplication`, with its own closed
+vocabulary, and leave `rejectionReasonCode` meaning only what its name says. If the column is deferred,
+the minimum is that `CONTRACTED_ELSEWHERE` leaves `pipeline_loss_reasons` entirely and every rejection
+query excludes withdrawn applications — written down, not remembered.
+
+### 7.3 §3 not implemented — `APPLICATION_WITHDRAWN.reason` is still `string`
+
+`event-types.ts` still types it as free text. The closed set was the point: `CONTRACTED_ELSEWHERE` ·
+`CUSTOMER_RESIGNED` · `EXPIRED` · `SUPERSEDED_BY_NEW_OFFER` · `OTHER`, with only the first excluded from
+failure counts. This is the type-level half of §7.2 and should land in the same commit.
+
+### 7.4 Nits
+
+- **`withdrawOtherApplicationsOnContract` is dead code.** It is exported from `application.service.ts`
+  and never called; `opportunity.service.ts` carries its own inline copy of the same loop. This is the
+  duplication pattern from `M2-REVIEW.md` §2.2 — correctly removed for reroute, reintroduced here.
+  Keep the helper, call it, delete the inline copy.
+- **`calculateOpportunityCompleteness(opportunity: any, allRequirementsForScope: any[])`** — two `any`
+  in a new function, against the module's own rule. It decides what every advisor sees on every card;
+  type it.
+- The `customer.companyNip` special case counting as *met* for non-B2B is unreachable while the seeded
+  row carries `clientType = B2B` (the filter above already drops it). Harmless today, misleading to read.
+  A non-applicable requirement should be excluded from `total`, never counted as met.
+
+### 7.5 Still open
+
+- **The stopwatch.** Unmeasured since M1 and now covering more ground: qualify → vehicle → offer →
+  application → refusal → parallel reroute. This is the last thing standing between M2 and operational
+  acceptance, and it is not something the test suite can answer.
+- Query-count assertion for the board (§4) — the shape is right (requirements pre-loaded), but nothing
+  asserts it stays that way.
