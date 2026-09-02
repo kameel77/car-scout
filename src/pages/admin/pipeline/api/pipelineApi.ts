@@ -29,7 +29,9 @@ export class ApiError extends Error {
 }
 
 function getHeaders() {
-  const token = localStorage.getItem('token');
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('auth_token') || localStorage.getItem('token')
+    : null;
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
