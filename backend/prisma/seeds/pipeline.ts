@@ -25,6 +25,7 @@ export async function seedPipeline(prisma: PrismaClient) {
     { code: 'QUAL_NOT_ELIGIBLE', label: 'Niekwalifikowany', category: 'QUALIFICATION', requiresComment: false, sortOrder: 100 },
     { code: 'QUAL_SPAM', label: 'Spam / pomyłka', category: 'QUALIFICATION', requiresComment: false, sortOrder: 110 },
     { code: 'OTHER', label: 'Inne', category: 'QUALIFICATION', requiresComment: true, sortOrder: 120 },
+    { code: 'CONTRACTED_ELSEWHERE', label: 'Wybrano innego finansującego', category: 'APPLICATION_WITHDRAWN', requiresComment: false, sortOrder: 200 },
   ];
 
   for (const lr of lossReasons) {
@@ -104,7 +105,7 @@ export async function seedPipeline(prisma: PrismaClient) {
 
     // HARD: DELIVERY
     { code: 'REQ_DEL_CONTRACT_SIGNED', targetPhase: PipelinePhase.DELIVERY, fieldPath: 'opportunity.contractSignedAt', label: 'Data podpisania umowy', enforcement: 'HARD', sortOrder: 60 },
-    { code: 'REQ_DEL_COMMISSION_BASIS', targetPhase: PipelinePhase.DELIVERY, fieldPath: 'commission.basisGrosze', label: 'Podstawa naliczenia prowizji', enforcement: 'HARD', sortOrder: 70 },
+    { code: 'REQ_DEL_COMMISSION_BASIS', targetPhase: PipelinePhase.DELIVERY, fieldPath: 'commission.basisGrosze', label: 'Podstawa naliczenia prowizji', enforcement: 'SOFT', sortOrder: 70 },
 
     // SOFT: QUALIFICATION, SELECTION, COMPLETING
     { code: 'REQ_QUAL_CLIENT_TYPE', targetPhase: PipelinePhase.QUALIFICATION, fieldPath: 'opportunity.clientType', label: 'Typ klienta', enforcement: 'SOFT', sortOrder: 10 },

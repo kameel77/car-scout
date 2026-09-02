@@ -1,6 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { pipelineApi, QueueFilterParams } from './pipelineApi';
-import { PipelinePhase, ClientType, FinancingType, LeadSourceChannel } from '../types';
+import {
+  PipelinePhase,
+  ClientType,
+  FinancingType,
+  LeadSourceChannel,
+  PipelineDocumentStatus,
+} from '../types';
 
 export const PIPELINE_KEYS = {
   all: ['pipeline'] as const,
@@ -113,23 +119,29 @@ export function usePipelineMutations() {
       id: string;
       data: {
         channel: 'CALL' | 'EMAIL' | 'SMS' | 'MEETING';
-        note?: string;
-        nextActionType?: string;
+        note?: string | null;
+        nextActionType?: string | null;
         nextActionDueAt?: string | null;
-        nextActionNote?: string;
+        nextActionNote?: string | null;
       };
     }) => pipelineApi.logContact(id, data),
     onSuccess: invalidateAll,
   });
 
-  const closeOpportunity = useMutation({
+  const closeWon = useMutation({
+    mutationFn: ({ id, data }: { id: string; data?: { comment?: string } }) =>
+      pipelineApi.closeWon(id, data),
+    onSuccess: invalidateAll,
+  });
+
+  const closeLost = useMutation({
     mutationFn: ({
       id,
       data,
     }: {
       id: string;
-      data: { status: 'WON' | 'LOST'; reasonCode?: string; comment?: string };
-    }) => pipelineApi.closeOpportunity(id, data),
+      data: { reasonCode: string; comment?: string | null };
+    }) => pipelineApi.closeLost(id, data),
     onSuccess: invalidateAll,
   });
 
@@ -139,30 +151,243 @@ export function usePipelineMutations() {
       data,
     }: {
       id: string;
-      data: Parameters<typeof pipelineApi.patchOpportunity>[1];
+      data: {
+        clientType?: ClientType;
+        financingType?: FinancingType | null;
+        leadSource?: LeadSourceChannel;
+        leadSourceDetail?: string | null;
+        customerName?: string;
+        customerPhone?: string | null;
+        customerEmail?: string | null;
+        companyName?: string | null;
+        companyNip?: string | null;
+      };
     }) => pipelineApi.patchOpportunity(id, data),
     onSuccess: invalidateAll,
   });
 
+  // Vehicles
+  const addVehicleCandidate = useMutation({
+    mutationFn: ({
+      opportunityId,
+      data,
+    }: {
+      opportunityId: string;
+      data: {
+        listingId?: string | null;
+        rentalVehicleId?: string | null;
+        customMake?: string | null;
+        customModel?: string | null;
+        customVersion?: string | null;
+        customYear?: number | null;
+        priceSnapshotGrosze?: number | null;
+        selectionStatus?: 'CANDIDATE' | 'SELECTED';
+      };
+    }) => pipelineApi.addVehicleCandidate(opportunityId, data),
+    onSuccess: invalidateAll,
+  });
+
+  const selectVehicleCandidate = useMutation({
+    mutationFn: ({
+      opportunityId,
+      candidateId,
+    }: {
+      opportunityId: string;
+      candidateId: string;
+    }) => pipelineApi.selectVehicleCandidate(opportunityId, candidateId),
+    onSuccess: invalidateAll,
+  });
+
+  const removeVehicleCandidate = useMutation({
+    mutationFn: ({
+      opportunityId,
+      candidateId,
+    }: {
+      opportunityId: string;
+      candidateId: string;
+    }) => pipelineApi.removeVehicleCandidate(opportunityId, candidateId),
+    onSuccess: invalidateAll,
+  });
+
+  // Offers
+  const createOrUpdateOffer = useMutation({
+    mutationFn: ({
+      opportunityId,
+      data,
+    }: {
+      opportunityId: string;
+      data: {
+        vehicleCandidateId?: string | null;
+        financingProductId?: string | null;
+        financingType: FinancingType;
+        priceGrosze: number;
+        downPaymentGrosze?: number;
+        periodMonths: number;
+        monthlyRateGrosze?: number | null;
+        finalPaymentGrosze?: number | null;
+        annualMileageKm?: number | null;
+      };
+    }) => pipelineApi.createOrUpdateOffer(opportunityId, data),
+    onSuccess: invalidateAll,
+  });
+
+  const supersedeOffer = useMutation({
+    mutationFn: ({
+      opportunityId,
+      data,
+    }: {
+      opportunityId: string;
+      data: {
+        vehicleCandidateId?: string | null;
+        financingProductId?: string | null;
+        financingType: FinancingType;
+        priceGrosze: number;
+        downPaymentGrosze?: number;
+        periodMonths: number;
+        monthlyRateGrosze?: number | null;
+        finalPaymentGrosze?: number | null;
+        annualMileageKm?: number | null;
+      };
+    }) => pipelineApi.supersedeOffer(opportunityId, data),
+    onSuccess: invalidateAll,
+  });
+
+  const presentOffer = useMutation({
+    mutationFn: ({
+      opportunityId,
+      offerId,
+      data,
+    }: {
+      opportunityId: string;
+      offerId: string;
+      data: { channel?: 'CALL' | 'EMAIL' | 'SMS' };
+    }) => pipelineApi.presentOffer(opportunityId, offerId, data),
+    onSuccess: invalidateAll,
+  });
+
+  const acceptOffer = useMutation({
+    mutationFn: ({
+      opportunityId,
+      offerId,
+    }: {
+      opportunityId: string;
+      offerId: string;
+    }) => pipelineApi.acceptOffer(opportunityId, offerId),
+    onSuccess: invalidateAll,
+  });
+
+  // Applications
+  const createApplication = useMutation({
+    mutationFn: ({
+      opportunityId,
+      data,
+    }: {
+      opportunityId: string;
+      data: {
+        financierId: string;
+        offerId?: string | null;
+        externalReference?: string | null;
+      };
+    }) => pipelineApi.createApplication(opportunityId, data),
+    onSuccess: invalidateAll,
+  });
+
+  const submitApplication = useMutation({
+    mutationFn: ({
+      applicationId,
+      data,
+    }: {
+      applicationId: string;
+      data: {
+        stage: 'PRECHECK' | 'FULL';
+        externalReference?: string | null;
+      };
+    }) => pipelineApi.submitApplication(applicationId, data),
+    onSuccess: invalidateAll,
+  });
+
+  const decideApplication = useMutation({
+    mutationFn: ({
+      applicationId,
+      data,
+    }: {
+      applicationId: string;
+      data: {
+        decision: 'APPROVED' | 'CONDITIONALLY_APPROVED' | 'REJECTED';
+        rejectionReasonCode?: string | null;
+        rejectionComment?: string | null;
+        approvedConditions?: Record<string, unknown> | null;
+      };
+    }) => pipelineApi.decideApplication(applicationId, data),
+    onSuccess: invalidateAll,
+  });
+
+  const rerouteApplication = useMutation({
+    mutationFn: ({
+      applicationId,
+      data,
+    }: {
+      applicationId: string;
+      data: {
+        targetFinancierId: string;
+        offerId?: string | null;
+        note?: string | null;
+      };
+    }) => pipelineApi.rerouteApplication(applicationId, data),
+    onSuccess: invalidateAll,
+  });
+
+  // Documents
+  const materializeDocuments = useMutation({
+    mutationFn: (opportunityId: string) => pipelineApi.materializeDocuments(opportunityId),
+    onSuccess: invalidateAll,
+  });
+
+  const updateDocumentStatus = useMutation({
+    mutationFn: ({
+      documentId,
+      data,
+    }: {
+      documentId: string;
+      data: {
+        status: PipelineDocumentStatus;
+        note?: string | null;
+        requestedVia?: string | null;
+        reason?: string | null;
+      };
+    }) => pipelineApi.updateDocumentStatus(documentId, data),
+    onSuccess: invalidateAll,
+  });
+
+  // Inbox
   const qualifyLead = useMutation({
     mutationFn: ({
       leadId,
       data,
     }: {
       leadId: string;
-      data: Parameters<typeof pipelineApi.qualifyLead>[1];
+      data: {
+        ownerUserId?: string | null;
+        nextActionType?: string | null;
+        nextActionDueAt?: string | null;
+        nextActionNote?: string | null;
+        clientType?: ClientType;
+        financingType?: FinancingType | null;
+        leadSource?: LeadSourceChannel;
+        leadSourceDetail?: string | null;
+      };
     }) => pipelineApi.qualifyLead(leadId, data),
     onSuccess: invalidateAll,
   });
 
-  const dismissLead = useMutation({
+  const dismissLeadAsSpam = useMutation({
     mutationFn: ({
       leadId,
       data,
     }: {
       leadId: string;
-      data?: { comment?: string };
-    }) => pipelineApi.dismissLead(leadId, data),
+      data?: { comment?: string | null };
+    }) => pipelineApi.dismissLeadAsSpam(leadId, data),
     onSuccess: invalidateAll,
   });
 
@@ -172,9 +397,23 @@ export function usePipelineMutations() {
     assignOwner,
     setNextAction,
     logContact,
-    closeOpportunity,
+    closeWon,
+    closeLost,
     patchOpportunity,
+    addVehicleCandidate,
+    selectVehicleCandidate,
+    removeVehicleCandidate,
+    createOrUpdateOffer,
+    supersedeOffer,
+    presentOffer,
+    acceptOffer,
+    createApplication,
+    submitApplication,
+    decideApplication,
+    rerouteApplication,
+    materializeDocuments,
+    updateDocumentStatus,
     qualifyLead,
-    dismissLead,
+    dismissLeadAsSpam,
   };
 }

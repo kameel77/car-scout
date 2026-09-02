@@ -715,3 +715,34 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Dostęp chroniony uprawnieniami `pipeline:read` oraz `pipeline:write`.
   - Ścisła izolacja wielotenantowa oparta o token JWT (`scopeType`, `scopeId`).
 
+### 62. Moduł Pipeline CRM - Oferty, Wnioski Leasingowe, Równoległe Rundowanie, Rerouting, Dokumenty i Bramki Etapów (Kamień Milowy M2)
+- **Kandydaci pojazdów (Vehicle candidates shortlist)**:
+  - Możliwość dodawania do sprawy wielu propozycji pojazdów: ze stoku ogłoszeń (`Listing`), z floty wynajmu (`RentalVehicle`) lub aut spoza katalogu wprowadzanych ręcznie.
+  - Wybór 1 pojazdu głównego (`selectionStatus = 'SELECTED'`) stanowiącego bazę pod ofertę i wniosek leasingowy, z emisją zdarzeń `VEHICLE_CANDIDATE_ADDED` oraz `VEHICLE_SELECTED`.
+- **Oferty i Kalkulacja PMT w miejscu (Offers in-place)**:
+  - Jedna aktywna oferta edytowana bezpośrednio na karcie sprawy bez skomplikowanych kreatorów.
+  - Automatyczne przeliczanie raty miesięcznej w oparciu o silnik PMT i standardowe parametry rynkowe.
+  - Wersjonowanie ofert (`versionNumber + 1`) przy tworzeniu nowych wariantów (`supersedeOffer`) oraz rejestracja przedstawienia (`OFFER_PRESENTED`) i akceptacji klienta (`OFFER_ACCEPTED`).
+- **Wnioski leasingowe i Równoległe Rundowanie (Parallel Applications & Reroute)**:
+  - Pełny cykl życia wniosku u partnerów finansowych (`DRAFT` → `PRECHECK_SUBMITTED` / `FULL_SUBMITTED` → `APPROVED` / `CONDITIONALLY_APPROVED` / `REJECTED` / `WITHDRAWN`).
+  - **Dopuszczenie wniosków równoległych**: doradca może składać wnioski równolegle do wielu finansujących w tej samej rundzie (`roundMode = 'JOIN_CURRENT'`) lub otwierać nowe rundy (`roundMode = 'NEW_ROUND'`).
+  - Klucz unikalny `[opportunityId, financierId, roundNumber]` gwarantuje brak duplikatów w tej samej rundzie.
+  - Wymóg wskazania przyczyny odmowy ze słownika `FINANCIER` przy negacie.
+  - **Odrzucenie wniosku nigdy nie zamyka sprawy** - sprawa pozostaje aktywna w stanie `OPEN`.
+  - **1-klikowy Reroute**: natychmiastowe utworzenie kolejnego wniosku w nowej rundzie (`roundNumber + 1`, powiązanie `rerouteFromId`), delegacja powrotu do etapu weryfikacji finansowej bez duplikacji logiki i wyemitowanie zdarzenia `APPLICATION_REROUTED`.
+  - **Wycofanie przy podpisaniu umowy**: wskazanie wygranego wniosku (`contractedApplicationId`) i podpisanie umowy (`contractSignedAt`) automatycznie wycofuje pozostałe aktywne wnioski ze statusem `WITHDRAWN` i powodem `CONTRACTED_ELSEWHERE` (nie liczącym się jako porażka doradcy) oraz przypina prowizję do wygranego partnera.
+- **Bramki Etapów i Pasek Kompletności (Stage Gating Engine & Completeness Bar)**:
+  - Centralny mechanizm walidacji wymagań `PipelinePhaseRequirement` z blokadą wyłącznie dla ruchów w przód (ruchy wstecz są zawsze dozwolone).
+  - Semantyka reguł `application.*`: warunek jest spełniony, gdy **dowolny aktywny (nie-WITHDRAWN)** wniosek spełnia dane kryterium.
+  - Twarde bramki (`HARD`):
+    - `FINANCIAL_DECISION`: wymaga rodzaju finansowania, ceny pojazdu, raty miesięcznej, wybranego finansującego oraz NIP firmy (dla klientów B2B).
+    - `DELIVERY`: wymaga daty podpisania umowy (`contractSignedAt`).
+  - Próba niespełnionego przejścia w przód zwraca strukturalny błąd **HTTP 422** z listą brakujących pól, całkowicie wycofuje transakcję (rollback bazy) i nie zapisuje żadnych zdarzeń.
+  - Interfejs wyświetla dedykowany modal `StageGateAlertModal` z czytelnym wyjaśnieniem brakujących danych.
+  - **Pasek Kompletności (Completeness Bar)**: dynamiczny wskaźnik gotowości sprawy do **kolejnego etapu** procesu (`met/total` i procent), wyliczany jednoprzebiegowo w zapytaniach listowych i prezentowany na kartach tablicy Kanban oraz w wierszach kolejki doradcy.
+- **Automatyczna Checklista Dokumentów (Documents)**:
+  - Automatyczna materializacja listy wymaganych dokumentów (`PipelineDocumentRequirement`) jako **suma (unia)** wymagań wszystkich aktywnych partnerów finansowych powiązanych ze sprawą oraz typu klienta i produktu.
+  - 1-klikowa zmiana statusu (`REQUIRED` → `REQUESTED` → `RECEIVED` → `VERIFIED` / `WAIVED`) z automatycznym pomiarem czasu oczekiwania na dokument (`hoursSinceRequest`).
+  - Zmiana produktu oznacza nieaktualne dokumenty jako `WAIVED`, gwarantując, że już otrzymane i zweryfikowane dokumenty nie znikną z historii sprawy.
+
+

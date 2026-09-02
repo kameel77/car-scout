@@ -22,7 +22,6 @@ export const PHASE_LABELS: Record<PipelinePhase, string> = {
 
 /**
  * Validates if transition from currentPhase to targetPhase is structurally allowed.
- * In M1, any phase change within the active taxonomy is allowed (or overridden if explicitly flagged).
  */
 export function isPhaseTransitionAllowed(
   currentPhase: PipelinePhase,
@@ -31,4 +30,18 @@ export function isPhaseTransitionAllowed(
 ): boolean {
   if (currentPhase === targetPhase) return true;
   return PIPELINE_PHASES.includes(targetPhase);
+}
+
+/**
+ * Checks if target phase is forward in the pipeline sequence relative to current phase.
+ * Hard gates only apply to forward transitions.
+ */
+export function isForwardTransition(
+  currentPhase: PipelinePhase,
+  targetPhase: PipelinePhase
+): boolean {
+  const currentIndex = PIPELINE_PHASES.indexOf(currentPhase);
+  const targetIndex = PIPELINE_PHASES.indexOf(targetPhase);
+  if (currentIndex === -1 || targetIndex === -1) return false;
+  return targetIndex > currentIndex;
 }

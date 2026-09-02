@@ -132,6 +132,8 @@ export async function registerOpportunityRoutes(app: FastifyInstance) {
         customerEmail: body.customerEmail,
         companyName: body.companyName,
         companyNip: body.companyNip,
+        contractSignedAt: body.contractSignedAt,
+        contractedApplicationId: body.contractedApplicationId,
         actor,
       });
 
@@ -150,15 +152,29 @@ export async function registerOpportunityRoutes(app: FastifyInstance) {
       const body = transitionSchema.parse(request.body);
       const actor = getActorFromRequest(request);
 
-      const updated = await executeChangePhase(app.prisma, {
-        id,
-        targetPhase: body.targetPhase,
-        overridden: body.overridden,
-        overrideReason: body.overrideReason,
-        actor,
-      });
+      try {
+        const updated = await executeChangePhase(app.prisma, {
+          id,
+          targetPhase: body.targetPhase,
+          overridden: body.overridden,
+          overrideReason: body.overrideReason,
+          actor,
+        });
 
-      return reply.send(updated);
+        return reply.send(updated);
+      } catch (err: unknown) {
+        const error = err as { statusCode?: number; currentPhase?: string; targetPhase?: string; missing?: unknown[]; message?: string };
+        if (error?.statusCode === 422) {
+          return reply.code(422).send({
+            error: 'STAGE_GATE_VIOLATION',
+            message: error.message,
+            currentPhase: error.currentPhase,
+            targetPhase: error.targetPhase,
+            missing: error.missing ?? [],
+          });
+        }
+        throw err;
+      }
     }
   );
 

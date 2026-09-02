@@ -72,24 +72,102 @@ export type UserSummary = {
 
 export type VehicleCandidateSummary = {
   id: string;
+  opportunityId?: string;
   customMake: string | null;
   customModel: string | null;
   customVersion: string | null;
   customYear: number | null;
   priceSnapshotGrosze: number | null;
+  selectionStatus?: 'CANDIDATE' | 'SELECTED';
   listingId: string | null;
   rentalVehicleId: string | null;
+  createdAt?: string;
   listing?: {
+    id?: string;
     make: string;
     model: string;
     version: string | null;
     productionYear: number | null;
     pricePln: number | null;
+    primaryImageUrl?: string | null;
   } | null;
   rentalVehicle?: {
+    id?: string;
     make: string;
     model: string;
     productionYear: number | null;
+  } | null;
+};
+
+export type PipelineOfferSummary = {
+  id: string;
+  opportunityId: string;
+  versionNumber: number;
+  vehicleCandidateId: string | null;
+  financingProductId: string | null;
+  financingType: FinancingType;
+  status: 'DRAFT' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED' | 'EXPIRED';
+  priceGrosze: number;
+  downPaymentGrosze: number;
+  periodMonths: number;
+  monthlyRateGrosze: number;
+  finalPaymentGrosze: number | null;
+  annualMileageKm: number | null;
+  currency: string;
+  taxMode?: string;
+  presentedAt: string | null;
+  acceptedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PipelineApplicationSummary = {
+  id: string;
+  opportunityId: string;
+  financierId: string;
+  offerId: string | null;
+  roundNumber: number;
+  attemptSequence?: number;
+  rerouteFromId: string | null;
+  state: 'DRAFT' | 'PRECHECK_SUBMITTED' | 'FULL_SUBMITTED' | 'APPROVED' | 'CONDITIONALLY_APPROVED' | 'REJECTED' | 'WITHDRAWN';
+  externalReference: string | null;
+  rejectionReasonCode: string | null;
+  rejectionComment: string | null;
+  approvedConditions: Record<string, unknown> | null;
+  submittedFirstAt: string | null;
+  submittedFullAt: string | null;
+  decisionAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  financier?: {
+    id: string;
+    code: string;
+    name: string;
+  } | null;
+  rerouteFrom?: {
+    id: string;
+    financier?: {
+      code: string;
+      name: string;
+    } | null;
+  } | null;
+};
+
+export type PipelineDocumentStatus = 'REQUIRED' | 'REQUESTED' | 'RECEIVED' | 'VERIFIED' | 'WAIVED';
+
+export type PipelineDocumentSummary = {
+  id: string;
+  opportunityId: string;
+  requirementId: string | null;
+  code: string;
+  label: string;
+  status: PipelineDocumentStatus;
+  requestedAt: string | null;
+  receivedAt: string | null;
+  verifiedAt: string | null;
+  note: string | null;
+  requirement?: {
+    isMandatory: boolean;
   } | null;
 };
 
@@ -109,19 +187,31 @@ export type PipelineOpportunitySummary = {
   nextActionType: string | null;
   nextActionNote: string | null;
   nextActionDueAt: string | null;
+  contractSignedAt?: string | null;
+  contractedApplicationId?: string | null;
   wonAt: string | null;
   lostAt: string | null;
   lostReasonCode: string | null;
   lostComment: string | null;
+  completeness?: {
+    met: number;
+    total: number;
+    percentage: number;
+    nextPhase: string | null;
+  };
   createdAt: string;
   updatedAt: string;
   customer: CustomerSummary;
   owner: UserSummary | null;
   vehicleCandidates?: VehicleCandidateSummary[];
+  offers?: PipelineOfferSummary[];
+  applications?: PipelineApplicationSummary[];
+  documents?: Array<{ id: string; code: string; status: PipelineDocumentStatus }>;
   _count?: {
     vehicleCandidates: number;
     offers: number;
     tasks: number;
+    documents?: number;
   };
 };
 
@@ -179,15 +269,30 @@ export type PipelineEventItem = {
 
 export type OpportunityDetail = PipelineOpportunitySummary & {
   events: PipelineEventItem[];
-  offers: unknown[];
-  applications: unknown[];
+  vehicleCandidates: VehicleCandidateSummary[];
+  offers: PipelineOfferSummary[];
+  applications: PipelineApplicationSummary[];
   tasks: unknown[];
-  documents: unknown[];
+  documents: PipelineDocumentSummary[];
   sourceLead: {
     id: string;
     trafficSource: string | null;
     createdAt: string;
   } | null;
+};
+
+export type StageGateMissingItem = {
+  fieldPath: string;
+  label: string;
+  enforcement?: string;
+};
+
+export type StageGateViolationErrorData = {
+  error: 'STAGE_GATE_VIOLATION';
+  message: string;
+  currentPhase: PipelinePhase;
+  targetPhase: PipelinePhase;
+  missing: StageGateMissingItem[];
 };
 
 export type PipelineDictionaries = {
@@ -206,10 +311,14 @@ export type PipelineDictionaries = {
   }>;
   phaseRequirements: Array<{
     id: string;
-    phase: PipelinePhase;
+    phase?: PipelinePhase;
+    targetPhase?: PipelinePhase;
     code: string;
     label: string;
-    isMandatory: boolean;
+    enforcement: 'HARD' | 'SOFT';
+    fieldPath: string;
+    clientType?: ClientType | null;
+    financingType?: FinancingType | null;
     sortOrder: number;
   }>;
   users: UserSummary[];

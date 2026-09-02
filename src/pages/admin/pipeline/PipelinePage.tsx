@@ -16,7 +16,9 @@ import {
   FinancingType,
   LeadSourceChannel,
   LEAD_SOURCES,
+  StageGateViolationErrorData,
 } from './types';
+import { StageGateAlertModal } from './components/StageGateAlertModal';
 import { QualifyLeadModal } from './modals/QualifyLeadModal';
 import { LogContactModal } from './modals/LogContactModal';
 import { SetNextActionModal } from './modals/SetNextActionModal';
@@ -90,6 +92,7 @@ export default function PipelinePage() {
   const [selectedOppForTransition, setSelectedOppForTransition] = useState<PipelineOpportunitySummary | null>(null);
   const [selectedOppForClose, setSelectedOppForClose] = useState<PipelineOpportunitySummary | null>(null);
   const [isNewOppOpen, setIsNewOppOpen] = useState(false);
+  const [stageGateError, setStageGateError] = useState<StageGateViolationErrorData | null>(null);
 
   const users = dictQuery.data?.users || [];
 
@@ -129,14 +132,20 @@ export default function PipelinePage() {
       });
       toast({
         title: 'Przesunięto sprawę',
-        description: `Sprawa przeszła do fazy ${targetPhase}.`,
+        description: `Sprawa przeszła do etapu: ${
+          PIPELINE_PHASES.find((p) => p.id === targetPhase)?.label || targetPhase
+        }.`,
       });
     } catch (err: any) {
-      toast({
-        title: 'Błąd przejścia fazy',
-        description: err.message || 'Nie udało się zmienić etapu sprawy.',
-        variant: 'destructive',
-      });
+      if (err?.statusCode === 422 || err?.data?.error === 'STAGE_GATE_VIOLATION') {
+        setStageGateError(err.data as StageGateViolationErrorData);
+      } else {
+        toast({
+          title: 'Błąd przejścia fazy',
+          description: err.message || 'Nie udało się zmienić etapu sprawy.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -401,6 +410,13 @@ export default function PipelinePage() {
         onOpenClose={() => {
           setSelectedOppForClose(selectedOppForDetails);
         }}
+      />
+
+      {/* Stage Gate Error Alert Modal */}
+      <StageGateAlertModal
+        isOpen={Boolean(stageGateError)}
+        errorData={stageGateError}
+        onClose={() => setStageGateError(null)}
       />
     </div>
   );

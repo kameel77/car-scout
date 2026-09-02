@@ -4,7 +4,8 @@ import { NextActionBadge } from './NextActionBadge';
 import { LeadSourceBadge } from './LeadSourceBadge';
 import { useDraggable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
-import { Building2, Car, User, GripVertical } from 'lucide-react';
+import { Building2, Car, User, GripVertical, FileText, Shuffle, CheckCircle2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export function OpportunityCard({
   opportunity,
@@ -32,6 +33,11 @@ export function OpportunityCard({
     : selectedVehicle?.customMake
     ? `${selectedVehicle.customMake} ${selectedVehicle.customModel || ''}`
     : null;
+
+  const activeOffer = opportunity.offers?.[0];
+  const activeApp = opportunity.applications?.[0];
+  const docs = opportunity.documents || [];
+  const verifiedDocs = docs.filter((d) => d.status === 'VERIFIED' || d.status === 'WAIVED').length;
 
   return (
     <div
@@ -84,16 +90,88 @@ export function OpportunityCard({
         )}
       </div>
 
-      {/* Vehicle */}
-      {vehicleLabel && (
-        <div className="flex items-center gap-1 text-xs font-medium text-foreground bg-muted/40 px-2 py-1 rounded border border-border/50">
-          <Car className="w-3 h-3 text-primary shrink-0" />
-          <span className="truncate">{vehicleLabel}</span>
+      {/* Vehicle & Offer */}
+      <div className="flex flex-col gap-1">
+        {vehicleLabel && (
+          <div className="flex items-center gap-1 text-xs font-medium text-foreground bg-muted/40 px-2 py-1 rounded border border-border/50">
+            <Car className="w-3 h-3 text-primary shrink-0" />
+            <span className="truncate">{vehicleLabel}</span>
+          </div>
+        )}
+
+        {activeOffer && activeOffer.monthlyRateGrosze > 0 && (
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1">
+            <span>Rata:</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+              {(activeOffer.monthlyRateGrosze / 100).toLocaleString('pl-PL')} zł/mc
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Active Applications or Docs Indicator */}
+      {((opportunity.applications && opportunity.applications.length > 0) || docs.length > 0) && (
+        <div className="flex items-center justify-between gap-1 text-[10px] pt-0.5 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap">
+            {opportunity.applications
+              ?.filter((a) => a.state !== 'WITHDRAWN')
+              .slice(0, 2)
+              .map((app) => (
+                <Badge
+                  key={app.id}
+                  variant="outline"
+                  className={`text-[9px] px-1.5 py-0 h-4 gap-1 ${
+                    app.state === 'APPROVED'
+                      ? 'border-emerald-500/40 text-emerald-600 bg-emerald-500/10'
+                      : app.state === 'REJECTED'
+                      ? 'border-rose-500/40 text-rose-600 bg-rose-500/10'
+                      : 'border-blue-500/40 text-blue-600 bg-blue-500/10'
+                  }`}
+                >
+                  <Shuffle className="h-2 w-2" />
+                  {app.financier?.code || 'Partner'}: {app.state === 'APPROVED' ? 'Zgoda' : app.state === 'REJECTED' ? 'Negat' : `Wniosek R${app.roundNumber}`}
+                </Badge>
+              ))}
+          </div>
+
+          {docs.length > 0 && (
+            <span className="flex items-center gap-0.5 text-muted-foreground ml-auto">
+              <FileText className="h-2.5 w-2.5" />
+              {verifiedDocs}/{docs.length}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Completeness Bar for Next Phase */}
+      {opportunity.completeness && opportunity.completeness.total > 0 && (
+        <div
+          className="space-y-0.5 pt-0.5"
+          title={`Wymagania kolejnego etapu: ${opportunity.completeness.met}/${opportunity.completeness.total} (${opportunity.completeness.percentage}%)`}
+        >
+          <div className="flex items-center justify-between text-[9px] text-muted-foreground">
+            <span>Gotowość do awansu</span>
+            <span className="font-semibold text-foreground">
+              {opportunity.completeness.met}/{opportunity.completeness.total} ({opportunity.completeness.percentage}%)
+            </span>
+          </div>
+          <div className="w-full bg-muted/80 h-1.5 rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all duration-300 ${
+                opportunity.completeness.percentage === 100
+                  ? 'bg-emerald-500'
+                  : opportunity.completeness.percentage >= 50
+                  ? 'bg-amber-500'
+                  : 'bg-primary/70'
+              }`}
+              style={{ width: `${opportunity.completeness.percentage}%` }}
+            />
+          </div>
         </div>
       )}
 
       {/* Next action SLA */}
-      <div className="pt-1">
+      <div className="pt-0.5">
         <NextActionBadge
           actionType={opportunity.nextActionType}
           dueAt={opportunity.nextActionDueAt}

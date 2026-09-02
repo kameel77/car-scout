@@ -7,18 +7,21 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useOpportunityDetails, usePipelineMutations } from '../api/usePipeline';
+import { useOpportunityDetails } from '../api/usePipeline';
 import { PhaseBadge } from '../components/PhaseBadge';
 import { NextActionBadge } from '../components/NextActionBadge';
 import { LeadSourceBadge } from '../components/LeadSourceBadge';
 import { PIPELINE_PHASES, UserSummary, PipelineDictionaries } from '../types';
+import { VehicleCandidatesSection } from '../components/VehicleCandidatesSection';
+import { OfferEditorSection } from '../components/OfferEditorSection';
+import { ApplicationsRerouteSection } from '../components/ApplicationsRerouteSection';
+import { DocumentChecklistSection } from '../components/DocumentChecklistSection';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import {
   Phone,
   Mail,
   Building2,
-  Calendar,
   History,
   Car,
   FileText,
@@ -26,10 +29,9 @@ import {
   PhoneCall,
   Clock,
   ArrowRight,
-  Trophy,
-  XCircle,
   Loader2,
-  CheckCircle2,
+  Calculator,
+  Shuffle,
 } from 'lucide-react';
 
 export function OpportunityDetailModal({
@@ -53,14 +55,20 @@ export function OpportunityDetailModal({
   onOpenTransition?: () => void;
   onOpenClose?: () => void;
 }) {
-  const { data: opp, isLoading } = useOpportunityDetails(opportunityId);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'vehicles' | 'customer'>('timeline');
+  const { data: opp, isLoading, refetch } = useOpportunityDetails(opportunityId);
+  const [activeTab, setActiveTab] = useState<
+    'timeline' | 'vehicles' | 'offer' | 'applications' | 'documents' | 'customer'
+  >('offer');
 
   if (!isOpen) return null;
 
+  const selectedVehicle = opp?.vehicleCandidates?.find(
+    (v) => v.selectionStatus === 'SELECTED'
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
         {isLoading || !opp ? (
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -170,21 +178,78 @@ export function OpportunityDetailModal({
             {/* Content Tabs */}
             <div className="flex-1 overflow-y-auto p-6">
               <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
-                <TabsList className="grid grid-cols-3 mb-4">
-                  <TabsTrigger value="timeline" className="text-xs gap-1.5">
-                    <History className="w-3.5 h-3.5" />
-                    Oś zdarzeń ({opp.events?.length || 0})
+                <TabsList className="grid grid-cols-6 mb-4">
+                  <TabsTrigger value="offer" className="text-xs gap-1">
+                    <Calculator className="w-3.5 h-3.5" />
+                    Oferta
                   </TabsTrigger>
-                  <TabsTrigger value="vehicles" className="text-xs gap-1.5">
+                  <TabsTrigger value="vehicles" className="text-xs gap-1">
                     <Car className="w-3.5 h-3.5" />
                     Pojazdy ({opp.vehicleCandidates?.length || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="customer" className="text-xs gap-1.5">
+                  <TabsTrigger value="applications" className="text-xs gap-1">
+                    <Shuffle className="w-3.5 h-3.5" />
+                    Wnioski ({opp.applications?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="text-xs gap-1">
+                    <FileText className="w-3.5 h-3.5" />
+                    Dokumenty ({opp.documents?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="timeline" className="text-xs gap-1">
+                    <History className="w-3.5 h-3.5" />
+                    Oś ({opp.events?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="customer" className="text-xs gap-1">
                     <User className="w-3.5 h-3.5" />
-                    Klient i kontakt
+                    Klient
                   </TabsTrigger>
                 </TabsList>
 
+                {/* Tab: Offer */}
+                <TabsContent value="offer">
+                  <OfferEditorSection
+                    opportunityId={opp.id}
+                    offers={opp.offers || []}
+                    defaultFinancingType={opp.financingType}
+                    selectedVehiclePriceGrosze={
+                      selectedVehicle?.priceSnapshotGrosze ??
+                      (selectedVehicle?.listing?.pricePln
+                        ? Math.round(Number(selectedVehicle.listing.pricePln) * 100)
+                        : null)
+                    }
+                    onRefresh={refetch}
+                  />
+                </TabsContent>
+
+                {/* Tab: Vehicles */}
+                <TabsContent value="vehicles">
+                  <VehicleCandidatesSection
+                    opportunityId={opp.id}
+                    candidates={opp.vehicleCandidates || []}
+                    onRefresh={refetch}
+                  />
+                </TabsContent>
+
+                {/* Tab: Applications & Reroute */}
+                <TabsContent value="applications">
+                  <ApplicationsRerouteSection
+                    opportunityId={opp.id}
+                    applications={opp.applications || []}
+                    dictionaries={dictionaries}
+                    onRefresh={refetch}
+                  />
+                </TabsContent>
+
+                {/* Tab: Documents */}
+                <TabsContent value="documents">
+                  <DocumentChecklistSection
+                    opportunityId={opp.id}
+                    documents={opp.documents || []}
+                    onRefresh={refetch}
+                  />
+                </TabsContent>
+
+                {/* Tab: Timeline */}
                 <TabsContent value="timeline" className="space-y-3">
                   {opp.events && opp.events.length > 0 ? (
                     <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
@@ -217,6 +282,70 @@ export function OpportunityDetailModal({
                                     {Math.round(ev.payload.durationSeconds / 60)} min).
                                   </p>
                                 )}
+                                {ev.type === 'OFFER_CREATED' && (
+                                  <p>
+                                    Utworzono ofertę v{ev.payload.versionNumber}:{' '}
+                                    {(ev.payload.priceGrosze / 100).toLocaleString('pl-PL')} zł, rata{' '}
+                                    {(ev.payload.monthlyRateGrosze / 100).toLocaleString('pl-PL')} zł/mc ({ev.payload.periodMonths} mc).
+                                  </p>
+                                )}
+                                {ev.type === 'OFFER_UPDATED' && (
+                                  <p>
+                                    Zaktualizowano ofertę w miejscu (zmieniono: {Object.keys(ev.payload.after || {}).join(', ')}).
+                                  </p>
+                                )}
+                                {ev.type === 'OFFER_SUPERSEDED' && (
+                                  <p>
+                                    Unieważniono ofertę v{ev.payload.versionNumber} na rzecz nowej wersji.
+                                  </p>
+                                )}
+                                {ev.type === 'APPLICATION_CREATED' && (
+                                  <p>
+                                    Utworzono wniosek do {ev.payload.financierCode} (próba #{ev.payload.attemptSequence}).
+                                  </p>
+                                )}
+                                {ev.type === 'APPLICATION_SUBMITTED' && (
+                                  <p>
+                                    Złożono {ev.payload.stage === 'PRECHECK' ? 'Pre-check' : 'Pełny wniosek'} do {ev.payload.financierCode}
+                                    {ev.payload.externalReference && ` (ref: ${ev.payload.externalReference})`}.
+                                  </p>
+                                )}
+                                {ev.type === 'APPLICATION_DECIDED' && (
+                                  <p>
+                                    Decyzja {ev.payload.financierCode}: <span className="font-semibold">{ev.payload.decision}</span>
+                                    {ev.payload.reasonCode && ` (powód: ${ev.payload.reasonCode})`}.
+                                  </p>
+                                )}
+                                {ev.type === 'APPLICATION_REROUTED' && (
+                                  <p className="text-amber-600 dark:text-amber-400 font-medium">
+                                    Przepięto wniosek: {ev.payload.fromFinancierCode} → {ev.payload.toFinancierCode} (powód poprzedniej odmowy: {ev.payload.rejectionReasonCode}).
+                                  </p>
+                                )}
+                                {ev.type === 'DOCUMENT_REQUESTED' && (
+                                  <p>
+                                    Poproszono klienta o dokument: {ev.payload.label || ev.payload.code}.
+                                  </p>
+                                )}
+                                {ev.type === 'DOCUMENT_RECEIVED' && (
+                                  <p className="text-emerald-600 dark:text-emerald-400">
+                                    Otrzymano dokument: {ev.payload.code} (po {ev.payload.hoursSinceRequest}h).
+                                  </p>
+                                )}
+                                {ev.type === 'DOCUMENT_VERIFIED' && (
+                                  <p className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                    Zweryfikowano dokument: {ev.payload.code}.
+                                  </p>
+                                )}
+                                {ev.type === 'VEHICLE_CANDIDATE_ADDED' && (
+                                  <p>
+                                    Dodano propozycję pojazdu: {ev.payload.label}.
+                                  </p>
+                                )}
+                                {ev.type === 'VEHICLE_SELECTED' && (
+                                  <p className="font-medium text-emerald-600">
+                                    Oznaczono pojazd jako główne auto sprawy.
+                                  </p>
+                                )}
                                 {ev.type === 'OPPORTUNITY_FIRST_CONTACT' && (
                                   <p>
                                     Pierwszy kontakt via <span className="font-medium text-foreground">{ev.payload.channel}</span> po{' '}
@@ -225,7 +354,7 @@ export function OpportunityDetailModal({
                                 )}
                                 {ev.type === 'OPPORTUNITY_LOST' && (
                                   <p className="text-red-600 dark:text-red-400">
-                                    Powód: {ev.payload.reasonCode} {ev.payload.comment && `— "${ev.payload.comment}"`}
+                                    Powód utraty: {ev.payload.reasonCode} {ev.payload.comment && `— "${ev.payload.comment}"`}
                                   </p>
                                 )}
                                 {ev.type === 'OPPORTUNITY_WON' && (
@@ -259,97 +388,63 @@ export function OpportunityDetailModal({
                   )}
                 </TabsContent>
 
-                <TabsContent value="vehicles" className="space-y-3">
-                  {opp.vehicleCandidates && opp.vehicleCandidates.length > 0 ? (
-                    opp.vehicleCandidates.map((vc) => {
-                      const title =
-                        vc.listing
-                          ? `${vc.listing.make} ${vc.listing.model} ${vc.listing.version || ''}`
-                          : vc.rentalVehicle
-                          ? `${vc.rentalVehicle.make} ${vc.rentalVehicle.model}`
-                          : `${vc.customMake || ''} ${vc.customModel || ''}`.trim() || 'Pojazd';
-                      const year =
-                        vc.listing?.productionYear ||
-                        vc.rentalVehicle?.productionYear ||
-                        vc.customYear;
-                      const price =
-                        vc.priceSnapshotGrosze
-                          ? (vc.priceSnapshotGrosze / 100).toLocaleString('pl-PL') + ' zł'
-                          : vc.listing?.pricePln
-                          ? Number(vc.listing.pricePln).toLocaleString('pl-PL') + ' zł'
-                          : null;
-
-                      return (
-                        <div
-                          key={vc.id}
-                          className="p-4 bg-muted/30 rounded-lg border flex items-center justify-between"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-foreground text-sm">{title}</span>
-                              {year && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                                  {year}
-                                </span>
-                              )}
-                              <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
-                                Wybrany do oferty
-                              </span>
-                            </div>
-                            {price && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                Cena snapshot: <span className="font-semibold text-foreground">{price}</span>
-                              </div>
-                            )}
-                          </div>
+                {/* Tab: Customer */}
+                <TabsContent value="customer" className="space-y-4">
+                  <div className="p-4 rounded-lg border bg-card space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Klient</span>
+                        <span className="font-semibold text-foreground">
+                          {opp.customer?.fullName}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Typ klienta</span>
+                        <span className="font-semibold text-foreground">
+                          {opp.customer?.clientType || opp.clientType}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Telefon</span>
+                        {opp.customer?.phone ? (
+                          <a
+                            href={`tel:${opp.customer.phone}`}
+                            className="font-medium text-primary hover:underline flex items-center gap-1"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            {opp.customer.phone}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">Brak</span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">E-mail</span>
+                        {opp.customer?.email ? (
+                          <a
+                            href={`mailto:${opp.customer.email}`}
+                            className="font-medium text-primary hover:underline flex items-center gap-1"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            {opp.customer.email}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">Brak</span>
+                        )}
+                      </div>
+                      {opp.customer?.companyName && (
+                        <div className="col-span-2 pt-2 border-t">
+                          <span className="text-xs text-muted-foreground block">Firma</span>
+                          <span className="font-semibold text-foreground block">
+                            {opp.customer.companyName}
+                          </span>
+                          {opp.customer.companyNip && (
+                            <span className="text-xs text-muted-foreground">
+                              NIP: {opp.customer.companyNip}
+                            </span>
+                          )}
                         </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center p-8 text-xs text-muted-foreground border border-dashed rounded-lg">
-                      Brak przypisanych kandydatów pojazdu w tej sprawie.
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="customer" className="space-y-4 text-xs">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted/30 rounded-lg border space-y-2">
-                      <span className="font-bold text-foreground text-sm block mb-1">
-                        Dane kontaktowe
-                      </span>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="w-4 h-4 text-primary" />
-                        <span className="text-foreground font-medium">{opp.customer?.phone || 'Brak telefonu'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="w-4 h-4 text-primary" />
-                        <span className="text-foreground font-medium">{opp.customer?.email || 'Brak e-mail'}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-muted/30 rounded-lg border space-y-2">
-                      <span className="font-bold text-foreground text-sm block mb-1">
-                        Atrybucja i pochodzenie
-                      </span>
-                      <div>
-                        Źródło: <span className="font-semibold text-foreground">{opp.leadSource}</span>
-                        {opp.leadSourceDetail && ` (${opp.leadSourceDetail})`}
-                      </div>
-                      <div>
-                        Data wejścia:{' '}
-                        <span className="font-medium text-foreground">
-                          {format(new Date(opp.firstTouchAt), 'd MMMM yyyy, HH:mm', { locale: pl })}
-                        </span>
-                      </div>
-                      <div>
-                        Czas do 1. kontaktu:{' '}
-                        <span className="font-medium text-foreground">
-                          {opp.firstContactAt
-                            ? format(new Date(opp.firstContactAt), 'd MMM yyyy, HH:mm', { locale: pl })
-                            : 'Brak kontaktu'}
-                        </span>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </TabsContent>

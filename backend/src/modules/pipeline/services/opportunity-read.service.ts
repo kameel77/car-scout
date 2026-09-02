@@ -2,12 +2,13 @@ import {
   Prisma,
   PrismaClient,
   ScopeType,
+  PipelinePhase,
   ClientType,
   FinancingType,
   LeadSourceChannel,
-  PipelinePhase,
   OpportunityStatus,
 } from '@prisma/client';
+import { calculateOpportunityCompleteness } from '../workflow/requirements.js';
 
 export type OpportunityListFilters = {
   scopeType: ScopeType;
@@ -32,13 +33,24 @@ export async function listOpportunities(
     scopeId: filters.scopeId,
   };
 
-  if (filters.phase) where.phase = filters.phase;
-  if (filters.status) where.status = filters.status;
-  if (filters.ownerUserId) where.ownerUserId = filters.ownerUserId;
-  if (filters.clientType) where.clientType = filters.clientType;
-  if (filters.financingType) where.financingType = filters.financingType;
-  if (filters.leadSource) where.leadSource = filters.leadSource;
-
+  if (filters.phase) {
+    where.phase = filters.phase;
+  }
+  if (filters.status) {
+    where.status = filters.status;
+  }
+  if (filters.ownerUserId) {
+    where.ownerUserId = filters.ownerUserId;
+  }
+  if (filters.clientType) {
+    where.clientType = filters.clientType;
+  }
+  if (filters.financingType) {
+    where.financingType = filters.financingType;
+  }
+  if (filters.leadSource) {
+    where.leadSource = filters.leadSource;
+  }
   if (filters.search) {
     const q = filters.search.trim();
     where.OR = [
@@ -54,7 +66,7 @@ export async function listOpportunities(
   const limit = Math.min(filters.limit ?? 100, 200);
   const offset = filters.offset ?? 0;
 
-  const [items, total] = await Promise.all([
+  const [rawItems, total, requirements] = await Promise.all([
     prisma.pipelineOpportunity.findMany({
       where,
       orderBy: [{ nextActionDueAt: 'asc' }, { createdAt: 'desc' }],
@@ -109,17 +121,73 @@ export async function listOpportunities(
             },
           },
         },
+        offers: {
+          where: { status: { not: 'SUPERSEDED' } },
+          orderBy: { versionNumber: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            versionNumber: true,
+            financingType: true,
+            priceGrosze: true,
+            monthlyRateGrosze: true,
+            periodMonths: true,
+            downPaymentGrosze: true,
+            status: true,
+          },
+        },
+        applications: {
+          where: { state: { not: 'WITHDRAWN' } },
+          orderBy: { roundNumber: 'desc' },
+          select: {
+            id: true,
+            roundNumber: true,
+            state: true,
+            decisionAt: true,
+            rejectionReasonCode: true,
+            financier: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
+          },
+        },
+        documents: {
+          select: {
+            id: true,
+            code: true,
+            status: true,
+          },
+        },
         _count: {
           select: {
             vehicleCandidates: true,
             offers: true,
             tasks: true,
+            documents: true,
           },
         },
       },
     }),
     prisma.pipelineOpportunity.count({ where }),
+    prisma.pipelinePhaseRequirement.findMany({
+      where: {
+        OR: [
+          { scopeType: filters.scopeType, scopeId: filters.scopeId },
+          { scopeType: ScopeType.PLATFORM, scopeId: 'PLATFORM' },
+        ],
+        isActive: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    }),
   ]);
+
+  const items = rawItems.map((item) => ({
+    ...item,
+    completeness: calculateOpportunityCompleteness(item, requirements),
+  }));
 
   return { items, total };
 }
@@ -145,6 +213,7 @@ export async function getOpportunityById(
         },
       },
       vehicleCandidates: {
+        orderBy: [{ selectionStatus: 'desc' }, { createdAt: 'desc' }],
         include: {
           listing: {
             select: {
@@ -171,18 +240,45 @@ export async function getOpportunityById(
         orderBy: { versionNumber: 'desc' },
       },
       applications: {
+        orderBy: [{ roundNumber: 'desc' }, { createdAt: 'desc' }],
         include: {
-          financier: true,
+          financier: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+          rerouteFrom: {
+            select: {
+              id: true,
+              financier: {
+                select: {
+                  code: true,
+                  name: true,
+                },
+              },
+            },
+          },
         },
-        orderBy: { attemptSequence: 'desc' },
-      },
-      tasks: {
-        orderBy: { dueAt: 'asc' },
       },
       documents: {
+        orderBy: [{ status: 'asc' }, { code: 'asc' }],
         include: {
-          requirement: true,
+          requirement: {
+            select: {
+              isMandatory: true,
+            },
+          },
         },
+      },
+      tasks: {
+        where: { completedAt: null },
+        orderBy: { dueAt: 'asc' },
+      },
+      events: {
+        orderBy: { occurredAt: 'desc' },
+        take: 50,
       },
       sourceLead: {
         select: {
@@ -190,10 +286,6 @@ export async function getOpportunityById(
           trafficSource: true,
           createdAt: true,
         },
-      },
-      events: {
-        orderBy: { occurredAt: 'desc' },
-        take: 100,
       },
     },
   });
@@ -212,16 +304,20 @@ export async function getPipelineDictionaries(
     }),
     prisma.pipelineFinancier.findMany({
       where: {
-        scopeType: scope.scopeType,
-        scopeId: scope.scopeId,
+        OR: [
+          { scopeType: scope.scopeType, scopeId: scope.scopeId },
+          { scopeType: ScopeType.PLATFORM, scopeId: 'PLATFORM' },
+        ],
         isActive: true,
       },
       orderBy: { name: 'asc' },
     }),
     prisma.pipelinePhaseRequirement.findMany({
       where: {
-        scopeType: scope.scopeType,
-        scopeId: scope.scopeId,
+        OR: [
+          { scopeType: scope.scopeType, scopeId: scope.scopeId },
+          { scopeType: ScopeType.PLATFORM, scopeId: 'PLATFORM' },
+        ],
         isActive: true,
       },
       orderBy: { sortOrder: 'asc' },

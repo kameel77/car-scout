@@ -9,11 +9,14 @@ import {
   LeadSourceChannel,
   PipelineActorType,
   PipelineOpportunity,
+  PipelineApplicationState,
 } from '@prisma/client';
 import { recordEvent } from '../events/record-event.js';
 import { allocateOpportunityNumber } from './numbering.service.js';
 import { findOrCreateCustomer } from './customer.service.js';
-import { isPhaseTransitionAllowed } from '../workflow/phases.js';
+import { isPhaseTransitionAllowed, isForwardTransition } from '../workflow/phases.js';
+import { evaluatePhaseRequirements, StageGateViolationError } from '../workflow/requirements.js';
+import { materializeDocumentsForOpportunity } from './document.service.js';
 
 export type ActorContext = {
   type: PipelineActorType;
@@ -166,6 +169,9 @@ export async function createOpportunity(
     });
   }
 
+  // Auto-materialize initial document checklist
+  await materializeDocumentsForOpportunity(tx, opportunity.id);
+
   return opportunity;
 }
 
@@ -189,6 +195,28 @@ export async function changePhase(
 
   if (!isPhaseTransitionAllowed(opportunity.phase, input.targetPhase, input.overridden)) {
     throw new Error(`Niedozwolone przejście z fazy ${opportunity.phase} do ${input.targetPhase}`);
+  }
+
+  let unmetSoftFields: string[] = [];
+
+  // Evaluate hard stage gates only on forward transitions
+  if (isForwardTransition(opportunity.phase, input.targetPhase)) {
+    const evalResult = await evaluatePhaseRequirements(
+      tx,
+      { scopeType: opportunity.scopeType, scopeId: opportunity.scopeId },
+      opportunity.id,
+      input.targetPhase
+    );
+
+    if (!evalResult.allowed && !input.overridden) {
+      throw new StageGateViolationError(
+        opportunity.phase,
+        input.targetPhase,
+        evalResult.unmetHard
+      );
+    }
+
+    unmetSoftFields = evalResult.unmetSoft.map((m) => m.fieldPath);
   }
 
   const now = new Date();
@@ -219,6 +247,7 @@ export async function changePhase(
       after: input.targetPhase,
       durationSeconds,
       overridden: input.overridden ?? false,
+      unmetRequirements: unmetSoftFields.length > 0 ? unmetSoftFields : undefined,
     },
   });
 
@@ -533,6 +562,8 @@ export async function patchOpportunity(
     customerEmail?: string | null;
     companyName?: string | null;
     companyNip?: string | null;
+    contractSignedAt?: string | null;
+    contractedApplicationId?: string | null;
     actor: ActorContext;
   }
 ): Promise<PipelineOpportunity> {
@@ -546,6 +577,14 @@ export async function patchOpportunity(
   if (input.financingType !== undefined) oppUpdate.financingType = input.financingType;
   if (input.leadSource) oppUpdate.leadSource = input.leadSource;
   if (input.leadSourceDetail !== undefined) oppUpdate.leadSourceDetail = input.leadSourceDetail;
+  if (input.contractSignedAt !== undefined) {
+    oppUpdate.contractSignedAt = input.contractSignedAt ? new Date(input.contractSignedAt) : null;
+  }
+  if (input.contractedApplicationId !== undefined) {
+    oppUpdate.contractedApplication = input.contractedApplicationId
+      ? { connect: { id: input.contractedApplicationId } }
+      : { disconnect: true };
+  }
 
   const updated = await tx.pipelineOpportunity.update({
     where: { id: input.id },
@@ -566,6 +605,62 @@ export async function patchOpportunity(
       where: { id: opportunity.customerId },
       data: custUpdate,
     });
+  }
+
+  // If contractedApplicationId is specified with contract signing, withdraw competing applications
+  if (input.contractedApplicationId) {
+    const otherApps = await tx.pipelineApplication.findMany({
+      where: {
+        opportunityId: opportunity.id,
+        id: { not: input.contractedApplicationId },
+        state: {
+          in: [
+            PipelineApplicationState.DRAFT,
+            PipelineApplicationState.PRECHECK_SUBMITTED,
+            PipelineApplicationState.FULL_SUBMITTED,
+            PipelineApplicationState.APPROVED,
+            PipelineApplicationState.CONDITIONALLY_APPROVED,
+          ],
+        },
+      },
+      include: { financier: true },
+    });
+
+    for (const app of otherApps) {
+      await tx.pipelineApplication.update({
+        where: { id: app.id },
+        data: {
+          state: PipelineApplicationState.WITHDRAWN,
+          rejectionReasonCode: 'CONTRACTED_ELSEWHERE',
+          rejectionComment: 'Podpisano umowę z innym finansującym',
+        },
+      });
+
+      await recordEvent(tx, {
+        scopeType: opportunity.scopeType,
+        scopeId: opportunity.scopeId,
+        type: 'APPLICATION_WITHDRAWN',
+        aggregateType: 'APPLICATION',
+        aggregateId: app.id,
+        opportunityId: opportunity.id,
+        customerId: opportunity.customerId,
+        actor: input.actor,
+        payload: {
+          financierCode: app.financier.code,
+          reason: 'CONTRACTED_ELSEWHERE',
+        },
+      });
+    }
+
+    // Attach commission to contracted application
+    await tx.pipelineCommission.updateMany({
+      where: { opportunityId: opportunity.id, applicationId: null },
+      data: { applicationId: input.contractedApplicationId },
+    });
+  }
+
+  if (input.clientType || input.financingType !== undefined) {
+    await materializeDocumentsForOpportunity(tx, opportunity.id);
   }
 
   return updated;

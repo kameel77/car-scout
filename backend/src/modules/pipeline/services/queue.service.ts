@@ -8,6 +8,7 @@ import {
   OpportunityStatus,
 } from '@prisma/client';
 import { listInboxLeads } from './inbox.service.js';
+import { calculateOpportunityCompleteness } from '../workflow/requirements.js';
 
 export type QueueFilters = {
   scopeType: ScopeType;
@@ -107,11 +108,52 @@ export async function getAdvisorQueue(
         },
       },
     },
+    offers: {
+      where: { status: { not: 'SUPERSEDED' } },
+      orderBy: { versionNumber: 'desc' },
+      take: 1,
+      select: {
+        id: true,
+        versionNumber: true,
+        financingType: true,
+        priceGrosze: true,
+        monthlyRateGrosze: true,
+        periodMonths: true,
+        downPaymentGrosze: true,
+        status: true,
+      },
+    },
+    applications: {
+      where: { state: { not: 'WITHDRAWN' } },
+      orderBy: { roundNumber: 'desc' },
+      select: {
+        id: true,
+        roundNumber: true,
+        state: true,
+        decisionAt: true,
+        rejectionReasonCode: true,
+        financier: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+      },
+    },
+    documents: {
+      select: {
+        id: true,
+        code: true,
+        status: true,
+      },
+    },
     _count: {
       select: {
         vehicleCandidates: true,
         offers: true,
         tasks: true,
+        documents: true,
       },
     },
   };
@@ -159,12 +201,40 @@ export async function getAdvisorQueue(
     limit: 50,
   });
 
-  const [overdue, today, noAction, inbox] = await Promise.all([
+  // 5. Requirements for completeness calculation
+  const reqsPromise = prisma.pipelinePhaseRequirement.findMany({
+    where: {
+      OR: [
+        { scopeType: filters.scopeType, scopeId: filters.scopeId },
+        { scopeType: ScopeType.PLATFORM, scopeId: 'PLATFORM' },
+      ],
+      isActive: true,
+    },
+    orderBy: { sortOrder: 'asc' },
+  });
+
+  const [rawOverdue, rawToday, rawNoAction, inbox, requirements] = await Promise.all([
     overduePromise,
     todayPromise,
     noActionPromise,
     inboxPromise,
+    reqsPromise,
   ]);
+
+  const overdue = rawOverdue.map((opp) => ({
+    ...opp,
+    completeness: calculateOpportunityCompleteness(opp, requirements),
+  }));
+
+  const today = rawToday.map((opp) => ({
+    ...opp,
+    completeness: calculateOpportunityCompleteness(opp, requirements),
+  }));
+
+  const noAction = rawNoAction.map((opp) => ({
+    ...opp,
+    completeness: calculateOpportunityCompleteness(opp, requirements),
+  }));
 
   return {
     overdue,

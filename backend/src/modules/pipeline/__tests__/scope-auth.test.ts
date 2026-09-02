@@ -33,6 +33,9 @@ describe('Tenant Scope Isolation & Fail-Closed Authorization', () => {
         findMany: () => Promise.resolve([]),
         count: () => Promise.resolve(0),
       },
+      pipelinePhaseRequirement: {
+        findMany: () => Promise.resolve([]),
+      },
     } as any);
 
     await registerPipelineModule(app);

@@ -102,6 +102,30 @@ export function QueueRow({
                 {opportunity.owner.name || opportunity.owner.email}
               </span>
             )}
+
+            {opportunity.completeness && opportunity.completeness.total > 0 && (
+              <div
+                className="flex items-center gap-1.5 ml-1 bg-muted/40 px-2 py-0.5 rounded border text-[11px]"
+                title={`Wymagania kolejnego etapu: ${opportunity.completeness.met}/${opportunity.completeness.total} (${opportunity.completeness.percentage}%)`}
+              >
+                <span className="text-muted-foreground">Awans:</span>
+                <span className="font-semibold text-foreground">
+                  {opportunity.completeness.met}/{opportunity.completeness.total}
+                </span>
+                <div className="w-12 bg-muted h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${
+                      opportunity.completeness.percentage === 100
+                        ? 'bg-emerald-500'
+                        : opportunity.completeness.percentage >= 50
+                        ? 'bg-amber-500'
+                        : 'bg-primary/70'
+                    }`}
+                    style={{ width: `${opportunity.completeness.percentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1166,6 +1166,7 @@ model PipelineOpportunity {
   nextActionDueAt DateTime? @map("next_action_due_at")
 
   contractSignedAt DateTime? @map("contract_signed_at")
+  contractedApplicationId String? @map("contracted_application_id")
   deliveredAt      DateTime? @map("delivered_at")
 
   wonAt          DateTime? @map("won_at")
@@ -1176,10 +1177,11 @@ model PipelineOpportunity {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  customer   PipelineCustomer    @relation(fields: [customerId], references: [id])
-  sourceLead Lead?               @relation(fields: [sourceLeadId], references: [id], onDelete: SetNull)
-  owner      User?               @relation("PipelineOpportunityOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
-  lostReason PipelineLossReason? @relation(fields: [lostReasonCode], references: [code])
+  customer              PipelineCustomer     @relation(fields: [customerId], references: [id])
+  sourceLead            Lead?                @relation(fields: [sourceLeadId], references: [id], onDelete: SetNull)
+  owner                 User?                @relation("PipelineOpportunityOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  lostReason            PipelineLossReason?  @relation(fields: [lostReasonCode], references: [code])
+  contractedApplication PipelineApplication? @relation("ContractedApplication", fields: [contractedApplicationId], references: [id], onDelete: SetNull)
 
   vehicleCandidates PipelineVehicleCandidate[]
   offers            PipelineOffer[]
@@ -1316,7 +1318,7 @@ model PipelineApplication {
   opportunityId     String                   @map("opportunity_id")
   offerId           String?                  @map("offer_id")
   financierId       String                   @map("financier_id")
-  attemptSequence   Int                      @map("attempt_sequence")
+  roundNumber       Int                      @map("round_number")
   externalReference String?                  @map("external_reference")
   state             PipelineApplicationState @default(DRAFT)
 
@@ -1328,20 +1330,21 @@ model PipelineApplication {
   rejectionComment    String? @map("rejection_comment")
   approvedConditions  Json?   @map("approved_conditions")
   /// Set when this attempt was created by rerouting a previous rejection.
-  rerouteFromId       String? @unique @map("reroute_from_id")
+  rerouteFromId       String? @map("reroute_from_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  opportunity     PipelineOpportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  offer           PipelineOffer?       @relation(fields: [offerId], references: [id], onDelete: SetNull)
-  financier       PipelineFinancier    @relation(fields: [financierId], references: [id])
-  rerouteFrom     PipelineApplication? @relation("Reroute", fields: [rerouteFromId], references: [id])
-  rerouteTo       PipelineApplication? @relation("Reroute")
-  rejectionReason PipelineLossReason?  @relation(fields: [rejectionReasonCode], references: [code])
-  commissions     PipelineCommission[]
+  opportunity                PipelineOpportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  offer                      PipelineOffer?        @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  financier                  PipelineFinancier     @relation(fields: [financierId], references: [id])
+  rerouteFrom                PipelineApplication?  @relation("Reroute", fields: [rerouteFromId], references: [id])
+  rerouteTo                  PipelineApplication[] @relation("Reroute")
+  rejectionReason            PipelineLossReason?   @relation(fields: [rejectionReasonCode], references: [code])
+  commissions                PipelineCommission[]
+  contractedForOpportunities PipelineOpportunity[] @relation("ContractedApplication")
 
-  @@unique([opportunityId, attemptSequence])
+  @@unique([opportunityId, financierId, roundNumber])
   @@index([financierId, state])
   @@index([opportunityId])
   @@map("pipeline_applications")

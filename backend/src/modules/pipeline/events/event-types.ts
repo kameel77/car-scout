@@ -121,10 +121,10 @@ export type PipelineEventPayloadMap = {
     versionNumber: number;
   };
 
-  // Financing application — the reroute chain
+  // Financing application — parallel rounds and reroute chain
   APPLICATION_CREATED: {
     financierCode: string;
-    attemptSequence: number;
+    roundNumber: number;
     offerId?: string | null;
     rerouteFromId?: string | null;
     recommenderRank?: number | null;
