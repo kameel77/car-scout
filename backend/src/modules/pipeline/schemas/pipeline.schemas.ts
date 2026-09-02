@@ -73,6 +73,11 @@ export const closeLostSchema = z.object({
 
 export const qualifyLeadSchema = z.object({
   ownerUserId: z.string().optional().nullable(),
+  customerName: z.string().optional().nullable(),
+  customerPhone: z.string().optional().nullable(),
+  customerEmail: z.string().email().optional().nullable().or(z.literal('')),
+  companyName: z.string().optional().nullable(),
+  companyNip: z.string().optional().nullable(),
   nextActionType: z.string().optional().nullable(),
   nextActionDueAt: z.string().datetime().optional().nullable(),
   nextActionNote: z.string().optional().nullable(),

@@ -13,7 +13,7 @@ import {
 } from '@prisma/client';
 import { recordEvent } from '../events/record-event.js';
 import { allocateOpportunityNumber } from './numbering.service.js';
-import { findOrCreateCustomer } from './customer.service.js';
+import { findOrCreateCustomer, normalizePhone } from './customer.service.js';
 import { isPhaseTransitionAllowed, isForwardTransition } from '../workflow/phases.js';
 import { evaluatePhaseRequirements, StageGateViolationError } from '../workflow/requirements.js';
 import { materializeDocumentsForOpportunity } from './document.service.js';
@@ -595,10 +595,12 @@ export async function patchOpportunity(
   // Update customer details if provided
   const custUpdate: Prisma.PipelineCustomerUpdateInput = {};
   if (input.customerName) custUpdate.fullName = input.customerName.trim();
-  if (input.customerPhone !== undefined) custUpdate.phone = input.customerPhone;
-  if (input.customerEmail !== undefined) custUpdate.email = input.customerEmail;
-  if (input.companyName !== undefined) custUpdate.companyName = input.companyName;
-  if (input.companyNip !== undefined) custUpdate.companyNip = input.companyNip;
+  if (input.customerPhone !== undefined) {
+    custUpdate.phone = input.customerPhone ? normalizePhone(input.customerPhone) : null;
+  }
+  if (input.customerEmail !== undefined) custUpdate.email = input.customerEmail ? input.customerEmail.trim().toLowerCase() : null;
+  if (input.companyName !== undefined) custUpdate.companyName = input.companyName ? input.companyName.trim() : null;
+  if (input.companyNip !== undefined) custUpdate.companyNip = input.companyNip ? input.companyNip.trim().replace(/\D/g, '') : null;
   if (input.clientType) custUpdate.clientType = input.clientType;
 
   if (Object.keys(custUpdate).length > 0) {

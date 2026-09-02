@@ -87,6 +87,11 @@ export type QualifyLeadInput = {
   scopeType: ScopeType;
   scopeId: string;
   ownerUserId?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  customerEmail?: string | null;
+  companyName?: string | null;
+  companyNip?: string | null;
   nextActionType?: string | null;
   nextActionDueAt?: Date | null;
   nextActionNote?: string | null;
@@ -150,9 +155,11 @@ export async function qualifyLead(
     leadSourceDetail: input.leadSourceDetail ?? lead.trafficSource ?? null,
     clientType,
     financingType: input.financingType ?? null,
-    customerName: lead.name || 'Klient z formularza',
-    customerPhone: lead.phone,
-    customerEmail: lead.email,
+    customerName: (input.customerName && input.customerName.trim()) || lead.name || 'Klient z formularza',
+    customerPhone: input.customerPhone !== undefined ? input.customerPhone : lead.phone,
+    customerEmail: input.customerEmail !== undefined ? input.customerEmail : lead.email,
+    companyName: input.companyName !== undefined ? input.companyName : null,
+    companyNip: input.companyNip !== undefined ? input.companyNip : null,
     sourceLeadId: lead.id,
     ownerUserId: input.ownerUserId ?? null,
     nextActionType: input.nextActionType ?? 'CALL_FIRST',

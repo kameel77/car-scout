@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -6,12 +6,30 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useOpportunityDetails } from '../api/usePipeline';
+import { useOpportunityDetails, usePipelineMutations } from '../api/usePipeline';
+import { useToast } from '@/hooks/use-toast';
 import { PhaseBadge } from '../components/PhaseBadge';
 import { NextActionBadge } from '../components/NextActionBadge';
 import { LeadSourceBadge } from '../components/LeadSourceBadge';
-import { PIPELINE_PHASES, UserSummary, PipelineDictionaries } from '../types';
+import {
+  PIPELINE_PHASES,
+  UserSummary,
+  PipelineDictionaries,
+  ClientType,
+  FinancingType,
+  LeadSourceChannel,
+  LEAD_SOURCES,
+} from '../types';
 import { VehicleCandidatesSection } from '../components/VehicleCandidatesSection';
 import { OfferEditorSection } from '../components/OfferEditorSection';
 import { ApplicationsRerouteSection } from '../components/ApplicationsRerouteSection';
@@ -32,6 +50,9 @@ import {
   Loader2,
   Calculator,
   Shuffle,
+  Edit,
+  Save,
+  X,
 } from 'lucide-react';
 
 export function OpportunityDetailModal({
@@ -56,9 +77,85 @@ export function OpportunityDetailModal({
   onOpenClose?: () => void;
 }) {
   const { data: opp, isLoading, refetch } = useOpportunityDetails(opportunityId);
+  const { patchOpportunity } = usePipelineMutations();
+  const { toast } = useToast();
+
   const [activeTab, setActiveTab] = useState<
     'timeline' | 'vehicles' | 'offer' | 'applications' | 'documents' | 'customer'
   >('offer');
+
+  // Customer Edit State
+  const [isEditingCustomer, setIsEditingCustomer] = useState(false);
+  const [custName, setCustName] = useState('');
+  const [custPhone, setCustPhone] = useState('');
+  const [custEmail, setCustEmail] = useState('');
+  const [custCompanyName, setCustCompanyName] = useState('');
+  const [custCompanyNip, setCustCompanyNip] = useState('');
+  const [custClientType, setCustClientType] = useState<ClientType>('UNKNOWN');
+  const [custFinancingType, setCustFinancingType] = useState<FinancingType | ''>('');
+  const [custLeadSource, setCustLeadSource] = useState<LeadSourceChannel>('ORGANIC');
+  const [custLeadSourceDetail, setCustLeadSourceDetail] = useState('');
+
+  useEffect(() => {
+    if (opp) {
+      setCustName(opp.customer?.fullName || '');
+      setCustPhone(opp.customer?.phone || '');
+      setCustEmail(opp.customer?.email || '');
+      setCustCompanyName(opp.customer?.companyName || '');
+      setCustCompanyNip(opp.customer?.companyNip || '');
+      setCustClientType(opp.customer?.clientType || opp.clientType || 'UNKNOWN');
+      setCustFinancingType(opp.financingType || '');
+      setCustLeadSource(opp.leadSource || 'ORGANIC');
+      setCustLeadSourceDetail(opp.leadSourceDetail || '');
+      setIsEditingCustomer(false);
+    }
+  }, [opp]);
+
+  const handleSaveCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!opp) return;
+
+    if (!custName.trim()) {
+      toast({
+        title: 'Błąd walidacji',
+        description: 'Imię i nazwisko klienta jest wymagane.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await patchOpportunity.mutateAsync({
+        id: opp.id,
+        data: {
+          customerName: custName.trim(),
+          customerPhone: custPhone.trim() || null,
+          customerEmail: custEmail.trim() || null,
+          companyName: custCompanyName.trim() || null,
+          companyNip: custCompanyNip.trim() || null,
+          clientType: custClientType,
+          financingType: custFinancingType ? (custFinancingType as FinancingType) : null,
+          leadSource: custLeadSource,
+          leadSourceDetail: custLeadSourceDetail.trim() || null,
+        },
+      });
+
+      toast({
+        title: 'Zaktualizowano dane klienta',
+        description: 'Dane klienta i sprawy zostały pomyślnie zapisane.',
+      });
+
+      setIsEditingCustomer(false);
+      refetch();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast({
+        title: 'Błąd zapisu',
+        description: message || 'Nie udało się zaktualizować danych klienta.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -95,9 +192,23 @@ export function OpportunityDetailModal({
                       </span>
                     )}
                   </div>
-                  <h2 className="text-xl font-bold text-foreground">
-                    {opp.customer?.fullName}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-foreground">
+                      {opp.customer?.fullName}
+                    </h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                      title="Edytuj dane klienta"
+                      onClick={() => {
+                        setActiveTab('customer');
+                        setIsEditingCustomer(true);
+                      }}
+                    >
+                      <Edit className="w-3.5 h-3.5 text-primary" />
+                    </Button>
+                  </div>
                   {opp.customer?.companyName && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                       <Building2 className="w-3.5 h-3.5" />
@@ -390,62 +501,291 @@ export function OpportunityDetailModal({
 
                 {/* Tab: Customer */}
                 <TabsContent value="customer" className="space-y-4">
-                  <div className="p-4 rounded-lg border bg-card space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg border bg-card space-y-4 text-sm">
+                    <div className="flex items-center justify-between border-b pb-3">
                       <div>
-                        <span className="text-xs text-muted-foreground block">Klient</span>
-                        <span className="font-semibold text-foreground">
-                          {opp.customer?.fullName}
-                        </span>
+                        <h3 className="font-semibold text-foreground text-sm">Dane klienta i profil sprawy</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Zarządzaj danymi kontaktowymi, firmowymi i parametrami sprawy.
+                        </p>
                       </div>
-                      <div>
-                        <span className="text-xs text-muted-foreground block">Typ klienta</span>
-                        <span className="font-semibold text-foreground">
-                          {opp.customer?.clientType || opp.clientType}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-xs text-muted-foreground block">Telefon</span>
-                        {opp.customer?.phone ? (
-                          <a
-                            href={`tel:${opp.customer.phone}`}
-                            className="font-medium text-primary hover:underline flex items-center gap-1"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                            {opp.customer.phone}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">Brak</span>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-xs text-muted-foreground block">E-mail</span>
-                        {opp.customer?.email ? (
-                          <a
-                            href={`mailto:${opp.customer.email}`}
-                            className="font-medium text-primary hover:underline flex items-center gap-1"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                            {opp.customer.email}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">Brak</span>
-                        )}
-                      </div>
-                      {opp.customer?.companyName && (
-                        <div className="col-span-2 pt-2 border-t">
-                          <span className="text-xs text-muted-foreground block">Firma</span>
-                          <span className="font-semibold text-foreground block">
-                            {opp.customer.companyName}
-                          </span>
-                          {opp.customer.companyNip && (
-                            <span className="text-xs text-muted-foreground">
-                              NIP: {opp.customer.companyNip}
-                            </span>
-                          )}
-                        </div>
+                      {!isEditingCustomer ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs"
+                          onClick={() => setIsEditingCustomer(true)}
+                        >
+                          <Edit className="w-3.5 h-3.5 text-primary" />
+                          Edytuj dane
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs text-muted-foreground"
+                          onClick={() => {
+                            if (opp) {
+                              setCustName(opp.customer?.fullName || '');
+                              setCustPhone(opp.customer?.phone || '');
+                              setCustEmail(opp.customer?.email || '');
+                              setCustCompanyName(opp.customer?.companyName || '');
+                              setCustCompanyNip(opp.customer?.companyNip || '');
+                              setCustClientType(opp.customer?.clientType || opp.clientType || 'UNKNOWN');
+                              setCustFinancingType(opp.financingType || '');
+                              setCustLeadSource(opp.leadSource || 'ORGANIC');
+                              setCustLeadSourceDetail(opp.leadSourceDetail || '');
+                            }
+                            setIsEditingCustomer(false);
+                          }}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          Anuluj
+                        </Button>
                       )}
                     </div>
+
+                    {!isEditingCustomer ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Imię i nazwisko klienta</span>
+                            <span className="font-semibold text-foreground text-base">
+                              {opp.customer?.fullName}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Typ klienta</span>
+                            <span className="font-semibold text-foreground">
+                              {opp.customer?.clientType || opp.clientType}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Telefon</span>
+                            {opp.customer?.phone ? (
+                              <a
+                                href={`tel:${opp.customer.phone}`}
+                                className="font-medium text-primary hover:underline flex items-center gap-1.5"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                {opp.customer.phone}
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">Brak</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">E-mail</span>
+                            {opp.customer?.email ? (
+                              <a
+                                href={`mailto:${opp.customer.email}`}
+                                className="font-medium text-primary hover:underline flex items-center gap-1.5"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                                {opp.customer.email}
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">Brak</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Forma finansowania</span>
+                            <span className="font-semibold text-foreground">
+                              {opp.financingType || 'Nie ustalono'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block">Źródło leada</span>
+                            <span className="font-semibold text-foreground flex items-center gap-1.5">
+                              <LeadSourceBadge source={opp.leadSource} detail={opp.leadSourceDetail} />
+                            </span>
+                          </div>
+                        </div>
+
+                        {(opp.customer?.companyName || opp.customer?.companyNip) && (
+                          <div className="pt-3 border-t grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-xs text-muted-foreground block">Nazwa firmy</span>
+                              <span className="font-semibold text-foreground block">
+                                {opp.customer.companyName || 'Brak'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block">NIP</span>
+                              <span className="font-semibold text-foreground block font-mono">
+                                {opp.customer.companyNip || 'Brak'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSaveCustomer} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Imię i nazwisko klienta *</Label>
+                            <Input
+                              value={custName}
+                              onChange={(e) => setCustName(e.target.value)}
+                              placeholder="np. Jan Kowalski"
+                              className="h-9 text-xs"
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Typ klienta</Label>
+                            <Select
+                              value={custClientType}
+                              onValueChange={(val) => setCustClientType(val as ClientType)}
+                            >
+                              <SelectTrigger className="h-9 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="UNKNOWN" className="text-xs">
+                                  Nie określono (UNKNOWN)
+                                </SelectItem>
+                                <SelectItem value="B2C" className="text-xs">
+                                  Konsument (B2C)
+                                </SelectItem>
+                                <SelectItem value="B2B" className="text-xs">
+                                  Firma (B2B)
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Telefon</Label>
+                            <Input
+                              value={custPhone}
+                              onChange={(e) => setCustPhone(e.target.value)}
+                              placeholder="+48..."
+                              className="h-9 text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">E-mail</Label>
+                            <Input
+                              type="email"
+                              value={custEmail}
+                              onChange={(e) => setCustEmail(e.target.value)}
+                              placeholder="klient@email.pl"
+                              className="h-9 text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Forma finansowania</Label>
+                            <Select
+                              value={custFinancingType || 'none'}
+                              onValueChange={(val) => setCustFinancingType(val === 'none' ? '' : (val as FinancingType))}
+                            >
+                              <SelectTrigger className="h-9 text-xs">
+                                <SelectValue placeholder="Nie ustalono" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-xs text-muted-foreground">
+                                  Nie ustalono
+                                </SelectItem>
+                                <SelectItem value="LEASING" className="text-xs">
+                                  Leasing operacyjny / finansowy
+                                </SelectItem>
+                                <SelectItem value="CREDIT" className="text-xs">
+                                  Kredyt samochodowy
+                                </SelectItem>
+                                <SelectItem value="RENTAL" className="text-xs">
+                                  Wynajem długoterminowy
+                                </SelectItem>
+                                <SelectItem value="CASH" className="text-xs">
+                                  Gotówka / Zakup bezpośredni
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Kanał źródła</Label>
+                            <Select
+                              value={custLeadSource}
+                              onValueChange={(val) => setCustLeadSource(val as LeadSourceChannel)}
+                            >
+                              <SelectTrigger className="h-9 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {LEAD_SOURCES.map((s) => (
+                                  <SelectItem key={s.id} value={s.id} className="text-xs">
+                                    {s.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {custClientType === 'B2B' && (
+                          <div className="grid grid-cols-2 gap-3 p-3 bg-muted/20 border rounded-lg">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Nazwa firmy</Label>
+                              <Input
+                                value={custCompanyName}
+                                onChange={(e) => setCustCompanyName(e.target.value)}
+                                placeholder="np. Moja Firma Sp. z o.o."
+                                className="h-9 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">NIP firmy</Label>
+                              <Input
+                                value={custCompanyNip}
+                                onChange={(e) => setCustCompanyNip(e.target.value)}
+                                placeholder="np. 5250000000"
+                                className="h-9 text-xs"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Szczegóły źródła / Kampania / UTM</Label>
+                          <Input
+                            value={custLeadSourceDetail}
+                            onChange={(e) => setCustLeadSourceDetail(e.target.value)}
+                            placeholder="np. Kampania FB Q3 Leasing Promocja"
+                            className="h-9 text-xs"
+                          />
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2 border-t">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                            disabled={patchOpportunity.isPending}
+                            onClick={() => setIsEditingCustomer(false)}
+                          >
+                            Anuluj
+                          </Button>
+                          <Button
+                            type="submit"
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            disabled={patchOpportunity.isPending}
+                          >
+                            {patchOpportunity.isPending ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Save className="w-3.5 h-3.5" />
+                            )}
+                            Zapisz dane klienta
+                          </Button>
+                        </div>
+                      </form>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>

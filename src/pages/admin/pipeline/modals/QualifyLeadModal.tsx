@@ -55,6 +55,11 @@ export function QualifyLeadModal({
   const { toast } = useToast();
 
   const [ownerUserId, setOwnerUserId] = useState<string>(user?.id ?? '');
+  const [customerName, setCustomerName] = useState<string>(lead?.name || '');
+  const [customerPhone, setCustomerPhone] = useState<string>(lead?.phone || '');
+  const [customerEmail, setCustomerEmail] = useState<string>(lead?.email || '');
+  const [companyName, setCompanyName] = useState<string>('');
+  const [companyNip, setCompanyNip] = useState<string>('');
   const [clientType, setClientType] = useState<ClientType>(() => deriveClientType(lead));
   const [financingType, setFinancingType] = useState<FinancingType | ''>('');
   const [nextActionType, setNextActionType] = useState<string>('CALL_FIRST');
@@ -65,6 +70,11 @@ export function QualifyLeadModal({
 
   useEffect(() => {
     if (lead) {
+      setCustomerName(lead.name || '');
+      setCustomerPhone(lead.phone || '');
+      setCustomerEmail(lead.email || '');
+      setCompanyName('');
+      setCompanyNip('');
       setClientType(deriveClientType(lead));
       setFinancingType('');
       setOwnerUserId(user?.id ?? '');
@@ -90,6 +100,11 @@ export function QualifyLeadModal({
         leadId: lead.id,
         data: {
           ownerUserId: ownerUserId && ownerUserId !== 'none' ? ownerUserId : null,
+          customerName: customerName.trim() || null,
+          customerPhone: customerPhone.trim() || null,
+          customerEmail: customerEmail.trim() || null,
+          companyName: companyName.trim() || null,
+          companyNip: companyNip.trim() || null,
           clientType,
           financingType: financingType ? (financingType as FinancingType) : null,
           nextActionType,
@@ -141,6 +156,42 @@ export function QualifyLeadModal({
             )}
           </div>
 
+          <div className="space-y-3 p-3 bg-card border rounded-lg">
+            <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+              <span>Dane klienta (możesz skorygować)</span>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Imię i nazwisko / Nazwa leada</Label>
+              <Input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="np. Jan Kowalski"
+                className="h-9 text-xs"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Telefon</Label>
+                <Input
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="+48..."
+                  className="h-9 text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">E-mail</Label>
+                <Input
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="klient@email.pl"
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Przypisany doradca</Label>
@@ -185,6 +236,29 @@ export function QualifyLeadModal({
               </Select>
             </div>
           </div>
+
+          {clientType === 'B2B' && (
+            <div className="grid grid-cols-2 gap-3 p-3 bg-muted/20 border rounded-lg">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Nazwa firmy</Label>
+                <Input
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="np. Moja Firma Sp. z o.o."
+                  className="h-9 text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">NIP</Label>
+                <Input
+                  value={companyNip}
+                  onChange={(e) => setCompanyNip(e.target.value)}
+                  placeholder="np. 5250000000"
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label className="text-xs">Forma finansowania (opcjonalne w fazie kwalifikacji)</Label>

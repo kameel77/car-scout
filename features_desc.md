@@ -744,5 +744,9 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Automatyczna materializacja listy wymaganych dokumentów (`PipelineDocumentRequirement`) jako **suma (unia)** wymagań wszystkich aktywnych partnerów finansowych powiązanych ze sprawą oraz typu klienta i produktu.
   - 1-klikowa zmiana statusu (`REQUIRED` → `REQUESTED` → `RECEIVED` → `VERIFIED` / `WAIVED`) z automatycznym pomiarem czasu oczekiwania na dokument (`hoursSinceRequest`).
   - Zmiana produktu oznacza nieaktualne dokumenty jako `WAIVED`, gwarantując, że już otrzymane i zweryfikowane dokumenty nie znikną z historii sprawy.
+- **Edycja i aktualizacja danych klienta (Customer Data Management)**:
+  - **Kwalifikacja leada**: w oknie `QualifyLeadModal` doradca może od razu skorygować lub uzupełnić dane kontaktowe (imię i nazwisko leada np. zamiana placeholderu "Szybki kontakt" na właściwe personalia, telefon, e-mail, firma, NIP) przed utworzeniem sprawy.
+  - **Karta sprawy (Modal szczegółów)**: w zakładce *Klient* oraz bezpośrednio z nagłówka sprawy (przycisk edycji obok nazwiska) doradca może w dowolnym momencie zaktualizować imię i nazwisko, typ klienta (`B2C` / `B2B` / `UNKNOWN`), numer telefonu, adres e-mail, nazwę i NIP firmy, preferowaną formę finansowania oraz źródło leada / tagi kampanii. Zmiany są natychmiast synchronizowane w bazie (`PipelineCustomer` oraz `PipelineOpportunity`).
+
 
 

@@ -15,7 +15,9 @@ import {
   logContact,
   closeWon,
   closeLost,
+  patchOpportunity,
 } from '../services/opportunity.service.js';
+import { qualifyLead } from '../services/inbox.service.js';
 import { PLATFORM_SCOPE } from '../events/record-event.js';
 import { findOrCreateCustomer } from '../services/customer.service.js';
 
@@ -341,5 +343,79 @@ describe('Opportunity Lifecycle & Service Logic', () => {
     );
 
     expect(cust1.customer.id).not.toBe(cust2.customer.id);
+  });
+
+  it('patchOpportunity updates customer name, phone, email, and company details', async () => {
+    const opp = await prisma.$transaction((tx) =>
+      createOpportunity(tx, {
+        scopeType: PLATFORM_SCOPE.scopeType,
+        scopeId: PLATFORM_SCOPE.scopeId,
+        leadSource: LeadSourceChannel.ORGANIC,
+        customerName: 'Szybki Kontakt',
+        customerPhone: '500111222',
+        actor: { type: PipelineActorType.USER },
+      })
+    );
+
+    const updated = await prisma.$transaction((tx) =>
+      patchOpportunity(tx, {
+        id: opp.id,
+        customerName: 'Jan Kowalski',
+        customerPhone: '+48500111222',
+        customerEmail: 'jan.kowalski@firma.pl',
+        companyName: 'Kowalski Transport Sp. z o.o.',
+        companyNip: '525-000-11-22',
+        clientType: 'B2B',
+        actor: { type: PipelineActorType.USER },
+      })
+    );
+
+    const cust = await prisma.pipelineCustomer.findUnique({
+      where: { id: opp.customerId },
+    });
+
+    expect(cust?.fullName).toBe('Jan Kowalski');
+    expect(cust?.phone).toBe('+48500111222');
+    expect(cust?.email).toBe('jan.kowalski@firma.pl');
+    expect(cust?.companyName).toBe('Kowalski Transport Sp. z o.o.');
+    expect(cust?.companyNip).toBe('5250001122');
+    expect(cust?.clientType).toBe('B2B');
+  });
+
+  it('qualifyLead allows overriding customer name, phone, and email from lead', async () => {
+    const lead = await prisma.lead.create({
+      data: {
+        referenceNumber: `LEAD-TEST-${Date.now()}`,
+        name: 'Szybki Kontakt Formularz',
+        phone: '600700800',
+        email: 'kontakt@formularz.pl',
+        message: 'Chcę leasing na auto',
+        status: 'NEW',
+        leadType: 'b2b',
+      },
+    });
+
+    const opp = await prisma.$transaction((tx) =>
+      qualifyLead(tx, {
+        leadId: lead.id,
+        scopeType: PLATFORM_SCOPE.scopeType,
+        scopeId: PLATFORM_SCOPE.scopeId,
+        customerName: 'Adam Nowak',
+        customerPhone: '+48600700800',
+        customerEmail: 'adam.nowak@spolka.pl',
+        companyName: 'Nowak Logistics',
+        companyNip: '1112223344',
+        actor: { type: PipelineActorType.USER },
+      })
+    );
+
+    const cust = await prisma.pipelineCustomer.findUnique({
+      where: { id: opp.customerId },
+    });
+
+    expect(cust?.fullName).toBe('Adam Nowak');
+    expect(cust?.email).toBe('adam.nowak@spolka.pl');
+    expect(cust?.companyName).toBe('Nowak Logistics');
+    expect(cust?.companyNip).toBe('1112223344');
   });
 });

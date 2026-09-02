@@ -493,6 +493,11 @@ export const pipelineApi = {
     leadId: string,
     data: {
       ownerUserId?: string | null;
+      customerName?: string | null;
+      customerPhone?: string | null;
+      customerEmail?: string | null;
+      companyName?: string | null;
+      companyNip?: string | null;
       nextActionType?: string | null;
       nextActionDueAt?: string | null;
       nextActionNote?: string | null;
