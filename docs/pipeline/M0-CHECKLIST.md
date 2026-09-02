@@ -198,10 +198,14 @@ HARD, `targetPhase = FINANCIAL_DECISION`:
 
 HARD, `targetPhase = DELIVERY`:
 
-| fieldPath | label |
-|---|---|
-| `opportunity.contractSignedAt` | Data podpisania umowy |
-| `commission.basisGrosze` | Podstawa naliczenia prowizji |
+| fieldPath | label | enforcement |
+|---|---|---|
+| `opportunity.contractSignedAt` | Data podpisania umowy | HARD |
+| `commission.basisGrosze` | Podstawa naliczenia prowizji | **SOFT until M3** |
+
+> Corrected 2026-09-02 (`M2-PLAN-REVIEW.md` §1.2). Nothing writes `PipelineCommission` before M3, so a
+> HARD requirement on it would make `DELIVERY` unreachable for the whole of M2. Seed it SOFT and flip it
+> to HARD in M3, together with the derivation that fills it.
 
 SOFT (completeness bar only) — seed at least these, extend freely:
 `QUALIFICATION`: `opportunity.clientType`, `opportunity.leadSource`.
