@@ -49,14 +49,48 @@ function isMasterWebp(name: string): boolean {
     return !VARIANT_SUFFIXES.some(s => base.endsWith(s));
 }
 
-async function processDirectory(dir: string, stats: BackfillStats, reencode: boolean): Promise<void> {
+// Formatuje czas w sekundach jako mm:ss (poniżej godziny) lub hh:mm:ss.
+function formatDuration(totalSeconds: number): string {
+    const s = Math.max(0, Math.round(totalSeconds));
+    const hh = Math.floor(s / 3600);
+    const mm = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    if (hh > 0) {
+        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+    }
+    return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+}
+
+// Liczy pliki master rekurencyjnie tym samym filtrem co przetwarzanie, bez
+// dotykania sharp ani zawartości plików — czyste readdirSync do zliczenia
+// całkowitej liczby plików przed startem, na potrzeby paska postępu.
+function countMasterFiles(dir: string): number {
+    if (!fs.existsSync(dir)) return 0;
+
+    let count = 0;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+
+        if (entry.isDirectory()) {
+            count += countMasterFiles(fullPath);
+            continue;
+        }
+
+        if (entry.isFile() && isMasterWebp(entry.name)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+async function processDirectory(dir: string, stats: BackfillStats, reencode: boolean, total: number, startTime: number): Promise<void> {
     if (!fs.existsSync(dir)) return;
 
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const fullPath = path.join(dir, entry.name);
 
         if (entry.isDirectory()) {
-            await processDirectory(fullPath, stats, reencode);
+            await processDirectory(fullPath, stats, reencode, total, startTime);
             continue;
         }
 
@@ -99,6 +133,19 @@ async function processDirectory(dir: string, stats: BackfillStats, reencode: boo
             console.error(`[Backfill] Błąd przetwarzania ${fullPath}:`, err.message);
             stats.errors++;
         }
+
+        if (stats.scanned % 200 === 0) {
+            const elapsedSeconds = (Date.now() - startTime) / 1000;
+            const rate = elapsedSeconds > 0 ? stats.scanned / elapsedSeconds : 0;
+            // Klamra na 100%: import CSFlow może dopisać nowe pliki master w trakcie
+            // wielogodzinnego przebiegu, a wtedy scanned przekroczyłby policzony total.
+            const percent = total > 0 ? Math.min(100, (stats.scanned / total) * 100).toFixed(1) : '0.0';
+            const remaining = total > 0 ? Math.max(0, total - stats.scanned) : 0;
+            const etaSeconds = rate > 0 ? remaining / rate : 0;
+            console.log(
+                `[Backfill] ${stats.scanned}/${total} (${percent}%) | utworzone ${stats.created} pominięte ${stats.skipped} błędy ${stats.errors} | ${formatDuration(elapsedSeconds)} | ${rate.toFixed(1)} plik/s | ETA ${formatDuration(etaSeconds)}`
+            );
+        }
     }
 }
 
@@ -133,11 +180,15 @@ async function main() {
     console.log(`[Backfill] Warianty: ${VARIANTS.map(v => `${v.suffix} ${v.width}px`).join(', ')} @ q${QUALITY}`);
     console.log(`[Backfill] Tryb: ${reencode ? 'dopisuje brakujące + PRZEKODOWUJE istniejące' : 'tylko brakujące warianty'}`);
 
+    const total = dirsToScan.reduce((sum, dir) => sum + countMasterFiles(dir), 0);
+    console.log(`[Backfill] Do przetworzenia: ${total} plików master`);
+
     const stats: BackfillStats = { scanned: 0, created: 0, reencoded: 0, skipped: 0, bytesWritten: 0, errors: 0 };
+    const startTime = Date.now();
 
     for (const dir of dirsToScan) {
         console.log(`[Backfill] Skanuję ${dir}...`);
-        await processDirectory(dir, stats, reencode);
+        await processDirectory(dir, stats, reencode, total, startTime);
     }
 
     console.log(`\n--- Podsumowanie ---`);
@@ -147,6 +198,7 @@ async function main() {
     console.log(`Wariantów pominiętych:         ${stats.skipped}`);
     console.log(`Zapisano łącznie:              ${(stats.bytesWritten / 1024 / 1024).toFixed(1)} MiB`);
     console.log(`Błędy: ${stats.errors}`);
+    console.log(`Czas trwania: ${formatDuration((Date.now() - startTime) / 1000)}`);
 }
 
 main().catch(err => {
