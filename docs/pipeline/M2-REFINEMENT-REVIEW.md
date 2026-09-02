@@ -189,3 +189,41 @@ failure counts. This is the type-level half of §7.2 and should land in the same
   acceptance, and it is not something the test suite can answer.
 - Query-count assertion for the board (§4) — the shape is right (requirements pre-loaded), but nothing
   asserts it stays that way.
+
+---
+
+## 8. §7 fixes — accepted
+
+| Item | Verification |
+|---|---|
+| §7.2 withdrawal isolated | ✅ `withdrawal_reason_code` added; withdrawal sets it and nulls `rejectionReasonCode`; `CONTRACTED_ELSEWHERE` removed from the seed and deleted from `pipeline_loss_reasons` by the migration. `rejection_reason_code` again means only what its name says. |
+| §7.3 closed vocabulary | ✅ `ApplicationWithdrawalReason` union in `event-types.ts`, `APPLICATION_WITHDRAWN.reason` typed, with the "excluded from failure counts" rule in a comment on the member itself. |
+| §7.4 duplication | ✅ `opportunity.service.ts` imports and calls `withdrawOtherApplicationsOnContract`; the inline loop is gone. |
+| §7.4 typing | ✅ Zero `any` in `requirements.ts`; non-applicable requirements excluded from `total`. |
+
+**One line to add to the migration.** `pipeline_applications_rejection_reason_code_fkey` is
+`ON DELETE SET NULL`, so the `DELETE FROM pipeline_loss_reasons` silently nulls the column on any
+application already withdrawn as `CONTRACTED_ELSEWHERE` — those rows end up with neither reason.
+Backfill before deleting:
+
+```sql
+UPDATE "pipeline_applications" SET "withdrawal_reason_code" = 'CONTRACTED_ELSEWHERE'
+WHERE "state" = 'WITHDRAWN' AND "rejection_reason_code" = 'CONTRACTED_ELSEWHERE';
+```
+
+Irrelevant on a database where the flow was never exercised, which is why it will not show up in testing.
+
+## 9. The stopwatch benchmark measures the wrong thing
+
+`advisor-stopwatch.test.ts` is a good test and worth keeping: it proves the nine-step flow composes
+end to end, and the constant query count on the board is exactly the §4 assertion that was missing.
+
+It is not the acceptance criterion. 223 ms is **server execution time**; the criterion was a person
+completing a real qualification in under 30 seconds. The gap between them is the entire user experience —
+finding the lead, reading it, deciding the owner, deciding the product, choosing a date, understanding
+what the modal is asking. A flow can run in 4 ms per call and still take an advisor four minutes, and it
+is the four minutes that decides whether this module replaces the spreadsheet or joins it.
+
+The measurement that is still owed: one advisor who did not build this, one real lead, a clock, and the
+number of times they stop to ask what a field means. Rename the benchmark to
+`advisor-flow-performance.test.ts` so it stops standing in for that.
