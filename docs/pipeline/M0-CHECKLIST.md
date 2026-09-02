@@ -40,13 +40,14 @@ The five items AG listed are correct and complete. Three things are wrong or mis
 
 ### 2.1 The migration must be additive-only
 
-Inverse relation fields generate no SQL. Therefore the generated migration must contain **only**
-`CREATE TYPE` and `CREATE TABLE` / `CREATE INDEX` statements. If it contains any `ALTER TABLE` or
-`DROP` touching a pre-existing table, something is wrong with the schema edit — stop and report,
-do not apply.
+Inverse relation fields generate no SQL. Therefore the generated migration must touch **no pre-existing
+table**. Prisma emits foreign keys as separate `ALTER TABLE … ADD CONSTRAINT` statements, so those are
+expected — what must not appear is any statement naming a table outside the module. If one does, the
+schema edit is wrong — stop and report, do not apply.
 
 ```bash
-grep -iE 'alter table|drop ' prisma/migrations/*pipeline_foundation/migration.sql   # must return nothing
+grep -oE '(ALTER TABLE|DROP TABLE) "[a-z_]+"' prisma/migrations/*_pipeline_*/migration.sql \
+  | grep -v '"pipeline_'      # must return nothing
 ```
 
 This is the strongest single guarantee that the module cannot break the live site.
@@ -227,7 +228,7 @@ replace the constraint with a partial unique index rather than adding applicatio
 ```bash
 cd backend
 npx prisma validate
-grep -icE 'alter table|drop ' prisma/migrations/*pipeline_foundation/migration.sql   # 0
+grep -oE '(ALTER TABLE|DROP TABLE) "[a-z_]+"' prisma/migrations/*_pipeline_*/migration.sql | grep -v '"pipeline_'
 npx prisma migrate status                                                            # no drift, no pending
 npm run build                                                                        # no new TS errors
 npm test -- pipeline                                                                 # green
