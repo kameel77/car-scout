@@ -12,7 +12,9 @@ const uploadsRoot = path.resolve(__dirname, '../../uploads');
 const CSFLOW_IMAGES_DIR = path.join(uploadsRoot, 'csflow-images');
 
 const DOWNLOAD_TIMEOUT_MS = 10_000;
-const MAX_CONCURRENT = 3;
+// Przy 3x3 (z MAX_CONCURRENT_LISTINGS) mogło biec do 9 równoległych optymalizacji;
+// import ma być powolny i nie konkurować z obsługą ruchu HTTP.
+const MAX_CONCURRENT = 2;
 
 /**
  * Pobiera zdjęcia z zewnętrznych URL-i CSFlow i zapisuje je lokalnie.
@@ -127,7 +129,9 @@ let activeDownloads = 0;
 const queue: QueueTask[] = [];
 const activeAndQueuedListingIds = new Set<string>();
 
-const MAX_CONCURRENT_LISTINGS = 3;
+// Przy 3x3 (z MAX_CONCURRENT) mogło biec do 9 równoległych optymalizacji;
+// import ma być powolny i nie konkurować z obsługą ruchu HTTP.
+const MAX_CONCURRENT_LISTINGS = 1;
 
 async function processQueue() {
     if (activeDownloads >= MAX_CONCURRENT_LISTINGS || queue.length === 0) {
