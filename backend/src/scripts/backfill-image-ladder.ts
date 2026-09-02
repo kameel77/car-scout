@@ -2,6 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 
+// Skrypt bywa uruchamiany na produkcji obok żywego ruchu i nie może zabrać
+// całego CPU (image-optimizer.ts ma to samo ograniczenie, ale ten skrypt
+// woła sharp bezpośrednio i go nie importuje).
+sharp.concurrency(1);
+
 /**
  * Regeneruje pełną drabinkę wariantów (-thumb 600 / -md 900 / -lg 1400) z plików
  * master, zgodnie z image-optimizer.ts.
