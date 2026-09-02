@@ -932,6 +932,27 @@ describe('injectHead', () => {
         expect(html).not.toContain('noindex');
     });
 
+    it('puts the LCP image preload before font and API preloads', () => {
+        // Fonty (wstrzykiwane przez vite po </title>) i preloady API (index.html)
+        // mają ten sam priorytet High co obrazek LCP, a w obrębie priorytetu
+        // przeglądarka wysyła żądania w kolejności dokumentu. Obrazek musi być pierwszy.
+        const TPL = `<!doctype html><html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><title>OLD</title>`
+            + `<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>`
+            + `<link rel="preload" href="/api/settings" as="fetch" crossorigin="anonymous" />`
+            + `</head><body><div id="root"></div></body></html>`;
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        const html = injectHead(TPL, m);
+
+        const img = html.indexOf('rel="preload" as="image"');
+        const font = html.indexOf('as="font"');
+        const api = html.indexOf('/api/settings');
+        expect(img).toBeGreaterThan(-1);
+        expect(img).toBeLessThan(font);
+        expect(img).toBeLessThan(api);
+        // i nadal za charsetem/viewportem — te muszą zostać na początku <head>
+        expect(img).toBeGreaterThan(html.indexOf('name="viewport"'));
+    });
+
     it('wraps bodyHtml in a hidden prerender container inside #root', () => {
         const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
         const html = injectHead(TEMPLATE, m);

@@ -1555,11 +1555,15 @@ export function injectHead(template: string, meta: PageMeta): string {
         );
     }
 
-    const extra: string[] = [];
     // Preload scanner rusza obrazek LCP od pierwszej milisekundy, zanim React się zamontuje —
-    // imagesrcset/imagesizes zgodne z <img> na froncie, żeby trafić w ten sam wariant
+    // imagesrcset/imagesizes zgodne z <img> na froncie, żeby trafić w ten sam wariant.
+    // Wstawiamy zaraz za </title>, PRZED preloadami fontów (vite) i API (index.html):
+    // wszystkie te zasoby mają priorytet High, a w obrębie jednego priorytetu przeglądarka
+    // wysyła żądania w kolejności dokumentu. Dopisywany na końcu <head> obrazek LCP stał
+    // w kolejce za ~114 KB fontów i czterema preloadami API.
+    const imagePreloads: string[] = [];
     for (const p of meta.preloadImages ?? []) {
-        extra.push(
+        imagePreloads.push(
             `<link rel="preload" as="image" fetchpriority="high" href="${escapeAttr(p.href)}"` +
             (p.imagesrcset ? ` imagesrcset="${escapeAttr(p.imagesrcset)}"` : '') +
             (p.imagesizes ? ` imagesizes="${escapeAttr(p.imagesizes)}"` : '') +
@@ -1568,6 +1572,15 @@ export function injectHead(template: string, meta: PageMeta): string {
             ` />`
         );
     }
+    if (imagePreloads.length) {
+        const block = `\n    ${imagePreloads.join('\n    ')}`;
+        // Fallback na </head>, żeby szablon bez <title> nie gubił preloadu LCP po cichu.
+        html = html.includes('</title>')
+            ? html.replace('</title>', () => `</title>${block}`)
+            : html.replace('</head>', () => `${block}\n</head>`);
+    }
+
+    const extra: string[] = [];
     if (meta.canonical) extra.push(`<link rel="canonical" href="${escapeAttr(meta.canonical)}" />`);
     if (meta.noindex) extra.push(`<meta name="robots" content="noindex" />`);
     if (meta.jsonLd) {
