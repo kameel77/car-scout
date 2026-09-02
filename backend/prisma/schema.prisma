@@ -44,104 +44,105 @@ model VehicleSpecification {
 }
 
 model Listing {
-  id                       String                @id @default(cuid())
-  listingId                String?               @unique @map("listing_id")
-  listingUrl               String?               @map("listing_url")
-  scrapedAt                DateTime?             @map("scraped_at")
-  make                     String
-  model                    String
-  version                  String?
-  vin                      String?               @unique
-  pricePln                 Int                   @map("price_pln")
-  priceDisplay             String?               @map("price_display")
-  omnibusLowest30dPln      Int?                  @map("omnibus_lowest_30d_pln")
-  omnibusText              String?               @map("omnibus_text")
+  id                          String                     @id @default(cuid())
+  listingId                   String?                    @unique @map("listing_id")
+  listingUrl                  String?                    @map("listing_url")
+  scrapedAt                   DateTime?                  @map("scraped_at")
+  make                        String
+  model                       String
+  version                     String?
+  vin                         String?                    @unique
+  pricePln                    Int                        @map("price_pln")
+  priceDisplay                String?                    @map("price_display")
+  omnibusLowest30dPln         Int?                       @map("omnibus_lowest_30d_pln")
+  omnibusText                 String?                    @map("omnibus_text")
   /// Tagi marketingowe na karcie oferty (np. "Od ręki", "Gwarancja fabryczna")
-  marketingTags            String[]              @default([]) @map("marketing_tags")
-  productionYear           Int                   @map("production_year")
-  mileageKm                Int                   @map("mileage_km")
-  fuelType                 String?               @map("fuel_type")
-  transmission             String?
-  enginePowerHp            Int?                  @map("engine_power_hp")
-  engineCapacityCm3        Int?                  @map("engine_capacity_cm3")
-  drive                    String?
-  bodyType                 String?               @map("body_type")
-  doors                    Int?
-  seats                    Int?
-  color                    String?
-  paintType                String?               @map("paint_type")
-  registrationNumber       String?               @map("registration_number")
-  firstRegistrationDate    String?               @map("first_registration_date")
-  primaryImageUrl          String?               @map("primary_image_url")
-  imageCount               Int?                  @map("image_count")
-  imageUrls                String[]              @map("image_urls")
-  dealerId                 String?               @map("dealer_id")
-  equipmentAudioMultimedia String[]              @map("equipment_audio_multimedia")
-  equipmentSafety          String[]              @map("equipment_safety")
-  equipmentComfortExtras   String[]              @map("equipment_comfort_extras")
-  equipmentOther           String[]              @map("equipment_other")
-  additionalInfoHeader     String?               @map("additional_info_header")
-  additionalInfoContent    String?               @map("additional_info_content")
-  specsJson                Json?                 @map("specs_json")
-  isArchived               Boolean               @default(false) @map("is_archived")
-  archivedAt               DateTime?             @map("archived_at")
-  archivedReason           String?               @map("archived_reason")
-  createdAt                DateTime              @default(now()) @map("created_at")
-  updatedAt                DateTime              @updatedAt @map("updated_at")
-  brokerPriceEur           Int?                  @map("broker_price_eur")
-  brokerPricePln           Int?                  @map("broker_price_pln")
-  dealerPriceNetEur        Float?                @map("dealer_price_net_eur")
-  dealerPriceNetPln        Float?                @map("dealer_price_net_pln")
-  marketplace              String?               @map("marketplace")
-  slug                     String?               @unique @map("slug")
-  contactEmail             String?               @map("contact_email")
-  contactMode              ContactMode           @default(DEALER_GENERIC) @map("contact_mode")
-  contactName              String?               @map("contact_name")
-  contactPhoneSnapshot     String?               @map("contact_phone_snapshot")
-  importSource             String?               @map("import_source")
-  ownerUserId              String?               @map("owner_user_id")
-  isFeatured               Boolean               @default(false) @map("is_featured")
-  isBusinessFeatured       Boolean               @default(false) @map("is_business_featured")
-  catalogPrice             Int?                  @map("catalog_price")
-  condition                ListingCondition      @default(USED)
-  entrySource              EntrySource?          @map("entry_source")
-  financingPriceBase       FinancingPriceBase    @default(BROKER_PRICE_PLN) @map("financing_price_base")
-  isChineseBrand           Boolean               @default(false) @map("is_chinese_brand")
-  lastManualEditAt         DateTime?             @map("last_manual_edit_at")
-  specificationUrl         String?               @map("specification_url")
-  motoliaDiscountPln       Int?                  @map("motolia_discount_pln")
-  showMotoliaDiscount      Boolean               @default(false) @map("show_motolia_discount")
-  displaySalePrice         Boolean               @default(false) @map("display_sale_price")
-  availableForCompany      Boolean               @default(true) @map("available_for_company")
-  availableForPrivate      Boolean               @default(true) @map("available_for_private")
-  creditAvailable          Boolean               @default(true) @map("credit_available")
-  creditProductId          String?               @map("credit_product_id")
-  leasingAvailable         Boolean               @default(true) @map("leasing_available")
-  leasingProductId         String?               @map("leasing_product_id")
-  priceCompanyCreditPln    Int?                  @map("price_company_credit_pln")
-  priceCompanyLeasingPln   Int?                  @map("price_company_leasing_pln")
-  pricePrivateCreditPln    Int?                  @map("price_private_credit_pln")
-  pricePrivateLeasingPln   Int?                  @map("price_private_leasing_pln")
-  vatMargin                Boolean               @default(false) @map("vat_margin")
-  specificationId          String?               @map("specification_id")
-  isRepresentative         Boolean               @default(true) @map("is_representative")
-  isReserved               Boolean               @default(false) @map("is_reserved")
-  csflowSourceId           String?               @map("csflow_source_id")
-  csflowCarId              Int?                  @map("csflow_car_id")
-  pewneautoSourceId        String?               @map("pewneauto_source_id")
-  pewneautoCarId           Int?                  @map("pewneauto_car_id")
-  referenceCreditInstallment  Int?              @map("reference_credit_installment")
-  referenceLeasingInstallment Int?              @map("reference_leasing_installment")
-  referenceCalcAt             DateTime?         @map("reference_calc_at")
-  leads                    Lead[]
-  creditProduct            FinancingProduct?     @relation("ListingCreditProduct", fields: [creditProductId], references: [id])
-  dealer                   Dealer?               @relation(fields: [dealerId], references: [id])
-  leasingProduct           FinancingProduct?     @relation("ListingLeasingProduct", fields: [leasingProductId], references: [id])
-  ownerUser                User?                 @relation("ListingOwner", fields: [ownerUserId], references: [id])
-  specification            VehicleSpecification? @relation(fields: [specificationId], references: [id])
-  csflowSource             CsflowSource?         @relation(fields: [csflowSourceId], references: [id])
-  pewneautoSource          PewneAutoSource?      @relation(fields: [pewneautoSourceId], references: [id])
-  priceHistory             PriceHistory[]
+  marketingTags               String[]                   @default([]) @map("marketing_tags")
+  productionYear              Int                        @map("production_year")
+  mileageKm                   Int                        @map("mileage_km")
+  fuelType                    String?                    @map("fuel_type")
+  transmission                String?
+  enginePowerHp               Int?                       @map("engine_power_hp")
+  engineCapacityCm3           Int?                       @map("engine_capacity_cm3")
+  drive                       String?
+  bodyType                    String?                    @map("body_type")
+  doors                       Int?
+  seats                       Int?
+  color                       String?
+  paintType                   String?                    @map("paint_type")
+  registrationNumber          String?                    @map("registration_number")
+  firstRegistrationDate       String?                    @map("first_registration_date")
+  primaryImageUrl             String?                    @map("primary_image_url")
+  imageCount                  Int?                       @map("image_count")
+  imageUrls                   String[]                   @map("image_urls")
+  dealerId                    String?                    @map("dealer_id")
+  equipmentAudioMultimedia    String[]                   @map("equipment_audio_multimedia")
+  equipmentSafety             String[]                   @map("equipment_safety")
+  equipmentComfortExtras      String[]                   @map("equipment_comfort_extras")
+  equipmentOther              String[]                   @map("equipment_other")
+  additionalInfoHeader        String?                    @map("additional_info_header")
+  additionalInfoContent       String?                    @map("additional_info_content")
+  specsJson                   Json?                      @map("specs_json")
+  isArchived                  Boolean                    @default(false) @map("is_archived")
+  archivedAt                  DateTime?                  @map("archived_at")
+  archivedReason              String?                    @map("archived_reason")
+  createdAt                   DateTime                   @default(now()) @map("created_at")
+  updatedAt                   DateTime                   @updatedAt @map("updated_at")
+  brokerPriceEur              Int?                       @map("broker_price_eur")
+  brokerPricePln              Int?                       @map("broker_price_pln")
+  dealerPriceNetEur           Float?                     @map("dealer_price_net_eur")
+  dealerPriceNetPln           Float?                     @map("dealer_price_net_pln")
+  marketplace                 String?                    @map("marketplace")
+  slug                        String?                    @unique @map("slug")
+  contactEmail                String?                    @map("contact_email")
+  contactMode                 ContactMode                @default(DEALER_GENERIC) @map("contact_mode")
+  contactName                 String?                    @map("contact_name")
+  contactPhoneSnapshot        String?                    @map("contact_phone_snapshot")
+  importSource                String?                    @map("import_source")
+  ownerUserId                 String?                    @map("owner_user_id")
+  isFeatured                  Boolean                    @default(false) @map("is_featured")
+  isBusinessFeatured          Boolean                    @default(false) @map("is_business_featured")
+  catalogPrice                Int?                       @map("catalog_price")
+  condition                   ListingCondition           @default(USED)
+  entrySource                 EntrySource?               @map("entry_source")
+  financingPriceBase          FinancingPriceBase         @default(BROKER_PRICE_PLN) @map("financing_price_base")
+  isChineseBrand              Boolean                    @default(false) @map("is_chinese_brand")
+  lastManualEditAt            DateTime?                  @map("last_manual_edit_at")
+  specificationUrl            String?                    @map("specification_url")
+  motoliaDiscountPln          Int?                       @map("motolia_discount_pln")
+  showMotoliaDiscount         Boolean                    @default(false) @map("show_motolia_discount")
+  displaySalePrice            Boolean                    @default(false) @map("display_sale_price")
+  availableForCompany         Boolean                    @default(true) @map("available_for_company")
+  availableForPrivate         Boolean                    @default(true) @map("available_for_private")
+  creditAvailable             Boolean                    @default(true) @map("credit_available")
+  creditProductId             String?                    @map("credit_product_id")
+  leasingAvailable            Boolean                    @default(true) @map("leasing_available")
+  leasingProductId            String?                    @map("leasing_product_id")
+  priceCompanyCreditPln       Int?                       @map("price_company_credit_pln")
+  priceCompanyLeasingPln      Int?                       @map("price_company_leasing_pln")
+  pricePrivateCreditPln       Int?                       @map("price_private_credit_pln")
+  pricePrivateLeasingPln      Int?                       @map("price_private_leasing_pln")
+  vatMargin                   Boolean                    @default(false) @map("vat_margin")
+  specificationId             String?                    @map("specification_id")
+  isRepresentative            Boolean                    @default(true) @map("is_representative")
+  isReserved                  Boolean                    @default(false) @map("is_reserved")
+  csflowSourceId              String?                    @map("csflow_source_id")
+  csflowCarId                 Int?                       @map("csflow_car_id")
+  pewneautoSourceId           String?                    @map("pewneauto_source_id")
+  pewneautoCarId              Int?                       @map("pewneauto_car_id")
+  referenceCreditInstallment  Int?                       @map("reference_credit_installment")
+  referenceLeasingInstallment Int?                       @map("reference_leasing_installment")
+  referenceCalcAt             DateTime?                  @map("reference_calc_at")
+  leads                       Lead[]
+  creditProduct               FinancingProduct?          @relation("ListingCreditProduct", fields: [creditProductId], references: [id])
+  dealer                      Dealer?                    @relation(fields: [dealerId], references: [id])
+  leasingProduct              FinancingProduct?          @relation("ListingLeasingProduct", fields: [leasingProductId], references: [id])
+  ownerUser                   User?                      @relation("ListingOwner", fields: [ownerUserId], references: [id])
+  specification               VehicleSpecification?      @relation(fields: [specificationId], references: [id])
+  csflowSource                CsflowSource?              @relation(fields: [csflowSourceId], references: [id])
+  pewneautoSource             PewneAutoSource?           @relation(fields: [pewneautoSourceId], references: [id])
+  priceHistory                PriceHistory[]
+  pipelineVehicleCandidates   PipelineVehicleCandidate[]
 
   @@unique([csflowSourceId, csflowCarId])
   @@unique([pewneautoSourceId, pewneautoCarId])
@@ -168,42 +169,43 @@ model Listing {
 }
 
 model Lead {
-  id                              String            @id @default(cuid())
-  listingId                       String?           @map("listing_id")
+  id                              String               @id @default(cuid())
+  listingId                       String?              @map("listing_id")
   name                            String
   email                           String?
   phone                           String?
-  preferredContact                String            @default("email") @map("preferred_contact")
+  preferredContact                String               @default("email") @map("preferred_contact")
   message                         String
-  status                          String            @default("new")
-  referenceNumber                 String            @unique @map("reference_number")
-  consentMarketingAt              DateTime?         @map("consent_marketing_at")
-  consentPrivacyAt                DateTime?         @map("consent_privacy_at")
-  createdAt                       DateTime          @default(now()) @map("created_at")
-  updatedAt                       DateTime          @updatedAt @map("updated_at")
-  externalId                      String?           @map("external_id")
-  externalStatus                  String?           @map("external_status")
-  financingAmount                 Float?            @map("financing_amount")
-  financingDownPayment            Float?            @map("financing_down_payment")
-  financingInstallment            Float?            @map("financing_installment")
-  financingPeriod                 Int?              @map("financing_period")
-  financingProductId              String?           @map("financing_product_id")
-  financingFinalPayment           Float?            @map("financing_final_payment")
-  leadType                        String            @default("sale") @map("lead_type")
-  rentalAnnualMileageKm           Int?              @map("rental_annual_mileage_km")
-  rentalCompanyName               String?           @map("rental_company_name")
-  rentalContractMonths            Int?              @map("rental_contract_months")
-  rentalInitialPaymentPct         Float?            @map("rental_initial_payment_pct")
-  rentalMonthlyRate               Float?            @map("rental_monthly_rate")
-  rentalVehicleId                 String?           @map("rental_vehicle_id")
-  rentalInitialPaymentAmountGross Float?            @map("rental_initial_payment_amount_gross")
-  rentalInitialPaymentAmountNet   Float?            @map("rental_initial_payment_amount_net")
-  landingPageId                   String?           @map("landing_page_id")
-  trafficSource                   String?           @map("traffic_source")
-  financingProduct                FinancingProduct? @relation(fields: [financingProductId], references: [id])
-  listing                         Listing?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  rentalVehicle                   RentalVehicle?    @relation(fields: [rentalVehicleId], references: [id])
-  landingPage                     LandingPage?      @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
+  status                          String               @default("new")
+  referenceNumber                 String               @unique @map("reference_number")
+  consentMarketingAt              DateTime?            @map("consent_marketing_at")
+  consentPrivacyAt                DateTime?            @map("consent_privacy_at")
+  createdAt                       DateTime             @default(now()) @map("created_at")
+  updatedAt                       DateTime             @updatedAt @map("updated_at")
+  externalId                      String?              @map("external_id")
+  externalStatus                  String?              @map("external_status")
+  financingAmount                 Float?               @map("financing_amount")
+  financingDownPayment            Float?               @map("financing_down_payment")
+  financingInstallment            Float?               @map("financing_installment")
+  financingPeriod                 Int?                 @map("financing_period")
+  financingProductId              String?              @map("financing_product_id")
+  financingFinalPayment           Float?               @map("financing_final_payment")
+  leadType                        String               @default("sale") @map("lead_type")
+  rentalAnnualMileageKm           Int?                 @map("rental_annual_mileage_km")
+  rentalCompanyName               String?              @map("rental_company_name")
+  rentalContractMonths            Int?                 @map("rental_contract_months")
+  rentalInitialPaymentPct         Float?               @map("rental_initial_payment_pct")
+  rentalMonthlyRate               Float?               @map("rental_monthly_rate")
+  rentalVehicleId                 String?              @map("rental_vehicle_id")
+  rentalInitialPaymentAmountGross Float?               @map("rental_initial_payment_amount_gross")
+  rentalInitialPaymentAmountNet   Float?               @map("rental_initial_payment_amount_net")
+  landingPageId                   String?              @map("landing_page_id")
+  trafficSource                   String?              @map("traffic_source")
+  financingProduct                FinancingProduct?    @relation(fields: [financingProductId], references: [id])
+  listing                         Listing?             @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  rentalVehicle                   RentalVehicle?       @relation(fields: [rentalVehicleId], references: [id])
+  landingPage                     LandingPage?         @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
+  pipelineOpportunity             PipelineOpportunity?
 
   @@index([listingId])
   @@index([financingProductId])
@@ -284,20 +286,22 @@ model ImportLog {
 }
 
 model User {
-  id                   String       @id @default(cuid())
-  email                String       @unique
-  password             String
-  name                 String?
-  role                 String       @default("admin")
-  isActive             Boolean      @default(true) @map("is_active")
-  lastLogin            DateTime?    @map("last_login")
-  createdAt            DateTime     @default(now()) @map("created_at")
-  updatedAt            DateTime     @updatedAt @map("updated_at")
-  resetPasswordExpires DateTime?    @map("reset_password_expires")
-  resetPasswordToken   String?      @map("reset_password_token")
-  importLogs           ImportLog[]
-  ownedListings        Listing[]    @relation("ListingOwner")
-  memberships          Membership[]
+  id                    String                @id @default(cuid())
+  email                 String                @unique
+  password              String
+  name                  String?
+  role                  String                @default("admin")
+  isActive              Boolean               @default(true) @map("is_active")
+  lastLogin             DateTime?             @map("last_login")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+  resetPasswordExpires  DateTime?             @map("reset_password_expires")
+  resetPasswordToken    String?               @map("reset_password_token")
+  importLogs            ImportLog[]
+  ownedListings         Listing[]             @relation("ListingOwner")
+  memberships           Membership[]
+  pipelineOpportunities PipelineOpportunity[] @relation("PipelineOpportunityOwner")
+  pipelineTasks         PipelineTask[]        @relation("PipelineTaskAssignee")
 
   @@map("users")
 }
@@ -421,6 +425,7 @@ model FinancingProduct {
   leads                 Lead[]
   creditListings        Listing[]        @relation("ListingCreditProduct")
   leasingListings       Listing[]        @relation("ListingLeasingProduct")
+  pipelineOffers        PipelineOffer[]
 
   @@index([category])
   @@index([isDefault])
@@ -566,18 +571,18 @@ model PewneAutoSource {
 }
 
 model DealerGroup {
-  id               String            @id @default(cuid())
-  name             String            @unique
-  slug             String            @unique
-  contactName      String?           @map("contact_name")
-  contactEmail     String?           @map("contact_email")
-  contactPhone     String?           @map("contact_phone")
-  addressLine1     String?           @map("address_line1")
+  id               String               @id @default(cuid())
+  name             String               @unique
+  slug             String               @unique
+  contactName      String?              @map("contact_name")
+  contactEmail     String?              @map("contact_email")
+  contactPhone     String?              @map("contact_phone")
+  addressLine1     String?              @map("address_line1")
   city             String?
   nip              String?
-  isActive         Boolean           @default(true) @map("is_active")
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
+  isActive         Boolean              @default(true) @map("is_active")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
   settings         DealerGroupSettings?
   dealers          Dealer[]
   csflowSources    CsflowSource[]
@@ -672,55 +677,56 @@ model PartnerDealerMapping {
 }
 
 model RentalVehicle {
-  id                       String                    @id @default(cuid())
-  dealerId                 String?                   @map("dealer_id")
-  make                     String
-  model                    String
-  version                  String?
-  bodyType                 String?                   @map("body_type")
-  fuelType                 String?                   @map("fuel_type")
-  transmission             String?
-  enginePowerHp            Int?                      @map("engine_power_hp")
-  engineCapacityCm3        Int?                      @map("engine_capacity_cm3")
-  productionYear           Int?                      @map("production_year")
-  color                    String?
-  paintType                String?                   @map("paint_type")
-  doors                    Int?
-  seats                    Int?
-  drive                    String?
-  catalogPrice             Int?                      @map("catalog_price")
-  sellingPrice             Int?                      @map("selling_price")
-  primaryImageUrl          String?                   @map("primary_image_url")
-  imageUrls                String[]                  @map("image_urls")
-  equipmentAudioMultimedia String[]                  @map("equipment_audio_multimedia")
-  equipmentSafety          String[]                  @map("equipment_safety")
-  equipmentComfortExtras   String[]                  @map("equipment_comfort_extras")
-  equipmentOther           String[]                  @map("equipment_other")
-  additionalInfoHeader     String?                   @map("additional_info_header")
-  additionalInfoContent    String?                   @map("additional_info_content")
-  specsJson                Json?                     @map("specs_json")
-  slug                     String?                   @unique
-  isActive                 Boolean                   @default(true) @map("is_active")
-  createdAt                DateTime                  @default(now()) @map("created_at")
-  updatedAt                DateTime                  @updatedAt @map("updated_at")
-  ownerRentalCompanyId     String?                   @map("owner_rental_company_id")
-  specificationUrl         String?                   @map("specification_url")
-  carClass                 String?                   @map("car_class")
-  isFeatured               Boolean                   @default(false) @map("is_featured")
+  id                        String                     @id @default(cuid())
+  dealerId                  String?                    @map("dealer_id")
+  make                      String
+  model                     String
+  version                   String?
+  bodyType                  String?                    @map("body_type")
+  fuelType                  String?                    @map("fuel_type")
+  transmission              String?
+  enginePowerHp             Int?                       @map("engine_power_hp")
+  engineCapacityCm3         Int?                       @map("engine_capacity_cm3")
+  productionYear            Int?                       @map("production_year")
+  color                     String?
+  paintType                 String?                    @map("paint_type")
+  doors                     Int?
+  seats                     Int?
+  drive                     String?
+  catalogPrice              Int?                       @map("catalog_price")
+  sellingPrice              Int?                       @map("selling_price")
+  primaryImageUrl           String?                    @map("primary_image_url")
+  imageUrls                 String[]                   @map("image_urls")
+  equipmentAudioMultimedia  String[]                   @map("equipment_audio_multimedia")
+  equipmentSafety           String[]                   @map("equipment_safety")
+  equipmentComfortExtras    String[]                   @map("equipment_comfort_extras")
+  equipmentOther            String[]                   @map("equipment_other")
+  additionalInfoHeader      String?                    @map("additional_info_header")
+  additionalInfoContent     String?                    @map("additional_info_content")
+  specsJson                 Json?                      @map("specs_json")
+  slug                      String?                    @unique
+  isActive                  Boolean                    @default(true) @map("is_active")
+  createdAt                 DateTime                   @default(now()) @map("created_at")
+  updatedAt                 DateTime                   @updatedAt @map("updated_at")
+  ownerRentalCompanyId      String?                    @map("owner_rental_company_id")
+  specificationUrl          String?                    @map("specification_url")
+  carClass                  String?                    @map("car_class")
+  isFeatured                Boolean                    @default(false) @map("is_featured")
   /// Wyróżnienie w ofercie dla firm (/dla-firm) — miks najmu z innymi formami finansowania
-  isBusinessFeatured       Boolean                   @default(false) @map("is_business_featured")
-  modelCode                String?                   @map("model_code")
-  condition                ListingCondition          @default(NEW) @map("condition")
-  firstRegistrationDate    String?                   @map("first_registration_date")
-  availableFrom            String?                   @map("available_from")
-  mileageKm                Int?                      @map("mileage_km")
-  registrationNumber       String?                   @map("registration_number")
-  vin                      String?                   @map("vin")
-  isPublished              Boolean                   @default(true) @map("is_published")
-  leads                    Lead[]
-  dealer                   Dealer?                   @relation(fields: [dealerId], references: [id])
-  ownerRentalCompany       RentalCompany?            @relation("VehicleOwnerCompany", fields: [ownerRentalCompanyId], references: [id])
-  rentalAssignments        VehicleRentalAssignment[]
+  isBusinessFeatured        Boolean                    @default(false) @map("is_business_featured")
+  modelCode                 String?                    @map("model_code")
+  condition                 ListingCondition           @default(NEW) @map("condition")
+  firstRegistrationDate     String?                    @map("first_registration_date")
+  availableFrom             String?                    @map("available_from")
+  mileageKm                 Int?                       @map("mileage_km")
+  registrationNumber        String?                    @map("registration_number")
+  vin                       String?                    @map("vin")
+  isPublished               Boolean                    @default(true) @map("is_published")
+  leads                     Lead[]
+  dealer                    Dealer?                    @relation(fields: [dealerId], references: [id])
+  ownerRentalCompany        RentalCompany?             @relation("VehicleOwnerCompany", fields: [ownerRentalCompanyId], references: [id])
+  rentalAssignments         VehicleRentalAssignment[]
+  pipelineVehicleCandidates PipelineVehicleCandidate[]
 
   @@index([dealerId])
   @@index([ownerRentalCompanyId])
@@ -947,50 +953,50 @@ enum SelectionMode {
 }
 
 model LandingPage {
-  id             String          @id @default(cuid())
-  slug           String          @unique
-  name           String
-  audience       String?
-  isActive       Boolean         @default(true) @map("is_active")
-  isIndexable    Boolean         @default(false) @map("is_indexable")
-  validFrom      DateTime?       @map("valid_from")
-  validTo        DateTime?       @map("valid_to")
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  audience    String?
+  isActive    Boolean   @default(true) @map("is_active")
+  isIndexable Boolean   @default(false) @map("is_indexable")
+  validFrom   DateTime? @map("valid_from")
+  validTo     DateTime? @map("valid_to")
 
-  heroTitle      String          @map("hero_title")
-  heroSubtitle   String?         @map("hero_subtitle")
-  heroBadge      String?         @map("hero_badge")
-  heroImageUrl   String?         @map("hero_image_url")
-  ctaLabel       String          @default("Oddzwońcie do mnie") @map("cta_label")
+  heroTitle    String  @map("hero_title")
+  heroSubtitle String? @map("hero_subtitle")
+  heroBadge    String? @map("hero_badge")
+  heroImageUrl String? @map("hero_image_url")
+  ctaLabel     String  @default("Oddzwońcie do mnie") @map("cta_label")
 
   /// Wygląd landingu: 'dark' (domyślny, czarno-żółty) lub 'light'
-  theme          String          @default("dark")
+  theme        String  @default("dark")
   /// Czy blok hero z formularzem callback stoi przed listą pojazdów, czy za nią
-  heroPosition   String          @default("before") @map("hero_position")
+  heroPosition String  @default("before") @map("hero_position")
   /// Numer telefonu dla tego landingu; pusty = numer z ustawień serwisu
-  contactPhone   String?         @map("contact_phone")
+  contactPhone String? @map("contact_phone")
 
   discount       Int?
-  initialPayment Int?            @map("initial_payment")
+  initialPayment Int? @map("initial_payment")
 
-  selectionMode  LpSelectionMode @default(FILTERED) @map("selection_mode")
-  listingIds     String[]        @map("listing_ids")
+  selectionMode    LpSelectionMode @default(FILTERED) @map("selection_mode")
+  listingIds       String[]        @map("listing_ids")
   /// Pojazdy wynajmu długoterminowego wybrane ręcznie (tryb MANUAL)
-  rentalVehicleIds String[]      @map("rental_vehicle_ids")
-  filterParams   Json?           @map("filter_params")
-  maxListings    Int             @default(12) @map("max_listings")
+  rentalVehicleIds String[]        @map("rental_vehicle_ids")
+  filterParams     Json?           @map("filter_params")
+  maxListings      Int             @default(12) @map("max_listings")
 
-  sections       Json?
-  metaTitle      String?         @map("meta_title")
-  metaDescription String?        @map("meta_description")
+  sections        Json?
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
 
   /// Regulamin promocji (PDF) — link pojawia się w stopce landingu tylko gdy plik jest wgrany
-  termsFileUrl   String?         @map("terms_file_url")
-  termsLabel     String?         @map("terms_label")
+  termsFileUrl String? @map("terms_file_url")
+  termsLabel   String? @map("terms_label")
 
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  leads          Lead[]
+  leads Lead[]
 
   @@index([isActive, slug])
   @@map("landing_pages")
@@ -1001,3 +1007,553 @@ enum LpSelectionMode {
   FILTERED
 }
 
+// >>> PIPELINE MODULE
+// ---------- Enums ----------
+
+enum ClientType {
+  UNKNOWN
+  B2C
+  B2B
+}
+
+/// Orthogonal to ClientType. The pair (clientType, financingType) replaces the
+/// 7-value ProductPath cartesian enum, so a new product is a config row, not a
+/// schema migration.
+enum FinancingType {
+  CASH
+  CREDIT
+  LEASING
+  RENTAL
+}
+
+/// Lifecycle, deliberately separate from PipelinePhase so that a lost deal
+/// retains the phase it died in. This is the funnel drop-off report.
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+  NURTURING
+}
+
+enum PipelinePhase {
+  INBOX
+  QUALIFICATION
+  SELECTION
+  COMPLETING
+  FINANCIAL_DECISION
+  CONTRACT
+  DELIVERY
+}
+
+enum PipelineApplicationState {
+  DRAFT
+  PRECHECK_SUBMITTED
+  PRECHECK_APPROVED
+  FULL_SUBMITTED
+  CONDITIONALLY_APPROVED
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum LeadSourceChannel {
+  TV
+  META
+  GOOGLE
+  ORGANIC
+  REFERRAL
+  DEALER
+  PARTNER
+  OTHER
+}
+
+enum PipelineTaxMode {
+  GROSS
+  NET
+}
+
+enum CommissionStatus {
+  EXPECTED
+  EARNED
+  INVOICED
+  PAID
+  REVERSED
+}
+
+enum PipelineDocumentStatus {
+  REQUIRED
+  REQUESTED
+  RECEIVED
+  VERIFIED
+  WAIVED
+}
+
+enum PipelineActorType {
+  USER
+  SYSTEM
+  AUTOMATION
+  THULIUM
+  CUSTOMER
+}
+
+// ---------- Customer ----------
+
+/// Deliberately a first-class entity, not a snapshot on the opportunity.
+/// One customer can hold several opportunities in parallel (two cars bought at
+/// once) or in sequence (repeat business). Without this table, "what happened
+/// with this client" cannot be answered across cases.
+/// NO PESEL, no ID document numbers, no scans. Thulium and the financiers stay
+/// the carriers of identity documents.
+model PipelineCustomer {
+  id                String     @id @default(cuid())
+  scopeType         ScopeType  @map("scope_type")
+  scopeId           String     @map("scope_id")
+  clientType        ClientType @default(UNKNOWN) @map("client_type")
+  fullName          String     @map("full_name")
+  phone             String?
+  email             String?
+  companyName       String?    @map("company_name")
+  companyNip        String?    @map("company_nip")
+  thuliumCustomerId Int?       @map("thulium_customer_id")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  opportunities PipelineOpportunity[]
+  events        PipelineEvent[]
+
+  @@index([scopeType, scopeId])
+  @@index([phone])
+  @@index([email])
+  @@index([thuliumCustomerId])
+  @@index([companyNip])
+  @@map("pipeline_customers")
+}
+
+// ---------- Opportunity ----------
+
+model PipelineOpportunity {
+  id        String    @id @default(cuid())
+  number    String    @unique
+  scopeType ScopeType @map("scope_type")
+  scopeId   String    @map("scope_id")
+  brand     String    @default("motolia")
+
+  customerId    String         @map("customer_id")
+  clientType    ClientType     @default(UNKNOWN) @map("client_type")
+  financingType FinancingType? @map("financing_type")
+
+  status         OpportunityStatus @default(OPEN)
+  phase          PipelinePhase     @default(QUALIFICATION)
+  phaseEnteredAt DateTime          @default(now()) @map("phase_entered_at")
+
+  /// Attribution. REQUIRED at creation, including for manually created cases —
+  /// this is the field that makes "how many contracts did TV produce" answerable.
+  leadSource       LeadSourceChannel @map("lead_source")
+  leadSourceDetail String?           @map("lead_source_detail")
+  firstTouchAt     DateTime          @default(now()) @map("first_touch_at")
+  firstContactAt   DateTime?         @map("first_contact_at")
+
+  /// Origin lead from the public site, when the case started there.
+  sourceLeadId String? @unique @map("source_lead_id")
+
+  thuliumTicketId Int? @map("thulium_ticket_id")
+
+  ownerUserId     String?   @map("owner_user_id")
+  priority        String    @default("NORMAL")
+  nextActionType  String?   @map("next_action_type")
+  nextActionNote  String?   @map("next_action_note")
+  nextActionDueAt DateTime? @map("next_action_due_at")
+
+  contractSignedAt DateTime? @map("contract_signed_at")
+  deliveredAt      DateTime? @map("delivered_at")
+
+  wonAt          DateTime? @map("won_at")
+  lostAt         DateTime? @map("lost_at")
+  lostReasonCode String?   @map("lost_reason_code")
+  lostComment    String?   @map("lost_comment")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  customer   PipelineCustomer    @relation(fields: [customerId], references: [id])
+  sourceLead Lead?               @relation(fields: [sourceLeadId], references: [id], onDelete: SetNull)
+  owner      User?               @relation("PipelineOpportunityOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  lostReason PipelineLossReason? @relation(fields: [lostReasonCode], references: [code])
+
+  vehicleCandidates PipelineVehicleCandidate[]
+  offers            PipelineOffer[]
+  applications      PipelineApplication[]
+  documents         PipelineDocument[]
+  tasks             PipelineTask[]
+  commissions       PipelineCommission[]
+  events            PipelineEvent[]
+
+  @@index([scopeType, scopeId, status, phase])
+  @@index([ownerUserId, status])
+  @@index([nextActionDueAt])
+  @@index([customerId])
+  @@index([leadSource, createdAt])
+  @@map("pipeline_opportunities")
+}
+
+// ---------- Vehicle candidates ----------
+
+/// A shortlist, not a copy of the catalogue. Real FKs keep price and
+/// availability current; priceSnapshot only records what was quoted to the
+/// client at the time, for dispute resolution.
+model PipelineVehicleCandidate {
+  id                  String   @id @default(cuid())
+  opportunityId       String   @map("opportunity_id")
+  listingId           String?  @map("listing_id")
+  rentalVehicleId     String?  @map("rental_vehicle_id")
+  /// Only for cars outside our stock (dealer order, customer-found).
+  customMake          String?  @map("custom_make")
+  customModel         String?  @map("custom_model")
+  customVersion       String?  @map("custom_version")
+  customYear          Int?     @map("custom_year")
+  priceSnapshotGrosze Int?     @map("price_snapshot_grosze")
+  selectionStatus     String   @default("CANDIDATE")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  opportunity   PipelineOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  listing       Listing?            @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  rentalVehicle RentalVehicle?      @relation(fields: [rentalVehicleId], references: [id], onDelete: SetNull)
+  offers        PipelineOffer[]
+
+  @@index([opportunityId])
+  @@map("pipeline_vehicle_candidates")
+}
+
+// ---------- Offer ----------
+
+model PipelineOffer {
+  id                 String        @id @default(cuid())
+  opportunityId      String        @map("opportunity_id")
+  vehicleCandidateId String?       @map("vehicle_candidate_id")
+  financingProductId String?       @map("financing_product_id")
+  versionNumber      Int           @default(1) @map("version_number")
+  financingType      FinancingType @map("financing_type")
+  status             String        @default("DRAFT")
+
+  priceGrosze        Int             @map("price_grosze")
+  downPaymentGrosze  Int             @default(0) @map("down_payment_grosze")
+  periodMonths       Int             @map("period_months")
+  monthlyRateGrosze  Int             @map("monthly_rate_grosze")
+  finalPaymentGrosze Int?            @map("final_payment_grosze")
+  annualMileageKm    Int?            @map("annual_mileage_km")
+  taxMode            PipelineTaxMode @default(GROSS) @map("tax_mode")
+  currency           String          @default("PLN")
+
+  /// Computed from the commission basis, never typed by hand except as an
+  /// explicit override with a reason. See PipelineCommission.
+  commissionRatePct        Decimal? @map("commission_rate_pct") @db.Decimal(6, 3)
+  expectedCommissionGrosze Int?     @map("expected_commission_grosze")
+
+  presentedAt DateTime? @map("presented_at")
+  validUntil  DateTime? @map("valid_until")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  opportunity      PipelineOpportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  vehicleCandidate PipelineVehicleCandidate? @relation(fields: [vehicleCandidateId], references: [id], onDelete: SetNull)
+  financingProduct FinancingProduct?         @relation(fields: [financingProductId], references: [id], onDelete: SetNull)
+  applications     PipelineApplication[]
+
+  @@unique([opportunityId, versionNumber])
+  @@index([opportunityId])
+  @@map("pipeline_offers")
+}
+
+// ---------- Financier ----------
+
+/// The entity the previous plan was missing. Enables the financier
+/// recommender: hard-criteria filter + ranking by our own historical
+/// conversion. At a 74.5% rejection rate this is the only feature in the
+/// module that raises revenue rather than tidying data.
+/// scopeId = PLATFORM rows act as defaults inheritable by tenants.
+model PipelineFinancier {
+  id        String    @id @default(cuid())
+  scopeType ScopeType @map("scope_type")
+  scopeId   String    @map("scope_id")
+  code      String
+  name      String
+  isActive  Boolean   @default(true) @map("is_active")
+
+  supportedFinancing   FinancingType[] @map("supported_financing")
+  supportedClientTypes ClientType[]    @map("supported_client_types")
+  minAmountGrosze      Int?            @map("min_amount_grosze")
+  maxAmountGrosze      Int?            @map("max_amount_grosze")
+  minPeriodMonths      Int?            @map("min_period_months")
+  maxPeriodMonths      Int?            @map("max_period_months")
+  maxVehicleAgeYears   Int?            @map("max_vehicle_age_years")
+  minBusinessAgeMonths Int?            @map("min_business_age_months")
+  /// Structured extra criteria, evaluated by the recommender. Documented in
+  /// docs/pipeline/EVENTS.md §Financier criteria.
+  eligibilityRules     Json?           @map("eligibility_rules")
+  defaultCommissionPct Decimal?        @map("default_commission_pct") @db.Decimal(6, 3)
+  typicalDecisionDays  Int?            @map("typical_decision_days")
+  notes                String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  applications         PipelineApplication[]
+  documentRequirements PipelineDocumentRequirement[]
+
+  @@unique([scopeType, scopeId, code])
+  @@index([scopeType, scopeId, isActive])
+  @@map("pipeline_financiers")
+}
+
+// ---------- Financing application ----------
+
+/// Owned by the opportunity, NOT by the offer. A reroute after a rejection
+/// frequently changes financier AND vehicle; binding attempts to a single
+/// offer breaks the attempt sequence and loses the recovery story.
+model PipelineApplication {
+  id                String                   @id @default(cuid())
+  opportunityId     String                   @map("opportunity_id")
+  offerId           String?                  @map("offer_id")
+  financierId       String                   @map("financier_id")
+  attemptSequence   Int                      @map("attempt_sequence")
+  externalReference String?                  @map("external_reference")
+  state             PipelineApplicationState @default(DRAFT)
+
+  submittedFirstAt DateTime? @map("submitted_first_at")
+  submittedFullAt  DateTime? @map("submitted_full_at")
+  decisionAt       DateTime? @map("decision_at")
+
+  rejectionReasonCode String? @map("rejection_reason_code")
+  rejectionComment    String? @map("rejection_comment")
+  approvedConditions  Json?   @map("approved_conditions")
+  /// Set when this attempt was created by rerouting a previous rejection.
+  rerouteFromId       String? @unique @map("reroute_from_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  opportunity     PipelineOpportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  offer           PipelineOffer?       @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  financier       PipelineFinancier    @relation(fields: [financierId], references: [id])
+  rerouteFrom     PipelineApplication? @relation("Reroute", fields: [rerouteFromId], references: [id])
+  rerouteTo       PipelineApplication? @relation("Reroute")
+  rejectionReason PipelineLossReason?  @relation(fields: [rejectionReasonCode], references: [code])
+  commissions     PipelineCommission[]
+
+  @@unique([opportunityId, attemptSequence])
+  @@index([financierId, state])
+  @@index([opportunityId])
+  @@map("pipeline_applications")
+}
+
+// ---------- Dictionaries & workflow configuration ----------
+
+/// Closed dictionary. Free-text loss reasons were filled in 51% of the time in
+/// the spreadsheet and produced 7 uncategorizable comments.
+model PipelineLossReason {
+  code            String  @id
+  label           String
+  category        String // "FINANCIER" | "CUSTOMER" | "QUALIFICATION"
+  requiresComment Boolean @default(false) @map("requires_comment")
+  sortOrder       Int     @default(0) @map("sort_order")
+  isActive        Boolean @default(true) @map("is_active")
+
+  opportunities PipelineOpportunity[]
+  applications  PipelineApplication[]
+
+  @@map("pipeline_loss_reasons")
+}
+
+/// Stage gating as data, not as seven hand-written definition files.
+/// A new product path is rows here, not a code change.
+model PipelinePhaseRequirement {
+  id            String         @id @default(cuid())
+  scopeType     ScopeType      @map("scope_type")
+  scopeId       String         @map("scope_id")
+  clientType    ClientType?    @map("client_type")
+  financingType FinancingType? @map("financing_type")
+  targetPhase   PipelinePhase  @map("target_phase")
+  /// Dot path evaluated against the opportunity aggregate,
+  /// e.g. "offer.monthlyRateGrosze", "customer.companyNip".
+  fieldPath     String         @map("field_path")
+  label         String
+  /// HARD blocks the transition (HTTP 422). SOFT only shows on the
+  /// completeness bar. Default SOFT — hard gates only where the data is
+  /// needed for reporting, or advisors will type garbage to move the card.
+  enforcement   String         @default("SOFT")
+  sortOrder     Int            @default(0) @map("sort_order")
+  isActive      Boolean        @default(true) @map("is_active")
+
+  @@index([scopeType, scopeId, targetPhase])
+  @@map("pipeline_phase_requirements")
+}
+
+model PipelineDocumentRequirement {
+  id            String         @id @default(cuid())
+  scopeType     ScopeType      @map("scope_type")
+  scopeId       String         @map("scope_id")
+  code          String
+  label         String
+  clientType    ClientType?    @map("client_type")
+  financingType FinancingType? @map("financing_type")
+  financierId   String?        @map("financier_id")
+  isMandatory   Boolean        @default(true) @map("is_mandatory")
+  sortOrder     Int            @default(0) @map("sort_order")
+
+  financier PipelineFinancier? @relation(fields: [financierId], references: [id], onDelete: Cascade)
+  documents PipelineDocument[]
+
+  @@unique([scopeType, scopeId, code, clientType, financingType, financierId])
+  @@map("pipeline_document_requirements")
+}
+
+/// Tracks the STATUS of a document, never the file and never its content.
+/// "Missing customer documents" is a top controllable loss reason; this turns
+/// it into a task list with dates while storing zero personal data.
+model PipelineDocument {
+  id            String                 @id @default(cuid())
+  opportunityId String                 @map("opportunity_id")
+  requirementId String?                @map("requirement_id")
+  code          String
+  label         String
+  status        PipelineDocumentStatus @default(REQUIRED)
+  requestedAt   DateTime?              @map("requested_at")
+  receivedAt    DateTime?              @map("received_at")
+  verifiedAt    DateTime?              @map("verified_at")
+  note          String?
+
+  opportunity PipelineOpportunity          @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  requirement PipelineDocumentRequirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+
+  @@unique([opportunityId, code])
+  @@index([opportunityId, status])
+  @@map("pipeline_documents")
+}
+
+// ---------- Tasks & commission ----------
+
+model PipelineTask {
+  id             String    @id @default(cuid())
+  opportunityId  String    @map("opportunity_id")
+  title          String
+  kind           String    @default("MANUAL")
+  dueAt          DateTime? @map("due_at")
+  assignedUserId String?   @map("assigned_user_id")
+  completedAt    DateTime? @map("completed_at")
+  completedBy    String?   @map("completed_by")
+  createdBy      String?   @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  opportunity PipelineOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  assignee    User?               @relation("PipelineTaskAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  @@index([assignedUserId, completedAt])
+  @@index([opportunityId])
+  @@index([dueAt])
+  @@map("pipeline_tasks")
+}
+
+/// Amount is DERIVED from basis × rate. Manual entry is an override that must
+/// carry a reason — this is what stops the spreadsheet pathology where 36% of
+/// booked commission sat on deals that had no contract.
+model PipelineCommission {
+  id               String           @id @default(cuid())
+  opportunityId    String           @map("opportunity_id")
+  applicationId    String?          @map("application_id")
+  status           CommissionStatus @default(EXPECTED)
+  basisGrosze      Int              @map("basis_grosze")
+  ratePct          Decimal          @map("rate_pct") @db.Decimal(6, 3)
+  amountGrosze     Int              @map("amount_grosze")
+  isManualOverride Boolean          @default(false) @map("is_manual_override")
+  overrideReason   String?          @map("override_reason")
+  invoiceNumber    String?          @map("invoice_number")
+  earnedAt         DateTime?        @map("earned_at")
+  paidAt           DateTime?        @map("paid_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  opportunity PipelineOpportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  application PipelineApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([opportunityId])
+  @@index([status])
+  @@map("pipeline_commissions")
+}
+
+// ---------- Event log (append-only) & automation ----------
+
+/// The case history. Append-only: a Postgres trigger rejects UPDATE (except
+/// dispatchedAt) and DELETE — see migration `pipeline_events_immutable`.
+///
+/// This is NOT event sourcing. State tables above remain the read model and the
+/// source of truth; the log is an audit trail plus an automation outbox, always
+/// written INSIDE the same transaction as the state change it describes.
+/// Rule: no state write without a recordEvent() call in the same transaction.
+///
+/// opportunityId and customerId are denormalized roll-up keys so that both
+/// "everything that happened on this case" and "everything that happened with
+/// this client, across cases" are one indexed query.
+model PipelineEvent {
+  id        String    @id @default(cuid())
+  scopeType ScopeType @map("scope_type")
+  scopeId   String    @map("scope_id")
+
+  opportunityId String? @map("opportunity_id")
+  customerId    String? @map("customer_id")
+  aggregateType String  @map("aggregate_type")
+  aggregateId   String  @map("aggregate_id")
+
+  type        String
+  actorType   PipelineActorType @map("actor_type")
+  actorUserId String?           @map("actor_user_id")
+  actorLabel  String?           @map("actor_label")
+  /// { before?, after?, ... } — shape per event type, see docs/pipeline/EVENTS.md
+  payload     Json
+
+  occurredAt DateTime @default(now()) @map("occurred_at")
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  correlationId    String?   @map("correlation_id")
+  causationEventId String?   @map("causation_event_id")
+  /// Set for events ingested from outside (Thulium replays, webhook retries).
+  idempotencyKey   String?   @unique @map("idempotency_key")
+  /// Outbox marker. NULL = not yet seen by the automation worker. The only
+  /// column the immutability trigger permits updating.
+  dispatchedAt     DateTime? @map("dispatched_at")
+
+  opportunity PipelineOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  customer    PipelineCustomer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([opportunityId, occurredAt])
+  @@index([customerId, occurredAt])
+  @@index([aggregateType, aggregateId, occurredAt])
+  @@index([dispatchedAt])
+  @@index([scopeType, scopeId, type, occurredAt])
+  @@map("pipeline_events")
+}
+
+model PipelineAutomationRule {
+  id          String    @id @default(cuid())
+  scopeType   ScopeType @map("scope_type")
+  scopeId     String    @map("scope_id")
+  code        String
+  name        String
+  isActive    Boolean   @default(true) @map("is_active")
+  /// Event type this rule subscribes to, or "SCHEDULE" for time-based rules.
+  triggerType String    @map("trigger_type")
+  /// JSON predicate over the event payload / opportunity aggregate.
+  condition   Json?
+  /// Ordered list of actions: CREATE_TASK | SET_NEXT_ACTION | NOTIFY |
+  /// SET_COMMISSION_STATUS | EMIT_ANALYTICS | SEND_SMS
+  actions     Json
+  lastRunAt   DateTime? @map("last_run_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([scopeType, scopeId, code])
+  @@index([triggerType, isActive])
+  @@map("pipeline_automation_rules")
+}
+
+// <<< PIPELINE MODULE
