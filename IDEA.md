@@ -1,0 +1,1 @@
+The project aims to develop and maintain application that sell cars online. It is mainly aimed to develop the code with features and front-end BRAND=motolia --> https://motolia.pl  (https://dev.motolia.pl as development env). This code is developed also via claude code and antigravity.

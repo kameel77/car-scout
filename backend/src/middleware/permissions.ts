@@ -52,6 +52,9 @@ export type Permission =
     // Leads
     | 'leads:read'
     | 'leads:write'
+    // Pipeline (CRM)
+    | 'pipeline:read'
+    | 'pipeline:write'
     // Analytics
     | 'analytics:read'
     // Content / CMS
@@ -73,6 +76,7 @@ export const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
         'stock:read', 'stock:write', 'stock:import', 'stock:sources:write',
         'rental:read', 'rental:write', 'rental:config:write', 'rental:financials:read',
         'leads:read', 'leads:write',
+        'pipeline:read', 'pipeline:write',
         'analytics:read',
         'content:read', 'content:write',
         'context:switch',
@@ -83,6 +87,7 @@ export const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
         'stock:read', 'stock:write', 'stock:import', 'stock:sources:write',
         'rental:read', 'rental:write', 'rental:config:write', 'rental:financials:read',
         'leads:read', 'leads:write',
+        'pipeline:read', 'pipeline:write',
         'analytics:read',
         'context:switch',
     ],
@@ -96,6 +101,7 @@ export const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
         'stock:read', 'stock:write', 'stock:import',
         'rental:read', 'rental:write',
         'leads:read', 'leads:write',
+        'pipeline:read', 'pipeline:write',
     ],
     DEALER_ADMIN: [
         'dealers:read',        // read own dealer only
@@ -103,11 +109,13 @@ export const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
         'stock:read', 'stock:write', 'stock:import',
         'rental:read', 'rental:write',
         'leads:read', 'leads:write',
+        'pipeline:read', 'pipeline:write',
     ],
     DEALER_EMPLOYEE: [
         'stock:read', 'stock:write', 'stock:import',
         'rental:read', 'rental:write',
         'leads:read',
+        'pipeline:read',
     ],
 };
 

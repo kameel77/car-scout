@@ -679,11 +679,70 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Dane pojazdu / wynajmu: marka, model, rocznik, VIN, cena, przebieg, dealer, bezpośredni link do oferty.
   - Dane kalkulatora finansowania: wybrany produkt finansowy, kwota, okres, pierwsza wpłata, miesięczna rata, wykup.
   - Wiadomość klienta: zabezpieczony przed HTML injection blok cytatu z zachowaniem formatowania.
-
 ## 59. Domyślny rodzaj napędu („Przedni”) przy imporcie ogłoszeń i ekstrakcji AI
 - **Cel**: Wyeliminowanie sytuacji, w których brak podania napędu przez sprzedawcę na Otomoto powodował błędną interpretację (np. halucynację AI klasyfikującą wersje z literą „X”, mHEV lub standardowe wersje jako napęd 4x4) lub pozostawianie pustej wartości.
 - **Zachowanie**:
   - **Parser wtyczki (`content.js` / `popup.js`)**: W przypadku braku parametru napędu na Otomoto lub braku dopasowania, parser oraz formularz wtyczki Chrome ustawiają domyślnie wartość `'Przedni'`.
   - **Warstwa AI (`ai.js`)**: Prompt systemowy precyzuje, że klasyfikacja jako `'4x4'` lub `'Tylny'` jest dozwolona wyłącznie, gdy rodzaj napędu jest wprost wymieniony w opisie lub specyfikacji ogłoszenia. W przeciwnym razie AI zwraca `'Przedni'`.
   - **Backend CarScout (`listings.ts` - trasy `/api/v1/external/listings`)**: Funkcja `normalizeDrive` w przypadku braku parametru napędu lub nierozpoznanej wartości przypisuje domyślnie `'Przedni'`.
+
+## 61. Moduł Motolia Pipeline CRM (Kamień Milowy M1 - Core, Inbox i Kolejka Doradcy)
+- **Cel**: Dedykowany, operacyjny moduł CRM dla doradców leasingowych i menedżerów floty zastępujący arkusz kalkulacyjny i umożliwiający podejmowanie leadów w czasie poniżej 30 sekund.
+- **Kolejka Doradcy (Queue - Domyślny widok operacyjny)**:
+  - Automatyczny podział spraw na 4 priorytetowe sekcje:
+    1. **Zaległe (Overdue)**: sprawy z przekroczonym terminem SLA (czerwona odznaka ostrzegawcza).
+    2. **Dzisiejsze (Today)**: sprawy i telefony zaplanowane na bieżący dzień.
+    3. **Nowe w Inboxie (Inbox)**: niepodjęte zapytania ze strony www czekające na 1-kliknięciową kwalifikację.
+    4. **Bez wyznaczonej akcji (No Action)**: sprawy aktywne bez zaplanowanego terminu kolejnego kroku.
+  - Szybkie akcje 1-kliknięciowe w wierszu sprawy:
+    - **Kontakt**: rejestracja rozmowy/e-maila/SMS-a wraz z natychmiastowym wyznaczeniem kolejnego terminu kontaktu.
+    - **Termin / Snooze**: szybkie odłożenie na jutro (+1d), za 3 dni (+3d) lub za tydzień (+7d).
+    - **Etap**: natychmiastowe przejście do kolejnej fazy procesu.
+    - **Kwalifikacja**: 1-kliknięciowe przekształcenie leada z Inboxu w sprawę CRM z przypisaniem doradcy.
+- **Tablica Kanban (Board)**:
+  - Wizualny widok 7 kanonicznych faz procesu (`INBOX`, `QUALIFICATION`, `SELECTION`, `COMPLETING`, `FINANCIAL_DECISION`, `CONTRACT`, `DELIVERY`).
+  - Przeciąganie spraw (drag-and-drop) między kolumnami z automatyczną weryfikacją reguł przejść.
+  - Karty spraw z wyróżnieniem wybranego pojazdu, typu klienta (B2C/B2B), formy finansowania, doradcy oraz statusu terminu SLA.
+- **Audytowalny Event Log (Append-Only Event Sourcing)**:
+  - Wszystkie operacje biznesowe (utworzenie, zmiana etapu, przypisanie doradcy, kontakt, wyznaczenie kolejnej akcji, zamknięcie sprawy) są atomowo rejestrowane jako niemutowalne zdarzenia w tabeli `pipeline_events`.
+  - Blokada bazodanowa (trigger PostgreSQL) uniemożliwiająca usuwanie oraz modyfikację rekordów zdarzeń.
+  - Dokładny pomiar czasu trwania spraw w poszczególnych fazach (`durationSeconds`) z automatycznym resetem znacznika `phaseEnteredAt`.
+- **Atomowa numeracja spraw**:
+  - Unikalny, sekwencyjny format `MTL-YYYY-XXXXX` (np. `MTL-2026-00042`) alokowany atomowo przez instrukcję `INSERT ... ON CONFLICT (year) DO UPDATE` z rocznym resetem licznika.
+- **Wymóg atrybucji leada**:
+  - Bezwzględny wymóg wskazania źródła ruchu (`leadSource`: META, GOOGLE, ORGANIC, TV, DEALER, PARTNER, REFERRAL, OTHER) przy każdym tworzeniu sprawy.
+- **Uprawnienia i Bezpieczeństwo**:
+  - Dostęp chroniony uprawnieniami `pipeline:read` oraz `pipeline:write`.
+  - Ścisła izolacja wielotenantowa oparta o token JWT (`scopeType`, `scopeId`).
+
+### 62. Moduł Pipeline CRM - Oferty, Wnioski Leasingowe, Równoległe Rundowanie, Rerouting, Dokumenty i Bramki Etapów (Kamień Milowy M2)
+- **Kandydaci pojazdów (Vehicle candidates shortlist)**:
+  - Możliwość dodawania do sprawy wielu propozycji pojazdów: ze stoku ogłoszeń (`Listing`), z floty wynajmu (`RentalVehicle`) lub aut spoza katalogu wprowadzanych ręcznie.
+  - Wybór 1 pojazdu głównego (`selectionStatus = 'SELECTED'`) stanowiącego bazę pod ofertę i wniosek leasingowy, z emisją zdarzeń `VEHICLE_CANDIDATE_ADDED` oraz `VEHICLE_SELECTED`.
+- **Oferty i Kalkulacja PMT w miejscu (Offers in-place)**:
+  - Jedna aktywna oferta edytowana bezpośrednio na karcie sprawy bez skomplikowanych kreatorów.
+  - Automatyczne przeliczanie raty miesięcznej w oparciu o silnik PMT i standardowe parametry rynkowe.
+  - Wersjonowanie ofert (`versionNumber + 1`) przy tworzeniu nowych wariantów (`supersedeOffer`) oraz rejestracja przedstawienia (`OFFER_PRESENTED`) i akceptacji klienta (`OFFER_ACCEPTED`).
+- **Wnioski leasingowe i Równoległe Rundowanie (Parallel Applications & Reroute)**:
+  - Pełny cykl życia wniosku u partnerów finansowych (`DRAFT` → `PRECHECK_SUBMITTED` / `FULL_SUBMITTED` → `APPROVED` / `CONDITIONALLY_APPROVED` / `REJECTED` / `WITHDRAWN`).
+  - **Dopuszczenie wniosków równoległych**: doradca może składać wnioski równolegle do wielu finansujących w tej samej rundzie (`roundMode = 'JOIN_CURRENT'`) lub otwierać nowe rundy (`roundMode = 'NEW_ROUND'`).
+  - Klucz unikalny `[opportunityId, financierId, roundNumber]` gwarantuje brak duplikatów w tej samej rundzie.
+  - Wymóg wskazania przyczyny odmowy ze słownika `FINANCIER` przy negacie.
+  - **Odrzucenie wniosku nigdy nie zamyka sprawy** - sprawa pozostaje aktywna w stanie `OPEN`.
+  - **1-klikowy Reroute**: natychmiastowe utworzenie kolejnego wniosku w nowej rundzie (`roundNumber + 1`, powiązanie `rerouteFromId`), delegacja powrotu do etapu weryfikacji finansowej bez duplikacji logiki i wyemitowanie zdarzenia `APPLICATION_REROUTED`.
+  - **Wycofanie przy podpisaniu umowy**: wskazanie wygranego wniosku (`contractedApplicationId`) i podpisanie umowy (`contractSignedAt`) automatycznie wycofuje pozostałe aktywne wnioski ze statusem `WITHDRAWN` i powodem `CONTRACTED_ELSEWHERE` (nie liczącym się jako porażka doradcy) oraz przypina prowizję do wygranego partnera.
+- **Bramki Etapów i Pasek Kompletności (Stage Gating Engine & Completeness Bar)**:
+  - Centralny mechanizm walidacji wymagań `PipelinePhaseRequirement` z blokadą wyłącznie dla ruchów w przód (ruchy wstecz są zawsze dozwolone).
+  - Semantyka reguł `application.*`: warunek jest spełniony, gdy **dowolny aktywny (nie-WITHDRAWN)** wniosek spełnia dane kryterium.
+  - Twarde bramki (`HARD`):
+    - `FINANCIAL_DECISION`: wymaga rodzaju finansowania, ceny pojazdu, raty miesięcznej, wybranego finansującego oraz NIP firmy (dla klientów B2B).
+    - `DELIVERY`: wymaga daty podpisania umowy (`contractSignedAt`).
+  - Próba niespełnionego przejścia w przód zwraca strukturalny błąd **HTTP 422** z listą brakujących pól, całkowicie wycofuje transakcję (rollback bazy) i nie zapisuje żadnych zdarzeń.
+  - Interfejs wyświetla dedykowany modal `StageGateAlertModal` z czytelnym wyjaśnieniem brakujących danych.
+  - **Pasek Kompletności (Completeness Bar)**: dynamiczny wskaźnik gotowości sprawy do **kolejnego etapu** procesu (`met/total` i procent), wyliczany jednoprzebiegowo w zapytaniach listowych i prezentowany na kartach tablicy Kanban oraz w wierszach kolejki doradcy.
+- **Automatyczna Checklista Dokumentów (Documents)**:
+  - Automatyczna materializacja listy wymaganych dokumentów (`PipelineDocumentRequirement`) jako **suma (unia)** wymagań wszystkich aktywnych partnerów finansowych powiązanych ze sprawą oraz typu klienta i produktu.
+  - 1-klikowa zmiana statusu (`REQUIRED` → `REQUESTED` → `RECEIVED` → `VERIFIED` / `WAIVED`) z automatycznym pomiarem czasu oczekiwania na dokument (`hoursSinceRequest`).
+  - Zmiana produktu oznacza nieaktualne dokumenty jako `WAIVED`, gwarantując, że już otrzymane i zweryfikowane dokumenty nie znikną z historii sprawy.
+
 

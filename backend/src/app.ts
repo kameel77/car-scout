@@ -55,6 +55,7 @@ import { cspReportRoutes } from './routes/csp-report.js';
 import { externalListingsRoutes } from './routes/external/listings.js';
 import { marketingFeedsRoutes } from './routes/external/feeds.js';
 import { specificationRoutes } from './routes/specifications.js';
+import { registerPipelineModule } from './modules/pipeline/index.js';
 import { closeBrowser } from './services/puppeteer.js';
 import { isProductionHost, getCanonicalProductionHosts } from './services/environment.js';
 import { initSsrCache } from './services/ssr-cache.js';
@@ -449,6 +450,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(externalListingsRoutes);
     await fastify.register(marketingFeedsRoutes);
     await fastify.register(specificationRoutes);
+    await registerPipelineModule(fastify);
 
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {
