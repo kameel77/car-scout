@@ -174,6 +174,9 @@ model PipelineOpportunity {
   nextActionNote    String?             @map("next_action_note")
   nextActionDueAt   DateTime?           @map("next_action_due_at")
 
+  contractSignedAt  DateTime?           @map("contract_signed_at")
+  deliveredAt       DateTime?           @map("delivered_at")
+
   wonAt             DateTime?           @map("won_at")
   lostAt            DateTime?           @map("lost_at")
   lostReasonCode    String?             @map("lost_reason_code")
@@ -345,6 +348,7 @@ model PipelineApplication {
   rerouteFrom         PipelineApplication?     @relation("Reroute", fields: [rerouteFromId], references: [id])
   rerouteTo           PipelineApplication?     @relation("Reroute")
   rejectionReason     PipelineLossReason?      @relation(fields: [rejectionReasonCode], references: [code])
+  commissions         PipelineCommission[]
 
   @@unique([opportunityId, attemptSequence])
   @@index([financierId, state])
@@ -478,7 +482,8 @@ model PipelineCommission {
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 
-  opportunity      PipelineOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  opportunity      PipelineOpportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  application      PipelineApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 
   @@index([opportunityId])
   @@index([status])

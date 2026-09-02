@@ -4,7 +4,9 @@
 **Reviewer:** Kamil + Claude. Every milestone is reviewed before the next one starts.
 **Branch:** `feat/pipeline-foundation`, branched from `dev`.
 
-Read this file, `DATA-MODEL.prisma` and `EVENTS.md` in full before writing code.
+Read this file, `DATA-MODEL.prisma`, `EVENTS.md` and `M0-CHECKLIST.md` in full before writing code.
+`M0-CHECKLIST.md` carries the exact seed rows, the trigger SQL, the inverse relations and the
+database-safety rules for M0; where it and this file differ, it wins.
 Where this document and the earlier standalone-app plan disagree, this document wins.
 
 ---
@@ -140,9 +142,10 @@ This milestone is what replaces the spreadsheet for new cases. It is the one tha
    close a case by itself.
 5. Stage gating: `workflow/requirements.ts` evaluates `PipelinePhaseRequirement` rows against the
    opportunity aggregate. `SOFT` misses feed the completeness bar; `HARD` misses return 422 with
-   `{ error, currentPhase, targetPhase, missing: [{fieldPath,label}] }`. Seed exactly three HARD gates:
-   entering `FINANCIAL_DECISION` (financier + financing type + offer price + monthly rate), entering
-   `DELIVERY` (signed contract date + commission basis), and closing `LOST` (reason code).
+   `{ error, currentPhase, targetPhase, missing: [{fieldPath,label}] }`. Seed exactly **two** HARD gates —
+   entering `FINANCIAL_DECISION` and entering `DELIVERY`; the exact rows are in `M0-CHECKLIST.md` §4.3.
+   Closing as `LOST` is not a phase transition (`LOST` is a `status`), so its mandatory reason code is
+   enforced by the `closeLost` command schema, not by a requirement row.
 6. Documents: materialize `PipelineDocument` rows from `PipelineDocumentRequirement` when the financing
    type and financier are known; status transitions with timestamps; surface as a checklist on the case.
 7. `OpportunityDetailPage.tsx`: customer card with a Thulium deep link, vehicle candidates, current offer,
