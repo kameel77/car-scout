@@ -161,3 +161,36 @@ Two process notes, neither a defect:
 `PipelinePhaseRequirement` has no natural unique key, which is why the seed needs `findFirst` +
 `create` rather than `upsert`. Add a `code String` column and `@@unique([scopeType, scopeId, code])`
 when M1 touches the schema anyway, and switch the seed to `upsert`.
+
+---
+
+## 7. Re-review — ACCEPTED (2026-09-02, commit `20788e3`)
+
+All three findings fixed and verified in the source, not from the report.
+
+| Finding | Verification |
+|---|---|
+| §1 `recordEvent` idempotency | `createMany({ skipDuplicates: true })` + `findUniqueOrThrow`; the `catch` is gone. The conflict is resolved by the database, so the business transaction is never aborted. |
+| §1 concurrency test | Genuinely concurrent (`Promise.all` over two independent `$transaction` calls), asserts all four conditions. Confirmed it discriminates: against the previous implementation the second transaction would abort and `Promise.all` would reject. |
+| §2 `OFFER_UPDATED` | `Partial<OfferDiffFields>` over eight named `PipelineOffer` fields. |
+| §3 roll-up keys | `assertRollupKeys` enforces `opportunityId` for every aggregate except `CUSTOMER`, covered by a throwing test and a `CUSTOMER` allow-test. |
+| Type cleanliness | One `Record<string, unknown>` remains, in a test helper's `overrides` parameter — legitimate. |
+| Commit scope | `20788e3` touches exactly the nine expected files. `app.ts` untouched, nothing outside the module, working tree clean. |
+
+**M0 is accepted. M1 may start.**
+
+### One invisible constraint this fix introduces — record it before M1
+
+`createMany(skipDuplicates)` followed by `findUniqueOrThrow` is correct **under READ COMMITTED**, which is
+PostgreSQL's default and therefore Prisma's. On a conflict the insert blocks until the other transaction
+commits, then skips, and the subsequent `SELECT` — taking a fresh statement snapshot — sees the committed
+row.
+
+Under `REPEATABLE READ` or `SERIALIZABLE` that `SELECT` reads a snapshot taken before the other
+transaction committed, finds nothing, and `findUniqueOrThrow` raises `P2025`. Prisma exposes
+`$transaction(fn, { isolationLevel })`, so this is one line away from being silently broken.
+
+**Rule for M1 onward:** do not raise the isolation level on any transaction that calls `recordEvent`
+without revisiting this function. If a stricter level is ever genuinely needed, the pattern becomes a raw
+`INSERT … ON CONFLICT (idempotency_key) DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
+RETURNING id`, which returns the row in both branches within a single statement.
