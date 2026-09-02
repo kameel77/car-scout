@@ -484,11 +484,18 @@ describe('buildStaticMeta', () => {
         ];
         const m = buildStaticMeta('/nowe', ctx, listings)!;
         expect(m.preloadImages).toHaveLength(1);
+        // Karta używa drabinki bez mastera (600/900/1400) — href wskazuje -lg,
+        // bo to największy kandydat, jaki karta może wybrać.
         expect(m.preloadImages![0]).toMatchObject({
-            href: 'https://dev.motolia.pl/uploads/listings/first.webp',
+            href: 'https://dev.motolia.pl/uploads/listings/first-lg.webp',
             type: 'image/webp',
         });
         expect(m.preloadImages![0].imagesrcset).toContain('first-thumb.webp 600w');
+        expect(m.preloadImages![0].imagesrcset).toContain('first-md.webp 900w');
+        expect(m.preloadImages![0].imagesrcset).toContain('first-lg.webp 1400w');
+        // master 1920w nie może trafić do karty — to on powodował, że telefony
+        // o DPR >= 2,4 pobierały pełny plik zamiast wariantu
+        expect(m.preloadImages![0].imagesrcset).not.toContain('1920w');
         expect(m.preloadImages![0].imagesrcset).not.toContain('second');
     });
 

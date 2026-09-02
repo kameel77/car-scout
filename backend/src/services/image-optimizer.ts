@@ -5,9 +5,10 @@ export interface OptimizeImageOptions {
     targetDir: string;
     baseFilename: string; // bez rozszerzenia, np. "12345-hash"
     largeWidth?: number; // domyślnie 1920
+    cardWidth?: number; // domyślnie 1400
     mediumWidth?: number; // domyślnie 900
     thumbWidth?: number; // domyślnie 600
-    quality?: number; // domyślnie 80
+    quality?: number; // domyślnie 75
     generateThumbnail?: boolean; // domyślnie true
     generateAvif?: boolean; // domyślnie true
     generateLqip?: boolean; // domyślnie true
@@ -15,6 +16,7 @@ export interface OptimizeImageOptions {
 
 export interface OptimizeImageResult {
     largeFilename: string; // np. "12345-hash.webp"
+    cardFilename?: string; // np. "12345-hash-lg.webp"
     mediumFilename?: string; // np. "12345-hash-md.webp"
     thumbFilename?: string; // np. "12345-hash-thumb.webp"
     avifLargeFilename?: string;
@@ -37,13 +39,20 @@ export async function optimizeAndSaveImage(
         targetDir,
         baseFilename,
         largeWidth = 1920,
+        // Wariant karty nie może być szerszy od mastera. Część call sites
+        // świadomie obniża largeWidth (feature-tiles: 900) — bez tego ograniczenia
+        // -lg byłby tam NAJWIĘKSZYM plikiem zestawu i przeglądarka wybierałaby
+        // właśnie jego, odwracając cel zmiany.
+        cardWidth: rawCardWidth = 1400,
         mediumWidth = 900,
         thumbWidth = 600,
-        quality = 80,
+        quality = 75,
         generateThumbnail = true,
         generateAvif = true,
         generateLqip = true,
     } = options;
+
+    const cardWidth = Math.min(rawCardWidth, largeWidth);
 
     const image = sharp(inputBuffer).rotate(); // auto-rotate based on EXIF
     const metadata = await image.metadata();
@@ -66,6 +75,7 @@ export async function optimizeAndSaveImage(
 
     await webpPipe(largeWidth);
     if (generateThumbnail) {
+        result.cardFilename = await webpPipe(cardWidth, '-lg');
         result.mediumFilename = await webpPipe(mediumWidth, '-md');
         result.thumbFilename = await webpPipe(thumbWidth, '-thumb');
     }
@@ -86,6 +96,9 @@ export async function optimizeAndSaveImage(
 
         result.avifLargeFilename = await avifPipe(largeWidth);
         if (generateThumbnail) {
+            // -lg.avif celowo pominięty: AVIF nie jest dziś w ogóle serwowany
+            // (front nie emituje <source type="image/avif">), a kodowanie AVIF
+            // 1400 px to najwolniejszy etap uploadu. Dodać przy włączaniu AVIF.
             result.avifMediumFilename = await avifPipe(mediumWidth, '-md');
             result.avifThumbFilename = await avifPipe(thumbWidth, '-thumb');
         }

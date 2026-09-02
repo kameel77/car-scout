@@ -11,6 +11,14 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
     mobileSrc?: string | null;
     /** Czy pokazywać szary placeholder motolii gdy brak src lub błąd ładowania */
     allowPlaceholder?: boolean;
+    /**
+     * 'card' — drabinka bez mastera (600/900/1400). Karta ofertowa nigdy nie
+     * potrzebuje 1920 px, a obecność tego kandydata powodowała, że telefon
+     * o DPR ≥ 2,4 (potrzeba ~1081 px przy sizes=100vw) przeskakiwał ponad
+     * wariant 900w prosto na mastera — ~128 KB zamiast ~77 KB.
+     * 'full' — pełna drabinka z masterem, dla galerii/hero.
+     */
+    ladder?: 'card' | 'full';
 }
 
 // Pipeline (image-optimizer.ts) zachowuje proporcje oryginału; zdjęcia aut to
@@ -20,11 +28,16 @@ const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 675;
 const THUMB_W = 600;
 const THUMB_H = 338;
+const MD_W = 900;
+const CARD_W = 1400;
+const LARGE_W = 1920;
 
-function localVariants(src: string): string | null {
+function localVariants(src: string, ladder: 'card' | 'full' = 'full'): string | null {
     if (!src.startsWith('/uploads/') || !src.endsWith('.webp')) return null;
     const base = src.slice(0, -'.webp'.length);
-    return `${base}-thumb.webp ${THUMB_W}w, ${base}-md.webp 900w, ${base}.webp 1920w`;
+    const steps = [`${base}-thumb.webp ${THUMB_W}w`, `${base}-md.webp ${MD_W}w`, `${base}-lg.webp ${CARD_W}w`];
+    if (ladder === 'full') steps.push(`${base}.webp ${LARGE_W}w`);
+    return steps.join(', ');
 }
 
 type Mode = 'srcset' | 'plain' | 'fallback';
@@ -37,6 +50,7 @@ export function OptimizedImage({
     forceThumbnail = false,
     priority = false,
     allowPlaceholder = true,
+    ladder = 'full',
     className,
     sizes,
     ...props
@@ -95,7 +109,7 @@ export function OptimizedImage({
         const img = (
             <img
                 src={src}
-                srcSet={localVariants(src) ?? undefined}
+                srcSet={localVariants(src, ladder) ?? undefined}
                 sizes={sizes ?? '100vw'}
                 alt={alt}
                 className={className}
@@ -107,10 +121,10 @@ export function OptimizedImage({
             />
         );
 
-        const webpSource = localVariants(src);
+        const webpSource = localVariants(src, ladder);
 
         if (mobileSrc) {
-            const mobileWebp = localVariants(mobileSrc);
+            const mobileWebp = localVariants(mobileSrc, ladder);
             return (
                 <picture>
                     {mobileWebp && <source media="(max-width: 767px)" type="image/webp" srcSet={mobileWebp} sizes={sizes ?? '100vw'} />}
