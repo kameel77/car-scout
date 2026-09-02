@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -30,6 +29,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserCheck, Sparkles, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
+function deriveClientType(lead: InboxLeadSummary | null): ClientType {
+  if (!lead) return 'UNKNOWN';
+  if (lead.leadType?.toLowerCase() === 'b2b') {
+    return 'B2B';
+  }
+  return 'UNKNOWN';
+}
+
 export function QualifyLeadModal({
   lead,
   users,
@@ -48,13 +55,24 @@ export function QualifyLeadModal({
   const { toast } = useToast();
 
   const [ownerUserId, setOwnerUserId] = useState<string>(user?.id ?? '');
-  const [clientType, setClientType] = useState<ClientType>('B2C');
-  const [financingType, setFinancingType] = useState<FinancingType | ''>('LEASING');
+  const [clientType, setClientType] = useState<ClientType>(() => deriveClientType(lead));
+  const [financingType, setFinancingType] = useState<FinancingType | ''>('');
   const [nextActionType, setNextActionType] = useState<string>('CALL_FIRST');
   const [nextActionDueAt, setNextActionDueAt] = useState<string>(
     format(new Date(Date.now() + 30 * 60 * 1000), "yyyy-MM-dd'T'HH:mm")
   );
   const [nextActionNote, setNextActionNote] = useState<string>('Pierwszy kontakt z klientem');
+
+  useEffect(() => {
+    if (lead) {
+      setClientType(deriveClientType(lead));
+      setFinancingType('');
+      setOwnerUserId(user?.id ?? '');
+      setNextActionType('CALL_FIRST');
+      setNextActionDueAt(format(new Date(Date.now() + 30 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"));
+      setNextActionNote('Pierwszy kontakt z klientem');
+    }
+  }, [lead, user?.id]);
 
   if (!lead) return null;
 
@@ -71,9 +89,9 @@ export function QualifyLeadModal({
       await qualifyLead.mutateAsync({
         leadId: lead.id,
         data: {
-          ownerUserId: ownerUserId || null,
+          ownerUserId: ownerUserId && ownerUserId !== 'none' ? ownerUserId : null,
           clientType,
-          financingType: (financingType as FinancingType) || null,
+          financingType: financingType ? (financingType as FinancingType) : null,
           nextActionType,
           nextActionDueAt: nextActionDueAt ? new Date(nextActionDueAt).toISOString() : null,
           nextActionNote: nextActionNote.trim() || null,
@@ -87,10 +105,11 @@ export function QualifyLeadModal({
 
       onClose();
       onSuccess?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       toast({
         title: 'Błąd kwalifikacji',
-        description: err.message || 'Nie udało się zakwalifikować leada.',
+        description: message || 'Nie udało się zakwalifikować leada.',
         variant: 'destructive',
       });
     }
@@ -125,7 +144,10 @@ export function QualifyLeadModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Przypisany doradca</Label>
-              <Select value={ownerUserId} onValueChange={setOwnerUserId}>
+              <Select
+                value={ownerUserId || 'none'}
+                onValueChange={(val) => setOwnerUserId(val === 'none' ? '' : val)}
+              >
                 <SelectTrigger className="h-9 text-xs">
                   <SelectValue placeholder="Wybierz doradcę" />
                 </SelectTrigger>
@@ -150,6 +172,9 @@ export function QualifyLeadModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="UNKNOWN" className="text-xs">
+                    Nie określono (UNKNOWN)
+                  </SelectItem>
                   <SelectItem value="B2C" className="text-xs">
                     Konsument (B2C)
                   </SelectItem>
@@ -162,15 +187,18 @@ export function QualifyLeadModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Forma finansowania</Label>
+            <Label className="text-xs">Forma finansowania (opcjonalne w fazie kwalifikacji)</Label>
             <Select
-              value={financingType}
-              onValueChange={(val) => setFinancingType(val as FinancingType)}
+              value={financingType || 'none'}
+              onValueChange={(val) => setFinancingType(val === 'none' ? '' : (val as FinancingType))}
             >
               <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="Wybierz finansowanie" />
+                <SelectValue placeholder="Nie ustalono (do ustalenia podczas rozmowy)" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none" className="text-xs text-muted-foreground">
+                  Nie ustalono (do ustalenia podczas rozmowy)
+                </SelectItem>
                 <SelectItem value="LEASING" className="text-xs">
                   Leasing operacyjny / finansowy
                 </SelectItem>

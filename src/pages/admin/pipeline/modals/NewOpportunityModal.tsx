@@ -50,8 +50,8 @@ export function NewOpportunityModal({
   const [customerEmail, setCustomerEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [companyNip, setCompanyNip] = useState('');
-  const [clientType, setClientType] = useState<ClientType>('B2C');
-  const [financingType, setFinancingType] = useState<FinancingType | ''>('LEASING');
+  const [clientType, setClientType] = useState<ClientType>('UNKNOWN');
+  const [financingType, setFinancingType] = useState<FinancingType | ''>('');
   const [leadSource, setLeadSource] = useState<LeadSourceChannel>('ORGANIC');
   const [leadSourceDetail, setLeadSourceDetail] = useState('');
   const [ownerUserId, setOwnerUserId] = useState<string>(user?.id ?? '');
@@ -76,10 +76,10 @@ export function NewOpportunityModal({
         companyName: clientType === 'B2B' ? companyName.trim() || null : null,
         companyNip: clientType === 'B2B' ? companyNip.trim() || null : null,
         clientType,
-        financingType: (financingType as FinancingType) || null,
+        financingType: financingType ? (financingType as FinancingType) : null,
         leadSource,
         leadSourceDetail: leadSourceDetail.trim() || null,
-        ownerUserId: ownerUserId || null,
+        ownerUserId: ownerUserId && ownerUserId !== 'none' ? ownerUserId : null,
         nextActionType,
         nextActionDueAt: nextActionDueAt ? new Date(nextActionDueAt).toISOString() : null,
         nextActionNote: nextActionNote.trim() || null,
@@ -92,10 +92,11 @@ export function NewOpportunityModal({
 
       onClose();
       onSuccess?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       toast({
         title: 'Błąd tworzenia sprawy',
-        description: err.message || 'Nie udało się utworzyć sprawy.',
+        description: message || 'Nie udało się utworzyć sprawy.',
         variant: 'destructive',
       });
     }
@@ -134,6 +135,9 @@ export function NewOpportunityModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="UNKNOWN" className="text-xs">
+                    Nie określono (UNKNOWN)
+                  </SelectItem>
                   <SelectItem value="B2C" className="text-xs">
                     Konsument (B2C)
                   </SelectItem>
@@ -230,24 +234,27 @@ export function NewOpportunityModal({
             <div className="space-y-1.5">
               <Label className="text-xs">Finansowanie</Label>
               <Select
-                value={financingType}
-                onValueChange={(val) => setFinancingType(val as FinancingType)}
+                value={financingType || 'none'}
+                onValueChange={(val) => setFinancingType(val === 'none' ? '' : (val as FinancingType))}
               >
                 <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Wybierz finansowanie" />
+                  <SelectValue placeholder="Nie ustalono (do ustalenia)" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none" className="text-xs text-muted-foreground">
+                    Nie ustalono (do ustalenia)
+                  </SelectItem>
                   <SelectItem value="LEASING" className="text-xs">
-                    Leasing
+                    Leasing operacyjny / finansowy
                   </SelectItem>
                   <SelectItem value="CREDIT" className="text-xs">
-                    Kredyt
+                    Kredyt samochodowy
                   </SelectItem>
                   <SelectItem value="RENTAL" className="text-xs">
-                    Wynajem
+                    Wynajem długoterminowy
                   </SelectItem>
                   <SelectItem value="CASH" className="text-xs">
-                    Gotówka
+                    Gotówka / Zakup bezpośredni
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -255,7 +262,10 @@ export function NewOpportunityModal({
 
             <div className="space-y-1.5">
               <Label className="text-xs">Przypisany doradca</Label>
-              <Select value={ownerUserId} onValueChange={setOwnerUserId}>
+              <Select
+                value={ownerUserId || 'none'}
+                onValueChange={(val) => setOwnerUserId(val === 'none' ? '' : val)}
+              >
                 <SelectTrigger className="h-9 text-xs">
                   <SelectValue placeholder="Wybierz doradcę" />
                 </SelectTrigger>

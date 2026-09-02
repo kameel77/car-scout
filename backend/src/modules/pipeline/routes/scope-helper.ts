@@ -29,11 +29,6 @@ export function getPipelineScope(request: FastifyRequest): { scopeType: ScopeTyp
 
   const ctx = user?.activeContext;
   if (!ctx?.scopeType || !ctx?.scopeId) {
-    if ((request.server as any).httpErrors?.forbidden) {
-      throw (request.server as any).httpErrors.forbidden(
-        'Brak aktywnego kontekstu organizacji (active tenant context)'
-      );
-    }
     throw new TenantScopeForbiddenError();
   }
 
