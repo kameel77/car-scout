@@ -54,7 +54,7 @@ Define it in `requirements.ts`, in one place, as data the evaluator receives:
 | `opportunity.` | the opportunity row |
 | `customer.` | its `PipelineCustomer` |
 | `offer.` | the current offer: highest `versionNumber` whose status is not `SUPERSEDED`; none → all `offer.*` unmet |
-| `application.` | the latest attempt: highest `attemptSequence` whose state is not `WITHDRAWN`; none → all `application.*` unmet |
+| `application.` | **superseded 2026-09-02:** met when ANY non-`WITHDRAWN` application meets it; none → all `application.*` unmet. See `PARALLEL-APPLICATIONS.md` §3 — parallel applications mean "the latest attempt" no longer names a row. |
 | `commission.` | the single non-`REVERSED` commission record; none → unmet |
 
 A missing parent is an unmet requirement, never a thrown error — the point of the gate is to report what
@@ -100,7 +100,8 @@ the historical spreadsheet, where reroutes read as sequential.
 **Does Motolia ever submit one case to two financiers at the same time?** At a 74.5% rejection rate it
 would be a rational tactic, and if it is done — or is likely within a year — the model needs to allow two
 open attempts now, while changing it is a migration rather than a rewrite of the reporting built on it.
-The linear chain is a fine answer; it just has to be a decided one. Kamil to confirm before M2 starts.
+**Answered 2026-09-02: parallel submission is allowed.** The linear chain is dropped; see
+`PARALLEL-APPLICATIONS.md` for the schema, gate, operational and reporting consequences.
 
 ---
 

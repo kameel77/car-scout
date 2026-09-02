@@ -325,7 +325,10 @@ model PipelineApplication {
   opportunityId       String                   @map("opportunity_id")
   offerId             String?                  @map("offer_id")
   financierId         String                   @map("financier_id")
-  attemptSequence     Int                      @map("attempt_sequence")
+  /// A round is a wave of submissions; several financiers may be asked in the
+  /// same round in parallel. Asking the same financier again after a refusal
+  /// is a new round. See docs/pipeline/PARALLEL-APPLICATIONS.md.
+  roundNumber         Int                      @map("round_number")
   externalReference   String?                  @map("external_reference")
   state               PipelineApplicationState @default(DRAFT)
 
@@ -336,8 +339,9 @@ model PipelineApplication {
   rejectionReasonCode String?                  @map("rejection_reason_code")
   rejectionComment    String?                  @map("rejection_comment")
   approvedConditions  Json?                    @map("approved_conditions")
-  /// Set when this attempt was created by rerouting a previous rejection.
-  rerouteFromId       String?                  @unique @map("reroute_from_id")
+  /// Set when this application was created by rerouting a previous rejection.
+  /// Not unique: one refusal may spawn several parallel successors.
+  rerouteFromId       String?                  @map("reroute_from_id")
 
   createdAt           DateTime                 @default(now()) @map("created_at")
   updatedAt           DateTime                 @updatedAt @map("updated_at")
@@ -346,11 +350,11 @@ model PipelineApplication {
   offer               PipelineOffer?           @relation(fields: [offerId], references: [id], onDelete: SetNull)
   financier           PipelineFinancier        @relation(fields: [financierId], references: [id])
   rerouteFrom         PipelineApplication?     @relation("Reroute", fields: [rerouteFromId], references: [id])
-  rerouteTo           PipelineApplication?     @relation("Reroute")
+  rerouteTo           PipelineApplication[]    @relation("Reroute")
   rejectionReason     PipelineLossReason?      @relation(fields: [rejectionReasonCode], references: [code])
   commissions         PipelineCommission[]
 
-  @@unique([opportunityId, attemptSequence])
+  @@unique([opportunityId, financierId, roundNumber])
   @@index([financierId, state])
   @@index([opportunityId])
   @@map("pipeline_applications")
