@@ -163,7 +163,7 @@ describe('Permissions Matrix & Engine', () => {
 
         it('DEALER_EMPLOYEE has restricted dealer operations', () => {
             const perms = ROLE_PERMISSIONS[MemberRole.DEALER_EMPLOYEE];
-            expect(perms.length).toBe(8);
+            expect(perms.length).toBe(7);
             expect(perms).toContain('stock:read');
             expect(perms).toContain('stock:write');
             expect(perms).toContain('stock:import');
@@ -171,8 +171,8 @@ describe('Permissions Matrix & Engine', () => {
             expect(perms).toContain('rental:write');
             expect(perms).toContain('leads:read');
             expect(perms).toContain('pipeline:read');
-            expect(perms).toContain('pipeline:write');
 
+            expect(perms).not.toContain('pipeline:write');
             expect(perms).not.toContain('leads:write');
             expect(perms).not.toContain('rental:config:write');
             expect(perms).not.toContain('users:read');

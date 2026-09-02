@@ -11,23 +11,13 @@ import { createOpportunity, closeLost, ActorContext } from './opportunity.servic
 
 export const DEFAULT_INBOX_CUTOFF_DATE = new Date('2026-01-01T00:00:00.000Z');
 
-export async function getInboxCutoffDate(prisma: PrismaClient | Prisma.TransactionClient): Promise<Date> {
+export function getInboxCutoffDate(): Date {
   const envCutoff = process.env.PIPELINE_INBOX_CUTOFF_DATE;
   if (envCutoff) {
     const parsed = new Date(envCutoff);
     if (!isNaN(parsed.getTime())) {
       return parsed;
     }
-  }
-
-  // Try AppSettings if configured
-  try {
-    const setting = await prisma.appSettings.findFirst({
-      select: { siteNamePl: true },
-    });
-    // Can be extended via AppSettings in the future
-  } catch {
-    // Ignore and fallback
   }
 
   return DEFAULT_INBOX_CUTOFF_DATE;
@@ -45,7 +35,7 @@ export async function listInboxLeads(
   prisma: PrismaClient | Prisma.TransactionClient,
   params: ListInboxParams
 ) {
-  const cutoffDate = params.cutoffDate ?? (await getInboxCutoffDate(prisma));
+  const cutoffDate = params.cutoffDate ?? getInboxCutoffDate();
   const limit = Math.min(params.limit ?? 50, 100);
   const offset = params.offset ?? 0;
 

@@ -115,7 +115,7 @@ export const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
         'stock:read', 'stock:write', 'stock:import',
         'rental:read', 'rental:write',
         'leads:read',
-        'pipeline:read', 'pipeline:write',
+        'pipeline:read',
     ],
 };
 
