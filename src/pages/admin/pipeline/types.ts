@@ -121,6 +121,13 @@ export type PipelineOfferSummary = {
   updatedAt: string;
 };
 
+export type ApplicationWithdrawalReason =
+  | 'CONTRACTED_ELSEWHERE'
+  | 'CUSTOMER_RESIGNED'
+  | 'EXPIRED'
+  | 'SUPERSEDED_BY_NEW_OFFER'
+  | 'OTHER';
+
 export type PipelineApplicationSummary = {
   id: string;
   opportunityId: string;
@@ -133,6 +140,7 @@ export type PipelineApplicationSummary = {
   externalReference: string | null;
   rejectionReasonCode: string | null;
   rejectionComment: string | null;
+  withdrawalReasonCode?: ApplicationWithdrawalReason | null;
   approvedConditions: Record<string, unknown> | null;
   submittedFirstAt: string | null;
   submittedFullAt: string | null;

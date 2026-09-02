@@ -227,9 +227,11 @@ describe('Milestone M2: Parallel Applications, Document Union & Contracted Withd
 
     expect(ayvensAfter?.state).not.toBe(PipelineApplicationState.WITHDRAWN);
     expect(vehisAfter?.state).toBe(PipelineApplicationState.WITHDRAWN);
-    expect(vehisAfter?.rejectionReasonCode).toBe('CONTRACTED_ELSEWHERE');
+    expect(vehisAfter?.withdrawalReasonCode).toBe('CONTRACTED_ELSEWHERE');
+    expect(vehisAfter?.rejectionReasonCode).toBeNull();
     expect(leasysAfter?.state).toBe(PipelineApplicationState.WITHDRAWN);
-    expect(leasysAfter?.rejectionReasonCode).toBe('CONTRACTED_ELSEWHERE');
+    expect(leasysAfter?.withdrawalReasonCode).toBe('CONTRACTED_ELSEWHERE');
+    expect(leasysAfter?.rejectionReasonCode).toBeNull();
 
     // Verify APPLICATION_WITHDRAWN events recorded
     const withdrawnEvents = await prisma.pipelineEvent.findMany({
@@ -241,5 +243,42 @@ describe('Milestone M2: Parallel Applications, Document Union & Contracted Withd
 
     expect(withdrawnEvents.length).toBe(2);
     expect((withdrawnEvents[0].payload as any).reason).toBe('CONTRACTED_ELSEWHERE');
+  });
+
+  it('escalates JOIN_CURRENT to a new round if the same financier is already present in the current round', async () => {
+    const scope = getTestScope();
+
+    const opp = await executeCreateOpportunity(prisma, {
+      scopeType: scope.scopeType,
+      scopeId: scope.scopeId,
+      leadSource: LeadSourceChannel.ORGANIC,
+      customerName: 'Escalation Test',
+      customerPhone: '+48600123456',
+      clientType: ClientType.B2C,
+      financingType: FinancingType.LEASING,
+      actor: TEST_ACTOR,
+    });
+
+    const vehis = await prisma.pipelineFinancier.findFirstOrThrow({ where: { code: 'VEHIS' } });
+
+    // Round 1
+    const app1 = await executeCreateApplication(
+      prisma,
+      scope,
+      opp.id,
+      { financierId: vehis.id, roundMode: 'JOIN_CURRENT' },
+      TEST_ACTOR
+    );
+    expect(app1.roundNumber).toBe(1);
+
+    // Adding same financier with JOIN_CURRENT must escalate to round 2 without key violation
+    const app2 = await executeCreateApplication(
+      prisma,
+      scope,
+      opp.id,
+      { financierId: vehis.id, roundMode: 'JOIN_CURRENT' },
+      TEST_ACTOR
+    );
+    expect(app2.roundNumber).toBe(2);
   });
 });

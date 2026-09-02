@@ -145,6 +145,7 @@ export async function listOpportunities(
             state: true,
             decisionAt: true,
             rejectionReasonCode: true,
+            withdrawalReasonCode: true,
             financier: {
               select: {
                 id: true,

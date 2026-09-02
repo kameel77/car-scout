@@ -14,6 +14,33 @@ export type EvaluationResult = {
   completenessPct: number;
 };
 
+export interface OpportunityEvaluationContext {
+  id: string;
+  phase: PipelinePhase;
+  clientType: ClientType;
+  financingType: FinancingType | null;
+  customer?: Record<string, unknown> | null;
+  offers?: Array<Record<string, unknown>>;
+  applications?: Array<Record<string, unknown>>;
+  vehicleCandidates?: Array<Record<string, unknown>>;
+  documents?: Array<Record<string, unknown>>;
+  commissions?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+export interface PhaseRequirementDefinition {
+  id: string;
+  code: string;
+  targetPhase: PipelinePhase;
+  fieldPath: string;
+  label: string;
+  enforcement: string;
+  clientType?: ClientType | null;
+  financingType?: FinancingType | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export class StageGateViolationError extends Error {
   statusCode = 422;
   currentPhase: PipelinePhase;
@@ -45,30 +72,34 @@ export class StageGateViolationError extends Error {
  * - application.* -> satisfied if ANY non-WITHDRAWN application satisfies the property
  * - commission.* -> single non-REVERSED commission record
  */
-export function resolveFieldValue(aggregate: any, fieldPath: string): unknown {
+export function resolveFieldValue(
+  aggregate: OpportunityEvaluationContext | Record<string, unknown> | null,
+  fieldPath: string
+): unknown {
+  if (!aggregate) return null;
   const parts = fieldPath.split('.');
   const prefix = parts[0];
   const property = parts.slice(1).join('.');
 
-  let targetObject: any = null;
+  let targetObject: Record<string, unknown> | Array<Record<string, unknown>> | null = null;
 
   switch (prefix) {
     case 'opportunity':
-      targetObject = aggregate;
+      targetObject = aggregate as Record<string, unknown>;
       break;
     case 'customer':
-      targetObject = aggregate?.customer ?? null;
+      targetObject = (aggregate.customer as Record<string, unknown>) ?? null;
       break;
     case 'offer': {
-      const offers = (aggregate?.offers as any[]) ?? [];
+      const offers = (aggregate.offers as Array<Record<string, unknown>>) ?? [];
       const activeOffers = offers
         .filter((o) => o.status !== 'SUPERSEDED')
-        .sort((a, b) => (b.versionNumber ?? 0) - (a.versionNumber ?? 0));
+        .sort((a, b) => (Number(b.versionNumber) || 0) - (Number(a.versionNumber) || 0));
       targetObject = activeOffers[0] ?? null;
       break;
     }
     case 'application': {
-      const applications = (aggregate?.applications as any[]) ?? [];
+      const applications = (aggregate.applications as Array<Record<string, unknown>>) ?? [];
       const activeApps = applications.filter((a) => a.state !== 'WITHDRAWN');
       if (!property) {
         return activeApps.length > 0 ? activeApps : null;
@@ -81,19 +112,19 @@ export function resolveFieldValue(aggregate: any, fieldPath: string): unknown {
       return matchedApp ? getNestedProperty(matchedApp, property) : null;
     }
     case 'commission': {
-      const commissions = (aggregate?.commissions as any[]) ?? [];
+      const commissions = (aggregate.commissions as Array<Record<string, unknown>>) ?? [];
       const activeCommissions = commissions.filter((c) => c.status !== 'REVERSED');
       targetObject = activeCommissions[0] ?? null;
       break;
     }
     case 'selectedVehicle': {
-      const vehicles = (aggregate?.vehicleCandidates as any[]) ?? [];
+      const vehicles = (aggregate.vehicleCandidates as Array<Record<string, unknown>>) ?? [];
       const selected = vehicles.find((v) => v.selectionStatus === 'SELECTED');
       targetObject = selected ?? null;
       break;
     }
     default:
-      targetObject = aggregate;
+      targetObject = aggregate as Record<string, unknown>;
       break;
   }
 
@@ -108,13 +139,13 @@ export function resolveFieldValue(aggregate: any, fieldPath: string): unknown {
   return getNestedProperty(targetObject, property);
 }
 
-function getNestedProperty(obj: any, path: string): unknown {
-  if (!obj) return null;
+function getNestedProperty(obj: unknown, path: string): unknown {
+  if (!obj || typeof obj !== 'object') return null;
   const subParts = path.split('.');
-  let current: any = obj;
+  let current: unknown = obj;
   for (const part of subParts) {
-    if (current === null || current === undefined) return null;
-    current = current[part];
+    if (current === null || current === undefined || typeof current !== 'object') return null;
+    current = (current as Record<string, unknown>)[part];
   }
   return current;
 }
@@ -133,8 +164,8 @@ export function isRequirementSatisfied(value: unknown): boolean {
  * Calculates requirements completeness for the NEXT phase of an opportunity in list/queue views.
  */
 export function calculateOpportunityCompleteness(
-  opportunity: any,
-  allRequirementsForScope: any[]
+  opportunity: OpportunityEvaluationContext,
+  allRequirementsForScope: PhaseRequirementDefinition[]
 ): { met: number; total: number; percentage: number; nextPhase: PipelinePhase | null } {
   const currentIdx = PIPELINE_PHASES.indexOf(opportunity.phase);
   if (currentIdx === -1 || currentIdx >= PIPELINE_PHASES.length - 1) {
@@ -146,6 +177,7 @@ export function calculateOpportunityCompleteness(
     if (req.targetPhase !== nextPhase || !req.isActive) return false;
     if (req.clientType && req.clientType !== opportunity.clientType) return false;
     if (req.financingType && req.financingType !== opportunity.financingType) return false;
+    if (req.fieldPath === 'customer.companyNip' && opportunity.clientType !== ClientType.B2B) return false;
     return true;
   });
 
@@ -155,10 +187,6 @@ export function calculateOpportunityCompleteness(
 
   let metCount = 0;
   for (const req of matchingReqs) {
-    if (req.fieldPath === 'customer.companyNip' && opportunity.clientType !== ClientType.B2B) {
-      metCount++;
-      continue;
-    }
     const val = resolveFieldValue(opportunity, req.fieldPath);
     if (isRequirementSatisfied(val)) {
       metCount++;
@@ -240,7 +268,6 @@ export async function evaluatePhaseRequirements(
   for (const req of requirements) {
     // Check specific condition if clientType is B2B for customer.companyNip
     if (req.fieldPath === 'customer.companyNip' && opportunity.clientType !== ClientType.B2B) {
-      satisfiedCount++;
       continue;
     }
 

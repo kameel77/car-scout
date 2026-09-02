@@ -132,6 +132,7 @@ export async function getAdvisorQueue(
         state: true,
         decisionAt: true,
         rejectionReasonCode: true,
+        withdrawalReasonCode: true,
         financier: {
           select: {
             id: true,

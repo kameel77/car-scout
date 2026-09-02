@@ -25,7 +25,6 @@ export async function seedPipeline(prisma: PrismaClient) {
     { code: 'QUAL_NOT_ELIGIBLE', label: 'Niekwalifikowany', category: 'QUALIFICATION', requiresComment: false, sortOrder: 100 },
     { code: 'QUAL_SPAM', label: 'Spam / pomyłka', category: 'QUALIFICATION', requiresComment: false, sortOrder: 110 },
     { code: 'OTHER', label: 'Inne', category: 'QUALIFICATION', requiresComment: true, sortOrder: 120 },
-    { code: 'CONTRACTED_ELSEWHERE', label: 'Wybrano innego finansującego', category: 'APPLICATION_WITHDRAWN', requiresComment: false, sortOrder: 200 },
   ];
 
   for (const lr of lossReasons) {

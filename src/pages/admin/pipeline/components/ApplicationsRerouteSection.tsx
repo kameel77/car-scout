@@ -231,7 +231,11 @@ export function ApplicationsRerouteSection({
     }
   };
 
-  const getStatusBadge = (state: string, reasonCode?: string | null) => {
+  const getStatusBadge = (
+    state: string,
+    reasonCode?: string | null,
+    withdrawalReasonCode?: string | null
+  ) => {
     switch (state) {
       case 'DRAFT':
         return (
@@ -273,7 +277,7 @@ export function ApplicationsRerouteSection({
         return (
           <Badge variant="secondary" className="text-xs text-muted-foreground">
             <Ban className="h-3 w-3 mr-1" />
-            {reasonCode === 'CONTRACTED_ELSEWHERE' ? 'Wycofany (inna umowa)' : 'Wycofany'}
+            {withdrawalReasonCode === 'CONTRACTED_ELSEWHERE' ? 'Wycofany (inna umowa)' : 'Wycofany'}
           </Badge>
         );
       default:
@@ -336,7 +340,7 @@ export function ApplicationsRerouteSection({
                         <Badge variant="outline" className="text-[10px] h-4">
                           Runda #{app.roundNumber ?? app.attemptSequence ?? 1}
                         </Badge>
-                        {getStatusBadge(app.state, app.rejectionReasonCode)}
+                        {getStatusBadge(app.state, app.rejectionReasonCode, app.withdrawalReasonCode)}
                       </div>
                       {app.externalReference && (
                         <p className="text-xs text-muted-foreground mt-0.5">

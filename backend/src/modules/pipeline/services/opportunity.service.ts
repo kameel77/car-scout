@@ -17,6 +17,7 @@ import { findOrCreateCustomer } from './customer.service.js';
 import { isPhaseTransitionAllowed, isForwardTransition } from '../workflow/phases.js';
 import { evaluatePhaseRequirements, StageGateViolationError } from '../workflow/requirements.js';
 import { materializeDocumentsForOpportunity } from './document.service.js';
+import { withdrawOtherApplicationsOnContract } from './application.service.js';
 
 export type ActorContext = {
   type: PipelineActorType;
@@ -609,48 +610,12 @@ export async function patchOpportunity(
 
   // If contractedApplicationId is specified with contract signing, withdraw competing applications
   if (input.contractedApplicationId) {
-    const otherApps = await tx.pipelineApplication.findMany({
-      where: {
-        opportunityId: opportunity.id,
-        id: { not: input.contractedApplicationId },
-        state: {
-          in: [
-            PipelineApplicationState.DRAFT,
-            PipelineApplicationState.PRECHECK_SUBMITTED,
-            PipelineApplicationState.FULL_SUBMITTED,
-            PipelineApplicationState.APPROVED,
-            PipelineApplicationState.CONDITIONALLY_APPROVED,
-          ],
-        },
-      },
-      include: { financier: true },
-    });
-
-    for (const app of otherApps) {
-      await tx.pipelineApplication.update({
-        where: { id: app.id },
-        data: {
-          state: PipelineApplicationState.WITHDRAWN,
-          rejectionReasonCode: 'CONTRACTED_ELSEWHERE',
-          rejectionComment: 'Podpisano umowę z innym finansującym',
-        },
-      });
-
-      await recordEvent(tx, {
-        scopeType: opportunity.scopeType,
-        scopeId: opportunity.scopeId,
-        type: 'APPLICATION_WITHDRAWN',
-        aggregateType: 'APPLICATION',
-        aggregateId: app.id,
-        opportunityId: opportunity.id,
-        customerId: opportunity.customerId,
-        actor: input.actor,
-        payload: {
-          financierCode: app.financier.code,
-          reason: 'CONTRACTED_ELSEWHERE',
-        },
-      });
-    }
+    await withdrawOtherApplicationsOnContract(
+      tx,
+      opportunity.id,
+      input.contractedApplicationId,
+      input.actor
+    );
 
     // Attach commission to contracted application
     await tx.pipelineCommission.updateMany({

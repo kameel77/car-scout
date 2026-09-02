@@ -29,6 +29,13 @@ export type OfferDiffFields = Pick<
   | 'financingType'
 >;
 
+export type ApplicationWithdrawalReason =
+  | 'CONTRACTED_ELSEWHERE' // Excluded from failure counts! (Won at another financier)
+  | 'CUSTOMER_RESIGNED'
+  | 'EXPIRED'
+  | 'SUPERSEDED_BY_NEW_OFFER'
+  | 'OTHER';
+
 export type PipelineEventPayloadMap = {
   // Opportunity
   OPPORTUNITY_CREATED: {
@@ -150,7 +157,8 @@ export type PipelineEventPayloadMap = {
   };
   APPLICATION_WITHDRAWN: {
     financierCode: string;
-    reason: string;
+    reason: ApplicationWithdrawalReason;
+    comment?: string | null;
   };
 
   // Documents, tasks, commission

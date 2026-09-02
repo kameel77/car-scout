@@ -1326,9 +1326,10 @@ model PipelineApplication {
   submittedFullAt  DateTime? @map("submitted_full_at")
   decisionAt       DateTime? @map("decision_at")
 
-  rejectionReasonCode String? @map("rejection_reason_code")
-  rejectionComment    String? @map("rejection_comment")
-  approvedConditions  Json?   @map("approved_conditions")
+  rejectionReasonCode  String? @map("rejection_reason_code")
+  rejectionComment     String? @map("rejection_comment")
+  withdrawalReasonCode String? @map("withdrawal_reason_code")
+  approvedConditions   Json?   @map("approved_conditions")
   /// Set when this attempt was created by rerouting a previous rejection.
   rerouteFromId       String? @map("reroute_from_id")
 

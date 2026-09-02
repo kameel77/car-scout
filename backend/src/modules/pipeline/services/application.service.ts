@@ -346,8 +346,9 @@ export async function withdrawOtherApplicationsOnContract(
       where: { id: app.id },
       data: {
         state: PipelineApplicationState.WITHDRAWN,
-        rejectionReasonCode: 'CONTRACTED_ELSEWHERE',
-        rejectionComment: 'Podpisano umowę z innym finansującym',
+        withdrawalReasonCode: 'CONTRACTED_ELSEWHERE',
+        rejectionReasonCode: null,
+        rejectionComment: null,
       },
     });
 
@@ -363,6 +364,7 @@ export async function withdrawOtherApplicationsOnContract(
       payload: {
         financierCode: app.financier.code,
         reason: 'CONTRACTED_ELSEWHERE',
+        comment: 'Podpisano umowę z innym finansującym',
       },
     });
   }
