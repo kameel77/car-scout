@@ -1371,6 +1371,7 @@ model PipelinePhaseRequirement {
   id            String         @id @default(cuid())
   scopeType     ScopeType      @map("scope_type")
   scopeId       String         @map("scope_id")
+  code          String
   clientType    ClientType?    @map("client_type")
   financingType FinancingType? @map("financing_type")
   targetPhase   PipelinePhase  @map("target_phase")
@@ -1385,6 +1386,7 @@ model PipelinePhaseRequirement {
   sortOrder     Int            @default(0) @map("sort_order")
   isActive      Boolean        @default(true) @map("is_active")
 
+  @@unique([scopeType, scopeId, code])
   @@index([scopeType, scopeId, targetPhase])
   @@map("pipeline_phase_requirements")
 }
@@ -1554,6 +1556,13 @@ model PipelineAutomationRule {
   @@unique([scopeType, scopeId, code])
   @@index([triggerType, isActive])
   @@map("pipeline_automation_rules")
+}
+
+model PipelineNumberSequence {
+  year      Int @id
+  lastValue Int @default(0) @map("last_value")
+
+  @@map("pipeline_number_sequences")
 }
 
 // <<< PIPELINE MODULE

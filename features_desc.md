@@ -679,11 +679,39 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Dane pojazdu / wynajmu: marka, model, rocznik, VIN, cena, przebieg, dealer, bezpośredni link do oferty.
   - Dane kalkulatora finansowania: wybrany produkt finansowy, kwota, okres, pierwsza wpłata, miesięczna rata, wykup.
   - Wiadomość klienta: zabezpieczony przed HTML injection blok cytatu z zachowaniem formatowania.
-
 ## 59. Domyślny rodzaj napędu („Przedni”) przy imporcie ogłoszeń i ekstrakcji AI
 - **Cel**: Wyeliminowanie sytuacji, w których brak podania napędu przez sprzedawcę na Otomoto powodował błędną interpretację (np. halucynację AI klasyfikującą wersje z literą „X”, mHEV lub standardowe wersje jako napęd 4x4) lub pozostawianie pustej wartości.
 - **Zachowanie**:
   - **Parser wtyczki (`content.js` / `popup.js`)**: W przypadku braku parametru napędu na Otomoto lub braku dopasowania, parser oraz formularz wtyczki Chrome ustawiają domyślnie wartość `'Przedni'`.
   - **Warstwa AI (`ai.js`)**: Prompt systemowy precyzuje, że klasyfikacja jako `'4x4'` lub `'Tylny'` jest dozwolona wyłącznie, gdy rodzaj napędu jest wprost wymieniony w opisie lub specyfikacji ogłoszenia. W przeciwnym razie AI zwraca `'Przedni'`.
   - **Backend CarScout (`listings.ts` - trasy `/api/v1/external/listings`)**: Funkcja `normalizeDrive` w przypadku braku parametru napędu lub nierozpoznanej wartości przypisuje domyślnie `'Przedni'`.
+
+## 61. Moduł Motolia Pipeline CRM (Kamień Milowy M1 - Core, Inbox i Kolejka Doradcy)
+- **Cel**: Dedykowany, operacyjny moduł CRM dla doradców leasingowych i menedżerów floty zastępujący arkusz kalkulacyjny i umożliwiający podejmowanie leadów w czasie poniżej 30 sekund.
+- **Kolejka Doradcy (Queue - Domyślny widok operacyjny)**:
+  - Automatyczny podział spraw na 4 priorytetowe sekcje:
+    1. **Zaległe (Overdue)**: sprawy z przekroczonym terminem SLA (czerwona odznaka ostrzegawcza).
+    2. **Dzisiejsze (Today)**: sprawy i telefony zaplanowane na bieżący dzień.
+    3. **Nowe w Inboxie (Inbox)**: niepodjęte zapytania ze strony www czekające na 1-kliknięciową kwalifikację.
+    4. **Bez wyznaczonej akcji (No Action)**: sprawy aktywne bez zaplanowanego terminu kolejnego kroku.
+  - Szybkie akcje 1-kliknięciowe w wierszu sprawy:
+    - **Kontakt**: rejestracja rozmowy/e-maila/SMS-a wraz z natychmiastowym wyznaczeniem kolejnego terminu kontaktu.
+    - **Termin / Snooze**: szybkie odłożenie na jutro (+1d), za 3 dni (+3d) lub za tydzień (+7d).
+    - **Etap**: natychmiastowe przejście do kolejnej fazy procesu.
+    - **Kwalifikacja**: 1-kliknięciowe przekształcenie leada z Inboxu w sprawę CRM z przypisaniem doradcy.
+- **Tablica Kanban (Board)**:
+  - Wizualny widok 7 kanonicznych faz procesu (`INBOX`, `QUALIFICATION`, `SELECTION`, `COMPLETING`, `FINANCIAL_DECISION`, `CONTRACT`, `DELIVERY`).
+  - Przeciąganie spraw (drag-and-drop) między kolumnami z automatyczną weryfikacją reguł przejść.
+  - Karty spraw z wyróżnieniem wybranego pojazdu, typu klienta (B2C/B2B), formy finansowania, doradcy oraz statusu terminu SLA.
+- **Audytowalny Event Log (Append-Only Event Sourcing)**:
+  - Wszystkie operacje biznesowe (utworzenie, zmiana etapu, przypisanie doradcy, kontakt, wyznaczenie kolejnej akcji, zamknięcie sprawy) są atomowo rejestrowane jako niemutowalne zdarzenia w tabeli `pipeline_events`.
+  - Blokada bazodanowa (trigger PostgreSQL) uniemożliwiająca usuwanie oraz modyfikację rekordów zdarzeń.
+  - Dokładny pomiar czasu trwania spraw w poszczególnych fazach (`durationSeconds`) z automatycznym resetem znacznika `phaseEnteredAt`.
+- **Atomowa numeracja spraw**:
+  - Unikalny, sekwencyjny format `MTL-YYYY-XXXXX` (np. `MTL-2026-00042`) alokowany atomowo przez instrukcję `INSERT ... ON CONFLICT (year) DO UPDATE` z rocznym resetem licznika.
+- **Wymóg atrybucji leada**:
+  - Bezwzględny wymóg wskazania źródła ruchu (`leadSource`: META, GOOGLE, ORGANIC, TV, DEALER, PARTNER, REFERRAL, OTHER) przy każdym tworzeniu sprawy.
+- **Uprawnienia i Bezpieczeństwo**:
+  - Dostęp chroniony uprawnieniami `pipeline:read` oraz `pipeline:write`.
+  - Ścisła izolacja wielotenantowa oparta o token JWT (`scopeType`, `scopeId`).
 

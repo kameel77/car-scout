@@ -30,6 +30,7 @@ import {
     Images,
     FileEdit,
     Target,
+    GitPullRequest,
 } from 'lucide-react';
 import { useAuth, MemberRole, ROLE_LABELS, Permission } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -51,7 +52,8 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
     // Dashboard – everyone authenticated
     { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/leads', label: 'Leady', icon: MessageSquare, permission: 'leads:read' },
+    { href: '/admin/pipeline', label: 'Pipeline CRM', icon: GitPullRequest, permission: 'pipeline:read' },
+    { href: '/admin/leads', label: 'Leady (Inbox)', icon: MessageSquare, permission: 'leads:read' },
 
     // Stock management
     { href: '/admin/listings', label: 'Pojazdy', icon: Car, permission: 'stock:read' },

@@ -1,0 +1,182 @@
+import React from 'react';
+import {
+  QueueResponse,
+  PipelineOpportunitySummary,
+  InboxLeadSummary,
+} from '../types';
+import { QueueRow } from '../components/QueueRow';
+import { InboxRow } from '../components/InboxRow';
+import { AlertTriangle, Calendar, HelpCircle, Inbox, Loader2 } from 'lucide-react';
+
+export function QueueView({
+  queue,
+  isLoading,
+  onOpenDetails,
+  onOpenLogContact,
+  onOpenSetNextAction,
+  onOpenTransition,
+  onOpenClose,
+  onQuickSnooze,
+  onQualifyLead,
+  onDismissLead,
+}: {
+  queue?: QueueResponse;
+  isLoading: boolean;
+  onOpenDetails: (opp: PipelineOpportunitySummary) => void;
+  onOpenLogContact: (opp: PipelineOpportunitySummary) => void;
+  onOpenSetNextAction: (opp: PipelineOpportunitySummary) => void;
+  onOpenTransition: (opp: PipelineOpportunitySummary) => void;
+  onOpenClose: (opp: PipelineOpportunitySummary) => void;
+  onQuickSnooze: (opp: PipelineOpportunitySummary, days: number) => void;
+  onQualifyLead: (lead: InboxLeadSummary) => void;
+  onDismissLead: (lead: InboxLeadSummary) => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-16 text-muted-foreground gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="text-sm">Ładowanie kolejki doradcy...</span>
+      </div>
+    );
+  }
+
+  if (!queue) return null;
+
+  const { overdue, today, noAction, inbox, counts } = queue;
+
+  return (
+    <div className="space-y-8">
+      {/* 1. OVERDUE SECTION (🔴 Zaległe) */}
+      {overdue.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1 rounded-md bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-base text-red-700 dark:text-red-400">
+              Zaległe akcje ({counts.overdue})
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              Wymagają natychmiastowego kontaktu lub zmiany terminu
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {overdue.map((opp) => (
+              <QueueRow
+                key={opp.id}
+                opportunity={opp}
+                onOpenDetails={onOpenDetails}
+                onOpenLogContact={onOpenLogContact}
+                onOpenSetNextAction={onOpenSetNextAction}
+                onOpenTransition={onOpenTransition}
+                onOpenClose={onOpenClose}
+                onQuickSnooze={onQuickSnooze}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 2. TODAY SECTION (🟡 Dzisiejsze) */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <h3 className="font-bold text-base text-foreground">
+            Zaplanowane na dziś ({counts.today})
+          </h3>
+          <span className="text-xs text-muted-foreground">
+            Zadania i kontakty do wykonania w trakcie dnia
+          </span>
+        </div>
+
+        {today.length > 0 ? (
+          <div className="space-y-2">
+            {today.map((opp) => (
+              <QueueRow
+                key={opp.id}
+                opportunity={opp}
+                onOpenDetails={onOpenDetails}
+                onOpenLogContact={onOpenLogContact}
+                onOpenSetNextAction={onOpenSetNextAction}
+                onOpenTransition={onOpenTransition}
+                onOpenClose={onOpenClose}
+                onQuickSnooze={onQuickSnooze}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 text-center rounded-xl border border-dashed text-xs text-muted-foreground bg-muted/20">
+            Brak spraw zaplanowanych na dzisiaj. Świetna robota!
+          </div>
+        )}
+      </section>
+
+      {/* 3. INBOX SECTION (🔵 Nowe zapytania) */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400">
+            <Inbox className="w-4 h-4" />
+          </div>
+          <h3 className="font-bold text-base text-blue-700 dark:text-blue-400">
+            Nowe zapytania z Inboxu ({counts.inbox})
+          </h3>
+          <span className="text-xs text-muted-foreground">
+            Leady czekające na 30-sekundową kwalifikację i przypisanie
+          </span>
+        </div>
+
+        {inbox.length > 0 ? (
+          <div className="space-y-2">
+            {inbox.map((lead) => (
+              <InboxRow
+                key={lead.id}
+                lead={lead}
+                onQualify={onQualifyLead}
+                onDismiss={onDismissLead}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 text-center rounded-xl border border-dashed text-xs text-muted-foreground bg-muted/20">
+            Inbox jest pusty — brak oczekujących leadów.
+          </div>
+        )}
+      </section>
+
+      {/* 4. NO NEXT ACTION SECTION (⚪ Bez kolejnej akcji) */}
+      {noAction.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <HelpCircle className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-base text-foreground">
+              Bez wyznaczonej akcji ({counts.noAction})
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              Otwarte sprawy, które nie mają zaplanowanego kolejnego kroku
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {noAction.map((opp) => (
+              <QueueRow
+                key={opp.id}
+                opportunity={opp}
+                onOpenDetails={onOpenDetails}
+                onOpenLogContact={onOpenLogContact}
+                onOpenSetNextAction={onOpenSetNextAction}
+                onOpenTransition={onOpenTransition}
+                onOpenClose={onOpenClose}
+                onQuickSnooze={onQuickSnooze}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}

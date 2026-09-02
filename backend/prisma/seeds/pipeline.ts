@@ -86,6 +86,7 @@ export async function seedPipeline(prisma: PrismaClient) {
 
   // 3. Phase requirements
   const phaseRequirements: Array<{
+    code: string;
     targetPhase: PipelinePhase;
     fieldPath: string;
     label: string;
@@ -95,61 +96,56 @@ export async function seedPipeline(prisma: PrismaClient) {
     sortOrder: number;
   }> = [
     // HARD: FINANCIAL_DECISION
-    { targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'opportunity.financingType', label: 'Rodzaj finansowania', enforcement: 'HARD', sortOrder: 10 },
-    { targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'offer.priceGrosze', label: 'Cena pojazdu', enforcement: 'HARD', sortOrder: 20 },
-    { targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'offer.monthlyRateGrosze', label: 'Rata miesięczna', enforcement: 'HARD', sortOrder: 30 },
-    { targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'application.financierId', label: 'Wybrany finansujący', enforcement: 'HARD', sortOrder: 40 },
-    { targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'customer.companyNip', label: 'NIP firmy', clientType: ClientType.B2B, enforcement: 'HARD', sortOrder: 50 },
+    { code: 'REQ_FIN_FINANCING_TYPE', targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'opportunity.financingType', label: 'Rodzaj finansowania', enforcement: 'HARD', sortOrder: 10 },
+    { code: 'REQ_FIN_PRICE', targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'offer.priceGrosze', label: 'Cena pojazdu', enforcement: 'HARD', sortOrder: 20 },
+    { code: 'REQ_FIN_RATE', targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'offer.monthlyRateGrosze', label: 'Rata miesięczna', enforcement: 'HARD', sortOrder: 30 },
+    { code: 'REQ_FIN_FINANCIER', targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'application.financierId', label: 'Wybrany finansujący', enforcement: 'HARD', sortOrder: 40 },
+    { code: 'REQ_FIN_NIP', targetPhase: PipelinePhase.FINANCIAL_DECISION, fieldPath: 'customer.companyNip', label: 'NIP firmy', clientType: ClientType.B2B, enforcement: 'HARD', sortOrder: 50 },
 
     // HARD: DELIVERY
-    { targetPhase: PipelinePhase.DELIVERY, fieldPath: 'opportunity.contractSignedAt', label: 'Data podpisania umowy', enforcement: 'HARD', sortOrder: 60 },
-    { targetPhase: PipelinePhase.DELIVERY, fieldPath: 'commission.basisGrosze', label: 'Podstawa naliczenia prowizji', enforcement: 'HARD', sortOrder: 70 },
+    { code: 'REQ_DEL_CONTRACT_SIGNED', targetPhase: PipelinePhase.DELIVERY, fieldPath: 'opportunity.contractSignedAt', label: 'Data podpisania umowy', enforcement: 'HARD', sortOrder: 60 },
+    { code: 'REQ_DEL_COMMISSION_BASIS', targetPhase: PipelinePhase.DELIVERY, fieldPath: 'commission.basisGrosze', label: 'Podstawa naliczenia prowizji', enforcement: 'HARD', sortOrder: 70 },
 
     // SOFT: QUALIFICATION, SELECTION, COMPLETING
-    { targetPhase: PipelinePhase.QUALIFICATION, fieldPath: 'opportunity.clientType', label: 'Typ klienta', enforcement: 'SOFT', sortOrder: 10 },
-    { targetPhase: PipelinePhase.QUALIFICATION, fieldPath: 'opportunity.leadSource', label: 'Źródło leada', enforcement: 'SOFT', sortOrder: 20 },
-    { targetPhase: PipelinePhase.SELECTION, fieldPath: 'selectedCandidateId', label: 'Wybrany pojazd', enforcement: 'SOFT', sortOrder: 10 },
-    { targetPhase: PipelinePhase.COMPLETING, fieldPath: 'documents.mandatoryReceived', label: 'Wymagane dokumenty', enforcement: 'SOFT', sortOrder: 10 },
+    { code: 'REQ_QUAL_CLIENT_TYPE', targetPhase: PipelinePhase.QUALIFICATION, fieldPath: 'opportunity.clientType', label: 'Typ klienta', enforcement: 'SOFT', sortOrder: 10 },
+    { code: 'REQ_QUAL_LEAD_SOURCE', targetPhase: PipelinePhase.QUALIFICATION, fieldPath: 'opportunity.leadSource', label: 'Źródło leada', enforcement: 'SOFT', sortOrder: 20 },
+    { code: 'REQ_SEL_VEHICLE', targetPhase: PipelinePhase.SELECTION, fieldPath: 'selectedCandidateId', label: 'Wybrany pojazd', enforcement: 'SOFT', sortOrder: 10 },
+    { code: 'REQ_COMP_DOCUMENTS', targetPhase: PipelinePhase.COMPLETING, fieldPath: 'documents.mandatoryReceived', label: 'Wymagane dokumenty', enforcement: 'SOFT', sortOrder: 10 },
   ];
 
   for (const pr of phaseRequirements) {
-    const existing = await prisma.pipelinePhaseRequirement.findFirst({
+    await prisma.pipelinePhaseRequirement.upsert({
       where: {
-        scopeType: PLATFORM_SCOPE.scopeType,
-        scopeId: PLATFORM_SCOPE.scopeId,
-        targetPhase: pr.targetPhase,
-        fieldPath: pr.fieldPath,
-        clientType: pr.clientType ?? null,
-        financingType: pr.financingType ?? null,
-      },
-    });
-
-    if (existing) {
-      await prisma.pipelinePhaseRequirement.update({
-        where: { id: existing.id },
-        data: {
-          label: pr.label,
-          enforcement: pr.enforcement,
-          sortOrder: pr.sortOrder,
-          isActive: true,
-        },
-      });
-    } else {
-      await prisma.pipelinePhaseRequirement.create({
-        data: {
+        scopeType_scopeId_code: {
           scopeType: PLATFORM_SCOPE.scopeType,
           scopeId: PLATFORM_SCOPE.scopeId,
-          targetPhase: pr.targetPhase,
-          fieldPath: pr.fieldPath,
-          label: pr.label,
-          clientType: pr.clientType ?? null,
-          financingType: pr.financingType ?? null,
-          enforcement: pr.enforcement,
-          sortOrder: pr.sortOrder,
-          isActive: true,
+          code: pr.code,
         },
-      });
-    }
+      },
+      update: {
+        targetPhase: pr.targetPhase,
+        fieldPath: pr.fieldPath,
+        label: pr.label,
+        clientType: pr.clientType ?? null,
+        financingType: pr.financingType ?? null,
+        enforcement: pr.enforcement,
+        sortOrder: pr.sortOrder,
+        isActive: true,
+      },
+      create: {
+        scopeType: PLATFORM_SCOPE.scopeType,
+        scopeId: PLATFORM_SCOPE.scopeId,
+        code: pr.code,
+        targetPhase: pr.targetPhase,
+        fieldPath: pr.fieldPath,
+        label: pr.label,
+        clientType: pr.clientType ?? null,
+        financingType: pr.financingType ?? null,
+        enforcement: pr.enforcement,
+        sortOrder: pr.sortOrder,
+        isActive: true,
+      },
+    });
   }
   console.log(`  ✅ Seeded ${phaseRequirements.length} phase requirements`);
 
