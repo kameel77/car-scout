@@ -39,7 +39,7 @@ import {
 } from '../services/document.service.js';
 import { listOpportunities } from '../services/opportunity-read.service.js';
 
-describe('Advisor Journey Stopwatch & Performance Benchmark', () => {
+describe('Advisor Flow Server Performance & Query Benchmark', () => {
   const prisma = new PrismaClient();
   const testScope = {
     scopeType: ScopeType.DEALER_GROUP,
