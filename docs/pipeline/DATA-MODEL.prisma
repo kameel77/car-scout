@@ -1,0 +1,561 @@
+// =============================================================================
+// PIPELINE MODULE — deal & financing process engine
+// -----------------------------------------------------------------------------
+// Append this block VERBATIM to backend/prisma/schema.prisma, at the end of the
+// file, between the marker comments. Do not interleave with existing models.
+//
+// Conventions:
+//   * Prisma model names prefixed `Pipeline`, tables mapped to `pipeline_*`.
+//     This is the extraction seam: the module can be lifted into its own
+//     service/database later without renaming anything.
+//   * Money is stored as Int in grosze (minor units). Int max = 21M PLN.
+//     Never Float. Never BigInt (breaks JSON serialization for no benefit here).
+//   * Every row carries (scopeType, scopeId) for multi-tenancy. Reuses the
+//     existing ScopeType enum and the Membership table for authorization.
+//   * Cross-module references to Listing / RentalVehicle / Lead / User /
+//     FinancingProduct are real foreign keys. That is the whole point of
+//     living in this database.
+// =============================================================================
+
+// ---------- Enums ----------
+
+enum ClientType {
+  UNKNOWN
+  B2C
+  B2B
+}
+
+/// Orthogonal to ClientType. The pair (clientType, financingType) replaces the
+/// 7-value ProductPath cartesian enum, so a new product is a config row, not a
+/// schema migration.
+enum FinancingType {
+  CASH
+  CREDIT
+  LEASING
+  RENTAL
+}
+
+/// Lifecycle, deliberately separate from PipelinePhase so that a lost deal
+/// retains the phase it died in. This is the funnel drop-off report.
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+  NURTURING
+}
+
+enum PipelinePhase {
+  INBOX
+  QUALIFICATION
+  SELECTION
+  COMPLETING
+  FINANCIAL_DECISION
+  CONTRACT
+  DELIVERY
+}
+
+enum PipelineApplicationState {
+  DRAFT
+  PRECHECK_SUBMITTED
+  PRECHECK_APPROVED
+  FULL_SUBMITTED
+  CONDITIONALLY_APPROVED
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum LeadSourceChannel {
+  TV
+  META
+  GOOGLE
+  ORGANIC
+  REFERRAL
+  DEALER
+  PARTNER
+  OTHER
+}
+
+enum PipelineTaxMode {
+  GROSS
+  NET
+}
+
+enum CommissionStatus {
+  EXPECTED
+  EARNED
+  INVOICED
+  PAID
+  REVERSED
+}
+
+enum PipelineDocumentStatus {
+  REQUIRED
+  REQUESTED
+  RECEIVED
+  VERIFIED
+  WAIVED
+}
+
+enum PipelineActorType {
+  USER
+  SYSTEM
+  AUTOMATION
+  THULIUM
+  CUSTOMER
+}
+
+// ---------- Customer ----------
+
+/// Deliberately a first-class entity, not a snapshot on the opportunity.
+/// One customer can hold several opportunities in parallel (two cars bought at
+/// once) or in sequence (repeat business). Without this table, "what happened
+/// with this client" cannot be answered across cases.
+/// NO PESEL, no ID document numbers, no scans. Thulium and the financiers stay
+/// the carriers of identity documents.
+model PipelineCustomer {
+  id                String              @id @default(cuid())
+  scopeType         ScopeType           @map("scope_type")
+  scopeId           String              @map("scope_id")
+  clientType        ClientType          @default(UNKNOWN) @map("client_type")
+  fullName          String              @map("full_name")
+  phone             String?
+  email             String?
+  companyName       String?             @map("company_name")
+  companyNip        String?             @map("company_nip")
+  thuliumCustomerId Int?                @map("thulium_customer_id")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  opportunities     PipelineOpportunity[]
+  events            PipelineEvent[]
+
+  @@index([scopeType, scopeId])
+  @@index([phone])
+  @@index([email])
+  @@index([thuliumCustomerId])
+  @@index([companyNip])
+  @@map("pipeline_customers")
+}
+
+// ---------- Opportunity ----------
+
+model PipelineOpportunity {
+  id                String              @id @default(cuid())
+  number            String              @unique
+  scopeType         ScopeType           @map("scope_type")
+  scopeId           String              @map("scope_id")
+  brand             String              @default("motolia")
+
+  customerId        String              @map("customer_id")
+  clientType        ClientType          @default(UNKNOWN) @map("client_type")
+  financingType     FinancingType?      @map("financing_type")
+
+  status            OpportunityStatus   @default(OPEN)
+  phase             PipelinePhase       @default(QUALIFICATION)
+  phaseEnteredAt    DateTime            @default(now()) @map("phase_entered_at")
+
+  /// Attribution. REQUIRED at creation, including for manually created cases —
+  /// this is the field that makes "how many contracts did TV produce" answerable.
+  leadSource        LeadSourceChannel   @map("lead_source")
+  leadSourceDetail  String?             @map("lead_source_detail")
+  firstTouchAt      DateTime            @default(now()) @map("first_touch_at")
+  firstContactAt    DateTime?           @map("first_contact_at")
+
+  /// Origin lead from the public site, when the case started there.
+  sourceLeadId      String?             @unique @map("source_lead_id")
+
+  thuliumTicketId   Int?                @map("thulium_ticket_id")
+
+  ownerUserId       String?             @map("owner_user_id")
+  priority          String              @default("NORMAL")
+  nextActionType    String?             @map("next_action_type")
+  nextActionNote    String?             @map("next_action_note")
+  nextActionDueAt   DateTime?           @map("next_action_due_at")
+
+  wonAt             DateTime?           @map("won_at")
+  lostAt            DateTime?           @map("lost_at")
+  lostReasonCode    String?             @map("lost_reason_code")
+  lostComment       String?             @map("lost_comment")
+
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  customer          PipelineCustomer    @relation(fields: [customerId], references: [id])
+  sourceLead        Lead?               @relation(fields: [sourceLeadId], references: [id], onDelete: SetNull)
+  owner             User?               @relation("PipelineOpportunityOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  lostReason        PipelineLossReason? @relation(fields: [lostReasonCode], references: [code])
+
+  vehicleCandidates PipelineVehicleCandidate[]
+  offers            PipelineOffer[]
+  applications      PipelineApplication[]
+  documents         PipelineDocument[]
+  tasks             PipelineTask[]
+  commissions       PipelineCommission[]
+  events            PipelineEvent[]
+
+  @@index([scopeType, scopeId, status, phase])
+  @@index([ownerUserId, status])
+  @@index([nextActionDueAt])
+  @@index([customerId])
+  @@index([leadSource, createdAt])
+  @@map("pipeline_opportunities")
+}
+
+// ---------- Vehicle candidates ----------
+
+/// A shortlist, not a copy of the catalogue. Real FKs keep price and
+/// availability current; priceSnapshot only records what was quoted to the
+/// client at the time, for dispute resolution.
+model PipelineVehicleCandidate {
+  id                 String               @id @default(cuid())
+  opportunityId      String               @map("opportunity_id")
+  listingId          String?              @map("listing_id")
+  rentalVehicleId    String?              @map("rental_vehicle_id")
+  /// Only for cars outside our stock (dealer order, customer-found).
+  customMake         String?              @map("custom_make")
+  customModel        String?              @map("custom_model")
+  customVersion      String?              @map("custom_version")
+  customYear         Int?                 @map("custom_year")
+  priceSnapshotGrosze Int?                @map("price_snapshot_grosze")
+  selectionStatus    String               @default("CANDIDATE")
+  createdAt          DateTime             @default(now()) @map("created_at")
+
+  opportunity        PipelineOpportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  listing            Listing?             @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  rentalVehicle      RentalVehicle?       @relation(fields: [rentalVehicleId], references: [id], onDelete: SetNull)
+  offers             PipelineOffer[]
+
+  @@index([opportunityId])
+  @@map("pipeline_vehicle_candidates")
+}
+
+// ---------- Offer ----------
+
+model PipelineOffer {
+  id                    String                    @id @default(cuid())
+  opportunityId         String                    @map("opportunity_id")
+  vehicleCandidateId    String?                   @map("vehicle_candidate_id")
+  financingProductId    String?                   @map("financing_product_id")
+  versionNumber         Int                       @default(1) @map("version_number")
+  financingType         FinancingType             @map("financing_type")
+  status                String                    @default("DRAFT")
+
+  priceGrosze           Int                       @map("price_grosze")
+  downPaymentGrosze     Int                       @default(0) @map("down_payment_grosze")
+  periodMonths          Int                       @map("period_months")
+  monthlyRateGrosze     Int                       @map("monthly_rate_grosze")
+  finalPaymentGrosze    Int?                      @map("final_payment_grosze")
+  annualMileageKm       Int?                      @map("annual_mileage_km")
+  taxMode               PipelineTaxMode           @default(GROSS) @map("tax_mode")
+  currency              String                    @default("PLN")
+
+  /// Computed from the commission basis, never typed by hand except as an
+  /// explicit override with a reason. See PipelineCommission.
+  commissionRatePct     Decimal?                  @db.Decimal(6, 3) @map("commission_rate_pct")
+  expectedCommissionGrosze Int?                   @map("expected_commission_grosze")
+
+  presentedAt           DateTime?                 @map("presented_at")
+  validUntil            DateTime?                 @map("valid_until")
+  createdAt             DateTime                  @default(now()) @map("created_at")
+  updatedAt             DateTime                  @updatedAt @map("updated_at")
+
+  opportunity           PipelineOpportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  vehicleCandidate      PipelineVehicleCandidate? @relation(fields: [vehicleCandidateId], references: [id], onDelete: SetNull)
+  financingProduct      FinancingProduct?         @relation(fields: [financingProductId], references: [id], onDelete: SetNull)
+  applications          PipelineApplication[]
+
+  @@unique([opportunityId, versionNumber])
+  @@index([opportunityId])
+  @@map("pipeline_offers")
+}
+
+// ---------- Financier ----------
+
+/// The entity the previous plan was missing. Enables the financier
+/// recommender: hard-criteria filter + ranking by our own historical
+/// conversion. At a 74.5% rejection rate this is the only feature in the
+/// module that raises revenue rather than tidying data.
+/// scopeId = PLATFORM rows act as defaults inheritable by tenants.
+model PipelineFinancier {
+  id                  String                @id @default(cuid())
+  scopeType           ScopeType             @map("scope_type")
+  scopeId             String                @map("scope_id")
+  code                String
+  name                String
+  isActive            Boolean               @default(true) @map("is_active")
+
+  supportedFinancing  FinancingType[]       @map("supported_financing")
+  supportedClientTypes ClientType[]         @map("supported_client_types")
+  minAmountGrosze     Int?                  @map("min_amount_grosze")
+  maxAmountGrosze     Int?                  @map("max_amount_grosze")
+  minPeriodMonths     Int?                  @map("min_period_months")
+  maxPeriodMonths     Int?                  @map("max_period_months")
+  maxVehicleAgeYears  Int?                  @map("max_vehicle_age_years")
+  minBusinessAgeMonths Int?                 @map("min_business_age_months")
+  /// Structured extra criteria, evaluated by the recommender. Documented in
+  /// docs/pipeline/EVENTS.md §Financier criteria.
+  eligibilityRules    Json?                 @map("eligibility_rules")
+  defaultCommissionPct Decimal?             @db.Decimal(6, 3) @map("default_commission_pct")
+  typicalDecisionDays Int?                  @map("typical_decision_days")
+  notes               String?
+
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  applications        PipelineApplication[]
+  documentRequirements PipelineDocumentRequirement[]
+
+  @@unique([scopeType, scopeId, code])
+  @@index([scopeType, scopeId, isActive])
+  @@map("pipeline_financiers")
+}
+
+// ---------- Financing application ----------
+
+/// Owned by the opportunity, NOT by the offer. A reroute after a rejection
+/// frequently changes financier AND vehicle; binding attempts to a single
+/// offer breaks the attempt sequence and loses the recovery story.
+model PipelineApplication {
+  id                  String                   @id @default(cuid())
+  opportunityId       String                   @map("opportunity_id")
+  offerId             String?                  @map("offer_id")
+  financierId         String                   @map("financier_id")
+  attemptSequence     Int                      @map("attempt_sequence")
+  externalReference   String?                  @map("external_reference")
+  state               PipelineApplicationState @default(DRAFT)
+
+  submittedFirstAt    DateTime?                @map("submitted_first_at")
+  submittedFullAt     DateTime?                @map("submitted_full_at")
+  decisionAt          DateTime?                @map("decision_at")
+
+  rejectionReasonCode String?                  @map("rejection_reason_code")
+  rejectionComment    String?                  @map("rejection_comment")
+  approvedConditions  Json?                    @map("approved_conditions")
+  /// Set when this attempt was created by rerouting a previous rejection.
+  rerouteFromId       String?                  @unique @map("reroute_from_id")
+
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+
+  opportunity         PipelineOpportunity      @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  offer               PipelineOffer?           @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  financier           PipelineFinancier        @relation(fields: [financierId], references: [id])
+  rerouteFrom         PipelineApplication?     @relation("Reroute", fields: [rerouteFromId], references: [id])
+  rerouteTo           PipelineApplication?     @relation("Reroute")
+  rejectionReason     PipelineLossReason?      @relation(fields: [rejectionReasonCode], references: [code])
+
+  @@unique([opportunityId, attemptSequence])
+  @@index([financierId, state])
+  @@index([opportunityId])
+  @@map("pipeline_applications")
+}
+
+// ---------- Dictionaries & workflow configuration ----------
+
+/// Closed dictionary. Free-text loss reasons were filled in 51% of the time in
+/// the spreadsheet and produced 7 uncategorizable comments.
+model PipelineLossReason {
+  code          String                @id
+  label         String
+  category      String                // "FINANCIER" | "CUSTOMER" | "QUALIFICATION"
+  requiresComment Boolean             @default(false) @map("requires_comment")
+  sortOrder     Int                   @default(0) @map("sort_order")
+  isActive      Boolean               @default(true) @map("is_active")
+
+  opportunities PipelineOpportunity[]
+  applications  PipelineApplication[]
+
+  @@map("pipeline_loss_reasons")
+}
+
+/// Stage gating as data, not as seven hand-written definition files.
+/// A new product path is rows here, not a code change.
+model PipelinePhaseRequirement {
+  id            String          @id @default(cuid())
+  scopeType     ScopeType       @map("scope_type")
+  scopeId       String          @map("scope_id")
+  clientType    ClientType?     @map("client_type")
+  financingType FinancingType?  @map("financing_type")
+  targetPhase   PipelinePhase   @map("target_phase")
+  /// Dot path evaluated against the opportunity aggregate,
+  /// e.g. "offer.monthlyRateGrosze", "customer.companyNip".
+  fieldPath     String          @map("field_path")
+  label         String
+  /// HARD blocks the transition (HTTP 422). SOFT only shows on the
+  /// completeness bar. Default SOFT — hard gates only where the data is
+  /// needed for reporting, or advisors will type garbage to move the card.
+  enforcement   String          @default("SOFT")
+  sortOrder     Int             @default(0) @map("sort_order")
+  isActive      Boolean         @default(true) @map("is_active")
+
+  @@index([scopeType, scopeId, targetPhase])
+  @@map("pipeline_phase_requirements")
+}
+
+model PipelineDocumentRequirement {
+  id            String             @id @default(cuid())
+  scopeType     ScopeType          @map("scope_type")
+  scopeId       String             @map("scope_id")
+  code          String
+  label         String
+  clientType    ClientType?        @map("client_type")
+  financingType FinancingType?     @map("financing_type")
+  financierId   String?            @map("financier_id")
+  isMandatory   Boolean            @default(true) @map("is_mandatory")
+  sortOrder     Int                @default(0) @map("sort_order")
+
+  financier     PipelineFinancier? @relation(fields: [financierId], references: [id], onDelete: Cascade)
+  documents     PipelineDocument[]
+
+  @@unique([scopeType, scopeId, code, clientType, financingType, financierId])
+  @@map("pipeline_document_requirements")
+}
+
+/// Tracks the STATUS of a document, never the file and never its content.
+/// "Missing customer documents" is a top controllable loss reason; this turns
+/// it into a task list with dates while storing zero personal data.
+model PipelineDocument {
+  id            String                      @id @default(cuid())
+  opportunityId String                      @map("opportunity_id")
+  requirementId String?                     @map("requirement_id")
+  code          String
+  label         String
+  status        PipelineDocumentStatus      @default(REQUIRED)
+  requestedAt   DateTime?                   @map("requested_at")
+  receivedAt    DateTime?                   @map("received_at")
+  verifiedAt    DateTime?                   @map("verified_at")
+  note          String?
+
+  opportunity   PipelineOpportunity         @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  requirement   PipelineDocumentRequirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+
+  @@unique([opportunityId, code])
+  @@index([opportunityId, status])
+  @@map("pipeline_documents")
+}
+
+// ---------- Tasks & commission ----------
+
+model PipelineTask {
+  id             String              @id @default(cuid())
+  opportunityId  String              @map("opportunity_id")
+  title          String
+  kind           String              @default("MANUAL")
+  dueAt          DateTime?           @map("due_at")
+  assignedUserId String?             @map("assigned_user_id")
+  completedAt    DateTime?           @map("completed_at")
+  completedBy    String?             @map("completed_by")
+  createdBy      String?             @map("created_by")
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  opportunity    PipelineOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  assignee       User?               @relation("PipelineTaskAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  @@index([assignedUserId, completedAt])
+  @@index([opportunityId])
+  @@index([dueAt])
+  @@map("pipeline_tasks")
+}
+
+/// Amount is DERIVED from basis × rate. Manual entry is an override that must
+/// carry a reason — this is what stops the spreadsheet pathology where 36% of
+/// booked commission sat on deals that had no contract.
+model PipelineCommission {
+  id               String              @id @default(cuid())
+  opportunityId    String              @map("opportunity_id")
+  applicationId    String?             @map("application_id")
+  status           CommissionStatus    @default(EXPECTED)
+  basisGrosze      Int                 @map("basis_grosze")
+  ratePct          Decimal             @db.Decimal(6, 3) @map("rate_pct")
+  amountGrosze     Int                 @map("amount_grosze")
+  isManualOverride Boolean             @default(false) @map("is_manual_override")
+  overrideReason   String?             @map("override_reason")
+  invoiceNumber    String?             @map("invoice_number")
+  earnedAt         DateTime?           @map("earned_at")
+  paidAt           DateTime?           @map("paid_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  opportunity      PipelineOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
+  @@index([status])
+  @@map("pipeline_commissions")
+}
+
+// ---------- Event log (append-only) & automation ----------
+
+/// The case history. Append-only: a Postgres trigger rejects UPDATE (except
+/// dispatchedAt) and DELETE — see migration `pipeline_events_immutable`.
+///
+/// This is NOT event sourcing. State tables above remain the read model and the
+/// source of truth; the log is an audit trail plus an automation outbox, always
+/// written INSIDE the same transaction as the state change it describes.
+/// Rule: no state write without a recordEvent() call in the same transaction.
+///
+/// opportunityId and customerId are denormalized roll-up keys so that both
+/// "everything that happened on this case" and "everything that happened with
+/// this client, across cases" are one indexed query.
+model PipelineEvent {
+  id               String               @id @default(cuid())
+  scopeType        ScopeType            @map("scope_type")
+  scopeId          String               @map("scope_id")
+
+  opportunityId    String?              @map("opportunity_id")
+  customerId       String?              @map("customer_id")
+  aggregateType    String               @map("aggregate_type")
+  aggregateId      String               @map("aggregate_id")
+
+  type             String
+  actorType        PipelineActorType    @map("actor_type")
+  actorUserId      String?              @map("actor_user_id")
+  actorLabel       String?              @map("actor_label")
+  /// { before?, after?, ... } — shape per event type, see docs/pipeline/EVENTS.md
+  payload          Json
+
+  occurredAt       DateTime             @default(now()) @map("occurred_at")
+  recordedAt       DateTime             @default(now()) @map("recorded_at")
+
+  correlationId    String?              @map("correlation_id")
+  causationEventId String?              @map("causation_event_id")
+  /// Set for events ingested from outside (Thulium replays, webhook retries).
+  idempotencyKey   String?              @unique @map("idempotency_key")
+  /// Outbox marker. NULL = not yet seen by the automation worker. The only
+  /// column the immutability trigger permits updating.
+  dispatchedAt     DateTime?            @map("dispatched_at")
+
+  opportunity      PipelineOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  customer         PipelineCustomer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([opportunityId, occurredAt])
+  @@index([customerId, occurredAt])
+  @@index([aggregateType, aggregateId, occurredAt])
+  @@index([dispatchedAt])
+  @@index([scopeType, scopeId, type, occurredAt])
+  @@map("pipeline_events")
+}
+
+model PipelineAutomationRule {
+  id            String    @id @default(cuid())
+  scopeType     ScopeType @map("scope_type")
+  scopeId       String    @map("scope_id")
+  code          String
+  name          String
+  isActive      Boolean   @default(true) @map("is_active")
+  /// Event type this rule subscribes to, or "SCHEDULE" for time-based rules.
+  triggerType   String    @map("trigger_type")
+  /// JSON predicate over the event payload / opportunity aggregate.
+  condition     Json?
+  /// Ordered list of actions: CREATE_TASK | SET_NEXT_ACTION | NOTIFY |
+  /// SET_COMMISSION_STATUS | EMIT_ANALYTICS | SEND_SMS
+  actions       Json
+  lastRunAt     DateTime? @map("last_run_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([scopeType, scopeId, code])
+  @@index([triggerType, isActive])
+  @@map("pipeline_automation_rules")
+}

@@ -46,4 +46,4 @@ backend/scratch.*
 backend/test_api.*
 backend/scripts/compile-cookies.ts
 patch_nginx.sh
-IDEA.md
+IDEA.md.claude/settings.local.json
