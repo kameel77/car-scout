@@ -41,7 +41,9 @@ reason this module lives in this database. Nothing outside the module may hold a
 ## Thulium return webhook
 
 `POST /api/pipeline/integrations/thulium/webhook` accepts authenticated Thulium ticket/customer
-identifiers. Configure `THULIUM_WEBHOOK_SECRET` and send it as a Bearer token. The route resolves an
+identifiers. Configure `THULIUM_WEBHOOK_USER` / `THULIUM_WEBHOOK_PASSWORD` and enter them as the Login
+and Hasło fields in the Thulium webhook form (Administracja → Zaawansowane → Webhooks), which sends
+them as Basic Auth. The route resolves an
 explicit opportunity ID, or exactly one open opportunity by normalized customer phone. Zero or
 ambiguous phone matches return `204` without writing; identifier conflicts return `409`.
 
