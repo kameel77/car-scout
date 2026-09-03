@@ -227,6 +227,9 @@ export type PipelineEventPayloadMap = {
     thuliumTicketId: number;
     thuliumCustomerId?: number | null;
   };
+  THULIUM_CUSTOMER_LINKED: {
+    thuliumCustomerId: number;
+  };
   NOTE_ADDED: {
     content: string;
   };

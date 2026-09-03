@@ -37,3 +37,15 @@ migration in M0 generates the client types. M0 creates these files.
 Foreign keys into `Listing`, `RentalVehicle`, `Lead`, `User`, `FinancingProduct` are allowed and are the
 reason this module lives in this database. Nothing outside the module may hold a foreign key **into** a
 `pipeline_*` table. That asymmetry is the extraction seam.
+
+## Thulium return webhook
+
+`POST /api/pipeline/integrations/thulium/webhook` accepts authenticated Thulium ticket/customer
+identifiers. Configure `THULIUM_WEBHOOK_SECRET` and send it as a Bearer token. The route resolves an
+explicit opportunity ID, or exactly one open opportunity by normalized customer phone. Zero or
+ambiguous phone matches return `204` without writing; identifier conflicts return `409`.
+
+Phone fallback deliberately considers only opportunities with `status = OPEN`; callbacks for won,
+lost, or archived cases need an explicit opportunity ID. The webhook secret is platform-wide: its
+holder can link an opportunity in any tenant, while scope is always derived from the resolved record
+and is never accepted from the callback payload.

@@ -51,6 +51,7 @@ import {
   Users,
 } from 'lucide-react';
 import { addDays } from 'date-fns';
+import { getDeepLinkedOpportunityId, getUrlWithoutOpportunityId } from './utils/deepLink';
 
 export default function PipelinePage() {
   const { user } = useAuth();
@@ -87,7 +88,9 @@ export default function PipelinePage() {
 
   // Modal states
   const [selectedLeadForQualify, setSelectedLeadForQualify] = useState<InboxLeadSummary | null>(null);
-  const [selectedOppForDetails, setSelectedOppForDetails] = useState<PipelineOpportunitySummary | null>(null);
+  const [selectedOppIdForDetails, setSelectedOppIdForDetails] = useState<string | null>(() =>
+    getDeepLinkedOpportunityId(window.location.search)
+  );
   const [selectedOppForContact, setSelectedOppForContact] = useState<PipelineOpportunitySummary | null>(null);
   const [selectedOppForNextAction, setSelectedOppForNextAction] = useState<PipelineOpportunitySummary | null>(null);
   const [selectedOppForTransition, setSelectedOppForTransition] = useState<PipelineOpportunitySummary | null>(null);
@@ -96,6 +99,15 @@ export default function PipelinePage() {
   const [stageGateError, setStageGateError] = useState<StageGateViolationErrorData | null>(null);
 
   const users = dictQuery.data?.users || [];
+
+  const handleCloseOpportunityDetails = () => {
+    setSelectedOppIdForDetails(null);
+    window.history.replaceState(
+      null,
+      '',
+      getUrlWithoutOpportunityId(window.location.pathname, window.location.search, window.location.hash)
+    );
+  };
 
   // Quick actions
   const handleQuickSnooze = async (opp: PipelineOpportunitySummary, days: number) => {
@@ -326,7 +338,7 @@ export default function PipelinePage() {
         <QueueView
           queue={queueQuery.data}
           isLoading={queueQuery.isLoading}
-          onOpenDetails={(opp) => setSelectedOppForDetails(opp)}
+          onOpenDetails={(opp) => setSelectedOppIdForDetails(opp.id)}
           onOpenLogContact={(opp) => setSelectedOppForContact(opp)}
           onOpenSetNextAction={(opp) => setSelectedOppForNextAction(opp)}
           onOpenTransition={(opp) => setSelectedOppForTransition(opp)}
@@ -348,7 +360,7 @@ export default function PipelinePage() {
           opportunities={oppsQuery.data?.items}
           inboxLeads={inboxQuery.data?.leads}
           isLoading={oppsQuery.isLoading}
-          onCardClick={(opp) => setSelectedOppForDetails(opp)}
+          onCardClick={(opp) => setSelectedOppIdForDetails(opp.id)}
           onTransitionPhase={handleKanbanTransition}
           onQualifyLead={(lead) => setSelectedLeadForQualify(lead)}
         />
@@ -394,22 +406,22 @@ export default function PipelinePage() {
       />
 
       <OpportunityDetailModal
-        opportunityId={selectedOppForDetails?.id ?? null}
+        opportunityId={selectedOppIdForDetails}
         users={users}
         dictionaries={dictQuery.data}
-        isOpen={Boolean(selectedOppForDetails)}
-        onClose={() => setSelectedOppForDetails(null)}
-        onOpenLogContact={() => {
-          setSelectedOppForContact(selectedOppForDetails);
+        isOpen={Boolean(selectedOppIdForDetails)}
+        onClose={handleCloseOpportunityDetails}
+        onOpenLogContact={(opp) => {
+          setSelectedOppForContact(opp);
         }}
-        onOpenSetNextAction={() => {
-          setSelectedOppForNextAction(selectedOppForDetails);
+        onOpenSetNextAction={(opp) => {
+          setSelectedOppForNextAction(opp);
         }}
-        onOpenTransition={() => {
-          setSelectedOppForTransition(selectedOppForDetails);
+        onOpenTransition={(opp) => {
+          setSelectedOppForTransition(opp);
         }}
-        onOpenClose={() => {
-          setSelectedOppForClose(selectedOppForDetails);
+        onOpenClose={(opp) => {
+          setSelectedOppForClose(opp);
         }}
       />
 

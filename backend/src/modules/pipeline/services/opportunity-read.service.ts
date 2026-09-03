@@ -82,6 +82,7 @@ export async function listOpportunities(
             companyName: true,
             companyNip: true,
             clientType: true,
+            thuliumCustomerId: true,
           },
         },
         owner: {

@@ -26,6 +26,10 @@ export function normalizePhone(phone: string | null | undefined): string | null 
   if (cleaned.startsWith('00') && cleaned.length > 9) {
     return `+${cleaned.slice(2)}`;
   }
+  // Polish country code without a plus sign (e.g. 48123123123).
+  if (/^48\d{9}$/.test(cleaned)) {
+    return `+${cleaned}`;
+  }
   // Polish 9-digit local number
   if (/^\d{9}$/.test(cleaned)) {
     return `+48${cleaned}`;

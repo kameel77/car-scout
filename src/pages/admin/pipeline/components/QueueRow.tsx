@@ -72,6 +72,11 @@ export function QueueRow({
               source={opportunity.leadSource}
               detail={opportunity.leadSourceDetail}
             />
+            {opportunity.thuliumTicketId ? (
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 border border-amber-200">
+                Thulium #{opportunity.thuliumTicketId}
+              </span>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">

@@ -61,6 +61,7 @@ export type CustomerSummary = {
   companyName: string | null;
   companyNip: string | null;
   clientType: ClientType;
+  thuliumCustomerId: number | null;
 };
 
 export type UserSummary = {
@@ -195,6 +196,7 @@ export type PipelineOpportunitySummary = {
   nextActionType: string | null;
   nextActionNote: string | null;
   nextActionDueAt: string | null;
+  thuliumTicketId: number | null;
   contractSignedAt?: string | null;
   contractedApplicationId?: string | null;
   wonAt: string | null;

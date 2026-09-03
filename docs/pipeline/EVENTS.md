@@ -98,6 +98,7 @@ from day one, even before the recommender is smart.
 | `CALL_LOGGED` | OPPORTUNITY | `{ thuliumConnectionId, direction, durationSeconds, agentName?, recordingUrl?, topic? }` |
 | `EMAIL_LOGGED` | OPPORTUNITY | `{ thuliumTicketId, direction, subject? }` |
 | `TICKET_LINKED` | OPPORTUNITY | `{ thuliumTicketId, thuliumCustomerId }` |
+| `THULIUM_CUSTOMER_LINKED` | CUSTOMER | `{ thuliumCustomerId }` |
 | `NOTE_ADDED` | OPPORTUNITY | `{ content }` |
 
 These arrive from `crm-connector`, with `actorType = THULIUM` and an `idempotencyKey`. They require no

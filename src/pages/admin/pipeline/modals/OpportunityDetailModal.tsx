@@ -29,6 +29,7 @@ import {
   FinancingType,
   LeadSourceChannel,
   LEAD_SOURCES,
+  OpportunityDetail,
 } from '../types';
 import { VehicleCandidatesSection } from '../components/VehicleCandidatesSection';
 import { OfferEditorSection } from '../components/OfferEditorSection';
@@ -71,12 +72,12 @@ export function OpportunityDetailModal({
   dictionaries?: PipelineDictionaries;
   isOpen: boolean;
   onClose: () => void;
-  onOpenLogContact?: () => void;
-  onOpenSetNextAction?: () => void;
-  onOpenTransition?: () => void;
-  onOpenClose?: () => void;
+  onOpenLogContact?: (opportunity: OpportunityDetail) => void;
+  onOpenSetNextAction?: (opportunity: OpportunityDetail) => void;
+  onOpenTransition?: (opportunity: OpportunityDetail) => void;
+  onOpenClose?: (opportunity: OpportunityDetail) => void;
 }) {
-  const { data: opp, isLoading, refetch } = useOpportunityDetails(opportunityId);
+  const { data: opp, isLoading, isError, error, refetch } = useOpportunityDetails(opportunityId);
   const { patchOpportunity } = usePipelineMutations();
   const { toast } = useToast();
 
@@ -166,12 +167,27 @@ export function OpportunityDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        {isLoading || !opp ? (
+        {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
+        ) : isError || !opp ? (
+          <div className="flex flex-col items-center gap-3 p-12 text-center" role="alert">
+            <DialogHeader>
+              <DialogTitle>Nie udało się otworzyć sprawy</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : 'Sprawa nie jest już dostępna w aktywnym kontekście.'}
+            </p>
+            <Button variant="outline" onClick={onClose}>
+              Zamknij
+            </Button>
+          </div>
         ) : (
           <>
+            <DialogHeader className="sr-only">
+              <DialogTitle>{opp.number}</DialogTitle>
+            </DialogHeader>
             {/* Header */}
             <div className="p-6 border-b bg-muted/20">
               <div className="flex items-start justify-between gap-4">
@@ -216,6 +232,30 @@ export function OpportunityDetailModal({
                       {opp.customer.companyNip && <span>(NIP: {opp.customer.companyNip})</span>}
                     </div>
                   )}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3 text-xs">
+                    {opp.thuliumTicketId ? (
+                      <div className="rounded-lg border bg-background px-3 py-2">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Thulium ticket</div>
+                        <div className="font-mono font-semibold text-foreground">#{opp.thuliumTicketId}</div>
+                      </div>
+                    ) : null}
+                    {opp.customer?.thuliumCustomerId ? (
+                      <div className="rounded-lg border bg-background px-3 py-2">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Thulium customer</div>
+                        <div className="font-mono font-semibold text-foreground">#{opp.customer.thuliumCustomerId}</div>
+                      </div>
+                    ) : null}
+                    {opp.sourceLead ? (
+                      <div className="rounded-lg border bg-background px-3 py-2 sm:col-span-1">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Source lead</div>
+                        <div className="font-mono font-semibold text-foreground">{opp.sourceLead.id.slice(0, 8)}…</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {opp.sourceLead.trafficSource || 'formularz'} ·{' '}
+                          {format(new Date(opp.sourceLead.createdAt), 'd MMM yyyy, HH:mm', { locale: pl })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="flex flex-col items-end gap-1.5">
@@ -251,7 +291,7 @@ export function OpportunityDetailModal({
                     size="sm"
                     variant="outline"
                     className="h-8 text-xs gap-1.5"
-                    onClick={onOpenLogContact}
+                    onClick={() => onOpenLogContact?.(opp)}
                   >
                     <PhoneCall className="w-3.5 h-3.5 text-primary" />
                     Zaloguj kontakt
@@ -260,7 +300,7 @@ export function OpportunityDetailModal({
                     size="sm"
                     variant="outline"
                     className="h-8 text-xs gap-1.5"
-                    onClick={onOpenSetNextAction}
+                    onClick={() => onOpenSetNextAction?.(opp)}
                   >
                     <Clock className="w-3.5 h-3.5" />
                     Zmień termin
@@ -269,7 +309,7 @@ export function OpportunityDetailModal({
                     size="sm"
                     variant="default"
                     className="h-8 text-xs gap-1.5"
-                    onClick={onOpenTransition}
+                    onClick={() => onOpenTransition?.(opp)}
                   >
                     <ArrowRight className="w-3.5 h-3.5" />
                     Przesuń etap
@@ -278,7 +318,7 @@ export function OpportunityDetailModal({
                     size="sm"
                     variant="ghost"
                     className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={onOpenClose}
+                    onClick={() => onOpenClose?.(opp)}
                   >
                     Zamknij...
                   </Button>
