@@ -17,39 +17,33 @@ describe('Thulium pipeline webhook route', () => {
       scopeType: 'DEALER',
       scopeId: 'dealer_123',
       thuliumTicketId: null,
-      customer: {
-        id: 'customer_456',
-        phone: '+48123123123',
-        thuliumCustomerId: null,
-      },
-    };
-    const event = {
-      id: 'event_789',
-      type: 'TICKET_LINKED',
-      aggregateType: 'OPPORTUNITY',
-      aggregateId: 'opp_982',
-      payload: { thuliumTicketId: 12345, thuliumCustomerId: 67890 },
+      customerId: 'customer_456',
+      customer: { id: 'customer_456' },
     };
     tx = {
       pipelineOpportunity: {
-        findFirst: vi.fn().mockResolvedValue(opportunity),
         findMany: vi.fn().mockResolvedValue([opportunity]),
+        findUnique: vi.fn().mockResolvedValue(opportunity),
         findUniqueOrThrow: vi.fn().mockResolvedValue({ thuliumTicketId: 12345 }),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       pipelineCustomer: {
-        findUniqueOrThrow: vi.fn().mockResolvedValue({ thuliumCustomerId: 67890 }),
-        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findFirst: vi.fn().mockResolvedValue({ id: 'customer_456' }),
       },
       pipelineEvent: {
+        findFirst: vi.fn().mockResolvedValue({ opportunityId: 'opp_982', customerId: 'customer_456' }),
         createMany: vi.fn().mockResolvedValue({ count: 1 }),
-        findUniqueOrThrow: vi.fn().mockImplementation(({ where }: any) =>
-          Promise.resolve(where.id ? event : { id: event.id })
-        ),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 'event_789' }),
+      },
+      pipelineThuliumDeadLetter: {
+        create: vi.fn().mockResolvedValue({ id: 'dl_1' }),
       },
     };
     app = Fastify({ logger: false });
-    app.decorate('prisma', { $transaction: (callback: (transaction: typeof tx) => unknown) => callback(tx) } as any);
+    app.decorate('prisma', {
+      $transaction: (callback: (transaction: typeof tx) => unknown) => callback(tx),
+      pipelineThuliumDeadLetter: { create: vi.fn().mockResolvedValue({ id: 'dl_invalid' }) },
+    } as any);
     await app.register(rateLimit, { global: false });
     await registerThuliumWebhookRoutes(app);
   });
@@ -73,118 +67,131 @@ describe('Thulium pipeline webhook route', () => {
     });
   }
 
-  it('links by phone when Thulium does not know the opportunity ID', async () => {
+  it('links AGENT_RINGING by normalized source_number', async () => {
     const response = await inject({
-      event_id: 'event-1',
-      event_type: 'TICKET_CREATED',
-      customer_phone: '48 123 123 123',
-      thulium_ticket_id: 12345,
-      thulium_customer_id: 67890,
+      action: 'AGENT_RINGING',
+      connection_id: '1416225570.341',
+      queue_id: 155,
+      agent_login: 'jkowalski',
+      source_number: '523993855',
+      destination_number: '162',
+      date: '2016-04-20 09:46:24',
     });
 
     expect(response.statusCode).toBe(202);
     expect(tx.pipelineOpportunity.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: 'OPEN', customer: { phone: '+48123123123' } },
+        where: { status: 'OPEN', customer: { phone: '+48523993855' } },
         take: 2,
       })
     );
     expect(response.json()).toEqual({ accepted: true, eventId: 'event_789' });
   });
 
-  it('accepts an explicit opportunity without a phone', async () => {
+  it('links RECORDING_READY by connection_id', async () => {
     const response = await inject({
-      event_id: 'event-2',
-      event_type: 'TICKET_CREATED',
-      opportunity_id: 'opp_982',
-      thulium_ticket_id: 12345,
-      thulium_customer_id: 67890,
+      action: 'RECORDING_READY',
+      connection_id: '1416225570.341',
+      filename: 'SOME-QUEUE/2014-11-17/2014-11-17_125932_1416225570.341.wav',
+      date: '2016-04-20 09:46:24',
     });
 
     expect(response.statusCode).toBe(202);
-  });
-
-  it('uses CUSTOMER_UPDATED semantics even when the payload also contains a ticket ID', async () => {
-    tx.pipelineEvent.findUniqueOrThrow.mockImplementation(({ where }: any) =>
-      Promise.resolve(
-        where.id
-          ? {
-              id: 'event_customer',
-              type: 'THULIUM_CUSTOMER_LINKED',
-              aggregateType: 'CUSTOMER',
-              aggregateId: 'customer_456',
-              payload: { thuliumCustomerId: 67890 },
-            }
-          : { id: 'event_customer' }
-      )
-    );
-
-    const response = await inject({
-      event_id: 'event-customer-update',
-      event_type: 'CUSTOMER_UPDATED',
-      opportunity_id: 'opp_982',
-      thulium_ticket_id: 12345,
-      thulium_customer_id: 67890,
-    });
-
-    expect(response.statusCode).toBe(202);
-    expect(tx.pipelineOpportunity.updateMany).not.toHaveBeenCalled();
-    expect(tx.pipelineCustomer.updateMany).toHaveBeenCalled();
-    expect(tx.pipelineEvent.createMany).toHaveBeenCalledWith(
+    expect(tx.pipelineEvent.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: [expect.objectContaining({ type: 'THULIUM_CUSTOMER_LINKED' })],
+        where: {
+          type: 'CALL_LOGGED',
+          payload: { path: ['thuliumConnectionId'], equals: '1416225570.341' },
+        },
       })
     );
+    expect(response.json()).toEqual({ accepted: true, eventId: 'event_789' });
   });
 
-  it('returns 404 when an explicit opportunity phone guard does not match', async () => {
+  it('links TICKET_CREATED by thulium customer_id', async () => {
     const response = await inject({
-      event_id: 'event-phone-mismatch',
-      event_type: 'TICKET_CREATED',
-      opportunity_id: 'opp_982',
-      customer_phone: '501 222 333',
-      thulium_ticket_id: 12345,
+      action: 'TICKET_CREATED',
+      ticket_id: 12,
+      agent_login: 'jkowalski',
+      direction: 'in_behalf_of',
+      date: '2016-04-20 09:46:24',
+      customer_id: 154,
     });
 
-    expect(response.statusCode).toBe(404);
-    expect(response.json()).toEqual({ error: 'Nie znaleziono sprawy opp_982 dla zdarzenia Thulium' });
+    expect(response.statusCode).toBe(202);
+    expect(response.json()).toEqual({ accepted: true, eventId: 'event_789' });
   });
 
-  it('returns 409 instead of overwriting an existing Thulium identifier', async () => {
-    tx.pipelineOpportunity.findFirst.mockResolvedValueOnce({
-      id: 'opp_982',
-      scopeType: 'DEALER',
-      scopeId: 'dealer_123',
-      thuliumTicketId: 999,
-      customer: {
-        id: 'customer_456',
-        phone: '+48123123123',
-        thuliumCustomerId: null,
+  it('accepts CUSTOMER_CREATED as unresolved (no writes)', async () => {
+    const response = await inject({
+      action: 'CUSTOMER_CREATED',
+      customer_id: 154,
+      company_id: 5,
+      date: '2016-04-20 09:46:24',
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it('accepts CUSTOMER_UPDATED as unresolved (no writes)', async () => {
+    const response = await inject({
+      action: 'CUSTOMER_UPDATED',
+      customer_id: 154,
+      company_id: 5,
+      date: '2016-04-20 09:46:24',
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 instead of overwriting an existing Thulium ticket link', async () => {
+    tx.pipelineOpportunity.findMany.mockResolvedValue([
+      {
+        id: 'opp_982',
+        scopeType: 'DEALER',
+        scopeId: 'dealer_123',
+        thuliumTicketId: 999,
+        customerId: 'customer_456',
+        customer: { id: 'customer_456' },
       },
-    });
+    ]);
 
     const response = await inject({
-      event_id: 'event-conflict',
-      event_type: 'TICKET_CREATED',
-      opportunity_id: 'opp_982',
-      thulium_ticket_id: 12345,
+      action: 'TICKET_CREATED',
+      ticket_id: 12,
+      customer_id: 154,
     });
 
     expect(response.statusCode).toBe(409);
     expect(response.json()).toEqual({ error: 'Sprawa jest już połączona z innym ticketem Thulium' });
   });
 
-  it('returns 204 without writes when phone resolution is ambiguous', async () => {
+  it('returns 204 without writes when the phone match is ambiguous', async () => {
     tx.pipelineOpportunity.findMany.mockResolvedValue([
-      await tx.pipelineOpportunity.findFirst(),
-      { ...(await tx.pipelineOpportunity.findFirst()), id: 'opp_983' },
+      {
+        id: 'opp_982',
+        scopeType: 'DEALER',
+        scopeId: 'dealer_123',
+        thuliumTicketId: null,
+        customerId: 'customer_456',
+        customer: { id: 'customer_456' },
+      },
+      {
+        id: 'opp_983',
+        scopeType: 'DEALER',
+        scopeId: 'dealer_123',
+        thuliumTicketId: null,
+        customerId: 'customer_457',
+        customer: { id: 'customer_457' },
+      },
     ]);
 
     const response = await inject({
-      event_id: 'event-3',
-      event_type: 'TICKET_CREATED',
-      customer_phone: '123123123',
-      thulium_ticket_id: 12345,
+      action: 'AGENT_RINGING',
+      connection_id: 'conn-ambiguous',
+      source_number: '523993855',
     });
 
     expect(response.statusCode).toBe(204);
@@ -192,15 +199,46 @@ describe('Thulium pipeline webhook route', () => {
     expect(tx.pipelineOpportunity.updateMany).not.toHaveBeenCalled();
   });
 
+  it('records a dead letter with the phone suffix for unmatched AGENT_RINGING and still returns 204', async () => {
+    tx.pipelineOpportunity.findMany.mockResolvedValue([]);
+
+    const response = await inject({
+      action: 'AGENT_RINGING',
+      connection_id: 'conn-unmatched',
+      source_number: '523993855',
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(tx.pipelineThuliumDeadLetter.create).toHaveBeenCalledWith({
+      data: {
+        scopeType: 'PLATFORM',
+        scopeId: 'PLATFORM',
+        action: 'AGENT_RINGING',
+        reason: 'no_open_opportunity',
+        payload: expect.objectContaining({ action: 'AGENT_RINGING', connection_id: 'conn-unmatched' }),
+        phoneSuffix: '3855',
+      },
+    });
+  });
+
+  it('does not record a dead letter for CUSTOMER_UPDATED', async () => {
+    const response = await inject({
+      action: 'CUSTOMER_UPDATED',
+      customer_id: 154,
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(tx.pipelineThuliumDeadLetter.create).not.toHaveBeenCalled();
+  });
+
   it('rejects an unauthenticated request before any database lookup', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/pipeline/integrations/thulium/webhook',
       payload: {
-        event_id: 'event-4',
-        event_type: 'TICKET_CREATED',
-        customer_phone: '123123123',
-        thulium_ticket_id: 12345,
+        action: 'AGENT_RINGING',
+        connection_id: 'conn-1',
+        source_number: '523993855',
       },
     });
 
@@ -216,10 +254,9 @@ describe('Thulium pipeline webhook route', () => {
         authorization: 'Basic ' + Buffer.from('motolia-webhook:wrong-password').toString('base64'),
       },
       payload: {
-        event_id: 'event-wrong-password',
-        event_type: 'TICKET_CREATED',
-        customer_phone: '123123123',
-        thulium_ticket_id: 12345,
+        action: 'AGENT_RINGING',
+        connection_id: 'conn-1',
+        source_number: '523993855',
       },
     });
 
@@ -232,20 +269,65 @@ describe('Thulium pipeline webhook route', () => {
     delete process.env.THULIUM_WEBHOOK_PASSWORD;
 
     const response = await inject({
-      event_id: 'event-not-configured',
-      event_type: 'TICKET_CREATED',
-      customer_phone: '123123123',
-      thulium_ticket_id: 12345,
+      action: 'AGENT_RINGING',
+      connection_id: 'conn-1',
+      source_number: '523993855',
     });
 
     expect(response.statusCode).toBe(503);
   });
 
-  it('rejects a payload without an opportunity selector', async () => {
+  it('rejects an unknown action value', async () => {
     const response = await inject({
-      event_id: 'event-5',
-      event_type: 'TICKET_CREATED',
-      thulium_ticket_id: 12345,
+      action: 'SOMETHING_ELSE',
+      connection_id: 'conn-1',
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('records a dead letter with reason invalid_payload for an unknown action value', async () => {
+    const response = await inject({
+      action: 'SOMETHING_ELSE',
+      connection_id: 'conn-1',
+    });
+
+    expect(response.statusCode).toBe(400);
+    const prisma = app.prisma as any;
+    expect(prisma.pipelineThuliumDeadLetter.create).toHaveBeenCalledWith({
+      data: {
+        scopeType: 'PLATFORM',
+        scopeId: 'PLATFORM',
+        action: 'SOMETHING_ELSE',
+        reason: 'invalid_payload',
+        payload: { action: 'SOMETHING_ELSE', connection_id: 'conn-1' },
+        phoneSuffix: null,
+      },
+    });
+  });
+
+  it('rejects AGENT_RINGING missing source_number', async () => {
+    const response = await inject({
+      action: 'AGENT_RINGING',
+      connection_id: 'conn-1',
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects RECORDING_READY missing filename', async () => {
+    const response = await inject({
+      action: 'RECORDING_READY',
+      connection_id: 'conn-1',
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects TICKET_CREATED missing customer_id', async () => {
+    const response = await inject({
+      action: 'TICKET_CREATED',
+      ticket_id: 12,
     });
 
     expect(response.statusCode).toBe(400);
@@ -255,11 +337,9 @@ describe('Thulium pipeline webhook route', () => {
     let response;
     for (let index = 0; index < 61; index += 1) {
       response = await inject({
-        event_id: `rate-${index}`,
-        event_type: 'TICKET_CREATED',
-        opportunity_id: 'opp_982',
-        thulium_ticket_id: 12345,
-        thulium_customer_id: 67890,
+        action: 'TICKET_CREATED',
+        ticket_id: 12,
+        customer_id: 154,
       });
     }
 

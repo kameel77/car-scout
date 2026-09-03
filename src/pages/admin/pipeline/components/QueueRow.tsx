@@ -30,6 +30,7 @@ export function QueueRow({
   onOpenTransition,
   onOpenClose,
   onQuickSnooze,
+  waitingNote,
 }: {
   opportunity: PipelineOpportunitySummary;
   onOpenDetails: (opp: PipelineOpportunitySummary) => void;
@@ -38,6 +39,7 @@ export function QueueRow({
   onOpenTransition: (opp: PipelineOpportunitySummary) => void;
   onOpenClose: (opp: PipelineOpportunitySummary) => void;
   onQuickSnooze?: (opp: PipelineOpportunitySummary, days: number) => void;
+  waitingNote?: string;
 }) {
   const selectedVehicle = opportunity.vehicleCandidates?.[0];
   const vehicleLabel = selectedVehicle?.listing
@@ -75,6 +77,11 @@ export function QueueRow({
             {opportunity.thuliumTicketId ? (
               <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 border border-amber-200">
                 Thulium #{opportunity.thuliumTicketId}
+              </span>
+            ) : null}
+            {waitingNote ? (
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-100 text-orange-700 border border-orange-200">
+                {waitingNote}
               </span>
             ) : null}
           </div>

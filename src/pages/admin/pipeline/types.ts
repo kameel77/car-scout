@@ -253,14 +253,23 @@ export type InboxLeadSummary = {
   } | null;
 };
 
+export type WaitingReason = 'APPLICATION_PENDING' | 'DOCUMENT_PENDING';
+
+export type WaitingOpportunitySummary = PipelineOpportunitySummary & {
+  waitingReason: WaitingReason;
+  waitingSince: string;
+};
+
 export type QueueResponse = {
   overdue: PipelineOpportunitySummary[];
   today: PipelineOpportunitySummary[];
+  waiting: WaitingOpportunitySummary[];
   noAction: PipelineOpportunitySummary[];
   inbox: InboxLeadSummary[];
   counts: {
     overdue: number;
     today: number;
+    waiting: number;
     noAction: number;
     inbox: number;
     totalActive: number;

@@ -218,6 +218,10 @@ export type PipelineEventPayloadMap = {
     recordingUrl?: string | null;
     topic?: string | null;
   };
+  CALL_RECORDING_ATTACHED: {
+    thuliumConnectionId: string;
+    recordingFilename: string;
+  };
   EMAIL_LOGGED: {
     thuliumTicketId: number;
     direction: string;

@@ -1,12 +1,21 @@
 import { PipelineActorType, Prisma } from '@prisma/client';
-import { recordEvent } from '../events/record-event.js';
+import { recordEvent, PLATFORM_SCOPE } from '../events/record-event.js';
 import { isUnmatchablePhone, normalizePhone } from './customer.service.js';
 
-export class ThuliumWebhookNotFoundError extends Error {
-  constructor(opportunityId: string) {
-    super(`Nie znaleziono sprawy ${opportunityId} dla zdarzenia Thulium`);
-    this.name = 'ThuliumWebhookNotFoundError';
-  }
+export async function recordThuliumDeadLetter(
+  tx: Prisma.TransactionClient,
+  input: { action: string; reason: string; payload: unknown; phoneSuffix?: string | null }
+): Promise<void> {
+  await tx.pipelineThuliumDeadLetter.create({
+    data: {
+      scopeType: PLATFORM_SCOPE.scopeType,
+      scopeId: PLATFORM_SCOPE.scopeId,
+      action: input.action,
+      reason: input.reason,
+      payload: input.payload as Prisma.InputJsonValue,
+      phoneSuffix: input.phoneSuffix ?? null,
+    },
+  });
 }
 
 export class ThuliumWebhookConflictError extends Error {
@@ -16,70 +25,24 @@ export class ThuliumWebhookConflictError extends Error {
   }
 }
 
-type LinkThuliumTicketInput = {
-  eventType?: 'TICKET_CREATED' | 'CUSTOMER_CREATED' | 'CUSTOMER_UPDATED';
-  opportunityId?: string;
-  customerPhone?: string;
-  thuliumTicketId?: number | null;
-  thuliumCustomerId?: number | null;
-  idempotencyKey: string;
-};
+export type ThuliumNotification =
+  | { action: 'AGENT_RINGING'; connectionId: string; sourceNumber: string; agentLogin?: string | null }
+  | { action: 'RECORDING_READY'; connectionId: string; filename: string }
+  | { action: 'TICKET_CREATED'; ticketId: number; customerId: number }
+  | { action: 'CUSTOMER_CREATED' | 'CUSTOMER_UPDATED'; customerId: number };
 
-type ResolvedOpportunity = {
-  id: string;
-  scopeType: 'PLATFORM' | 'DEALER_GROUP' | 'DEALER';
-  scopeId: string;
-  thuliumTicketId: number | null;
-  customer: {
-    id: string;
-    phone: string | null;
-    thuliumCustomerId: number | null;
-  };
-};
+export type ThuliumHandlingResult =
+  | { status: 'linked'; eventId: string }
+  | { status: 'unresolved'; reason: string };
 
-function eventPayloadMatches(actual: unknown, expected: Record<string, number | null>): boolean {
-  if (!actual || typeof actual !== 'object' || Array.isArray(actual)) return false;
-  const value = actual as Record<string, unknown>;
-  const actualKeys = Object.keys(value).sort();
-  const expectedKeys = Object.keys(expected).sort();
-  return (
-    actualKeys.length === expectedKeys.length &&
-    actualKeys.every((key, index) => key === expectedKeys[index] && value[key] === expected[key])
-  );
-}
-
-async function resolveOpportunity(
+async function handleAgentRinging(
   tx: Prisma.TransactionClient,
-  input: Pick<LinkThuliumTicketInput, 'opportunityId' | 'customerPhone'>
-): Promise<{ opportunity: ResolvedOpportunity | null; matchCount: number }> {
-  const normalizedPhone = normalizePhone(input.customerPhone);
-
-  if (input.opportunityId) {
-    const opportunity = await tx.pipelineOpportunity.findFirst({
-      where: { id: input.opportunityId },
-      select: {
-        id: true,
-        scopeType: true,
-        scopeId: true,
-        thuliumTicketId: true,
-        customer: {
-          select: { id: true, phone: true, thuliumCustomerId: true },
-        },
-      },
-    });
-
-    if (
-      !opportunity ||
-      (input.customerPhone !== undefined &&
-        (!normalizedPhone || normalizePhone(opportunity.customer.phone) !== normalizedPhone))
-    ) {
-      throw new ThuliumWebhookNotFoundError(input.opportunityId);
-    }
-    return { opportunity, matchCount: 1 };
-  }
-
+  notification: Extract<ThuliumNotification, { action: 'AGENT_RINGING' }>,
+  idempotencyKey: string
+): Promise<ThuliumHandlingResult> {
+  const normalizedPhone = normalizePhone(notification.sourceNumber);
   if (!normalizedPhone || isUnmatchablePhone(normalizedPhone)) {
-    return { opportunity: null, matchCount: 0 };
+    return { status: 'unresolved', reason: 'unmatchable_phone' };
   }
 
   const matches = await tx.pipelineOpportunity.findMany({
@@ -88,146 +51,177 @@ async function resolveOpportunity(
       id: true,
       scopeType: true,
       scopeId: true,
-      thuliumTicketId: true,
-      customer: {
-        select: { id: true, phone: true, thuliumCustomerId: true },
-      },
+      customer: { select: { id: true } },
     },
     take: 2,
   });
 
-  return {
-    opportunity: matches.length === 1 ? matches[0] : null,
-    matchCount: matches.length,
-  };
+  if (matches.length === 0) {
+    return { status: 'unresolved', reason: 'no_open_opportunity' };
+  }
+  if (matches.length > 1) {
+    return { status: 'unresolved', reason: 'ambiguous_phone' };
+  }
+
+  const opportunity = matches[0];
+  const eventId = await recordEvent(tx, {
+    scopeType: opportunity.scopeType,
+    scopeId: opportunity.scopeId,
+    type: 'CALL_LOGGED',
+    aggregateType: 'OPPORTUNITY',
+    aggregateId: opportunity.id,
+    opportunityId: opportunity.id,
+    customerId: opportunity.customer.id,
+    actor: { type: PipelineActorType.THULIUM, label: 'Thulium webhook' },
+    payload: {
+      thuliumConnectionId: notification.connectionId,
+      direction: 'INBOUND',
+      durationSeconds: 0,
+      agentName: notification.agentLogin ?? null,
+      recordingUrl: null,
+      topic: null,
+    },
+    idempotencyKey,
+  });
+
+  return { status: 'linked', eventId };
 }
 
-function assertCompatibleIds(opportunity: ResolvedOpportunity, input: LinkThuliumTicketInput): void {
-  if (
-    input.thuliumTicketId != null &&
-    opportunity.thuliumTicketId != null &&
-    opportunity.thuliumTicketId !== input.thuliumTicketId
-  ) {
+async function handleRecordingReady(
+  tx: Prisma.TransactionClient,
+  notification: Extract<ThuliumNotification, { action: 'RECORDING_READY' }>,
+  idempotencyKey: string
+): Promise<ThuliumHandlingResult> {
+  const callEvent = await tx.pipelineEvent.findFirst({
+    where: {
+      type: 'CALL_LOGGED',
+      payload: { path: ['thuliumConnectionId'], equals: notification.connectionId },
+    },
+    orderBy: { occurredAt: 'desc' },
+    select: { opportunityId: true, customerId: true },
+  });
+
+  if (!callEvent || !callEvent.opportunityId) {
+    return { status: 'unresolved', reason: 'unknown_connection' };
+  }
+
+  const opportunity = await tx.pipelineOpportunity.findUnique({
+    where: { id: callEvent.opportunityId },
+    select: { id: true, scopeType: true, scopeId: true, customerId: true },
+  });
+
+  if (!opportunity) {
+    return { status: 'unresolved', reason: 'unknown_connection' };
+  }
+
+  const eventId = await recordEvent(tx, {
+    scopeType: opportunity.scopeType,
+    scopeId: opportunity.scopeId,
+    type: 'CALL_RECORDING_ATTACHED',
+    aggregateType: 'OPPORTUNITY',
+    aggregateId: opportunity.id,
+    opportunityId: opportunity.id,
+    customerId: opportunity.customerId,
+    actor: { type: PipelineActorType.THULIUM, label: 'Thulium webhook' },
+    payload: {
+      thuliumConnectionId: notification.connectionId,
+      recordingFilename: notification.filename,
+    },
+    idempotencyKey,
+  });
+
+  return { status: 'linked', eventId };
+}
+
+async function handleTicketCreated(
+  tx: Prisma.TransactionClient,
+  notification: Extract<ThuliumNotification, { action: 'TICKET_CREATED' }>,
+  idempotencyKey: string
+): Promise<ThuliumHandlingResult> {
+  const customer = await tx.pipelineCustomer.findFirst({
+    where: { thuliumCustomerId: notification.customerId },
+    select: { id: true },
+  });
+
+  if (!customer) {
+    return { status: 'unresolved', reason: 'unknown_thulium_customer' };
+  }
+
+  const matches = await tx.pipelineOpportunity.findMany({
+    where: { customerId: customer.id, status: 'OPEN' },
+    select: {
+      id: true,
+      scopeType: true,
+      scopeId: true,
+      thuliumTicketId: true,
+      customerId: true,
+    },
+    take: 2,
+  });
+
+  if (matches.length === 0) {
+    return { status: 'unresolved', reason: 'no_open_opportunity' };
+  }
+  if (matches.length > 1) {
+    return { status: 'unresolved', reason: 'ambiguous_customer_opportunities' };
+  }
+
+  const opportunity = matches[0];
+
+  if (opportunity.thuliumTicketId != null && opportunity.thuliumTicketId !== notification.ticketId) {
     throw new ThuliumWebhookConflictError('Sprawa jest już połączona z innym ticketem Thulium');
   }
-  if (
-    input.thuliumCustomerId != null &&
-    opportunity.customer.thuliumCustomerId != null &&
-    opportunity.customer.thuliumCustomerId !== input.thuliumCustomerId
-  ) {
-    throw new ThuliumWebhookConflictError('Klient jest już połączony z innym klientem Thulium');
-  }
-}
 
-export async function linkThuliumTicket(
-  tx: Prisma.TransactionClient,
-  input: LinkThuliumTicketInput
-): Promise<{ status: 'linked'; eventId: string } | { status: 'unresolved'; matchCount: number }> {
-  const resolution = await resolveOpportunity(tx, input);
-  if (!resolution.opportunity) {
-    return { status: 'unresolved', matchCount: resolution.matchCount };
-  }
-  const opportunity = resolution.opportunity;
-
-  const isTicketEvent =
-    (input.eventType ?? (input.thuliumTicketId != null ? 'TICKET_CREATED' : 'CUSTOMER_UPDATED')) ===
-    'TICKET_CREATED';
-
-  assertCompatibleIds(opportunity, input);
-
-  const actor = { type: PipelineActorType.THULIUM, label: 'Thulium webhook' };
-  let eventId: string;
-  let eventType: 'TICKET_LINKED' | 'THULIUM_CUSTOMER_LINKED';
-  let aggregateType: 'OPPORTUNITY' | 'CUSTOMER';
-  let aggregateId: string;
-  let payload: Record<string, number | null>;
-
-  if (isTicketEvent && input.thuliumTicketId != null) {
-    eventType = 'TICKET_LINKED';
-    aggregateType = 'OPPORTUNITY';
-    aggregateId = opportunity.id;
-    payload = {
-      thuliumTicketId: input.thuliumTicketId,
-      thuliumCustomerId: input.thuliumCustomerId ?? null,
-    };
-    eventId = await recordEvent(tx, {
-      scopeType: opportunity.scopeType,
-      scopeId: opportunity.scopeId,
-      type: 'TICKET_LINKED',
-      aggregateType,
-      aggregateId,
-      opportunityId: opportunity.id,
-      customerId: opportunity.customer.id,
-      actor,
-      payload: {
-        thuliumTicketId: input.thuliumTicketId,
-        thuliumCustomerId: input.thuliumCustomerId ?? null,
-      },
-      idempotencyKey: input.idempotencyKey,
-    });
-  } else {
-    eventType = 'THULIUM_CUSTOMER_LINKED';
-    aggregateType = 'CUSTOMER';
-    aggregateId = opportunity.customer.id;
-    payload = { thuliumCustomerId: input.thuliumCustomerId as number };
-    eventId = await recordEvent(tx, {
-      scopeType: opportunity.scopeType,
-      scopeId: opportunity.scopeId,
-      type: 'THULIUM_CUSTOMER_LINKED',
-      aggregateType,
-      aggregateId,
-      opportunityId: opportunity.id,
-      customerId: opportunity.customer.id,
-      actor,
-      payload: { thuliumCustomerId: input.thuliumCustomerId as number },
-      idempotencyKey: input.idempotencyKey,
-    });
-  }
-
-  const persistedEvent = await tx.pipelineEvent.findUniqueOrThrow({
-    where: { id: eventId },
-    select: { type: true, aggregateType: true, aggregateId: true, payload: true },
-  });
-  if (
-    persistedEvent.type !== eventType ||
-    persistedEvent.aggregateType !== aggregateType ||
-    persistedEvent.aggregateId !== aggregateId ||
-    !eventPayloadMatches(persistedEvent.payload, payload)
-  ) {
-    throw new ThuliumWebhookConflictError('Identyfikator zdarzenia Thulium został już użyty z innymi danymi');
-  }
-
-  if (isTicketEvent && input.thuliumTicketId != null && opportunity.thuliumTicketId == null) {
+  if (opportunity.thuliumTicketId == null) {
     const updated = await tx.pipelineOpportunity.updateMany({
       where: { id: opportunity.id, thuliumTicketId: null },
-      data: { thuliumTicketId: input.thuliumTicketId },
+      data: { thuliumTicketId: notification.ticketId },
     });
     if (updated.count === 0) {
       const current = await tx.pipelineOpportunity.findUniqueOrThrow({
         where: { id: opportunity.id },
         select: { thuliumTicketId: true },
       });
-      if (current.thuliumTicketId !== input.thuliumTicketId) {
+      if (current.thuliumTicketId !== notification.ticketId) {
         throw new ThuliumWebhookConflictError('Sprawa jest już połączona z innym ticketem Thulium');
       }
     }
   }
 
-  if (input.thuliumCustomerId != null && opportunity.customer.thuliumCustomerId == null) {
-    const updated = await tx.pipelineCustomer.updateMany({
-      where: { id: opportunity.customer.id, thuliumCustomerId: null },
-      data: { thuliumCustomerId: input.thuliumCustomerId },
-    });
-    if (updated.count === 0) {
-      const current = await tx.pipelineCustomer.findUniqueOrThrow({
-        where: { id: opportunity.customer.id },
-        select: { thuliumCustomerId: true },
-      });
-      if (current.thuliumCustomerId !== input.thuliumCustomerId) {
-        throw new ThuliumWebhookConflictError('Klient jest już połączony z innym klientem Thulium');
-      }
-    }
-  }
+  const eventId = await recordEvent(tx, {
+    scopeType: opportunity.scopeType,
+    scopeId: opportunity.scopeId,
+    type: 'TICKET_LINKED',
+    aggregateType: 'OPPORTUNITY',
+    aggregateId: opportunity.id,
+    opportunityId: opportunity.id,
+    customerId: opportunity.customerId,
+    actor: { type: PipelineActorType.THULIUM, label: 'Thulium webhook' },
+    payload: {
+      thuliumTicketId: notification.ticketId,
+      thuliumCustomerId: notification.customerId,
+    },
+    idempotencyKey,
+  });
 
   return { status: 'linked', eventId };
+}
+
+export async function handleThuliumNotification(
+  tx: Prisma.TransactionClient,
+  input: { notification: ThuliumNotification; idempotencyKey: string }
+): Promise<ThuliumHandlingResult> {
+  const { notification, idempotencyKey } = input;
+
+  switch (notification.action) {
+    case 'AGENT_RINGING':
+      return handleAgentRinging(tx, notification, idempotencyKey);
+    case 'RECORDING_READY':
+      return handleRecordingReady(tx, notification, idempotencyKey);
+    case 'TICKET_CREATED':
+      return handleTicketCreated(tx, notification, idempotencyKey);
+    case 'CUSTOMER_CREATED':
+    case 'CUSTOMER_UPDATED':
+      return { status: 'unresolved', reason: 'not_actionable_without_thulium_client' };
+  }
 }
