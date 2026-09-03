@@ -34,6 +34,8 @@ export type Permission =
     | 'rental:financials:read'
     | 'leads:read'
     | 'leads:write'
+    | 'pipeline:read'
+    | 'pipeline:write'
     | 'analytics:read'
     | 'content:read'
     | 'content:write'

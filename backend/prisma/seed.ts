@@ -1,5 +1,6 @@
 import { PrismaClient, ScopeType, MemberRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { seedPipeline } from './seeds/pipeline';
 
 const prisma = new PrismaClient();
 
@@ -72,6 +73,9 @@ async function main() {
     });
 
     console.log('✅ Created sample dealer:', dealer.name);
+
+    // Seed Pipeline module
+    await seedPipeline(prisma);
 
     console.log('🎉 Seed completed successfully!');
 }

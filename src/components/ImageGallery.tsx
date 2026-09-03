@@ -95,15 +95,6 @@ export function ImageGallery({ images, title, isReserved }: ImageGalleryProps) {
             </motion.div>
           </AnimatePresence>
 
-          {/* Reservation Badge */}
-          {isReserved && (
-            <div className="absolute top-3.5 left-3.5 z-10">
-              <span className="px-3 py-1.5 bg-amber-500 text-white text-xs sm:text-sm font-bold rounded-lg shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                Zarezerwowane
-              </span>
-            </div>
-          )}
 
           {/* Navigation Arrows */}
           {images.length > 1 && (

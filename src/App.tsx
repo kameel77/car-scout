@@ -75,6 +75,7 @@ const RentalMatrixPage = lazy(() => import("./pages/admin/RentalMatrixPage"));
 const DealerGroupsPage = lazy(() => import("./pages/admin/DealerGroupsPage"));
 const DealersPage = lazy(() => import("./pages/admin/DealersPage"));
 const WidgetsPage = lazy(() => import("./pages/admin/WidgetsPage"));
+const PipelinePage = lazy(() => import("./pages/admin/pipeline/PipelinePage"));
 
 const queryClient = new QueryClient();
 
@@ -141,6 +142,7 @@ const App = () => (
                           <Route element={<AdminLayout />}>
                             <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
                             <Route path="/admin/leads" element={<ProtectedRoute permission="leads:read"><LeadsPage /></ProtectedRoute>} />
+                            <Route path="/admin/pipeline" element={<ProtectedRoute permission="pipeline:read"><PipelinePage /></ProtectedRoute>} />
                             <Route path="/admin/listings" element={<ProtectedRoute permission="stock:read"><ListingManagementPage /></ProtectedRoute>} />
                             <Route path="/admin/listings/new" element={<ProtectedRoute permission="stock:write"><ListingNewPage /></ProtectedRoute>} />
                             <Route path="/admin/listings/:id/edit" element={<ProtectedRoute permission="stock:write"><ListingEditPage /></ProtectedRoute>} />
