@@ -1,5 +1,6 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, Permission } from '@/contexts/AuthContext';
+import { getLoginRedirectPath } from '@/utils/authRedirect';
 
 interface Props {
     children: React.ReactNode;
@@ -16,7 +17,8 @@ interface Props {
 }
 
 export function ProtectedRoute({ children, permission }: Props) {
-    const { user, isLoading, can } = useAuth();
+  const { user, isLoading, can } = useAuth();
+  const location = useLocation();
 
     if (isLoading) {
         return (
@@ -27,7 +29,7 @@ export function ProtectedRoute({ children, permission }: Props) {
     }
 
     if (!user) {
-        return <Navigate to="/admin/login" replace />;
+      return <Navigate to={getLoginRedirectPath(location)} replace />;
     }
 
     if (permission && !can(permission)) {

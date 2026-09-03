@@ -432,12 +432,6 @@ export default function ListingDetailPage() {
     </div>
   ) : null;
 
-  // Tag "Rabat Motolia" (bez wartości) na zdjęciu galerii — gdy operator włączył checkbox
-  const motoliaPhotoTag = showMotolia ? (
-    <div className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
-      {t('listing.motoliaDiscount')}: {catalogPriceVal ? Math.round((catalogPriceVal - listing.price_pln) / catalogPriceVal * 100) : 0}%
-    </div>
-  ) : null;
 
   // Tooltip "i" przy cenie pojazdu — gdy pokazujemy cenę po rabacie (tryb B = finansowanie) i pojazd ma rabat
   const priceRabatInfo = (showMotolia && !listing.displaySalePrice) ? (
@@ -710,7 +704,27 @@ export default function ListingDetailPage() {
           <div className="lg:col-span-2 space-y-8">
             {/* Gallery */}
             <div className="relative">
-              {motoliaPhotoTag}
+              {(hasSpecialOffer || showMotolia || (listing.marketing_tags?.length ?? 0) > 0 || Boolean(listing.is_reserved || listing.isReserved)) && (
+                <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start pointer-events-none">
+                  {Boolean(listing.is_reserved || listing.isReserved) && (
+                    <span className="px-2.5 py-1 bg-amber-500 text-white text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      Zarezerwowane
+                    </span>
+                  )}
+                  {(listing.marketing_tags ?? []).map((tag) => (
+                    <span key={tag} className="px-2.5 py-1 bg-accent text-accent-foreground text-xs font-bold rounded-lg shadow-md">
+                      {tag}
+                    </span>
+                  ))}
+                  {hasSpecialOffer && <SpecialOfferTag className="pointer-events-auto" />}
+                  {showMotolia && (
+                    <div className="px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md">
+                      {t('listing.motoliaDiscount')}: {catalogPriceVal ? Math.round((catalogPriceVal - listing.price_pln) / catalogPriceVal * 100) : 0}%
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="absolute top-3 right-3 z-10 px-2.5 py-1 bg-white/90 backdrop-blur-sm border text-slate-800 text-xs font-bold rounded-lg shadow-sm pointer-events-none">
                 {listing.vatMargin ? 'VAT Marża' : 'Faktura VAT 23%'}
               </div>

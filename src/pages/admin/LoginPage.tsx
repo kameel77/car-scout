@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { toast } from 'sonner';
+import { getPostLoginRedirectPath } from '@/utils/authRedirect';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -16,6 +17,7 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const { data: settings } = useAppSettings();
     const { config } = useBrand();
     const { i18n } = useTranslation();
@@ -43,7 +45,7 @@ export default function LoginPage() {
 
         if (result.success) {
             toast.success('Logged in successfully');
-            navigate('/admin/dashboard');
+            navigate(getPostLoginRedirectPath(location.search), { replace: true });
         } else {
             toast.error(result.error || 'Invalid credentials');
         }
