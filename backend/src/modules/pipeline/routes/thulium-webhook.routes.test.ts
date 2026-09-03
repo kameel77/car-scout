@@ -4,12 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerThuliumWebhookRoutes } from './thulium-webhook.routes.js';
 
 describe('Thulium pipeline webhook route', () => {
-  const originalSecret = process.env.THULIUM_WEBHOOK_SECRET;
+  const originalUser = process.env.THULIUM_WEBHOOK_USER;
+  const originalPassword = process.env.THULIUM_WEBHOOK_PASSWORD;
   let app: ReturnType<typeof Fastify>;
   let tx: any;
 
   beforeEach(async () => {
-    process.env.THULIUM_WEBHOOK_SECRET = 'test-thulium-webhook-secret';
+    process.env.THULIUM_WEBHOOK_USER = 'motolia-webhook';
+    process.env.THULIUM_WEBHOOK_PASSWORD = 'test-thulium-webhook-password';
     const opportunity = {
       id: 'opp_982',
       scopeType: 'DEALER',
@@ -54,15 +56,19 @@ describe('Thulium pipeline webhook route', () => {
 
   afterEach(async () => {
     await app.close();
-    if (originalSecret === undefined) delete process.env.THULIUM_WEBHOOK_SECRET;
-    else process.env.THULIUM_WEBHOOK_SECRET = originalSecret;
+    if (originalUser === undefined) delete process.env.THULIUM_WEBHOOK_USER;
+    else process.env.THULIUM_WEBHOOK_USER = originalUser;
+    if (originalPassword === undefined) delete process.env.THULIUM_WEBHOOK_PASSWORD;
+    else process.env.THULIUM_WEBHOOK_PASSWORD = originalPassword;
   });
 
   function inject(payload: Record<string, unknown>) {
     return app.inject({
       method: 'POST',
       url: '/api/pipeline/integrations/thulium/webhook',
-      headers: { authorization: 'Bearer test-thulium-webhook-secret' },
+      headers: {
+        authorization: 'Basic ' + Buffer.from('motolia-webhook:test-thulium-webhook-password').toString('base64'),
+      },
       payload,
     });
   }
@@ -200,6 +206,39 @@ describe('Thulium pipeline webhook route', () => {
 
     expect(response.statusCode).toBe(401);
     expect(tx.pipelineOpportunity.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects a request with a valid Basic Auth scheme but the wrong password', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/pipeline/integrations/thulium/webhook',
+      headers: {
+        authorization: 'Basic ' + Buffer.from('motolia-webhook:wrong-password').toString('base64'),
+      },
+      payload: {
+        event_id: 'event-wrong-password',
+        event_type: 'TICKET_CREATED',
+        customer_phone: '123123123',
+        thulium_ticket_id: 12345,
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(tx.pipelineOpportunity.findMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 503 when the webhook credentials are not configured', async () => {
+    delete process.env.THULIUM_WEBHOOK_USER;
+    delete process.env.THULIUM_WEBHOOK_PASSWORD;
+
+    const response = await inject({
+      event_id: 'event-not-configured',
+      event_type: 'TICKET_CREATED',
+      customer_phone: '123123123',
+      thulium_ticket_id: 12345,
+    });
+
+    expect(response.statusCode).toBe(503);
   });
 
   it('rejects a payload without an opportunity selector', async () => {

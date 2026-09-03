@@ -33,12 +33,13 @@ const thuliumWebhookSchema = z
     }
   });
 
-function hasValidWebhookSecret(authorization: string | undefined, expectedSecret: string): boolean {
-  const providedSecret = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!providedSecret) return false;
+function hasValidWebhookBasicAuth(authorization: string | undefined, user: string, password: string): boolean {
+  const providedCredentials = authorization?.match(/^Basic\s+(.+)$/i)?.[1];
+  if (!providedCredentials) return false;
 
-  const provided = Buffer.from(providedSecret);
-  const expected = Buffer.from(expectedSecret);
+  const decoded = Buffer.from(providedCredentials, 'base64').toString('utf8');
+  const provided = Buffer.from(decoded);
+  const expected = Buffer.from(`${user}:${password}`);
   return provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
 }
 
@@ -46,13 +47,14 @@ export async function registerThuliumWebhookRoutes(app: FastifyInstance) {
   app.post('/api/pipeline/integrations/thulium/webhook', {
     config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
   }, async (request, reply) => {
-    const webhookSecret = process.env.THULIUM_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      request.log.error('THULIUM_WEBHOOK_SECRET is not configured');
+    const webhookUser = process.env.THULIUM_WEBHOOK_USER;
+    const webhookPassword = process.env.THULIUM_WEBHOOK_PASSWORD;
+    if (!webhookUser || !webhookPassword) {
+      request.log.error('THULIUM_WEBHOOK_USER / THULIUM_WEBHOOK_PASSWORD is not configured');
       return reply.code(503).send({ error: 'Thulium webhook is not configured' });
     }
 
-    if (!hasValidWebhookSecret(request.headers.authorization, webhookSecret)) {
+    if (!hasValidWebhookBasicAuth(request.headers.authorization, webhookUser, webhookPassword)) {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
 
