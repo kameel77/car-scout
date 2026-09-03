@@ -261,13 +261,29 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
     // robots.txt — served via nginx proxy at /robots.txt (brand-aware Sitemap line)
     fastify.get('/api/robots.txt', async (request, reply) => {
+        // Wcześniej było tu "Allow: /", co zapraszało crawlery na środowiska nieprodukcyjne.
+        // Globalny hook w app.ts dokleja hostom nieprodukcyjnym nagłówek
+        // "X-Robots-Tag: noindex, nofollow, noarchive", ale noindex blokuje INDEKSOWANIE, nie
+        // CRAWLOWANIE — Googlebot musiał pobrać każdą stronę, żeby ten nagłówek w ogóle zobaczyć.
+        // Skutek zmierzony w Search Console (2026-09-03): dev.motolia.pl zebrał 49 730 z 208 000
+        // żądań Googlebota, czyli blisko 24% budżetu indeksowania domeny, nie mogąc wygenerować
+        // ani jednej zaindeksowanej strony. Oba mechanizmy zostają: Disallow powstrzymuje
+        // crawlowanie, X-Robots-Tag nadal chroni na wypadek trafienia na adres z zewnętrznego linku.
         if (!isProductionHost(request)) {
             return reply
                 .header('Content-Type', 'text/plain; charset=utf-8')
-                .send('User-agent: *\nAllow: /\n');
+                .send('User-agent: *\nDisallow: /\n');
         }
 
         const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://carsalon.pl';
+        // Blokujemy crawlowanie stron formularzy (/lead, /negotiate, /zapytanie) — te ścieżki są
+        // oznaczone jako noindex przez NOINDEX_RE w render.ts, ale noindex nie blokuje
+        // crawlowania. Googlebot dociera do nich renderując JavaScript (w HTML serwowanym
+        // crawlerowi nie ma do nich linków), więc każda oferta generuje trzy takie adresy pod
+        // prefiksami /oferta, /kredyt i /leasing. Pomiar w Search Console z 2026-09-03: 8 683
+        // stron w koszu "wykluczona tagiem noindex" przy 2 789 ofertach w sitemapie — czyli
+        // praktycznie cały ten kosz to te formularze. Same strony pozostają noindex; Disallow
+        // odcina jedynie marnowanie budżetu indeksowania.
         const body = `User-agent: *
 Content-Signal: search=yes, ai-input=yes, ai-train=no
 
@@ -288,6 +304,9 @@ Disallow: /login
 Disallow: /api/
 Disallow: /nowy/podglad/
 Disallow: /storage/
+Disallow: /*/lead$
+Disallow: /*/negotiate$
+Disallow: /*/zapytanie$
 
 User-agent: Bingbot
 Allow: /
@@ -306,6 +325,9 @@ Disallow: /login
 Disallow: /api/
 Disallow: /nowy/podglad/
 Disallow: /storage/
+Disallow: /*/lead$
+Disallow: /*/negotiate$
+Disallow: /*/zapytanie$
 
 User-agent: Twitterbot
 Allow: /
@@ -334,6 +356,9 @@ Disallow: /login
 Disallow: /api/
 Disallow: /nowy/podglad/
 Disallow: /storage/
+Disallow: /*/lead$
+Disallow: /*/negotiate$
+Disallow: /*/zapytanie$
 
 User-agent: *
 Allow: /
@@ -357,6 +382,9 @@ Disallow: /backup/
 Disallow: /wp/
 Disallow: /old/
 Disallow: /new/
+Disallow: /*/lead$
+Disallow: /*/negotiate$
+Disallow: /*/zapytanie$
 
 Sitemap: ${baseUrl}/sitemap.xml
 `;
