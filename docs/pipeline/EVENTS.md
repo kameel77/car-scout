@@ -96,6 +96,7 @@ from day one, even before the recommender is smart.
 | type | aggregate | payload |
 |---|---|---|
 | `CALL_LOGGED` | OPPORTUNITY | `{ thuliumConnectionId, direction, durationSeconds, agentName?, recordingUrl?, topic? }` |
+| `CALL_RECORDING_ATTACHED` | OPPORTUNITY | `{ thuliumConnectionId, recordingFilename }` |
 | `EMAIL_LOGGED` | OPPORTUNITY | `{ thuliumTicketId, direction, subject? }` |
 | `TICKET_LINKED` | OPPORTUNITY | `{ thuliumTicketId, thuliumCustomerId }` |
 | `THULIUM_CUSTOMER_LINKED` | CUSTOMER | `{ thuliumCustomerId }` |

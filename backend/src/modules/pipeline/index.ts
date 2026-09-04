@@ -8,6 +8,8 @@ import { registerOfferRoutes } from './routes/offers.routes.js';
 import { registerApplicationRoutes } from './routes/applications.routes.js';
 import { registerDocumentRoutes } from './routes/documents.routes.js';
 import { registerThuliumWebhookRoutes } from './routes/thulium-webhook.routes.js';
+import { registerThuliumCrmRoutes } from './routes/thulium-crm.routes.js';
+import { registerThuliumDeadLetterRoutes } from './routes/thulium-dead-letters.routes.js';
 
 export async function registerPipelineModule(app: FastifyInstance) {
   await registerQueueRoutes(app);
@@ -19,5 +21,7 @@ export async function registerPipelineModule(app: FastifyInstance) {
   await registerApplicationRoutes(app);
   await registerDocumentRoutes(app);
   await registerThuliumWebhookRoutes(app);
+  await registerThuliumCrmRoutes(app);
+  await registerThuliumDeadLetterRoutes(app);
   app.log.info('Pipeline CRM module registered successfully');
 }
