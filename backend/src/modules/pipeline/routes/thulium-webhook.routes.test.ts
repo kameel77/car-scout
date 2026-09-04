@@ -88,6 +88,28 @@ describe('Thulium pipeline webhook route', () => {
     expect(response.json()).toEqual({ accepted: true, eventId: 'event_789' });
   });
 
+  it('links AGENT_RINGING sent as application/x-www-form-urlencoded', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/pipeline/integrations/thulium/webhook',
+      headers: {
+        authorization: 'Basic ' + Buffer.from('motolia-webhook:test-thulium-webhook-password').toString('base64'),
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      payload:
+        'action=AGENT_RINGING&connection_id=1416225570.341&queue_id=155&agent_login=jkowalski&source_number=523993855&destination_number=162&date=2016-04-20+09%3A46%3A24',
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(tx.pipelineOpportunity.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: 'OPEN', customer: { phone: '+48523993855' } },
+        take: 2,
+      })
+    );
+    expect(response.json()).toEqual({ accepted: true, eventId: 'event_789' });
+  });
+
   it('links RECORDING_READY by connection_id', async () => {
     const response = await inject({
       action: 'RECORDING_READY',
@@ -119,6 +141,27 @@ describe('Thulium pipeline webhook route', () => {
     });
 
     expect(response.statusCode).toBe(202);
+    expect(response.json()).toEqual({ accepted: true, eventId: 'event_789' });
+  });
+
+  it('links TICKET_CREATED sent as application/x-www-form-urlencoded, coercing ids to numbers', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/pipeline/integrations/thulium/webhook',
+      headers: {
+        authorization: 'Basic ' + Buffer.from('motolia-webhook:test-thulium-webhook-password').toString('base64'),
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      payload: 'action=TICKET_CREATED&ticket_id=12&customer_id=154',
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(tx.pipelineCustomer.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { thuliumCustomerId: 154 } })
+    );
+    expect(tx.pipelineOpportunity.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { thuliumTicketId: 12 } })
+    );
     expect(response.json()).toEqual({ accepted: true, eventId: 'event_789' });
   });
 
@@ -330,6 +373,41 @@ describe('Thulium pipeline webhook route', () => {
       ticket_id: 12,
     });
 
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('parses a JSON body sent with an unexpected content-type instead of returning 415', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/pipeline/integrations/thulium/webhook',
+      headers: {
+        authorization: 'Basic ' + Buffer.from('motolia-webhook:test-thulium-webhook-password').toString('base64'),
+        'content-type': 'text/plain',
+      },
+      payload: JSON.stringify({
+        action: 'TICKET_CREATED',
+        ticket_id: 12,
+        customer_id: 154,
+      }),
+    });
+
+    expect(response.statusCode).not.toBe(415);
+    expect(response.statusCode).toBe(202);
+    expect(response.json()).toEqual({ accepted: true, eventId: 'event_789' });
+  });
+
+  it('rejects an unparseable application/x-www-form-urlencoded body with 400, not 415', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/pipeline/integrations/thulium/webhook',
+      headers: {
+        authorization: 'Basic ' + Buffer.from('motolia-webhook:test-thulium-webhook-password').toString('base64'),
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      payload: 'to-nie-jest-payload',
+    });
+
+    expect(response.statusCode).not.toBe(415);
     expect(response.statusCode).toBe(400);
   });
 
