@@ -411,6 +411,63 @@ describe('Thulium pipeline webhook route', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  // Regression test for a production incident: Thulium serializes empty form-urlencoded
+  // fields as the literal string "null", not an empty string. This exact payload landed in
+  // the dead letter with a 400 before the payload normalization fix.
+  it('accepts the production CUSTOMER_UPDATED payload with company_id="null" as unresolved, not a validation error', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/pipeline/integrations/thulium/webhook',
+      headers: {
+        authorization: 'Basic ' + Buffer.from('motolia-webhook:test-thulium-webhook-password').toString('base64'),
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      payload: 'action=CUSTOMER_UPDATED&customer_id=682&company_id=null&date=2026-09-04+12%3A19%3A43',
+    });
+
+    expect(response.statusCode).toBe(204);
+  });
+
+  it('links AGENT_RINGING sent as application/x-www-form-urlencoded with queue_id="null"', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/pipeline/integrations/thulium/webhook',
+      headers: {
+        authorization: 'Basic ' + Buffer.from('motolia-webhook:test-thulium-webhook-password').toString('base64'),
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      payload: 'action=AGENT_RINGING&connection_id=1416225570.341&queue_id=null&source_number=523993855',
+    });
+
+    expect(response.statusCode).toBe(202);
+  });
+
+  it('rejects TICKET_CREATED with ticket_id="null" (required field)', async () => {
+    const response = await inject({
+      action: 'TICKET_CREATED',
+      ticket_id: 'null',
+      customer_id: 154,
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('normalizes an optional text field sent as "null" so the stored event does not persist the literal string', async () => {
+    const response = await inject({
+      action: 'AGENT_RINGING',
+      connection_id: '1416225570.341',
+      source_number: '523993855',
+      agent_login: 'null',
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(tx.pipelineEvent.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ payload: expect.objectContaining({ agentName: null }) })],
+      })
+    );
+  });
+
   it('rate limits repeated public webhook requests', async () => {
     let response;
     for (let index = 0; index < 61; index += 1) {

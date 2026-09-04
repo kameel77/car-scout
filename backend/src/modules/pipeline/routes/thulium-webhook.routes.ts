@@ -8,17 +8,27 @@ import {
   type ThuliumNotification,
 } from '../services/thulium-webhook.service.js';
 
-const optionalCoercedInt = z.preprocess(
-  (val) => (val === '' ? undefined : val),
-  z.coerce.number().int().optional()
-);
+// Thulium sends webhooks as application/x-www-form-urlencoded, so every value arrives as a
+// string, and empty fields are serialized as the literal string "null" (not an empty string).
+// Normalize those away to `undefined` before validation, once, for the whole payload — rather
+// than patching each optional field individually — so both numeric and text optional fields are
+// covered.
+function normalizeThuliumPayload(input: unknown): unknown {
+  if (typeof input !== 'object' || input === null) return input;
 
-const thuliumWebhookSchema = z.discriminatedUnion('action', [
+  const normalized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    normalized[key] = typeof value === 'string' && ['', 'null', 'undefined'].includes(value.trim()) ? undefined : value;
+  }
+  return normalized;
+}
+
+const thuliumWebhookPayloadSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('AGENT_RINGING'),
     connection_id: z.string().min(1).max(200),
     source_number: z.string().trim().min(3).max(64),
-    queue_id: optionalCoercedInt,
+    queue_id: z.coerce.number().int().optional(),
     agent_login: z.string().optional(),
     destination_number: z.string().optional(),
     date: z.string().optional(),
@@ -40,16 +50,18 @@ const thuliumWebhookSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('CUSTOMER_CREATED'),
     customer_id: z.coerce.number().int().positive(),
-    company_id: optionalCoercedInt,
+    company_id: z.coerce.number().int().optional(),
     date: z.string().optional(),
   }),
   z.object({
     action: z.literal('CUSTOMER_UPDATED'),
     customer_id: z.coerce.number().int().positive(),
-    company_id: optionalCoercedInt,
+    company_id: z.coerce.number().int().optional(),
     date: z.string().optional(),
   }),
 ]);
+
+const thuliumWebhookSchema = z.preprocess(normalizeThuliumPayload, thuliumWebhookPayloadSchema);
 
 function hasValidWebhookBasicAuth(authorization: string | undefined, user: string, password: string): boolean {
   const providedCredentials = authorization?.match(/^Basic\s+(.+)$/i)?.[1];
