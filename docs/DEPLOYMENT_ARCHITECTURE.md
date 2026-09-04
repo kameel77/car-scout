@@ -27,7 +27,7 @@ git push → GitHub Actions: CI (quality gates) + Docker Build & Push → GHCR �
 - Coolify build pack: **dockercompose** (not Nixpacks, not single Dockerfile).
 - `docker-compose.coolify.yml` references `ghcr.io/kameel77/car-scout-backend:${IMAGE_TAG}` and `ghcr.io/kameel77/car-scout-frontend:${IMAGE_TAG}`.
 - Never switch build pack to Nixpacks — it will fail (no GHCR auth).
-- Two GitHub Actions workflows run on every push to `dev`/`staging`/`main` and on every PR (see Section 10):
+- Two GitHub Actions workflows run on every push to `dev`/`staging`/`main` and on every PR (see Section 11):
   - `ci.yml` — type-check + lint + unit tests (frontend + backend typecheck)
   - `docker.yml` — builds and pushes images to GHCR (only on push to branches, not on PRs)
 
@@ -86,7 +86,41 @@ networks:
 
 ---
 
-## 5. IPv4 Requirement
+## 5. Backend → Frontend (SSR HTML template)
+
+**Rule:** the backend must read the SPA shell (`index.html`) from this resource's **own** frontend,
+never through the public domain and never through a shared alias.
+
+`frontendBase()` in `backend/src/routes/render.ts` picks the source in this order:
+1. Explicit `INTERNAL_FRONTEND_URL`, if set to something **other than** the shared `http://frontend:80` alias.
+2. `http://${COOLIFY_RESOURCE_UUID}-frontend` — Coolify injects `COOLIFY_RESOURCE_UUID` into every
+   deployment, so this alias always resolves to the frontend of **this** resource.
+3. The public domain — last resort only.
+
+**Why the public domain is wrong:** `index.html` is served with `Cache-Control: max-age=14400` (4 h)
+and requests to the public domain go through Cloudflare. After a deploy, the edge CDN keeps serving
+the pre-deploy template — pointing at asset hashes that no longer exist — for up to 4 hours. The
+backend would render **every** page from that stale template.
+
+**Why `http://frontend:80` is wrong:** it's a shared alias across environments. On production it
+resolved to the **staging** frontend container and returned staging's build hash. This is the same
+class of bug Section 3 warns about (generic aliases on shared networks collide across environments)
+— here it hit the SSR template fetch instead of the `/api` proxy.
+
+**Verification after deploy — the three-measurement method:**
+Compare the `assets/index-*.js` hash from three places:
+1. What the user gets through the CDN.
+2. What the origin returns bypassing the CDN (`curl --resolve domain:443:<origin-IP> -k`).
+3. What's physically in the frontend container (`grep -o "assets/index-[A-Za-z0-9_-]*\.js" /usr/share/nginx/html/index.html`).
+
+A mismatch between (1) and (2) points to CDN cache; a mismatch between (2) and (3) points to SSR
+cache or an in-memory template in the backend.
+
+**Incident:** 2026-09-04, fixed in commit `816af7b`.
+
+---
+
+## 6. IPv4 Requirement
 
 The application must communicate over **IPv4**, not IPv6. This particularly affects Nginx health checks and upstream connections.
 
@@ -97,7 +131,7 @@ The application must communicate over **IPv4**, not IPv6. This particularly affe
 
 ---
 
-## 6. Coolify-Managed Databases
+## 7. Coolify-Managed Databases
 
 Standalone databases created in Coolify (PostgreSQL, Redis):
 - Live on the `coolify` network with their UUID as hostname (e.g., `uw40cw8c4wsg0s4kckw4cgoo:5432`).
@@ -107,7 +141,7 @@ Standalone databases created in Coolify (PostgreSQL, Redis):
 
 ---
 
-## 7. Key Environment Variables (set in Coolify UI, not in code)
+## 8. Key Environment Variables (set in Coolify UI, not in code)
 
 | Variable | Purpose |
 |---|---|
@@ -123,7 +157,7 @@ Standalone databases created in Coolify (PostgreSQL, Redis):
 
 ---
 
-## 8. Deployment Procedure
+## 9. Deployment Procedure
 
 1. Commit & push to the appropriate branch (`dev`, `staging`, or `main`).
 2. GitHub Actions builds images and pushes to GHCR automatically.
@@ -133,7 +167,7 @@ Standalone databases created in Coolify (PostgreSQL, Redis):
 
 ---
 
-## 9. Common Failure Modes
+## 10. Common Failure Modes
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -145,7 +179,7 @@ Standalone databases created in Coolify (PostgreSQL, Redis):
 
 ---
 
-## 10. CI Pipeline (Quality Gates)
+## 11. CI Pipeline (Quality Gates)
 
 Defined in `.github/workflows/ci.yml`. Runs on every PR and on every push to `dev`, `staging`, `main`.
 
@@ -163,7 +197,7 @@ Defined in `.github/workflows/ci.yml`. Runs on every PR and on every push to `de
 - Lint must stay clean — when adding `eslint-disable` comments, prefer a per-line rule disable with a one-line justification (see existing examples in `backend/src/routes/rental-vehicles.ts` for `no-control-regex` on transliteration regex).
 - Gitleaks scans the **entire git history** (`fetch-depth: 0`). If a secret was ever committed and only later removed, it will still fail. Rotate the secret AND rewrite history (`git filter-repo` or BFG) — re-pushing without rewrite will keep failing.
 
-### 10.1 Container vulnerability scan (Trivy)
+### 11.1 Container vulnerability scan (Trivy)
 
 Defined in `.github/workflows/docker.yml`. Runs after each image is pushed to GHCR for `dev`, `staging`, `main`. Three matrix jobs (backend, frontend-carsalon, frontend-motolia) each scan their own image.
 
@@ -173,7 +207,7 @@ Defined in `.github/workflows/docker.yml`. Runs after each image is pushed to GH
 - **Blocking behavior:** `exit-code: 1` only on `main`; on `dev` and `staging` the scan runs and reports but doesn't fail the workflow. This means a fresh CRITICAL CVE shows up in dev/staging logs as a warning before it can block production.
 - Trivy pulls the image from GHCR using the branch tag (`ghcr.io/.../car-scout-<service>:${branch}`), so it runs against the exact image Coolify will deploy.
 
-### 10.2 Dependency updates (Dependabot)
+### 11.2 Dependency updates (Dependabot)
 
 Defined in `.github/dependabot.yml`. Five ecosystems, all targeting `dev` branch:
 
@@ -187,7 +221,7 @@ Defined in `.github/dependabot.yml`. Five ecosystems, all targeting `dev` branch
 
 **Dependabot security alerts** (separate from version updates) are enabled in repo Settings → Code security. Alerts open PRs against the **default branch** (`main`), independent of `dependabot.yml`. Standard handling: cherry-pick / rebase the security PR onto `dev`, run CI, promote through staging → main like any other change.
 
-### 10.3 npm overrides (transitive CVE patching)
+### 11.3 npm overrides (transitive CVE patching)
 
 `backend/package.json` declares an `overrides` block:
 
@@ -209,9 +243,9 @@ If you upgrade `@fastify/jwt` later, re-run `npm ls fast-jwt` in `backend/` and 
 
 ---
 
-## 11. Per-Environment Deployment Details
+## 12. Per-Environment Deployment Details
 
-### 11.1 `dev` → `dev.carsalon.pl`
+### 12.1 `dev` → `dev.carsalon.pl`
 
 **Purpose:** Active development branch. First place where merged feature branches are observed running. Considered live but unstable.
 
@@ -235,7 +269,7 @@ If you upgrade `@fastify/jwt` later, re-run `npm ls fast-jwt` in `backend/` and 
 
 ---
 
-### 11.2 `staging` → `staging.carsalon.pl`
+### 12.2 `staging` → `staging.carsalon.pl`
 
 **Purpose:** Pre-production verification. Mirror of prod data shape, used to catch issues before promoting to `main`.
 
@@ -263,11 +297,11 @@ If you upgrade `@fastify/jwt` later, re-run `npm ls fast-jwt` in `backend/` and 
 
 ---
 
-### 11.3 `main` → `carsalon.pl` (production)
+### 12.3 `main` → `carsalon.pl` (production)
 
 **Purpose:** Production. Customer-facing.
 
-**Trigger:** PR from `staging` to `main`. **PR review + green CI required** (branch protection — see Section 12).
+**Trigger:** PR from `staging` to `main`. **PR review + green CI required** (branch protection — see Section 13).
 
 **Coolify resource:**
 - `COMPOSE_PROJECT_NAME=carscout-prod`
@@ -292,7 +326,7 @@ If you upgrade `@fastify/jwt` later, re-run `npm ls fast-jwt` in `backend/` and 
 
 ---
 
-## 12. Branch Flow & Protection
+## 13. Branch Flow & Protection
 
 ```
 feature branches → dev → staging → main

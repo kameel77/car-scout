@@ -101,3 +101,17 @@ When new listings are imported or prices are updated via CSFlow/admin:
 | **60 seconds (1 min)** | Lower (unvalidated estimate — no measured figure yet) | Up to 1 minute | **Conservative Alternative**: Faster price updates, slightly lower cache efficiency. |
 
 *Note: You can change `s-maxage=300` in `backend/src/routes/render.ts` at any time if business requirements favor shorter cache retention.*
+
+---
+
+## 6. Consequence — the public domain is not an internal source
+
+Because HTML is cached at the edge, **no internal service may fetch HTML through the public domain** —
+it will get a copy from before the last deploy. This applies in particular to `index.html`, which
+carries the current build's asset hashes: an edge-cached copy points at chunks that no longer exist
+after a deploy. See "Backend → Frontend (SSR HTML template)" in `DEPLOYMENT_ARCHITECTURE.md` for the
+internal-source rule this drives.
+
+After a deploy that changes asset hashes, it's worth purging the CDN cache. `CLOUDFLARE_ZONE_ID` and
+`CLOUDFLARE_API_TOKEN` are already set on production, and `backend/src/services/cache-invalidation.service.ts`
+already knows how to call `purge_cache`.
