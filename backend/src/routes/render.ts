@@ -244,14 +244,26 @@ export async function __resetRenderCache() {
     await resetSsrCache().catch(() => {});
 }
 
-// Use SERVICE_URL_FRONTEND (public domain injected by Coolify) if available to bypass Docker DNS alias caching
-// which might resolve to dangling old frontend containers.
-// Fallback to INTERNAL_FRONTEND_URL or http://frontend:80.
+// Kolejność źródeł szablonu wynika z dwóch osobnych awarii produkcyjnych:
+//  - `http://frontend:80` to alias współdzielony przez środowiska: na produkcji rozwiązywał się
+//    na kontener frontendu STAGINGU, więc szablon pochodził z zupełnie innego builda;
+//  - `SERVICE_URL_FRONTEND` to domena publiczna, więc szablon leciał przez CDN, a `index.html`
+//    ma `max-age=14400`. Po deployu backend przez wiele godzin renderował strony wskazujące na
+//    chunki, których już nie ma — strona wyglądała poprawnie, ale JS się nie uruchamiał.
+// Alias `<COOLIFY_RESOURCE_UUID>-frontend` wskazuje na frontend TEGO zasobu, omija CDN i jest
+// poprawny w każdym środowisku bez dodatkowej konfiguracji.
 function frontendBase(): string {
-    let base = process.env.SERVICE_URL_FRONTEND || process.env.INTERNAL_FRONTEND_URL || 'http://frontend:80';
-    if (base === 'http://frontend:80' && process.env.INTERNAL_FRONTEND_URL && process.env.INTERNAL_FRONTEND_URL !== 'http://frontend:80') {
-        base = process.env.INTERNAL_FRONTEND_URL;
+    const explicit = process.env.INTERNAL_FRONTEND_URL;
+    if (explicit && explicit !== 'http://frontend:80') {
+        return explicit.replace(/\/$/, '');
     }
+
+    const resourceUuid = process.env.COOLIFY_RESOURCE_UUID;
+    if (resourceUuid) {
+        return `http://${resourceUuid}-frontend`;
+    }
+
+    const base = process.env.SERVICE_URL_FRONTEND || explicit || 'http://frontend:80';
     return base.replace(/\/$/, '');
 }
 
