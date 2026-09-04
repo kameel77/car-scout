@@ -1,244 +1,189 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PipelineActorType, ScopeType } from '@prisma/client';
+import { ScopeType } from '@prisma/client';
 import {
-  linkThuliumTicket,
+  handleThuliumNotification,
   ThuliumWebhookConflictError,
-  ThuliumWebhookNotFoundError,
+  type ThuliumNotification,
 } from './thulium-webhook.service.js';
 
 const opportunity = {
   id: 'opp_982',
   scopeType: ScopeType.DEALER,
   scopeId: 'dealer_123',
-  thuliumTicketId: null,
-  customer: {
-    id: 'customer_456',
-    phone: '+48123123123',
-    thuliumCustomerId: null,
-  },
+  thuliumTicketId: null as number | null,
+  customerId: 'customer_456',
+  customer: { id: 'customer_456' },
 };
 
 function createTx(overrides: Record<string, unknown> = {}) {
-  const persistedEvent = {
-    id: 'event_789',
-    type: 'TICKET_LINKED',
-    aggregateType: 'OPPORTUNITY',
-    aggregateId: opportunity.id,
-    payload: { thuliumTicketId: 12345, thuliumCustomerId: 67890 },
-  };
   return {
     pipelineOpportunity: {
-      findFirst: vi.fn().mockResolvedValue(opportunity),
       findMany: vi.fn().mockResolvedValue([opportunity]),
+      findUnique: vi.fn().mockResolvedValue(opportunity),
       findUniqueOrThrow: vi.fn().mockResolvedValue({ thuliumTicketId: 12345 }),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     pipelineCustomer: {
-      findUniqueOrThrow: vi.fn().mockResolvedValue({ thuliumCustomerId: 67890 }),
-      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findFirst: vi.fn().mockResolvedValue({ id: 'customer_456' }),
     },
     pipelineEvent: {
+      findFirst: vi.fn().mockResolvedValue({ opportunityId: 'opp_982', customerId: 'customer_456' }),
       createMany: vi.fn().mockResolvedValue({ count: 1 }),
-      findUniqueOrThrow: vi.fn().mockImplementation(({ where }: any) =>
-        Promise.resolve(where.id ? persistedEvent : { id: persistedEvent.id })
-      ),
+      findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 'event_789' }),
     },
     ...overrides,
   } as any;
 }
 
-describe('linkThuliumTicket', () => {
-  it.each(['123123123', '48123123123', '+48 123 123 123'])(
-    'resolves one open opportunity by normalized phone %s',
-    async (customerPhone) => {
+function call(tx: any, notification: ThuliumNotification, idempotencyKey: string) {
+  return handleThuliumNotification(tx, { notification, idempotencyKey });
+}
+
+describe('handleThuliumNotification', () => {
+  describe('AGENT_RINGING', () => {
+    it.each(['523993855', '48523993855', '+48 523 993 855'])(
+      'resolves one open opportunity by normalized phone %s',
+      async (sourceNumber) => {
+        const tx = createTx();
+
+        const result = await call(
+          tx,
+          { action: 'AGENT_RINGING', connectionId: 'conn-1', sourceNumber },
+          'thulium:ringing:conn-1'
+        );
+
+        expect(result).toEqual({ status: 'linked', eventId: 'event_789' });
+        expect(tx.pipelineOpportunity.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { status: 'OPEN', customer: { phone: '+48523993855' } },
+            take: 2,
+          })
+        );
+        expect(tx.pipelineEvent.createMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: [expect.objectContaining({ type: 'CALL_LOGGED' })],
+          })
+        );
+      }
+    );
+
+    it('returns unresolved without writing when no open opportunity matches', async () => {
+      const tx = createTx();
+      tx.pipelineOpportunity.findMany.mockResolvedValue([]);
+
+      const result = await call(
+        tx,
+        { action: 'AGENT_RINGING', connectionId: 'conn-2', sourceNumber: '523993855' },
+        'thulium:ringing:conn-2'
+      );
+
+      expect(result).toEqual({ status: 'unresolved', reason: 'no_open_opportunity' });
+      expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
+    });
+
+    it('returns unresolved without writing when the phone match is ambiguous', async () => {
+      const tx = createTx();
+      tx.pipelineOpportunity.findMany.mockResolvedValue([opportunity, { ...opportunity, id: 'opp_983' }]);
+
+      const result = await call(
+        tx,
+        { action: 'AGENT_RINGING', connectionId: 'conn-3', sourceNumber: '523993855' },
+        'thulium:ringing:conn-3'
+      );
+
+      expect(result).toEqual({ status: 'unresolved', reason: 'ambiguous_phone' });
+      expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('RECORDING_READY', () => {
+    it('finds the opportunity by connection_id and records CALL_RECORDING_ATTACHED', async () => {
       const tx = createTx();
 
-      const result = await linkThuliumTicket(tx, {
-        customerPhone,
-        thuliumTicketId: 12345,
-        thuliumCustomerId: 67890,
-        idempotencyKey: 'thulium:event-1',
-      });
+      const result = await call(
+        tx,
+        { action: 'RECORDING_READY', connectionId: 'conn-1', filename: 'SOME-QUEUE/2014-11-17/rec.wav' },
+        'thulium:recording:conn-1'
+      );
 
       expect(result).toEqual({ status: 'linked', eventId: 'event_789' });
-      expect(tx.pipelineOpportunity.findMany).toHaveBeenCalledWith(
+      expect(tx.pipelineEvent.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { status: 'OPEN', customer: { phone: '+48123123123' } },
-          take: 2,
+          where: {
+            type: 'CALL_LOGGED',
+            payload: { path: ['thuliumConnectionId'], equals: 'conn-1' },
+          },
         })
       );
-      expect(tx.pipelineOpportunity.updateMany).toHaveBeenCalled();
-      expect(tx.pipelineCustomer.updateMany).toHaveBeenCalled();
-    }
-  );
+      expect(tx.pipelineEvent.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: [expect.objectContaining({ type: 'CALL_RECORDING_ATTACHED' })],
+        })
+      );
+    });
 
-  it.each([
-    { matches: [] },
-    { matches: [opportunity, { ...opportunity, id: 'opp_983' }] },
-  ])(
-    'does not write when phone resolution is not unique',
-    async ({ matches }) => {
+    it('returns unresolved without writing for an unknown connection_id', async () => {
       const tx = createTx();
-      tx.pipelineOpportunity.findMany.mockResolvedValue(matches);
+      tx.pipelineEvent.findFirst.mockResolvedValue(null);
 
-      const result = await linkThuliumTicket(tx, {
-        customerPhone: '123123123',
-        thuliumTicketId: 12345,
-        idempotencyKey: 'thulium:event-unresolved',
-      });
+      const result = await call(
+        tx,
+        { action: 'RECORDING_READY', connectionId: 'conn-unknown', filename: 'rec.wav' },
+        'thulium:recording:conn-unknown'
+      );
 
-      expect(result).toEqual({ status: 'unresolved', matchCount: matches.length });
+      expect(result).toEqual({ status: 'unresolved', reason: 'unknown_connection' });
       expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('TICKET_CREATED', () => {
+    it('resolves the opportunity via thuliumCustomerId', async () => {
+      const tx = createTx();
+
+      const result = await call(
+        tx,
+        { action: 'TICKET_CREATED', ticketId: 12, customerId: 154 },
+        'thulium:ticket:12'
+      );
+
+      expect(result).toEqual({ status: 'linked', eventId: 'event_789' });
+      expect(tx.pipelineCustomer.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { thuliumCustomerId: 154 } })
+      );
+      expect(tx.pipelineOpportunity.updateMany).toHaveBeenCalledWith({
+        where: { id: 'opp_982', thuliumTicketId: null },
+        data: { thuliumTicketId: 12 },
+      });
+      expect(tx.pipelineEvent.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: [expect.objectContaining({ type: 'TICKET_LINKED' })],
+        })
+      );
+    });
+
+    it('rejects a ticket already linked to a different Thulium ticket', async () => {
+      const tx = createTx();
+      tx.pipelineOpportunity.findMany.mockResolvedValue([{ ...opportunity, thuliumTicketId: 999 }]);
+
+      await expect(
+        call(tx, { action: 'TICKET_CREATED', ticketId: 12, customerId: 154 }, 'thulium:ticket:12')
+      ).rejects.toBeInstanceOf(ThuliumWebhookConflictError);
       expect(tx.pipelineOpportunity.updateMany).not.toHaveBeenCalled();
-      expect(tx.pipelineCustomer.updateMany).not.toHaveBeenCalled();
-    }
-  );
-
-  it('accepts an explicit opportunity without a phone guard', async () => {
-    const tx = createTx();
-
-    await expect(
-      linkThuliumTicket(tx, {
-        opportunityId: 'opp_982',
-        thuliumTicketId: 12345,
-        thuliumCustomerId: 67890,
-        idempotencyKey: 'thulium:event-explicit',
-      })
-    ).resolves.toEqual({ status: 'linked', eventId: 'event_789' });
-  });
-
-  it('normalizes an optional phone guard and rejects a mismatch without writes', async () => {
-    const tx = createTx();
-
-    await expect(
-      linkThuliumTicket(tx, {
-        opportunityId: 'opp_982',
-        customerPhone: '999888777',
-        thuliumTicketId: 12345,
-        idempotencyKey: 'thulium:event-mismatch',
-      })
-    ).rejects.toBeInstanceOf(ThuliumWebhookNotFoundError);
-
-    expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
-    expect(tx.pipelineOpportunity.updateMany).not.toHaveBeenCalled();
-  });
-
-  it('rejects a replay whose persisted event has a different payload', async () => {
-    const tx = createTx();
-    tx.pipelineEvent.findUniqueOrThrow.mockImplementation(({ where }: any) =>
-      Promise.resolve(
-        where.id
-          ? {
-              id: 'event_789',
-              type: 'TICKET_LINKED',
-              aggregateType: 'OPPORTUNITY',
-              aggregateId: opportunity.id,
-              payload: { thuliumTicketId: 99999, thuliumCustomerId: 67890 },
-            }
-          : { id: 'event_789' }
-      )
-    );
-
-    await expect(
-      linkThuliumTicket(tx, {
-        opportunityId: 'opp_982',
-        thuliumTicketId: 12345,
-        thuliumCustomerId: 67890,
-        idempotencyKey: 'thulium:event-conflict',
-      })
-    ).rejects.toBeInstanceOf(ThuliumWebhookConflictError);
-    expect(tx.pipelineOpportunity.updateMany).not.toHaveBeenCalled();
-  });
-
-  it('rejects a different ticket ID already linked to the opportunity', async () => {
-    const tx = createTx();
-    tx.pipelineOpportunity.findFirst.mockResolvedValue({ ...opportunity, thuliumTicketId: 77777 });
-
-    await expect(
-      linkThuliumTicket(tx, {
-        opportunityId: 'opp_982',
-        thuliumTicketId: 12345,
-        idempotencyKey: 'thulium:event-existing-conflict',
-      })
-    ).rejects.toBeInstanceOf(ThuliumWebhookConflictError);
-    expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
-  });
-
-  it('detects a concurrent conflicting ticket link instead of overwriting it', async () => {
-    const tx = createTx();
-    tx.pipelineOpportunity.updateMany.mockResolvedValueOnce({ count: 0 });
-    tx.pipelineOpportunity.findUniqueOrThrow.mockResolvedValueOnce({ thuliumTicketId: 99999 });
-
-    await expect(
-      linkThuliumTicket(tx, {
-        opportunityId: 'opp_982',
-        thuliumTicketId: 12345,
-        thuliumCustomerId: 67890,
-        idempotencyKey: 'thulium:event-concurrent-conflict',
-      })
-    ).rejects.toBeInstanceOf(ThuliumWebhookConflictError);
-
-    expect(tx.pipelineOpportunity.updateMany).toHaveBeenCalledWith({
-      where: { id: 'opp_982', thuliumTicketId: null },
-      data: { thuliumTicketId: 12345 },
+      expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
     });
   });
 
-  it('keeps an identical replay as a no-op', async () => {
-    const linked = {
-      ...opportunity,
-      thuliumTicketId: 12345,
-      customer: { ...opportunity.customer, thuliumCustomerId: 67890 },
-    };
-    const tx = createTx();
-    tx.pipelineOpportunity.findFirst.mockResolvedValue(linked);
+  describe('CUSTOMER_UPDATED', () => {
+    it('returns unresolved without writing', async () => {
+      const tx = createTx();
 
-    await linkThuliumTicket(tx, {
-      opportunityId: 'opp_982',
-      thuliumTicketId: 12345,
-      thuliumCustomerId: 67890,
-      idempotencyKey: 'thulium:event-replay',
+      const result = await call(tx, { action: 'CUSTOMER_UPDATED', customerId: 154 }, 'thulium:customer:154:nodate');
+
+      expect(result).toEqual({ status: 'unresolved', reason: 'not_actionable_without_thulium_client' });
+      expect(tx.pipelineCustomer.findFirst).not.toHaveBeenCalled();
+      expect(tx.pipelineOpportunity.findMany).not.toHaveBeenCalled();
+      expect(tx.pipelineEvent.createMany).not.toHaveBeenCalled();
     });
-
-    expect(tx.pipelineOpportunity.updateMany).not.toHaveBeenCalled();
-    expect(tx.pipelineCustomer.updateMany).not.toHaveBeenCalled();
-  });
-
-  it('records a customer audit event before updating the customer', async () => {
-    const tx = createTx();
-    tx.pipelineEvent.findUniqueOrThrow.mockImplementation(({ where }: any) =>
-      Promise.resolve(
-        where.id
-          ? {
-              id: 'event_customer',
-              type: 'THULIUM_CUSTOMER_LINKED',
-              aggregateType: 'CUSTOMER',
-              aggregateId: opportunity.customer.id,
-              payload: { thuliumCustomerId: 67890 },
-            }
-          : { id: 'event_customer' }
-      )
-    );
-
-    await linkThuliumTicket(tx, {
-      opportunityId: 'opp_982',
-      thuliumCustomerId: 67890,
-      idempotencyKey: 'thulium:customer-event',
-    });
-
-    expect(tx.pipelineEvent.createMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: [expect.objectContaining({ type: 'THULIUM_CUSTOMER_LINKED' })],
-      })
-    );
-    expect(tx.pipelineCustomer.updateMany).toHaveBeenCalled();
-    expect(tx.pipelineEvent.createMany.mock.invocationCallOrder[0]).toBeLessThan(
-      tx.pipelineCustomer.updateMany.mock.invocationCallOrder[0]
-    );
-    expect(tx.pipelineEvent.createMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: [expect.objectContaining({ actorType: PipelineActorType.THULIUM })],
-      })
-    );
   });
 });

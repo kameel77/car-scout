@@ -3,10 +3,21 @@ import {
   QueueResponse,
   PipelineOpportunitySummary,
   InboxLeadSummary,
+  WaitingOpportunitySummary,
 } from '../types';
 import { QueueRow } from '../components/QueueRow';
 import { InboxRow } from '../components/InboxRow';
-import { AlertTriangle, Calendar, HelpCircle, Inbox, Loader2 } from 'lucide-react';
+import { AlertTriangle, Calendar, HelpCircle, Hourglass, Inbox, Loader2 } from 'lucide-react';
+
+const WAITING_REASON_LABEL: Record<WaitingOpportunitySummary['waitingReason'], string> = {
+  APPLICATION_PENDING: 'czeka na decyzję finansującego',
+  DOCUMENT_PENDING: 'czeka na dokument od klienta',
+};
+
+function waitingNoteFor(opp: WaitingOpportunitySummary): string {
+  const days = Math.floor((Date.now() - new Date(opp.waitingSince).getTime()) / (1000 * 60 * 60 * 24));
+  return `${WAITING_REASON_LABEL[opp.waitingReason]} (${days} dni)`;
+}
 
 export function QueueView({
   queue,
@@ -42,7 +53,7 @@ export function QueueView({
 
   if (!queue) return null;
 
-  const { overdue, today, noAction, inbox, counts } = queue;
+  const { overdue, today, waiting, noAction, inbox, counts } = queue;
 
   return (
     <div className="space-y-8">
@@ -113,6 +124,39 @@ export function QueueView({
           </div>
         )}
       </section>
+
+      {/* 2b. WAITING SECTION (🟠 Czeka na odpowiedź) */}
+      {waiting.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1 rounded-md bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-400">
+              <Hourglass className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-base text-orange-700 dark:text-orange-400">
+              Czeka na odpowiedź ({counts.waiting})
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              Brak decyzji finansującego lub dokumentu od klienta od co najmniej 3 dni
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {waiting.map((opp) => (
+              <QueueRow
+                key={opp.id}
+                opportunity={opp}
+                onOpenDetails={onOpenDetails}
+                onOpenLogContact={onOpenLogContact}
+                onOpenSetNextAction={onOpenSetNextAction}
+                onOpenTransition={onOpenTransition}
+                onOpenClose={onOpenClose}
+                onQuickSnooze={onQuickSnooze}
+                waitingNote={waitingNoteFor(opp)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 3. INBOX SECTION (🔵 Nowe zapytania) */}
       <section className="space-y-3">

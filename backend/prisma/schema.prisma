@@ -1569,4 +1569,32 @@ model PipelineNumberSequence {
   @@map("pipeline_number_sequences")
 }
 
+// ---------- Thulium dead letters ----------
+
+/// Thulium notifications that could not be linked to any opportunity/customer
+/// (or that failed payload validation). Never dropped silently — reviewed and
+/// dismissed manually. Lives in the platform scope: an unmatched notification
+/// does not belong to any dealer.
+model PipelineThuliumDeadLetter {
+  id        String    @id @default(cuid())
+  scopeType ScopeType @map("scope_type")
+  scopeId   String    @map("scope_id")
+
+  action String
+  reason String
+  payload Json
+
+  /// Ostatnie 4 cyfry numeru, jeśli payload go niósł — do szybkiego rozpoznania bez wyciągania pełnego numeru na listę.
+  phoneSuffix String? @map("phone_suffix")
+
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  dismissedAt     DateTime? @map("dismissed_at")
+  dismissedUserId String?   @map("dismissed_user_id")
+
+  @@index([scopeType, scopeId, dismissedAt])
+  @@index([receivedAt])
+  @@map("pipeline_thulium_dead_letters")
+}
+
 // <<< PIPELINE MODULE
