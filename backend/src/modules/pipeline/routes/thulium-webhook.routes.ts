@@ -8,12 +8,17 @@ import {
   type ThuliumNotification,
 } from '../services/thulium-webhook.service.js';
 
+const optionalCoercedInt = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.coerce.number().int().optional()
+);
+
 const thuliumWebhookSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('AGENT_RINGING'),
     connection_id: z.string().min(1).max(200),
     source_number: z.string().trim().min(3).max(64),
-    queue_id: z.number().int().optional(),
+    queue_id: optionalCoercedInt,
     agent_login: z.string().optional(),
     destination_number: z.string().optional(),
     date: z.string().optional(),
@@ -26,22 +31,22 @@ const thuliumWebhookSchema = z.discriminatedUnion('action', [
   }),
   z.object({
     action: z.literal('TICKET_CREATED'),
-    ticket_id: z.number().int().positive(),
-    customer_id: z.number().int().positive(),
+    ticket_id: z.coerce.number().int().positive(),
+    customer_id: z.coerce.number().int().positive(),
     agent_login: z.string().optional(),
     direction: z.string().optional(),
     date: z.string().optional(),
   }),
   z.object({
     action: z.literal('CUSTOMER_CREATED'),
-    customer_id: z.number().int().positive(),
-    company_id: z.number().int().optional(),
+    customer_id: z.coerce.number().int().positive(),
+    company_id: optionalCoercedInt,
     date: z.string().optional(),
   }),
   z.object({
     action: z.literal('CUSTOMER_UPDATED'),
-    customer_id: z.number().int().positive(),
-    company_id: z.number().int().optional(),
+    customer_id: z.coerce.number().int().positive(),
+    company_id: optionalCoercedInt,
     date: z.string().optional(),
   }),
 ]);
@@ -98,84 +103,138 @@ function buildIdempotencyKey(payload: z.infer<typeof thuliumWebhookSchema>): str
 }
 
 export async function registerThuliumWebhookRoutes(app: FastifyInstance) {
-  app.post('/api/pipeline/integrations/thulium/webhook', {
-    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
-  }, async (request, reply) => {
-    const webhookUser = process.env.THULIUM_WEBHOOK_USER;
-    const webhookPassword = process.env.THULIUM_WEBHOOK_PASSWORD;
-    if (!webhookUser || !webhookPassword) {
-      request.log.error('THULIUM_WEBHOOK_USER / THULIUM_WEBHOOK_PASSWORD is not configured');
-      return reply.code(503).send({ error: 'Thulium webhook is not configured' });
-    }
+  await app.register(async (scoped) => {
+    // Thulium's docs don't state a Content-Type, and the flat payload shape suggests
+    // application/x-www-form-urlencoded, but we have no proof from production. So we accept
+    // both, and log the actual Content-Type for anything unrecognized to learn the truth.
+    //
+    // Drop the inherited default text/plain parser (which just returns the raw string body)
+    // so that an unexpected text/plain request falls through to our '*' catch-all below
+    // instead of being handled — unparsed — by Fastify's built-in parser.
+    scoped.removeContentTypeParser('text/plain');
 
-    if (!hasValidWebhookBasicAuth(request.headers.authorization, webhookUser, webhookPassword)) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
+    scoped.addContentTypeParser<string>(
+      'application/x-www-form-urlencoded',
+      { parseAs: 'string' },
+      (_request, body, done) => {
+        try {
+          done(null, body === '' ? {} : Object.fromEntries(new URLSearchParams(body)));
+        } catch (error) {
+          done(error as Error);
+        }
+      }
+    );
 
-    const parsed = thuliumWebhookSchema.safeParse(request.body);
-    if (!parsed.success) {
-      const rawBody = request.body as Record<string, unknown> | undefined;
-      const action = typeof rawBody?.action === 'string' ? rawBody.action : 'UNKNOWN';
+    scoped.addContentTypeParser<string>('*', { parseAs: 'string' }, (request, body, done) => {
+      scoped.log.warn(
+        { contentType: request.headers['content-type'] ?? null },
+        'Thulium webhook: nieznany Content-Type'
+      );
+
+      if (body === '') {
+        done(null, {});
+        return;
+      }
+
       try {
-        await recordThuliumDeadLetter(app.prisma, {
-          action,
-          reason: 'invalid_payload',
-          payload: request.body,
-        });
-      } catch (deadLetterError) {
-        request.log.error(deadLetterError, 'Failed to record Thulium dead letter for invalid payload');
+        done(null, JSON.parse(body));
+        return;
+      } catch {
+        // fall through to the form-urlencoded fallback below
       }
-      return reply.code(400).send({ error: 'Validation failed', details: parsed.error.flatten() });
-    }
 
-    try {
-      const result = await app.prisma.$transaction(async (tx) => {
-        const handled = await handleThuliumNotification(tx, {
-          notification: toNotification(parsed.data),
-          idempotencyKey: buildIdempotencyKey(parsed.data),
-        });
+      try {
+        done(null, Object.fromEntries(new URLSearchParams(body)));
+      } catch {
+        const error: Error & { statusCode?: number } = new Error(
+          'Nie udało się rozpoznać treści żądania Thulium'
+        );
+        error.statusCode = 400;
+        done(error);
+      }
+    });
 
-        if (handled.status === 'unresolved' && handled.reason !== 'not_actionable_without_thulium_client') {
-          const phoneSuffix =
-            parsed.data.action === 'AGENT_RINGING'
-              ? (() => {
-                  const digits = parsed.data.source_number.replace(/\D/g, '');
-                  return digits ? digits.slice(-4) : null;
-                })()
-              : null;
-          await recordThuliumDeadLetter(tx, {
-            action: parsed.data.action,
-            reason: handled.reason,
-            payload: parsed.data,
-            phoneSuffix,
+    scoped.post(
+      '/api/pipeline/integrations/thulium/webhook',
+      { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } },
+      async (request, reply) => {
+        const webhookUser = process.env.THULIUM_WEBHOOK_USER;
+        const webhookPassword = process.env.THULIUM_WEBHOOK_PASSWORD;
+        if (!webhookUser || !webhookPassword) {
+          request.log.error('THULIUM_WEBHOOK_USER / THULIUM_WEBHOOK_PASSWORD is not configured');
+          return reply.code(503).send({ error: 'Thulium webhook is not configured' });
+        }
+
+        if (!hasValidWebhookBasicAuth(request.headers.authorization, webhookUser, webhookPassword)) {
+          return reply.code(401).send({ error: 'Unauthorized' });
+        }
+
+        const parsed = thuliumWebhookSchema.safeParse(request.body);
+        if (!parsed.success) {
+          const rawBody = request.body as Record<string, unknown> | undefined;
+          const action = typeof rawBody?.action === 'string' ? rawBody.action : 'UNKNOWN';
+          try {
+            await recordThuliumDeadLetter(app.prisma, {
+              action,
+              reason: 'invalid_payload',
+              payload: request.body,
+            });
+          } catch (deadLetterError) {
+            request.log.error(deadLetterError, 'Failed to record Thulium dead letter for invalid payload');
+          }
+          return reply.code(400).send({ error: 'Validation failed', details: parsed.error.flatten() });
+        }
+
+        try {
+          const result = await app.prisma.$transaction(async (tx) => {
+            const handled = await handleThuliumNotification(tx, {
+              notification: toNotification(parsed.data),
+              idempotencyKey: buildIdempotencyKey(parsed.data),
+            });
+
+            if (handled.status === 'unresolved' && handled.reason !== 'not_actionable_without_thulium_client') {
+              const phoneSuffix =
+                parsed.data.action === 'AGENT_RINGING'
+                  ? (() => {
+                      const digits = parsed.data.source_number.replace(/\D/g, '');
+                      return digits ? digits.slice(-4) : null;
+                    })()
+                  : null;
+              await recordThuliumDeadLetter(tx, {
+                action: parsed.data.action,
+                reason: handled.reason,
+                payload: parsed.data,
+                phoneSuffix,
+              });
+            }
+
+            return handled;
           });
+
+          if (result.status === 'unresolved') {
+            const logContext: Record<string, unknown> = {
+              action: parsed.data.action,
+              reason: result.reason,
+            };
+            if ('connection_id' in parsed.data) logContext.connection_id = parsed.data.connection_id;
+            if ('ticket_id' in parsed.data) logContext.ticket_id = parsed.data.ticket_id;
+            if ('customer_id' in parsed.data) logContext.customer_id = parsed.data.customer_id;
+            if (parsed.data.action === 'AGENT_RINGING') {
+              const digits = parsed.data.source_number.replace(/\D/g, '');
+              logContext.sourceNumberSuffix = digits ? digits.slice(-4) : undefined;
+            }
+            request.log.info(logContext, 'Thulium webhook notification could not be linked');
+            return reply.code(204).send();
+          }
+
+          return reply.code(202).send({ accepted: true, eventId: result.eventId });
+        } catch (error) {
+          if (error instanceof ThuliumWebhookConflictError) {
+            return reply.code(409).send({ error: error.message });
+          }
+          throw error;
         }
-
-        return handled;
-      });
-
-      if (result.status === 'unresolved') {
-        const logContext: Record<string, unknown> = {
-          action: parsed.data.action,
-          reason: result.reason,
-        };
-        if ('connection_id' in parsed.data) logContext.connection_id = parsed.data.connection_id;
-        if ('ticket_id' in parsed.data) logContext.ticket_id = parsed.data.ticket_id;
-        if ('customer_id' in parsed.data) logContext.customer_id = parsed.data.customer_id;
-        if (parsed.data.action === 'AGENT_RINGING') {
-          const digits = parsed.data.source_number.replace(/\D/g, '');
-          logContext.sourceNumberSuffix = digits ? digits.slice(-4) : undefined;
-        }
-        request.log.info(logContext, 'Thulium webhook notification could not be linked');
-        return reply.code(204).send();
       }
-
-      return reply.code(202).send({ accepted: true, eventId: result.eventId });
-    } catch (error) {
-      if (error instanceof ThuliumWebhookConflictError) {
-        return reply.code(409).send({ error: error.message });
-      }
-      throw error;
-    }
+    );
   });
 }
