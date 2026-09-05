@@ -753,6 +753,7 @@ model RentalCompany {
   insuranceAddMode   InsuranceAddMode?         @default(INSURANCE_23) @map("insurance_add_mode")
   ownedVehicles      RentalVehicle[]           @relation("VehicleOwnerCompany")
   vehicleAssignments VehicleRentalAssignment[]
+  stockUnits         RentalStockUnit[]
 
   @@map("rental_companies")
 }
@@ -797,13 +798,49 @@ model RentalMatrixEntry {
   initialPaymentAmountNet   Float                   @default(0) @map("initial_payment_amount_net")
   insuranceNet              Float?                  @map("insurance_net")
   feePct                    Float?                  @map("fee_pct")
+  overMileageTiresNoLimit   Float?                  @map("over_mileage_tires_no_limit")
+  priceVariant              String                  @default("base") @map("price_variant")
   assignment                VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
-  @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct, initialPaymentAmountNet, initialPaymentAmountGross, offerType])
+  @@unique([assignmentId, annualMileageKm, contractMonths, initialPaymentPct, initialPaymentAmountNet, initialPaymentAmountGross, offerType, priceVariant])
   @@index([assignmentId])
   @@index([monthlyRateGross])
   @@index([assignmentId, monthlyRateGross])
   @@map("rental_matrix_entries")
+}
+
+model RentalStockUnit {
+  id                  String    @id @default(cuid())
+  rentalCompanyId     String    @map("rental_company_id")
+  stockNo             String    @map("stock_no")
+  /// Surowa wartość z pliku partnera — do reklamacji i audytu, np. "291 (Warszawa)".
+  specNoRaw           String    @map("spec_no_raw")
+  /// Po ekstrakcji regexem. null = nie udało się wyciągnąć; wtedy pozycja jest bez wyceny.
+  specNo              String?   @map("spec_no")
+  /// Reszta specNoRaw po odcięciu numeru, np. "(Warszawa)". Nośnik informacji o miejscu wydania.
+  specNoNote          String?   @map("spec_no_note")
+  vin                 String?
+  registrationNumber  String?   @map("registration_number")
+  make                String?
+  model               String?
+  modelDescription    String?   @map("model_description")
+  bodyType            String?   @map("body_type")
+  color               String?
+  fuelType            String?   @map("fuel_type")
+  dealerName          String?   @map("dealer_name")
+  docsDeliveryDate    DateTime? @map("docs_delivery_date")
+  vehicleDeliveryDate DateTime? @map("vehicle_delivery_date")
+  isActive            Boolean   @default(true) @map("is_active")
+  sourceFile          String?   @map("source_file")
+  importedAt          DateTime  @default(now()) @map("imported_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  rentalCompany RentalCompany @relation(fields: [rentalCompanyId], references: [id])
+
+  @@unique([rentalCompanyId, stockNo])
+  @@index([rentalCompanyId, specNo])
+  @@index([vehicleDeliveryDate])
+  @@map("rental_stock_units")
 }
 
 model Widget {

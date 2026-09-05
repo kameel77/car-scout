@@ -17,7 +17,10 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
     fastify.post('/api/rental-matrix/import', {
         preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
-        const { rentalCompanyId } = request.query as { rentalCompanyId: string };
+        const { rentalCompanyId, priceVariant: queryVariant } = request.query as {
+            rentalCompanyId: string;
+            priceVariant?: string;
+        };
 
         if (!rentalCompanyId) {
             return reply.code(400).send({ error: 'rentalCompanyId query parameter is required' });
@@ -176,11 +179,19 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             });
         }
 
-        // Delete existing matrix entries for resolved assignments (full replace strategy)
+        // Delete existing matrix entries for resolved assignments for these priceVariants
         if (assignmentMap.size > 0) {
             const assignmentIds = [...new Set([...assignmentMap.values()].flat())];
+            const variantsToDelete = [
+                ...new Set(
+                    allMappedEntries.map(e => e.priceVariant || queryVariant || 'base')
+                )
+            ];
             await fastify.prisma.rentalMatrixEntry.deleteMany({
-                where: { assignmentId: { in: assignmentIds } }
+                where: {
+                    assignmentId: { in: assignmentIds },
+                    priceVariant: { in: variantsToDelete }
+                }
             });
         }
 
@@ -202,6 +213,8 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             tiresNoLimit: number | null;
             insuranceNet: number | null;
             feePct: number | null;
+            overMileageTiresNoLimit?: number | null;
+            priceVariant?: string;
         }> = [];
 
         // Track vehicle metadata updates (provider format only)
@@ -229,6 +242,8 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
                     });
                 }
 
+                const effectiveVariant = entry.priceVariant || queryVariant || 'base';
+
                 batchData.push({
                     assignmentId,
                     annualMileageKm: entry.annualMileageKm,
@@ -241,11 +256,13 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
                     monthlyRateGross: entry.monthlyRateGross,
                     servicesIncluded: entry.servicesIncluded,
                     overMileageCost: entry.overMileageCost,
+                    overMileageTiresNoLimit: entry.overMileageTiresNoLimit,
                     insuranceExcess500: entry.insuranceExcess500,
                     insuranceNoLimit: entry.insuranceNoLimit,
                     tiresNoLimit: entry.tiresNoLimit,
                     insuranceNet: entry.insuranceNet,
-                    feePct: entry.feePct
+                    feePct: entry.feePct,
+                    priceVariant: effectiveVariant
                 });
 
                 // Collect vehicle metadata updates

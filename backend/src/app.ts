@@ -38,6 +38,7 @@ import { listingUploadRoutes } from './routes/listing-upload.js';
 import { rentalVehicleRoutes } from './routes/rental-vehicles.js';
 import { rentalCompanyRoutes } from './routes/rental-companies.js';
 import { rentalMatrixRoutes } from './routes/rental-matrix.js';
+import { rentalStockRoutes } from './routes/rental-stock.js';
 import { rentalPublicRoutes } from './routes/rental-public.js';
 import { csflowRoutes } from './routes/csflow.js';
 import { pewneautoRoutes } from './routes/pewneauto.js';
@@ -433,6 +434,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(rentalVehicleRoutes);
     await fastify.register(rentalCompanyRoutes);
     await fastify.register(rentalMatrixRoutes);
+    await fastify.register(rentalStockRoutes);
     await fastify.register(rentalPublicRoutes);
     await fastify.register(csflowRoutes);
     await fastify.register(pewneautoRoutes);

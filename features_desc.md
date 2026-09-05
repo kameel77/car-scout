@@ -754,3 +754,32 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 
 
 
+
+### 63. Moduł Wynajmu - Stok Pojazdów Partnerów, Warianty Cenowe Matrycy i Silnik Wyceny (Etap 1)
+- **Cel**: automatyzacja warstwy danych o stoku pojazdów z wynajmu długoterminowego (np. Ayvens) oraz deterministyczny silnik wyceny raty dla konkretnego numeru stockowego na podstawie parametrów zapytania.
+- **Warianty cenowe w matrycy wynajmu (`priceVariant`)**:
+  - Rozszerzenie matrycy stawek `RentalMatrixEntry` o wymiar `priceVariant` (domyślnie `"base"`) oraz klucz unikalny `[assignmentId, months, annualKm, priceVariant]`.
+  - Możliwość przechowywania alternatywnych cenników (np. marża 6%, 8%) obok cennika bazowego.
+  - Import CSV matrycy wspiera kolumny `price_variant` / `variant` z pierwszeństwem wartości wiersza nad parametrem zapytania i domyślnym fallbackiem do `"base"`.
+  - Czyszczenie poprzednich wpisów przy imporcie jest ograniczone wyłącznie do importowanych wariantów (`priceVariant: { in: variantsToDelete }`), co zapobiega nadpisywaniu innych wariantów stawek.
+- **Koszt nadprzebiegu z oponami (`overMileageTiresNoLimit`)**:
+  - Obsługa dedykowanej stawki za nadprzebieg w wariancie z oponami (kolumna 23 cennika Ayvens).
+  - Wycena z parametrem `tires=true` zwraca stawkę `overMileageTiresNoLimit`. Jeśli wartość w matrycy nie jest uzupełniona, system zwraca `overMileageNet: null` oraz `overMileageUnavailable: true` zamiast błędnie podstawiać stawkę bez opon.
+- **Baza stoku pojazdów wynajmu (`RentalStockUnit`)**:
+  - Nowa tabela `rental_stock_units` powiązana z firmą wynajmu (`RentalCompany`), przechowująca numer stocku (`stockNo`), numer specyfikacji cennikowej (`specNo`), notatkę specyfikacji (`specNoNote`), dane pojazdu (marka, model, wersja, skrzynia, napęd, moc, paliwo, kolor, VIN), daty dostępności oraz status aktywności (`isActive`).
+  - Klucz unikalny `[rentalCompanyId, stockNo]`.
+- **Import kanonicznego CSV stoku (`POST /api/rental-stock/import`)**:
+  - Obsługa kanonicznego formatu CSV z elastycznym parsowaniem dat (`YYYY-MM-DD`, `DD.MM.YYYY`, ISO) i automatyczną ekstrakcją czystego numeru specyfikacji (`extractSpecNo`) z zachowaniem dopisków (np. "294 (krajowy)") w `specNoNote`.
+  - Wymóg obecności co najmniej jednego poprawnego wiersza danych stoku (blokada przed przypadkowym wyczyszczeniem stoku przy pustym pliku).
+  - Mechanizm upsert: aktualizacja istniejących jednostek i dodawanie nowych.
+  - Automatyczna deaktywacja brakujących: jednostki danej firmy najmu nieobecne w przesyłanym pliku CSV są oznaczane jako `isActive: false`.
+  - Zwraca raport: `{ totalRows, inserted, updated, deactivated, unmatched, errors }`.
+- **Wyszukiwarka stoku (`GET /api/rental-stock/search`)**:
+  - Wyszukiwanie aktywnych jednostek po numerze stocku, marce, modelu, opisie lub numerze VIN.
+  - Filtr po firmie wynajmu (`companyId`).
+  - Dynamiczne wzbogacanie wyników o flagę `hasPricing` (czy istnieje powiązana specyfikacja w matrycy stawek) oraz sortowanie priorytetyzujące pojazdy wycenione (`hasPricing` malejąco) oraz z najwcześniejszą datą odbioru, z poprawnym zliczaniem `total` w bazie.
+- **Silnik wyceny raty dla numeru stockowego (`GET /api/rental-stock/:id/quote`)**:
+  - Parametry: `months` (24/36/48/60), `annualKm` (10000..50000), `insurance` (udział własny: 1000, 500 lub 0 PLN), `tires` (true/false), `variant` (np. base, 6, 8), opcjonalny `companyId`.
+  - Deterministyczne mapowanie ze stoku na specyfikację matrycy z wyborem najniższego identyfikatora przypisania (`assignmentId`) w przypadku wielu pasujących wpisów o identycznych stawkach.
+  - Wykrywanie rozbieżności stawek: w przypadku niezgodności stawek pomiędzy wieloma przypisaniami tej samej specyfikacji endpoint zwraca `HTTP 409 Conflict` z listą rozbieżności.
+  - Zwraca pełną strukturę wyceny: identyfikatory, dane pojazdu, parametry wejściowe, ratę bazową, zwyżki za ubezpieczenie i opony, finalną ratę netto/brutto oraz stawkę za nadprzebieg.

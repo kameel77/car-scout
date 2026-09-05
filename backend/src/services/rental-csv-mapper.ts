@@ -16,6 +16,8 @@ export interface RentalMatrixCSVRow {
     offer_type?: string; // "business" | "consumer" | "all" — defaults to "all"
     fee_pct?: string;
     fee?: string;
+    price_variant?: string;
+    variant?: string;
 }
 
 /** Provider format (car_id, term_months, monthly_cost_net, …) */
@@ -42,6 +44,7 @@ export interface ProviderCSVRow {
     other_cost_net?: string;
     monthly_cost_net: string;
     over_mileage?: string;
+    over_mileage_tires?: string;
     insurance_500?: string;
     insurance_nolim?: string;
     tires_nolim?: string;
@@ -50,6 +53,8 @@ export interface ProviderCSVRow {
     amounts_type?: string;
     fee_pct?: string;
     fee?: string;
+    price_variant?: string;
+    variant?: string;
 }
 
 export interface RentalMatrixImportResult {
@@ -207,6 +212,8 @@ export interface MappedMatrixEntry {
     tiresNoLimit: number | null;
     insuranceNet: number | null;
     feePct: number | null;
+    overMileageTiresNoLimit: number | null;
+    priceVariant: string | null;
     // Provider-only vehicle metadata (used to update vehicle record optionally)
     vehicleMeta?: {
         carClass: string | null;
@@ -315,7 +322,9 @@ export function mapCSVRowToMatrixEntry(row: RentalMatrixCSVRow, rowIndex: number
             insuranceNoLimit: null,
             tiresNoLimit: null,
             insuranceNet: null,
-            feePct: feeParsed.value
+            feePct: feeParsed.value,
+            overMileageTiresNoLimit: null,
+            priceVariant: row.price_variant?.trim() || row.variant?.trim() || null
         },
         error: null
     };
@@ -389,10 +398,12 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
 
     // Parse optional financial fields
     const overMileageCost = safeFloat(row.over_mileage);
+    const overMileageTiresNoLimit = safeFloat(row.over_mileage_tires);
     const insuranceExcess500 = safeFloat(row.insurance_500);
     const insuranceNoLimit = safeFloat(row.insurance_nolim);
     const tiresNoLimit = safeFloat(row.tires_nolim);
     const insuranceNet = safeFloat(row.insurance_net);
+    const priceVariant = row.price_variant?.trim() || row.variant?.trim() || null;
 
     // Parse fee_pct
     const rawFee = row.fee_pct ?? row.fee;
@@ -428,6 +439,8 @@ export function mapProviderCSVRow(row: ProviderCSVRow, rowIndex: number): Provid
         tiresNoLimit,
         insuranceNet,
         feePct: feeParsed.value,
+        overMileageTiresNoLimit,
+        priceVariant,
         vehicleMeta
     }));
 
