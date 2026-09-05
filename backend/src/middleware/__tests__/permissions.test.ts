@@ -37,9 +37,9 @@ describe('Permissions Matrix & Engine', () => {
     const dealerCtx: ActiveContext = { scopeType: ScopeType.DEALER, scopeId: 'dealer-1' };
 
     describe('ROLE_PERMISSIONS Matrix', () => {
-        it('SUPERADMIN_PLATFORM has all 24 permissions', () => {
+        it('SUPERADMIN_PLATFORM has all 25 permissions', () => {
             const perms = ROLE_PERMISSIONS[MemberRole.SUPERADMIN_PLATFORM];
-            expect(perms.length).toBe(24);
+            expect(perms.length).toBe(25);
             expect(perms).toContain('platform:settings:read');
             expect(perms).toContain('platform:settings:write');
             expect(perms).toContain('dealer_groups:read');
@@ -60,15 +60,16 @@ describe('Permissions Matrix & Engine', () => {
             expect(perms).toContain('leads:write');
             expect(perms).toContain('pipeline:read');
             expect(perms).toContain('pipeline:write');
+            expect(perms).toContain('pipeline:pii:read');
             expect(perms).toContain('analytics:read');
             expect(perms).toContain('content:read');
             expect(perms).toContain('content:write');
             expect(perms).toContain('context:switch');
         });
 
-        it('PLATFORM_MANAGER has operational permissions (18 permissions) but NO content:write, users, settings', () => {
+        it('PLATFORM_MANAGER has operational permissions (19 permissions) but NO content:write, users, settings', () => {
             const perms = ROLE_PERMISSIONS[MemberRole.PLATFORM_MANAGER];
-            expect(perms.length).toBe(18);
+            expect(perms.length).toBe(19);
             expect(perms).toContain('dealer_groups:read');
             expect(perms).toContain('dealer_groups:write');
             expect(perms).toContain('dealers:read');
@@ -85,6 +86,7 @@ describe('Permissions Matrix & Engine', () => {
             expect(perms).toContain('leads:write');
             expect(perms).toContain('pipeline:read');
             expect(perms).toContain('pipeline:write');
+            expect(perms).toContain('pipeline:pii:read');
             expect(perms).toContain('analytics:read');
             expect(perms).toContain('context:switch');
 
@@ -120,7 +122,7 @@ describe('Permissions Matrix & Engine', () => {
 
         it('DEALER_GROUP_ADMIN has group-level permissions', () => {
             const perms = ROLE_PERMISSIONS[MemberRole.DEALER_GROUP_ADMIN];
-            expect(perms.length).toBe(14);
+            expect(perms.length).toBe(15);
             expect(perms).toContain('dealer_groups:read');
             expect(perms).toContain('dealers:read');
             expect(perms).toContain('dealers:write');
@@ -135,6 +137,7 @@ describe('Permissions Matrix & Engine', () => {
             expect(perms).toContain('leads:write');
             expect(perms).toContain('pipeline:read');
             expect(perms).toContain('pipeline:write');
+            expect(perms).toContain('pipeline:pii:read');
 
             expect(perms).not.toContain('analytics:read');
             expect(perms).not.toContain('content:write');
@@ -143,7 +146,7 @@ describe('Permissions Matrix & Engine', () => {
 
         it('DEALER_ADMIN has dealer-level admin permissions', () => {
             const perms = ROLE_PERMISSIONS[MemberRole.DEALER_ADMIN];
-            expect(perms.length).toBe(12);
+            expect(perms.length).toBe(13);
             expect(perms).toContain('dealers:read');
             expect(perms).toContain('users:read');
             expect(perms).toContain('users:write');
@@ -156,6 +159,7 @@ describe('Permissions Matrix & Engine', () => {
             expect(perms).toContain('leads:write');
             expect(perms).toContain('pipeline:read');
             expect(perms).toContain('pipeline:write');
+            expect(perms).toContain('pipeline:pii:read');
 
             expect(perms).not.toContain('analytics:read');
             expect(perms).not.toContain('content:write');

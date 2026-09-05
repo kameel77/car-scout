@@ -69,6 +69,7 @@ export function normalizeNip(nip: string | null | undefined): string | null {
 export type FindMatchResult = {
   match: PipelineCustomer | null;
   isAmbiguous: boolean;
+  candidates?: PipelineCustomer[];
 };
 
 /**
@@ -101,14 +102,14 @@ export async function findCustomerMatch(
         scopeId: input.scopeId,
         phone: normPhone,
       },
-      take: 2,
+      take: 5,
     });
 
     if (phoneMatches.length === 1) {
       return { match: phoneMatches[0], isAmbiguous: false };
     }
     if (phoneMatches.length > 1) {
-      return { match: null, isAmbiguous: true };
+      return { match: null, isAmbiguous: true, candidates: phoneMatches };
     }
   }
 
@@ -120,14 +121,14 @@ export async function findCustomerMatch(
         scopeId: input.scopeId,
         email: normEmail,
       },
-      take: 2,
+      take: 5,
     });
 
     if (emailMatches.length === 1) {
       return { match: emailMatches[0], isAmbiguous: false };
     }
     if (emailMatches.length > 1) {
-      return { match: null, isAmbiguous: true };
+      return { match: null, isAmbiguous: true, candidates: emailMatches };
     }
   }
 
@@ -139,14 +140,14 @@ export async function findCustomerMatch(
         scopeId: input.scopeId,
         companyNip: normNip,
       },
-      take: 2,
+      take: 5,
     });
 
     if (nipMatches.length === 1) {
       return { match: nipMatches[0], isAmbiguous: false };
     }
     if (nipMatches.length > 1) {
-      return { match: null, isAmbiguous: true };
+      return { match: null, isAmbiguous: true, candidates: nipMatches };
     }
   }
 
@@ -164,13 +165,15 @@ export async function findOrCreateCustomer(
     companyName?: string | null;
     companyNip?: string | null;
     clientType?: ClientType;
+    peselEnc?: string | null;
+    peselMasked?: string | null;
   }
-): Promise<{ customer: PipelineCustomer; isNew: boolean; isAmbiguous: boolean }> {
+): Promise<{ customer: PipelineCustomer; isNew: boolean; isAmbiguous: boolean; candidates?: PipelineCustomer[] }> {
   const normPhone = normalizePhone(input.phone);
   const normEmail = normalizeEmail(input.email);
   const normNip = normalizeNip(input.companyNip);
 
-  const { match, isAmbiguous } = await findCustomerMatch(tx, {
+  const { match, isAmbiguous, candidates } = await findCustomerMatch(tx, {
     scopeType: input.scopeType,
     scopeId: input.scopeId,
     phone: normPhone,
@@ -179,7 +182,22 @@ export async function findOrCreateCustomer(
   });
 
   if (match) {
+    // If PESEL is provided and existing customer has none, update it safely
+    if (input.peselEnc && !match.peselEnc) {
+      const updated = await tx.pipelineCustomer.update({
+        where: { id: match.id },
+        data: {
+          peselEnc: input.peselEnc,
+          peselMasked: input.peselMasked,
+        },
+      });
+      return { customer: updated, isNew: false, isAmbiguous: false };
+    }
     return { customer: match, isNew: false, isAmbiguous: false };
+  }
+
+  if (isAmbiguous) {
+    return { customer: null as any, isNew: false, isAmbiguous: true, candidates };
   }
 
   const newCustomer = await tx.pipelineCustomer.create({
@@ -192,8 +210,10 @@ export async function findOrCreateCustomer(
       companyName: input.companyName?.trim() || null,
       companyNip: normNip,
       clientType: input.clientType ?? ClientType.UNKNOWN,
+      peselEnc: input.peselEnc || null,
+      peselMasked: input.peselMasked || null,
     },
   });
 
-  return { customer: newCustomer, isNew: true, isAmbiguous };
+  return { customer: newCustomer, isNew: true, isAmbiguous: false };
 }

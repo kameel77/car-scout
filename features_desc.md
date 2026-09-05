@@ -783,3 +783,30 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Deterministyczne mapowanie ze stoku na specyfikację matrycy z wyborem najniższego identyfikatora przypisania (`assignmentId`) w przypadku wielu pasujących wpisów o identycznych stawkach.
   - Wykrywanie rozbieżności stawek: w przypadku niezgodności stawek pomiędzy wieloma przypisaniami tej samej specyfikacji endpoint zwraca `HTTP 409 Conflict` z listą rozbieżności.
   - Zwraca pełną strukturę wyceny: identyfikatory, dane pojazdu, parametry wejściowe, ratę bazową, zwyżki za ubezpieczenie i opony, finalną ratę netto/brutto oraz stawkę za nadprzebieg.
+
+### 64. Składanie i Wysyłka Wniosku Najmu do Partnera Finansowego (Etap 2)
+- **Cel**: zastąpienie ręcznego wysyłania maili z wnioskiem do partnera finansowego (np. Ayvens) pojedynczym, atomowym wywołaniem API orkiestrującym założenie klienta, sprawy w pipeline, przypisanie kandydata pojazdu ze stoku, zamrożenie oferty, rejestrację wniosku w statusie `PRECHECK_SUBMITTED`, wysyłkę sformatowanego zgłoszenia e-mail oraz rejestrację audytowalnych zdarzeń biznesowych.
+- **Bezpieczeństwo danych wrażliwych (PESEL)**:
+  - Przechowywanie numeru PESEL w `PipelineCustomer` w formie zaszyfrowanej kryptograficznie symetrycznym algorytmem AES-256-GCM (`peselEnc`) z 12-bajtowym wektorem IV oraz 16-bajtowym tagiem uwierzytelniającym, wraz z maskowaną reprezentacją (`peselMasked`: `*******1234`).
+  - Twarda reguła fail-closed: brak lub nieprawidłowy format klucza szyfrowania `PESEL_ENCRYPTION_KEY` natychmiast przerywa operację ze statusem **HTTP 503**, nie dopuszczając do zapisu nieszyfrowanych danych.
+  - Algorytmiczna walidacja sumy kontrolnej numeru PESEL: błędna suma kontrolna natychmiast odrzuca żądanie kodem **HTTP 422**, bez tworzenia żadnych encji w bazie i bez zwracania numeru PESEL w treści komunikatu błędu.
+  - Ochrona przed wyciekiem (PII Guard): odczyt sprawy `GET /api/pipeline/opportunities/:id` oczyszcza obiekt klienta z pola `peselEnc`. Odszyfrowany PESEL jest dostępny wyłącznie na dedykowanym endpointcie `GET /api/pipeline/customers/:id/pii` chronionym uprawnieniem `pipeline:pii:read`.
+  - Bezwzględny zakaz występowania numeru PESEL w logach serwera, tabeli zdarzeń `PipelineEvent`, dead letterach oraz parametrach zapytań (URL query string).
+- **Złożenie wniosku o wynajem (`POST /api/pipeline/rental-applications`)**:
+  - Walidacja danych klienta dla osób fizycznych (`B2C`: wymagane imię, nazwisko oraz poprawny PESEL) oraz firm (`B2B`: wymagana nazwa firmy lub imię i nazwisko osoby kontaktowej oraz NIP).
+  - Weryfikacja niejednoznaczności klienta: jeśli podany telefon lub email pasuje do wielu kartotek w ramach organizacji, API zwraca **HTTP 409 Conflict** z listą kandydatów do manualnego rozstrzygnięcia.
+  - Atomowa transakcja bazodanowa:
+    1. Utworzenie lub aktualizacja kartoteki klienta (`PipelineCustomer`).
+    2. Utworzenie nowej sprawy w pipeline (`PipelineOpportunity`) w etapie `QUALIFICATION`.
+    3. Pobranie i zweryfikowanie deterministycznej wyceny ze stoku (`calculateRentalQuote`).
+    4. Utworzenie wybranego kandydata pojazdu (`PipelineVehicleCandidate`) z powiązaniem do `RentalStockUnit` (`rentalStockUnitId`).
+    5. Zapisanie zamrożonej oferty handlowej (`PipelineOffer`) z wariantem marży (`rentalPriceVariant`), poziomem ubezpieczenia (`rentalInsuranceVariant`) i flagą opon (`rentalTiresIncluded`).
+    6. Utworzenie wniosku u partnera finansowego (`PipelineApplication`) i przejście do stanu `PRECHECK_SUBMITTED`.
+  - Niezależność wysyłki e-mail: wysyłka wiadomości SMTP do odbiorców partnera (`applicationEmailTo` z tabeli `PipelineFinancier`) odbywa się poza transakcją bazodanową. Ewentualny błąd serwera pocztowego zwraca **HTTP 201** z flagą `emailStatus: "FAILED"` i nie cofa transakcji ani nie zwraca błędu 500.
+  - Rejestracja zdarzenia `RENTAL_APPLICATION_EMAILED` z adresem odbiorców i statusem wysyłki.
+- **Ponowna wysyłka zgłoszenia e-mail (`POST /api/pipeline/applications/:id/resend-email`)**:
+  - Możliwość ponownego wysłania wniosku do partnera finansowego w przypadku awarii serwera pocztowego.
+  - Odtworzenie danych ze snapshotu zamrożonej oferty i wybranego pojazdu bez konieczności ponownego przeliczania stawek.
+- **Widoczność w Thulium**:
+  - Dzięki utworzeniu powiązania `PipelineCustomer` z poprawnym numerem telefonu, istniejący lookup doradcy w Thulium natychmiast widzi nową sprawę, numer wniosku i pojazd bez konieczności jakichkolwiek modyfikacji integracji z Thulium.
+

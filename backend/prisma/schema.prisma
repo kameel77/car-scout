@@ -836,6 +836,7 @@ model RentalStockUnit {
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   rentalCompany RentalCompany @relation(fields: [rentalCompanyId], references: [id])
+  pipelineVehicleCandidates PipelineVehicleCandidate[]
 
   @@unique([rentalCompanyId, stockNo])
   @@index([rentalCompanyId, specNo])
@@ -1140,8 +1141,8 @@ enum PipelineActorType {
 /// One customer can hold several opportunities in parallel (two cars bought at
 /// once) or in sequence (repeat business). Without this table, "what happened
 /// with this client" cannot be answered across cases.
-/// NO PESEL, no ID document numbers, no scans. Thulium and the financiers stay
-/// the carriers of identity documents.
+/// PESEL is stored encrypted (AES-256-GCM) for financial application submission.
+/// ID document scans and numbers are NOT stored. Thulium and financiers remain carriers of document scans.
 model PipelineCustomer {
   id                String     @id @default(cuid())
   scopeType         ScopeType  @map("scope_type")
@@ -1152,6 +1153,11 @@ model PipelineCustomer {
   email             String?
   companyName       String?    @map("company_name")
   companyNip        String?    @map("company_nip")
+  /// Szyfrowany AES-256-GCM. Format: "v1:<iv_b64>:<tag_b64>:<ciphertext_b64>".
+  /// NIGDY nie trafia do pipeline_events, pipeline_thulium_dead_letters ani do logów.
+  peselEnc          String?    @map("pesel_enc")
+  /// Do rozpoznania klienta bez deszyfrowania: 7 gwiazdek + 4 ostatnie cyfry.
+  peselMasked       String?    @map("pesel_masked")
   thuliumCustomerId Int?       @map("thulium_customer_id")
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
@@ -1246,6 +1252,7 @@ model PipelineVehicleCandidate {
   opportunityId       String   @map("opportunity_id")
   listingId           String?  @map("listing_id")
   rentalVehicleId     String?  @map("rental_vehicle_id")
+  rentalStockUnitId   String?  @map("rental_stock_unit_id")
   /// Only for cars outside our stock (dealer order, customer-found).
   customMake          String?  @map("custom_make")
   customModel         String?  @map("custom_model")
@@ -1255,12 +1262,14 @@ model PipelineVehicleCandidate {
   selectionStatus     String   @default("CANDIDATE")
   createdAt           DateTime @default(now()) @map("created_at")
 
-  opportunity   PipelineOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  listing       Listing?            @relation(fields: [listingId], references: [id], onDelete: SetNull)
-  rentalVehicle RentalVehicle?      @relation(fields: [rentalVehicleId], references: [id], onDelete: SetNull)
-  offers        PipelineOffer[]
+  opportunity     PipelineOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  listing         Listing?            @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  rentalVehicle   RentalVehicle?      @relation(fields: [rentalVehicleId], references: [id], onDelete: SetNull)
+  rentalStockUnit RentalStockUnit?    @relation(fields: [rentalStockUnitId], references: [id], onDelete: SetNull)
+  offers          PipelineOffer[]
 
   @@index([opportunityId])
+  @@index([rentalStockUnitId])
   @@map("pipeline_vehicle_candidates")
 }
 
@@ -1283,6 +1292,11 @@ model PipelineOffer {
   annualMileageKm    Int?            @map("annual_mileage_km")
   taxMode            PipelineTaxMode @default(GROSS) @map("tax_mode")
   currency           String          @default("PLN")
+
+  /// Frozen rental matrix variant snapshot
+  rentalPriceVariant     String?  @map("rental_price_variant")
+  rentalInsuranceVariant Int?     @map("rental_insurance_variant")
+  rentalTiresIncluded    Boolean  @default(false) @map("rental_tires_included")
 
   /// Computed from the commission basis, never typed by hand except as an
   /// explicit override with a reason. See PipelineCommission.
@@ -1333,6 +1347,9 @@ model PipelineFinancier {
   defaultCommissionPct Decimal?        @map("default_commission_pct") @db.Decimal(6, 3)
   typicalDecisionDays  Int?            @map("typical_decision_days")
   notes                String?
+
+  applicationEmailTo   String[]        @default([]) @map("application_email_to")
+  applicationEmailCc   String[]        @default([]) @map("application_email_cc")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

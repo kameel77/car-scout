@@ -292,6 +292,14 @@ export async function getOpportunityById(
     },
   });
 
+  if (opportunity && opportunity.customer) {
+    const { peselEnc, ...safeCustomer } = opportunity.customer as any;
+    return {
+      ...opportunity,
+      customer: safeCustomer,
+    };
+  }
+
   return opportunity;
 }
 

@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requirePermission } from '../middleware/permissions.js';
 import { parseRentalStockCSV } from '../services/rental-stock-parser.js';
+import { calculateRentalQuote, RentalQuoteError } from '../services/rental-quote.service.js';
 
 export async function rentalStockRoutes(fastify: FastifyInstance) {
     // ── 1. Import rental stock CSV ────────────────────────────────────
@@ -294,181 +295,46 @@ export async function rentalStockRoutes(fastify: FastifyInstance) {
 
         const months = parseInt(monthsRaw || '', 10);
         const annualKm = parseInt(annualKmRaw || '', 10);
-        const insurance = insuranceRaw ? insuranceRaw.trim() : '1000';
+        const insurance = (insuranceRaw ? insuranceRaw.trim() : '1000') as '1000' | '500' | '0';
         const tires = tiresRaw === 'true' || tiresRaw === '1';
         const variant = variantRaw ? variantRaw.trim() : 'base';
 
-        if (isNaN(months) || months <= 0) {
-            return reply.code(400).send({ error: 'Nieprawidłowy parametr months (musi być liczbą dodatnią)' });
-        }
-        if (isNaN(annualKm) || annualKm <= 0) {
-            return reply.code(400).send({ error: 'Nieprawidłowy parametr annualKm (musi być liczbą dodatnią)' });
-        }
-        if (!['1000', '500', '0'].includes(insurance)) {
-            return reply.code(400).send({ error: 'Parametr insurance musi przyjmować wartość 1000, 500 lub 0' });
-        }
-
-        // Lookup stock unit by id or stockNo (scoped to companyId if provided)
-        const whereUnit: Record<string, any> = {
-            OR: [
-                { id },
-                { stockNo: id }
-            ]
-        };
-        if (companyId) {
-            whereUnit.rentalCompanyId = companyId;
-        }
-
-        const unit = await fastify.prisma.rentalStockUnit.findFirst({
-            where: whereUnit
-        });
-
-        if (!unit) {
-            return reply.code(404).send({ error: `Egzemplarz stoku o identyfikatorze "${id}" nie został znaleziony` });
-        }
-
-        if (!unit.specNo) {
-            return reply.code(422).send({
-                error: 'Brak zidentyfikowanego numeru specyfikacji dla tego egzemplarza stoku',
-                specNoRaw: unit.specNoRaw
+        try {
+            const quote = await calculateRentalQuote(fastify.prisma, {
+                unitIdentifier: id,
+                months,
+                annualKm,
+                insurance,
+                tires,
+                variant,
+                companyId
             });
-        }
 
-        // Find matching vehicle rental assignments for (rentalCompanyId, externalVehicleId)
-        const allCompanyAssignments = await fastify.prisma.vehicleRentalAssignment.findMany({
-            where: { rentalCompanyId: unit.rentalCompanyId },
-            select: { id: true, externalVehicleId: true }
-        });
-
-        const matchingAssignments = allCompanyAssignments.filter(a => {
-            if (!a.externalVehicleId) return false;
-            const parts = a.externalVehicleId.split(/[,;]/).map(s => s.trim());
-            return parts.includes(unit.specNo!);
-        });
-
-        if (matchingAssignments.length === 0) {
-            return reply.code(422).send({
-                error: `Brak przypisania pojazdu do specyfikacji ${unit.specNo} w cenniku firmy najmu`
-            });
-        }
-
-        const assignmentIds = matchingAssignments.map(a => a.id);
-
-        // Fetch matrix entries for requested combination across all matching assignments
-        const entries = await fastify.prisma.rentalMatrixEntry.findMany({
-            where: {
-                assignmentId: { in: assignmentIds },
-                contractMonths: months,
-                annualMileageKm: annualKm,
-                priceVariant: variant
-            },
-            orderBy: { assignmentId: 'asc' }
-        });
-
-        if (entries.length === 0) {
-            const available = await fastify.prisma.rentalMatrixEntry.findMany({
-                where: {
-                    assignmentId: { in: assignmentIds }
+            return reply.code(200).send({
+                stockNo: quote.unit.stockNo,
+                specNo: quote.unit.specNo,
+                vehicle: {
+                    make: quote.unit.make,
+                    model: quote.unit.model,
+                    modelDescription: quote.unit.modelDescription,
+                    color: quote.unit.color
                 },
-                select: {
-                    contractMonths: true,
-                    annualMileageKm: true,
-                    priceVariant: true
-                },
-                distinct: ['contractMonths', 'annualMileageKm', 'priceVariant']
+                vehicleDeliveryDate: quote.vehicleDeliveryDate,
+                variant: quote.variant,
+                breakdown: quote.breakdown,
+                monthlyRateNet: quote.monthlyRateNet,
+                monthlyRateGross: quote.monthlyRateGross,
+                overMileageNet: quote.overMileageNet,
+                ...(quote.overMileageUnavailable ? { overMileageUnavailable: true } : {})
             });
-
-            return reply.code(404).send({
-                error: `Brak wyceny dla specyfikacji ${unit.specNo} dla kombinacji: okres ${months} msc, przebieg ${annualKm} km, wariant ${variant}`,
-                availableCombinations: available.map(a => ({
-                    months: a.contractMonths,
-                    annualKm: a.annualMileageKm,
-                    variant: a.priceVariant
-                }))
-            });
-        }
-
-        // Multiple assignments rule: verify all matching entries have identical financial parameters
-        if (entries.length > 1) {
-            const first = entries[0];
-            const hasDiscrepancy = entries.slice(1).some(e =>
-                e.monthlyRateNet !== first.monthlyRateNet ||
-                e.insuranceExcess500 !== first.insuranceExcess500 ||
-                e.insuranceNoLimit !== first.insuranceNoLimit ||
-                e.tiresNoLimit !== first.tiresNoLimit ||
-                e.overMileageCost !== first.overMileageCost ||
-                e.overMileageTiresNoLimit !== first.overMileageTiresNoLimit
-            );
-
-            if (hasDiscrepancy) {
-                return reply.code(409).send({
-                    error: `Wykryto niespójne stawki w cenniku dla specyfikacji ${unit.specNo} w ${entries.length} przypisaniach`,
-                    discrepancies: entries.map(e => ({
-                        assignmentId: e.assignmentId,
-                        monthlyRateNet: e.monthlyRateNet,
-                        insuranceExcess500: e.insuranceExcess500,
-                        insuranceNoLimit: e.insuranceNoLimit,
-                        tiresNoLimit: e.tiresNoLimit,
-                        overMileageCost: e.overMileageCost,
-                        overMileageTiresNoLimit: e.overMileageTiresNoLimit
-                    }))
+        } catch (err: any) {
+            if (err instanceof RentalQuoteError) {
+                return reply.code(err.statusCode).send({
+                    error: err.message,
+                    ...(err.details || {})
                 });
             }
+            throw err;
         }
-
-        // Deterministically pick lowest assignmentId
-        const chosenEntry = entries[0];
-
-        const baseNet = chosenEntry.monthlyRateNet;
-        let insuranceNet = 0;
-        if (insurance === '500') {
-            insuranceNet = chosenEntry.insuranceExcess500 ?? 0;
-        } else if (insurance === '0') {
-            insuranceNet = chosenEntry.insuranceNoLimit ?? 0;
-        }
-
-        const tiresNet = tires ? (chosenEntry.tiresNoLimit ?? 0) : 0;
-        const monthlyRateNet = Math.round((baseNet + insuranceNet + tiresNet) * 100) / 100;
-        const monthlyRateGross = Math.round(monthlyRateNet * 1.23 * 100) / 100;
-
-        let overMileageNet: number | null = null;
-        let overMileageUnavailable = false;
-
-        if (tires) {
-            if (chosenEntry.overMileageTiresNoLimit !== null && chosenEntry.overMileageTiresNoLimit !== undefined) {
-                overMileageNet = chosenEntry.overMileageTiresNoLimit;
-            } else {
-                overMileageNet = null;
-                overMileageUnavailable = true;
-            }
-        } else {
-            overMileageNet = chosenEntry.overMileageCost ?? null;
-        }
-
-        const vehicleDeliveryDateStr = unit.vehicleDeliveryDate
-            ? unit.vehicleDeliveryDate.toISOString().split('T')[0]
-            : null;
-
-        return reply.code(200).send({
-            stockNo: unit.stockNo,
-            specNo: unit.specNo,
-            vehicle: {
-                make: unit.make,
-                model: unit.model,
-                modelDescription: unit.modelDescription,
-                color: unit.color
-            },
-            vehicleDeliveryDate: vehicleDeliveryDateStr,
-            variant,
-            breakdown: {
-                baseNet,
-                insuranceNet,
-                tiresNet
-            },
-            monthlyRateNet,
-            monthlyRateGross,
-            overMileageNet,
-            ...(overMileageUnavailable ? { overMileageUnavailable: true } : {})
-        });
     });
 }
