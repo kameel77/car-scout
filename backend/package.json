@@ -36,7 +36,7 @@
         "@sinclair/typebox": "^0.34.49",
         "@sparticuz/chromium": "^131.0.1",
         "bcrypt": "^6.0.0",
-        "csv-parse": "^5.5.6",
+        "csv-parse": "^7.0.2",
         "dotenv": "^16.4.1",
         "fastify": "^5.8.5",
         "ioredis": "^5.3.2",
