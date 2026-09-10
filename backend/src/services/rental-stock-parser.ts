@@ -62,8 +62,8 @@ export function extractSpecNo(raw: string | null | undefined): {
     let remainder = match[2] ? match[2].trim() : '';
 
     remainder = remainder
-        .replace(/^[\s\-–—:()\[\]]+/, '')
-        .replace(/[\s\-–—:()\[\]]+$/, '')
+        .replace(/^[\s\-–—:()[\]]+/, '')
+        .replace(/[\s\-–—:()[\]]+$/, '')
         .trim();
 
     const specNoNote = remainder.length > 0 ? remainder : null;
