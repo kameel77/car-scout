@@ -143,6 +143,7 @@ model Listing {
   pewneautoSource             PewneAutoSource?           @relation(fields: [pewneautoSourceId], references: [id])
   priceHistory                PriceHistory[]
   pipelineVehicleCandidates   PipelineVehicleCandidate[]
+  employeeProgramOffers       EmployeeProgramOffer[]
 
   @@unique([csflowSourceId, csflowCarId])
   @@unique([pewneautoSourceId, pewneautoCarId])
@@ -206,6 +207,7 @@ model Lead {
   rentalVehicle                   RentalVehicle?       @relation(fields: [rentalVehicleId], references: [id])
   landingPage                     LandingPage?         @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
   pipelineOpportunity             PipelineOpportunity?
+  employeeInquiry                 EmployeeInquiry?
 
   @@index([listingId])
   @@index([financingProductId])
@@ -426,6 +428,7 @@ model FinancingProduct {
   creditListings        Listing[]        @relation("ListingCreditProduct")
   leasingListings       Listing[]        @relation("ListingLeasingProduct")
   pipelineOffers        PipelineOffer[]
+  employeeProductOverrides EmployeeProductOverride[]
 
   @@index([category])
   @@index([isDefault])
@@ -754,6 +757,7 @@ model RentalCompany {
   ownedVehicles      RentalVehicle[]           @relation("VehicleOwnerCompany")
   vehicleAssignments VehicleRentalAssignment[]
   stockUnits         RentalStockUnit[]
+  employeeMatrixSets EmployeeMatrixSet[]
 
   @@map("rental_companies")
 }
@@ -772,6 +776,8 @@ model VehicleRentalAssignment {
   matrixEntries            RentalMatrixEntry[]
   rentalCompany            RentalCompany       @relation(fields: [rentalCompanyId], references: [id])
   vehicle                  RentalVehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  employeeMatrixRows       EmployeeMatrixRow[]
+  employeeProgramOffers    EmployeeProgramOffer[]
 
   @@unique([vehicleId, rentalCompanyId])
   @@index([vehicleId])
@@ -1652,3 +1658,310 @@ model PipelineThuliumDeadLetter {
 }
 
 // <<< PIPELINE MODULE
+
+// ===========================================================================
+// MODUŁ PROGRAMU PRACOWNICZEGO (Employee Program by Motolia)
+// ===========================================================================
+
+enum EmployeeOfferSourceType {
+  FINANCING // Nowe auto z tabeli Listing
+  RENTAL    // Auto powiązane przez VehicleRentalAssignment
+}
+
+enum ContractPartyOption {
+  CONSUMER          // Osoba fizyczna (konsument)
+  EMPLOYEE_B2B      // Działalność gospodarcza pracownika
+  EMPLOYER_COMPANY  // Firma pracodawcy (np. Action)
+}
+
+enum ProductAvailabilityStatus {
+  AVAILABLE               // Potwierdzona dostępność
+  REQUIRES_CONFIRMATION   // Wymaga potwierdzenia (domyślny przy braku weryfikacji)
+  UNAVAILABLE             // Niedostępne dla danej formy umowy
+}
+
+enum MatrixPublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model EmployeeCompany {
+  id                String                     @id @default(cuid())
+  name              String                     @unique
+  slug              String                     @unique
+  nip               String?
+  isActive          Boolean                    @default(true) @map("is_active")
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
+
+  programs          EmployeeProgram[]
+  registrationCodes EmployeeRegistrationCode[]
+  memberships       EmployeeMembership[]
+  inquiries         EmployeeInquiry[]
+
+  @@map("employee_companies")
+}
+
+model EmployeeProgram {
+  id                   String                     @id @default(cuid())
+  companyId            String                     @map("company_id")
+  name                 String
+  slug                 String                     @unique
+  description          String?
+  isActive             Boolean                    @default(true) @map("is_active")
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  updatedAt            DateTime                   @updatedAt @map("updated_at")
+
+  defaultDiscountPct   Decimal?                   @map("default_discount_pct") @db.Decimal(5, 2)
+
+  company              EmployeeCompany            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  productOverrides     EmployeeProductOverride[]
+  offers               EmployeeProgramOffer[]
+  benefitPolicies      EmployeeBenefitPolicy[]
+  memberships          EmployeeMembership[]
+  inquiries            EmployeeInquiry[]
+  registrationCodes    EmployeeRegistrationCode[]
+
+  @@unique([companyId, id])
+  @@map("employee_programs")
+}
+
+// Konfiguracja dopuszczonych produktów finansowych per program
+model EmployeeProductOverride {
+  id                      String                    @id @default(cuid())
+  programId               String                    @map("program_id")
+  financingProductId      String                    @map("financing_product_id")
+  isEnabled               Boolean                   @default(true) @map("is_enabled")
+  b2cStatus               ProductAvailabilityStatus @default(REQUIRES_CONFIRMATION) @map("b2c_status")
+  allowedContractParties  ContractPartyOption[]     @default([EMPLOYEE_B2B, EMPLOYER_COMPANY]) @map("allowed_contract_parties")
+  minDownPaymentPct       Decimal?                  @map("min_down_payment_pct") @db.Decimal(5, 2)
+  maxDownPaymentPct       Decimal?                  @map("max_down_payment_pct") @db.Decimal(5, 2)
+  allowedPeriods          Int[]                     @default([]) @map("allowed_periods") // Pusta tablica = dziedziczenie z Motolii
+  createdAt               DateTime                  @default(now()) @map("created_at")
+  updatedAt               DateTime                  @updatedAt @map("updated_at")
+
+  program                 EmployeeProgram           @relation(fields: [programId], references: [id], onDelete: Cascade)
+  financingProduct        FinancingProduct          @relation(fields: [financingProductId], references: [id], onDelete: Restrict)
+
+  @@unique([programId, financingProductId])
+  @@map("employee_product_overrides")
+}
+
+model EmployeeRegistrationCode {
+  id          String          @id @default(cuid())
+  companyId   String          @map("company_id")
+  programId   String          @map("program_id")
+  codeHash    String          @unique @map("code_hash")
+  label       String?
+  isActive    Boolean         @default(true) @map("is_active")
+  expiresAt   DateTime?       @map("expires_at")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  company     EmployeeCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  program     EmployeeProgram @relation(fields: [companyId, programId], references: [companyId, id], onDelete: Cascade)
+
+  @@index([companyId, isActive])
+  @@map("employee_registration_codes")
+}
+
+model EmployeeAccount {
+  id              String                    @id @default(cuid())
+  email           String                    @unique
+  passwordHash    String                    @map("password_hash")
+  firstName       String?                   @map("first_name")
+  lastName        String?                   @map("last_name")
+  phone           String?
+  isActive        Boolean                   @default(true) @map("is_active")
+  lastLoginAt     DateTime?                 @map("last_login_at")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+
+  membership      EmployeeMembership?       // MVP: dokładnie jedno aktywne członkostwo
+  membershipAudit EmployeeMembershipAudit[]
+  inquiries       EmployeeInquiry[]
+
+  @@map("employee_accounts")
+}
+
+model EmployeeMembership {
+  id         String          @id @default(cuid())
+  accountId  String          @unique @map("account_id") // 1 konto = 1 aktywne członkostwo w MVP
+  companyId  String          @map("company_id")
+  programId  String          @map("program_id")
+  isActive   Boolean         @default(true) @map("is_active")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  revokedAt  DateTime?       @map("revoked_at")
+
+  account    EmployeeAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  company    EmployeeCompany @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  program    EmployeeProgram @relation(fields: [companyId, programId], references: [companyId, id], onDelete: Restrict)
+
+  @@map("employee_memberships")
+}
+
+model EmployeeMembershipAudit {
+  id         String          @id @default(cuid())
+  accountId  String          @map("account_id")
+  companyId  String          @map("company_id")
+  programId  String          @map("program_id")
+  action     String          @map("action") // CREATED, ROTATED, REVOKED, REINSTATED
+  reason     String?         @map("reason")
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  account    EmployeeAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt])
+  @@map("employee_membership_audits")
+}
+
+// Prywatne matryce najmu - powiązane z dostawcą floty RentalCompany
+model EmployeeMatrixSet {
+  id                     String                    @id @default(cuid())
+  rentalCompanyId        String                    @map("rental_company_id")
+  name                   String                    // np. "Ayvens Flota Zamknięta"
+  description            String?
+  allowedContractParties ContractPartyOption[]     @default([EMPLOYEE_B2B, EMPLOYER_COMPANY]) @map("allowed_contract_parties")
+  b2cStatus              ProductAvailabilityStatus @default(REQUIRES_CONFIRMATION) @map("b2c_status")
+  createdAt              DateTime                  @default(now()) @map("created_at")
+  updatedAt              DateTime                  @updatedAt @map("updated_at")
+
+  rentalCompany          RentalCompany             @relation(fields: [rentalCompanyId], references: [id], onDelete: Restrict)
+  versions               EmployeeMatrixVersion[]
+
+  @@map("employee_matrix_sets")
+}
+
+model EmployeeMatrixVersion {
+  id            String                 @id @default(cuid())
+  matrixSetId   String                 @map("matrix_set_id")
+  versionNumber Int                    @map("version_number")
+  label         String                 // np. "Zestaw 6% fee - Q3 2026"
+  feePct        Decimal?               @map("fee_pct") @db.Decimal(5, 2)
+  status        MatrixPublishStatus    @default(DRAFT)
+  publishedAt   DateTime?              @map("published_at")
+  effectiveFrom DateTime?              @map("effective_from")
+  effectiveTo   DateTime?              @map("effective_to")
+  createdAt     DateTime               @default(now()) @map("created_at")
+
+  matrixSet     EmployeeMatrixSet      @relation(fields: [matrixSetId], references: [id], onDelete: Cascade)
+  rows          EmployeeMatrixRow[]
+  offers        EmployeeProgramOffer[]
+
+  @@unique([matrixSetId, versionNumber])
+  @@map("employee_matrix_versions")
+}
+
+model EmployeeMatrixRow {
+  id                      String                  @id @default(cuid())
+  versionId               String                  @map("version_id")
+  assignmentId            String                  @map("assignment_id") // Powiązanie z pojazdem i dostawcą
+  contractMonths          Int                     @map("contract_months")
+  annualMileageKm         Int                     @map("annual_mileage_km")
+  initialPaymentPct       Decimal                 @map("initial_payment_pct") @db.Decimal(5, 2)
+  initialPaymentAmountNet Decimal                 @default(0) @map("initial_payment_amount_net") @db.Decimal(10, 2)
+  monthlyRateNet          Decimal                 @map("monthly_rate_net") @db.Decimal(10, 2)
+  monthlyRateGross        Decimal                 @map("monthly_rate_gross") @db.Decimal(10, 2)
+  servicesIncluded        String[]                @default([]) @map("services_included")
+  insuranceExcess500      Decimal?                @map("insurance_excess_500") @db.Decimal(10, 2)
+  insuranceNoLimit        Decimal?                @map("insurance_no_limit") @db.Decimal(10, 2)
+  tiresNoLimit            Decimal?                @map("tires_no_limit") @db.Decimal(10, 2)
+  overMileageCost         Decimal?                @map("over_mileage_cost") @db.Decimal(6, 4)
+  createdAt               DateTime                @default(now()) @map("created_at")
+
+  version                 EmployeeMatrixVersion   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  assignment              VehicleRentalAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+
+  // Kompletny klucz unikalności wiersza kalkulacji:
+  @@unique([versionId, assignmentId, contractMonths, annualMileageKm, initialPaymentPct, initialPaymentAmountNet])
+  @@index([versionId, assignmentId])
+  @@map("employee_matrix_rows")
+}
+
+// Oferty w programie: powiązane z Listing (finansowanie) lub VehicleRentalAssignment (najem)
+model EmployeeProgramOffer {
+  id              String                   @id @default(cuid())
+  programId       String                   @map("program_id")
+  sourceType      EmployeeOfferSourceType  @map("source_type")
+
+  listingId       String?                  @map("listing_id")
+  listing         Listing?                 @relation(fields: [listingId], references: [id], onDelete: Restrict)
+
+  assignmentId    String?                  @map("assignment_id")
+  assignment      VehicleRentalAssignment? @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+
+  matrixVersionId String?                  @map("matrix_version_id")
+  matrixVersion   EmployeeMatrixVersion?   @relation(fields: [matrixVersionId], references: [id], onDelete: Restrict)
+
+  customPricePln  Int?                     @map("custom_price_pln")
+  discountPct     Decimal?                 @map("discount_pct") @db.Decimal(5, 2)
+
+  benefitPolicyId String?                  @map("benefit_policy_id")
+  benefitPolicy   EmployeeBenefitPolicy?   @relation(fields: [programId, benefitPolicyId], references: [programId, id], onDelete: Restrict)
+
+  isActive        Boolean                  @default(true) @map("is_active")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  program         EmployeeProgram          @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  // Unikalności: dokładnie 1 oferta danego auta w finansowaniu i 1 oferta danego przypisania dostawcy w najmie:
+  @@unique([programId, listingId])
+  @@unique([programId, assignmentId])
+  @@index([programId, isActive])
+  @@map("employee_program_offers")
+}
+
+model EmployeeBenefitPolicy {
+  id              String                 @id @default(cuid())
+  programId       String                 @map("program_id")
+  name            String                 // np. "Pakiet Start Moya 500"
+  moyaCardAmount  Int?                   @map("moya_card_amount")
+  fuelDiscount    String?                @map("fuel_discount")
+  consultantCare  Boolean                @default(true) @map("consultant_care")
+  termsText       String?                @map("terms_text")
+  isActive        Boolean                @default(true) @map("is_active")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  program         EmployeeProgram        @relation(fields: [programId], references: [id], onDelete: Cascade)
+  offers          EmployeeProgramOffer[]
+
+  @@unique([programId, id])
+  @@map("employee_benefit_policies")
+}
+
+model EmployeeInquiry {
+  id                       String                    @id @default(cuid())
+  accountId                String                    @map("account_id")
+  companyId                String                    @map("company_id")
+  programId                String                    @map("program_id")
+  contractParty            ContractPartyOption       @map("contract_party")
+  productAvailabilityStatus ProductAvailabilityStatus @default(REQUIRES_CONFIRMATION) @map("product_availability_status")
+
+  contactName              String                    @map("contact_name")
+  contactEmail             String                    @map("contact_email")
+  contactPhone             String                    @map("contact_phone")
+  nip                      String?
+  notes                    String?
+
+  calculationSnapshot      Json                      @map("calculation_snapshot")
+  benefitSnapshot          Json?                     @map("benefit_snapshot")
+
+  idempotencyKey           String                    @unique @map("idempotency_key")
+  leadId                   String?                   @unique @map("lead_id")
+  lead                     Lead?                     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  status                   String                    @default("NEW")
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+
+  account                  EmployeeAccount           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  company                  EmployeeCompany           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  program                  EmployeeProgram           @relation(fields: [companyId, programId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, status])
+  @@index([accountId])
+  @@map("employee_inquiries")
+}
