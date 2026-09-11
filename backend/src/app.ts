@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
+import { trustPlatformJwt } from './middleware/platform-jwt.js';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { PrismaClient } from '@prisma/client';
@@ -57,6 +58,7 @@ import { externalListingsRoutes } from './routes/external/listings.js';
 import { marketingFeedsRoutes } from './routes/external/feeds.js';
 import { specificationRoutes } from './routes/specifications.js';
 import { registerPipelineModule } from './modules/pipeline/index.js';
+import { registerEmployeeProgramModule } from './modules/employee-program/index.js';
 import { closeBrowser } from './services/puppeteer.js';
 import { isProductionHost, getCanonicalProductionHosts } from './services/environment.js';
 import { initSsrCache } from './services/ssr-cache.js';
@@ -81,9 +83,9 @@ declare module 'fastify' {
 declare module '@fastify/jwt' {
     interface FastifyJWT {
         payload: {
-            userId: string;
+            userId?: string;
             email: string;
-            role: string;
+            role?: string;
             memberships?: Array<{
                 id: string;
                 scopeType: string;
@@ -95,6 +97,12 @@ declare module '@fastify/jwt' {
                 scopeType: string;
                 scopeId: string;
             };
+            // Employee realm fields
+            accountId?: string;
+            companyId?: string;
+            programId?: string;
+            realm?: 'employee' | 'platform';
+            aud?: string;
         };
         user: {
             userId: string;
@@ -111,6 +119,12 @@ declare module '@fastify/jwt' {
                 scopeType: string;
                 scopeId: string;
             };
+            // Employee realm fields
+            accountId?: string;
+            companyId?: string;
+            programId?: string;
+            realm?: 'employee' | 'platform';
+            aud?: string;
         };
     }
 }
@@ -304,7 +318,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
 
     await fastify.register(jwt, {
-        secret: jwtSecret || 'your-secret-key-change-in-production'
+        secret: jwtSecret || 'your-secret-key-change-in-production',
+        trusted: trustPlatformJwt
     });
 
     // Decorate fastify
@@ -453,6 +468,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(marketingFeedsRoutes);
     await fastify.register(specificationRoutes);
     await registerPipelineModule(fastify);
+    await registerEmployeeProgramModule(fastify);
 
     // Static files — helper
     const serveStaticFile = async (filePath: string, reply: any) => {

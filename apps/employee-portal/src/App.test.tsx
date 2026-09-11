@@ -3,15 +3,18 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import App, { AppRoutes } from './App';
 import { BrandProvider } from './config/BrandContext';
+import { AuthProvider } from './features/auth/AuthContext';
 import {
   validateBrandConfig,
   loadPortalConfig,
   resetCachedConfigForTesting,
   defaultBrandConfig,
 } from './config/brand';
+import * as authApi from './features/auth/auth-api';
 
-describe('Employee Portal - P1 Skeleton & Branding Suite', () => {
+describe('Employee Portal - Frontend Integration Suite', () => {
   beforeEach(() => {
+    window.history.pushState({}, '', '/');
     resetCachedConfigForTesting();
     delete window.__PORTAL_CONFIG__;
     vi.restoreAllMocks();
@@ -45,9 +48,9 @@ describe('Employee Portal - P1 Skeleton & Branding Suite', () => {
 
     it('rejects invalid or unsafe values and applies defaults', () => {
       const unsafe = {
-        brandName: '', // Pusta nazwa -> fallback
-        brandLogoUrl: 'javascript:alert(1)', // Niebezpieczny schemat -> fallback
-        apiUrl: 'http://malicious-site.com/steal', // Zewnętrzny niezaufany adres -> fallback na /api
+        brandName: '',
+        brandLogoUrl: 'javascript:alert(1)',
+        apiUrl: 'http://malicious-site.com/steal',
       };
       const result = validateBrandConfig(unsafe);
       expect(result.brandName).toBe(defaultBrandConfig.brandName);
@@ -56,17 +59,14 @@ describe('Employee Portal - P1 Skeleton & Branding Suite', () => {
     });
 
     it('rejects protocol-relative URL and malformed https URL for brandLogoUrl', () => {
-      // Protocol-relative //evil.com/logo.png
       expect(
         validateBrandConfig({ brandLogoUrl: '//evil.com/logo.png' }).brandLogoUrl
       ).toBe(defaultBrandConfig.brandLogoUrl);
 
-      // Malformed https URL
       expect(
         validateBrandConfig({ brandLogoUrl: 'https://' }).brandLogoUrl
       ).toBe(defaultBrandConfig.brandLogoUrl);
 
-      // Valid relative path
       expect(
         validateBrandConfig({ brandLogoUrl: '/images/partner-logo.svg' }).brandLogoUrl
       ).toBe('/images/partner-logo.svg');
@@ -131,14 +131,15 @@ describe('Employee Portal - P1 Skeleton & Branding Suite', () => {
       );
       vi.stubGlobal('fetch', fakeFetch);
 
-      // Uruchamiamy z bardzo krótkim timeoutem 50ms
       const loaded = await loadPortalConfig(50);
       expect(loaded.brandName).toBe(defaultBrandConfig.brandName);
     });
   });
 
   describe('2. UI & Dynamic Branding Integration Tests', () => {
-    it('renders custom brand name and logo when runtime config is provided', async () => {
+    it('renders custom brand name and redirects unauthenticated user to login', async () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+
       const customConfig = {
         brandName: 'Action Auto Benefit',
         brandLogoUrl: 'https://cdn.example.com/action-logo.png',
@@ -150,72 +151,76 @@ describe('Employee Portal - P1 Skeleton & Branding Suite', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Action Auto Benefit')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Zaloguj się do portalu/i })).toBeInTheDocument();
       });
-
-      const logoImg = screen.getByAltText('Action Auto Benefit');
-      expect(logoImg).toHaveAttribute('src', 'https://cdn.example.com/action-logo.png');
     });
 
-    it('displays explicit mock notice and benefit outline on catalog page', async () => {
-      render(<App />);
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Makieta etapu P1 - szkielet interfejsu/i)
-        ).toBeInTheDocument();
+    it('displays honest catalog placeholder and header when authenticated', async () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
+        id: 'acc_1',
+        email: 'jan@firma.pl',
+        firstName: 'Jan',
+        lastName: 'Kowalski',
+        company: { id: 'c1', name: 'Firma S.A.', slug: 'firma' },
+        program: { id: 'p1', name: 'Program Flotowy', slug: 'flota' },
       });
-      expect(
-        screen.getByText(/Przykładowy pakiet benefitów/i)
-      ).toBeInTheDocument();
-      expect(screen.getByText(/Pakiet paliwowy Moya/i)).toBeInTheDocument();
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Katalog pojazdów w przygotowaniu/i })).toBeInTheDocument();
+        expect(screen.getByText(/Trwa integracja ofert dedykowanych/i)).toBeInTheDocument();
+        expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
+      });
     });
   });
 
-  describe('3. Routing & Form Mock Status Tests', () => {
-    it('renders /logowanie with prominent demo notice and disabled submit', () => {
+  describe('3. Routing & Protected Access Tests', () => {
+    it('renders /logowanie form with active credentials inputs and submit button', () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+
       render(
         <BrandProvider initialConfig={defaultBrandConfig}>
-          <MemoryRouter initialEntries={['/logowanie']}>
-            <AppRoutes />
-          </MemoryRouter>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/logowanie']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
         </BrandProvider>
       );
 
-      expect(screen.getByText(/Zaloguj się do portalu/i)).toBeInTheDocument();
-      expect(
-        screen.getByText(/Makieta etapu P1 \(Tryb demonstracyjny\)/i)
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Logowanie nieaktywne w etapie P1/i })
-      ).toBeDisabled();
+      expect(screen.getByRole('heading', { name: /Zaloguj się do portalu/i })).toBeInTheDocument();
+      expect(screen.getByLabelText(/Adres e-mail/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Hasło/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Zaloguj się/i })).not.toBeDisabled();
     });
 
-    it('renders /rejestracja with neutral code placeholder and demo notice', () => {
+    it('renders /rejestracja with company access code check step', () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+
       render(
         <BrandProvider initialConfig={defaultBrandConfig}>
-          <MemoryRouter initialEntries={['/rejestracja']}>
-            <AppRoutes />
-          </MemoryRouter>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/rejestracja']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
         </BrandProvider>
       );
 
-      expect(screen.getByText(/Aktywuj dostęp pracowniczy/i)).toBeInTheDocument();
-      expect(
-        screen.getByText(/Makieta etapu P1 \(Tryb demonstracyjny\)/i)
-      ).toBeInTheDocument();
-      expect(
-        screen.getByDisplayValue('KOD-FIRMY-1234')
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Rejestracja nieaktywna w etapie P1/i })
-      ).toBeDisabled();
+      expect(screen.getByRole('heading', { name: /Aktywuj dostęp pracowniczy/i })).toBeInTheDocument();
+      expect(screen.getByLabelText(/Kod dostępu firmy/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Sprawdź kod/i })).toBeInTheDocument();
     });
 
     it('renders 404 NotFoundPage for unknown routes', () => {
       render(
         <BrandProvider initialConfig={defaultBrandConfig}>
-          <MemoryRouter initialEntries={['/nieznana-sciezka-xyz']}>
-            <AppRoutes />
-          </MemoryRouter>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/nieznana-sciezka-xyz']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
         </BrandProvider>
       );
 

@@ -1,12 +1,57 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useBrandConfig } from '../../config/BrandContext';
-import { LogIn, KeyRound, Info } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import { LogIn, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { config } = useBrandConfig();
-  const [email, setEmail] = useState('jan.kowalski@firma.pl');
-  const [password, setPassword] = useState('demo1234');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Podaj adres e-mail');
+      return;
+    }
+
+    if (!password || password.length < 8) {
+      setError('Hasło musi mieć co najmniej 8 znaków');
+      return;
+    }
+
+    if (new TextEncoder().encode(password).length > 72) {
+      setError('Hasło nie może przekraczać 72 bajtów');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await login({ email: trimmedEmail, password });
+      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/katalog';
+      // Tylko bezpieczne wewnętrzne ścieżki
+      const safeTarget = from.startsWith('/') && !from.startsWith('//') ? from : '/katalog';
+      navigate(safeTarget, { replace: true });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Wystąpił błąd podczas logowania');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -23,16 +68,17 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Informacja o statusie makiety przed formularzem */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 flex items-start gap-3 text-amber-800 text-xs leading-relaxed">
-          <Info className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold block">Makieta etapu P1 (Tryb demonstracyjny)</span>
-            Formularz logowania nie przetwarza danych w etapie P1. Prawdziwe uwierzytelnianie przez tokeny JWT zostanie aktywowane w etapie P3.
+        {error && (
+          <div
+            role="alert"
+            className="bg-red-50 border border-red-200 rounded-lg p-3.5 flex items-start gap-3 text-red-800 text-sm leading-relaxed"
+          >
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="font-medium">{error}</div>
           </div>
-        </div>
+        )}
 
-        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Adres e-mail
@@ -40,34 +86,47 @@ export const LoginPage: React.FC = () => {
             <input
               id="email"
               type="email"
-              disabled
+              required
+              autoComplete="email"
+              disabled={isSubmitting}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500 sm:text-sm cursor-not-allowed"
+              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 sm:text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              placeholder="twoj.email@firma.pl"
             />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Hasło (podgląd makiety)
+              Hasło
             </label>
             <input
               id="password"
               type="password"
-              disabled
+              required
+              autoComplete="current-password"
+              disabled={isSubmitting}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500 sm:text-sm cursor-not-allowed"
+              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 sm:text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              placeholder="••••••••"
             />
           </div>
 
           <div>
             <button
-              type="button"
-              disabled
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg text-sm font-medium text-gray-400 bg-gray-100 cursor-not-allowed"
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
-              Logowanie nieaktywne w etapie P1
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Logowanie...
+                </>
+              ) : (
+                'Zaloguj się'
+              )}
             </button>
           </div>
         </form>

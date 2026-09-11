@@ -16,6 +16,8 @@
         "db:push": "prisma db push",
         "db:seed": "prisma db seed",
         "test": "vitest run",
+        "test:employee": "vitest run --config vitest.employee.config.ts",
+        "test:employee:integration": "node scripts/test-employee-integration.mjs",
         "test:watch": "vitest",
         "backfill:images": "tsx src/scripts/backfill-image-ladder.ts",
         "backfill:images:prod": "node dist/scripts/backfill-image-ladder.js"
