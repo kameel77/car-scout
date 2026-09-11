@@ -276,7 +276,7 @@ async function main() {
         DATABASE_URL: databaseUrl,
         REDIS_URL: redisUrl,
         EMPLOYEE_INTEGRATION_RUNNER_MARKER: RUNNER_TEST_MARKER,
-        JWT_SECRET: 'test-jwt-secret-employee-isolated-12345678901234567890',
+        JWT_SECRET: crypto.randomBytes(32).toString('hex'),
         TEST_DB_NAME: dbName,
         TEST_DB_PORT: String(pgPort),
         TEST_REDIS_PORT: String(redisPort),
