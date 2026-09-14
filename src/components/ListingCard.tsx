@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Calendar, Gauge, Fuel, ArrowRight, Info } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
 import { cn } from '@/lib/utils';
@@ -113,7 +113,7 @@ function getBrandColor(make: string | undefined): string {
   return brandColors[normalized] || 'hsl(var(--primary))';
 }
 
-export function ListingCard({ listing, index = 0, financingType }: ListingCardProps) {
+function ListingCardComponent({ listing, index = 0, financingType }: ListingCardProps) {
   const { t } = useTranslation();
   const { data: settings } = useAppSettings();
   const { priceType } = usePriceSettings();
@@ -405,16 +405,14 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                           ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
                           : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
                       </span>
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                            <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
-                          </TooltipTrigger>
-                          <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
-                            Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania.
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
+                          Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania.
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 )}
@@ -439,16 +437,14 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
                       <span className="text-sm font-semibold text-muted-foreground tabular-nums whitespace-nowrap">
                         {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
                       </span>
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                            <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
-                          </TooltipTrigger>
-                          <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
-                            Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania.
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
+                          Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania.
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 )}
@@ -463,6 +459,12 @@ export function ListingCard({ listing, index = 0, financingType }: ListingCardPr
     </div>
   );
 }
+
+// Siatka katalogu renderuje do 32 kart. Bez memo każda zmiana stanu strony
+// (debounce sync URL-a, przyjście appSettings, merge tłumaczeń, przełącznik netto/brutto)
+// przechodziła przez wszystkie karty. Propsy są stabilne między tymi re-renderami.
+export const ListingCard = React.memo(ListingCardComponent);
+ListingCard.displayName = 'ListingCard';
 
 export function ListingCardSkeleton() {
   return (

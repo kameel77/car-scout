@@ -17,6 +17,7 @@ import { ClarityPageTracker } from './components/seo/ClarityPageTracker';
 import { PageViewTracker } from './components/seo/PageViewTracker';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import './i18n';
 
 // Import statyczny dla strony głównej (LCP)
@@ -99,6 +100,7 @@ const App = () => (
               <SpecialOfferProvider>
                 <CrmTrackingProvider>
                   <PersonalOfferProvider>
+                    <TooltipProvider delayDuration={0}>
                     <ChunkErrorBoundary>
                       <Suspense fallback={null}>
                         <Routes>
@@ -172,6 +174,7 @@ const App = () => (
                         </Routes>
                       </Suspense>
                     </ChunkErrorBoundary>
+                    </TooltipProvider>
                   </PersonalOfferProvider>
                 </CrmTrackingProvider>
               </SpecialOfferProvider>
