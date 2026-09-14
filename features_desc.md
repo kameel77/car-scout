@@ -810,3 +810,8 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Widoczność w Thulium**:
   - Dzięki utworzeniu powiązania `PipelineCustomer` z poprawnym numerem telefonu, istniejący lookup doradcy w Thulium natychmiast widzi nową sprawę, numer wniosku i pojazd bez konieczności jakichkolwiek modyfikacji integracji z Thulium.
 
+### Korekta zależności katalogu mobilnego
+- SearchPage korzysta wyłącznie z danych sprzedaży; usunięto wyłączone zapytanie najmu i nieosiągalne karty najmu. Cache najmu nie uzupełnia już filtrów sprzedaży.
+- HomePage pozostaje importowany synchronicznie, bez zmiany zachowania względem dev.
+- Audyt i ograniczenia pomiarów: `docs/performance/astra-mobile-review.md`. Nie potwierdzono jeszcze poprawy LCP ani celu 200-250 ms.
+
