@@ -1,4 +1,6 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
+import { buildCatalogPrefetchScript } from '../utils/catalog-prefetch.js';
+import { buildRentalPrefetchScript } from '../utils/rental-prefetch.js';
 import { extractListingIdFromSlug, generateListingSlug } from '../utils/url-utils.js';
 import {
     buildBrandMeta,
@@ -953,9 +955,9 @@ async function renderPage(
     }
 
     // Preload /api/rental/vehicles?limit=1 (index.html) jest oznaczony jako "globalny", ale
-    // realnie czyta go tylko strona główna i /wynajem-dlugoterminowy* — na resztę tras (w tym
-    // /oferta/*) kradnie pasmo bez żadnego zysku, więc wycinamy go tam.
-    const usesRentalPreload = path === '/' || path === '/wynajem-dlugoterminowy' || path.startsWith('/wynajem-dlugoterminowy/');
+    // katalog najmu pobiera 12 ofert z sortowaniem i segmentem, więc limit=1 nie jest
+    // wykorzystywany. Zachowujemy dotychczasowe zachowanie home i szczegółów.
+    const usesRentalPreload = path === '/' || path.startsWith('/wynajem-dlugoterminowy/');
     if (!usesRentalPreload) {
         template = template.replace(/\s*<link rel="preload" href="\/api\/rental\/vehicles\?limit=1"[^>]*\/>/, () => '');
     }
@@ -1042,24 +1044,18 @@ async function renderPage(
     }
 
     // window.__CATALOG_PREFETCH__ — fetch-ahead of the default catalog query (#Task 3)
-    if ((path === '/nowe' || path === '/uzywane') && page === 1) {
-        const condition = path === '/nowe' ? 'NEW' : 'USED';
+    if (['/nowe', '/uzywane', '/samochody'].includes(path) && page === 1) {
         const ssrPerPage = await getSsrPerPage(fastify);
         const sortKey = (publicSettings as any)?.defaultSortCars || 'price_asc';
         const currency = (publicSettings as any)?.displayCurrency || 'PLN';
 
-        const prefetchParams = new URLSearchParams();
-        prefetchParams.append('status', condition);
-        prefetchParams.append('rateType', 'credit');
-        prefetchParams.append('rateBasis', 'gross');
-        prefetchParams.append('sortBy', sortKey);
-        prefetchParams.append('currency', currency);
-        prefetchParams.append('page', '1');
-        prefetchParams.append('perPage', ssrPerPage.toString());
-
-        const prefetchUrl = `/api/listings?${prefetchParams.toString()}`;
-        const prefetchScript = `<script>window.__CATALOG_PREFETCH__={url:${JSON.stringify(prefetchUrl)},p:fetch(${JSON.stringify(prefetchUrl)}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})};</script>\n`;
+        const prefetchScript = buildCatalogPrefetchScript(path, ssrPerPage, sortKey, currency);
         html = html.replace('</head>', () => `${prefetchScript}</head>`);
+    }
+
+    if (path === '/wynajem-dlugoterminowy' && page === 1 && publicSettings) {
+        const sort = String(publicSettings.defaultSortRental || 'minMonthlyRateNet_asc');
+        html = html.replace('</head>', () => `${buildRentalPrefetchScript(sort)}</head>`);
     }
 
     // window.__HERO_BANNERS__ — initialData React Query dla frontu (#3), tylko na /,

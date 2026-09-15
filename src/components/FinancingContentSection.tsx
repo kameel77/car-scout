@@ -4,47 +4,16 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { MarkdownText } from '@/components/MarkdownText';
 import { faqApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
+import { splitLeadParagraph } from '@/components/financing/splitLeadParagraph';
+import {
+  type FinancingContentType,
+  useFinancingArticle,
+} from '@/components/financing/useFinancingArticle';
 
-let API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '');
-API_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
-
-export type FinancingContentType = 'leasing' | 'kredyt' | 'wynajem';
-
-interface FinancingArticle {
-  h1: string;
-  html: string;
-}
-
-/**
- * Wspólny hook pobierający artykuł filarowy (h1 + html) dla /leasing, /kredyt,
- * /wynajem-dlugoterminowy. Ten sam queryKey ['financing-content', type] deduplikuje
- * zapytanie, gdy wołają go jednocześnie SearchPage (H1/lead nad listingiem) i ta sekcja.
- */
-export function useFinancingArticle(type: FinancingContentType | null) {
-  return useQuery<FinancingArticle | null>({
-    queryKey: ['financing-content', type],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/content/financing/${type}`);
-      if (res.status === 404) return null; // brand bez treści filarowej
-      if (!res.ok) throw new Error('Failed to fetch financing content');
-      return res.json();
-    },
-    enabled: type !== null,
-    staleTime: 60 * 60 * 1000,
-  });
-}
-
-/**
- * Wyciąga pierwszy akapit z HTML artykułu filarowego (lead pod H1 strony) i zwraca resztę
- * HTML bez tego akapitu — żeby nie duplikować go w treści renderowanej niżej.
- */
-export function splitLeadParagraph(html: string): { lead: string | null; rest: string } {
-  const match = html.match(/<p[^>]*>[\s\S]*?<\/p>/i);
-  if (!match || match.index == null) return { lead: null, rest: html };
-  const lead = match[0].replace(/<\/?p[^>]*>/gi, '').trim();
-  const rest = html.slice(0, match.index) + html.slice(match.index + match[0].length);
-  return { lead, rest };
-}
+// Preserve the historical module exports for existing callers while SearchPage imports
+// the light modules directly and can defer this below-the-fold renderer.
+export { splitLeadParagraph } from '@/components/financing/splitLeadParagraph';
+export { type FinancingContentType, useFinancingArticle } from '@/components/financing/useFinancingArticle';
 
 /**
  * Sekcja treści filarowej + FAQ pod listingiem na stronach kategorii finansowania

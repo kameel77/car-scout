@@ -1,4 +1,5 @@
 import type { TranslationEntry, TranslationPayload } from '@/types/translations';
+import { matchesCatalogPrefetch } from '@/utils/catalogPrefetch';
 import type { User, UserPayload } from '@/types/user';
 import type { FaqEntry, FaqPayload } from '@/types/faq';
 import type {
@@ -564,9 +565,9 @@ export const listingsApi = {
         const url = `${API_BASE_URL}/api/listings?${params.toString()}`;
 
         // Check for catalog prefetch injected by SSR (#Task 3)
-        if (typeof window !== 'undefined' && (window as any).__CATALOG_PREFETCH__) {
+        if (!token && typeof window !== 'undefined' && (window as any).__CATALOG_PREFETCH__) {
             const prefetch = (window as any).__CATALOG_PREFETCH__;
-            if (prefetch && prefetch.url === url && prefetch.p) {
+            if (prefetch && matchesCatalogPrefetch(prefetch.url, url, window.location.href) && prefetch.p) {
                 (window as any).__CATALOG_PREFETCH__ = null;
                 try {
                     const data = await prefetch.p;

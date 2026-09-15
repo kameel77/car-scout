@@ -15,4 +15,17 @@ describe('public catalog dependency boundaries', () => {
     expect(code).not.toMatch(/import[^;]*(RentalListingCard|rentalPublicApi)/);
     expect(code).not.toContain("queryKey: ['rental-search'");
   });
+
+  it('keeps conditional financing and waitlist UI outside the SearchPage static closure', () => {
+    const code = source('src/pages/SearchPage.tsx');
+
+    expect(code).toContain("from '@/components/financing/useFinancingArticle'");
+    expect(code).toContain("from '@/components/financing/splitLeadParagraph'");
+    expect(code).toMatch(/React\.lazy\(\(\) =>\s*import\(['"]@\/components\/FinancingContentSection['"]\)/);
+    expect(code).toMatch(/React\.lazy\(\(\) =>\s*import\(['"]@\/components\/PillarFinancingCalculator['"]\)/);
+    expect(code).toMatch(/React\.lazy\(\(\) =>\s*import\(['"]@\/components\/WaitlistForm['"]\)/);
+    expect(code).not.toMatch(/import\s+\{[^}]*FinancingContentSection[^}]*\}\s+from/);
+    expect(code).not.toMatch(/import\s+\{[^}]*PillarFinancingCalculator[^}]*\}\s+from/);
+    expect(code).not.toMatch(/import\s+\{[^}]*WaitlistForm[^}]*\}\s+from/);
+  });
 });

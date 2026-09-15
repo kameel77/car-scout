@@ -32,11 +32,23 @@ import { trackViewItemList } from '@/lib/analytics';
 import { getFinancingBasePrice } from '@/utils/listingPrice';
 import type { Listing } from '@/data/mockData';
 import { canonicalTransmission, canonicalFuel } from '@/utils/i18n-utils';
-import { FinancingContentSection, FinancingContentType, useFinancingArticle, splitLeadParagraph } from '@/components/FinancingContentSection';
-import { PillarFinancingCalculator } from '@/components/PillarFinancingCalculator';
+import { type FinancingContentType, useFinancingArticle } from '@/components/financing/useFinancingArticle';
+import { splitLeadParagraph } from '@/components/financing/splitLeadParagraph';
 import { slugifyBrandName } from '@/utils/brand-slug';
-import { WaitlistForm } from '@/components/WaitlistForm';
 import NotFound from '@/pages/NotFound';
+
+// These modules are only needed for conditional, non-LCP UI. The article query and
+// lead splitter above stay synchronous so financing-route H1 and lead remain available
+// without pulling FAQ, calculator, react-hook-form, or Turnstile dependencies.
+const FinancingContentSection = React.lazy(() =>
+  import('@/components/FinancingContentSection').then(({ FinancingContentSection: Component }) => ({ default: Component })),
+);
+const PillarFinancingCalculator = React.lazy(() =>
+  import('@/components/PillarFinancingCalculator').then(({ PillarFinancingCalculator: Component }) => ({ default: Component })),
+);
+const WaitlistForm = React.lazy(() =>
+  import('@/components/WaitlistForm').then(({ WaitlistForm: Component }) => ({ default: Component })),
+);
 
 // Fallback do wyświetlenia marki/modelu, gdy slug nie rozwiązuje się przez katalog aktywnych
 // ofert (0 aktywnych ofert) — "słowo-na-słowo" kapitalizacja slugu, np. "aston-martin" →
@@ -140,7 +152,7 @@ export default function SearchPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sekcja treści filarowej pod listingiem — tylko na kategoriach finansowania
-  const financingContentType: FinancingContentType | null =
+  const financingContentType: Extract<FinancingContentType, 'leasing' | 'kredyt'> | null =
     window.location.pathname === '/leasing' ? 'leasing'
       : window.location.pathname === '/kredyt' ? 'kredyt'
         : null;
@@ -653,8 +665,19 @@ export default function SearchPage() {
             </p>
           </div>
 
-          {/* Kalkulator finansowania nad listingiem — tylko na trasach filarowych (/leasing, /kredyt) */}
-          {financingContentType && <PillarFinancingCalculator type={financingContentType} />}
+          {/* Kalkulator finansowania nad listingiem — tylko na trasach filarowych (/leasing, /kredyt).
+              Fallback retains the section heading, so a slow optional chunk never blanks main content. */}
+          {financingContentType && (
+            <React.Suspense
+              fallback={(
+                <section id="kalkulator" className="mt-8 mb-2" aria-busy="true">
+                  <div className="h-24 rounded-md bg-muted/40" role="status">{t('common.loading')}</div>
+                </section>
+              )}
+            >
+              <PillarFinancingCalculator type={financingContentType} />
+            </React.Suspense>
+          )}
 
           {/* Top filter bar on desktop */}
           <TopFilterBar
@@ -777,7 +800,11 @@ export default function SearchPage() {
                             {t('waitlist.emptyTitle', 'Aktualnie brak ofert')} {displayModel ? `${displayBrand} ${displayModel}` : displayBrand} — {t('waitlist.emptyHint', 'zostaw kontakt, powiadomimy o nowej ofercie.')}
                           </p>
                           <div className="mt-6">
-                            <WaitlistForm make={displayBrand} model={displayModel} />
+                            <React.Suspense
+                              fallback={<div className="py-8 text-center text-sm text-muted-foreground" role="status">{t('common.loading')}</div>}
+                            >
+                              <WaitlistForm make={displayBrand} model={displayModel} />
+                            </React.Suspense>
                           </div>
                         </>
                       ) : (
@@ -832,7 +859,13 @@ export default function SearchPage() {
           </div>
         )}
 
-        {financingContentType && <FinancingContentSection type={financingContentType} hideTitle />}
+        {financingContentType && (
+          <React.Suspense
+            fallback={<div className="container mt-12 mb-8 text-sm text-muted-foreground" role="status">{t('common.loading')}</div>}
+          >
+            <FinancingContentSection type={financingContentType} hideTitle />
+          </React.Suspense>
+        )}
       </main>
 
       <ScrollToTopButton />
