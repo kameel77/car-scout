@@ -821,3 +821,35 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - HomePage pozostaje importowany synchronicznie, bez zmiany zachowania względem dev.
 - Audyt i ograniczenia pomiarów: `docs/performance/astra-mobile-review.md`. Nie potwierdzono jeszcze poprawy LCP ani celu 200-250 ms.
 
+### 65. Liczniki Ofert Dealera w Backoffice oraz Automatyczne Przywracanie Ofert w StockSyncEngine
+- **Cel**: wyeliminowanie mylących rozbieżności pomiędzy liczbą ofert widoczną w panelu dealerów a stanem faktycznym na listingu publicznym oraz zapewnienie bezstratnej migracji ofert z importów CSV do automatycznych integracji API (np. PewneAuto).
+- **Zliczanie ofert dealera w backoffice (`GET /api/admin/dealers`, `GET /api/admin/dealers/:id`)**:
+  - Wskaźnik `_count.listings` uwzględnia wyłącznie oferty aktywne (`where: { isArchived: false }`), zapobiegając wliczaniu ofert zarchiwizowanych/sprzedanych do bieżącego stanu salonu w panelu administracyjnym.
+- **Automatyczne odarchiwizowanie w StockSyncEngine**:
+  - Silnik synchronizacji feedów (`StockSyncEngine`) przy napotkaniu pojazdu (po VIN lub zewnętrznym identyfikatorze), który był wcześniej oznaczony jako archiwalny z powodem `Not in latest import` (wynikającym z niepełnych lub selektywnych importów CSV), automatycznie przywraca ofertę do stanu aktywnego (`isArchived: false`, `archivedReason: null`, `archivedAt: null`), zachowując jednocześnie twardą ochronę przed odarchiwizowaniem ofert wygaszonych ręcznie przez administratora (`Manual archive`).
+
+### 66. Panel Zarządzania Programem Pracowniczym (Backoffice Superadmina)
+- **Cel**: Umożliwienie Superadminowi platformy pełnej konfiguracji firm partnerskich, programów rabatowych, generowania bezpiecznych kodów dostępu dla pracowników, tworzenia ofert specjalnych oraz masowego importu flotowych matryc wynajmu długoterminowego (CSV).
+- **Lokalizacja i Autoryzacja**:
+  - Panel dostępny pod adresem `/admin/employee-programs` w backoffice Motolia.
+  - Ochrona uprawnieniem `platform:settings:write` (wymaga roli Superadmina platformy; odmowa dostępu 403 dla pozostałych ról).
+- **Zarządzanie Firmami i Programami**:
+  - Tworzenie firm partnerskich z automatycznym generowaniem domyślnego programu pracowniczego.
+  - Widok listy z filtrowaniem i statystykami (liczba kodów, przypisane oferty specjalne, status aktywności).
+  - Widok szczegółowy organizacji podzielony na 4 moduły (karty).
+- **Moduł Kodów Rejestracyjnych**:
+  - Generowanie unikalnych kodów dostępu (ręcznych lub losowych).
+  - Bezpieczeństwo (Zero-Knowledge): W bazie danych zapisywany jest wyłącznie skrót SHA-256 (`codeHash`). Jawny kod zwracany jest jednorazowo w oknie modalnym z możliwością natychmiastowego skopiowania do schowka.
+  - Wyświetlanie statystyk użycia oraz możliwość natychmiastowej dezaktywacji kodu.
+- **Moduł Ofert Specjalnych**:
+  - Przypisywanie pojazdów z bazy `Listing` do programu pracowniczego jako oferty specjalne ze statusem `FINANCING` (zgodnie z ADR-04).
+  - Wbudowany kalkulator rabatu procentowego i kwotowego (dynamiczne przeliczanie ceny katalogowej na cenę w programie).
+  - Możliwość powiązania oferty ze zdefiniowanym pakietem benefitów (karta paliwowa Moya, dedykowany doradca).
+- **Moduł Prywatnych Matryc Najmu (ADR-03)**:
+  - Obsługa zestawów matrycowych izolowanych od oferty publicznej (`EmployeeMatrixSet`, `EmployeeMatrixVersion`, `EmployeeMatrixRow`).
+  - Import plików CSV w formatach zewnętrznych dostawców oraz wewnętrznym formacie Motolia.
+  - Wersjonowanie w trybie DRAFT z podglądem zaimportowanych stawek przed publikacją.
+  - Publikacja 1-klikiem (dezaktywacja poprzedniej wersji aktywnej i natychmiastowe udostępnienie nowych stawek pracownikom).
+- **Moduł Ustawień Programu i Polityk Benefitów**:
+  - Konfiguracja globalnego rabatu procentowego programu.
+  - Pełny CRUD polityk benefitowych (kwota karty paliwowej Moya, opieka dedykowanego opiekuna floty, warunki regulaminowe).
