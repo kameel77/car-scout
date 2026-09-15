@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
+import { buildCatalogPrefetchScript } from '../utils/catalog-prefetch.js';
 import { extractListingIdFromSlug, generateListingSlug } from '../utils/url-utils.js';
 import {
     buildBrandMeta,
@@ -1042,23 +1043,12 @@ async function renderPage(
     }
 
     // window.__CATALOG_PREFETCH__ — fetch-ahead of the default catalog query (#Task 3)
-    if ((path === '/nowe' || path === '/uzywane') && page === 1) {
-        const condition = path === '/nowe' ? 'NEW' : 'USED';
+    if (['/nowe', '/uzywane', '/samochody'].includes(path) && page === 1) {
         const ssrPerPage = await getSsrPerPage(fastify);
         const sortKey = (publicSettings as any)?.defaultSortCars || 'price_asc';
         const currency = (publicSettings as any)?.displayCurrency || 'PLN';
 
-        const prefetchParams = new URLSearchParams();
-        prefetchParams.append('status', condition);
-        prefetchParams.append('rateType', 'credit');
-        prefetchParams.append('rateBasis', 'gross');
-        prefetchParams.append('sortBy', sortKey);
-        prefetchParams.append('currency', currency);
-        prefetchParams.append('page', '1');
-        prefetchParams.append('perPage', ssrPerPage.toString());
-
-        const prefetchUrl = `/api/listings?${prefetchParams.toString()}`;
-        const prefetchScript = `<script>window.__CATALOG_PREFETCH__={url:${JSON.stringify(prefetchUrl)},p:fetch(${JSON.stringify(prefetchUrl)}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})};</script>\n`;
+        const prefetchScript = buildCatalogPrefetchScript(path, ssrPerPage, sortKey, currency);
         html = html.replace('</head>', () => `${prefetchScript}</head>`);
     }
 

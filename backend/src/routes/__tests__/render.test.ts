@@ -238,7 +238,11 @@ describe('GET /api/render', () => {
 
         const resSamochody = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
         expect(resSamochody.statusCode).toBe(200);
-        expect(resSamochody.body).not.toContain('window.__CATALOG_PREFETCH__=');
+        expect(resSamochody.body).toContain('window.__CATALOG_PREFETCH__=');
+        expect(resSamochody.body).toContain('/api/listings?rateType=credit&rateBasis=gross');
+        expect(resSamochody.body).toContain('||location.search)return;');
+        const resSamochodyPage2 = await app.inject({ method: 'GET', url: '/api/render?path=/samochody&page=2' });
+        expect(resSamochodyPage2.body).not.toContain('window.__CATALOG_PREFETCH__=');
     });
 
     it('listing detail gets LCP image preload with srcset variants', async () => {

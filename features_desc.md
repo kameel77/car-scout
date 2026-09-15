@@ -3,6 +3,13 @@
 Ten plik dokumentuje działanie kluczowych funkcjonalności aplikacji w przystępny, produktowy sposób.
 Każda nowa funkcjonalność lub zmiana zachowania istniejącej powinna mieć tutaj krótki opis.
 
+## Wcześniejsze pobieranie ofert katalogu
+- `/samochody` nie pobiera od razu kalkulatora finansowania, sekcji artykułu ani formularza powiadomień. Są pobierane tylko wtedy, gdy dana sekcja jest potrzebna; nagłówek, lead i pierwsze karty pozostają poza tymi granicami ładowania.
+- Na trasach katalogu GTM rozpoczyna ładowanie po zamontowaniu kart i dwóch klatkach animacji, po wczesnej interakcji lub najpóźniej po 3,5 s. Pozostałe strony korzystają z zakończenia ładowania dokumentu. Tag Assistant, kolejka zdarzeń oraz domyślne zgody pozostają zachowane. Thulium uruchamiane przez GTM korzysta z tej samej kolejności.
+- Domyślne wejście na `/samochody`, `/nowe` i `/uzywane` rozpoczyna publiczne zapytanie o oferty już z HTML, przed uruchomieniem Reacta.
+- Frontend wykorzystuje tę samą odpowiedź jednokrotnie wyłącznie dla identycznego originu, endpointu i parametrów. Zapytania autoryzowane nie korzystają z publicznego prefetchu; błąd prefetchu uruchamia zwykłe pobieranie.
+- URL z parametrami pozostaje przy standardowym pobieraniu. Sprawdzenie w przeglądarce chroni również wejścia z filtrami obsługiwane przez cache HTML.
+
 ## Etapowe wyświetlanie katalogu na telefonach
 - Na ekranach poniżej 640 px katalogi `/nowe`, `/uzywane`, `/samochody` i `/wynajem-dlugoterminowy` montują najpierw dwie karty. Następne pojawiają się w partiach po dwie, gdy użytkownik zbliża się do końca widocznej części listy.
 - Przycisk „Pokaż wszystkie oferty na tej stronie” udostępnia pełną stronę wyników bez przewijania i działa z klawiatury. Ma tłumaczenia PL/EN/DE.

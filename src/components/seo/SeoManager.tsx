@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useBrand } from '@/contexts/BrandContext';
 import { loadConsent, pushConsentDefault } from '@/lib/consent';
+import { scheduleTrackingAfterCatalogPaint } from './trackingScheduler';
 import React from 'react';
 
 export interface SeoConfig {
@@ -74,78 +75,44 @@ export function SeoManager() {
         if (!seoConfig?.gtmId) return;
         const gtmId = seoConfig.gtmId;
 
-        let cancelled = false;
         const saved = loadConsent();
         const analytics = saved ? saved.analytics : false;
         const marketing = saved ? saved.marketing : false;
+        // This must precede every GTM path, including Tag Assistant. It also keeps
+        // events already queued in dataLayer intact for the container to consume.
         pushConsentDefault(analytics, marketing);
 
-        (() => {
-            // Lazy Load GTM on user interaction to drastically improve PageSpeed
-            const injectGTM = () => {
-                if (cancelled || (window as any)._gtmLoaded) return;
-                (window as any)._gtmLoaded = true;
-                
-                (function (w: any, d: any, s: any, l: any, i: any) {
-                    w[l] = w[l] || []; w[l].push({
-                        'gtm.start':
-                            new Date().getTime(), event: 'gtm.js'
-                    });
-                    const f = d.getElementsByTagName(s)[0];
-                    const j = d.createElement(s);
-                    const dl = l != 'dataLayer' ? '&l=' + l : '';
-                    j.async = true;
-                    j.src =
-                        'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-                })(window, document, 'script', 'dataLayer', gtmId);
-            };
+        // Lazy load GTM without replacing the pre-existing dataLayer. Conversion
+        // events can be queued before this effect runs and GTM reads that queue.
+        const injectGTM = () => {
+            if ((window as any)._gtmLoaded) return;
+            (window as any)._gtmLoaded = true;
 
-            // Tag Assistant preview opens the page with ?gtm_debug=... and expects the
-            // container at page load — with lazy-load it times out ("Could not connect").
-            // Inject immediately in debug sessions; normal visitors keep the lazy path.
-            const isTagAssistantDebug = window.location.search.includes('gtm_debug')
-                || document.referrer.includes('tagassistant.google.com');
-            if (isTagAssistantDebug) {
-                injectGTM();
-                return;
-            }
+            (function (w: any, d: any, s: any, l: any, i: any) {
+                w[l] = w[l] || []; w[l].push({
+                    'gtm.start':
+                        new Date().getTime(), event: 'gtm.js'
+                });
+                const f = d.getElementsByTagName(s)[0];
+                const j = d.createElement(s);
+                const dl = l != 'dataLayer' ? '&l=' + l : '';
+                j.async = true;
+                j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+            })(window, document, 'script', 'dataLayer', gtmId);
+        };
 
-            // Arm C: Defer GTM until first user interaction or window load + idle.
-            // This prevents GTM (616ms CPU, 331KB JS) from executing during the FCP/LCP critical path.
-            const interactionEvents = ['scroll', 'mousemove', 'touchstart', 'click', 'keydown'];
-            const onInteraction = () => {
-                cleanupListeners();
-                injectGTM();
-            };
+        // Tag Assistant preview opens the page with ?gtm_debug=... and expects the
+        // container at page load — with lazy-load it times out ("Could not connect").
+        // Inject immediately in debug sessions; normal visitors keep the safe path.
+        const isTagAssistantDebug = window.location.search.includes('gtm_debug')
+            || document.referrer.includes('tagassistant.google.com');
+        if (isTagAssistantDebug) {
+            injectGTM();
+            return;
+        }
 
-            const cleanupListeners = () => {
-                interactionEvents.forEach(e => window.removeEventListener(e, onInteraction));
-            };
-
-            interactionEvents.forEach(e => window.addEventListener(e, onInteraction, { passive: true, once: true }));
-
-            const scheduleIdle = () => {
-                if ('requestIdleCallback' in window) {
-                    (window as any).requestIdleCallback(() => {
-                        cleanupListeners();
-                        injectGTM();
-                    }, { timeout: 3500 });
-                } else {
-                    setTimeout(() => {
-                        cleanupListeners();
-                        injectGTM();
-                    }, 3500);
-                }
-            };
-
-            if (document.readyState === 'complete') {
-                scheduleIdle();
-            } else {
-                window.addEventListener('load', scheduleIdle, { once: true });
-            }
-        })();
-
-        return () => { cancelled = true; };
+        return scheduleTrackingAfterCatalogPaint({ document, window, onInject: injectGTM });
     }, [seoConfig?.gtmId]);
 
     const finalOgTitle = seoConfig?.homeTitle || (settings as any)?.defaultOgTitle || homeTitle || siteName || config.name;
