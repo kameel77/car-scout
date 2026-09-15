@@ -7,6 +7,7 @@ Każda nowa funkcjonalność lub zmiana zachowania istniejącej powinna mieć tu
 - `/samochody` nie pobiera od razu kalkulatora finansowania, sekcji artykułu ani formularza powiadomień. Są pobierane tylko wtedy, gdy dana sekcja jest potrzebna; nagłówek, lead i pierwsze karty pozostają poza tymi granicami ładowania.
 - Na trasach katalogu GTM rozpoczyna ładowanie po zamontowaniu kart i dwóch klatkach animacji, po wczesnej interakcji lub najpóźniej po 3,5 s. Pozostałe strony korzystają z zakończenia ładowania dokumentu. Tag Assistant, kolejka zdarzeń oraz domyślne zgody pozostają zachowane. Thulium uruchamiane przez GTM korzysta z tej samej kolejności.
 - Domyślne wejście na `/samochody`, `/nowe` i `/uzywane` rozpoczyna publiczne zapytanie o oferty już z HTML, przed uruchomieniem Reacta.
+- Trasa `/wynajem-dlugoterminowy` (strona 1) wykorzystuje prefetch ofert najmu ze skryptu HTML (`window.__RENTAL_PREFETCH__`), czytając segment klienta (`rentalClientType`: b2b / consumer -> b2c) bezpośrednio w przeglądarce przed wykonaniem zapytania, dzięki czemu współdzielony HTML nie wymusza na stałe typu klienta. Dodatkowo usunięto nieużywany preload `limit=1` na listingu najmu.
 - Frontend wykorzystuje tę samą odpowiedź jednokrotnie wyłącznie dla identycznego originu, endpointu i parametrów. Zapytania autoryzowane nie korzystają z publicznego prefetchu; błąd prefetchu uruchamia zwykłe pobieranie.
 - URL z parametrami pozostaje przy standardowym pobieraniu. Sprawdzenie w przeglądarce chroni również wejścia z filtrami obsługiwane przez cache HTML.
 

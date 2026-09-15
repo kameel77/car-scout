@@ -1,4 +1,5 @@
 // Rental API client — follows same fetch-based pattern as other api modules
+import { matchesCatalogPrefetch } from '@/utils/catalogPrefetch';
 
 let API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 if (API_BASE_URL.endsWith('/api')) API_BASE_URL = API_BASE_URL.slice(0, -4);
@@ -360,7 +361,18 @@ export const rentalPublicApi = {
             Object.entries(params).forEach(([k, v]) => { if (v) queryParams.append(k, v); });
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/rental/vehicles?${queryParams}`);
+        const url = `${API_BASE_URL}/api/rental/vehicles?${queryParams}`;
+        if (typeof window !== 'undefined') {
+            const prefetch = (window as any).__RENTAL_PREFETCH__;
+            if (prefetch?.p && matchesCatalogPrefetch(prefetch.url, url, window.location.href)) {
+                (window as any).__RENTAL_PREFETCH__ = null;
+                try {
+                    const data = await prefetch.p;
+                    if (data) return data;
+                } catch { /* ordinary request below retries a failed fetch-ahead */ }
+            }
+        }
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch rental vehicles');
         return response.json();
     },

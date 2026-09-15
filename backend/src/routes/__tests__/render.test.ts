@@ -245,6 +245,18 @@ describe('GET /api/render', () => {
         expect(resSamochodyPage2.body).not.toContain('window.__CATALOG_PREFETCH__=');
     });
 
+    it('injects browser-segment rental fetch-ahead only on the first rental page', async () => {
+        const first = await app.inject({ method: 'GET', url: '/api/render?path=/wynajem-dlugoterminowy' });
+        expect(first.statusCode).toBe(200);
+        expect(first.body).toContain('window.__RENTAL_PREFETCH__=');
+        expect(first.body).not.toContain('href="/api/rental/vehicles?limit=1"');
+        expect(first.body).toContain('localStorage.getItem("rentalClientType")');
+        const next = await app.inject({ method: 'GET', url: '/api/render?path=/wynajem-dlugoterminowy&page=2' });
+        expect(next.body).not.toContain('window.__RENTAL_PREFETCH__=');
+        const home = await app.inject({ method: 'GET', url: '/api/render?path=/' });
+        expect(home.body).not.toContain('window.__RENTAL_PREFETCH__=');
+    });
+
     it('listing detail gets LCP image preload with srcset variants', async () => {
         const l = await app.prisma.listing.create({
             data: {
