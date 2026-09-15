@@ -186,17 +186,20 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
               >
                 <div>
                   <div className="relative h-44 bg-gray-100 overflow-hidden">
-                    {l?.images && l.images.length > 0 ? (
-                      <img
-                        src={l.images[0]}
-                        alt={`${l.make} ${l.model}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <Car className="w-12 h-12" />
-                      </div>
-                    )}
+                    {(() => {
+                      const imgUrl = l?.primaryImageUrl || (l?.imageUrls && l.imageUrls[0]) || (l?.images && l.images[0]);
+                      return imgUrl ? (
+                        <img
+                          src={imgUrl}
+                          alt={`${l?.make} ${l?.model}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <Car className="w-12 h-12" />
+                        </div>
+                      );
+                    })()}
                     <div className="absolute top-2.5 left-2.5">
                       <Badge className="bg-emerald-600 text-white font-medium shadow-xs">
                         Rabat: {offer.discountPct ? `${offer.discountPct}%` : 'Dedykowany'}

@@ -69,6 +69,8 @@ export interface EmployeeProgramOffer {
     version: string | null;
     productionYear: number;
     pricePln: number;
+    primaryImageUrl?: string | null;
+    imageUrls?: string[];
     images?: string[];
     fuelType?: string | null;
     transmission?: string | null;
@@ -83,6 +85,8 @@ export interface AvailableListing {
   version: string | null;
   productionYear: number;
   pricePln: number;
+  primaryImageUrl?: string | null;
+  imageUrls?: string[];
   images?: string[];
   fuelType?: string | null;
   transmission?: string | null;

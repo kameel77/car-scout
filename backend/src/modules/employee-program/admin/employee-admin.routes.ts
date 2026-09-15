@@ -611,7 +611,8 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
         version: true,
         productionYear: true,
         pricePln: true,
-        images: true,
+        primaryImageUrl: true,
+        imageUrls: true,
         fuelType: true,
         transmission: true,
         bodyType: true
@@ -644,7 +645,8 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
               version: true,
               productionYear: true,
               pricePln: true,
-              images: true,
+              primaryImageUrl: true,
+              imageUrls: true,
               fuelType: true,
               transmission: true
             }
@@ -990,7 +992,8 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
       // Deduplicate rows based on unique constraint
       const seen = new Set<string>();
       const dedupedRows = rowsToInsert.filter((r) => {
-        const key = `${r.assignmentId}-${r.contractMonths}-${r.annualMileageKm}-${r.initialPaymentPct.toString()}-${r.initialPaymentAmountNet.toString()}`;
+        const netAmountStr = r.initialPaymentAmountNet ? r.initialPaymentAmountNet.toString() : '0';
+        const key = `${r.assignmentId}-${r.contractMonths}-${r.annualMileageKm}-${r.initialPaymentPct.toString()}-${netAmountStr}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
