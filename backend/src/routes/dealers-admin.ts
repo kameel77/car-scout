@@ -67,7 +67,7 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
             where,
             include: {
                 dealerGroup: { select: { id: true, name: true } },
-                _count: { select: { listings: true, rentalVehicles: true } },
+                _count: { select: { listings: { where: { isArchived: false } }, rentalVehicles: true } },
             },
             orderBy: { name: 'asc' },
         });
@@ -115,7 +115,7 @@ export async function dealerAdminRoutes(fastify: FastifyInstance) {
             include: {
                 dealerGroup: true,
                 settings: true,
-                _count: { select: { listings: true, rentalVehicles: true } },
+                _count: { select: { listings: { where: { isArchived: false } }, rentalVehicles: true } },
             },
         });
 

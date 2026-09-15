@@ -5,6 +5,7 @@ import { ActorContext } from './opportunity.service.js';
 export type AddVehicleCandidateInput = {
   listingId?: string | null;
   rentalVehicleId?: string | null;
+  rentalStockUnitId?: string | null;
   customMake?: string | null;
   customModel?: string | null;
   customVersion?: string | null;
@@ -69,6 +70,7 @@ export async function addVehicleCandidate(
       opportunityId,
       listingId: input.listingId || null,
       rentalVehicleId: input.rentalVehicleId || null,
+      rentalStockUnitId: input.rentalStockUnitId || null,
       customMake: input.customMake || null,
       customModel: input.customModel || null,
       customVersion: input.customVersion || null,

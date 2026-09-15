@@ -6,6 +6,7 @@ import { registerDictionaryRoutes } from './routes/dictionaries.routes.js';
 import { registerVehicleRoutes } from './routes/vehicles.routes.js';
 import { registerOfferRoutes } from './routes/offers.routes.js';
 import { registerApplicationRoutes } from './routes/applications.routes.js';
+import { registerRentalApplicationRoutes } from './routes/rental-applications.routes.js';
 import { registerDocumentRoutes } from './routes/documents.routes.js';
 import { registerThuliumWebhookRoutes } from './routes/thulium-webhook.routes.js';
 import { registerThuliumCrmRoutes } from './routes/thulium-crm.routes.js';
@@ -19,6 +20,7 @@ export async function registerPipelineModule(app: FastifyInstance) {
   await registerVehicleRoutes(app);
   await registerOfferRoutes(app);
   await registerApplicationRoutes(app);
+  await registerRentalApplicationRoutes(app);
   await registerDocumentRoutes(app);
   await registerThuliumWebhookRoutes(app);
   await registerThuliumCrmRoutes(app);

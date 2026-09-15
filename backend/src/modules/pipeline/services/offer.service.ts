@@ -15,6 +15,9 @@ export type OfferInput = {
   annualMileageKm?: number | null;
   taxMode?: PipelineTaxMode;
   currency?: string;
+  rentalPriceVariant?: string | null;
+  rentalInsuranceVariant?: number | null;
+  rentalTiresIncluded?: boolean;
 };
 
 /**
@@ -108,6 +111,9 @@ export async function createOrUpdateOffer(
         annualMileageKm: input.annualMileageKm ?? latestOffer.annualMileageKm,
         taxMode: input.taxMode ?? latestOffer.taxMode,
         currency: input.currency ?? latestOffer.currency,
+        rentalPriceVariant: input.rentalPriceVariant !== undefined ? input.rentalPriceVariant : latestOffer.rentalPriceVariant,
+        rentalInsuranceVariant: input.rentalInsuranceVariant !== undefined ? input.rentalInsuranceVariant : latestOffer.rentalInsuranceVariant,
+        rentalTiresIncluded: input.rentalTiresIncluded !== undefined ? input.rentalTiresIncluded : latestOffer.rentalTiresIncluded,
       },
     });
 
@@ -150,6 +156,9 @@ export async function createOrUpdateOffer(
       annualMileageKm: input.annualMileageKm ?? null,
       taxMode: input.taxMode ?? PipelineTaxMode.GROSS,
       currency: input.currency ?? 'PLN',
+      rentalPriceVariant: input.rentalPriceVariant || null,
+      rentalInsuranceVariant: input.rentalInsuranceVariant ?? null,
+      rentalTiresIncluded: input.rentalTiresIncluded ?? false,
     },
   });
 

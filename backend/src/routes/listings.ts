@@ -92,6 +92,9 @@ const PUBLIC_LIST_SELECT = {
     specification: { select: { stockCount: true, displayMode: true } },
 } as const;
 
+// Ile zdjęć trafia do listy katalogu (swipe na karcie). Reszta galerii dostępna w detalu.
+const LIST_IMAGE_URLS_LIMIT = 6;
+
 export async function listingRoutes(fastify: FastifyInstance) {
     function getListingInvalidationUrls(listing: { id: string; slug?: string | null; make?: string | null; model?: string | null }): string[] {
         const slugOrId = listing.slug || listing.id;
@@ -677,7 +680,17 @@ export async function listingRoutes(fastify: FastifyInstance) {
             };
 
             return {
-                listings: listings.map(l => sanitizeListing(l, authenticated)),
+                listings: listings.map(l => {
+                    const safe = sanitizeListing(l, authenticated);
+                    if (authenticated || !safe) return safe;
+                    // Karta katalogu pokazuje przy starcie wyłącznie primaryImageUrl; reszta
+                    // zdjęć jest potrzebna dopiero po swipe w ImageSwiper. Pełna tablica
+                    // (kilkanaście URL-i × perPage ofert) to czysty balast JSON-a na mobile.
+                    // Pełną galerię zwraca endpoint detalu oferty.
+                    return Array.isArray(safe.imageUrls) && safe.imageUrls.length > LIST_IMAGE_URLS_LIMIT
+                        ? { ...safe, imageUrls: safe.imageUrls.slice(0, LIST_IMAGE_URLS_LIMIT) }
+                        : safe;
+                }),
                 count: totalCount,
                 byCondition,
                 facets,

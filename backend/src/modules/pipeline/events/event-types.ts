@@ -237,6 +237,18 @@ export type PipelineEventPayloadMap = {
   NOTE_ADDED: {
     content: string;
   };
+
+  // Rental application outbound email
+  RENTAL_APPLICATION_EMAILED: {
+    applicationId: string;
+    financierCode: string;
+    stockNo: string;
+    variant: string;
+    monthlyRateNet: number;
+    recipients: string[];
+    status: 'SENT' | 'FAILED';
+    error?: string;
+  };
 };
 
 export type PipelineEventType = keyof PipelineEventPayloadMap;

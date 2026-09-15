@@ -331,9 +331,10 @@ export class StockSyncEngine {
                 // Ochrona ręcznych modyfikacji (P1.11): nie nadpisujemy modelu/wersji jeśli była ręczna edycja
                 const hasManualEdit = Boolean(existing.lastManualEditAt);
                 
-                // Ochrona ręcznej archiwizacji (P1.12): przywracamy tylko oferty zarchiwizowane automatycznie przez samą integrację
+                // Ochrona ręcznej archiwizacji (P1.12): przywracamy tylko oferty zarchiwizowane automatycznie przez samą integrację lub brak w imporcie
                 const shouldUnarchive = !existing.isArchived
-                    || (existing.archivedReason?.startsWith('pewneauto_') ?? false);
+                    || (existing.archivedReason?.startsWith('pewneauto_') ?? false)
+                    || existing.archivedReason === 'Not in latest import';
 
                 const rawDrive = (feedCar.rawSpecs?.drive || (feedCar as any).drive) as string | undefined;
                 const galleryUrls = (feedCar.galleryImageUrls && feedCar.galleryImageUrls.length > 0)
