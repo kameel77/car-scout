@@ -4,6 +4,7 @@
  * Routes: /nowe → condition="NEW"   /uzywane → condition="USED"
  */
 import React from 'react';
+import { ProgressiveListingGrid } from '@/components/ProgressiveListingGrid';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Car, Building2, User, ArrowUpDown, Check } from 'lucide-react';
@@ -530,13 +531,13 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               availableModels={availableModels}
             />
 
-            <div className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
+            <ProgressiveListingGrid className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
               {saleLoading
                 ? Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={i} />)
                 : saleListings.map((listing, index) => (
                     <ListingCard key={listing.listing_id} listing={listing} index={index} />
                   ))}
-            </div>
+            </ProgressiveListingGrid>
             {/* Empty state */}
             {!saleLoading && saleListings.length === 0 && (
               <div className="col-span-full py-16 text-center">

@@ -1,4 +1,8 @@
 export const en = {
+  progressiveGrid: {
+    loading: 'Loading more offers…',
+    showAll: 'Show all offers on this page ({{count}})',
+  },
   "common": {
     "search": "Search",
     "clear": "Clear",

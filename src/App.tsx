@@ -17,9 +17,11 @@ import { ClarityPageTracker } from './components/seo/ClarityPageTracker';
 import { PageViewTracker } from './components/seo/PageViewTracker';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import './i18n';
 
-// Import statyczny dla strony głównej (LCP)
+// Homepage stays synchronous: createRoot does not hydrate or preserve the SSR shell
+// while a lazy page is suspended. Split non-critical sections inside the page instead.
 import HomePage from "./pages/HomePage";
 
 // Lazy-loaded pages
@@ -76,6 +78,7 @@ const DealerGroupsPage = lazy(() => import("./pages/admin/DealerGroupsPage"));
 const DealersPage = lazy(() => import("./pages/admin/DealersPage"));
 const WidgetsPage = lazy(() => import("./pages/admin/WidgetsPage"));
 const PipelinePage = lazy(() => import("./pages/admin/pipeline/PipelinePage"));
+const EmployeeProgramsPage = lazy(() => import("./pages/admin/EmployeeProgramsPage"));
 
 const queryClient = new QueryClient();
 
@@ -99,6 +102,7 @@ const App = () => (
               <SpecialOfferProvider>
                 <CrmTrackingProvider>
                   <PersonalOfferProvider>
+                    <TooltipProvider delayDuration={0}>
                     <ChunkErrorBoundary>
                       <Suspense fallback={null}>
                         <Routes>
@@ -155,6 +159,7 @@ const App = () => (
                             <Route path="/admin/landing-pages" element={<ProtectedRoute permission="content:read"><AdminLandingPagesPage /></ProtectedRoute>} />
                             <Route path="/admin/partners" element={<ProtectedRoute permission="content:read"><AdminPartnersPage /></ProtectedRoute>} />
                             <Route path="/admin/api-partners" element={<ProtectedRoute permission="platform:settings:read"><AdminApiPartnersPage /></ProtectedRoute>} />
+                            <Route path="/admin/employee-programs" element={<ProtectedRoute permission="platform:settings:write"><EmployeeProgramsPage /></ProtectedRoute>} />
                             <Route path="/admin/financing" element={<ProtectedRoute permission="platform:settings:read"><FinancingPage /></ProtectedRoute>} />
                             <Route path="/admin/import" element={<ProtectedRoute permission="stock:import"><ImportPage /></ProtectedRoute>} />
                             <Route path="/admin/analytics" element={<ProtectedRoute permission="analytics:read"><PriceAnalyticsPage /></ProtectedRoute>} />
@@ -172,6 +177,7 @@ const App = () => (
                         </Routes>
                       </Suspense>
                     </ChunkErrorBoundary>
+                    </TooltipProvider>
                   </PersonalOfferProvider>
                 </CrmTrackingProvider>
               </SpecialOfferProvider>

@@ -43,6 +43,7 @@ export type CreateOpportunityInput = {
   nextActionType?: string | null;
   nextActionDueAt?: Date | null;
   nextActionNote?: string | null;
+  customerId?: string;
   actor: ActorContext;
 };
 
@@ -56,16 +57,22 @@ export async function createOpportunity(
 
   const number = await allocateOpportunityNumber(tx, new Date().getFullYear());
 
-  const { customer, isAmbiguous } = await findOrCreateCustomer(tx, {
-    scopeType: input.scopeType,
-    scopeId: input.scopeId,
-    fullName: input.customerName,
-    phone: input.customerPhone,
-    email: input.customerEmail,
-    companyName: input.companyName,
-    companyNip: input.companyNip,
-    clientType: input.clientType,
-  });
+  let targetCustomerId = input.customerId;
+  let isCustomerAmbiguous = false;
+  if (!targetCustomerId) {
+    const { customer, isAmbiguous } = await findOrCreateCustomer(tx, {
+      scopeType: input.scopeType,
+      scopeId: input.scopeId,
+      fullName: input.customerName,
+      phone: input.customerPhone,
+      email: input.customerEmail,
+      companyName: input.companyName,
+      companyNip: input.companyNip,
+      clientType: input.clientType,
+    });
+    targetCustomerId = customer.id;
+    isCustomerAmbiguous = isAmbiguous;
+  }
 
   const now = new Date();
   const phase = input.initialPhase ?? PipelinePhase.QUALIFICATION;
@@ -75,7 +82,7 @@ export async function createOpportunity(
       number,
       scopeType: input.scopeType,
       scopeId: input.scopeId,
-      customerId: customer.id,
+      customerId: targetCustomerId,
       status: OpportunityStatus.OPEN,
       phase,
       phaseEnteredAt: now,
@@ -100,7 +107,7 @@ export async function createOpportunity(
     aggregateType: 'OPPORTUNITY',
     aggregateId: opportunity.id,
     opportunityId: opportunity.id,
-    customerId: customer.id,
+    customerId: opportunity.customerId,
     actor: input.actor,
     payload: {
       number: opportunity.number,
@@ -121,7 +128,7 @@ export async function createOpportunity(
       aggregateType: 'OPPORTUNITY',
       aggregateId: opportunity.id,
       opportunityId: opportunity.id,
-      customerId: customer.id,
+      customerId: opportunity.customerId,
       actor: input.actor,
       payload: {
         before: null,
@@ -140,7 +147,7 @@ export async function createOpportunity(
       aggregateType: 'OPPORTUNITY',
       aggregateId: opportunity.id,
       opportunityId: opportunity.id,
-      customerId: customer.id,
+      customerId: opportunity.customerId,
       actor: input.actor,
       payload: {
         before: null,
@@ -154,7 +161,7 @@ export async function createOpportunity(
   }
 
   // If customer matching was ambiguous, record note
-  if (isAmbiguous) {
+  if (isCustomerAmbiguous) {
     await recordEvent(tx, {
       scopeType: input.scopeType,
       scopeId: input.scopeId,
@@ -162,7 +169,7 @@ export async function createOpportunity(
       aggregateType: 'OPPORTUNITY',
       aggregateId: opportunity.id,
       opportunityId: opportunity.id,
-      customerId: customer.id,
+      customerId: opportunity.customerId,
       actor: { type: PipelineActorType.SYSTEM, label: 'Dopasowanie klienta' },
       payload: {
         content: 'Uwaga: Niejednoznaczne dopasowanie danych kontaktowych klienta. Utworzono nową kartotekę.',

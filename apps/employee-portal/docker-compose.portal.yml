@@ -1,0 +1,36 @@
+version: '3.8'
+
+# Coolify deployment file for Employee Portal (Frontend-only connected to existing Dev/Staging/Prod backend)
+# Example dev environment:
+# Domain: pracownicy-dev.motolia.pl
+# COMPOSE_PROJECT_NAME: motolia-employee-portal-dev
+# BACKEND_URL: http://motolia-dev-backend:3000 (or http://carscout-dev-backend:3000)
+
+services:
+  employee-portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/kameel77/car-scout-employee-portal:${IMAGE_TAG:-dev}
+    container_name: "${COMPOSE_PROJECT_NAME:-employee-portal-dev}-frontend"
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      # Link to existing backend alias on the shared coolify network (or private bridge)
+      BACKEND_URL: ${BACKEND_URL:?Set the verified environment-qualified backend URL}
+      PORTAL_BRAND_NAME: ${PORTAL_BRAND_NAME:-Program Samochodowy by Motolia}
+      PORTAL_BRAND_LOGO_URL: ${PORTAL_BRAND_LOGO_URL:-/logo.svg}
+      PORTAL_URL: ${PORTAL_URL:-https://pracownicy-dev.motolia.pl}
+      PORTAL_API_URL: "/api"
+    labels:
+      - "traefik.docker.network=coolify"
+    networks:
+      coolify:
+        aliases:
+          - "${COMPOSE_PROJECT_NAME:-employee-portal-dev}-frontend"
+
+networks:
+  coolify:
+    name: coolify
+    external: true

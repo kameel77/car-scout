@@ -3,6 +3,12 @@
 Ten plik dokumentuje działanie kluczowych funkcjonalności aplikacji w przystępny, produktowy sposób.
 Każda nowa funkcjonalność lub zmiana zachowania istniejącej powinna mieć tutaj krótki opis.
 
+## Etapowe wyświetlanie katalogu na telefonach
+- Na ekranach poniżej 640 px katalogi `/nowe`, `/uzywane`, `/samochody` i `/wynajem-dlugoterminowy` montują najpierw dwie karty. Następne pojawiają się w partiach po dwie, gdy użytkownik zbliża się do końca widocznej części listy.
+- Przycisk „Pokaż wszystkie oferty na tej stronie” udostępnia pełną stronę wyników bez przewijania i działa z klawiatury. Ma tłumaczenia PL/EN/DE.
+- Desktop, wydruk i przeglądarki bez IntersectionObserver mają pełną listę. Powrót z szerokiego ekranu do wąskiego nie ukrywa odsłoniętych kart.
+- Paginacja, sortowanie, liczba wyników API i pierwsza karta LCP pozostają bez zmian. Rezerwacja miejsca opiera się na wysokości pierwszej karty; CLS i TBT wymagają oceny online na różnych ofertach.
+
 ## 1. Cena specjalna dla Ciebie (parametr `offer`)
 - **Cel**: personalizowana oferta cenowa, która wygląda na przygotowaną indywidualnie dla użytkownika.
 - **Wejście**: link z parametrem `offer`, który zawiera zakodowaną wartość rabatu (np. base64url z `offerDiscount=5000`).
@@ -754,3 +760,96 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 
 
 
+
+### 63. Moduł Wynajmu - Stok Pojazdów Partnerów, Warianty Cenowe Matrycy i Silnik Wyceny (Etap 1)
+- **Cel**: automatyzacja warstwy danych o stoku pojazdów z wynajmu długoterminowego (np. Ayvens) oraz deterministyczny silnik wyceny raty dla konkretnego numeru stockowego na podstawie parametrów zapytania.
+- **Warianty cenowe w matrycy wynajmu (`priceVariant`)**:
+  - Rozszerzenie matrycy stawek `RentalMatrixEntry` o wymiar `priceVariant` (domyślnie `"base"`) oraz klucz unikalny `[assignmentId, months, annualKm, priceVariant]`.
+  - Możliwość przechowywania alternatywnych cenników (np. marża 6%, 8%) obok cennika bazowego.
+  - Import CSV matrycy wspiera kolumny `price_variant` / `variant` z pierwszeństwem wartości wiersza nad parametrem zapytania i domyślnym fallbackiem do `"base"`.
+  - Czyszczenie poprzednich wpisów przy imporcie jest ograniczone wyłącznie do importowanych wariantów (`priceVariant: { in: variantsToDelete }`), co zapobiega nadpisywaniu innych wariantów stawek.
+- **Koszt nadprzebiegu z oponami (`overMileageTiresNoLimit`)**:
+  - Obsługa dedykowanej stawki za nadprzebieg w wariancie z oponami (kolumna 23 cennika Ayvens).
+  - Wycena z parametrem `tires=true` zwraca stawkę `overMileageTiresNoLimit`. Jeśli wartość w matrycy nie jest uzupełniona, system zwraca `overMileageNet: null` oraz `overMileageUnavailable: true` zamiast błędnie podstawiać stawkę bez opon.
+- **Baza stoku pojazdów wynajmu (`RentalStockUnit`)**:
+  - Nowa tabela `rental_stock_units` powiązana z firmą wynajmu (`RentalCompany`), przechowująca numer stocku (`stockNo`), numer specyfikacji cennikowej (`specNo`), notatkę specyfikacji (`specNoNote`), dane pojazdu (marka, model, wersja, skrzynia, napęd, moc, paliwo, kolor, VIN), daty dostępności oraz status aktywności (`isActive`).
+  - Klucz unikalny `[rentalCompanyId, stockNo]`.
+- **Import kanonicznego CSV stoku (`POST /api/rental-stock/import`)**:
+  - Obsługa kanonicznego formatu CSV z elastycznym parsowaniem dat (`YYYY-MM-DD`, `DD.MM.YYYY`, ISO) i automatyczną ekstrakcją czystego numeru specyfikacji (`extractSpecNo`) z zachowaniem dopisków (np. "294 (krajowy)") w `specNoNote`.
+  - Wymóg obecności co najmniej jednego poprawnego wiersza danych stoku (blokada przed przypadkowym wyczyszczeniem stoku przy pustym pliku).
+  - Mechanizm upsert: aktualizacja istniejących jednostek i dodawanie nowych.
+  - Automatyczna deaktywacja brakujących: jednostki danej firmy najmu nieobecne w przesyłanym pliku CSV są oznaczane jako `isActive: false`.
+  - Zwraca raport: `{ totalRows, inserted, updated, deactivated, unmatched, errors }`.
+- **Wyszukiwarka stoku (`GET /api/rental-stock/search`)**:
+  - Wyszukiwanie aktywnych jednostek po numerze stocku, marce, modelu, opisie lub numerze VIN.
+  - Filtr po firmie wynajmu (`companyId`).
+  - Dynamiczne wzbogacanie wyników o flagę `hasPricing` (czy istnieje powiązana specyfikacja w matrycy stawek) oraz sortowanie priorytetyzujące pojazdy wycenione (`hasPricing` malejąco) oraz z najwcześniejszą datą odbioru, z poprawnym zliczaniem `total` w bazie.
+- **Silnik wyceny raty dla numeru stockowego (`GET /api/rental-stock/:id/quote`)**:
+  - Parametry: `months` (24/36/48/60), `annualKm` (10000..50000), `insurance` (udział własny: 1000, 500 lub 0 PLN), `tires` (true/false), `variant` (np. base, 6, 8), opcjonalny `companyId`.
+  - Deterministyczne mapowanie ze stoku na specyfikację matrycy z wyborem najniższego identyfikatora przypisania (`assignmentId`) w przypadku wielu pasujących wpisów o identycznych stawkach.
+  - Wykrywanie rozbieżności stawek: w przypadku niezgodności stawek pomiędzy wieloma przypisaniami tej samej specyfikacji endpoint zwraca `HTTP 409 Conflict` z listą rozbieżności.
+  - Zwraca pełną strukturę wyceny: identyfikatory, dane pojazdu, parametry wejściowe, ratę bazową, zwyżki za ubezpieczenie i opony, finalną ratę netto/brutto oraz stawkę za nadprzebieg.
+
+### 64. Składanie i Wysyłka Wniosku Najmu do Partnera Finansowego (Etap 2)
+- **Cel**: zastąpienie ręcznego wysyłania maili z wnioskiem do partnera finansowego (np. Ayvens) pojedynczym, atomowym wywołaniem API orkiestrującym założenie klienta, sprawy w pipeline, przypisanie kandydata pojazdu ze stoku, zamrożenie oferty, rejestrację wniosku w statusie `PRECHECK_SUBMITTED`, wysyłkę sformatowanego zgłoszenia e-mail oraz rejestrację audytowalnych zdarzeń biznesowych.
+- **Bezpieczeństwo danych wrażliwych (PESEL)**:
+  - Przechowywanie numeru PESEL w `PipelineCustomer` w formie zaszyfrowanej kryptograficznie symetrycznym algorytmem AES-256-GCM (`peselEnc`) z 12-bajtowym wektorem IV oraz 16-bajtowym tagiem uwierzytelniającym, wraz z maskowaną reprezentacją (`peselMasked`: `*******1234`).
+  - Twarda reguła fail-closed: brak lub nieprawidłowy format klucza szyfrowania `PESEL_ENCRYPTION_KEY` natychmiast przerywa operację ze statusem **HTTP 503**, nie dopuszczając do zapisu nieszyfrowanych danych.
+  - Algorytmiczna walidacja sumy kontrolnej numeru PESEL: błędna suma kontrolna natychmiast odrzuca żądanie kodem **HTTP 422**, bez tworzenia żadnych encji w bazie i bez zwracania numeru PESEL w treści komunikatu błędu.
+  - Ochrona przed wyciekiem (PII Guard): odczyt sprawy `GET /api/pipeline/opportunities/:id` oczyszcza obiekt klienta z pola `peselEnc`. Odszyfrowany PESEL jest dostępny wyłącznie na dedykowanym endpointcie `GET /api/pipeline/customers/:id/pii` chronionym uprawnieniem `pipeline:pii:read`.
+  - Bezwzględny zakaz występowania numeru PESEL w logach serwera, tabeli zdarzeń `PipelineEvent`, dead letterach oraz parametrach zapytań (URL query string).
+- **Złożenie wniosku o wynajem (`POST /api/pipeline/rental-applications`)**:
+  - Walidacja danych klienta dla osób fizycznych (`B2C`: wymagane imię, nazwisko oraz poprawny PESEL) oraz firm (`B2B`: wymagana nazwa firmy lub imię i nazwisko osoby kontaktowej oraz NIP).
+  - Weryfikacja niejednoznaczności klienta: jeśli podany telefon lub email pasuje do wielu kartotek w ramach organizacji, API zwraca **HTTP 409 Conflict** z listą kandydatów do manualnego rozstrzygnięcia.
+  - Atomowa transakcja bazodanowa:
+    1. Utworzenie lub aktualizacja kartoteki klienta (`PipelineCustomer`).
+    2. Utworzenie nowej sprawy w pipeline (`PipelineOpportunity`) w etapie `QUALIFICATION`.
+    3. Pobranie i zweryfikowanie deterministycznej wyceny ze stoku (`calculateRentalQuote`).
+    4. Utworzenie wybranego kandydata pojazdu (`PipelineVehicleCandidate`) z powiązaniem do `RentalStockUnit` (`rentalStockUnitId`).
+    5. Zapisanie zamrożonej oferty handlowej (`PipelineOffer`) z wariantem marży (`rentalPriceVariant`), poziomem ubezpieczenia (`rentalInsuranceVariant`) i flagą opon (`rentalTiresIncluded`).
+    6. Utworzenie wniosku u partnera finansowego (`PipelineApplication`) i przejście do stanu `PRECHECK_SUBMITTED`.
+  - Niezależność wysyłki e-mail: wysyłka wiadomości SMTP do odbiorców partnera (`applicationEmailTo` z tabeli `PipelineFinancier`) odbywa się poza transakcją bazodanową. Ewentualny błąd serwera pocztowego zwraca **HTTP 201** z flagą `emailStatus: "FAILED"` i nie cofa transakcji ani nie zwraca błędu 500.
+  - Rejestracja zdarzenia `RENTAL_APPLICATION_EMAILED` z adresem odbiorców i statusem wysyłki.
+- **Ponowna wysyłka zgłoszenia e-mail (`POST /api/pipeline/applications/:id/resend-email`)**:
+  - Możliwość ponownego wysłania wniosku do partnera finansowego w przypadku awarii serwera pocztowego.
+  - Odtworzenie danych ze snapshotu zamrożonej oferty i wybranego pojazdu bez konieczności ponownego przeliczania stawek.
+- **Widoczność w Thulium**:
+  - Dzięki utworzeniu powiązania `PipelineCustomer` z poprawnym numerem telefonu, istniejący lookup doradcy w Thulium natychmiast widzi nową sprawę, numer wniosku i pojazd bez konieczności jakichkolwiek modyfikacji integracji z Thulium.
+
+### Korekta zależności katalogu mobilnego
+- SearchPage korzysta wyłącznie z danych sprzedaży; usunięto wyłączone zapytanie najmu i nieosiągalne karty najmu. Cache najmu nie uzupełnia już filtrów sprzedaży.
+- HomePage pozostaje importowany synchronicznie, bez zmiany zachowania względem dev.
+- Audyt i ograniczenia pomiarów: `docs/performance/astra-mobile-review.md`. Nie potwierdzono jeszcze poprawy LCP ani celu 200-250 ms.
+
+### 65. Liczniki Ofert Dealera w Backoffice oraz Automatyczne Przywracanie Ofert w StockSyncEngine
+- **Cel**: wyeliminowanie mylących rozbieżności pomiędzy liczbą ofert widoczną w panelu dealerów a stanem faktycznym na listingu publicznym oraz zapewnienie bezstratnej migracji ofert z importów CSV do automatycznych integracji API (np. PewneAuto).
+- **Zliczanie ofert dealera w backoffice (`GET /api/admin/dealers`, `GET /api/admin/dealers/:id`)**:
+  - Wskaźnik `_count.listings` uwzględnia wyłącznie oferty aktywne (`where: { isArchived: false }`), zapobiegając wliczaniu ofert zarchiwizowanych/sprzedanych do bieżącego stanu salonu w panelu administracyjnym.
+- **Automatyczne odarchiwizowanie w StockSyncEngine**:
+  - Silnik synchronizacji feedów (`StockSyncEngine`) przy napotkaniu pojazdu (po VIN lub zewnętrznym identyfikatorze), który był wcześniej oznaczony jako archiwalny z powodem `Not in latest import` (wynikającym z niepełnych lub selektywnych importów CSV), automatycznie przywraca ofertę do stanu aktywnego (`isArchived: false`, `archivedReason: null`, `archivedAt: null`), zachowując jednocześnie twardą ochronę przed odarchiwizowaniem ofert wygaszonych ręcznie przez administratora (`Manual archive`).
+
+### 66. Panel Zarządzania Programem Pracowniczym (Backoffice Superadmina)
+- **Cel**: Umożliwienie Superadminowi platformy pełnej konfiguracji firm partnerskich, programów rabatowych, generowania bezpiecznych kodów dostępu dla pracowników, tworzenia ofert specjalnych oraz masowego importu flotowych matryc wynajmu długoterminowego (CSV).
+- **Lokalizacja i Autoryzacja**:
+  - Panel dostępny pod adresem `/admin/employee-programs` w backoffice Motolia.
+  - Ochrona uprawnieniem `platform:settings:write` (wymaga roli Superadmina platformy; odmowa dostępu 403 dla pozostałych ról).
+- **Zarządzanie Firmami i Programami**:
+  - Tworzenie firm partnerskich z automatycznym generowaniem domyślnego programu pracowniczego.
+  - Widok listy z filtrowaniem i statystykami (liczba kodów, przypisane oferty specjalne, status aktywności).
+  - Widok szczegółowy organizacji podzielony na 4 moduły (karty).
+- **Moduł Kodów Rejestracyjnych**:
+  - Generowanie unikalnych kodów dostępu (ręcznych lub losowych).
+  - Bezpieczeństwo (Zero-Knowledge): W bazie danych zapisywany jest wyłącznie skrót SHA-256 (`codeHash`). Jawny kod zwracany jest jednorazowo w oknie modalnym z możliwością natychmiastowego skopiowania do schowka.
+  - Wyświetlanie statystyk użycia oraz możliwość natychmiastowej dezaktywacji kodu.
+- **Moduł Ofert Specjalnych**:
+  - Przypisywanie pojazdów z bazy `Listing` do programu pracowniczego jako oferty specjalne ze statusem `FINANCING` (zgodnie z ADR-04).
+  - Wbudowany kalkulator rabatu procentowego i kwotowego (dynamiczne przeliczanie ceny katalogowej na cenę w programie).
+  - Możliwość powiązania oferty ze zdefiniowanym pakietem benefitów (karta paliwowa Moya, dedykowany doradca).
+- **Moduł Prywatnych Matryc Najmu (ADR-03)**:
+  - Obsługa zestawów matrycowych izolowanych od oferty publicznej (`EmployeeMatrixSet`, `EmployeeMatrixVersion`, `EmployeeMatrixRow`).
+  - Import plików CSV w formatach zewnętrznych dostawców oraz wewnętrznym formacie Motolia.
+  - Wersjonowanie w trybie DRAFT z podglądem zaimportowanych stawek przed publikacją.
+  - Publikacja 1-klikiem (dezaktywacja poprzedniej wersji aktywnej i natychmiastowe udostępnienie nowych stawek pracownikom).
+- **Moduł Ustawień Programu i Polityk Benefitów**:
+  - Konfiguracja globalnego rabatu procentowego programu.
+  - Pełny CRUD polityk benefitowych (kwota karty paliwowej Moya, opieka dedykowanego opiekuna floty, warunki regulaminowe).

@@ -395,6 +395,24 @@ describe('StockSyncEngine — Integracja PewneAuto', () => {
             }
         });
 
+        // Trzecia oferta zarchiwizowana wcześniej z powodu braku w imporcie CSV ("Not in latest import")
+        const csvArchivedListing = await prisma.listing.create({
+            data: {
+                listingId: 'pewneauto-csv-archived-3',
+                slug: 'toyota-camry-csv-archived-slug',
+                vin: 'VINTESTCSVARCHIVED003',
+                make: 'Toyota',
+                model: 'Camry',
+                pricePln: 110000,
+                productionYear: 2023,
+                mileageKm: 15000,
+                isArchived: true,
+                archivedReason: 'Not in latest import',
+                pewneautoSourceId: testSource.id,
+                pewneautoCarId: 9003
+            }
+        });
+
         const feedCars = [
             mapRawCarToNormalized({
                 id: 9001,
@@ -420,13 +438,25 @@ describe('StockSyncEngine — Integracja PewneAuto', () => {
                 priceGross: 59000,
                 dealer_code_and_name: '010 Toyota Piaseczno',
                 reserved: 0
+            })!,
+            mapRawCarToNormalized({
+                id: 9003,
+                vin: 'VINTESTCSVARCHIVED003',
+                brand_name: 'Toyota',
+                model_name: 'Camry',
+                year: 2023,
+                mileage: 15000,
+                price: 109000,
+                priceGross: 109000,
+                dealer_code_and_name: '010 Toyota Piaseczno',
+                reserved: 0
             })!
         ];
 
         const engine = new StockSyncEngine(prisma);
         await engine.executeSync({
             providerSlug: 'pewneauto',
-            fetchCars: async () => ({ cars: feedCars, totalCount: 2, totalPages: 1 })
+            fetchCars: async () => ({ cars: feedCars, totalCount: 3, totalPages: 1 })
         }, {
             sourceId: testSource.id,
             sourceSlug: testSource.slug,
@@ -449,7 +479,13 @@ describe('StockSyncEngine — Integracja PewneAuto', () => {
         expect(updatedAuto?.archivedReason).toBeNull();
         expect(updatedAuto?.pricePln).toBe(59000);
 
-        await prisma.listing.deleteMany({ where: { id: { in: [manualListing.id, autoArchivedListing.id] } } });
+        // 3. csvArchivedListing: oferta z 'Not in latest import' również automatycznie przywrócona
+        const updatedCsv = await prisma.listing.findUnique({ where: { id: csvArchivedListing.id } });
+        expect(updatedCsv?.isArchived).toBe(false);
+        expect(updatedCsv?.archivedReason).toBeNull();
+        expect(updatedCsv?.pricePln).toBe(109000);
+
+        await prisma.listing.deleteMany({ where: { id: { in: [manualListing.id, autoArchivedListing.id, csvArchivedListing.id] } } });
     });
 
     it('Circuit Breaker: blokuje masową archiwizację gdy feed drastycznie spada', async () => {

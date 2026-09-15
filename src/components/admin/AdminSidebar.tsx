@@ -75,6 +75,7 @@ const NAV_ITEMS: NavItem[] = [
 
     // Platform settings & CMS
     { href: '/admin/translations', label: 'Tłumaczenia', icon: Languages, permission: 'content:read', dividerBefore: true },
+    { href: '/admin/employee-programs', label: 'Program pracowniczy', icon: Building2, permission: 'platform:settings:write' },
     { href: '/admin/financing', label: 'Finansowanie', icon: Banknote, permission: 'platform:settings:read' },
     { href: '/admin/seo', label: 'SEO', icon: Search, permission: 'content:read' },
     { href: '/admin/faq', label: 'FAQ', icon: HelpCircle, permission: 'content:read' },

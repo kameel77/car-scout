@@ -1,20 +1,21 @@
 import React from 'react';
+import { ProgressiveListingGrid } from '@/components/ProgressiveListingGrid';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+
 import { Header } from '@/components/Header';
 import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { StatusTabs } from '@/components/StatusTabs';
 import { TopFilterBar } from '@/components/TopFilterBar';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
-import { RentalListingCard } from '@/components/RentalListingCard';
+
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
 import { useSeoContent } from '@/hooks/useSeoContent';
-import { rentalPublicApi } from '@/services/rental-api';
+
 import { mergeFacets, mergeMakes, mergeModels, popularBrandsFromFacets } from '@/utils/listingMerge';
 import { ListingPagination } from '@/components/ListingPagination';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
@@ -361,71 +362,20 @@ export default function SearchPage() {
     }
   }, [listings, financingContentType]);
 
-  const rentalCondition = filters.statuses.length === 1
-    ? (filters.statuses[0] as 'NEW' | 'USED')
-    : undefined;
-  // Rental vehicles display exclusively in /wynajem-dlugoterminowy
-  const hideRentals = true;
-  const rentalOfferType = priceType === 'net' ? 'b2b' : 'b2c';
-  const rentalRateMin = filters.rateFrom || undefined;
-  const rentalRateMax = filters.rateTo || undefined;
-  const rentalRateBasis = (filters.rateFrom || filters.rateTo) ? filters.rateBasis : undefined;
-  // Map the sale sortBy onto rental-backend sort fields so rentals reorder with the user's choice.
-  // For price-based sorts, use the matching rate basis (gross for Prywatnie, net for Firma).
-  const rentalRateField = priceType === 'net' ? 'minMonthlyRateNet' : 'minMonthlyRateGross';
-  const rentalSort: { sortBy: string; sortOrder: 'asc' | 'desc' } = (() => {
-    switch (sortBy) {
-      case 'year_desc': return { sortBy: 'productionYear', sortOrder: 'desc' };
-      case 'year_asc': return { sortBy: 'productionYear', sortOrder: 'asc' };
-      case 'price_asc': return { sortBy: rentalRateField, sortOrder: 'asc' };
-      case 'price_desc': return { sortBy: rentalRateField, sortOrder: 'desc' };
-      default: return { sortBy: 'createdAt', sortOrder: 'desc' };
-    }
-  })();
-  const { data: rentalData, isLoading: rentalLoading } = useQuery({
-    queryKey: ['rental-search', rentalCondition, filters.makes, filters.models, filters.fuelTypes, filters.bodyTypes, filters.yearFrom, filters.yearTo, filters.query, rentalOfferType, rentalRateMin, rentalRateMax, rentalRateBasis, rentalSort.sortBy, rentalSort.sortOrder],
-    queryFn: () => rentalPublicApi.listVehicles({
-      page: '1',
-      limit: '50',
-      search: filters.query || undefined,
-      make: filters.makes.length ? filters.makes.join(',') : undefined,
-      model: filters.models.length ? filters.models.join(',') : undefined,
-      fuelType: filters.fuelTypes.length ? filters.fuelTypes.join(',') : undefined,
-      bodyType: filters.bodyTypes.length ? filters.bodyTypes.join(',') : undefined,
-      yearFrom: filters.yearFrom || undefined,
-      yearTo: filters.yearTo || undefined,
-      condition: rentalCondition,
-      offerType: rentalOfferType,
-      priceFrom: rentalRateMin,
-      priceTo: rentalRateMax,
-      priceBasis: rentalRateBasis,
-      sortBy: rentalSort.sortBy,
-      sortOrder: rentalSort.sortOrder,
-    }),
-    enabled: !hideRentals,
-  });
-  const rentalVehicles = hideRentals ? [] : (rentalData?.vehicles || []);
-
-  const rentalByCondition = hideRentals
-    ? undefined
-    : (rentalData?.filters?.byCondition as { NEW: number; USED: number } | undefined);
-  const mergedByCondition = data?.byCondition
-    ? {
-        NEW: data.byCondition.NEW + (rentalByCondition?.NEW ?? 0),
-        USED: data.byCondition.USED + (rentalByCondition?.USED ?? 0),
-      }
-    : undefined;
+  // This route contains sale listings only. Do not subscribe to the rental cache
+  // or import rental UI/API code for a branch that can never render.
+  const mergedByCondition = data?.byCondition;
   const mergedMakes = React.useMemo(
-    () => mergeMakes(options?.makes || [], rentalData?.filters?.makes || []),
-    [options?.makes, rentalData?.filters?.makes],
+    () => mergeMakes(options?.makes || [], []),
+    [options?.makes],
   );
   const mergedModels = React.useMemo(
-    () => mergeModels(options?.models || [], rentalData?.filters?.models || []),
-    [options?.models, rentalData?.filters?.models],
+    () => mergeModels(options?.models || [], []),
+    [options?.models],
   );
   const mergedFacets = React.useMemo(
-    () => mergeFacets(data?.facets, rentalData?.facets),
-    [data?.facets, rentalData?.facets],
+    () => mergeFacets(data?.facets),
+    [data?.facets],
   );
   // "Popularne marki" — linkowanie wewnętrzne do stron marek, tylko na czystym /samochody
   // (ten sam próg top ~20 wg liczby ofert co blok SSR w buildStaticMeta).
@@ -434,7 +384,7 @@ export default function SearchPage() {
     [mergedFacets],
   );
 
-  const totalCount = saleTotalCount + rentalVehicles.length;
+  const totalCount = saleTotalCount;
   const totalPages = data?.totalPages ?? Math.max(1, Math.ceil((saleTotalCount || 1) / perPage));
 
   const handleFilterChange = React.useCallback((updatedFilters: FilterState) => {
@@ -774,11 +724,7 @@ export default function SearchPage() {
             )}
 
             {(() => {
-              // Kolejność kart najmu vs sprzedaży sterowana ustawieniem backoffice (domyślnie najem pierwszy)
-              const rentalCardsFirst = settings?.rentalCardsFirst !== false;
-              const rentalCards = rentalVehicles.map((v: any, i: number) => (
-                <RentalListingCard key={`r-${v.id}`} v={v} priority={rentalCardsFirst && i < 3} />
-              ));
+
               const saleCards = isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
@@ -821,11 +767,9 @@ export default function SearchPage() {
               );
 
               return (
-                <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
-                  {rentalCardsFirst && rentalCards}
+                <ProgressiveListingGrid className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
                   {saleCards}
-                  {!rentalCardsFirst && rentalCards}
-                  {!isLoading && !rentalLoading && listings.length === 0 && rentalVehicles.length === 0 && (
+                  {!isLoading && listings.length === 0 && (
                     <div className="col-span-full py-16 text-center">
                       {displayBrand ? (
                         <>
@@ -844,7 +788,7 @@ export default function SearchPage() {
                       )}
                     </div>
                   )}
-                </div>
+                </ProgressiveListingGrid>
               );
             })()}
 
