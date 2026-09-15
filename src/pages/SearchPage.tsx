@@ -1,4 +1,5 @@
 import React from 'react';
+import { ProgressiveListingGrid } from '@/components/ProgressiveListingGrid';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom';
@@ -766,7 +767,7 @@ export default function SearchPage() {
               );
 
               return (
-                <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
+                <ProgressiveListingGrid className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
                   {saleCards}
                   {!isLoading && listings.length === 0 && (
                     <div className="col-span-full py-16 text-center">
@@ -787,7 +788,7 @@ export default function SearchPage() {
                       )}
                     </div>
                   )}
-                </div>
+                </ProgressiveListingGrid>
               );
             })()}
 

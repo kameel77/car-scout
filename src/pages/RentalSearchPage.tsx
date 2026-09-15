@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { ProgressiveListingGrid } from '@/components/ProgressiveListingGrid';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -790,7 +791,7 @@ export default function RentalSearchPage() {
             ))}
           </div>
         ) : vehicles.length > 0 ? (
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
+          <ProgressiveListingGrid className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
             {vehicles.map((v: any, i: number) => (
               <Link key={v.id} to={`/wynajem-dlugoterminowy/${v.slug || v.id}`} className="listing-card group flex flex-col overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <div className="relative">
@@ -846,7 +847,7 @@ export default function RentalSearchPage() {
                 </div>
               </Link>
             ))}
-          </div>
+          </ProgressiveListingGrid>
         ) : (
           <div className="text-center py-20">
             <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />

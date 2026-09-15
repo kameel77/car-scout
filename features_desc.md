@@ -3,6 +3,12 @@
 Ten plik dokumentuje działanie kluczowych funkcjonalności aplikacji w przystępny, produktowy sposób.
 Każda nowa funkcjonalność lub zmiana zachowania istniejącej powinna mieć tutaj krótki opis.
 
+## Etapowe wyświetlanie katalogu na telefonach
+- Na ekranach poniżej 640 px katalogi `/nowe`, `/uzywane`, `/samochody` i `/wynajem-dlugoterminowy` montują najpierw dwie karty. Następne pojawiają się w partiach po dwie, gdy użytkownik zbliża się do końca widocznej części listy.
+- Przycisk „Pokaż wszystkie oferty na tej stronie” udostępnia pełną stronę wyników bez przewijania i działa z klawiatury. Ma tłumaczenia PL/EN/DE.
+- Desktop, wydruk i przeglądarki bez IntersectionObserver mają pełną listę. Powrót z szerokiego ekranu do wąskiego nie ukrywa odsłoniętych kart.
+- Paginacja, sortowanie, liczba wyników API i pierwsza karta LCP pozostają bez zmian. Rezerwacja miejsca opiera się na wysokości pierwszej karty; CLS i TBT wymagają oceny online na różnych ofertach.
+
 ## 1. Cena specjalna dla Ciebie (parametr `offer`)
 - **Cel**: personalizowana oferta cenowa, która wygląda na przygotowaną indywidualnie dla użytkownika.
 - **Wejście**: link z parametrem `offer`, który zawiera zakodowaną wartość rabatu (np. base64url z `offerDiscount=5000`).
