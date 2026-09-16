@@ -13,11 +13,13 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import { Settings, Fuel, Plus, Trash2, Check, Loader2, ShieldCheck, UserCheck } from 'lucide-react';
+import { Settings, Fuel, Plus, Trash2, Check, Loader2, ShieldCheck, UserCheck, Layers, Link2, Building2, AlertCircle } from 'lucide-react';
 import {
   employeeAdminApi,
   EmployeeBenefitPolicy,
-  EmployeeProgramSummary
+  EmployeeProgramSummary,
+  ProgramMatrixSetLink,
+  EmployeeMatrixSetSummary
 } from '@/services/employee-admin.service';
 
 interface Props {
@@ -44,6 +46,11 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
   const [consultantCare, setConsultantCare] = useState(true);
   const [termsText, setTermsText] = useState('');
   const [policyError, setPolicyError] = useState<string | null>(null);
+
+  // Matrix linking state
+  const [isMatrixModalOpen, setIsMatrixModalOpen] = useState(false);
+  const [selectedMatrixSetId, setSelectedMatrixSetId] = useState('');
+  const [matrixLinkError, setMatrixLinkError] = useState<string | null>(null);
 
   // Fetch benefit policies
   const { data: policiesData, isLoading: isPoliciesLoading } = useQuery({
@@ -91,6 +98,42 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
     },
     onError: (err: unknown) => {
       alert(err instanceof Error ? err.message : 'Błąd podczas usuwania pakietu benefitów');
+    }
+  });
+
+  // Fetch linked matrix sets for program
+  const { data: programMatrixData, isLoading: isProgramMatrixLoading } = useQuery({
+    queryKey: ['employee-program-matrix-sets', program.id],
+    queryFn: () => employeeAdminApi.listProgramMatrixSets(program.id, token)
+  });
+
+  // Fetch all available matrix sets when modal is open
+  const { data: allMatrixSetsData, isLoading: isAllMatrixLoading } = useQuery({
+    queryKey: ['admin-matrix-sets'],
+    queryFn: () => employeeAdminApi.listMatrixSets(token),
+    enabled: isMatrixModalOpen
+  });
+
+  const linkMatrixMutation = useMutation({
+    mutationFn: (matrixSetId: string) => employeeAdminApi.linkProgramMatrixSet(program.id, matrixSetId, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-program-matrix-sets', program.id] });
+      setIsMatrixModalOpen(false);
+      setSelectedMatrixSetId('');
+      setMatrixLinkError(null);
+    },
+    onError: (err: unknown) => {
+      setMatrixLinkError(err instanceof Error ? err.message : 'Błąd podczas powiązywania zestawu matryc');
+    }
+  });
+
+  const unlinkMatrixMutation = useMutation({
+    mutationFn: (matrixSetId: string) => employeeAdminApi.unlinkProgramMatrixSet(program.id, matrixSetId, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-program-matrix-sets', program.id] });
+    },
+    onError: (err: unknown) => {
+      alert(err instanceof Error ? err.message : 'Błąd podczas odłączania zestawu matryc');
     }
   });
 
@@ -196,10 +239,10 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
                 />
                 <div className="text-xs">
                   <span className="font-medium text-gray-900">
-                    Automatycznie uwzględniaj oferty najmu długoterminowego
+                    Włącz oferty najmu długoterminowego (zakładka Najem)
                   </span>
                   <p className="text-gray-500">
-                    Flaga przygotowana pod integrację matryc najmu (Etap E3).
+                    Pracownicy programu uzyskają dostęp do katalogu aut w najmie z dedykowanymi stawkami partnerskimi lub publicznymi.
                   </p>
                 </div>
               </label>
@@ -334,6 +377,95 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
         )}
       </div>
 
+      {/* Sekcja 3: Powiązane matryce najmu długoterminowego */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div className="flex items-center gap-2">
+            <Layers className="w-5 h-5 text-indigo-600" />
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Powiązane matryce najmu długoterminowego</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Prywatne matryce stawek partnerskich przypisane do programu pracowniczego.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            onClick={() => {
+              setMatrixLinkError(null);
+              setSelectedMatrixSetId('');
+              setIsMatrixModalOpen(true);
+            }}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            Powiąż zestaw matryc
+          </Button>
+        </div>
+
+        {isProgramMatrixLoading ? (
+          <div className="p-6 text-center text-xs text-gray-500">Ładowanie matryc najmu...</div>
+        ) : !programMatrixData?.matrixSets || programMatrixData.matrixSets.length === 0 ? (
+          <div className="p-6 text-center text-xs text-gray-400 italic">
+            Brak przypisanych prywatnych matryc najmu dla tego programu. Obowiązują publiczne stawki Motolii.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {programMatrixData.matrixSets.map((link: ProgramMatrixSetLink) => {
+              const activeVer = link.matrixSet.versions?.[0];
+              return (
+                <div
+                  key={link.id}
+                  className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 flex flex-col justify-between gap-3 shadow-2xs"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-gray-500" />
+                        <span className="font-semibold text-sm text-gray-900">{link.matrixSet.name}</span>
+                      </div>
+                      <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px]">
+                        {link.matrixSet.rentalCompany?.name || 'Firma najmowa'}
+                      </Badge>
+                    </div>
+
+                    <div className="text-xs text-gray-600 space-y-1">
+                      {activeVer ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-emerald-700 font-medium">Wersja {activeVer.versionNumber} ({activeVer.label || 'Opublikowana'})</span>
+                          <span className="text-gray-400">·</span>
+                          <span>{activeVer._count?.rows ?? 0} stawek</span>
+                        </div>
+                      ) : (
+                        <div className="text-amber-600 text-xs">Brak opublikowanej wersji matrycy</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2 border-t border-gray-200/60">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                      disabled={unlinkMatrixMutation.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Odłączyć zestaw matryc "${link.matrixSet.name}" od programu?`)) {
+                          unlinkMatrixMutation.mutate(link.matrixSetId);
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Odłącz matrycę
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Dialog dodawania pakietu benefitu */}
       <Dialog open={isPolicyModalOpen} onOpenChange={setIsPolicyModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -409,6 +541,76 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {createPolicyMutation.isPending ? 'Zapisywanie...' : 'Dodaj pakiet'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog powiązania zestawu matryc */}
+      <Dialog open={isMatrixModalOpen} onOpenChange={setIsMatrixModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!selectedMatrixSetId) return;
+              linkMatrixMutation.mutate(selectedMatrixSetId);
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-indigo-600" />
+                Powiąż zestaw matryc najmu
+              </DialogTitle>
+              <DialogDescription>
+                Wybierz zestaw matryc stawek najmu dla dostawcy floty. Program może mieć maksymalnie jeden aktywny zestaw na firmę najmową.
+              </DialogDescription>
+            </DialogHeader>
+
+            {matrixLinkError && (
+              <div className="my-3 p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{matrixLinkError}</span>
+              </div>
+            )}
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="matrix-set-select">Dostępne zestawy matryc</Label>
+                {isAllMatrixLoading ? (
+                  <div className="text-xs text-gray-500 py-2">Ładowanie matryc...</div>
+                ) : (
+                  <select
+                    id="matrix-set-select"
+                    value={selectedMatrixSetId}
+                    onChange={(e) => setSelectedMatrixSetId(e.target.value)}
+                    className="w-full h-9 px-3 py-1 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  >
+                    <option value="">Wybierz zestaw matryc...</option>
+                    {(allMatrixSetsData?.matrixSets || []).map((ms: EmployeeMatrixSetSummary) => (
+                      <option key={ms.id} value={ms.id}>
+                        {ms.name} ({ms.rentalCompany?.name})
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-2xs text-gray-500">
+                  Pracownicy B2B będą korzystać z preferencyjnych stawek z opublikowanej wersji wybranego zestawu.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsMatrixModalOpen(false)}>
+                Anuluj
+              </Button>
+              <Button
+                type="submit"
+                disabled={!selectedMatrixSetId || linkMatrixMutation.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {linkMatrixMutation.isPending ? 'Zapisywanie...' : 'Powiąż zestaw'}
               </Button>
             </DialogFooter>
           </form>

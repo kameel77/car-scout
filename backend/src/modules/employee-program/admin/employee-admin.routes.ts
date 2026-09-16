@@ -95,11 +95,31 @@ const updateBenefitPolicySchema = createBenefitPolicySchema.partial().extend({
 });
 
 const createOfferSchema = z.object({
-  listingId: z.string().min(1),
+  sourceType: z.enum(['FINANCING', 'RENTAL']).optional().default('FINANCING'),
+  listingId: z.string().optional().nullable(),
+  assignmentId: z.string().optional().nullable(),
   customPricePln: z.coerce.number().int().min(1).optional().nullable(),
   discountPct: z.coerce.number().min(0).max(100).optional().nullable(),
   benefitPolicyId: z.string().optional().nullable(),
   isExcluded: z.boolean().optional().default(false)
+}).superRefine((data, ctx) => {
+  if (data.sourceType === 'RENTAL') {
+    if (!data.assignmentId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['assignmentId'],
+        message: 'assignmentId jest wymagany dla oferty najmu'
+      });
+    }
+  } else {
+    if (!data.listingId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['listingId'],
+        message: 'listingId jest wymagany dla oferty finansowania'
+      });
+    }
+  }
 });
 
 const updateOfferSchema = z.object({
@@ -635,6 +655,89 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
     return reply.send({ listings });
   });
 
+  // GET /api/admin/employee-programs/available-rental-assignments
+  fastify.get('/api/admin/employee-programs/available-rental-assignments', { preHandler: adminAuth }, async (request, reply) => {
+    const { programId, search, limit: rawLimit } = request.query as {
+      programId: string;
+      search?: string;
+      limit?: string;
+    };
+
+    if (!programId) {
+      return reply.code(400).send({ error: 'programId jest wymagany' });
+    }
+
+    const limit = Math.min(Math.max(parseInt(rawLimit || '50', 10), 1), 100);
+
+    // Pobierz istniejące wykluczenia dla najmu w tym programie
+    const existingOffers = await fastify.prisma.employeeProgramOffer.findMany({
+      where: { programId, assignmentId: { not: null } },
+      select: { assignmentId: true, isExcluded: true, isActive: true }
+    });
+    const excludedAssignmentIds = new Set(
+      existingOffers
+        .filter((o) => o.isExcluded && o.isActive)
+        .map((o) => o.assignmentId!)
+    );
+
+    const where: Prisma.VehicleRentalAssignmentWhereInput = {
+      isActive: true,
+      vehicle: {
+        isActive: true,
+        isPublished: true,
+        ...(search
+          ? {
+              OR: [
+                { make: { contains: search, mode: 'insensitive' } },
+                { model: { contains: search, mode: 'insensitive' } },
+                { version: { contains: search, mode: 'insensitive' } }
+              ]
+            }
+          : {})
+      }
+    };
+
+    const assignments = await fastify.prisma.vehicleRentalAssignment.findMany({
+      where,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        vehicle: {
+          select: {
+            id: true,
+            make: true,
+            model: true,
+            version: true,
+            productionYear: true,
+            primaryImageUrl: true,
+            imageUrls: true,
+            fuelType: true,
+            transmission: true,
+            bodyType: true
+          }
+        },
+        rentalCompany: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true
+          }
+        }
+      }
+    });
+
+    const formattedAssignments = assignments.map((a) => ({
+      id: a.id,
+      vehicleId: a.vehicleId,
+      rentalCompanyId: a.rentalCompanyId,
+      isExcluded: excludedAssignmentIds.has(a.id),
+      vehicle: a.vehicle,
+      rentalCompany: a.rentalCompany
+    }));
+
+    return reply.send({ assignments: formattedAssignments });
+  });
+
   // GET /api/admin/employee-programs/programs/:programId/offers
   fastify.get('/api/admin/employee-programs/programs/:programId/offers', { preHandler: adminAuth }, async (request, reply) => {
     const { programId } = request.params as { programId: string };
@@ -662,6 +765,28 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
               imageUrls: true,
               fuelType: true,
               transmission: true
+            }
+          },
+          assignment: {
+            include: {
+              vehicle: {
+                select: {
+                  id: true,
+                  make: true,
+                  model: true,
+                  version: true,
+                  productionYear: true,
+                  primaryImageUrl: true,
+                  imageUrls: true
+                }
+              },
+              rentalCompany: {
+                select: {
+                  id: true,
+                  name: true,
+                  logoUrl: true
+                }
+              }
             }
           },
           benefitPolicy: {
@@ -698,10 +823,16 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ error: 'Program nie został znaleziony' });
     }
 
-    // Verify listing exists
-    const listing = await fastify.prisma.listing.findUnique({ where: { id: body.listingId } });
-    if (!listing) {
-      return reply.code(404).send({ error: 'Pojazd nie został znaleziony' });
+    if (body.sourceType === 'RENTAL') {
+      const assignment = await fastify.prisma.vehicleRentalAssignment.findUnique({ where: { id: body.assignmentId! } });
+      if (!assignment) {
+        return reply.code(404).send({ error: 'Przypisanie najmu nie zostało znalezione' });
+      }
+    } else {
+      const listing = await fastify.prisma.listing.findUnique({ where: { id: body.listingId! } });
+      if (!listing) {
+        return reply.code(404).send({ error: 'Pojazd nie został znaleziony' });
+      }
     }
 
     // If benefitPolicyId is provided, verify it belongs to this program
@@ -718,8 +849,9 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
       const offer = await fastify.prisma.employeeProgramOffer.create({
         data: {
           programId,
-          sourceType: 'FINANCING',
-          listingId: body.listingId,
+          sourceType: body.sourceType,
+          listingId: body.sourceType === 'RENTAL' ? null : body.listingId,
+          assignmentId: body.sourceType === 'RENTAL' ? body.assignmentId : null,
           customPricePln: body.customPricePln || null,
           discountPct: body.discountPct != null ? new Prisma.Decimal(body.discountPct) : null,
           benefitPolicyId: body.benefitPolicyId || null,
@@ -728,13 +860,19 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
         },
         include: {
           listing: true,
+          assignment: {
+            include: {
+              vehicle: true,
+              rentalCompany: true
+            }
+          },
           benefitPolicy: true
         }
       });
       return reply.code(201).send({ offer });
     } catch (err: any) {
       if (err?.code === 'P2002') {
-        return reply.code(409).send({ error: 'Ten pojazd jest już przypisany do tego programu' });
+        return reply.code(409).send({ error: 'Ten pojazd lub przypisanie jest już powiązane z tym programem' });
       }
       throw err;
     }
@@ -851,6 +989,116 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
     });
 
     return reply.code(201).send({ matrixSet });
+  });
+
+  // GET /api/admin/employee-programs/programs/:programId/matrix-sets
+  fastify.get('/api/admin/employee-programs/programs/:programId/matrix-sets', { preHandler: adminAuth }, async (request, reply) => {
+    const { programId } = request.params as { programId: string };
+    const program = await fastify.prisma.employeeProgram.findUnique({
+      where: { id: programId }
+    });
+    if (!program) {
+      return reply.code(404).send({ error: 'Program nie został znaleziony' });
+    }
+    const matrixSets = await fastify.prisma.employeeProgramMatrixSet.findMany({
+      where: { programId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        matrixSet: {
+          include: {
+            rentalCompany: { select: { id: true, name: true, logoUrl: true } },
+            versions: {
+              where: { status: 'PUBLISHED' },
+              orderBy: { versionNumber: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                versionNumber: true,
+                label: true,
+                status: true,
+                effectiveFrom: true,
+                effectiveTo: true,
+                publishedAt: true,
+                _count: { select: { rows: true } }
+              }
+            }
+          }
+        }
+      }
+    });
+    return reply.send({ matrixSets });
+  });
+
+  // POST /api/admin/employee-programs/programs/:programId/matrix-sets
+  fastify.post('/api/admin/employee-programs/programs/:programId/matrix-sets', { preHandler: adminAuth }, async (request, reply) => {
+    const { programId } = request.params as { programId: string };
+    const { matrixSetId } = request.body as { matrixSetId: string };
+
+    if (!matrixSetId) {
+      return reply.code(400).send({ error: 'matrixSetId jest wymagany' });
+    }
+
+    const program = await fastify.prisma.employeeProgram.findUnique({
+      where: { id: programId }
+    });
+    if (!program) {
+      return reply.code(404).send({ error: 'Program nie został znaleziony' });
+    }
+
+    const matrixSet = await fastify.prisma.employeeMatrixSet.findUnique({
+      where: { id: matrixSetId }
+    });
+    if (!matrixSet) {
+      return reply.code(404).send({ error: 'Zestaw matryc nie został znaleziony' });
+    }
+
+    // Egzekwowanie reguły biznesowej: max 1 zestaw per firma najmowa per program
+    const existingSameCompany = await fastify.prisma.employeeProgramMatrixSet.findFirst({
+      where: {
+        programId,
+        matrixSet: {
+          rentalCompanyId: matrixSet.rentalCompanyId
+        }
+      }
+    });
+
+    if (existingSameCompany) {
+      return reply.code(409).send({
+        error: 'Conflict',
+        message: 'Program posiada już powiązany zestaw matryc dla tego dostawcy floty'
+      });
+    }
+
+    const link = await fastify.prisma.employeeProgramMatrixSet.create({
+      data: {
+        programId,
+        matrixSetId
+      },
+      include: {
+        matrixSet: {
+          include: {
+            rentalCompany: true
+          }
+        }
+      }
+    });
+
+    return reply.code(201).send({ link });
+  });
+
+  // DELETE /api/admin/employee-programs/programs/:programId/matrix-sets/:matrixSetId
+  fastify.delete('/api/admin/employee-programs/programs/:programId/matrix-sets/:matrixSetId', { preHandler: adminAuth }, async (request, reply) => {
+    const { programId, matrixSetId } = request.params as { programId: string; matrixSetId: string };
+
+    const deleted = await fastify.prisma.employeeProgramMatrixSet.deleteMany({
+      where: { programId, matrixSetId }
+    });
+
+    if (deleted.count === 0) {
+      return reply.code(404).send({ error: 'Powiązanie nie zostało znalezione' });
+    }
+
+    return reply.send({ success: true });
   });
 
   // POST /api/admin/employee-programs/matrix-sets/:setId/import
