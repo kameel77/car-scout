@@ -861,3 +861,188 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Moduł Ustawień Programu i Polityk Benefitów**:
   - Konfiguracja globalnego rabatu procentowego programu.
   - Pełny CRUD polityk benefitowych (kwota karty paliwowej Moya, opieka dedykowanego opiekuna floty, warunki regulaminowe).
+
+### 67. Prywatny Katalog Ofert w Portalu Pracowniczym (Etap P3b)
+- **Cel**: Udostępnienie zweryfikowanemu i zalogowanemu pracownikowi firmy partnerskiej prywatnego katalogu pojazdów z dedykowanymi warunkami cenowymi, pakietami korzyści oraz izolacją tenantów.
+- **Backend API**:
+  - `GET /api/employee/offers`: Zwraca listę aktywnych ofert przypisanych do programu pracownika. Autoryzacja przez bezpieczne ciasteczko sesyjne `__Host-ep-session` z walidacją Redis allowlist i bazy danych (`verifyEmployeeAuth`).
+  - `GET /api/employee/offers/:offerId`: Zwraca szczegóły pojedynczej oferty. W przypadku próby odpytania o ofertę należącą do innego programu/firmy endpoint zwraca kod **404 Not Found** (nigdy 403, aby zapobiec sondowaniu identyfikatorów obcych tenantów).
+  - Paginacja keyset (`cursor`, `limit` 1-50, domyślnie 24) po `createdAt desc, id desc`.
+  - Wyszukiwanie (`search` max 100 znaków) po marce, modelu lub wersji pojazdu.
+  - Ochrona przed zarchiwizowanymi pojazdami (`listing.isArchived = false`) oraz pomijanie niespójnych rekordów bez listingId (`fastify.log.warn`).
+  - Przycinanie tablicy zdjęć `imageUrls` do maksymalnie 5 pozycji dla oszczędności transferu.
+- **Reguła rozstrzygania cen i rabatów (§4 briefu)**:
+  1. `customPricePln` (ręcznie wynegocjowana kwota) ma bezwzględne pierwszeństwo.
+  2. W drugiej kolejności stosowany jest rabat z oferty `discountPct`.
+  3. W trzeciej kolejności dziedziczony jest rabat domyślny programu `program.defaultDiscountPct`.
+  4. Domyślnie: cena katalogowa z zerowym rabatem.
+  - Kwota pracownicza jest zaokrąglana matematycznie (`Math.round`), a faktyczny rabat `discountPct` jest zawsze przeliczany z finalnej ceny z dokładnością do 2 miejsc po przecinku (z obcięciem zer zbędnych).
+- **Interfejs Portalu Pracowniczego (`apps/employee-portal`)**:
+  - 4 stany widoku katalogu:
+    - **Ładowanie**: responsywna siatka szkieletów kafli (skeleton) z pulsującą animacją.
+    - **Lista ofert**: siatka kart samochodów z podglądem zdjęcia (i fallbackiem), specyfikacją (rok, paliwo, skrzynia biegów), przekreśloną ceną katalogową, wyróżnioną ceną pracowniczą, plakietką zaoszczędzonej kwoty i rabatu oraz plakietką pakietu benefitów (np. Karta paliwowa Moya).
+    - **Stan pusty**: estetyczny komunikat informujący o braku dostępnych ofert z kontaktem do opiekuna programu.
+    - **Stan błędu**: czytelne powiadomienie o niepowodzeniu pobrania danych z przyciskiem ponowienia zapytania.
+  - Wykorzystanie natywnego stanu React (`useState`, `useEffect`) z obsługą anulowania żądań (`AbortController`) i `credentials: 'same-origin'`.
+
+### 68. Zgłoszenia i Zapytania o Ofertę w Portalu Pracowniczym (Etap P3c)
+- **Cel**: Umożliwienie zalogowanemu pracownikowi firmy partnerskiej przesłania zapytania o wybraną ofertę samochodową z katalogu, automatyczne utworzenie leada w CRM z zachowaniem snapshotu wyliczeń oraz podgląd historii swoich zgłoszeń.
+- **Backend API**:
+  - `POST /api/employee/inquiries`:
+    - Idempotentne tworzenie zgłoszenia (`EmployeeInquiry`) powiązanego z nowym leadem w CRM (`Lead`) w jednej transakcji bazodanowej.
+    - Zabezpieczenie podwójną weryfikacją: ciasteczko sesyjne (`verifyEmployeeAuth`) oraz ochrona przed CSRF (`verifyEmployeeCsrf`, nagłówek `X-CSRF-Token`).
+    - Rate limit ograniczający nadużycia do 10 zapytań na minutę per IP.
+    - Generowanie numeru referencyjnego w formacie `AF-...` za pomocą współdzielonej funkcji `generateReference()`. W przypadku kolizji unikalności `reference_number` mechanizm ponawia próbę po 2 ms opóźnienia, gwarantując unikalną milisekundę.
+    - Walidacja Zgody RODO (§3.1a): pole `consentPrivacy: boolean` jest bezwzględnie wymagane w ciele żądania. Wartość `false` lub brak zwraca kod 400 Bad Request. Po wyrażeniu zgody (`true`), na rekordzie `Lead` zapisywany jest timestamp `consentPrivacyAt: new Date()`, natomiast zgoda marketingowa `consentMarketingAt` pozostaje `null`.
+    - Forma finansowania / Strona umowy (`contractParty`): obsługuje `CONSUMER` (osoba prywatna), `EMPLOYEE_B2B` (działalność gospodarcza pracownika) oraz `EMPLOYER_COMPANY` (umowa na firmę pracodawcy). Weryfikacja semantyki sumy (ANY): jeśli program definiuje nadpisania produktowe (`EmployeeProductOverride`), wybrana strona umowy musi być dozwolona w co najmniej jednym aktywnym produkcie. Dla opcji B2B i firmy pracodawcy wymagany jest poprawny numer NIP (10 - 15 znaków).
+    - Snapshotting: serwer pobiera aktualne dane oferty i zapisuje niezmienną migawkę kalkulacji ceny (`calculationSnapshot` z ceną katalogową, pracowniczą, oszczędnością i procentem rabatu) oraz pakietu benefitów (`benefitSnapshot`).
+    - Integracja z CRM Inbox: tworzony `Lead` (z typem `'employee'`) ma przypisany `listingId` oferty, co pozwala doradcom na podgląd specyfikacji pojazdu w skrzynce CRM.
+  - `GET /api/employee/inquiries`:
+    - Zwraca listę zgłoszeń zalogowanego pracownika w ramach ścisłej izolacji konta.
+    - Paginacja keyset (`cursor`, `limit` domyślnie 20, max 50).
+    - Odpowiedź zawiera zagnieżdżone obiekty pojazdu, kalkulacji cenowej, benefitów, statusu oraz numeru referencyjnego z powiązanego leada.
+- **Interfejs Portalu Pracowniczego (`apps/employee-portal`)**:
+  - Przycisk akcji "Zapytaj o tę ofertę" umieszczony na każdej karcie pojazdu w katalogu.
+  - Modal formularza (`InquiryModal`):
+    - Generuje unikalny klucz idempotencji (`crypto.randomUUID()`) per sesję modalu, zachowując go przy ponowieniu próby po błędzie sieciowym.
+    - Dynamiczny wybór strony umowy z warunkowym wyświetlaniem pola NIP dla działalności i firmy pracodawcy.
+    - Automatyczne wstępne wypełnienie danych kontaktowych z kontekstu zalogowanego pracownika (imię, nazwisko, e-mail, telefon).
+    - Opcjonalne pole na uwagi pracownika (do 2000 znaków).
+    - Wymagany checkbox zgody na przetwarzanie danych osobowych z linkiem do Polityki Prywatności.
+    - Dedykowany ekran sukcesu prezentujący nadany numer referencyjny `AF-...` oraz przyciski nawigacji.
+  - Widok historii zapytań (`MyInquiriesPage` na trasie `/zapytania`):
+    - 4 stany widoku: szkielet ładowania (skeleton), lista zgłoszeń z podglądem auta, ceną pracowniczą, statusem i korzyściami, stan pusty z zachętą do przejścia do katalogu oraz stan błędu z przyciskiem ponowienia.
+  - Nawigacja w górnym pasku portalu z przełącznikiem zakładek "Katalog ofert" oraz "Moje zapytania".
+
+### 69. Pełny Katalog Ofert Pracowniczych ze Stoku - Reguły Zasięgu i Wyjątki (Etap E1)
+- **Cel**: Dynamiczne zasilanie katalogu pracowniczego całym dostępnym stokiem nowych samochodów (`Listing` z `condition = NEW`) w oparciu o globalne reguły zasięgu programu pracodawcy, z zachowaniem mechanizmu wyjątków cenowych (`EmployeeProgramOffer`) i wykluczeń (`isExcluded: true`).
+- **Architektura Bazy Danych (`schema.prisma`)**:
+  - `EmployeeProgram`:
+    - `scopeIncludeNew Boolean @default(false)`: Włącza automatyczne włączanie do katalogu pracowniczego wszystkich niearchiwalnych pojazdów nowych (`condition = NEW`, `pricePln > 0`, `isReserved = false`). Domyślna wartość `false` gwarantuje zachowanie status quo dla istniejących programów partnerskich bez decyzji biznesowej administratora.
+    - `scopeIncludeRental Boolean @default(false)`: Flaga przygotowana pod etap E3 (matryce najmu długoterminowego ze stoku).
+    - `scopeDiscountPct Decimal? @db.Decimal(5, 2)`: Dedykowany rabat procentowy dla reguły zasięgu stoku nowego.
+  - `EmployeeProgramOffer`:
+    - Pełni rolę jawnych wyjątków lub wykluczeń ze stoku.
+    - `isExcluded Boolean @default(false)`: Oznacza jawne wykluczenie pojazdu ze stoku z widoku katalogu pracowniczego. Wykluczenie jest aktywne wyłącznie wtedy, gdy `isExcluded: true` oraz `isActive: true`. Zmiana `isActive: false` na rekordzie wykluczenia deaktywuje wykluczenie i przywraca pojazd do widoku stoku.
+    - Indeks złożony: `@@index([programId, isExcluded, isActive])` optymalizujący filtrowanie bazy danych.
+- **Hierarchia Rozstrzygania Cen (5-poziomowy łańcuch `calculateOfferPricing`)**:
+  1. Wyjątek kwotowy: `offer.customPricePln` (jeśli zdefiniowany i większy od 0).
+  2. Wyjątek procentowy: `offer.discountPct` (jeśli zdefiniowany i większy od 0).
+  3. Rabat reguły zasięgu: `program.scopeDiscountPct` (jeśli zdefiniowany i większy od 0).
+  4. Domyślny rabat programu: `program.defaultDiscountPct` (jeśli zdefiniowany i większy od 0).
+  5. Cena katalogowa brutto: `listing.pricePln` (brak rabatu).
+- **Backend API**:
+  - `GET /api/employee/offers`:
+    - Zapytanie bazodanowe zakorzenione bezpośrednio w modelu `Listing` z warunkiem logicznym `AND` łączącym filtr wyszukiwania oraz klauzulę `OR`:
+      1. Reguła zasięgu (gdy `scopeIncludeNew = true`): `condition: NEW`, `isReserved: false` oraz brak aktywnego wpisu z `isExcluded: true` i `isActive: true` dla danego programu.
+      2. Wyjątki ofertowe: wpis w `EmployeeProgramOffer` dla danego programu z `isActive: true` i `isExcluded: false`.
+    - Paginacja kursorowa oparta ściśle na `Listing.id` (bez ryzyka błędu `P2025` i duplikacji rekordów).
+    - Pojazdy będące wyjątkami pojawiają się w katalogu dokładnie raz, reprezentowane przez identyfikator oferty (CUID), podczas gdy pojazdy z reguły zasięgu otrzymują wirtualny identyfikator `listing-{id}`.
+    - **Obsługa ofert RENTAL (Etap E1 vs E3)**: Zapytanie stoku w E1 obsługuje pojazdy na sprzedaż/finansowanie (`Listing`). Oferty najmu długoterminowego (`sourceType: 'RENTAL'`, `listingId: null`) są celowo pomijane na liście w E1 (brak gotówkowego rabatu procentowego) - ich pełna integracja z matrycami stawek najmu i flagą `scopeIncludeRental` nastąpi w Etapie E3.
+  - `GET /api/employee/offers/:offerId`:
+    - Obsługa dwukierunkowa: pobieranie po wirtualnym identyfikatorze `listing-{id}` (weryfikacja `scopeIncludeNew` oraz braku aktywnego wykluczenia) lub po identyfikatorze oferty CUID (z weryfikacją uprawnień programu).
+  - `POST /api/employee/inquiries`:
+    - Przyjmowanie zarówno ofert wyjątkowych (CUID), jak i ofert ze stoku (`listing-{id}`).
+    - W przypadku oferty ze stoku: serwer pobiera `Listing`, oblicza aktualną cenę pracowniczą wg hierarchii reguły zasięgu i programu, a następnie tworzy `EmployeeInquiry` z `listingId: listing.id` oraz powiązany `Lead` w CRM.
+  - `GET /api/admin/employee-programs/companies` oraz endpointy programów:
+    - Rozszerzenie odpowiedzi o pola `scopeIncludeNew`, `scopeIncludeRental`, `scopeDiscountPct` oraz obsługa `isExcluded` przy dodawaniu i edycji ofert specjalnych.
+- **Panel Administratora (`src/components/admin/employee-programs`)**:
+  - `ProgramSettingsTab.tsx`:
+    - Sekcja "Reguły zasięgu katalogu (Katalog Pełny)" z przełącznikami dla pojazdów nowych (`scopeIncludeNew`) i wynajmu (`scopeIncludeRental`) oraz polem rabatu reguły (`scopeDiscountPct`).
+    - Informacja o kolejności rozstrzygania rabatów dla administratora.
+  - `SpecialOffersTab.tsx`:
+    - Możliwość oznaczenia oferty jako "Wyklucz ten pojazd z katalogu pracowniczego (isExcluded)".
+    - Czerwona plakietka ostrzegawcza "Wykluczenie ze stoku" na kafelkach wykluczonych pojazdów w panelu.
+
+### 70. Feedy Produktowe Marketingowe (Google Merchant Center, Meta Catalog) - Wykluczenie Aut Używanych
+- **Cel**: Dostosowanie katalogów reklamowych i feedów produktowych (`/google-feed.xml`, `/facebook-feed.csv`, `/feed.xml`) do wymogów polityk Google Merchant Center oraz Meta Commerce, które zabraniają promowania aut używanych w standardowych feedach produktowych.
+- **Logika selekcji**:
+  - **Oferty sprzedaży i leasingu (`Listing`)**: pobierane są wyłącznie pojazdy nowe (`condition = 'NEW'`), niearchiwalne (`isArchived: false`). Wszystkie pojazdy używane (`condition = 'USED'`), w tym pochodzące z integracji giełdowych (np. PewneAuto), są ściśle wykluczone.
+  - **Wynajem długoterminowy (`RentalVehicle`)**: pobierane są aktywne pojazdy z warunkiem `condition = 'NEW'`. Ewentualne pojazdy używane są pomijane.
+  - **Atrybut stanu (`condition`)**: we wszystkich wygenerowanych feedach (zarówno w XML `<g:condition>`, jak i w CSV) wartość parametru stanu jest zawsze ustawiona na `new`.
+  - **Opis kanału RSS**: zaktualizowano opis w nagłówku feedu XML z wzmianki o autach używanych na "Katalog aktywnych ofert nowych samochodów oraz wynajmu długoterminowego".
+- **Weryfikacja**: Dedykowany test integracyjny `backend/src/routes/__tests__/feeds.test.ts` potwierdza poprawne filtrowanie, obecność aut nowych i wynajmu oraz całkowite wykluczenie aut używanych ze struktury XML i CSV.
+
+### 71. Wynajem Długoterminowy w Programie Pracowniczym (Etap E3)
+- **Cel**: Rozszerzenie programu pracowniczego o pełną obsługę najmu długoterminowego aut nowych z dedykowanymi stawkami partnerskimi, osobnym katalogiem ofert oraz integracją kalkulatora dyskretnego i CRM.
+- **Architektura API**:
+  - Dedykowane endpointy katalogu najmu `GET /api/employee/rental-offers` oraz `GET /api/employee/rental-offers/:id`, działające niezależnie od katalogu zakupu i leasingu ze stoku (`Listing`). Takie rozdzielenie eliminuje problem scalania w pamięci różnych encji bazodanowych i gwarantuje stabilną paginację kursorową po `RentalVehicle.id`.
+  - Warunek widoczności oferty: lustrzany do publicznego katalogu najmu (`isActive: true`, `isPublished: true`, aktywne przypisanie `VehicleRentalAssignment` z dostępnymi stawkami) oraz brak aktywnego wykluczenia dla danego programu pracowniczego.
+  - Flaga `scopeIncludeRental`: gdy flaga programu ma wartość `false`, lista ofert zwraca pustą tablicę (kod 200), a szczegóły oferty zwracają kod 404 Not Found.
+- **Model Danych i Relacje**:
+  - Model tabeli łączącej `EmployeeProgramMatrixSet` powiązujący program pracowniczy (`EmployeeProgram`) z prywatnymi zestawami matryc dostawców (`EmployeeMatrixSet`).
+  - Zasada biznesowa egzekwowana na poziomie API: dany program pracowniczy może posiadać maksymalnie jeden powiązany zestaw matryc na konkretnego dostawcę floty (`RentalCompany`).
+- **Silnik Rozstrzygania Cen i Stawek (`employee-rental-pricing.utils.ts`)**:
+  - Wielopoziomowa weryfikacja dostępności stawek prywatnych:
+    1. Sprawdzenie obecności powiązanego zestawu matryc dla dostawcy danego pojazdu.
+    2. Sprawdzenie opublikowanej wersji matrycy (`status: 'PUBLISHED'`) obowiązującej w danym momencie (`effectiveFrom <= now <= effectiveTo`).
+    3. Weryfikacja obecności wierszy kalkulacji dla konkretnego przypisania pojazdu.
+    4. Weryfikacja dopuszczalnych stron umowy (`allowedContractParties`): pracownik jako konsument (`CONSUMER`) korzysta ze stawek publicznych (`PUBLIC_MATRIX`), natomiast firmy (`EMPLOYEE_B2B`, `EMPLOYER_COMPANY`) uzyskują dostęp do stawek prywatnych (`EMPLOYEE_MATRIX`).
+  - Deterministyczny fallback do publicznych stawek Motolia w przypadku braku powiązania, wersji roboczej (DRAFT), wygaśnięcia terminu obowiązywania lub braku wierszy dla pojazdu.
+  - Wyliczanie rat z uwzględnieniem trybu ubezpieczenia (`calculateRatesWithInsurance`): standardowo doliczany podatek 23% dla `INSURANCE_23` lub brak marży dla `INSURANCE_INCLUDED`.
+- **Zgłoszenia Pracownicze o Najem i Integracja CRM**:
+  - Rozszerzenie endpointu `POST /api/employee/inquiries` o identyfikatory ofert najmu (`rental-<id>`) oraz parametry wybranego wariantu `rentalSelection` (przypisanie, okres w miesiącach, roczny przebieg, opłata wstępna procentowa i kwotowa).
+  - Serwerowa weryfikacja i rekalkulacja stawek w oparciu o bieżący stan bazy danych (całkowita ochrona przed manipulacją stawkami po stronie frontendu).
+  - Zapis rekordu `EmployeeInquiry` z `sourceType: 'RENTAL'`, niezmienną migawką wyceny `calculationSnapshot.rental` oraz unikalnym numerem referencyjnym `PP-`.
+  - Tworzenie rekordu `Lead` w CRM ze statusem `new`, referencją do `rentalVehicleId`, polami parametrów umowy najmu (`rentalCompanyName`, `rentalContractMonths`, `rentalAnnualMileageKm`, `rentalMonthlyRate`) oraz czytelną wiadomością leadu.
+  - Endpoint `GET /api/employee/inquiries` zwraca pełną historię zgłoszeń najmu wraz z migawką parametrów i dostawcy.
+- **Panel Administratora (`src/components/admin/employee-programs`)**:
+  - `ProgramSettingsTab.tsx`: sekcja zarządzania prywatnymi matrycami najmu, umożliwiająca łączenie i odłączanie zestawów matryc poszczególnych dostawców z walidacją reguły unikalności per firma.
+  - `SpecialOffersTab.tsx`: obsługa wykluczeń ofert najmu ze stoku (`sourceType: 'RENTAL'`) z wyborem dostawcy i pojazdu oraz prezentacją ostrzegawczej czerwonej plakietki.
+- **Portal Pracowniczy (`apps/employee-portal`)**:
+  - Nowa trasa `/najem` (`RentalCatalogPage`): kafelkowy katalog ofert najmu z wyszukiwarką, filtrami, plakietkami rodzaju stawki (stawka partnerska vs katalogowa) i prezentacją najniższej dostępnej raty miesięcznej.
+  - Nowa trasa `/najem/:id` (`RentalOfferDetailPage`): karta pojazdu z pełną specyfikacją techniczną, galerią zdjęć, informacjami o dostawcy oraz interaktywnym, dyskretnym kalkulatorem raty (wybór okresu 24-48 mies., rocznego limitu km i opłaty wstępnej).
+  - Obsługa zapytań o najem w `InquiryModal` (podsumowanie parametrów umowy, wybór strony umowy, weryfikacja NIP i zgoda RODO) oraz historia zgłoszeń w `MyInquiriesPage`.
+- **Weryfikacja i Testy**:
+  - Zestaw 14 testów integracyjnych w odizolowanym środowisku Docker (`backend/src/modules/employee-program/rental/__tests__/employee-rental.test.ts`): najniższa rata w katalogu, sortowanie wariantów, stawki B2B vs konsument, fallback publiczny (brak matrycy, DRAFT, przeterminowanie), wykluczenia, flaga `scopeIncludeRental`, utworzenie zgłoszenia i leada w CRM, idempotencja, rekalkulacja serwerowa oraz izolacja tenantów.
+  - Wszystkie 69 testów integracyjnych oraz 102 testy jednostkowe backendu i 83 testy portalu pracowniczego zakończone sukcesem.
+
+## 76. Portal Pracowniczy - Ujednolicenie Nagłówka, Poprawka Kalkulatora Najmu i Karta Pojazdu Nowego z Kalkulatorem Finansowania
+- **Ujednolicenie nagłówka (`PortalHeader.tsx`)**:
+  - Zastąpiono rozbieżne implementacje nagłówków na stronach `/katalog`, `/katalog/:id`, `/najem`, `/najem/:id` oraz `/zapytania` jednym wspólnym komponentem `PortalHeader`.
+  - Usunięto długą, łamiącą się plakietkę `[Program Samochodowy Finarena Sp. z o.o.]` z pigułki użytkownika, ujednolicając układ do wzorca z `/zapytania`: `[User] Imię Nazwisko | [Building] Nazwa Firmy`.
+- **Korekta deduplikacji opłaty wstępnej w kalkulatorze najmu (`rental-api.ts`, `RentalOfferDetailPage.tsx`)**:
+  - Usunięto błąd polegający na nadpisywaniu wariantu 0 zł przez opcję kwotową 20 000 zł w kalkulatorze najmu (wynikający z klucza deduplikacji uwzględniającego jedynie `initialPaymentPct = 0`).
+  - Rozszerzono klucz deduplikacji o `initialPaymentAmountNet` oraz wprowadzono dedykowaną tablicę `downPaymentOptions` z etykietami kwotowymi i procentowymi, gwarantującą poprawne odzwierciedlenie stawek (np. 3 389 zł dla 0 zł i 2 789 zł dla 20 000 zł).
+- **Karta pojazdu nowego `/katalog/:id` (`NewCarOfferDetailPage.tsx`)**:
+  - Dedykowana podstrona pojazdu nowego z odzwierciedleniem standardów platformy Motolia:
+    - Galeria zdjęć (duże zdjęcie główne + pasek miniatur).
+    - Szczegółowe dane techniczne (rok, paliwo, skrzynia, moc KM, pojemność cm³, nadwozie, napęd, kolor, liczba drzwi/miejsc).
+    - Pogrupowane listy wyposażenia (bezpieczeństwo, komfort i dodatki, multimedia, inne).
+    - Pakiet benefitów programu pracowniczego (karta paliwowa Moya, stały rabat na paliwo, opieka doradcy flotowego).
+    - Interaktywny kalkulator finansowania (leasing B2B / kredyt konsumencki) wykorzystujący standardowy silnik PMT: wybór okresu (24, 36, 48, 60 mies.), wpłaty własnej (0%, 10%, 20%, 30%, 45%) oraz wykupu (1%, 10%, 20%, 30%) z natychmiastowym przeliczaniem raty netto i brutto na cenie pracowniczej.
+    - Zintegrowany modal zapytania (`InquiryModal`) z automatycznym wstępnym uzupełnieniem uwag parametrami kalkulacji wybranymi przez pracownika.
+- **Interaktywność kafelków w katalogu nowych aut (`CatalogPage.tsx`)**:
+  - Dodano klikalność miniatur zdjęć, tytułów oraz dedykowany przycisk CTA „Szczegóły i kalkulator raty” przenoszący bezpośrednio do `/katalog/:id`.
+  - Zachowano przycisk „Zapytaj o tę ofertę” dla 1-kliknięciowego otwarcia szybkiego zapytania.
+
+## 77. Portal Pracowniczy - Wyposażenie Najmu, Filtry Katalogowe, Plakietki B2B i Ukrycie Dostawcy
+- **Pełne wyposażenie i parametry techniczne w ofertach najmu (`RentalOfferDetailPage.tsx`, `rental-api.ts`)**:
+  - Dodano prezentację 4-kolumnowej, kategoryzowanej listy wyposażenia pojazdu najmu:
+    - Bezpieczeństwo i asystenci jazdy (`equipmentSafety`)
+    - Komfort i dodatki (`equipmentComfortExtras`)
+    - Multimedia i łączność (`equipmentAudioMultimedia`)
+    - Pozostałe elementy (`equipmentOther`)
+    - Dodatkowe uwagi i opis pojazdu (`additionalInfoHeader`, `additionalInfoContent`)
+  - Rozszerzono siatkę parametrów technicznych o moc silnika (KM), pojemność (cm³), rodzaj napędu, kolor lakieru oraz liczbę drzwi i miejsc siedzących.
+- **Pasek filtrów w katalogach najmu i nowych samochodów (`RentalCatalogPage.tsx`, `CatalogPage.tsx`)**:
+  - Dodano responsywny pasek filtrów w standardzie platformy Motolia dla obu widoków katalogowych:
+    - Wyszukiwarka tekstowa (szukanie po marce, modelu lub wersji)
+    - Marka pojazdu (dynamicznie generowana lista unikalnych marek z bieżących ofert)
+    - Rodzaj paliwa (formatowane etykiety: Benzyna, Diesel, Hybryda, Mild Hybrid, Plug-in Hybrid, Elektryczny)
+    - Skrzynia biegów (Automat, Manualna)
+    - Typ nadwozia (SUV, Sedan, Kombi, Hatchback, Liftback, Coupe, Kabriolet, Minivan)
+    - Dedykowany filtr „Tylko B2B” na listingu najmu długoterminowego
+    - Sortowanie (najem: rata rosnąco/malejąco; nowe auta: cena rosnąco/malejąco, największy rabat)
+    - Licznik znalezionych ofert oraz przycisk „Wyczyść filtry” przy aktywnym filtrowaniu.
+- **Plakietki B2B na ofertach najmu (`RentalCatalogPage.tsx`, `RentalOfferDetailPage.tsx`)**:
+  - Dodano wyróżniającą się bursztynową plakietkę `Oferta B2B` (`bg-amber-500 text-white`) w lewym górnym rogu na zdjęciu pojazdu na kafelkach listingu najmu oraz na zdjęciu głównym karty pojazdu.
+  - Flaga `isB2b` jest wyliczana serwerowo w backendzie wyłącznie na podstawie reguły: dozwolone strony umowy (`allowedContractParties`) nie zawierają strony konsumenckiej (`CONSUMER`), czyli oferta jest dedykowana wyłącznie dla `EMPLOYEE_B2B` lub `EMPLOYER_COMPANY`.
+- **Usunięcie etykiety „Dostawca: <nazwa>” z widoku pracownika**:
+  - Całkowicie usunięto informację o firmie wynajmującej / dostawcy (w tym pola `rentalCompanyName`, `rentalCompanySlug`, `rentalCompanyLogoUrl` i `rentalCompanies`) z odpowiedzi API portalu pracowniczego oraz z interfejsu (kafelki listingu najmu, nagłówek karty pojazdu, siatka specyfikacji oraz modal zapytania).
+- **Architektura podglądu portalu w kontekście wybranej firmy przez Operatora (Masquerade Mode) - Specyfikacja koncepcyjna**:
+  - *Status: Specyfikacja architektoniczna (niezaimplementowana jeszcze w kodzie produkcyjnym).*
+  - Zaprojektowano mechanizm podglądu kontekstowego portalu pracowniczego bezpośrednio z panelu administracyjnego Motolia:
+    1. Operator klika „Podgląd portalu firmy” przy wybranej firmie lub programie w panelu administratora.
+    2. Backend generuje krótkotrwały token podglądu (np. ważny 15 minut) z uprawnieniem tylko-do-odczytu i flagą `isPreview: true`.
+    3. Portal pracowniczy otwiera się z żółtym banerem ostrzegawczym u góry informującym: „Tryb podglądu organizacji: [Nazwa Firmy] (akcje zapisu zablokowane) [Zakończ podgląd]”.

@@ -70,7 +70,7 @@ describe('RegisterCodePage Component', () => {
       expect(screen.getByLabelText(/Nazwisko/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Adres e-mail/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Hasło/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Utwórz konto pracownika/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Utwórz konto/i })).toBeInTheDocument();
     });
   });
 
@@ -112,7 +112,7 @@ describe('RegisterCodePage Component', () => {
 
     // Step 2
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Utwórz konto pracownika/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Utwórz konto/i })).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByLabelText(/Imię/i), { target: { value: 'Jan' } });
@@ -121,7 +121,7 @@ describe('RegisterCodePage Component', () => {
     fireEvent.change(screen.getByLabelText(/Numer telefonu/i), { target: { value: '+48123456789' } });
     fireEvent.change(screen.getByLabelText(/Hasło/i), { target: { value: 'Password123!' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /Utwórz konto pracownika/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Utwórz konto/i }));
 
     await waitFor(() => {
       expect(registerSpy).toHaveBeenCalledWith('/api', {

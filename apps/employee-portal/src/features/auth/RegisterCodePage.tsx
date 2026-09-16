@@ -283,7 +283,7 @@ export const RegisterCodePage: React.FC = () => {
                     Tworzenie konta...
                   </>
                 ) : (
-                  'Utwórz konto pracownika'
+                  'Utwórz konto'
                 )}
               </button>
             </div>

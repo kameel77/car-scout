@@ -1,0 +1,13 @@
+# Gitleaks Configuration
+# Extends default gitleaks rules with project allowlists
+
+[allowlist]
+description = "Allowlist for unit test fixtures and mock IDs"
+paths = [
+  '''(?i)\.(test|spec)\.(ts|tsx|js|jsx)$''',
+  '''(?i)__tests__/.*''',
+]
+regexes = [
+  '''rental-[a-zA-Z0-9_-]+''',
+  '''offer_[a-zA-Z0-9_-]+''',
+]

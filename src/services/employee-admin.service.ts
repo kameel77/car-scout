@@ -8,6 +8,9 @@ export interface EmployeeProgramSummary {
   slug: string;
   isActive: boolean;
   defaultDiscountPct: string | null;
+  scopeIncludeNew?: boolean;
+  scopeIncludeRental?: boolean;
+  scopeDiscountPct?: string | null;
   _count: {
     registrationCodes: number;
     offers: number;
@@ -56,10 +59,12 @@ export interface EmployeeProgramOffer {
   id: string;
   programId: string;
   sourceType: 'FINANCING' | 'RENTAL';
-  listingId: string | null;
-  customPricePln: number | null;
-  discountPct: string | null;
-  benefitPolicyId: string | null;
+  listingId?: string | null;
+  assignmentId?: string | null;
+  customPricePln?: number | null;
+  discountPct?: string | null;
+  benefitPolicyId?: string | null;
+  isExcluded?: boolean;
   isActive: boolean;
   createdAt: string;
   listing?: {
@@ -71,9 +76,25 @@ export interface EmployeeProgramOffer {
     pricePln: number;
     primaryImageUrl?: string | null;
     imageUrls?: string[];
-    images?: string[];
     fuelType?: string | null;
     transmission?: string | null;
+  } | null;
+  assignment?: {
+    id: string;
+    vehicle: {
+      id: string;
+      make: string;
+      model: string;
+      version: string | null;
+      productionYear: number;
+      primaryImageUrl?: string | null;
+      imageUrls?: string[];
+    };
+    rentalCompany: {
+      id: string;
+      name: string;
+      logoUrl?: string | null;
+    };
   } | null;
   benefitPolicy?: EmployeeBenefitPolicy | null;
 }
@@ -91,6 +112,44 @@ export interface AvailableListing {
   fuelType?: string | null;
   transmission?: string | null;
   bodyType?: string | null;
+}
+
+export interface AvailableRentalAssignment {
+  id: string;
+  vehicleId: string;
+  rentalCompanyId: string;
+  isExcluded: boolean;
+  vehicle: {
+    id: string;
+    make: string;
+    model: string;
+    version: string | null;
+    productionYear: number;
+    primaryImageUrl?: string | null;
+    imageUrls?: string[];
+    fuelType?: string | null;
+    transmission?: string | null;
+    bodyType?: string | null;
+  };
+  rentalCompany: {
+    id: string;
+    name: string;
+    logoUrl?: string | null;
+  };
+}
+
+export interface ProgramMatrixSetLink {
+  id: string;
+  programId: string;
+  matrixSetId: string;
+  createdAt: string;
+  matrixSet: {
+    id: string;
+    name: string;
+    rentalCompanyId: string;
+    rentalCompany: { id: string; name: string; logoUrl?: string | null };
+    versions: EmployeeMatrixVersionSummary[];
+  };
 }
 
 export interface EmployeeMatrixVersionSummary {
@@ -176,7 +235,15 @@ export const employeeAdminApi = {
 
   updateProgram: (
     programId: string,
-    data: { name?: string; description?: string | null; defaultDiscountPct?: number | null; isActive?: boolean },
+    data: {
+      name?: string;
+      description?: string | null;
+      defaultDiscountPct?: number | null;
+      scopeIncludeNew?: boolean;
+      scopeIncludeRental?: boolean;
+      scopeDiscountPct?: number | null;
+      isActive?: boolean;
+    },
     token: string
   ) => {
     return request<{ program: any }>(
@@ -197,11 +264,7 @@ export const employeeAdminApi = {
     }>(`/api/admin/employee-programs/programs/${programId}/registration-codes?${q.toString()}`, {}, token);
   },
 
-  createCode: (
-    programId: string,
-    data: { label?: string | null; customCode?: string; expiresAt?: string | null },
-    token: string
-  ) => {
+  createCode: (programId: string, data: { label?: string | null; customCode?: string; expiresAt?: string | null }, token: string) => {
     return request<{ code: EmployeeRegistrationCode; rawCode: string }>(
       `/api/admin/employee-programs/programs/${programId}/registration-codes`,
       { method: 'POST', body: JSON.stringify(data) },
@@ -212,12 +275,12 @@ export const employeeAdminApi = {
   deactivateCode: (codeId: string, token: string) => {
     return request<{ code: EmployeeRegistrationCode }>(
       `/api/admin/employee-programs/registration-codes/${codeId}/deactivate`,
-      { method: 'PATCH' },
+      { method: 'POST' },
       token
     );
   },
 
-  // Benefit policies
+  // Benefit Policies
   listBenefitPolicies: (programId: string, token: string) => {
     return request<{ policies: EmployeeBenefitPolicy[] }>(
       `/api/admin/employee-programs/programs/${programId}/benefit-policies`,
@@ -228,7 +291,7 @@ export const employeeAdminApi = {
 
   createBenefitPolicy: (
     programId: string,
-    data: { name: string; moyaCardAmount?: number | null; fuelDiscount?: string | null; consultantCare: boolean; termsText?: string | null },
+    data: { name: string; moyaCardAmount?: number | null; fuelDiscount?: string | null; consultantCare?: boolean; termsText?: string | null },
     token: string
   ) => {
     return request<{ policy: EmployeeBenefitPolicy }>(
@@ -240,7 +303,7 @@ export const employeeAdminApi = {
 
   updateBenefitPolicy: (
     policyId: string,
-    data: Partial<{ name: string; moyaCardAmount: number | null; fuelDiscount: string | null; consultantCare: boolean; termsText: string | null; isActive: boolean }>,
+    data: { name?: string; moyaCardAmount?: number | null; fuelDiscount?: string | null; consultantCare?: boolean; termsText?: string | null; isActive?: boolean },
     token: string
   ) => {
     return request<{ policy: EmployeeBenefitPolicy }>(
@@ -258,7 +321,7 @@ export const employeeAdminApi = {
     );
   },
 
-  // Available Listings & Offers
+  // Available Listings (for offer picker)
   listAvailableListings: (programId: string, search: string = '', token: string) => {
     const q = new URLSearchParams({ programId });
     if (search) q.set('search', search);
@@ -269,6 +332,18 @@ export const employeeAdminApi = {
     );
   },
 
+  // Available Rental Assignments (for rental exclusion picker)
+  listAvailableRentalAssignments: (programId: string, search: string = '', token: string) => {
+    const q = new URLSearchParams({ programId });
+    if (search) q.set('search', search);
+    return request<{ assignments: AvailableRentalAssignment[] }>(
+      `/api/admin/employee-programs/available-rental-assignments?${q.toString()}`,
+      {},
+      token
+    );
+  },
+
+  // Offers
   listOffers: (programId: string, params: { page?: number; limit?: number } = {}, token: string) => {
     const q = new URLSearchParams();
     if (params.page) q.set('page', String(params.page));
@@ -281,7 +356,15 @@ export const employeeAdminApi = {
 
   createOffer: (
     programId: string,
-    data: { listingId: string; customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null },
+    data: {
+      sourceType?: 'FINANCING' | 'RENTAL';
+      listingId?: string | null;
+      assignmentId?: string | null;
+      customPricePln?: number | null;
+      discountPct?: number | null;
+      benefitPolicyId?: string | null;
+      isExcluded?: boolean;
+    },
     token: string
   ) => {
     return request<{ offer: EmployeeProgramOffer }>(
@@ -293,7 +376,7 @@ export const employeeAdminApi = {
 
   updateOffer: (
     offerId: string,
-    data: { customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null; isActive?: boolean },
+    data: { customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null; isExcluded?: boolean; isActive?: boolean },
     token: string
   ) => {
     return request<{ offer: EmployeeProgramOffer }>(
@@ -320,6 +403,30 @@ export const employeeAdminApi = {
     return request<{ matrixSet: EmployeeMatrixSet }>(
       '/api/admin/employee-programs/matrix-sets',
       { method: 'POST', body: JSON.stringify(data) },
+      token
+    );
+  },
+
+  listProgramMatrixSets: (programId: string, token: string) => {
+    return request<{ matrixSets: ProgramMatrixSetLink[] }>(
+      `/api/admin/employee-programs/programs/${programId}/matrix-sets`,
+      {},
+      token
+    );
+  },
+
+  linkProgramMatrixSet: (programId: string, matrixSetId: string, token: string) => {
+    return request<{ link: ProgramMatrixSetLink }>(
+      `/api/admin/employee-programs/programs/${programId}/matrix-sets`,
+      { method: 'POST', body: JSON.stringify({ matrixSetId }) },
+      token
+    );
+  },
+
+  unlinkProgramMatrixSet: (programId: string, matrixSetId: string, token: string) => {
+    return request<{ success: boolean }>(
+      `/api/admin/employee-programs/programs/${programId}/matrix-sets/${matrixSetId}`,
+      { method: 'DELETE' },
       token
     );
   },
@@ -367,3 +474,5 @@ export const employeeAdminApi = {
     );
   }
 };
+
+export const employeeAdminService = employeeAdminApi;

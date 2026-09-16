@@ -1714,6 +1714,9 @@ model EmployeeProgram {
   updatedAt            DateTime                   @updatedAt @map("updated_at")
 
   defaultDiscountPct   Decimal?                   @map("default_discount_pct") @db.Decimal(5, 2)
+  scopeIncludeNew      Boolean                    @default(false) @map("scope_include_new")
+  scopeIncludeRental   Boolean                    @default(false) @map("scope_include_rental")
+  scopeDiscountPct     Decimal?                   @map("scope_discount_pct") @db.Decimal(5, 2)
 
   company              EmployeeCompany            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   productOverrides     EmployeeProductOverride[]
@@ -1722,6 +1725,7 @@ model EmployeeProgram {
   memberships          EmployeeMembership[]
   inquiries            EmployeeInquiry[]
   registrationCodes    EmployeeRegistrationCode[]
+  matrixSets           EmployeeProgramMatrixSet[]
 
   @@unique([companyId, id])
   @@map("employee_programs")
@@ -1829,8 +1833,23 @@ model EmployeeMatrixSet {
 
   rentalCompany          RentalCompany             @relation(fields: [rentalCompanyId], references: [id], onDelete: Restrict)
   versions               EmployeeMatrixVersion[]
+  programMatrixSets      EmployeeProgramMatrixSet[]
 
   @@map("employee_matrix_sets")
+}
+
+model EmployeeProgramMatrixSet {
+  id          String            @id @default(cuid())
+  programId   String            @map("program_id")
+  matrixSetId String            @map("matrix_set_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  program     EmployeeProgram   @relation(fields: [programId], references: [id], onDelete: Cascade)
+  matrixSet   EmployeeMatrixSet @relation(fields: [matrixSetId], references: [id], onDelete: Restrict)
+
+  @@unique([programId, matrixSetId])
+  @@index([matrixSetId])
+  @@map("employee_program_matrix_sets")
 }
 
 model EmployeeMatrixVersion {
@@ -1900,6 +1919,7 @@ model EmployeeProgramOffer {
   benefitPolicyId String?                  @map("benefit_policy_id")
   benefitPolicy   EmployeeBenefitPolicy?   @relation(fields: [programId, benefitPolicyId], references: [programId, id], onDelete: Restrict)
 
+  isExcluded      Boolean                  @default(false) @map("is_excluded")
   isActive        Boolean                  @default(true) @map("is_active")
   createdAt       DateTime                 @default(now()) @map("created_at")
   updatedAt       DateTime                 @updatedAt @map("updated_at")
@@ -1910,6 +1930,7 @@ model EmployeeProgramOffer {
   @@unique([programId, listingId])
   @@unique([programId, assignmentId])
   @@index([programId, isActive])
+  @@index([programId, isExcluded, isActive])
   @@map("employee_program_offers")
 }
 

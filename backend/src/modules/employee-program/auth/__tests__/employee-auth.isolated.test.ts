@@ -123,8 +123,9 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
     };
 
     app = Fastify();
+    const jwtSecret = process.env.JWT_SECRET || 'test-jwt-secret-employee-isolated';
     await app.register(fastifyJwt, {
-      secret: 'super-secret-employee-test-key-32chars!',
+      secret: jwtSecret,
       sign: { expiresIn: '1h' }
     });
 

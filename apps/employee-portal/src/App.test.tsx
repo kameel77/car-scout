@@ -11,6 +11,7 @@ import {
   defaultBrandConfig,
 } from './config/brand';
 import * as authApi from './features/auth/auth-api';
+import * as catalogApi from './features/catalog/catalog-api';
 
 describe('Employee Portal - Frontend Integration Suite', () => {
   beforeEach(() => {
@@ -155,7 +156,7 @@ describe('Employee Portal - Frontend Integration Suite', () => {
       });
     });
 
-    it('displays honest catalog placeholder and header when authenticated', async () => {
+    it('displays authenticated employee catalog and header when authenticated', async () => {
       vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
         id: 'acc_1',
         email: 'jan@firma.pl',
@@ -164,13 +165,16 @@ describe('Employee Portal - Frontend Integration Suite', () => {
         company: { id: 'c1', name: 'Firma S.A.', slug: 'firma' },
         program: { id: 'p1', name: 'Program Flotowy', slug: 'flota' },
       });
+      vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
+        offers: [],
+        nextCursor: null,
+      });
 
       render(<App />);
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /Katalog pojazdów w przygotowaniu/i })).toBeInTheDocument();
-        expect(screen.getByText(/Trwa integracja ofert dedykowanych/i)).toBeInTheDocument();
         expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
+        expect(screen.getByText('Dedykowana oferta samochodów dla pracowników')).toBeInTheDocument();
       });
     });
   });
@@ -211,6 +215,55 @@ describe('Employee Portal - Frontend Integration Suite', () => {
       expect(screen.getByRole('heading', { name: /Aktywuj dostęp pracowniczy/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/Kod dostępu firmy/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Sprawdź kod/i })).toBeInTheDocument();
+    });
+
+    it('redirects unauthenticated user accessing /zapytania to /logowanie', async () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+
+      render(
+        <BrandProvider initialConfig={defaultBrandConfig}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/zapytania']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
+        </BrandProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Zaloguj się do portalu/i })).toBeInTheDocument();
+      });
+    });
+
+    it('renders /zapytania for authenticated employee', async () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
+        id: 'acc_1',
+        email: 'jan@firma.pl',
+        firstName: 'Jan',
+        lastName: 'Kowalski',
+        company: { id: 'c1', name: 'Firma S.A.', slug: 'firma' },
+        program: { id: 'p1', name: 'Program Flotowy', slug: 'flota' },
+      });
+
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ inquiries: [], nextCursor: null }),
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
+      render(
+        <BrandProvider initialConfig={defaultBrandConfig}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/zapytania']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
+        </BrandProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Moje zapytania/i })).toBeInTheDocument();
+      });
     });
 
     it('renders 404 NotFoundPage for unknown routes', () => {
