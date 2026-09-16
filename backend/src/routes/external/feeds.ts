@@ -35,6 +35,13 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         financingType: string;
     }
 
+    // Google Ads & Meta Commerce policies require images to be in PNG, JPG, JPEG, or GIF format (.webp is prohibited).
+    // Convert .webp URLs to .jpg (backend serves .webp converted to JPEG on-the-fly via Sharp).
+    const ensureCompatibleImageFormat = (url: string): string => {
+        if (!url) return '';
+        return url.replace(/\.webp(?=[?#]|$)/gi, '.jpg');
+    };
+
     const getAllActiveFeedItems = async (source: string): Promise<UnifiedFeedItem[]> => {
         const baseUrl = process.env.FRONTEND_URL || 'https://motolia.pl';
 
@@ -68,8 +75,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             if (l.version) title += ` ${l.version}`;
 
             const desc = l.additionalInfoContent || `Pojazd ${title} w ofercie Motolia.pl`;
-            const image = l.primaryImageUrl || (l.imageUrls && l.imageUrls[0]) || `${baseUrl}/brands/motolia/logo.png`;
-            const absoluteImage = image.startsWith('/') ? baseUrl + image : image;
+            const rawImage = l.primaryImageUrl || (l.imageUrls && l.imageUrls[0]) || `${baseUrl}/brands/motolia/logo.png`;
+            const absoluteImage = rawImage.startsWith('/') ? baseUrl + rawImage : rawImage;
+            const compatibleImage = ensureCompatibleImageFormat(absoluteImage);
             const link = `${baseUrl}/oferta/${l.slug || l.listingId || l.id}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
 
             items.push({
@@ -77,7 +85,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 title: sanitizeDescription(title),
                 description: sanitizeDescription(desc).substring(0, 4990),
                 link,
-                imageLink: absoluteImage,
+                imageLink: compatibleImage,
                 make: l.make.trim(),
                 pricePln: l.pricePln,
                 condition: 'new',
@@ -97,8 +105,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             if (r.version) title += ` ${r.version}`;
 
             const desc = r.additionalInfoContent || `Wynajem długoterminowy ${title}`;
-            const image = r.primaryImageUrl || (r.imageUrls && r.imageUrls[0]) || `${baseUrl}/brands/motolia/logo.png`;
-            const absoluteImage = image.startsWith('/') ? baseUrl + image : image;
+            const rawImage = r.primaryImageUrl || (r.imageUrls && r.imageUrls[0]) || `${baseUrl}/brands/motolia/logo.png`;
+            const absoluteImage = rawImage.startsWith('/') ? baseUrl + rawImage : rawImage;
+            const compatibleImage = ensureCompatibleImageFormat(absoluteImage);
             const link = `${baseUrl}/wynajem-dlugoterminowy/${r.slug || r.id}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
 
             items.push({
@@ -106,7 +115,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 title: sanitizeDescription(title),
                 description: sanitizeDescription(desc).substring(0, 4990),
                 link,
-                imageLink: absoluteImage,
+                imageLink: compatibleImage,
                 make: r.make.trim(),
                 pricePln: price,
                 condition: 'new',
