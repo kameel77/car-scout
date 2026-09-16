@@ -11,6 +11,7 @@ import {
   defaultBrandConfig,
 } from './config/brand';
 import * as authApi from './features/auth/auth-api';
+import * as catalogApi from './features/catalog/catalog-api';
 
 describe('Employee Portal - Frontend Integration Suite', () => {
   beforeEach(() => {
@@ -155,7 +156,7 @@ describe('Employee Portal - Frontend Integration Suite', () => {
       });
     });
 
-    it('displays honest catalog placeholder and header when authenticated', async () => {
+    it('displays authenticated employee catalog and header when authenticated', async () => {
       vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
         id: 'acc_1',
         email: 'jan@firma.pl',
@@ -164,13 +165,16 @@ describe('Employee Portal - Frontend Integration Suite', () => {
         company: { id: 'c1', name: 'Firma S.A.', slug: 'firma' },
         program: { id: 'p1', name: 'Program Flotowy', slug: 'flota' },
       });
+      vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
+        offers: [],
+        nextCursor: null,
+      });
 
       render(<App />);
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /Katalog pojazdów w przygotowaniu/i })).toBeInTheDocument();
-        expect(screen.getByText(/Trwa integracja ofert dedykowanych/i)).toBeInTheDocument();
         expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
+        expect(screen.getByText('Dedykowana oferta samochodów dla pracowników')).toBeInTheDocument();
       });
     });
   });

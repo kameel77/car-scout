@@ -4,6 +4,7 @@ import jwt from '@fastify/jwt';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 import { employeeAuthRoutes } from '../employee-auth.routes.js';
+import { employeeCatalogRoutes } from '../../catalog/employee-catalog.routes.js';
 import { trustPlatformJwt } from '../../../../middleware/platform-jwt.js';
 
 export const RUNNER_TEST_MARKER = 'EMPLOYEE_INTEGRATION_RUNNER_ACTIVE_SAFE_V1';
@@ -95,8 +96,9 @@ export async function createLightweightTestApp(options: LightweightAppOptions = 
   app.decorate('prisma', prisma);
   app.decorate('redis', redis);
 
-  // Register only employee auth module
+  // Register employee auth and catalog modules
   await app.register(employeeAuthRoutes);
+  await app.register(employeeCatalogRoutes);
 
   await app.ready();
 

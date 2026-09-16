@@ -861,3 +861,26 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Moduł Ustawień Programu i Polityk Benefitów**:
   - Konfiguracja globalnego rabatu procentowego programu.
   - Pełny CRUD polityk benefitowych (kwota karty paliwowej Moya, opieka dedykowanego opiekuna floty, warunki regulaminowe).
+
+### 67. Prywatny Katalog Ofert w Portalu Pracowniczym (Etap P3b)
+- **Cel**: Udostępnienie zweryfikowanemu i zalogowanemu pracownikowi firmy partnerskiej prywatnego katalogu pojazdów z dedykowanymi warunkami cenowymi, pakietami korzyści oraz izolacją tenantów.
+- **Backend API**:
+  - `GET /api/employee/offers`: Zwraca listę aktywnych ofert przypisanych do programu pracownika. Autoryzacja przez bezpieczne ciasteczko sesyjne `__Host-ep-session` z walidacją Redis allowlist i bazy danych (`verifyEmployeeAuth`).
+  - `GET /api/employee/offers/:offerId`: Zwraca szczegóły pojedynczej oferty. W przypadku próby odpytania o ofertę należącą do innego programu/firmy endpoint zwraca kod **404 Not Found** (nigdy 403, aby zapobiec sondowaniu identyfikatorów obcych tenantów).
+  - Paginacja keyset (`cursor`, `limit` 1-50, domyślnie 24) po `createdAt desc, id desc`.
+  - Wyszukiwanie (`search` max 100 znaków) po marce, modelu lub wersji pojazdu.
+  - Ochrona przed zarchiwizowanymi pojazdami (`listing.isArchived = false`) oraz pomijanie niespójnych rekordów bez listingId (`fastify.log.warn`).
+  - Przycinanie tablicy zdjęć `imageUrls` do maksymalnie 5 pozycji dla oszczędności transferu.
+- **Reguła rozstrzygania cen i rabatów (§4 briefu)**:
+  1. `customPricePln` (ręcznie wynegocjowana kwota) ma bezwzględne pierwszeństwo.
+  2. W drugiej kolejności stosowany jest rabat z oferty `discountPct`.
+  3. W trzeciej kolejności dziedziczony jest rabat domyślny programu `program.defaultDiscountPct`.
+  4. Domyślnie: cena katalogowa z zerowym rabatem.
+  - Kwota pracownicza jest zaokrąglana matematycznie (`Math.round`), a faktyczny rabat `discountPct` jest zawsze przeliczany z finalnej ceny z dokładnością do 2 miejsc po przecinku (z obcięciem zer zbędnych).
+- **Interfejs Portalu Pracowniczego (`apps/employee-portal`)**:
+  - 4 stany widoku katalogu:
+    - **Ładowanie**: responsywna siatka szkieletów kafli (skeleton) z pulsującą animacją.
+    - **Lista ofert**: siatka kart samochodów z podglądem zdjęcia (i fallbackiem), specyfikacją (rok, paliwo, skrzynia biegów), przekreśloną ceną katalogową, wyróżnioną ceną pracowniczą, plakietką zaoszczędzonej kwoty i rabatu oraz plakietką pakietu benefitów (np. Karta paliwowa Moya).
+    - **Stan pusty**: estetyczny komunikat informujący o braku dostępnych ofert z kontaktem do opiekuna programu.
+    - **Stan błędu**: czytelne powiadomienie o niepowodzeniu pobrania danych z przyciskiem ponowienia zapytania.
+  - Wykorzystanie natywnego stanu React (`useState`, `useEffect`) z obsługą anulowania żądań (`AbortController`) i `credentials: 'same-origin'`.
