@@ -20,14 +20,14 @@ export interface ResolvedRentalRateSource {
   rows: EmployeeRentalCalculatedRow[];
 }
 
-export function calculateRatesWithInsurance(
-  entry: {
-    monthlyRateNet: number;
-    monthlyRateGross: number;
-    insuranceNet?: number | null;
-    servicesIncluded?: string[];
-    [key: string]: any;
-  },
+export function calculateRatesWithInsurance<T extends {
+  monthlyRateNet: number;
+  monthlyRateGross: number;
+  insuranceNet?: number | null;
+  servicesIncluded?: string[];
+  [key: string]: any;
+}>(
+  entry: T,
   assignment: {
     insuranceAddModeOverride?: string | null;
     includedServicesOverride?: string[] | null;
@@ -36,7 +36,11 @@ export function calculateRatesWithInsurance(
       includedServices?: string[] | null;
     } | null;
   }
-) {
+): T & {
+  monthlyRateNet: number;
+  monthlyRateGross: number;
+  servicesIncluded: string[];
+} {
   const insuranceAddMode =
     assignment.insuranceAddModeOverride ||
     assignment.rentalCompany?.insuranceAddMode ||

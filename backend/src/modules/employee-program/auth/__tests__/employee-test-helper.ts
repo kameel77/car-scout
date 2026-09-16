@@ -74,10 +74,13 @@ export async function createLightweightTestApp(options: LightweightAppOptions = 
     logger: false,
   });
 
+  const appScopeId = Math.random().toString(36).substring(2, 8);
+
   // Register rate limit
   await app.register(rateLimit, {
     global: false,
     redis,
+    keyGenerator: (req) => `${appScopeId}:${req.ip}`,
     errorResponseBuilder: (_request, context) => ({
       statusCode: 429,
       error: 'Too Many Requests',

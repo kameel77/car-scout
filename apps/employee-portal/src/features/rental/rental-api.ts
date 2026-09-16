@@ -111,7 +111,37 @@ export async function fetchEmployeeRentalOffers(
     },
   });
 
-  return handleResponseJson<EmployeeRentalCatalogResponse>(res);
+  const raw = await handleResponseJson<any>(res);
+  const offers: EmployeeRentalOfferSummary[] = (raw.offers || []).map((o: any) => {
+    if (o.rentalCompany && o.minMonthlyRateGross !== undefined) {
+      return o as EmployeeRentalOfferSummary;
+    }
+    const rentalCompName = o.rental?.rentalCompanies?.[0] || 'Dostawca';
+    const rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' =
+      o.rental?.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX';
+    const minGross = Number(o.rental?.fromMonthlyRateGross || 0);
+    const minNet = Math.round(minGross / 1.23);
+
+    return {
+      id: o.id,
+      sourceType: 'RENTAL' as const,
+      vehicle: o.vehicle,
+      rentalCompany: {
+        id: rentalCompName,
+        name: rentalCompName,
+        logoUrl: null,
+      },
+      rateSource,
+      minMonthlyRateNet: minNet,
+      minMonthlyRateGross: minGross,
+      optionsCount: 1,
+    };
+  });
+
+  return {
+    offers,
+    nextCursor: raw.nextCursor ?? null,
+  };
 }
 
 /**
@@ -132,5 +162,66 @@ export async function fetchEmployeeRentalOfferDetails(
     },
   });
 
-  return handleResponseJson<EmployeeRentalOfferDetails>(res);
+  const raw = await handleResponseJson<any>(res);
+  if (raw.contractMonthsOptions && raw.rentalOptions && raw.rentalCompany) {
+    return raw as EmployeeRentalOfferDetails;
+  }
+
+  // Surowy backend zwraca rentalOptions jako tablicę grup dostawców z wierszami `rows: [...]`
+  const assignmentGroups = Array.isArray(raw.rentalOptions) ? raw.rentalOptions : [];
+  const primaryGroup = assignmentGroups[0] || null;
+  const allRows = assignmentGroups.flatMap((g: any) =>
+    (g.rows || []).map((r: any) => ({
+      ...r,
+      rateSource: g.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX',
+    }))
+  );
+
+  const contractMonthsSet = new Set<number>();
+  const annualMileageSet = new Set<number>();
+  const downPaymentPctSet = new Set<number>();
+
+  const flattenedOptions: RentalOptionItem[] = allRows.map((r: any) => {
+    const months = Number(r.contractMonths);
+    const mileage = Number(r.annualMileageKm);
+    const downPct = Number(r.initialPaymentPct);
+
+    contractMonthsSet.add(months);
+    annualMileageSet.add(mileage);
+    downPaymentPctSet.add(downPct);
+
+    return {
+      contractMonths: months,
+      annualMileage: mileage,
+      downPaymentPct: downPct,
+      downPaymentAmountPln: Number(r.initialPaymentAmountNet || 0),
+      monthlyRateNet: Number(r.monthlyRateNet),
+      monthlyRateGross: Number(r.monthlyRateGross),
+      rateSource: r.rateSource as 'PARTNER_MATRIX' | 'PUBLIC_MATRIX',
+    };
+  });
+
+  const contractMonthsOptions = Array.from(contractMonthsSet).sort((a, b) => a - b);
+  const annualMileageOptions = Array.from(annualMileageSet).sort((a, b) => a - b);
+  const downPaymentPctOptions = Array.from(downPaymentPctSet).sort((a, b) => a - b);
+
+  const rentalCompanyName = primaryGroup?.rentalCompanyName || 'Dostawca';
+  const rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' =
+    primaryGroup?.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX';
+
+  return {
+    id: raw.id,
+    sourceType: 'RENTAL' as const,
+    vehicle: raw.vehicle,
+    rentalCompany: {
+      id: primaryGroup?.assignmentId || rentalCompanyName,
+      name: rentalCompanyName,
+      logoUrl: primaryGroup?.rentalCompanyLogoUrl || null,
+    },
+    rateSource,
+    contractMonthsOptions,
+    annualMileageOptions,
+    downPaymentPctOptions,
+    rentalOptions: flattenedOptions,
+  };
 }

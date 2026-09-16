@@ -954,3 +954,48 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - Możliwość oznaczenia oferty jako "Wyklucz ten pojazd z katalogu pracowniczego (isExcluded)".
     - Czerwona plakietka ostrzegawcza "Wykluczenie ze stoku" na kafelkach wykluczonych pojazdów w panelu.
 
+### 70. Feedy Produktowe Marketingowe (Google Merchant Center, Meta Catalog) - Wykluczenie Aut Używanych
+- **Cel**: Dostosowanie katalogów reklamowych i feedów produktowych (`/google-feed.xml`, `/facebook-feed.csv`, `/feed.xml`) do wymogów polityk Google Merchant Center oraz Meta Commerce, które zabraniają promowania aut używanych w standardowych feedach produktowych.
+- **Logika selekcji**:
+  - **Oferty sprzedaży i leasingu (`Listing`)**: pobierane są wyłącznie pojazdy nowe (`condition = 'NEW'`), niearchiwalne (`isArchived: false`). Wszystkie pojazdy używane (`condition = 'USED'`), w tym pochodzące z integracji giełdowych (np. PewneAuto), są ściśle wykluczone.
+  - **Wynajem długoterminowy (`RentalVehicle`)**: pobierane są aktywne pojazdy z warunkiem `condition = 'NEW'`. Ewentualne pojazdy używane są pomijane.
+  - **Atrybut stanu (`condition`)**: we wszystkich wygenerowanych feedach (zarówno w XML `<g:condition>`, jak i w CSV) wartość parametru stanu jest zawsze ustawiona na `new`.
+  - **Opis kanału RSS**: zaktualizowano opis w nagłówku feedu XML z wzmianki o autach używanych na "Katalog aktywnych ofert nowych samochodów oraz wynajmu długoterminowego".
+- **Weryfikacja**: Dedykowany test integracyjny `backend/src/routes/__tests__/feeds.test.ts` potwierdza poprawne filtrowanie, obecność aut nowych i wynajmu oraz całkowite wykluczenie aut używanych ze struktury XML i CSV.
+
+### 71. Wynajem Długoterminowy w Programie Pracowniczym (Etap E3)
+- **Cel**: Rozszerzenie programu pracowniczego o pełną obsługę najmu długoterminowego aut nowych z dedykowanymi stawkami partnerskimi, osobnym katalogiem ofert oraz integracją kalkulatora dyskretnego i CRM.
+- **Architektura API**:
+  - Dedykowane endpointy katalogu najmu `GET /api/employee/rental-offers` oraz `GET /api/employee/rental-offers/:id`, działające niezależnie od katalogu zakupu i leasingu ze stoku (`Listing`). Takie rozdzielenie eliminuje problem scalania w pamięci różnych encji bazodanowych i gwarantuje stabilną paginację kursorową po `RentalVehicle.id`.
+  - Warunek widoczności oferty: lustrzany do publicznego katalogu najmu (`isActive: true`, `isPublished: true`, aktywne przypisanie `VehicleRentalAssignment` z dostępnymi stawkami) oraz brak aktywnego wykluczenia dla danego programu pracowniczego.
+  - Flaga `scopeIncludeRental`: gdy flaga programu ma wartość `false`, lista ofert zwraca pustą tablicę (kod 200), a szczegóły oferty zwracają kod 404 Not Found.
+- **Model Danych i Relacje**:
+  - Model tabeli łączącej `EmployeeProgramMatrixSet` powiązujący program pracowniczy (`EmployeeProgram`) z prywatnymi zestawami matryc dostawców (`EmployeeMatrixSet`).
+  - Zasada biznesowa egzekwowana na poziomie API: dany program pracowniczy może posiadać maksymalnie jeden powiązany zestaw matryc na konkretnego dostawcę floty (`RentalCompany`).
+- **Silnik Rozstrzygania Cen i Stawek (`employee-rental-pricing.utils.ts`)**:
+  - Wielopoziomowa weryfikacja dostępności stawek prywatnych:
+    1. Sprawdzenie obecności powiązanego zestawu matryc dla dostawcy danego pojazdu.
+    2. Sprawdzenie opublikowanej wersji matrycy (`status: 'PUBLISHED'`) obowiązującej w danym momencie (`effectiveFrom <= now <= effectiveTo`).
+    3. Weryfikacja obecności wierszy kalkulacji dla konkretnego przypisania pojazdu.
+    4. Weryfikacja dopuszczalnych stron umowy (`allowedContractParties`): pracownik jako konsument (`CONSUMER`) korzysta ze stawek publicznych (`PUBLIC_MATRIX`), natomiast firmy (`EMPLOYEE_B2B`, `EMPLOYER_COMPANY`) uzyskują dostęp do stawek prywatnych (`EMPLOYEE_MATRIX`).
+  - Deterministyczny fallback do publicznych stawek Motolia w przypadku braku powiązania, wersji roboczej (DRAFT), wygaśnięcia terminu obowiązywania lub braku wierszy dla pojazdu.
+  - Wyliczanie rat z uwzględnieniem trybu ubezpieczenia (`calculateRatesWithInsurance`): standardowo doliczany podatek 23% dla `INSURANCE_23` lub brak marży dla `INSURANCE_INCLUDED`.
+- **Zgłoszenia Pracownicze o Najem i Integracja CRM**:
+  - Rozszerzenie endpointu `POST /api/employee/inquiries` o identyfikatory ofert najmu (`rental-<id>`) oraz parametry wybranego wariantu `rentalSelection` (przypisanie, okres w miesiącach, roczny przebieg, opłata wstępna procentowa i kwotowa).
+  - Serwerowa weryfikacja i rekalkulacja stawek w oparciu o bieżący stan bazy danych (całkowita ochrona przed manipulacją stawkami po stronie frontendu).
+  - Zapis rekordu `EmployeeInquiry` z `sourceType: 'RENTAL'`, niezmienną migawką wyceny `calculationSnapshot.rental` oraz unikalnym numerem referencyjnym `PP-`.
+  - Tworzenie rekordu `Lead` w CRM ze statusem `new`, referencją do `rentalVehicleId`, polami parametrów umowy najmu (`rentalCompanyName`, `rentalContractMonths`, `rentalAnnualMileageKm`, `rentalMonthlyRate`) oraz czytelną wiadomością leadu.
+  - Endpoint `GET /api/employee/inquiries` zwraca pełną historię zgłoszeń najmu wraz z migawką parametrów i dostawcy.
+- **Panel Administratora (`src/components/admin/employee-programs`)**:
+  - `ProgramSettingsTab.tsx`: sekcja zarządzania prywatnymi matrycami najmu, umożliwiająca łączenie i odłączanie zestawów matryc poszczególnych dostawców z walidacją reguły unikalności per firma.
+  - `SpecialOffersTab.tsx`: obsługa wykluczeń ofert najmu ze stoku (`sourceType: 'RENTAL'`) z wyborem dostawcy i pojazdu oraz prezentacją ostrzegawczej czerwonej plakietki.
+- **Portal Pracowniczy (`apps/employee-portal`)**:
+  - Nowa trasa `/najem` (`RentalCatalogPage`): kafelkowy katalog ofert najmu z wyszukiwarką, filtrami, plakietkami rodzaju stawki (stawka partnerska vs katalogowa) i prezentacją najniższej dostępnej raty miesięcznej.
+  - Nowa trasa `/najem/:id` (`RentalOfferDetailPage`): karta pojazdu z pełną specyfikacją techniczną, galerią zdjęć, informacjami o dostawcy oraz interaktywnym, dyskretnym kalkulatorem raty (wybór okresu 24-48 mies., rocznego limitu km i opłaty wstępnej).
+  - Obsługa zapytań o najem w `InquiryModal` (podsumowanie parametrów umowy, wybór strony umowy, weryfikacja NIP i zgoda RODO) oraz historia zgłoszeń w `MyInquiriesPage`.
+- **Weryfikacja i Testy**:
+  - Zestaw 14 testów integracyjnych w odizolowanym środowisku Docker (`backend/src/modules/employee-program/rental/__tests__/employee-rental.test.ts`): najniższa rata w katalogu, sortowanie wariantów, stawki B2B vs konsument, fallback publiczny (brak matrycy, DRAFT, przeterminowanie), wykluczenia, flaga `scopeIncludeRental`, utworzenie zgłoszenia i leada w CRM, idempotencja, rekalkulacja serwerowa oraz izolacja tenantów.
+  - Wszystkie 69 testów integracyjnych oraz 102 testy jednostkowe backendu i 83 testy portalu pracowniczego zakończone sukcesem.
+
+
+

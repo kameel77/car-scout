@@ -13,6 +13,7 @@ export default defineConfig({
     hookTimeout: 30000,
     globals: true,
     environment: 'node',
+    fileParallelism: false,
     // NO globalSetup to prevent loading .env
   },
 });
