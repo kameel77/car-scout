@@ -352,7 +352,7 @@ describe('Employee Inquiries Real DB & Redis Integration Tests (P3c)', () => {
     const body1 = JSON.parse(res1.body);
     expect(body1.inquiry.id).toBeDefined();
     expect(body1.inquiry.status).toBe('NEW');
-    expect(body1.inquiry.referenceNumber).toMatch(/^AF-\d{8}$/);
+    expect(body1.inquiry.referenceNumber).toMatch(/^PP-\d{8}$/);
     expect(body1.inquiry.pricing.employeePricePln).toBe(92000); // 100 000 - 8%
 
     // Second request with SAME idempotencyKey -> 200 OK

@@ -185,7 +185,7 @@ describe('InquiryModal Component', () => {
       inquiry: {
         id: 'inq_123',
         status: 'NEW',
-        referenceNumber: 'AF-87654321',
+        referenceNumber: 'PP-87654321',
         createdAt: new Date().toISOString(),
         vehicle: {
           make: 'Toyota',
@@ -215,7 +215,7 @@ describe('InquiryModal Component', () => {
     await waitFor(() => {
       expect(submitSpy).toHaveBeenCalledTimes(1);
       expect(screen.getByRole('heading', { name: /Dziękujemy za przesłanie zgłoszenia!/i })).toBeInTheDocument();
-      expect(screen.getByText('AF-87654321')).toBeInTheDocument();
+      expect(screen.getByText('PP-87654321')).toBeInTheDocument();
     });
 
     // Click "Zobacz moje zapytania"
@@ -238,7 +238,7 @@ describe('InquiryModal Component', () => {
         inquiry: {
           id: 'inq_success',
           status: 'NEW',
-          referenceNumber: 'AF-11223344',
+          referenceNumber: 'PP-11223344',
           createdAt: new Date().toISOString(),
           vehicle: null,
           pricing: null
@@ -270,7 +270,7 @@ describe('InquiryModal Component', () => {
 
     // Second attempt succeeds
     await waitFor(() => {
-      expect(screen.getByText('AF-11223344')).toBeInTheDocument();
+      expect(screen.getByText('PP-11223344')).toBeInTheDocument();
     });
 
     expect(payloads.length).toBe(2);

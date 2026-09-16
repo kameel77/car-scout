@@ -317,7 +317,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
           };
 
           // 4. Przygotowanie leada do CRM
-          const referenceNumber = generateReference();
+          const referenceNumber = generateReference('PP');
           const partyLabels: Record<string, string> = {
             CONSUMER: 'Osoba prywatna (Konsument)',
             EMPLOYEE_B2B: 'Działalność gospodarcza (B2B)',

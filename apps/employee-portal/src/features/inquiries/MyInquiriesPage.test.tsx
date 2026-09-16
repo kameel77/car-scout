@@ -28,7 +28,7 @@ const mockInquiriesList: inquiriesApi.EmployeeInquiryItem[] = [
   {
     id: 'inq_1',
     status: 'NEW',
-    referenceNumber: 'AF-12345678',
+    referenceNumber: 'PP-12345678',
     contractParty: 'CONSUMER',
     createdAt: '2026-09-16T08:00:00.000Z',
     contactName: 'Tomasz Kowalski',
@@ -60,7 +60,7 @@ const mockInquiriesList: inquiriesApi.EmployeeInquiryItem[] = [
   {
     id: 'inq_2',
     status: 'IN_PROGRESS',
-    referenceNumber: 'AF-87654321',
+    referenceNumber: 'PP-87654321',
     contractParty: 'EMPLOYEE_B2B',
     createdAt: '2026-09-15T12:00:00.000Z',
     contactName: 'Tomasz Kowalski',
@@ -125,8 +125,8 @@ describe('MyInquiriesPage Component', () => {
     renderMyInquiriesPage();
 
     await waitFor(() => {
-      expect(screen.getByText('AF-12345678')).toBeInTheDocument();
-      expect(screen.getByText('AF-87654321')).toBeInTheDocument();
+      expect(screen.getByText('PP-12345678')).toBeInTheDocument();
+      expect(screen.getByText('PP-87654321')).toBeInTheDocument();
     });
 
     // Verify Vehicle 1 details
@@ -182,7 +182,7 @@ describe('MyInquiriesPage Component', () => {
     fireEvent.click(retryBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('AF-12345678')).toBeInTheDocument();
+      expect(screen.getByText('PP-12345678')).toBeInTheDocument();
     });
   });
 

@@ -30,7 +30,7 @@ describe('Employee Portal Inquiries API Client', () => {
         inquiry: {
           id: 'inq_1',
           status: 'NEW',
-          referenceNumber: 'AF-12345678',
+          referenceNumber: 'PP-12345678',
           createdAt: new Date().toISOString(),
           vehicle: {
             make: 'Toyota',
@@ -113,7 +113,7 @@ describe('Employee Portal Inquiries API Client', () => {
           {
             id: 'inq_1',
             status: 'NEW',
-            referenceNumber: 'AF-98765432',
+            referenceNumber: 'PP-98765432',
             contractParty: 'CONSUMER' as const,
             createdAt: new Date().toISOString(),
             contactName: 'Jan Kowalski',
