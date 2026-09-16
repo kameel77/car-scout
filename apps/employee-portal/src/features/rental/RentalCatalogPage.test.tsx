@@ -56,6 +56,7 @@ const mockRentalOffersList: rentalApi.EmployeeRentalOfferSummary[] = [
     minMonthlyRateNet: 1450,
     minMonthlyRateGross: 1783.5,
     optionsCount: 18,
+    isB2b: true,
   },
   {
     id: 'rental-offer-2',
@@ -81,6 +82,7 @@ const mockRentalOffersList: rentalApi.EmployeeRentalOfferSummary[] = [
     minMonthlyRateNet: 1620,
     minMonthlyRateGross: 1992.6,
     optionsCount: 12,
+    isB2b: false,
   },
 ];
 
@@ -135,7 +137,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
     });
   });
 
-  it('renders rental offers list with rates and badges', async () => {
+  it('renders rental offers list with rates and badges without Dostawca', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
     vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
       offers: mockRentalOffersList,
@@ -157,12 +159,12 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
     });
 
+    expect(screen.getByText('Oferta B2B')).toBeInTheDocument();
     expect(screen.getByText('Stawka partnerska')).toBeInTheDocument();
     expect(screen.getByText('Stawka katalogowa')).toBeInTheDocument();
     expect(screen.getByText(/od 1\s?450 zł/)).toBeInTheDocument();
     expect(screen.getByText(/od 1\s?620 zł/)).toBeInTheDocument();
-    expect(screen.getByText('Dostawca: Arval')).toBeInTheDocument();
-    expect(screen.getByText('Dostawca: Athlon')).toBeInTheDocument();
+    expect(screen.queryByText(/Dostawca:/i)).not.toBeInTheDocument();
   });
 
   it('renders empty state when no offers are available', async () => {
@@ -217,4 +219,44 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
     });
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
+
+  it('filters offers by B2B only and clears filters', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: mockRentalOffersList,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+    });
+
+    // Click B2B filter button
+    const b2bBtn = screen.getByRole('button', { name: /Tylko B2B/i });
+    fireEvent.click(b2bBtn);
+
+    // Only Toyota (which is B2B) should be visible
+    expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+    expect(screen.queryByText('Skoda Octavia')).not.toBeInTheDocument();
+
+    // Click clear filters
+    const clearBtn = screen.getByRole('button', { name: /Wyczyść filtry/i });
+    fireEvent.click(clearBtn);
+
+    // Both should be visible again
+    expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+    expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+  });
 });
+

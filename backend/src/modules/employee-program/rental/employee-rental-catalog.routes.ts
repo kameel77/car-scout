@@ -260,7 +260,12 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
             rental: {
               fromMonthlyRateGross: bestGrossRate,
               rateSource: bestRateSource,
-              rentalCompanies: companyNames
+              rentalCompanies: companyNames,
+              isB2b: Boolean(
+                v.isBusinessFeatured ||
+                bestRateSource === 'EMPLOYEE_MATRIX' ||
+                eligibleAssignments.some(asg => (asg.matrixEntries || []).some(e => e.offerType === 'business' || e.offerType === 'b2b') || (asg.employeeMatrixRows || []).length > 0)
+              )
             },
             benefit: null
           };
@@ -410,10 +415,20 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
           equipmentComfortExtras: vehicle.equipmentComfortExtras ?? [],
           equipmentAudioMultimedia: vehicle.equipmentAudioMultimedia ?? [],
           equipmentOther: vehicle.equipmentOther ?? [],
+          color: vehicle.color ?? null,
+          drive: vehicle.drive ?? null,
           specsJson: vehicle.specsJson ?? null,
           additionalInfoHeader: vehicle.additionalInfoHeader ?? null,
           additionalInfoContent: vehicle.additionalInfoContent ?? null
         },
+        isB2b: Boolean(
+          vehicle.isBusinessFeatured ||
+          rentalOptions.some((opt: any) =>
+            opt.rateSource === 'EMPLOYEE_MATRIX' ||
+            (opt.allowedContractParties && !opt.allowedContractParties.includes('CONSUMER')) ||
+            (opt.rows || []).some((r: any) => r.offerType === 'business' || r.offerType === 'b2b')
+          )
+        ),
         rentalOptions,
         benefit: null
       });

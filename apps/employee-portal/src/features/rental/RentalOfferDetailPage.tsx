@@ -267,7 +267,12 @@ export const RentalOfferDetailPage: React.FC = () => {
                     <Car className="h-20 w-20 text-gray-300" />
                   )}
 
-                  <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
+                    {offer.isB2b && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-xs">
+                        Oferta B2B
+                      </span>
+                    )}
                     {offer.rateSource === 'PARTNER_MATRIX' ? (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white shadow-xs">
                         <Sparkles className="h-3.5 w-3.5" />
@@ -278,10 +283,6 @@ export const RentalOfferDetailPage: React.FC = () => {
                         Stawka katalogowa Motolia
                       </span>
                     )}
-                  </div>
-
-                  <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-md backdrop-blur-xs">
-                    Dostawca: {offer.rentalCompany.name}
                   </div>
                 </div>
 
@@ -331,12 +332,131 @@ export const RentalOfferDetailPage: React.FC = () => {
                     <span className="text-xs text-gray-500 block">Wersja wyposażenia</span>
                     <span className="font-semibold text-gray-900">{offer.vehicle.version || 'Standardowa'}</span>
                   </div>
-                  <div>
-                    <span className="text-xs text-gray-500 block">Dostawca floty</span>
-                    <span className="font-semibold text-gray-900">{offer.rentalCompany.name}</span>
-                  </div>
+                  {offer.vehicle.powerHp && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Moc silnika</span>
+                      <span className="font-semibold text-gray-900">{offer.vehicle.powerHp} KM</span>
+                    </div>
+                  )}
+                  {offer.vehicle.engineCapacityCm3 && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Pojemność</span>
+                      <span className="font-semibold text-gray-900">{offer.vehicle.engineCapacityCm3.toLocaleString('pl-PL')} cm³</span>
+                    </div>
+                  )}
+                  {offer.vehicle.drive && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Napęd</span>
+                      <span className="font-semibold text-gray-900">{offer.vehicle.drive}</span>
+                    </div>
+                  )}
+                  {offer.vehicle.color && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Kolor</span>
+                      <span className="font-semibold text-gray-900">{offer.vehicle.color}</span>
+                    </div>
+                  )}
+                  {(offer.vehicle.doors || offer.vehicle.seats) && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Drzwi / Miejsca</span>
+                      <span className="font-semibold text-gray-900">
+                        {offer.vehicle.doors ? `${offer.vehicle.doors} drzwi` : ''}
+                        {offer.vehicle.doors && offer.vehicle.seats ? ' / ' : ''}
+                        {offer.vehicle.seats ? `${offer.vehicle.seats} miejsc` : ''}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Wyposażenie pojazdu */}
+              {(offer.vehicle.equipmentSafety?.length ||
+                offer.vehicle.equipmentComfortExtras?.length ||
+                offer.vehicle.equipmentAudioMultimedia?.length ||
+                offer.vehicle.equipmentOther?.length) ? (
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-6">
+                  <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+                    <ShieldCheck className="h-5 w-5 text-indigo-600" />
+                    Wyposażenie pojazdu
+                  </h3>
+
+                  {offer.vehicle.equipmentSafety && offer.vehicle.equipmentSafety.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                        Bezpieczeństwo i asystenci
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                        {offer.vehicle.equipmentSafety.map((item, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {offer.vehicle.equipmentComfortExtras && offer.vehicle.equipmentComfortExtras.length > 0 && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                        Komfort i funkcjonalność
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                        {offer.vehicle.equipmentComfortExtras.map((item, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {offer.vehicle.equipmentAudioMultimedia && offer.vehicle.equipmentAudioMultimedia.length > 0 && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                        Multimedia i łączność
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                        {offer.vehicle.equipmentAudioMultimedia.map((item, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {offer.vehicle.equipmentOther && offer.vehicle.equipmentOther.length > 0 && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                        Pozostałe elementy
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                        {offer.vehicle.equipmentOther.map((item, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Dodatkowe informacje o pojeździe */}
+              {offer.vehicle.additionalInfoContent && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs">
+                  <h3 className="text-base font-semibold text-gray-900 mb-3">
+                    {offer.vehicle.additionalInfoHeader || 'Dodatkowe informacje o pojeździe'}
+                  </h3>
+                  <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                    {offer.vehicle.additionalInfoContent}
+                  </p>
+                </div>
+              )}
 
               {/* Benefits in Rental */}
               <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 space-y-3">
@@ -372,9 +492,6 @@ export const RentalOfferDetailPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
                       Konfigurator abonamentu
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      Dostawca: {offer.rentalCompany.name}
                     </span>
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 mt-1">

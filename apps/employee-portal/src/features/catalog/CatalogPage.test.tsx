@@ -310,4 +310,44 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
       expect(screen.getByRole('heading', { name: /Zapytaj o tę ofertę/i })).toBeInTheDocument();
     });
   });
+
+  it('filters offers by search text and resets filters', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
+      offers: mockOffersList,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <CatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
+      expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
+    });
+
+    // Type in search box
+    const searchInput = screen.getByPlaceholderText(/Szukaj po marce lub modelu/i);
+    fireEvent.change(searchInput, { target: { value: 'Tayron' } });
+
+    // Only Volkswagen should be visible
+    expect(screen.queryByText('Toyota Yaris')).not.toBeInTheDocument();
+    expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
+
+    // Click clear filters
+    const clearBtn = screen.getByRole('button', { name: /Wyczyść filtry/i });
+    fireEvent.click(clearBtn);
+
+    // Both should be visible
+    expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
+    expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
+  });
 });
+

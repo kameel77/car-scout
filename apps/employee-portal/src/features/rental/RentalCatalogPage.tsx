@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
@@ -14,7 +14,11 @@ import {
   ArrowRight,
   Gauge,
   Calendar,
-  Layers
+  Layers,
+  Filter,
+  X,
+  SlidersHorizontal,
+  Briefcase
 } from 'lucide-react';
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
 import { PortalHeader } from '../common/PortalHeader';
@@ -42,6 +46,49 @@ function formatFuelType(fuelType: string | null): string {
   }
 }
 
+function formatTransmission(transmission: string | null): string {
+  if (!transmission) return 'Brak danych';
+  switch (transmission.toUpperCase()) {
+    case 'AUTOMATIC':
+    case 'DSG':
+    case 'E-CVT':
+    case 'CVT':
+      return 'Automat';
+    case 'MANUAL':
+    case 'MANUALNA':
+      return 'Manualna';
+    default:
+      return transmission;
+  }
+}
+
+function formatBodyType(bodyType: string | null): string {
+  if (!bodyType) return 'Inne';
+  switch (bodyType.toLowerCase()) {
+    case 'suv':
+      return 'SUV';
+    case 'sedan':
+      return 'Sedan';
+    case 'kombi':
+    case 'estate':
+      return 'Kombi';
+    case 'hatchback':
+      return 'Hatchback';
+    case 'coupe':
+      return 'Coupe';
+    case 'cabrio':
+    case 'convertible':
+      return 'Kabriolet';
+    case 'minivan':
+    case 'van':
+      return 'Minivan';
+    case 'liftback':
+      return 'Liftback';
+    default:
+      return bodyType.charAt(0).toUpperCase() + bodyType.slice(1);
+  }
+}
+
 export const RentalCatalogPage: React.FC = () => {
   const { config, isLoading: isBrandLoading } = useBrandConfig();
   const { user, isLoading: isAuthLoading, logout, sessionError } = useAuth();
@@ -55,6 +102,14 @@ export const RentalCatalogPage: React.FC = () => {
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(true);
   const [offersError, setOffersError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Filters State
+  const [selectedMake, setSelectedMake] = useState<string>('');
+  const [selectedFuel, setSelectedFuel] = useState<string>('');
+  const [selectedTransmission, setSelectedTransmission] = useState<string>('');
+  const [selectedBodyType, setSelectedBodyType] = useState<string>('');
+  const [selectedB2bOnly, setSelectedB2bOnly] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'default' | 'rate_asc' | 'rate_desc'>('default');
 
   const loadOffers = useCallback(async (searchQuery?: string, signal?: AbortSignal) => {
     setIsLoadingOffers(true);
@@ -84,6 +139,99 @@ export const RentalCatalogPage: React.FC = () => {
       controller.abort();
     };
   }, [loadOffers, searchTerm]);
+
+  // Compute available facet options from loaded offers
+  const availableMakes = useMemo(() => {
+    const set = new Set<string>();
+    offers.forEach((o) => {
+      if (o.vehicle.make) set.add(o.vehicle.make);
+    });
+    return Array.from(set).sort();
+  }, [offers]);
+
+  const availableFuels = useMemo(() => {
+    const set = new Set<string>();
+    offers.forEach((o) => {
+      if (o.vehicle.fuelType) set.add(o.vehicle.fuelType);
+    });
+    return Array.from(set).sort();
+  }, [offers]);
+
+  const availableTransmissions = useMemo(() => {
+    const set = new Set<string>();
+    offers.forEach((o) => {
+      if (o.vehicle.transmission) set.add(o.vehicle.transmission);
+    });
+    return Array.from(set).sort();
+  }, [offers]);
+
+  const availableBodyTypes = useMemo(() => {
+    const set = new Set<string>();
+    offers.forEach((o) => {
+      if (o.vehicle.bodyType) set.add(o.vehicle.bodyType);
+    });
+    return Array.from(set).sort();
+  }, [offers]);
+
+  const filteredOffers = useMemo(() => {
+    let result = [...offers];
+
+    if (selectedMake) {
+      result = result.filter(
+        (o) => o.vehicle.make.toLowerCase() === selectedMake.toLowerCase()
+      );
+    }
+
+    if (selectedFuel) {
+      result = result.filter(
+        (o) => (o.vehicle.fuelType || '').toLowerCase() === selectedFuel.toLowerCase()
+      );
+    }
+
+    if (selectedTransmission) {
+      result = result.filter(
+        (o) => (o.vehicle.transmission || '').toLowerCase() === selectedTransmission.toLowerCase()
+      );
+    }
+
+    if (selectedBodyType) {
+      result = result.filter(
+        (o) => (o.vehicle.bodyType || '').toLowerCase() === selectedBodyType.toLowerCase()
+      );
+    }
+
+    if (selectedB2bOnly) {
+      result = result.filter((o) => Boolean(o.isB2b));
+    }
+
+    if (sortBy === 'rate_asc') {
+      result.sort((a, b) => a.minMonthlyRateNet - b.minMonthlyRateNet);
+    } else if (sortBy === 'rate_desc') {
+      result.sort((a, b) => b.minMonthlyRateNet - a.minMonthlyRateNet);
+    }
+
+    return result;
+  }, [offers, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, selectedB2bOnly, sortBy]);
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() ||
+    selectedMake ||
+    selectedFuel ||
+    selectedTransmission ||
+    selectedBodyType ||
+    selectedB2bOnly ||
+    sortBy !== 'default'
+  );
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedMake('');
+    setSelectedFuel('');
+    setSelectedTransmission('');
+    setSelectedBodyType('');
+    setSelectedB2bOnly(false);
+    setSortBy('default');
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -170,6 +318,144 @@ export const RentalCatalogPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Filters Bar */}
+        {!offersError && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
+                <span>Filtry</span>
+                <span className="text-xs font-normal text-gray-400">
+                  (Dostępne oferty: <strong>{filteredOffers.length}</strong>)
+                </span>
+              </div>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Wyczyść filtry
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              {/* Marka */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Marka
+                </label>
+                <select
+                  value={selectedMake}
+                  onChange={(e) => setSelectedMake(e.target.value)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Wszystkie</option>
+                  {availableMakes.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Paliwo */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Paliwo
+                </label>
+                <select
+                  value={selectedFuel}
+                  onChange={(e) => setSelectedFuel(e.target.value)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Wszystkie</option>
+                  {availableFuels.map((f) => (
+                    <option key={f} value={f}>
+                      {formatFuelType(f)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Skrzynia */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Skrzynia
+                </label>
+                <select
+                  value={selectedTransmission}
+                  onChange={(e) => setSelectedTransmission(e.target.value)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Wszystkie</option>
+                  {availableTransmissions.map((t) => (
+                    <option key={t} value={t}>
+                      {formatTransmission(t)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Nadwozie */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Nadwozie
+                </label>
+                <select
+                  value={selectedBodyType}
+                  onChange={(e) => setSelectedBodyType(e.target.value)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Wszystkie</option>
+                  {availableBodyTypes.map((b) => (
+                    <option key={b} value={b}>
+                      {formatBodyType(b)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Oferta B2B toggle button */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Opcja B2B
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setSelectedB2bOnly(!selectedB2bOnly)}
+                  className={`w-full text-xs py-2 px-2.5 rounded-xl border font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                    selectedB2bOnly
+                      ? 'bg-amber-500 border-amber-600 text-white shadow-xs'
+                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Briefcase className="h-3.5 w-3.5" />
+                  <span>Tylko B2B</span>
+                </button>
+              </div>
+
+              {/* Sortowanie */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Sortowanie
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="default">Domyślne</option>
+                  <option value="rate_asc">Rata: od najniższej</option>
+                  <option value="rate_desc">Rata: od najwyższej</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 1. Loading Skeleton */}
         {isLoadingOffers ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="rental-skeleton">
@@ -207,7 +493,7 @@ export const RentalCatalogPage: React.FC = () => {
               Spróbuj ponownie
             </button>
           </div>
-        ) : offers.length === 0 ? (
+        ) : filteredOffers.length === 0 ? (
           /* 3. Empty State */
           <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center max-w-lg mx-auto shadow-xs my-10">
             <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -215,24 +501,24 @@ export const RentalCatalogPage: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-900">Brak dostępnych ofert najmu</h3>
             <p className="text-sm text-gray-500 mt-2 mb-6">
-              {searchTerm
-                ? 'Żadna oferta nie pasuje do wyszukiwanej frazy. Spróbuj zmienić kryteria wyszukiwania.'
+              {hasActiveFilters
+                ? 'Żadna oferta nie pasuje do wybranych filtrów. Spróbuj zmienić lub zresetować kryteria.'
                 : 'W Twoim programie partnerskim nie skonfigurowano jeszcze ofert najmu długoterminowego.'}
             </p>
-            {searchTerm && (
+            {hasActiveFilters && (
               <button
                 type="button"
-                onClick={() => setSearchTerm('')}
+                onClick={resetFilters}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
               >
-                Wyczyść wyszukiwanie
+                Wyczyść filtry
               </button>
             )}
           </div>
         ) : (
           /* 4. Offers Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {offers.map((offer) => {
+            {filteredOffers.map((offer) => {
               const primaryImg =
                 offer.vehicle.primaryImageUrl ||
                 (offer.vehicle.imageUrls && offer.vehicle.imageUrls[0]);
@@ -258,6 +544,11 @@ export const RentalCatalogPage: React.FC = () => {
                       )}
 
                       <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                        {offer.isB2b && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-xs">
+                            Oferta B2B
+                          </span>
+                        )}
                         {offer.rateSource === 'PARTNER_MATRIX' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white shadow-xs">
                             Stawka partnerska
@@ -267,10 +558,6 @@ export const RentalCatalogPage: React.FC = () => {
                             Stawka katalogowa
                           </span>
                         )}
-                      </div>
-
-                      <div className="absolute bottom-2.5 right-2.5 bg-black/60 text-white text-[11px] px-2 py-0.5 rounded backdrop-blur-xs">
-                        Dostawca: {offer.rentalCompany.name}
                       </div>
                     </div>
 

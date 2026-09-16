@@ -1016,6 +1016,37 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Dodano klikalność miniatur zdjęć, tytułów oraz dedykowany przycisk CTA „Szczegóły i kalkulator raty” przenoszący bezpośrednio do `/katalog/:id`.
   - Zachowano przycisk „Zapytaj o tę ofertę” dla 1-kliknięciowego otwarcia szybkiego zapytania.
 
+## 77. Portal Pracowniczy - Wyposażenie Najmu, Filtry Katalogowe, Plakietki B2B i Ukrycie Dostawcy
+- **Pełne wyposażenie i parametry techniczne w ofertach najmu (`RentalOfferDetailPage.tsx`, `rental-api.ts`)**:
+  - Dodano prezentację 4-kolumnowej, kategoryzowanej listy wyposażenia pojazdu najmu:
+    - Bezpieczeństwo i asystenci jazdy (`equipmentSafety`)
+    - Komfort i dodatki (`equipmentComfortExtras`)
+    - Multimedia i łączność (`equipmentAudioMultimedia`)
+    - Pozostałe elementy (`equipmentOther`)
+    - Dodatkowe uwagi i opis pojazdu (`additionalInfoHeader`, `additionalInfoContent`)
+  - Rozszerzono siatkę parametrów technicznych o moc silnika (KM), pojemność (cm³), rodzaj napędu, kolor lakieru oraz liczbę drzwi i miejsc siedzących.
+- **Pasek filtrów w katalogach najmu i nowych samochodów (`RentalCatalogPage.tsx`, `CatalogPage.tsx`)**:
+  - Dodano responsywny pasek filtrów w standardzie platformy Motolia dla obu widoków katalogowych:
+    - Wyszukiwarka tekstowa (szukanie po marce, modelu lub wersji)
+    - Marka pojazdu (dynamicznie generowana lista unikalnych marek z bieżących ofert)
+    - Rodzaj paliwa (formatowane etykiety: Benzyna, Diesel, Hybryda, Mild Hybrid, Plug-in Hybrid, Elektryczny)
+    - Skrzynia biegów (Automat, Manualna)
+    - Typ nadwozia (SUV, Sedan, Kombi, Hatchback, Liftback, Coupe, Kabriolet, Minivan)
+    - Dedykowany filtr „Tylko B2B” na listingu najmu długoterminowego
+    - Sortowanie (najem: rata rosnąco/malejąco; nowe auta: cena rosnąco/malejąco, największy rabat)
+    - Licznik znalezionych ofert oraz przycisk „Wyczyść filtry” przy aktywnym filtrowaniu.
+- **Plakietki B2B na ofertach najmu (`RentalCatalogPage.tsx`, `RentalOfferDetailPage.tsx`)**:
+  - Dodano wyróżniającą się bursztynową plakietkę `Oferta B2B` w lewym górnym rogu na zdjęciu pojazdu na kafelkach listingu najmu oraz na zdjęciu głównym karty pojazdu.
+  - Flaga `isB2b` jest wyliczana serwerowo w backendzie na podstawie przypisania oferty, typu wierszy matrycy oraz flagi `isBusinessFeatured`.
+- **Usunięcie etykiety „Dostawca: <nazwa>” z widoku pracownika**:
+  - Całkowicie usunięto wzmianki o firmie wynajmującej / dostawcy (`offer.rentalCompany.name`) ze wszystkich widoków dostępnych dla zalogowanego pracownika (kafelki listingu najmu, nagłówek karty pojazdu, siatka specyfikacji).
+- **Architektura podglądu portalu w kontekście wybranej firmy przez Operatora (Masquerade Mode)**:
+  - Zaprojektowano mechanizm podglądu kontekstowego portalu pracowniczego bezpośrednio z panelu administracyjnego Motolia:
+    1. Operator klika „Podgląd portalu firmy” przy wybranej firmie lub programie w panelu administratora.
+    2. Backend generuje krótkotrwały token podglądu (np. ważny 15 minut) z uprawnieniem tylko-do-odczytu i flagą `isPreview: true`.
+    3. Portal pracowniczy otwiera się z żółtym banerem ostrzegawczym u góry informującym: „Tryb podglądu organizacji: [Nazwa Firmy] (akcje zapisu zablokowane) [Zakończ podgląd]”.
+
+
 
 
 

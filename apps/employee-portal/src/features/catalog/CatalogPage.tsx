@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
@@ -15,7 +15,9 @@ import {
   X,
   RefreshCw,
   Tag,
-  ChevronRight
+  ChevronRight,
+  Search,
+  SlidersHorizontal
 } from 'lucide-react';
 import { fetchEmployeeOffers, EmployeeOffer } from './catalog-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
@@ -55,6 +57,33 @@ function formatTransmission(transmission: string): string {
   }
 }
 
+function formatBodyType(bodyType: string | null): string {
+  if (!bodyType) return 'Inne';
+  switch (bodyType.toLowerCase()) {
+    case 'suv':
+      return 'SUV';
+    case 'sedan':
+      return 'Sedan';
+    case 'kombi':
+    case 'estate':
+      return 'Kombi';
+    case 'hatchback':
+      return 'Hatchback';
+    case 'coupe':
+      return 'Coupe';
+    case 'cabrio':
+    case 'convertible':
+      return 'Kabriolet';
+    case 'minivan':
+    case 'van':
+      return 'Minivan';
+    case 'liftback':
+      return 'Liftback';
+    default:
+      return bodyType.charAt(0).toUpperCase() + bodyType.slice(1);
+  }
+}
+
 export const CatalogPage: React.FC = () => {
   const { config, isLoading: isBrandLoading } = useBrandConfig();
   const { user, isLoading: isAuthLoading, logout, sessionError } = useAuth();
@@ -67,6 +96,14 @@ export const CatalogPage: React.FC = () => {
   const [offers, setOffers] = useState<EmployeeOffer[]>([]);
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(true);
   const [offersError, setOffersError] = useState<string | null>(null);
+
+  // Filters State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMake, setSelectedMake] = useState<string>('');
+  const [selectedFuel, setSelectedFuel] = useState<string>('');
+  const [selectedTransmission, setSelectedTransmission] = useState<string>('');
+  const [selectedBodyType, setSelectedBodyType] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'discount_desc'>('default');
 
   // Inquiry Modal State
   const [selectedOfferForInquiry, setSelectedOfferForInquiry] = useState<EmployeeOffer | null>(null);
@@ -96,6 +133,105 @@ export const CatalogPage: React.FC = () => {
       controller.abort();
     };
   }, [loadOffers]);
+
+  // Compute available facet options from loaded offers
+  const availableMakes = useMemo(() => {
+    const set = new Set<string>();
+    offers.forEach((o) => {
+      if (o.vehicle.make) set.add(o.vehicle.make);
+    });
+    return Array.from(set).sort();
+  }, [offers]);
+
+  const availableFuels = useMemo(() => {
+    const set = new Set<string>();
+    offers.forEach((o) => {
+      if (o.vehicle.fuelType) set.add(o.vehicle.fuelType);
+    });
+    return Array.from(set).sort();
+  }, [offers]);
+
+  const availableTransmissions = useMemo(() => {
+    const set = new Set<string>();
+    offers.forEach((o) => {
+      if (o.vehicle.transmission) set.add(o.vehicle.transmission);
+    });
+    return Array.from(set).sort();
+  }, [offers]);
+
+  const availableBodyTypes = useMemo(() => {
+    const set = new Set<string>();
+    offers.forEach((o) => {
+      if (o.vehicle.bodyType) set.add(o.vehicle.bodyType);
+    });
+    return Array.from(set).sort();
+  }, [offers]);
+
+  const filteredOffers = useMemo(() => {
+    let result = [...offers];
+
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase().trim();
+      result = result.filter(
+        (o) =>
+          o.vehicle.make.toLowerCase().includes(q) ||
+          o.vehicle.model.toLowerCase().includes(q) ||
+          (o.vehicle.version && o.vehicle.version.toLowerCase().includes(q))
+      );
+    }
+
+    if (selectedMake) {
+      result = result.filter(
+        (o) => o.vehicle.make.toLowerCase() === selectedMake.toLowerCase()
+      );
+    }
+
+    if (selectedFuel) {
+      result = result.filter(
+        (o) => (o.vehicle.fuelType || '').toLowerCase() === selectedFuel.toLowerCase()
+      );
+    }
+
+    if (selectedTransmission) {
+      result = result.filter(
+        (o) => (o.vehicle.transmission || '').toLowerCase() === selectedTransmission.toLowerCase()
+      );
+    }
+
+    if (selectedBodyType) {
+      result = result.filter(
+        (o) => (o.vehicle.bodyType || '').toLowerCase() === selectedBodyType.toLowerCase()
+      );
+    }
+
+    if (sortBy === 'price_asc') {
+      result.sort((a, b) => a.pricing.employeePricePln - b.pricing.employeePricePln);
+    } else if (sortBy === 'price_desc') {
+      result.sort((a, b) => b.pricing.employeePricePln - a.pricing.employeePricePln);
+    } else if (sortBy === 'discount_desc') {
+      result.sort((a, b) => b.pricing.discountPct - a.pricing.discountPct);
+    }
+
+    return result;
+  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, sortBy]);
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() ||
+    selectedMake ||
+    selectedFuel ||
+    selectedTransmission ||
+    selectedBodyType ||
+    sortBy !== 'default'
+  );
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedMake('');
+    setSelectedFuel('');
+    setSelectedTransmission('');
+    setSelectedBodyType('');
+    setSortBy('default');
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -218,6 +354,139 @@ export const CatalogPage: React.FC = () => {
 
       {/* Real Catalog Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full">
+        {/* Filters Bar */}
+        {!offersError && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <SlidersHorizontal className="h-4 w-4 text-primary-600" />
+                <span>Filtry</span>
+                <span className="text-xs font-normal text-gray-400">
+                  (Dostępne oferty: <strong>{filteredOffers.length}</strong>)
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-full sm:w-64">
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Szukaj po marce lub modelu..."
+                    className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white shadow-xs"
+                  />
+                </div>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-800 transition-colors shrink-0"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Wyczyść filtry
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {/* Marka */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Marka
+                </label>
+                <select
+                  value={selectedMake}
+                  onChange={(e) => setSelectedMake(e.target.value)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Wszystkie</option>
+                  {availableMakes.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Paliwo */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Paliwo
+                </label>
+                <select
+                  value={selectedFuel}
+                  onChange={(e) => setSelectedFuel(e.target.value)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Wszystkie</option>
+                  {availableFuels.map((f) => (
+                    <option key={f} value={f}>
+                      {formatFuelType(f)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Skrzynia */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Skrzynia
+                </label>
+                <select
+                  value={selectedTransmission}
+                  onChange={(e) => setSelectedTransmission(e.target.value)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Wszystkie</option>
+                  {availableTransmissions.map((t) => (
+                    <option key={t} value={t}>
+                      {formatTransmission(t)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Nadwozie */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Nadwozie
+                </label>
+                <select
+                  value={selectedBodyType}
+                  onChange={(e) => setSelectedBodyType(e.target.value)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Wszystkie</option>
+                  {availableBodyTypes.map((b) => (
+                    <option key={b} value={b}>
+                      {formatBodyType(b)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sortowanie */}
+              <div>
+                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Sortowanie
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="default">Domyślne</option>
+                  <option value="price_asc">Cena: od najniższej</option>
+                  <option value="price_desc">Cena: od najwyższej</option>
+                  <option value="discount_desc">Największy rabat</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoadingOffers && (
           <div
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -273,7 +542,7 @@ export const CatalogPage: React.FC = () => {
           </div>
         )}
 
-        {!isLoadingOffers && !offersError && offers.length === 0 && (
+        {!isLoadingOffers && !offersError && filteredOffers.length === 0 && (
           <div
             className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-xs max-w-xl mx-auto"
             data-testid="catalog-empty-state"
@@ -282,20 +551,33 @@ export const CatalogPage: React.FC = () => {
               <Car className="h-7 w-7" />
             </div>
             <h2 className="text-lg font-bold text-gray-900">
-              Brak ofert przypisanych do Twojego programu
+              {hasActiveFilters
+                ? 'Brak ofert spełniających kryteria'
+                : 'Brak ofert przypisanych do Twojego programu'}
             </h2>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-              W tej chwili w Twoim programie partnerskim nie ma dostępnych ofert specjalnych. Skontaktuj się z opiekunem programu w swojej firmie lub doradcą Motolii, aby dowiedzieć się o planowanych transzach pojazdów.
+              {hasActiveFilters
+                ? 'Żadna oferta nie pasuje do wybranych filtrów. Spróbuj zmienić lub zresetować kryteria wyszukiwania.'
+                : 'W tej chwili w Twoim programie partnerskim nie ma dostępnych ofert specjalnych. Skontaktuj się z opiekunem programu w swojej firmie lub doradcą Motolii, aby dowiedzieć się o planowanych transzach pojazdów.'}
             </p>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-xs"
+              >
+                Wyczyść filtry
+              </button>
+            )}
           </div>
         )}
 
-        {!isLoadingOffers && !offersError && offers.length > 0 && (
+        {!isLoadingOffers && !offersError && filteredOffers.length > 0 && (
           <div
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             data-testid="catalog-offers-grid"
           >
-            {offers.map((offer) => (
+            {filteredOffers.map((offer) => (
               <article
                 key={offer.id}
                 className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"

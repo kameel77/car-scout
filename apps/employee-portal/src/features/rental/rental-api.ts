@@ -9,6 +9,19 @@ export interface RentalVehicle {
   bodyType: string | null;
   primaryImageUrl: string | null;
   imageUrls: string[];
+  powerHp?: number | null;
+  engineCapacityCm3?: number | null;
+  doors?: number | null;
+  seats?: number | null;
+  drive?: string | null;
+  color?: string | null;
+  equipmentSafety?: string[];
+  equipmentComfortExtras?: string[];
+  equipmentAudioMultimedia?: string[];
+  equipmentOther?: string[];
+  additionalInfoHeader?: string | null;
+  additionalInfoContent?: string | null;
+  specsJson?: any;
 }
 
 export interface RentalCompanySummary {
@@ -26,6 +39,7 @@ export interface EmployeeRentalOfferSummary {
   minMonthlyRateNet: number;
   minMonthlyRateGross: number;
   optionsCount: number;
+  isB2b?: boolean;
 }
 
 export interface RentalInitialPaymentOption {
@@ -57,6 +71,7 @@ export interface EmployeeRentalOfferDetails {
   downPaymentPctOptions: number[];
   downPaymentOptions?: RentalInitialPaymentOption[];
   rentalOptions: RentalOptionItem[];
+  isB2b?: boolean;
 }
 
 export interface EmployeeRentalCatalogResponse {
@@ -130,6 +145,12 @@ export async function fetchEmployeeRentalOffers(
       o.rental?.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX';
     const minGross = Number(o.rental?.fromMonthlyRateGross || 0);
     const minNet = Math.round(minGross / 1.23);
+    const isB2b = Boolean(
+      o.isB2b ||
+      o.rental?.isB2b ||
+      o.vehicle?.isBusinessFeatured ||
+      rateSource === 'PARTNER_MATRIX'
+    );
 
     return {
       id: o.id,
@@ -144,6 +165,7 @@ export async function fetchEmployeeRentalOffers(
       minMonthlyRateNet: minNet,
       minMonthlyRateGross: minGross,
       optionsCount: 1,
+      isB2b,
     };
   });
 
@@ -261,6 +283,12 @@ export async function fetchEmployeeRentalOfferDetails(
   const rentalCompanyName = primaryGroup?.rentalCompanyName || 'Dostawca';
   const rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' =
     primaryGroup?.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX';
+  const isB2b = Boolean(
+    raw.isB2b ||
+    raw.vehicle?.isBusinessFeatured ||
+    rateSource === 'PARTNER_MATRIX' ||
+    (primaryGroup?.allowedContractParties && !primaryGroup.allowedContractParties.includes('CONSUMER'))
+  );
 
   return {
     id: raw.id,
@@ -277,5 +305,6 @@ export async function fetchEmployeeRentalOfferDetails(
     downPaymentPctOptions,
     downPaymentOptions,
     rentalOptions: flattenedOptions,
+    isB2b,
   };
 }
