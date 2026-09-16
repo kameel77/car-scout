@@ -23,7 +23,7 @@ export interface InquiryCalculationSnapshot {
 }
 
 export const createInquirySchema = z.object({
-  offerId: z.string().cuid('Nieprawidłowy identyfikator oferty'),
+  offerId: z.string().regex(/^[a-zA-Z0-9_-]+$/, 'Nieprawidłowy identyfikator oferty').max(100),
   idempotencyKey: z.string().uuid('Nieprawidłowy klucz idempotencji (wymagany UUID v4)'),
   contractParty: z.enum(['CONSUMER', 'EMPLOYEE_B2B', 'EMPLOYER_COMPANY'], {
     errorMap: () => ({ message: 'Nieprawidłowa strona umowy' })
@@ -53,7 +53,7 @@ export const createInquirySchema = z.object({
 
 export const getInquiriesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
-  cursor: z.string().cuid().optional()
+  cursor: z.string().regex(/^[a-zA-Z0-9_-]+$/).max(100).optional()
 });
 
 export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
@@ -145,40 +145,153 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     for (let attempt = 0; attempt < MAX_REF_RETRIES; attempt++) {
       try {
         createdInquiry = await fastify.prisma.$transaction(async (tx) => {
-          // 1. Weryfikacja oferty
-          const offer = await tx.employeeProgramOffer.findUnique({
-            where: { id: body.offerId },
-            include: {
-              listing: true,
-              benefitPolicy: true,
-              program: {
-                select: {
-                  id: true,
-                  name: true,
-                  defaultDiscountPct: true,
-                  company: { select: { id: true, name: true } }
-                }
+          let targetListingId: string | null = null;
+          let vehicleSnapshot: any = null;
+          let pricing: any = null;
+          let benefitSnapshot: any = null;
+          let companyName = 'Firma';
+          let programName = 'Program pracowniczy';
+
+          // 1. Weryfikacja oferty (Scenariusz A: Wirtualne ID ze stoku listing-{id} vs Scenariusz B: Dedykowana oferta)
+          if (body.offerId.startsWith('listing-')) {
+            const listingId = body.offerId.replace(/^listing-/, '');
+            const program = await tx.employeeProgram.findUnique({
+              where: { id: employee.programId },
+              select: {
+                id: true,
+                name: true,
+                scopeIncludeNew: true,
+                scopeDiscountPct: true,
+                defaultDiscountPct: true,
+                company: { select: { id: true, name: true } }
               }
-            }
-          });
+            });
 
-          if (!offer || offer.programId !== employee.programId || !offer.isActive) {
-            const notFoundErr: any = new Error('Oferta nie została znaleziona');
-            notFoundErr.statusCode = 404;
-            throw notFoundErr;
-          }
-
-          if (offer.sourceType === 'FINANCING') {
-            if (!offer.listingId || !offer.listing) {
+            if (!program || !program.scopeIncludeNew) {
               const notFoundErr: any = new Error('Oferta nie została znaleziona');
               notFoundErr.statusCode = 404;
               throw notFoundErr;
             }
-            if (offer.listing.isArchived) {
-              const conflictErr: any = new Error('Ta oferta nie jest już dostępna');
-              conflictErr.statusCode = 409;
-              throw conflictErr;
+
+            const listing = await tx.listing.findUnique({
+              where: { id: listingId },
+              include: {
+                employeeProgramOffers: {
+                  where: { programId: employee.programId, isExcluded: true, isActive: true },
+                  take: 1
+                }
+              }
+            });
+
+            if (
+              !listing ||
+              listing.isArchived ||
+              listing.condition !== 'NEW' ||
+              (listing.pricePln ?? 0) <= 0 ||
+              listing.isReserved ||
+              (listing.employeeProgramOffers && listing.employeeProgramOffers.length > 0)
+            ) {
+              const notFoundErr: any = new Error('Oferta nie została znaleziona');
+              notFoundErr.statusCode = 404;
+              throw notFoundErr;
             }
+
+            targetListingId = listing.id;
+            companyName = program.company?.name || 'Firma';
+            programName = program.name || 'Program pracowniczy';
+
+            const listPrice = listing.pricePln ?? 0;
+            pricing = calculateOfferPricing(
+              listPrice,
+              null,
+              null,
+              program.defaultDiscountPct,
+              program.scopeDiscountPct
+            );
+
+            vehicleSnapshot = {
+              make: listing.make,
+              model: listing.model,
+              version: listing.version ?? null,
+              productionYear: listing.productionYear,
+              primaryImageUrl: listing.primaryImageUrl ?? null
+            };
+
+            benefitSnapshot = null;
+          } else {
+            const offer = await tx.employeeProgramOffer.findUnique({
+              where: { id: body.offerId },
+              include: {
+                listing: true,
+                benefitPolicy: true,
+                program: {
+                  select: {
+                    id: true,
+                    name: true,
+                    defaultDiscountPct: true,
+                    scopeDiscountPct: true,
+                    company: { select: { id: true, name: true } }
+                  }
+                }
+              }
+            });
+
+            if (!offer || offer.programId !== employee.programId || !offer.isActive || offer.isExcluded) {
+              const notFoundErr: any = new Error('Oferta nie została znaleziona');
+              notFoundErr.statusCode = 404;
+              throw notFoundErr;
+            }
+
+            if (offer.sourceType === 'FINANCING') {
+              if (!offer.listingId || !offer.listing) {
+                const notFoundErr: any = new Error('Oferta nie została znaleziona');
+                notFoundErr.statusCode = 404;
+                throw notFoundErr;
+              }
+              if (offer.listing.isArchived || (offer.listing.pricePln ?? 0) <= 0) {
+                const conflictErr: any = new Error('Ta oferta nie jest już dostępna');
+                conflictErr.statusCode = 409;
+                throw conflictErr;
+              }
+            }
+
+            targetListingId = offer.listingId;
+            companyName = offer.program?.company?.name || 'Firma';
+            programName = offer.program?.name || 'Program pracowniczy';
+
+            const listPrice = offer.sourceType === 'FINANCING' && offer.listing
+              ? (offer.listing.pricePln ?? 0)
+              : 0;
+
+            pricing = calculateOfferPricing(
+              listPrice,
+              offer.customPricePln,
+              offer.discountPct,
+              offer.program?.defaultDiscountPct,
+              offer.program?.scopeDiscountPct
+            );
+
+            vehicleSnapshot = offer.sourceType === 'FINANCING' && offer.listing ? {
+              make: offer.listing.make,
+              model: offer.listing.model,
+              version: offer.listing.version ?? null,
+              productionYear: offer.listing.productionYear,
+              primaryImageUrl: offer.listing.primaryImageUrl ?? null
+            } : {
+              make: 'Nieznana marka',
+              model: 'Nieznany model',
+              version: null,
+              productionYear: new Date().getFullYear(),
+              primaryImageUrl: null
+            };
+
+            benefitSnapshot = offer.benefitPolicy ? {
+              name: offer.benefitPolicy.name,
+              moyaCardAmount: offer.benefitPolicy.moyaCardAmount,
+              fuelDiscount: offer.benefitPolicy.fuelDiscount,
+              consultantCare: offer.benefitPolicy.consultantCare,
+              termsText: offer.benefitPolicy.termsText
+            } : null;
           }
 
           // 2. Weryfikacja dopuszczalnych stron umowy (Semantyka ANY / Suma z §3.4)
@@ -196,46 +309,12 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
             }
           }
 
-          // 3. Obliczenie niezmiennego snapshotu na serwerze
-          const listPrice = offer.sourceType === 'FINANCING' && offer.listing
-            ? (offer.listing.pricePln ?? 0)
-            : 0;
-
-          const pricing = calculateOfferPricing(
-            listPrice,
-            offer.customPricePln,
-            offer.discountPct,
-            offer.program?.defaultDiscountPct
-          );
-
-          const vehicleSnapshot = offer.sourceType === 'FINANCING' && offer.listing ? {
-            make: offer.listing.make,
-            model: offer.listing.model,
-            version: offer.listing.version ?? null,
-            productionYear: offer.listing.productionYear,
-            primaryImageUrl: offer.listing.primaryImageUrl ?? null
-          } : {
-            make: 'Nieznana marka',
-            model: 'Nieznany model',
-            version: null,
-            productionYear: new Date().getFullYear(),
-            primaryImageUrl: null
-          };
-
           const calculationSnapshot: InquiryCalculationSnapshot = {
-            offerId: offer.id,
-            sourceType: offer.sourceType,
+            offerId: body.offerId,
+            sourceType: 'FINANCING',
             vehicle: vehicleSnapshot,
             pricing
           };
-
-          const benefitSnapshot = offer.benefitPolicy ? {
-            name: offer.benefitPolicy.name,
-            moyaCardAmount: offer.benefitPolicy.moyaCardAmount,
-            fuelDiscount: offer.benefitPolicy.fuelDiscount,
-            consultantCare: offer.benefitPolicy.consultantCare,
-            termsText: offer.benefitPolicy.termsText
-          } : null;
 
           // 4. Przygotowanie leada do CRM
           const referenceNumber = generateReference();
@@ -245,8 +324,6 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
             EMPLOYER_COMPANY: 'Firma pracodawcy'
           };
           const partyLabel = partyLabels[body.contractParty] || body.contractParty;
-          const companyName = offer.program?.company?.name || 'Firma';
-          const programName = offer.program?.name || 'Program pracowniczy';
           const nipText = body.contractParty !== 'CONSUMER' && body.nip ? `, NIP: ${body.nip}` : '';
           const notesText = body.notes ? ` Uwagi: ${body.notes}` : '';
           const leadMessage = `[Program: ${companyName} / ${programName}] Zapytanie o: ${vehicleSnapshot.make} ${vehicleSnapshot.model}${vehicleSnapshot.version ? ` ${vehicleSnapshot.version}` : ''} (${vehicleSnapshot.productionYear}). Strona umowy: ${partyLabel}${nipText}. Cena pracownicza: ${pricing.employeePricePln} zł (katalogowa: ${pricing.listPricePln} zł, rabat: ${pricing.discountPct}%).${notesText}`;
@@ -256,7 +333,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
               name: body.contactName,
               email: body.contactEmail,
               phone: body.contactPhone,
-              listingId: offer.listingId,
+              listingId: targetListingId,
               leadType: 'employee',
               status: 'new',
               referenceNumber,

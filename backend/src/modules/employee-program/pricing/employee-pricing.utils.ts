@@ -9,7 +9,8 @@ export function calculateOfferPricing(
   listPrice: number,
   customPricePln: number | null | undefined,
   discountPct: number | { toNumber(): number } | null | undefined,
-  defaultDiscountPct: number | { toNumber(): number } | null | undefined
+  defaultDiscountPct: number | { toNumber(): number } | null | undefined,
+  scopeDiscountPct?: number | { toNumber(): number } | null | undefined
 ): CalculatedPricing {
   const safeListPrice = Math.max(0, listPrice);
   let employeePrice = safeListPrice;
@@ -21,11 +22,22 @@ export function calculateOfferPricing(
   const defaultDiscount = defaultDiscountPct !== null && defaultDiscountPct !== undefined
     ? (typeof defaultDiscountPct === 'number' ? defaultDiscountPct : defaultDiscountPct.toNumber())
     : null;
+  const scopeDiscount = scopeDiscountPct !== null && scopeDiscountPct !== undefined
+    ? (typeof scopeDiscountPct === 'number' ? scopeDiscountPct : scopeDiscountPct.toNumber())
+    : null;
 
+  // Hierarchia priorytetów (§2.1):
+  // 1. wyjątek.customPricePln
+  // 2. wyjątek.discountPct
+  // 3. reguła.scopeDiscountPct
+  // 4. program.defaultDiscountPct
+  // 5. cena katalogowa
   if (customPrice !== null) {
     employeePrice = customPrice;
   } else if (discount !== null) {
     employeePrice = Math.round(safeListPrice * (1 - discount / 100));
+  } else if (scopeDiscount !== null) {
+    employeePrice = Math.round(safeListPrice * (1 - scopeDiscount / 100));
   } else if (defaultDiscount !== null) {
     employeePrice = Math.round(safeListPrice * (1 - defaultDiscount / 100));
   } else {

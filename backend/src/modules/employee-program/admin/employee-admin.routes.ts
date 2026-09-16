@@ -69,6 +69,9 @@ const updateProgramSchema = z.object({
   name: z.string().trim().min(2).max(150).optional(),
   description: z.string().trim().max(500).optional().nullable(),
   defaultDiscountPct: z.coerce.number().min(0).max(100).optional().nullable(),
+  scopeIncludeNew: z.boolean().optional(),
+  scopeIncludeRental: z.boolean().optional(),
+  scopeDiscountPct: z.coerce.number().min(0).max(100).optional().nullable(),
   isPubliclyListed: z.boolean().optional(),
   isActive: z.boolean().optional()
 });
@@ -95,13 +98,15 @@ const createOfferSchema = z.object({
   listingId: z.string().min(1),
   customPricePln: z.coerce.number().int().min(1).optional().nullable(),
   discountPct: z.coerce.number().min(0).max(100).optional().nullable(),
-  benefitPolicyId: z.string().optional().nullable()
+  benefitPolicyId: z.string().optional().nullable(),
+  isExcluded: z.boolean().optional().default(false)
 });
 
 const updateOfferSchema = z.object({
   customPricePln: z.coerce.number().int().min(1).optional().nullable(),
   discountPct: z.coerce.number().min(0).max(100).optional().nullable(),
   benefitPolicyId: z.string().optional().nullable(),
+  isExcluded: z.boolean().optional(),
   isActive: z.boolean().optional()
 });
 
@@ -157,6 +162,9 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
               slug: true,
               isActive: true,
               defaultDiscountPct: true,
+              scopeIncludeNew: true,
+              scopeIncludeRental: true,
+              scopeDiscountPct: true,
               _count: {
                 select: {
                   registrationCodes: { where: { isActive: true } },
@@ -338,6 +346,11 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
           ...(body.description !== undefined && { description: body.description }),
           ...(body.defaultDiscountPct !== undefined && {
             defaultDiscountPct: body.defaultDiscountPct != null ? new Prisma.Decimal(body.defaultDiscountPct) : null
+          }),
+          ...(body.scopeIncludeNew !== undefined && { scopeIncludeNew: body.scopeIncludeNew }),
+          ...(body.scopeIncludeRental !== undefined && { scopeIncludeRental: body.scopeIncludeRental }),
+          ...(body.scopeDiscountPct !== undefined && {
+            scopeDiscountPct: body.scopeDiscountPct != null ? new Prisma.Decimal(body.scopeDiscountPct) : null
           }),
           ...(body.isPubliclyListed !== undefined && { isPubliclyListed: body.isPubliclyListed }),
           ...(body.isActive !== undefined && { isActive: body.isActive })
@@ -710,6 +723,7 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
           customPricePln: body.customPricePln || null,
           discountPct: body.discountPct != null ? new Prisma.Decimal(body.discountPct) : null,
           benefitPolicyId: body.benefitPolicyId || null,
+          isExcluded: body.isExcluded ?? false,
           isActive: true
         },
         include: {
@@ -755,6 +769,7 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
           discountPct: body.discountPct != null ? new Prisma.Decimal(body.discountPct) : null
         }),
         ...(body.benefitPolicyId !== undefined && { benefitPolicyId: body.benefitPolicyId }),
+        ...(body.isExcluded !== undefined && { isExcluded: body.isExcluded }),
         ...(body.isActive !== undefined && { isActive: body.isActive })
       },
       include: {

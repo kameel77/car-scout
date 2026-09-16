@@ -913,3 +913,44 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Widok historii zapytań (`MyInquiriesPage` na trasie `/zapytania`):
     - 4 stany widoku: szkielet ładowania (skeleton), lista zgłoszeń z podglądem auta, ceną pracowniczą, statusem i korzyściami, stan pusty z zachętą do przejścia do katalogu oraz stan błędu z przyciskiem ponowienia.
   - Nawigacja w górnym pasku portalu z przełącznikiem zakładek "Katalog ofert" oraz "Moje zapytania".
+
+### 69. Pełny Katalog Ofert Pracowniczych ze Stoku - Reguły Zasięgu i Wyjątki (Etap E1)
+- **Cel**: Dynamiczne zasilanie katalogu pracowniczego całym dostępnym stokiem nowych samochodów (`Listing` z `condition = NEW`) w oparciu o globalne reguły zasięgu programu pracodawcy, z zachowaniem mechanizmu wyjątków cenowych (`EmployeeProgramOffer`) i wykluczeń (`isExcluded: true`).
+- **Architektura Bazy Danych (`schema.prisma`)**:
+  - `EmployeeProgram`:
+    - `scopeIncludeNew Boolean @default(false)`: Włącza automatyczne włączanie do katalogu pracowniczego wszystkich niearchiwalnych pojazdów nowych (`condition = NEW`, `pricePln > 0`, `isReserved = false`). Domyślna wartość `false` gwarantuje zachowanie status quo dla istniejących programów partnerskich bez decyzji biznesowej administratora.
+    - `scopeIncludeRental Boolean @default(false)`: Flaga przygotowana pod etap E3 (matryce najmu długoterminowego ze stoku).
+    - `scopeDiscountPct Decimal? @db.Decimal(5, 2)`: Dedykowany rabat procentowy dla reguły zasięgu stoku nowego.
+  - `EmployeeProgramOffer`:
+    - Pełni rolę jawnych wyjątków lub wykluczeń ze stoku.
+    - `isExcluded Boolean @default(false)`: Oznacza jawne wykluczenie pojazdu ze stoku z widoku katalogu pracowniczego. Wykluczenie jest aktywne wyłącznie wtedy, gdy `isExcluded: true` oraz `isActive: true`. Zmiana `isActive: false` na rekordzie wykluczenia deaktywuje wykluczenie i przywraca pojazd do widoku stoku.
+    - Indeks złożony: `@@index([programId, isExcluded, isActive])` optymalizujący filtrowanie bazy danych.
+- **Hierarchia Rozstrzygania Cen (5-poziomowy łańcuch `calculateOfferPricing`)**:
+  1. Wyjątek kwotowy: `offer.customPricePln` (jeśli zdefiniowany i większy od 0).
+  2. Wyjątek procentowy: `offer.discountPct` (jeśli zdefiniowany i większy od 0).
+  3. Rabat reguły zasięgu: `program.scopeDiscountPct` (jeśli zdefiniowany i większy od 0).
+  4. Domyślny rabat programu: `program.defaultDiscountPct` (jeśli zdefiniowany i większy od 0).
+  5. Cena katalogowa brutto: `listing.pricePln` (brak rabatu).
+- **Backend API**:
+  - `GET /api/employee/offers`:
+    - Zapytanie bazodanowe zakorzenione bezpośrednio w modelu `Listing` z warunkiem logicznym `AND` łączącym filtr wyszukiwania oraz klauzulę `OR`:
+      1. Reguła zasięgu (gdy `scopeIncludeNew = true`): `condition: NEW`, `isReserved: false` oraz brak aktywnego wpisu z `isExcluded: true` i `isActive: true` dla danego programu.
+      2. Wyjątki ofertowe: wpis w `EmployeeProgramOffer` dla danego programu z `isActive: true` i `isExcluded: false`.
+    - Paginacja kursorowa oparta ściśle na `Listing.id` (bez ryzyka błędu `P2025` i duplikacji rekordów).
+    - Pojazdy będące wyjątkami pojawiają się w katalogu dokładnie raz, reprezentowane przez identyfikator oferty (CUID), podczas gdy pojazdy z reguły zasięgu otrzymują wirtualny identyfikator `listing-{id}`.
+    - **Obsługa ofert RENTAL (Etap E1 vs E3)**: Zapytanie stoku w E1 obsługuje pojazdy na sprzedaż/finansowanie (`Listing`). Oferty najmu długoterminowego (`sourceType: 'RENTAL'`, `listingId: null`) są celowo pomijane na liście w E1 (brak gotówkowego rabatu procentowego) - ich pełna integracja z matrycami stawek najmu i flagą `scopeIncludeRental` nastąpi w Etapie E3.
+  - `GET /api/employee/offers/:offerId`:
+    - Obsługa dwukierunkowa: pobieranie po wirtualnym identyfikatorze `listing-{id}` (weryfikacja `scopeIncludeNew` oraz braku aktywnego wykluczenia) lub po identyfikatorze oferty CUID (z weryfikacją uprawnień programu).
+  - `POST /api/employee/inquiries`:
+    - Przyjmowanie zarówno ofert wyjątkowych (CUID), jak i ofert ze stoku (`listing-{id}`).
+    - W przypadku oferty ze stoku: serwer pobiera `Listing`, oblicza aktualną cenę pracowniczą wg hierarchii reguły zasięgu i programu, a następnie tworzy `EmployeeInquiry` z `listingId: listing.id` oraz powiązany `Lead` w CRM.
+  - `GET /api/admin/employee-programs/companies` oraz endpointy programów:
+    - Rozszerzenie odpowiedzi o pola `scopeIncludeNew`, `scopeIncludeRental`, `scopeDiscountPct` oraz obsługa `isExcluded` przy dodawaniu i edycji ofert specjalnych.
+- **Panel Administratora (`src/components/admin/employee-programs`)**:
+  - `ProgramSettingsTab.tsx`:
+    - Sekcja "Reguły zasięgu katalogu (Katalog Pełny)" z przełącznikami dla pojazdów nowych (`scopeIncludeNew`) i wynajmu (`scopeIncludeRental`) oraz polem rabatu reguły (`scopeDiscountPct`).
+    - Informacja o kolejności rozstrzygania rabatów dla administratora.
+  - `SpecialOffersTab.tsx`:
+    - Możliwość oznaczenia oferty jako "Wyklucz ten pojazd z katalogu pracowniczego (isExcluded)".
+    - Czerwona plakietka ostrzegawcza "Wykluczenie ze stoku" na kafelkach wykluczonych pojazdów w panelu.
+

@@ -1714,6 +1714,9 @@ model EmployeeProgram {
   updatedAt            DateTime                   @updatedAt @map("updated_at")
 
   defaultDiscountPct   Decimal?                   @map("default_discount_pct") @db.Decimal(5, 2)
+  scopeIncludeNew      Boolean                    @default(false) @map("scope_include_new")
+  scopeIncludeRental   Boolean                    @default(false) @map("scope_include_rental")
+  scopeDiscountPct     Decimal?                   @map("scope_discount_pct") @db.Decimal(5, 2)
 
   company              EmployeeCompany            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   productOverrides     EmployeeProductOverride[]
@@ -1900,6 +1903,7 @@ model EmployeeProgramOffer {
   benefitPolicyId String?                  @map("benefit_policy_id")
   benefitPolicy   EmployeeBenefitPolicy?   @relation(fields: [programId, benefitPolicyId], references: [programId, id], onDelete: Restrict)
 
+  isExcluded      Boolean                  @default(false) @map("is_excluded")
   isActive        Boolean                  @default(true) @map("is_active")
   createdAt       DateTime                 @default(now()) @map("created_at")
   updatedAt       DateTime                 @updatedAt @map("updated_at")
@@ -1910,6 +1914,7 @@ model EmployeeProgramOffer {
   @@unique([programId, listingId])
   @@unique([programId, assignmentId])
   @@index([programId, isActive])
+  @@index([programId, isExcluded, isActive])
   @@map("employee_program_offers")
 }
 

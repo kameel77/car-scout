@@ -31,6 +31,9 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
   // Settings form state
   const [programName, setProgramName] = useState(program.name);
   const [discountPct, setDiscountPct] = useState(program.defaultDiscountPct || '5.0');
+  const [scopeIncludeNew, setScopeIncludeNew] = useState(program.scopeIncludeNew ?? false);
+  const [scopeIncludeRental, setScopeIncludeRental] = useState(program.scopeIncludeRental ?? false);
+  const [scopeDiscountPct, setScopeDiscountPct] = useState(program.scopeDiscountPct || '');
   const [isSavedSuccess, setIsSavedSuccess] = useState(false);
 
   // Policy dialog state
@@ -49,9 +52,16 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
   });
 
   const updateProgramMutation = useMutation({
-    mutationFn: (data: { name: string; defaultDiscountPct: number | null }) =>
+    mutationFn: (data: {
+      name: string;
+      defaultDiscountPct: number | null;
+      scopeIncludeNew: boolean;
+      scopeIncludeRental: boolean;
+      scopeDiscountPct: number | null;
+    }) =>
       employeeAdminApi.updateProgram(program.id, data, token),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-employee-companies'] });
       queryClient.invalidateQueries({ queryKey: ['employee-companies'] });
       setIsSavedSuccess(true);
       setTimeout(() => setIsSavedSuccess(false), 3000);
@@ -87,9 +97,13 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     const discNum = discountPct ? parseFloat(discountPct) : null;
+    const scopeDiscNum = scopeDiscountPct ? parseFloat(scopeDiscountPct) : null;
     updateProgramMutation.mutate({
       name: programName.trim(),
-      defaultDiscountPct: discNum && !isNaN(discNum) ? discNum : null
+      defaultDiscountPct: discNum && !isNaN(discNum) ? discNum : null,
+      scopeIncludeNew,
+      scopeIncludeRental,
+      scopeDiscountPct: scopeDiscNum && !isNaN(scopeDiscNum) ? scopeDiscNum : null
     });
   };
 
@@ -122,7 +136,7 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
           <h3 className="text-base font-semibold text-gray-900">Ustawienia ogólne i cennik programu</h3>
         </div>
 
-        <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl">
+        <form onSubmit={handleSaveSettings} className="space-y-5 max-w-xl">
           <div className="space-y-1.5">
             <Label htmlFor="prog-name">Nazwa programu</Label>
             <Input
@@ -145,8 +159,69 @@ export const ProgramSettingsTab: React.FC<Props> = ({ program, token }) => {
               onChange={(e) => setDiscountPct(e.target.value)}
             />
             <p className="text-xs text-gray-500">
-              Wszystkie nowe auta z bazy Motolii w tym programie automatycznie otrzymają ten rabat bez konieczności ręcznego przypinania ofert.
+              Podstawowy rabat floty, stosowany jako domyślna zniżka programu pracowniczego.
             </p>
+          </div>
+
+          {/* Reguła zasięgu katalogu (Scope Rules) */}
+          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
+            <h4 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+              Reguła zasięgu katalogu (Scope Rules)
+            </h4>
+
+            <div className="space-y-2">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={scopeIncludeNew}
+                  onChange={(e) => setScopeIncludeNew(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="text-xs">
+                  <span className="font-medium text-gray-900">
+                    Automatycznie uwzględniaj nowe pojazdy z katalogu Motolii (condition = NEW)
+                  </span>
+                  <p className="text-gray-500">
+                    Katalog pracowniczy aktualizuje się dynamicznie wraz ze stokiem nowych aut, bez konieczności ręcznego przypinania ofert.
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={scopeIncludeRental}
+                  onChange={(e) => setScopeIncludeRental(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="text-xs">
+                  <span className="font-medium text-gray-900">
+                    Automatycznie uwzględniaj oferty najmu długoterminowego
+                  </span>
+                  <p className="text-gray-500">
+                    Flaga przygotowana pod integrację matryc najmu (Etap E3).
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              <Label htmlFor="scope-discount" className="text-xs">Dedykowany rabat reguły zasięgu (%) - opcjonalny</Label>
+              <Input
+                id="scope-discount"
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="Np. 8.0 (jeśli puste, obowiązuje domyślny rabat floty)"
+                value={scopeDiscountPct}
+                onChange={(e) => setScopeDiscountPct(e.target.value)}
+                className="text-xs h-8"
+              />
+              <p className="text-2xs text-gray-500">
+                Hierarchia cen: Własna cena oferty &gt; Rabat wyjątku &gt; Rabat reguły zasięgu &gt; Domyślny rabat floty &gt; Cena katalogowa.
+              </p>
+            </div>
           </div>
 
           <div className="pt-2 flex items-center gap-3">

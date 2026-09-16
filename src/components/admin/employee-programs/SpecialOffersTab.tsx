@@ -33,6 +33,7 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
   const [discountPct, setDiscountPct] = useState<string>('8.0');
   const [customPricePln, setCustomPricePln] = useState<string>('');
   const [selectedPolicyId, setSelectedPolicyId] = useState<string>('');
+  const [isExcluded, setIsExcluded] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch offers in program
@@ -55,7 +56,7 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
   });
 
   const addOfferMutation = useMutation({
-    mutationFn: (payload: { listingId: string; customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null }) =>
+    mutationFn: (payload: { listingId: string; customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null; isExcluded?: boolean }) =>
       employeeAdminApi.createOffer(programId, payload, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employee-offers', programId] });
@@ -66,6 +67,7 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
       setCustomPricePln('');
       setDiscountPct('8.0');
       setSelectedPolicyId('');
+      setIsExcluded(false);
     },
     onError: (err: unknown) => {
       setError(err instanceof Error ? err.message : 'Błąd podczas przypisywania oferty');
@@ -124,9 +126,10 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
 
     addOfferMutation.mutate({
       listingId: selectedListing.id,
-      customPricePln: priceNum && !isNaN(priceNum) ? priceNum : null,
-      discountPct: discNum && !isNaN(discNum) ? discNum : null,
-      benefitPolicyId: selectedPolicyId || null
+      customPricePln: isExcluded ? null : (priceNum && !isNaN(priceNum) ? priceNum : null),
+      discountPct: isExcluded ? null : (discNum && !isNaN(discNum) ? discNum : null),
+      benefitPolicyId: isExcluded ? null : (selectedPolicyId || null),
+      isExcluded
     });
   };
 
@@ -201,9 +204,15 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
                       );
                     })()}
                     <div className="absolute top-2.5 left-2.5">
-                      <Badge className="bg-emerald-600 text-white font-medium shadow-xs">
-                        Rabat: {offer.discountPct ? `${offer.discountPct}%` : 'Dedykowany'}
-                      </Badge>
+                      {offer.isExcluded ? (
+                        <Badge className="bg-red-600 text-white font-medium shadow-xs">
+                          Wykluczenie ze stoku
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-emerald-600 text-white font-medium shadow-xs">
+                          Rabat: {offer.discountPct ? `${offer.discountPct}%` : 'Dedykowany'}
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
@@ -341,72 +350,97 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
                 </div>
               </div>
 
-              {/* Krok 2: Ustalenie ceny i rabatu */}
+              {/* Krok 2: Ustalenie ceny i rabatu lub wykluczenia */}
               {selectedListing && (
-                <div className="p-3.5 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3">
-                  <div className="text-xs font-semibold text-blue-900 uppercase tracking-wide">
-                    2. Dedykowana cena dla pracowników
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label htmlFor="offer-discount" className="text-xs">
-                        Rabat procentowy (%)
-                      </Label>
-                      <Input
-                        id="offer-discount"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={discountPct}
-                        onChange={(e) => handleDiscountChange(e.target.value)}
-                        placeholder="8.0"
+                <div className="space-y-3">
+                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isExcluded}
+                        onChange={(e) => setIsExcluded(e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
                       />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label htmlFor="offer-price" className="text-xs">
-                        Cena w programie (PLN brutto)
-                      </Label>
-                      <Input
-                        id="offer-price"
-                        type="number"
-                        value={customPricePln}
-                        onChange={(e) => handleCustomPriceChange(e.target.value)}
-                        placeholder="np. 99000"
-                      />
-                    </div>
+                      <div className="text-xs">
+                        <span className="font-semibold text-gray-900">
+                          Wyklucz ten pojazd ze stoku programu pracowniczego
+                        </span>
+                        <p className="text-gray-500">
+                          Pojazd nie pojawi się w katalogu pracownika, nawet jeśli pasuje do reguły zasięgu (condition = NEW).
+                        </p>
+                      </div>
+                    </label>
                   </div>
 
-                  <div className="text-[11px] text-gray-600 flex justify-between pt-1">
-                    <span>Cena bazowa Motolii: {selectedListing.pricePln.toLocaleString('pl-PL')} zł</span>
-                    {customPricePln && parseInt(customPricePln, 10) < selectedListing.pricePln && (
-                      <span className="font-medium text-emerald-700">
-                        Oszczędność: {(selectedListing.pricePln - parseInt(customPricePln, 10)).toLocaleString('pl-PL')} zł
-                      </span>
-                    )}
-                  </div>
+                  {!isExcluded ? (
+                    <>
+                      <div className="p-3.5 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3">
+                        <div className="text-xs font-semibold text-blue-900 uppercase tracking-wide">
+                          2. Dedykowana cena dla pracowników
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label htmlFor="offer-discount" className="text-xs">
+                              Rabat procentowy (%)
+                            </Label>
+                            <Input
+                              id="offer-discount"
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              value={discountPct}
+                              onChange={(e) => handleDiscountChange(e.target.value)}
+                              placeholder="8.0"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label htmlFor="offer-price" className="text-xs">
+                              Cena w programie (PLN brutto)
+                            </Label>
+                            <Input
+                              id="offer-price"
+                              type="number"
+                              value={customPricePln}
+                              onChange={(e) => handleCustomPriceChange(e.target.value)}
+                              placeholder="np. 99000"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="text-[11px] text-gray-600 flex justify-between pt-1">
+                          <span>Cena bazowa Motolii: {selectedListing.pricePln.toLocaleString('pl-PL')} zł</span>
+                          {customPricePln && parseInt(customPricePln, 10) < selectedListing.pricePln && (
+                            <span className="font-medium text-emerald-700">
+                              Oszczędność: {(selectedListing.pricePln - parseInt(customPricePln, 10)).toLocaleString('pl-PL')} zł
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Krok 3: Pakiet benefitów */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="offer-policy">3. Pakiet benefitów (opcjonalnie)</Label>
+                        <select
+                          id="offer-policy"
+                          value={selectedPolicyId}
+                          onChange={(e) => setSelectedPolicyId(e.target.value)}
+                          className="w-full h-9 px-3 py-1 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Brak dedykowanego pakietu benefitu</option>
+                          {policies.map((p: EmployeeBenefitPolicy) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} {p.moyaCardAmount ? `(Karta Moya: ${p.moyaCardAmount} zł)` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               )}
-
-              {/* Krok 3: Pakiet benefitów */}
-              <div className="space-y-1.5">
-                <Label htmlFor="offer-policy">3. Pakiet benefitów (opcjonalnie)</Label>
-                <select
-                  id="offer-policy"
-                  value={selectedPolicyId}
-                  onChange={(e) => setSelectedPolicyId(e.target.value)}
-                  className="w-full h-9 px-3 py-1 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Brak dedykowanego pakietu benefitu</option>
-                  {policies.map((p: EmployeeBenefitPolicy) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} {p.moyaCardAmount ? `(Karta Moya: ${p.moyaCardAmount} zł)` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <DialogFooter>

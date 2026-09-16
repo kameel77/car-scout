@@ -107,6 +107,26 @@ describe('Employee Inquiries - Schema Validation (Zod)', () => {
     });
     expect(badKey.success).toBe(false);
   });
+
+  it('accepts both CUID and listing- prefixed virtual offer IDs', () => {
+    const cuidOffer = createInquirySchema.safeParse({
+      ...validBase,
+      offerId: 'clw1234567890123456789012',
+    });
+    expect(cuidOffer.success).toBe(true);
+
+    const virtualOffer = createInquirySchema.safeParse({
+      ...validBase,
+      offerId: 'listing-clw1234567890123456789012',
+    });
+    expect(virtualOffer.success).toBe(true);
+
+    const invalidOffer = createInquirySchema.safeParse({
+      ...validBase,
+      offerId: 'invalid offer with spaces!',
+    });
+    expect(invalidOffer.success).toBe(false);
+  });
 });
 
 describe('Employee Inquiries - Security & CSRF Enforcement', () => {

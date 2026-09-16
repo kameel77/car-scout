@@ -76,7 +76,7 @@ describe('Employee Catalog Real DB & Redis Integration Tests (P3b)', () => {
     });
     await prisma.listing.deleteMany({
       where: {
-        id: { in: ['test-listing-yaris', 'test-listing-tayron', 'test-listing-bmw', 'test-listing-archived', 'test-listing-inactive'] }
+        id: { in: ['test-listing-yaris', 'test-listing-tayron', 'test-listing-bmw', 'test-listing-archived', 'test-listing-inactive', 'test-listing-corolla', 'test-listing-rav4'] }
       }
     });
   }
@@ -574,4 +574,345 @@ describe('Employee Catalog Real DB & Redis Integration Tests (P3b)', () => {
     expect(freshListing1?.updatedAt.toISOString()).toBe(listing1InitialUpdatedAt.toISOString());
     expect(freshListing2?.updatedAt.toISOString()).toBe(listing2InitialUpdatedAt.toISOString());
   });
+
+  describe('Stage E1: Scope Rules (Katalog Pełny) and Exception Handling', () => {
+    let corollaOfferId: string;
+
+    beforeAll(async () => {
+      // Seed NEW Listings
+      await prisma.listing.create({
+        data: {
+          id: 'test-listing-corolla',
+          make: 'Toyota',
+          model: 'Corolla',
+          version: '1.8 Hybrid Comfort',
+          productionYear: 2026,
+          mileageKm: 0,
+          pricePln: 100000,
+          fuelType: 'HYBRID',
+          transmission: 'AUTOMATIC',
+          bodyType: 'SEDAN',
+          condition: 'NEW',
+          isReserved: false,
+          isArchived: false
+        }
+      });
+
+      await prisma.listing.create({
+        data: {
+          id: 'test-listing-rav4',
+          make: 'Toyota',
+          model: 'RAV4',
+          version: '2.5 Hybrid Selection',
+          productionYear: 2026,
+          mileageKm: 0,
+          pricePln: 180000,
+          fuelType: 'HYBRID',
+          transmission: 'AUTOMATIC',
+          bodyType: 'SUV',
+          condition: 'NEW',
+          isReserved: false,
+          isArchived: false
+        }
+      });
+    });
+
+    afterAll(async () => {
+      // Reset Program A scope rule
+      await prisma.employeeProgram.update({
+        where: { id: programAId },
+        data: {
+          scopeIncludeNew: false,
+          scopeDiscountPct: null
+        }
+      });
+      await prisma.employeeProgramOffer.deleteMany({
+        where: {
+          programId: programAId,
+          OR: [
+            { listingId: { in: ['test-listing-corolla', 'test-listing-rav4'] } },
+            { sourceType: 'RENTAL' }
+          ]
+        }
+      });
+    });
+
+    it('5. Enables scopeIncludeNew on Program A: NEW listings are automatically included with scope discount', async () => {
+      // Update Program A: enable scopeIncludeNew with 7% discount
+      await prisma.employeeProgram.update({
+        where: { id: programAId },
+        data: {
+          scopeIncludeNew: true,
+          scopeDiscountPct: 7.0
+        }
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+
+      // Program A has: Yaris (exception 8%), Tayron (exception 8%), Corolla (scope 7%), RAV4 (scope 7%)
+      // Exactly 4 offers, no duplicates!
+      expect(body.offers.length).toBe(4);
+
+      const corollaOffer = body.offers.find((o: any) => o.id === 'listing-test-listing-corolla');
+      expect(corollaOffer).toBeDefined();
+      expect(corollaOffer.vehicle.make).toBe('Toyota');
+      expect(corollaOffer.vehicle.model).toBe('Corolla');
+      expect(corollaOffer.pricing.listPricePln).toBe(100000);
+      expect(corollaOffer.pricing.employeePricePln).toBe(93000); // 100,000 * (1 - 0.07)
+      expect(corollaOffer.pricing.savingsPln).toBe(7000);
+      expect(corollaOffer.pricing.discountPct).toBe(7.0);
+
+      // Yaris is STILL present with its exception pricing (8%), NOT scope pricing (7%)
+      const yarisOffer = body.offers.find((o: any) => o.id === offerA1Id);
+      expect(yarisOffer).toBeDefined();
+      expect(yarisOffer.pricing.discountPct).toBe(8.0);
+      expect(yarisOffer.pricing.employeePricePln).toBe(66148);
+
+      // Verify no duplicate Yaris
+      const yarisMatches = body.offers.filter((o: any) => o.vehicle.model === 'Yaris');
+      expect(yarisMatches.length).toBe(1);
+    });
+
+    it('6. Exception overrides scope discount and deactivation safely falls back to scope rule', async () => {
+      // Create explicit exception offer for Corolla with 12% discount
+      const offer = await prisma.employeeProgramOffer.create({
+        data: {
+          programId: programAId,
+          sourceType: 'FINANCING',
+          listingId: 'test-listing-corolla',
+          discountPct: 12.0,
+          isActive: true
+        }
+      });
+      corollaOfferId = offer.id;
+
+      // 1) Fetch catalog: Corolla now uses the CUID and 12% discount
+      const resActive = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      const activeBody = JSON.parse(resActive.body);
+      const activeCorolla = activeBody.offers.find((o: any) => o.vehicle.model === 'Corolla');
+      expect(activeCorolla).toBeDefined();
+      expect(activeCorolla.id).toBe(corollaOfferId);
+      expect(activeCorolla.pricing.discountPct).toBe(12.0);
+      expect(activeCorolla.pricing.employeePricePln).toBe(88000);
+
+      // 2) Deactivate exception offer: isActive = false
+      await prisma.employeeProgramOffer.update({
+        where: { id: corollaOfferId },
+        data: { isActive: false }
+      });
+
+      // 3) Fetch catalog: Corolla is still returned via scope rule, but discount falls back to scopeDiscountPct (7%)!
+      const resInactive = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      const inactiveBody = JSON.parse(resInactive.body);
+      const inactiveCorolla = inactiveBody.offers.find((o: any) => o.vehicle.model === 'Corolla');
+      expect(inactiveCorolla).toBeDefined();
+      expect(inactiveCorolla.id).toBe('listing-test-listing-corolla');
+      expect(inactiveCorolla.pricing.discountPct).toBe(7.0);
+      expect(inactiveCorolla.pricing.employeePricePln).toBe(93000);
+    });
+
+    it('7. Exclusion (isExcluded: true, isActive: true) removes vehicle from catalog; deactivated exclusion (isActive: false) restores it', async () => {
+      // 1) Set exception to isExcluded = true, isActive = true -> vehicle is excluded
+      await prisma.employeeProgramOffer.update({
+        where: { id: corollaOfferId },
+        data: { isExcluded: true, isActive: true }
+      });
+
+      const resExcluded = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(resExcluded.statusCode).toBe(200);
+      const excludedBody = JSON.parse(resExcluded.body);
+
+      // Corolla must NOT be in the catalog at all
+      const corollaMatch = excludedBody.offers.find((o: any) => o.vehicle.model === 'Corolla');
+      expect(corollaMatch).toBeUndefined();
+
+      // Direct lookup of virtual listing ID should also return 404 when actively excluded
+      const resExcludedDirect = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers/listing-test-listing-corolla',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(resExcludedDirect.statusCode).toBe(404);
+
+      // 2) Deactivate exclusion: isActive = false -> exclusion is disabled, vehicle restores to catalog!
+      await prisma.employeeProgramOffer.update({
+        where: { id: corollaOfferId },
+        data: { isExcluded: true, isActive: false }
+      });
+
+      const resRestored = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(resRestored.statusCode).toBe(200);
+      const restoredBody = JSON.parse(resRestored.body);
+
+      const restoredCorolla = restoredBody.offers.find((o: any) => o.vehicle.model === 'Corolla');
+      expect(restoredCorolla).toBeDefined();
+      expect(restoredCorolla.id).toBe('listing-test-listing-corolla');
+
+      // Direct lookup also works again
+      const resRestoredDirect = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers/listing-test-listing-corolla',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(resRestoredDirect.statusCode).toBe(200);
+
+      // Clean up offer
+      await prisma.employeeProgramOffer.delete({
+        where: { id: corollaOfferId }
+      });
+    });
+
+    it('8. Keyset pagination works without P2025 across scope items and exceptions', async () => {
+      // Program A has: Yaris, Tayron, Corolla, RAV4
+      // Fetch page 1 with limit=2
+      const resPage1 = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers?limit=2',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(resPage1.statusCode).toBe(200);
+      const body1 = JSON.parse(resPage1.body);
+      expect(body1.offers.length).toBe(2);
+      expect(body1.nextCursor).toBeDefined();
+
+      // Fetch page 2 with nextCursor
+      const resPage2 = await app.inject({
+        method: 'GET',
+        url: `/api/employee/offers?limit=2&cursor=${body1.nextCursor}`,
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(resPage2.statusCode).toBe(200);
+      const body2 = JSON.parse(resPage2.body);
+      expect(body2.offers.length).toBe(2);
+
+      // Ensure no overlapping items between page 1 and page 2
+      const page1Ids = body1.offers.map((o: any) => o.id);
+      const page2Ids = body2.offers.map((o: any) => o.id);
+      for (const id of page1Ids) {
+        expect(page2Ids).not.toContain(id);
+      }
+    });
+
+    it('9. GET /api/employee/offers/:offerId resolves virtual listing ID (listing-{id})', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers/listing-test-listing-corolla',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.id).toBe('listing-test-listing-corolla');
+      expect(body.vehicle.model).toBe('Corolla');
+      expect(body.pricing.discountPct).toBe(7.0);
+      expect(body.pricing.employeePricePln).toBe(93000);
+    });
+
+    it('10. RENTAL offers (sourceType: RENTAL, listingId: null) are intentionally omitted from catalog in Stage E1', async () => {
+      // Seed a RENTAL offer with listingId = null on Program A
+      const rentalOffer = await prisma.employeeProgramOffer.create({
+        data: {
+          programId: programAId,
+          sourceType: 'RENTAL',
+          listingId: null,
+          discountPct: 0,
+          isActive: true
+        }
+      });
+
+      // 1) List endpoint: query returns 200 OK without crashing; RENTAL offer is intentionally omitted
+      const resList = await app.inject({
+        method: 'GET',
+        url: '/api/employee/offers',
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(resList.statusCode).toBe(200);
+      const listBody = JSON.parse(resList.body);
+      const rentalInList = listBody.offers.find((o: any) => o.id === rentalOffer.id);
+      expect(rentalInList).toBeUndefined();
+
+      // 2) Single offer endpoint: returns 404 (handled in E3 with rate matrix resolution)
+      const resSingle = await app.inject({
+        method: 'GET',
+        url: `/api/employee/offers/${rentalOffer.id}`,
+        headers: {
+          host: TEST_HOST,
+          origin: TEST_ORIGIN,
+          cookie: sessionCookieA
+        }
+      });
+      expect(resSingle.statusCode).toBe(404);
+
+      // Clean up
+      await prisma.employeeProgramOffer.delete({
+        where: { id: rentalOffer.id }
+      });
+    });
+  });
 });
+

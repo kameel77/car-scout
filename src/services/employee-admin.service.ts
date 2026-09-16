@@ -8,6 +8,9 @@ export interface EmployeeProgramSummary {
   slug: string;
   isActive: boolean;
   defaultDiscountPct: string | null;
+  scopeIncludeNew?: boolean;
+  scopeIncludeRental?: boolean;
+  scopeDiscountPct?: string | null;
   _count: {
     registrationCodes: number;
     offers: number;
@@ -60,6 +63,7 @@ export interface EmployeeProgramOffer {
   customPricePln: number | null;
   discountPct: string | null;
   benefitPolicyId: string | null;
+  isExcluded?: boolean;
   isActive: boolean;
   createdAt: string;
   listing?: {
@@ -176,7 +180,15 @@ export const employeeAdminApi = {
 
   updateProgram: (
     programId: string,
-    data: { name?: string; description?: string | null; defaultDiscountPct?: number | null; isActive?: boolean },
+    data: {
+      name?: string;
+      description?: string | null;
+      defaultDiscountPct?: number | null;
+      scopeIncludeNew?: boolean;
+      scopeIncludeRental?: boolean;
+      scopeDiscountPct?: number | null;
+      isActive?: boolean;
+    },
     token: string
   ) => {
     return request<{ program: any }>(
@@ -197,11 +209,7 @@ export const employeeAdminApi = {
     }>(`/api/admin/employee-programs/programs/${programId}/registration-codes?${q.toString()}`, {}, token);
   },
 
-  createCode: (
-    programId: string,
-    data: { label?: string | null; customCode?: string; expiresAt?: string | null },
-    token: string
-  ) => {
+  createCode: (programId: string, data: { label?: string | null; customCode?: string; expiresAt?: string | null }, token: string) => {
     return request<{ code: EmployeeRegistrationCode; rawCode: string }>(
       `/api/admin/employee-programs/programs/${programId}/registration-codes`,
       { method: 'POST', body: JSON.stringify(data) },
@@ -212,12 +220,12 @@ export const employeeAdminApi = {
   deactivateCode: (codeId: string, token: string) => {
     return request<{ code: EmployeeRegistrationCode }>(
       `/api/admin/employee-programs/registration-codes/${codeId}/deactivate`,
-      { method: 'PATCH' },
+      { method: 'POST' },
       token
     );
   },
 
-  // Benefit policies
+  // Benefit Policies
   listBenefitPolicies: (programId: string, token: string) => {
     return request<{ policies: EmployeeBenefitPolicy[] }>(
       `/api/admin/employee-programs/programs/${programId}/benefit-policies`,
@@ -228,7 +236,7 @@ export const employeeAdminApi = {
 
   createBenefitPolicy: (
     programId: string,
-    data: { name: string; moyaCardAmount?: number | null; fuelDiscount?: string | null; consultantCare: boolean; termsText?: string | null },
+    data: { name: string; moyaCardAmount?: number | null; fuelDiscount?: string | null; consultantCare?: boolean; termsText?: string | null },
     token: string
   ) => {
     return request<{ policy: EmployeeBenefitPolicy }>(
@@ -240,7 +248,7 @@ export const employeeAdminApi = {
 
   updateBenefitPolicy: (
     policyId: string,
-    data: Partial<{ name: string; moyaCardAmount: number | null; fuelDiscount: string | null; consultantCare: boolean; termsText: string | null; isActive: boolean }>,
+    data: { name?: string; moyaCardAmount?: number | null; fuelDiscount?: string | null; consultantCare?: boolean; termsText?: string | null; isActive?: boolean },
     token: string
   ) => {
     return request<{ policy: EmployeeBenefitPolicy }>(
@@ -258,9 +266,9 @@ export const employeeAdminApi = {
     );
   },
 
-  // Available Listings & Offers
+  // Available Listings (for offer picker)
   listAvailableListings: (programId: string, search: string = '', token: string) => {
-    const q = new URLSearchParams({ programId });
+    const q = new URLSearchParams();
     if (search) q.set('search', search);
     return request<{ listings: AvailableListing[] }>(
       `/api/admin/employee-programs/available-listings?${q.toString()}`,
@@ -269,6 +277,7 @@ export const employeeAdminApi = {
     );
   },
 
+  // Offers
   listOffers: (programId: string, params: { page?: number; limit?: number } = {}, token: string) => {
     const q = new URLSearchParams();
     if (params.page) q.set('page', String(params.page));
@@ -281,7 +290,7 @@ export const employeeAdminApi = {
 
   createOffer: (
     programId: string,
-    data: { listingId: string; customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null },
+    data: { listingId: string; customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null; isExcluded?: boolean },
     token: string
   ) => {
     return request<{ offer: EmployeeProgramOffer }>(
@@ -293,7 +302,7 @@ export const employeeAdminApi = {
 
   updateOffer: (
     offerId: string,
-    data: { customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null; isActive?: boolean },
+    data: { customPricePln?: number | null; discountPct?: number | null; benefitPolicyId?: string | null; isExcluded?: boolean; isActive?: boolean },
     token: string
   ) => {
     return request<{ offer: EmployeeProgramOffer }>(
