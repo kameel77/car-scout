@@ -199,7 +199,8 @@ describe('Employee Portal Rental API Client', () => {
     });
     vi.stubGlobal('fetch', fakeFetch);
 
-    const result = await fetchEmployeeRentalOfferDetails('/api', 'rental-kuga123');
+    const testOfferId = 'rental-kuga123'; // gitleaks:allow
+    const result = await fetchEmployeeRentalOfferDetails('/api', testOfferId);
     expect(result.rentalOptions).toHaveLength(2);
     expect(result.downPaymentOptions).toHaveLength(2);
     expect(result.downPaymentOptions?.[0]).toEqual({
