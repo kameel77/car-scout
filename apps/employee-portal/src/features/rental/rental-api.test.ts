@@ -133,9 +133,10 @@ describe('Employee Portal Rental API Client', () => {
     });
     vi.stubGlobal('fetch', fakeFetch);
 
-    const result = await fetchEmployeeRentalOfferDetails('/api', 'rental-clx123');
+    const testOfferId = 'rental-clx123'; // gitleaks:allow
+    const result = await fetchEmployeeRentalOfferDetails('/api', testOfferId);
     expect(result).toEqual(mockDetails);
-    expect(fakeFetch).toHaveBeenCalledWith('/api/employee/rental-offers/rental-clx123', {
+    expect(fakeFetch).toHaveBeenCalledWith(`/api/employee/rental-offers/${testOfferId}`, {
       method: 'GET',
       credentials: 'same-origin',
       signal: undefined,
