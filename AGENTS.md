@@ -12,6 +12,7 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 7. **Formatowanie treści**: Kiedy tworzysz lub edytujesz treści tekstowe, używaj zwykłych myślników ( - ) zamiast podwójnych/długich ( — ).
 8. **Treści SEO na motolia.pl**: Każda treść serwisu (artykuły CMS marek/modeli, filary finansowania, blog) musi być zgodna ze strategią linkowania i konwencjami z [docs/SEO_LINKING_STRATEGY_MOTOLIA.md](docs/SEO_LINKING_STRATEGY_MOTOLIA.md) (hierarchia marka - model - oferta, anchory z encją, zakaz linkowania wariantów finansowania i stron noindex, FAQ bez linków, nagłówki bez `?` poza FAQ).
 9. **Obowiązkowy Audyt Subagenta (Pre-Delivery Code Audit)**: Za każdym razem przy tworzeniu lub modyfikacji kodu, przed oddaniem zadania użytkownikowi, bezwzględnie wywołaj niezależnego subagenta audytora (`code_audit_subagent`) i uzyskaj werdykt `[APPROVED]` (zgodnie z protokołem w `~/.gemini/GEMINI.md`).
+10. **Prewencja Gitleaks i Statyczny Typecheck**: Zawsze przed commitem i audytem uruchamiaj `npx tsc --noEmit` we wszystkich zmodyfikowanych modułach (`backend/`, `apps/employee-portal/`, root) - pamiętaj, że `npm test` w Vitest transpiluje kod bez type-checkingu i nie wykrywa błędów TypeScript! W plikach testowych i mockach nie używaj ciągów przypominających klucze API / hashe (np. `rental-kuga123`); jeśli specyficzny format jest wymagany, dodaj `// gitleaks:allow` w tej samej linii.
 
 ## 2. Technologie i Architektura
 - **Backend**: Fastify, Prisma, PostgreSQL.
@@ -69,7 +70,7 @@ Przewodnik i zasady dla agentów AI (Antigravity, Cursor itp.) pracujących nad 
 ## 5. Development i Build
 - **Backend dev**: `npm run dev` w katalogu `backend/`.
 - **Frontend dev**: `npm run dev` w głównym katalogu repozytorium.
-- Uruchamiaj testy (jeśli istnieją) przed zakończeniem zadania.
+- Uruchamiaj testy oraz pełny typecheck (`npx tsc --noEmit` w `backend/` oraz `apps/employee-portal/`) przed zakończeniem zadania.
 
 ## 6. Checklist pre-deployment (infrastruktura)
 Przed każdym deploymentem lub zmianą w Docker/Traefik/Nginx:

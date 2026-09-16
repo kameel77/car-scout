@@ -5,6 +5,7 @@ import {
   resolveRentalRateSource,
   getLowestRateGross,
   isRentalAllowedB2BOnly,
+  RentalRateSource,
   ContractPartyOption,
   ResolvedRentalRateSource,
   EmployeeRentalCalculatedRow
@@ -211,7 +212,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
           if (eligibleAssignments.length === 0) return null;
 
           let bestGrossRate: number | null = null;
-          let bestRateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' = 'PUBLIC_MATRIX';
+          let bestRateSource: RentalRateSource = 'PUBLIC_MATRIX';
           let bestIsB2b = false;
 
           for (const asg of eligibleAssignments) {
