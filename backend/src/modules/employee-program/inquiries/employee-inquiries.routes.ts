@@ -3,10 +3,11 @@ import { z } from 'zod';
 import { verifyEmployeeAuth, verifyEmployeeCsrf } from '../auth/employee-auth.middleware.js';
 import { generateReference } from '../../../utils/reference-generator.js';
 import { calculateOfferPricing } from '../pricing/employee-pricing.utils.js';
+import { resolveRentalRateSource } from '../rental/employee-rental-pricing.utils.js';
 
 export interface InquiryCalculationSnapshot {
   offerId: string;
-  sourceType: string;
+  sourceType: 'FINANCING' | 'RENTAL';
   vehicle: {
     make: string;
     model: string;
@@ -14,12 +15,24 @@ export interface InquiryCalculationSnapshot {
     productionYear: number;
     primaryImageUrl: string | null;
   };
-  pricing: {
+  pricing?: {
     listPricePln: number;
     employeePricePln: number;
     savingsPln: number;
     discountPct: number;
-  };
+  } | null;
+  rental?: {
+    rateSource: 'EMPLOYEE_MATRIX' | 'PUBLIC_MATRIX';
+    matrixVersionId: string | null;
+    rentalCompanyName: string;
+    assignmentId: string;
+    contractMonths: number;
+    annualMileageKm: number;
+    initialPaymentPct: number;
+    initialPaymentAmountNet: number;
+    monthlyRateNet: number;
+    monthlyRateGross: number;
+  } | null;
 }
 
 export const createInquirySchema = z.object({
@@ -38,7 +51,14 @@ export const createInquirySchema = z.object({
     invalid_type_error: 'Zgoda na przetwarzanie danych osobowych musi być wartością logiczną'
   }).refine((val) => val === true, {
     message: 'Wymagana jest zgoda na przetwarzanie danych osobowych'
-  })
+  }),
+  rentalSelection: z.object({
+    assignmentId: z.string().min(1, 'Identyfikator przypisania jest wymagany'),
+    contractMonths: z.number().int().positive('Okres umowy musi być dodatni'),
+    annualMileageKm: z.number().int().positive('Roczny przebieg musi być dodatni'),
+    initialPaymentPct: z.number().min(0).max(100),
+    initialPaymentAmountNet: z.number().min(0).default(0)
+  }).optional()
 }).strip().superRefine((data, ctx) => {
   if (data.contractParty === 'EMPLOYEE_B2B' || data.contractParty === 'EMPLOYER_COMPANY') {
     if (!data.nip || data.nip.length < 10 || data.nip.length > 15) {
@@ -46,6 +66,16 @@ export const createInquirySchema = z.object({
         code: z.ZodIssueCode.custom,
         path: ['nip'],
         message: 'NIP firmy (10-15 znaków) jest wymagany dla działalności gospodarczej i firmy pracodawcy'
+      });
+    }
+  }
+
+  if (data.offerId.startsWith('rental-')) {
+    if (!data.rentalSelection) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rentalSelection'],
+        message: 'Parametry najmu (rentalSelection) są wymagane dla oferty najmu'
       });
     }
   }
@@ -126,8 +156,10 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
             status: existing.status,
             referenceNumber: existing.lead?.referenceNumber || null,
             createdAt: existing.createdAt.toISOString(),
+            sourceType: snap?.sourceType ?? 'FINANCING',
             vehicle: snap?.vehicle ?? null,
-            pricing: snap?.pricing ?? null
+            pricing: snap?.pricing ?? null,
+            rental: snap?.rental ?? null
           }
         });
       } else {
@@ -145,15 +177,137 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     for (let attempt = 0; attempt < MAX_REF_RETRIES; attempt++) {
       try {
         createdInquiry = await fastify.prisma.$transaction(async (tx) => {
+          let sourceType: 'FINANCING' | 'RENTAL' = 'FINANCING';
           let targetListingId: string | null = null;
+          let targetRentalVehicleId: string | null = null;
           let vehicleSnapshot: any = null;
           let pricing: any = null;
+          let rentalSnapshot: any = null;
           let benefitSnapshot: any = null;
           let companyName = 'Firma';
           let programName = 'Program pracowniczy';
 
-          // 1. Weryfikacja oferty (Scenariusz A: Wirtualne ID ze stoku listing-{id} vs Scenariusz B: Dedykowana oferta)
-          if (body.offerId.startsWith('listing-')) {
+          // 1. Weryfikacja oferty (Scenariusz A: Najem rental-{id} vs Scenariusz B: Stok listing-{id} vs Scenariusz C: Dedykowana oferta)
+          if (body.offerId.startsWith('rental-')) {
+            sourceType = 'RENTAL';
+            const vehicleId = body.offerId.replace(/^rental-/, '');
+            const program = await tx.employeeProgram.findUnique({
+              where: { id: employee.programId },
+              select: {
+                id: true,
+                name: true,
+                scopeIncludeRental: true,
+                company: { select: { id: true, name: true } },
+                matrixSets: {
+                  include: {
+                    matrixSet: {
+                      include: {
+                        versions: {
+                          where: { status: 'PUBLISHED' },
+                          include: { rows: true }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            });
+
+            if (!program || !program.scopeIncludeRental) {
+              const notFoundErr: any = new Error('Oferta nie została znaleziona');
+              notFoundErr.statusCode = 404;
+              throw notFoundErr;
+            }
+
+            companyName = program.company?.name || 'Firma';
+            programName = program.name || 'Program pracowniczy';
+
+            const rentalSel = body.rentalSelection!;
+            const vehicle = await tx.rentalVehicle.findFirst({
+              where: {
+                id: vehicleId,
+                isActive: true,
+                isPublished: true
+              },
+              include: {
+                rentalAssignments: {
+                  where: {
+                    id: rentalSel.assignmentId,
+                    isActive: true,
+                    employeeProgramOffers: {
+                      none: {
+                        programId: employee.programId,
+                        isExcluded: true,
+                        isActive: true
+                      }
+                    }
+                  },
+                  include: {
+                    rentalCompany: true,
+                    matrixEntries: true,
+                    employeeMatrixRows: true
+                  }
+                }
+              }
+            });
+
+            if (!vehicle || (vehicle.rentalAssignments || []).length === 0) {
+              const notFoundErr: any = new Error('Oferta nie została znaleziona');
+              notFoundErr.statusCode = 404;
+              throw notFoundErr;
+            }
+
+            const assignment = vehicle.rentalAssignments[0];
+            targetRentalVehicleId = vehicle.id;
+
+            // Re-resolve rates (§2.1)
+            const resolved = resolveRentalRateSource({
+              assignment,
+              programMatrixSets: program.matrixSets,
+              contractParty: body.contractParty
+            });
+
+            // Find matching row
+            const matchedRow = resolved.rows.find(
+              (r) =>
+                r.contractMonths === rentalSel.contractMonths &&
+                r.annualMileageKm === rentalSel.annualMileageKm &&
+                Math.abs(r.initialPaymentPct - rentalSel.initialPaymentPct) < 0.01 &&
+                Math.abs(r.initialPaymentAmountNet - (rentalSel.initialPaymentAmountNet || 0)) < 1
+            );
+
+            if (!matchedRow) {
+              const conflictErr: any = new Error('Wybrany wariant nie jest już dostępny');
+              conflictErr.statusCode = 409;
+              throw conflictErr;
+            }
+
+            const rawImages = Array.isArray(vehicle.imageUrls) ? vehicle.imageUrls : [];
+            vehicleSnapshot = {
+              make: vehicle.make,
+              model: vehicle.model,
+              version: vehicle.version ?? null,
+              productionYear: vehicle.productionYear ?? 2026,
+              primaryImageUrl: vehicle.primaryImageUrl || (rawImages.length > 0 ? rawImages[0] : null)
+            };
+
+            rentalSnapshot = {
+              rateSource: resolved.rateSource,
+              matrixVersionId: resolved.matrixVersionId,
+              rentalCompanyName: assignment.rentalCompany?.name || '',
+              assignmentId: assignment.id,
+              contractMonths: matchedRow.contractMonths,
+              annualMileageKm: matchedRow.annualMileageKm,
+              initialPaymentPct: matchedRow.initialPaymentPct,
+              initialPaymentAmountNet: matchedRow.initialPaymentAmountNet,
+              monthlyRateNet: matchedRow.monthlyRateNet,
+              monthlyRateGross: matchedRow.monthlyRateGross
+            };
+
+            pricing = null;
+            benefitSnapshot = null;
+          } else if (body.offerId.startsWith('listing-')) {
+            sourceType = 'FINANCING';
             const listingId = body.offerId.replace(/^listing-/, '');
             const program = await tx.employeeProgram.findUnique({
               where: { id: employee.programId },
@@ -295,25 +449,29 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
           }
 
           // 2. Weryfikacja dopuszczalnych stron umowy (Semantyka ANY / Suma z §3.4)
-          const overrides = await tx.employeeProductOverride.findMany({
-            where: { programId: employee.programId, isEnabled: true },
-            select: { allowedContractParties: true }
-          });
+          // Wyłącznie dla ofert FINANCING - w najmie konsument korzysta ze stawek publicznych
+          if (sourceType === 'FINANCING') {
+            const overrides = await tx.employeeProductOverride.findMany({
+              where: { programId: employee.programId, isEnabled: true },
+              select: { allowedContractParties: true }
+            });
 
-          if (overrides.length > 0) {
-            const allowedParties = new Set(overrides.flatMap(o => o.allowedContractParties));
-            if (!allowedParties.has(body.contractParty)) {
-              const badRequestErr: any = new Error('Wybrana strona umowy nie jest dozwolona w tym programie');
-              badRequestErr.statusCode = 400;
-              throw badRequestErr;
+            if (overrides.length > 0) {
+              const allowedParties = new Set(overrides.flatMap(o => o.allowedContractParties));
+              if (!allowedParties.has(body.contractParty)) {
+                const badRequestErr: any = new Error('Wybrana strona umowy nie jest dozwolona w tym programie');
+                badRequestErr.statusCode = 400;
+                throw badRequestErr;
+              }
             }
           }
 
           const calculationSnapshot: InquiryCalculationSnapshot = {
             offerId: body.offerId,
-            sourceType: 'FINANCING',
+            sourceType,
             vehicle: vehicleSnapshot,
-            pricing
+            pricing,
+            rental: rentalSnapshot
           };
 
           // 4. Przygotowanie leada do CRM
@@ -326,21 +484,41 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
           const partyLabel = partyLabels[body.contractParty] || body.contractParty;
           const nipText = body.contractParty !== 'CONSUMER' && body.nip ? `, NIP: ${body.nip}` : '';
           const notesText = body.notes ? ` Uwagi: ${body.notes}` : '';
-          const leadMessage = `[Program: ${companyName} / ${programName}] Zapytanie o: ${vehicleSnapshot.make} ${vehicleSnapshot.model}${vehicleSnapshot.version ? ` ${vehicleSnapshot.version}` : ''} (${vehicleSnapshot.productionYear}). Strona umowy: ${partyLabel}${nipText}. Cena pracownicza: ${pricing.employeePricePln} zł (katalogowa: ${pricing.listPricePln} zł, rabat: ${pricing.discountPct}%).${notesText}`;
+
+          let leadMessage: string;
+          if (sourceType === 'RENTAL') {
+            leadMessage = `[Program: ${companyName} / ${programName}] Zapytanie o najem: ${vehicleSnapshot.make} ${vehicleSnapshot.model} (${vehicleSnapshot.productionYear}). Dostawca: ${rentalSnapshot.rentalCompanyName}. Warunki: ${rentalSnapshot.contractMonths} mies., ${rentalSnapshot.annualMileageKm} km/rok, wpłata ${rentalSnapshot.initialPaymentPct}% (${rentalSnapshot.initialPaymentAmountNet} zł netto). Rata: ${rentalSnapshot.monthlyRateNet} zł netto / ${rentalSnapshot.monthlyRateGross} zł brutto/mies. Strona umowy: ${partyLabel}${nipText}.${notesText}`;
+          } else {
+            leadMessage = `[Program: ${companyName} / ${programName}] Zapytanie o: ${vehicleSnapshot.make} ${vehicleSnapshot.model}${vehicleSnapshot.version ? ` ${vehicleSnapshot.version}` : ''} (${vehicleSnapshot.productionYear}). Strona umowy: ${partyLabel}${nipText}. Cena pracownicza: ${pricing.employeePricePln} zł (katalogowa: ${pricing.listPricePln} zł, rabat: ${pricing.discountPct}%).${notesText}`;
+          }
+
+          const leadData: any = {
+            name: body.contactName,
+            email: body.contactEmail,
+            phone: body.contactPhone,
+            leadType: 'employee',
+            status: 'new',
+            referenceNumber,
+            message: leadMessage,
+            consentPrivacyAt: new Date(),
+            consentMarketingAt: null
+          };
+
+          if (sourceType === 'RENTAL') {
+            leadData.listingId = null;
+            leadData.rentalVehicleId = targetRentalVehicleId;
+            leadData.rentalCompanyName = rentalSnapshot.rentalCompanyName;
+            leadData.rentalContractMonths = rentalSnapshot.contractMonths;
+            leadData.rentalAnnualMileageKm = rentalSnapshot.annualMileageKm;
+            leadData.rentalInitialPaymentPct = rentalSnapshot.initialPaymentPct;
+            leadData.rentalInitialPaymentAmountNet = rentalSnapshot.initialPaymentAmountNet;
+            leadData.rentalMonthlyRate = rentalSnapshot.monthlyRateNet;
+          } else {
+            leadData.listingId = targetListingId;
+          }
 
           const lead = await tx.lead.create({
-            data: {
-              name: body.contactName,
-              email: body.contactEmail,
-              phone: body.contactPhone,
-              listingId: targetListingId,
-              leadType: 'employee',
-              status: 'new',
-              referenceNumber,
-              message: leadMessage,
-              consentPrivacyAt: new Date(),
-              consentMarketingAt: null
-            }
+            data: leadData
           });
 
           // 5. Utworzenie zgłoszenia pracownika
@@ -398,8 +576,10 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
                     status: raceInquiry.status,
                     referenceNumber: raceInquiry.lead?.referenceNumber || null,
                     createdAt: raceInquiry.createdAt.toISOString(),
+                    sourceType: snap?.sourceType ?? 'FINANCING',
                     vehicle: snap?.vehicle ?? null,
-                    pricing: snap?.pricing ?? null
+                    pricing: snap?.pricing ?? null,
+                    rental: snap?.rental ?? null
                   }
                 });
               } else {
@@ -438,8 +618,10 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
         status: createdInquiry.status,
         referenceNumber: createdInquiry.lead?.referenceNumber || null,
         createdAt: createdInquiry.createdAt.toISOString(),
+        sourceType: snap?.sourceType ?? 'FINANCING',
         vehicle: snap?.vehicle ?? null,
-        pricing: snap?.pricing ?? null
+        pricing: snap?.pricing ?? null,
+        rental: snap?.rental ?? null
       }
     });
   });
@@ -493,8 +675,10 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
         contactPhone: inq.contactPhone,
         nip: inq.nip,
         notes: inq.notes,
+        sourceType: snap?.sourceType ?? 'FINANCING',
         vehicle: snap?.vehicle ?? null,
         pricing: snap?.pricing ?? null,
+        rental: snap?.rental ?? null,
         benefit: inq.benefitSnapshot
       };
     });

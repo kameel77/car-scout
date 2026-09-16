@@ -127,6 +127,58 @@ describe('Employee Inquiries - Schema Validation (Zod)', () => {
     });
     expect(invalidOffer.success).toBe(false);
   });
+
+  it('requires rentalSelection when offerId starts with rental-', () => {
+    const missingRentalSelection = createInquirySchema.safeParse({
+      ...validBase,
+      offerId: 'rental-rv-12345',
+    });
+    expect(missingRentalSelection.success).toBe(false);
+    if (!missingRentalSelection.success) {
+      expect(missingRentalSelection.error.errors[0].message).toContain('rentalSelection');
+    }
+
+    const validRental = createInquirySchema.safeParse({
+      ...validBase,
+      offerId: 'rental-rv-12345',
+      rentalSelection: {
+        assignmentId: 'asg-1',
+        contractMonths: 36,
+        annualMileageKm: 15000,
+        initialPaymentPct: 10,
+        initialPaymentAmountNet: 0
+      }
+    });
+    expect(validRental.success).toBe(true);
+  });
+
+  it('rejects invalid rentalSelection parameters (e.g. non-positive months or mileage)', () => {
+    const badMonths = createInquirySchema.safeParse({
+      ...validBase,
+      offerId: 'rental-rv-12345',
+      rentalSelection: {
+        assignmentId: 'asg-1',
+        contractMonths: 0,
+        annualMileageKm: 15000,
+        initialPaymentPct: 10,
+        initialPaymentAmountNet: 0
+      }
+    });
+    expect(badMonths.success).toBe(false);
+
+    const badMileage = createInquirySchema.safeParse({
+      ...validBase,
+      offerId: 'rental-rv-12345',
+      rentalSelection: {
+        assignmentId: 'asg-1',
+        contractMonths: 36,
+        annualMileageKm: -5000,
+        initialPaymentPct: 10,
+        initialPaymentAmountNet: 0
+      }
+    });
+    expect(badMileage.success).toBe(false);
+  });
 });
 
 describe('Employee Inquiries - Security & CSRF Enforcement', () => {
