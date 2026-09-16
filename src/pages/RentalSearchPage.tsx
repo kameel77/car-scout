@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { ProgressiveListingGrid } from '@/components/ProgressiveListingGrid';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -31,7 +31,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
-import { FinancingContentSection } from '@/components/FinancingContentSection';
+
+// The financing article and FAQ are below the catalog. Keep their accordion,
+// markdown renderer and API request out of the initial rental route chunk.
+const FinancingContentSection = lazy(() =>
+  import('@/components/FinancingContentSection').then(({ FinancingContentSection: Component }) => ({ default: Component })),
+);
 
 /* ── Helpers ── */
 
@@ -870,7 +875,11 @@ export default function RentalSearchPage() {
           </div>
         )}
 
-        <FinancingContentSection type="wynajem" />
+        <Suspense
+          fallback={<div className="container mt-12 mb-8 text-sm text-muted-foreground" role="status">{t('common.loading')}</div>}
+        >
+          <FinancingContentSection type="wynajem" />
+        </Suspense>
       </main>
       <ScrollToTopButton />
       <Footer />

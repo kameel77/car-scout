@@ -15,6 +15,7 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 - [ ] Panel administratora: wybór partnera finansowego przy dodawaniu nowego produktu kredytowego (np. Inbank, Produkt własny) wraz z konfiguracją widoczności na karcie oferty.
 
 ## 3. Optymalizacje
+- [x] **Odłączenie sekcji FAQ/treści finansowania od initial route chunka najmu**: `FinancingContentSection` jest ładowany asynchronicznie dopiero pod listą ofert, dzięki czemu accordion, markdown i `/api/faq?page=financing` nie tworzą krytycznego łańcucha dla pierwszego widoku.
 - [x] **Wąski preload entry chunka katalogu najmu**: Na `/wynajem-dlugoterminowy` preloadowany jest wyłącznie lazy entry `RentalSearchPage`, bez rekurencyjnego preloadowania całego grafu zależności. Celem jest skrócenie opóźnienia odkrycia pierwszej karty LCP bez ponownego obciążania ścieżki krytycznej fan-outem `modulepreload`.
 - [x] Warunkowe chunki finansowania i formularza w `SearchPage`; harmonogram GTM po pierwszych kartach, z cleanupem i zachowaniem Consent Mode. Oszczędność statycznego JS `/samochody`: 37 377 B gzip w porównaniu buildów Motolii. Przegląd końcowy punktów 2-3 i pomiar produkcyjny są osobnymi bramkami.
 - [x] Wcześniejsze publiczne pobieranie `/samochody` z HTML oraz bezpieczne współdzielenie odpowiedzi z klientem (zgodność parametrów/originu, wyłączenie dla autoryzacji, ochrona filtrowanych URL-i w cache).

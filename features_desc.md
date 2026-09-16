@@ -5,6 +5,7 @@ Każda nowa funkcjonalność lub zmiana zachowania istniejącej powinna mieć tu
 
 ## Wcześniejsze pobieranie ofert katalogu
 - Na `/wynajem-dlugoterminowy` HTML preładuje wyłącznie entry lazy chunka tej trasy. Dzięki temu pobieranie widoku może rozpocząć się równolegle z głównym bundlem, bez powrotu do pełnego rekurencyjnego `modulepreload`, który wcześniej konkurował o pasmo z HTML i obrazem LCP.
+- Sekcja treści finansowania i FAQ na `/wynajem-dlugoterminowy` jest ładowana dopiero po katalogu, ponieważ znajduje się pod listą ofert. Jej chunk i zapytanie FAQ nie blokują już pierwszego widoku ani LCP.
 - `/samochody` nie pobiera od razu kalkulatora finansowania, sekcji artykułu ani formularza powiadomień. Są pobierane tylko wtedy, gdy dana sekcja jest potrzebna; nagłówek, lead i pierwsze karty pozostają poza tymi granicami ładowania.
 - Na trasach katalogu GTM rozpoczyna ładowanie po zamontowaniu kart i dwóch klatkach animacji, po wczesnej interakcji lub najpóźniej po 3,5 s. Pozostałe strony korzystają z zakończenia ładowania dokumentu. Tag Assistant, kolejka zdarzeń oraz domyślne zgody pozostają zachowane. Thulium uruchamiane przez GTM korzysta z tej samej kolejności.
 - Domyślne wejście na `/samochody`, `/nowe` i `/uzywane` rozpoczyna publiczne zapytanie o oferty już z HTML, przed uruchomieniem Reacta.
