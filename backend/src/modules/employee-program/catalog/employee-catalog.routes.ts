@@ -34,11 +34,13 @@ function formatListingOffer(
   listing: any,
   exceptionOffer: any | null | undefined,
   programScopeDiscountPct: number | { toNumber(): number } | null | undefined,
-  programDefaultDiscountPct: number | { toNumber(): number } | null | undefined
+  programDefaultDiscountPct: number | { toNumber(): number } | null | undefined,
+  isDetail: boolean = false
 ): FormattedOffer {
   const listPrice = listing.pricePln ?? 0;
   const rawImages = Array.isArray(listing.imageUrls) ? listing.imageUrls : [];
   const vehicle: FormattedVehicle = {
+    id: listing.id,
     make: listing.make,
     model: listing.model,
     version: listing.version ?? null,
@@ -47,7 +49,21 @@ function formatListingOffer(
     transmission: listing.transmission ?? null,
     bodyType: listing.bodyType ?? null,
     primaryImageUrl: listing.primaryImageUrl ?? null,
-    imageUrls: rawImages.slice(0, LIST_IMAGE_URLS_LIMIT)
+    imageUrls: isDetail ? rawImages : rawImages.slice(0, LIST_IMAGE_URLS_LIMIT),
+    powerHp: listing.enginePowerHp ?? null,
+    engineCapacityCm3: listing.engineCapacityCm3 ?? null,
+    doors: listing.doors ?? null,
+    seats: listing.seats ?? null,
+    color: listing.color ?? null,
+    paintType: listing.paintType ?? null,
+    drive: listing.drive ?? null,
+    equipmentSafety: Array.isArray(listing.equipmentSafety) ? listing.equipmentSafety : [],
+    equipmentComfortExtras: Array.isArray(listing.equipmentComfortExtras) ? listing.equipmentComfortExtras : [],
+    equipmentAudioMultimedia: Array.isArray(listing.equipmentAudioMultimedia) ? listing.equipmentAudioMultimedia : [],
+    equipmentOther: Array.isArray(listing.equipmentOther) ? listing.equipmentOther : [],
+    additionalInfoHeader: listing.additionalInfoHeader ?? null,
+    additionalInfoContent: listing.additionalInfoContent ?? null,
+    specsJson: listing.specsJson ?? null
   };
 
   const customPricePln = exceptionOffer?.customPricePln ?? null;
@@ -341,7 +357,8 @@ export async function employeeCatalogRoutes(fastify: FastifyInstance) {
         listing,
         null,
         program.scopeDiscountPct,
-        program.defaultDiscountPct
+        program.defaultDiscountPct,
+        true
       );
 
       return reply.send(formatted);
@@ -351,22 +368,7 @@ export async function employeeCatalogRoutes(fastify: FastifyInstance) {
     const rawOffer = await fastify.prisma.employeeProgramOffer.findUnique({
       where: { id: offerId },
       include: {
-        listing: {
-          select: {
-            id: true,
-            make: true,
-            model: true,
-            version: true,
-            productionYear: true,
-            fuelType: true,
-            transmission: true,
-            bodyType: true,
-            pricePln: true,
-            primaryImageUrl: true,
-            imageUrls: true,
-            isArchived: true
-          }
-        },
+        listing: true,
         benefitPolicy: {
           select: {
             name: true,
@@ -406,7 +408,8 @@ export async function employeeCatalogRoutes(fastify: FastifyInstance) {
       rawOffer.listing,
       rawOffer,
       program.scopeDiscountPct,
-      program.defaultDiscountPct
+      program.defaultDiscountPct,
+      true
     );
 
     return reply.send(formatted);

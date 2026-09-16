@@ -43,6 +43,7 @@ interface InquiryModalProps {
   offer: InquiryOfferItem | EmployeeOffer | null;
   rentalSelection?: RentalSelection | null;
   rentalDisplay?: RentalDisplayInfo | null;
+  initialNotes?: string;
   onViewMyInquiries?: () => void;
 }
 
@@ -52,6 +53,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   offer,
   rentalSelection,
   rentalDisplay,
+  initialNotes,
   onViewMyInquiries
 }) => {
   const { config } = useBrandConfig();
@@ -79,13 +81,13 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
       setContactEmail(user ? user.email : '');
       setContactPhone(user?.phone || '');
       setNip('');
-      setNotes('');
+      setNotes(initialNotes || '');
       setConsentPrivacy(false);
       setIsSubmitting(false);
       setErrorMessage(null);
       setCreatedReferenceNumber(null);
     }
-  }, [isOpen, offer, user]);
+  }, [isOpen, offer, user, initialNotes]);
 
   if (!isOpen || !offer) return null;
 

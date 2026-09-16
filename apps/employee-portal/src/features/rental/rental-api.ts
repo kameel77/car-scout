@@ -28,6 +28,13 @@ export interface EmployeeRentalOfferSummary {
   optionsCount: number;
 }
 
+export interface RentalInitialPaymentOption {
+  pct: number;
+  amountNet: number;
+  amountGross: number;
+  label: string;
+}
+
 export interface RentalOptionItem {
   assignmentId: string;
   contractMonths: number;
@@ -48,6 +55,7 @@ export interface EmployeeRentalOfferDetails {
   contractMonthsOptions: number[];
   annualMileageOptions: number[];
   downPaymentPctOptions: number[];
+  downPaymentOptions?: RentalInitialPaymentOption[];
   rentalOptions: RentalOptionItem[];
 }
 
@@ -186,10 +194,11 @@ export async function fetchEmployeeRentalOfferDetails(
     }))
   );
 
-  // Gdy kilku dostawców oferuje ten sam wariant (miesiące, przebieg, wpłata), wybieramy ten z niższą ratą brutto
+  // Gdy kilku dostawców oferuje ten sam wariant (miesiące, przebieg, wpłata procentowa + kwotowa), wybieramy ten z niższą ratą brutto
   const optionMap = new Map<string, any>();
   for (const r of allRows) {
-    const key = `${r.contractMonths}-${r.annualMileageKm}-${r.initialPaymentPct}`;
+    const downAmountNet = Math.round(Number(r.initialPaymentAmountNet || 0));
+    const key = `${r.contractMonths}-${r.annualMileageKm}-${r.initialPaymentPct}-${downAmountNet}`;
     const existing = optionMap.get(key);
     if (!existing || Number(r.monthlyRateGross) < Number(existing.monthlyRateGross)) {
       optionMap.set(key, r);
@@ -200,22 +209,41 @@ export async function fetchEmployeeRentalOfferDetails(
   const contractMonthsSet = new Set<number>();
   const annualMileageSet = new Set<number>();
   const downPaymentPctSet = new Set<number>();
+  const downPaymentMap = new Map<string, RentalInitialPaymentOption>();
 
   const flattenedOptions: RentalOptionItem[] = bestRows.map((r: any) => {
     const months = Number(r.contractMonths);
     const mileage = Number(r.annualMileageKm);
     const downPct = Number(r.initialPaymentPct);
+    const downAmountNet = Math.round(Number(r.initialPaymentAmountNet || 0));
+    const downAmountGross = Math.round(Number(r.initialPaymentAmountGross || downAmountNet * 1.23));
 
     contractMonthsSet.add(months);
     annualMileageSet.add(mileage);
     downPaymentPctSet.add(downPct);
+
+    const downKey = `${downPct}-${downAmountNet}`;
+    if (!downPaymentMap.has(downKey)) {
+      let label = `${downAmountNet.toLocaleString('pl-PL')} zł`;
+      if (downAmountNet === 0 && downPct > 0) {
+        label = `${downPct}%`;
+      } else if (downAmountNet === 0 && downPct === 0) {
+        label = '0 zł';
+      }
+      downPaymentMap.set(downKey, {
+        pct: downPct,
+        amountNet: downAmountNet,
+        amountGross: downAmountGross,
+        label
+      });
+    }
 
     return {
       assignmentId: r.assignmentId || primaryGroup?.assignmentId || '',
       contractMonths: months,
       annualMileage: mileage,
       downPaymentPct: downPct,
-      downPaymentAmountPln: Number(r.initialPaymentAmountNet || 0),
+      downPaymentAmountPln: downAmountNet,
       monthlyRateNet: Number(r.monthlyRateNet),
       monthlyRateGross: Number(r.monthlyRateGross),
       rateSource: r.rateSource as 'PARTNER_MATRIX' | 'PUBLIC_MATRIX',
@@ -225,6 +253,10 @@ export async function fetchEmployeeRentalOfferDetails(
   const contractMonthsOptions = Array.from(contractMonthsSet).sort((a, b) => a - b);
   const annualMileageOptions = Array.from(annualMileageSet).sort((a, b) => a - b);
   const downPaymentPctOptions = Array.from(downPaymentPctSet).sort((a, b) => a - b);
+  const downPaymentOptions = Array.from(downPaymentMap.values()).sort((a, b) => {
+    if (a.pct !== b.pct) return a.pct - b.pct;
+    return a.amountNet - b.amountNet;
+  });
 
   const rentalCompanyName = primaryGroup?.rentalCompanyName || 'Dostawca';
   const rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' =
@@ -243,6 +275,7 @@ export async function fetchEmployeeRentalOfferDetails(
     contractMonthsOptions,
     annualMileageOptions,
     downPaymentPctOptions,
+    downPaymentOptions,
     rentalOptions: flattenedOptions,
   };
 }

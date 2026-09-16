@@ -997,5 +997,25 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Zestaw 14 testów integracyjnych w odizolowanym środowisku Docker (`backend/src/modules/employee-program/rental/__tests__/employee-rental.test.ts`): najniższa rata w katalogu, sortowanie wariantów, stawki B2B vs konsument, fallback publiczny (brak matrycy, DRAFT, przeterminowanie), wykluczenia, flaga `scopeIncludeRental`, utworzenie zgłoszenia i leada w CRM, idempotencja, rekalkulacja serwerowa oraz izolacja tenantów.
   - Wszystkie 69 testów integracyjnych oraz 102 testy jednostkowe backendu i 83 testy portalu pracowniczego zakończone sukcesem.
 
+## 76. Portal Pracowniczy - Ujednolicenie Nagłówka, Poprawka Kalkulatora Najmu i Karta Pojazdu Nowego z Kalkulatorem Finansowania
+- **Ujednolicenie nagłówka (`PortalHeader.tsx`)**:
+  - Zastąpiono rozbieżne implementacje nagłówków na stronach `/katalog`, `/katalog/:id`, `/najem`, `/najem/:id` oraz `/zapytania` jednym wspólnym komponentem `PortalHeader`.
+  - Usunięto długą, łamiącą się plakietkę `[Program Samochodowy Finarena Sp. z o.o.]` z pigułki użytkownika, ujednolicając układ do wzorca z `/zapytania`: `[User] Imię Nazwisko | [Building] Nazwa Firmy`.
+- **Korekta deduplikacji opłaty wstępnej w kalkulatorze najmu (`rental-api.ts`, `RentalOfferDetailPage.tsx`)**:
+  - Usunięto błąd polegający na nadpisywaniu wariantu 0 zł przez opcję kwotową 20 000 zł w kalkulatorze najmu (wynikający z klucza deduplikacji uwzględniającego jedynie `initialPaymentPct = 0`).
+  - Rozszerzono klucz deduplikacji o `initialPaymentAmountNet` oraz wprowadzono dedykowaną tablicę `downPaymentOptions` z etykietami kwotowymi i procentowymi, gwarantującą poprawne odzwierciedlenie stawek (np. 3 389 zł dla 0 zł i 2 789 zł dla 20 000 zł).
+- **Karta pojazdu nowego `/katalog/:id` (`NewCarOfferDetailPage.tsx`)**:
+  - Dedykowana podstrona pojazdu nowego z odzwierciedleniem standardów platformy Motolia:
+    - Galeria zdjęć (duże zdjęcie główne + pasek miniatur).
+    - Szczegółowe dane techniczne (rok, paliwo, skrzynia, moc KM, pojemność cm³, nadwozie, napęd, kolor, liczba drzwi/miejsc).
+    - Pogrupowane listy wyposażenia (bezpieczeństwo, komfort i dodatki, multimedia, inne).
+    - Pakiet benefitów programu pracowniczego (karta paliwowa Moya, stały rabat na paliwo, opieka doradcy flotowego).
+    - Interaktywny kalkulator finansowania (leasing B2B / kredyt konsumencki) wykorzystujący standardowy silnik PMT: wybór okresu (24, 36, 48, 60 mies.), wpłaty własnej (0%, 10%, 20%, 30%, 45%) oraz wykupu (1%, 10%, 20%, 30%) z natychmiastowym przeliczaniem raty netto i brutto na cenie pracowniczej.
+    - Zintegrowany modal zapytania (`InquiryModal`) z automatycznym wstępnym uzupełnieniem uwag parametrami kalkulacji wybranymi przez pracownika.
+- **Interaktywność kafelków w katalogu nowych aut (`CatalogPage.tsx`)**:
+  - Dodano klikalność miniatur zdjęć, tytułów oraz dedykowany przycisk CTA „Szczegóły i kalkulator raty” przenoszący bezpośrednio do `/katalog/:id`.
+  - Zachowano przycisk „Zapytaj o tę ofertę” dla 1-kliknięciowego otwarcia szybkiego zapytania.
+
+
 
 

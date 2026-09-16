@@ -145,4 +145,81 @@ describe('Employee Portal Rental API Client', () => {
       },
     });
   });
+
+  it('normalizes raw matrix rows with different initial payment amounts (0 zł vs 20 000 zł) without overwriting', async () => {
+    const rawBackendPayload = {
+      id: 'rental-kuga123',
+      sourceType: 'RENTAL',
+      vehicle: {
+        id: 'veh_kuga',
+        make: 'Ford',
+        model: 'Kuga',
+        version: 'ST-Line',
+        productionYear: 2026,
+        fuelType: 'HYBRID',
+        transmission: 'AUTOMATIC',
+        bodyType: 'SUV',
+        primaryImageUrl: null,
+        imageUrls: [],
+      },
+      rentalOptions: [
+        {
+          assignmentId: 'asg_arval',
+          rentalCompanyName: 'Arval',
+          rentalCompanyLogoUrl: null,
+          rateSource: 'PUBLIC_MATRIX',
+          rows: [
+            {
+              contractMonths: 36,
+              annualMileageKm: 10000,
+              initialPaymentPct: 0,
+              initialPaymentAmountNet: 0,
+              initialPaymentAmountGross: 0,
+              monthlyRateNet: 3389,
+              monthlyRateGross: 4169,
+            },
+            {
+              contractMonths: 36,
+              annualMileageKm: 10000,
+              initialPaymentPct: 0,
+              initialPaymentAmountNet: 20000,
+              initialPaymentAmountGross: 24600,
+              monthlyRateNet: 2789,
+              monthlyRateGross: 3430,
+            },
+          ],
+        },
+      ],
+    };
+
+    const fakeFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => rawBackendPayload,
+    });
+    vi.stubGlobal('fetch', fakeFetch);
+
+    const result = await fetchEmployeeRentalOfferDetails('/api', 'rental-kuga123');
+    expect(result.rentalOptions).toHaveLength(2);
+    expect(result.downPaymentOptions).toHaveLength(2);
+    expect(result.downPaymentOptions?.[0]).toEqual({
+      pct: 0,
+      amountNet: 0,
+      amountGross: 0,
+      label: '0 zł',
+    });
+    expect(result.downPaymentOptions?.[1]).toEqual({
+      pct: 0,
+      amountNet: 20000,
+      amountGross: 24600,
+      label: `${(20000).toLocaleString('pl-PL')} zł`,
+    });
+
+    const optZero = result.rentalOptions.find((o) => o.downPaymentAmountPln === 0);
+    const optTwenty = result.rentalOptions.find((o) => o.downPaymentAmountPln === 20000);
+    expect(optZero?.monthlyRateNet).toBe(3389);
+    expect(optZero?.monthlyRateGross).toBe(4169);
+    expect(optTwenty?.monthlyRateNet).toBe(2789);
+    expect(optTwenty?.monthlyRateGross).toBe(3430);
+  });
 });

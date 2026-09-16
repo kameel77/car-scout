@@ -1,4 +1,5 @@
 export interface EmployeeOfferVehicle {
+  id?: string;
   make: string;
   model: string;
   version: string | null;
@@ -8,6 +9,20 @@ export interface EmployeeOfferVehicle {
   bodyType: string | null;
   primaryImageUrl: string | null;
   imageUrls: string[];
+  powerHp?: number | null;
+  engineCapacityCm3?: number | null;
+  doors?: number | null;
+  seats?: number | null;
+  color?: string | null;
+  paintType?: string | null;
+  drive?: string | null;
+  equipmentSafety?: string[];
+  equipmentComfortExtras?: string[];
+  equipmentAudioMultimedia?: string[];
+  equipmentOther?: string[];
+  additionalInfoHeader?: string | null;
+  additionalInfoContent?: string | null;
+  specsJson?: any;
 }
 
 export interface EmployeeOfferPricing {

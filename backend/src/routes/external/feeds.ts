@@ -31,24 +31,26 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         imageLink: string;
         make: string;
         pricePln: number;
-        condition: 'new' | 'used';
+        condition: 'new';
         financingType: string;
     }
 
     const getAllActiveFeedItems = async (source: string): Promise<UnifiedFeedItem[]> => {
         const baseUrl = process.env.FRONTEND_URL || 'https://motolia.pl';
 
-        // 1. Fetch Sales & Leasing Listings
+        // 1. Fetch Sales & Leasing Listings - Only brand-new cars (Used cars are strictly excluded per Google/Meta policies)
         const listings = await fastify.prisma.listing.findMany({
             where: {
                 isArchived: false,
+                condition: 'NEW',
             },
         });
 
-        // 2. Fetch Long-Term Rental Vehicles
+        // 2. Fetch Long-Term Rental Vehicles (Exclude inactive or used vehicles)
         const rentalVehicles = await fastify.prisma.rentalVehicle.findMany({
             where: {
                 isActive: true,
+                condition: 'NEW',
             },
         });
 
@@ -56,9 +58,9 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         let skipped = 0;
 
         for (const l of listings) {
-            if (!l.pricePln || !l.make || !l.model) {
+            if (!l.pricePln || !l.make || !l.model || l.condition !== 'NEW') {
                 skipped++;
-                continue; // Skip incomplete records with no fabricated fallbacks
+                continue; // Skip incomplete or non-new records
             }
 
             const id = String(l.listingId || l.id);
@@ -78,16 +80,16 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 imageLink: absoluteImage,
                 make: l.make.trim(),
                 pricePln: l.pricePln,
-                condition: l.condition === 'NEW' ? 'new' : 'used',
+                condition: 'new',
                 financingType: 'leasing',
             });
         }
 
         for (const r of rentalVehicles) {
             const price = r.sellingPrice || r.catalogPrice;
-            if (!r.make || !r.model || !price) {
+            if (!r.make || !r.model || !price || (r.condition && r.condition !== 'NEW')) {
                 skipped++;
-                continue; // Skip incomplete records with no fabricated fallbacks
+                continue; // Skip incomplete or non-new records
             }
 
             const id = `rental-${r.id}`;
@@ -99,9 +101,6 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             const absoluteImage = image.startsWith('/') ? baseUrl + image : image;
             const link = `${baseUrl}/wynajem-dlugoterminowy/${r.slug || r.id}?utm_source=${source}&utm_medium=catalog&utm_campaign=feed`;
 
-            const currentYear = new Date().getFullYear();
-            const condition: 'new' | 'used' = (r.productionYear && r.productionYear >= currentYear - 1) ? 'new' : 'used';
-
             items.push({
                 id,
                 title: sanitizeDescription(title),
@@ -110,7 +109,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
                 imageLink: absoluteImage,
                 make: r.make.trim(),
                 pricePln: price,
-                condition,
+                condition: 'new',
                 financingType: 'wynajem',
             });
         }
@@ -186,7 +185,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
             xml += `  <channel>\n`;
             xml += `    <title>Motolia.pl - Katalog Oferty</title>\n`;
             xml += `    <link>${baseUrl}</link>\n`;
-            xml += `    <description>Katalog aktywnych ofert samochodów nowe i używane</description>\n`;
+            xml += `    <description>Katalog aktywnych ofert nowych samochodów oraz wynajmu długoterminowego</description>\n`;
 
             for (const item of items) {
                 xml += `    <item>\n`;

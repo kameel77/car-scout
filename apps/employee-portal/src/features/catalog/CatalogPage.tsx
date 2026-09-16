@@ -14,10 +14,12 @@ import {
   AlertCircle,
   X,
   RefreshCw,
-  Tag
+  Tag,
+  ChevronRight
 } from 'lucide-react';
 import { fetchEmployeeOffers, EmployeeOffer } from './catalog-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
+import { PortalHeader } from '../common/PortalHeader';
 
 function formatFuelType(fuelType: string): string {
   switch (fuelType.toUpperCase()) {
@@ -127,79 +129,7 @@ export const CatalogPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top Navbar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/katalog" className="flex items-center gap-3">
-              {config.brandLogoUrl && !logoError ? (
-                <img
-                  src={config.brandLogoUrl}
-                  alt={config.brandName}
-                  onError={() => setLogoError(true)}
-                  className="h-8 w-auto max-w-[140px] object-contain"
-                />
-              ) : (
-                <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                  {config.brandName.charAt(0) || 'P'}
-                </div>
-              )}
-              <span className="font-semibold text-gray-900 hidden sm:inline">{config.brandName}</span>
-            </Link>
-
-            {/* Navigation Tabs */}
-            <nav className="flex items-center gap-2">
-              <Link
-                to="/katalog"
-                className="px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 transition-colors"
-              >
-                Katalog ofert
-              </Link>
-              <Link
-                to="/najem"
-                className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-              >
-                Najem długoterminowy
-              </Link>
-              <Link
-                to="/zapytania"
-                className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-              >
-                Moje zapytania
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {user && (
-              <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 border border-gray-200 py-1.5 px-3 rounded-lg">
-                <UserCircle2 className="h-4 w-4 text-gray-500" />
-                <span className="font-medium text-gray-900">
-                  {user.firstName} {user.lastName}
-                </span>
-                <span className="hidden md:inline text-gray-300">|</span>
-                <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-600">
-                  <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                  <span className="font-medium text-gray-800">{user.company?.name || 'Firma'}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 font-medium text-[11px] border border-primary-200">
-                    {user.program?.name || 'Program partnerski'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 shadow-xs text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-colors"
-              aria-label="Wyloguj"
-            >
-              <LogOut className="h-4 w-4 text-gray-500" />
-              <span className="hidden sm:inline">Wyloguj</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <PortalHeader onLogout={handleLogout} isLoggingOut={isLoggingOut} />
 
       {/* Logout / Session Error Alert */}
       {activeError && (
@@ -371,12 +301,15 @@ export const CatalogPage: React.FC = () => {
                 className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
               >
                 {/* Image Box */}
-                <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
+                <Link
+                  to={`/katalog/${offer.id}`}
+                  className="relative aspect-[16/10] bg-gray-100 overflow-hidden block group"
+                >
                   {offer.vehicle.primaryImageUrl ? (
                     <img
                       src={offer.vehicle.primaryImageUrl}
                       alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                     />
                   ) : (
@@ -393,13 +326,18 @@ export const CatalogPage: React.FC = () => {
                       <span>-{String(offer.pricing.discountPct).replace('.', ',')}%</span>
                     </div>
                   )}
-                </div>
+                </Link>
 
                 {/* Content Box */}
                 <div className="p-5 flex-1 flex flex-col justify-between gap-4">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                      {offer.vehicle.make} {offer.vehicle.model}
+                      <Link
+                        to={`/katalog/${offer.id}`}
+                        className="hover:text-primary-600 transition-colors"
+                      >
+                        {offer.vehicle.make} {offer.vehicle.model}
+                      </Link>
                     </h3>
                     {offer.vehicle.version && (
                       <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">
@@ -465,16 +403,25 @@ export const CatalogPage: React.FC = () => {
                       <span className="text-xs text-gray-400 font-medium">brutto</span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedOfferForInquiry(offer);
-                        setIsInquiryModalOpen(true);
-                      }}
-                      className="mt-3.5 w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs flex items-center justify-center gap-2"
-                    >
-                      Zapytaj o tę ofertę
-                    </button>
+                    <div className="mt-3.5 flex flex-col gap-2">
+                      <Link
+                        to={`/katalog/${offer.id}`}
+                        className="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5"
+                      >
+                        <span>Szczegóły i kalkulator raty</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedOfferForInquiry(offer);
+                          setIsInquiryModalOpen(true);
+                        }}
+                        className="w-full py-2 px-3 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors text-center"
+                      >
+                        Zapytaj o tę ofertę
+                      </button>
+                    </div>
                   </div>
                 </div>
               </article>

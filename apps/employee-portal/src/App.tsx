@@ -6,6 +6,7 @@ import { LoginPage } from './features/auth/LoginPage';
 import { RegisterCodePage } from './features/auth/RegisterCodePage';
 import { ProtectedRoute } from './features/auth/ProtectedRoute';
 import { CatalogPage } from './features/catalog/CatalogPage';
+import { NewCarOfferDetailPage } from './features/catalog/NewCarOfferDetailPage';
 import { RentalCatalogPage } from './features/rental/RentalCatalogPage';
 import { RentalOfferDetailPage } from './features/rental/RentalOfferDetailPage';
 import { MyInquiriesPage } from './features/inquiries/MyInquiriesPage';
@@ -23,6 +24,14 @@ export const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <CatalogPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/katalog/:id"
+        element={
+          <ProtectedRoute>
+            <NewCarOfferDetailPage />
           </ProtectedRoute>
         }
       />

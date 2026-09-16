@@ -25,6 +25,7 @@ import {
   RentalOptionItem
 } from './rental-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
+import { PortalHeader } from '../common/PortalHeader';
 
 function formatFuelType(fuelType: string | null): string {
   if (!fuelType) return 'Brak danych';
@@ -68,7 +69,7 @@ export const RentalOfferDetailPage: React.FC = () => {
   // Calculator State
   const [selectedMonths, setSelectedMonths] = useState<number>(36);
   const [selectedMileage, setSelectedMileage] = useState<number>(20000);
-  const [selectedDownPayment, setSelectedDownPayment] = useState<number>(0);
+  const [selectedDownPayment, setSelectedDownPayment] = useState<{ pct: number; amountNet: number; label: string } | null>(null);
 
   // Inquiry Modal State
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState<boolean>(false);
@@ -92,9 +93,11 @@ export const RentalOfferDetailPage: React.FC = () => {
           : data.annualMileageOptions[0];
         setSelectedMileage(defaultMil);
       }
-      if (data.downPaymentPctOptions?.length) {
-        const defaultDown = data.downPaymentPctOptions.includes(0) ? 0 : data.downPaymentPctOptions[0];
-        setSelectedDownPayment(defaultDown);
+      if (data.downPaymentOptions && data.downPaymentOptions.length > 0) {
+        setSelectedDownPayment(data.downPaymentOptions[0]);
+      } else if (data.downPaymentPctOptions?.length) {
+        const pct = data.downPaymentPctOptions[0];
+        setSelectedDownPayment({ pct, amountNet: 0, label: `${pct}%` });
       }
     } catch (err: unknown) {
       if (signal?.aborted) return;
@@ -145,12 +148,29 @@ export const RentalOfferDetailPage: React.FC = () => {
   const activeError = logoutError || sessionError;
 
   // Znalezienie wybranego wariantu stawek
-  const activeOption: RentalOptionItem | undefined = offer?.rentalOptions.find(
-    (opt) =>
-      opt.contractMonths === selectedMonths &&
-      opt.annualMileage === selectedMileage &&
-      opt.downPaymentPct === selectedDownPayment
-  );
+  const activeOption: RentalOptionItem | undefined = offer?.rentalOptions.find((opt) => {
+    if (opt.contractMonths !== selectedMonths || opt.annualMileage !== selectedMileage) {
+      return false;
+    }
+    if (!selectedDownPayment) return false;
+    if (opt.downPaymentPct !== selectedDownPayment.pct) {
+      return false;
+    }
+    if (selectedDownPayment.amountNet > 0) {
+      return Math.abs(opt.downPaymentAmountPln - selectedDownPayment.amountNet) < 1;
+    }
+    const hasZeroAmountOption = offer.rentalOptions.some(
+      (o) =>
+        o.contractMonths === selectedMonths &&
+        o.annualMileage === selectedMileage &&
+        o.downPaymentPct === selectedDownPayment.pct &&
+        o.downPaymentAmountPln === 0
+    );
+    if (hasZeroAmountOption) {
+      return opt.downPaymentAmountPln === 0;
+    }
+    return true;
+  });
 
   const allImages = offer
     ? [
@@ -162,79 +182,7 @@ export const RentalOfferDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top Navbar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/katalog" className="flex items-center gap-3">
-              {config.brandLogoUrl && !logoError ? (
-                <img
-                  src={config.brandLogoUrl}
-                  alt={config.brandName}
-                  onError={() => setLogoError(true)}
-                  className="h-8 w-auto max-w-[140px] object-contain"
-                />
-              ) : (
-                <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                  {config.brandName.charAt(0) || 'P'}
-                </div>
-              )}
-              <span className="font-semibold text-gray-900 hidden sm:inline">{config.brandName}</span>
-            </Link>
-
-            {/* Navigation Tabs */}
-            <nav className="flex items-center gap-2">
-              <Link
-                to="/katalog"
-                className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-              >
-                Katalog ofert
-              </Link>
-              <Link
-                to="/najem"
-                className="px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg bg-indigo-50 text-indigo-700 transition-colors"
-              >
-                Najem długoterminowy
-              </Link>
-              <Link
-                to="/zapytania"
-                className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-              >
-                Moje zapytania
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {user && (
-              <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 border border-gray-200 py-1.5 px-3 rounded-lg">
-                <UserCircle2 className="h-4 w-4 text-gray-500" />
-                <span className="font-medium text-gray-900">
-                  {user.firstName} {user.lastName}
-                </span>
-                <span className="hidden md:inline text-gray-300">|</span>
-                <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-600">
-                  <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                  <span className="font-medium text-gray-800">{user.company?.name || 'Firma'}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium text-[11px] border border-indigo-200">
-                    {user.program?.name || 'Program partnerski'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 shadow-xs text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
-              aria-label="Wyloguj"
-            >
-              <LogOut className="h-4 w-4 text-gray-500" />
-              <span className="hidden sm:inline">Wyloguj</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <PortalHeader onLogout={handleLogout} isLoggingOut={isLoggingOut} />
 
       {/* Logout / Session Error Alert */}
       {activeError && (
@@ -490,21 +438,35 @@ export const RentalOfferDetailPage: React.FC = () => {
                     <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
                       Wpłata wstępna
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {offer.downPaymentPctOptions.map((downPct) => (
-                        <button
-                          key={downPct}
-                          type="button"
-                          onClick={() => setSelectedDownPayment(downPct)}
-                          className={`py-2 px-3 text-xs font-medium rounded-xl border transition-all ${
-                            selectedDownPayment === downPct
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-200'
-                              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {downPct}%
-                        </button>
-                      ))}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {(offer.downPaymentOptions && offer.downPaymentOptions.length > 0
+                        ? offer.downPaymentOptions
+                        : (offer.downPaymentPctOptions || []).map((pct) => ({
+                            pct,
+                            amountNet: 0,
+                            amountGross: 0,
+                            label: `${pct}%`
+                          }))
+                      ).map((downOpt) => {
+                        const isSelected =
+                          selectedDownPayment &&
+                          selectedDownPayment.pct === downOpt.pct &&
+                          selectedDownPayment.amountNet === downOpt.amountNet;
+                        return (
+                          <button
+                            key={`${downOpt.pct}-${downOpt.amountNet}`}
+                            type="button"
+                            onClick={() => setSelectedDownPayment(downOpt)}
+                            className={`py-2 px-3 text-xs font-medium rounded-xl border transition-all ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-200'
+                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {downOpt.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -547,9 +509,13 @@ export const RentalOfferDetailPage: React.FC = () => {
                       </div>
 
                       <div className="text-xs text-gray-500 flex justify-between border-t border-gray-200/80 pt-2">
-                        <span>Wpłata wstępna ({activeOption.downPaymentPct}%):</span>
+                        <span>Wpłata wstępna:</span>
                         <span className="font-semibold text-gray-900">
-                          {activeOption.downPaymentAmountPln.toLocaleString('pl-PL')} zł
+                          {activeOption.downPaymentAmountPln > 0
+                            ? `${activeOption.downPaymentAmountPln.toLocaleString('pl-PL')} zł`
+                            : activeOption.downPaymentPct > 0
+                            ? `${activeOption.downPaymentPct}%`
+                            : '0 zł'}
                         </span>
                       </div>
                     </>
@@ -595,14 +561,14 @@ export const RentalOfferDetailPage: React.FC = () => {
             contractMonths: selectedMonths,
             annualMileageKm: selectedMileage,
             annualMileage: selectedMileage,
-            initialPaymentPct: selectedDownPayment,
-            downPaymentPct: selectedDownPayment,
+            initialPaymentPct: activeOption.downPaymentPct,
+            downPaymentPct: activeOption.downPaymentPct,
             initialPaymentAmountNet: activeOption.downPaymentAmountPln || 0
           }}
           rentalDisplay={{
             contractMonths: selectedMonths,
             annualMileage: selectedMileage,
-            downPaymentPct: selectedDownPayment,
+            downPaymentPct: activeOption.downPaymentPct,
             monthlyRateNet: activeOption.monthlyRateNet,
             monthlyRateGross: activeOption.monthlyRateGross,
             rentalCompanyName: offer.rentalCompany.name
