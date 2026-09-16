@@ -184,10 +184,10 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     const openInquiryBtn = screen.getByRole('button', { name: /Zapytaj o tę ofertę/i });
     fireEvent.click(openInquiryBtn);
 
-    // Verify modal is open and shows rental details
+    // Verify modal is open and shows rental details without supplier name
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Wybrane parametry najmu:')).toBeInTheDocument();
-    expect(screen.getAllByText('Arval').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('Arval')).not.toBeInTheDocument();
 
     // Check privacy consent and submit
     const consentCheckbox = screen.getByRole('checkbox');

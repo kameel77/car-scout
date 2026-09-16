@@ -269,7 +269,7 @@ export const RentalOfferDetailPage: React.FC = () => {
 
                   <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
                     {offer.isB2b && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-xs">
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-xs">
                         Oferta B2B
                       </span>
                     )}
@@ -332,16 +332,16 @@ export const RentalOfferDetailPage: React.FC = () => {
                     <span className="text-xs text-gray-500 block">Wersja wyposażenia</span>
                     <span className="font-semibold text-gray-900">{offer.vehicle.version || 'Standardowa'}</span>
                   </div>
-                  {offer.vehicle.powerHp && (
+                  {Boolean(offer.vehicle.powerHp) && (
                     <div>
                       <span className="text-xs text-gray-500 block">Moc silnika</span>
                       <span className="font-semibold text-gray-900">{offer.vehicle.powerHp} KM</span>
                     </div>
                   )}
-                  {offer.vehicle.engineCapacityCm3 && (
+                  {Boolean(offer.vehicle.engineCapacityCm3) && (
                     <div>
                       <span className="text-xs text-gray-500 block">Pojemność</span>
-                      <span className="font-semibold text-gray-900">{offer.vehicle.engineCapacityCm3.toLocaleString('pl-PL')} cm³</span>
+                      <span className="font-semibold text-gray-900">{offer.vehicle.engineCapacityCm3?.toLocaleString('pl-PL')} cm³</span>
                     </div>
                   )}
                   {offer.vehicle.drive && (
@@ -356,7 +356,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                       <span className="font-semibold text-gray-900">{offer.vehicle.color}</span>
                     </div>
                   )}
-                  {(offer.vehicle.doors || offer.vehicle.seats) && (
+                  {Boolean(offer.vehicle.doors || offer.vehicle.seats) && (
                     <div>
                       <span className="text-xs text-gray-500 block">Drzwi / Miejsca</span>
                       <span className="font-semibold text-gray-900">
@@ -687,8 +687,7 @@ export const RentalOfferDetailPage: React.FC = () => {
             annualMileage: selectedMileage,
             downPaymentPct: activeOption.downPaymentPct,
             monthlyRateNet: activeOption.monthlyRateNet,
-            monthlyRateGross: activeOption.monthlyRateGross,
-            rentalCompanyName: offer.rentalCompany.name
+            monthlyRateGross: activeOption.monthlyRateGross
           }}
           onViewMyInquiries={() => navigate('/zapytania')}
         />

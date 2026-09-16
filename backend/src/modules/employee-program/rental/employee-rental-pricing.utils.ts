@@ -217,3 +217,8 @@ export function getLowestRateGross(rows: EmployeeRentalCalculatedRow[]): number 
   const candidates = allRows.length > 0 ? allRows : rows;
   return Math.min(...candidates.map((r) => r.monthlyRateGross));
 }
+
+export function isRentalAllowedB2BOnly(allowedContractParties?: string[] | null): boolean {
+  if (!allowedContractParties || allowedContractParties.length === 0) return false;
+  return !allowedContractParties.includes('CONSUMER');
+}

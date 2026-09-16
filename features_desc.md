@@ -1036,17 +1036,13 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - Sortowanie (najem: rata rosnąco/malejąco; nowe auta: cena rosnąco/malejąco, największy rabat)
     - Licznik znalezionych ofert oraz przycisk „Wyczyść filtry” przy aktywnym filtrowaniu.
 - **Plakietki B2B na ofertach najmu (`RentalCatalogPage.tsx`, `RentalOfferDetailPage.tsx`)**:
-  - Dodano wyróżniającą się bursztynową plakietkę `Oferta B2B` w lewym górnym rogu na zdjęciu pojazdu na kafelkach listingu najmu oraz na zdjęciu głównym karty pojazdu.
-  - Flaga `isB2b` jest wyliczana serwerowo w backendzie na podstawie przypisania oferty, typu wierszy matrycy oraz flagi `isBusinessFeatured`.
+  - Dodano wyróżniającą się bursztynową plakietkę `Oferta B2B` (`bg-amber-500 text-white`) w lewym górnym rogu na zdjęciu pojazdu na kafelkach listingu najmu oraz na zdjęciu głównym karty pojazdu.
+  - Flaga `isB2b` jest wyliczana serwerowo w backendzie wyłącznie na podstawie reguły: dozwolone strony umowy (`allowedContractParties`) nie zawierają strony konsumenckiej (`CONSUMER`), czyli oferta jest dedykowana wyłącznie dla `EMPLOYEE_B2B` lub `EMPLOYER_COMPANY`.
 - **Usunięcie etykiety „Dostawca: <nazwa>” z widoku pracownika**:
-  - Całkowicie usunięto wzmianki o firmie wynajmującej / dostawcy (`offer.rentalCompany.name`) ze wszystkich widoków dostępnych dla zalogowanego pracownika (kafelki listingu najmu, nagłówek karty pojazdu, siatka specyfikacji).
-- **Architektura podglądu portalu w kontekście wybranej firmy przez Operatora (Masquerade Mode)**:
+  - Całkowicie usunięto informację o firmie wynajmującej / dostawcy (w tym pola `rentalCompanyName`, `rentalCompanySlug`, `rentalCompanyLogoUrl` i `rentalCompanies`) z odpowiedzi API portalu pracowniczego oraz z interfejsu (kafelki listingu najmu, nagłówek karty pojazdu, siatka specyfikacji oraz modal zapytania).
+- **Architektura podglądu portalu w kontekście wybranej firmy przez Operatora (Masquerade Mode) - Specyfikacja koncepcyjna**:
+  - *Status: Specyfikacja architektoniczna (niezaimplementowana jeszcze w kodzie produkcyjnym).*
   - Zaprojektowano mechanizm podglądu kontekstowego portalu pracowniczego bezpośrednio z panelu administracyjnego Motolia:
     1. Operator klika „Podgląd portalu firmy” przy wybranej firmie lub programie w panelu administratora.
     2. Backend generuje krótkotrwały token podglądu (np. ważny 15 minut) z uprawnieniem tylko-do-odczytu i flagą `isPreview: true`.
     3. Portal pracowniczy otwiera się z żółtym banerem ostrzegawczym u góry informującym: „Tryb podglądu organizacji: [Nazwa Firmy] (akcje zapisu zablokowane) [Zakończ podgląd]”.
-
-
-
-
-

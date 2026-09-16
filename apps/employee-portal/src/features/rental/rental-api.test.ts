@@ -223,4 +223,124 @@ describe('Employee Portal Rental API Client', () => {
     expect(optTwenty?.monthlyRateNet).toBe(2789);
     expect(optTwenty?.monthlyRateGross).toBe(3430);
   });
+
+  it('fetchEmployeeRentalOffers does not infer isB2b from EMPLOYEE_MATRIX and keeps supplier anonymous', async () => {
+    const rawPayload = {
+      offers: [
+        {
+          id: 'offer_consumer_matrix',
+          sourceType: 'RENTAL',
+          vehicle: {
+            id: 'v1',
+            make: 'Kia',
+            model: 'Sportage',
+            version: 'L',
+            productionYear: 2026,
+            fuelType: 'HYBRID',
+            transmission: 'AUTOMATIC',
+            bodyType: 'SUV',
+            primaryImageUrl: null,
+            imageUrls: [],
+          },
+          rental: {
+            rateSource: 'EMPLOYEE_MATRIX',
+            fromMonthlyRateGross: 2000,
+            isB2b: false,
+          },
+        },
+        {
+          id: 'offer_b2b_only',
+          sourceType: 'RENTAL',
+          vehicle: {
+            id: 'v2',
+            make: 'Audi',
+            model: 'A4',
+            version: 'S-Line',
+            productionYear: 2026,
+            fuelType: 'DIESEL',
+            transmission: 'AUTOMATIC',
+            bodyType: 'SEDAN',
+            primaryImageUrl: null,
+            imageUrls: [],
+          },
+          rental: {
+            rateSource: 'EMPLOYEE_MATRIX',
+            fromMonthlyRateGross: 3000,
+            isB2b: true,
+          },
+        },
+      ],
+      nextCursor: null,
+    };
+
+    const fakeFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => rawPayload,
+    });
+    vi.stubGlobal('fetch', fakeFetch);
+
+    const res = await fetchEmployeeRentalOffers('/api');
+    expect(res.offers).toHaveLength(2);
+
+    // First offer has EMPLOYEE_MATRIX rateSource, but isB2b is false
+    expect(res.offers[0].rateSource).toBe('PARTNER_MATRIX');
+    expect(res.offers[0].isB2b).toBe(false);
+    expect(res.offers[0].rentalCompany.name).toBe('Motolia');
+
+    // Second offer is B2B
+    expect(res.offers[1].rateSource).toBe('PARTNER_MATRIX');
+    expect(res.offers[1].isB2b).toBe(true);
+    expect(res.offers[1].rentalCompany.name).toBe('Motolia');
+  });
+
+  it('fetchEmployeeRentalOfferDetails strictly uses server isB2b and masks supplier name', async () => {
+    const rawDetail = {
+      id: 'offer_det_1',
+      sourceType: 'RENTAL',
+      vehicle: {
+        id: 'v_det',
+        make: 'Skoda',
+        model: 'Superb',
+        version: 'Laurlin & Klement',
+        productionYear: 2026,
+        fuelType: 'DIESEL',
+        transmission: 'AUTOMATIC',
+        bodyType: 'KOMBI',
+        primaryImageUrl: null,
+        imageUrls: [],
+      },
+      isB2b: false,
+      rentalOptions: [
+        {
+          assignmentId: 'asg_secret_supplier',
+          rateSource: 'EMPLOYEE_MATRIX',
+          rows: [
+            {
+              contractMonths: 36,
+              annualMileageKm: 15000,
+              initialPaymentPct: 10,
+              initialPaymentAmountNet: 15000,
+              initialPaymentAmountGross: 18450,
+              monthlyRateNet: 2200,
+              monthlyRateGross: 2706,
+            },
+          ],
+        },
+      ],
+    };
+
+    const fakeFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => rawDetail,
+    });
+    vi.stubGlobal('fetch', fakeFetch);
+
+    const res = await fetchEmployeeRentalOfferDetails('/api', 'offer_det_1');
+    expect(res.isB2b).toBe(false);
+    expect(res.rateSource).toBe('PARTNER_MATRIX');
+    expect(res.rentalCompany.name).toBe('Motolia');
+    expect((res.rentalOptions[0] as any).rentalCompanyName).toBeUndefined();
+  });
 });

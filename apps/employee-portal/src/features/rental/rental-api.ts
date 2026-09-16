@@ -140,25 +140,19 @@ export async function fetchEmployeeRentalOffers(
     if (o.rentalCompany && o.minMonthlyRateGross !== undefined) {
       return o as EmployeeRentalOfferSummary;
     }
-    const rentalCompName = o.rental?.rentalCompanies?.[0] || 'Dostawca';
     const rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' =
       o.rental?.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX';
     const minGross = Number(o.rental?.fromMonthlyRateGross || 0);
     const minNet = Math.round(minGross / 1.23);
-    const isB2b = Boolean(
-      o.isB2b ||
-      o.rental?.isB2b ||
-      o.vehicle?.isBusinessFeatured ||
-      rateSource === 'PARTNER_MATRIX'
-    );
+    const isB2b = Boolean(o.rental?.isB2b ?? o.isB2b ?? false);
 
     return {
       id: o.id,
       sourceType: 'RENTAL' as const,
       vehicle: o.vehicle,
       rentalCompany: {
-        id: rentalCompName,
-        name: rentalCompName,
+        id: o.id,
+        name: 'Motolia',
         logoUrl: null,
       },
       rateSource,
@@ -280,24 +274,18 @@ export async function fetchEmployeeRentalOfferDetails(
     return a.amountNet - b.amountNet;
   });
 
-  const rentalCompanyName = primaryGroup?.rentalCompanyName || 'Dostawca';
   const rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' =
     primaryGroup?.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX';
-  const isB2b = Boolean(
-    raw.isB2b ||
-    raw.vehicle?.isBusinessFeatured ||
-    rateSource === 'PARTNER_MATRIX' ||
-    (primaryGroup?.allowedContractParties && !primaryGroup.allowedContractParties.includes('CONSUMER'))
-  );
+  const isB2b = Boolean(raw.isB2b ?? false);
 
   return {
     id: raw.id,
     sourceType: 'RENTAL' as const,
     vehicle: raw.vehicle,
     rentalCompany: {
-      id: primaryGroup?.assignmentId || rentalCompanyName,
-      name: rentalCompanyName,
-      logoUrl: primaryGroup?.rentalCompanyLogoUrl || null,
+      id: primaryGroup?.assignmentId || 'motolia',
+      name: 'Motolia',
+      logoUrl: null,
     },
     rateSource,
     contractMonthsOptions,

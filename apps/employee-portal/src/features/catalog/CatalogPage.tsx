@@ -23,65 +23,90 @@ import { fetchEmployeeOffers, EmployeeOffer } from './catalog-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
 
-function formatFuelType(fuelType: string): string {
-  switch (fuelType.toUpperCase()) {
-    case 'HYBRID':
-      return 'Hybryda';
-    case 'MILD_HYBRID':
-      return 'Mild Hybrid';
-    case 'PLUG_IN_HYBRID':
-      return 'Plug-in Hybrid';
+function normalizeFuelType(val: string | null): { key: string; label: string } | null {
+  if (!val) return null;
+  const upper = val.toUpperCase().trim();
+  switch (upper) {
     case 'PETROL':
-      return 'Benzyna';
+    case 'BENZYNA':
+      return { key: 'petrol', label: 'Benzyna' };
     case 'DIESEL':
-      return 'Diesel';
+      return { key: 'diesel', label: 'Diesel' };
+    case 'HYBRID':
+      return { key: 'hybrid', label: 'Hybryda' };
+    case 'MILD_HYBRID':
+      return { key: 'mild_hybrid', label: 'Mild Hybrid' };
+    case 'PLUG_IN_HYBRID':
+      return { key: 'plug_in_hybrid', label: 'Plug-in Hybrid' };
     case 'ELECTRIC':
-      return 'Elektryczny';
+    case 'ELEKTRYCZNY':
+      return { key: 'electric', label: 'Elektryczny' };
     case 'LPG':
-      return 'LPG';
+      return { key: 'lpg', label: 'LPG' };
     case 'CNG':
-      return 'CNG';
+      return { key: 'cng', label: 'CNG' };
     default:
-      return fuelType;
+      return { key: val.toLowerCase(), label: val };
   }
+}
+
+function normalizeTransmission(val: string | null): { key: string; label: string } | null {
+  if (!val) return null;
+  const upper = val.toUpperCase().trim();
+  switch (upper) {
+    case 'AUTOMATIC':
+    case 'AUTOMAT':
+    case 'DSG':
+    case 'E-CVT':
+    case 'CVT':
+      return { key: 'automatic', label: 'Automat' };
+    case 'MANUAL':
+    case 'MANUALNA':
+      return { key: 'manual', label: 'Manualna' };
+    default:
+      return { key: val.toLowerCase(), label: val };
+  }
+}
+
+function normalizeBodyType(val: string | null): { key: string; label: string } | null {
+  if (!val) return null;
+  const lower = val.toLowerCase().trim();
+  switch (lower) {
+    case 'suv':
+      return { key: 'suv', label: 'SUV' };
+    case 'sedan':
+      return { key: 'sedan', label: 'Sedan' };
+    case 'kombi':
+    case 'estate':
+      return { key: 'kombi', label: 'Kombi' };
+    case 'hatchback':
+      return { key: 'hatchback', label: 'Hatchback' };
+    case 'coupe':
+      return { key: 'coupe', label: 'Coupe' };
+    case 'cabrio':
+    case 'cabriolet':
+    case 'convertible':
+      return { key: 'cabrio', label: 'Kabriolet' };
+    case 'minivan':
+    case 'van':
+      return { key: 'minivan', label: 'Minivan' };
+    case 'liftback':
+      return { key: 'liftback', label: 'Liftback' };
+    default:
+      return { key: lower, label: val.charAt(0).toUpperCase() + val.slice(1) };
+  }
+}
+
+function formatFuelType(fuelType: string): string {
+  return normalizeFuelType(fuelType)?.label || fuelType;
 }
 
 function formatTransmission(transmission: string): string {
-  switch (transmission.toUpperCase()) {
-    case 'AUTOMATIC':
-      return 'Automat';
-    case 'MANUAL':
-      return 'Manualna';
-    default:
-      return transmission;
-  }
+  return normalizeTransmission(transmission)?.label || transmission;
 }
 
 function formatBodyType(bodyType: string | null): string {
-  if (!bodyType) return 'Inne';
-  switch (bodyType.toLowerCase()) {
-    case 'suv':
-      return 'SUV';
-    case 'sedan':
-      return 'Sedan';
-    case 'kombi':
-    case 'estate':
-      return 'Kombi';
-    case 'hatchback':
-      return 'Hatchback';
-    case 'coupe':
-      return 'Coupe';
-    case 'cabrio':
-    case 'convertible':
-      return 'Kabriolet';
-    case 'minivan':
-    case 'van':
-      return 'Minivan';
-    case 'liftback':
-      return 'Liftback';
-    default:
-      return bodyType.charAt(0).toUpperCase() + bodyType.slice(1);
-  }
+  return normalizeBodyType(bodyType)?.label || 'Inne';
 }
 
 export const CatalogPage: React.FC = () => {
@@ -144,27 +169,36 @@ export const CatalogPage: React.FC = () => {
   }, [offers]);
 
   const availableFuels = useMemo(() => {
-    const set = new Set<string>();
+    const map = new Map<string, string>();
     offers.forEach((o) => {
-      if (o.vehicle.fuelType) set.add(o.vehicle.fuelType);
+      const norm = normalizeFuelType(o.vehicle.fuelType);
+      if (norm) map.set(norm.key, norm.label);
     });
-    return Array.from(set).sort();
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
   }, [offers]);
 
   const availableTransmissions = useMemo(() => {
-    const set = new Set<string>();
+    const map = new Map<string, string>();
     offers.forEach((o) => {
-      if (o.vehicle.transmission) set.add(o.vehicle.transmission);
+      const norm = normalizeTransmission(o.vehicle.transmission);
+      if (norm) map.set(norm.key, norm.label);
     });
-    return Array.from(set).sort();
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
   }, [offers]);
 
   const availableBodyTypes = useMemo(() => {
-    const set = new Set<string>();
+    const map = new Map<string, string>();
     offers.forEach((o) => {
-      if (o.vehicle.bodyType) set.add(o.vehicle.bodyType);
+      const norm = normalizeBodyType(o.vehicle.bodyType);
+      if (norm) map.set(norm.key, norm.label);
     });
-    return Array.from(set).sort();
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
   }, [offers]);
 
   const filteredOffers = useMemo(() => {
@@ -188,19 +222,19 @@ export const CatalogPage: React.FC = () => {
 
     if (selectedFuel) {
       result = result.filter(
-        (o) => (o.vehicle.fuelType || '').toLowerCase() === selectedFuel.toLowerCase()
+        (o) => normalizeFuelType(o.vehicle.fuelType)?.key === selectedFuel
       );
     }
 
     if (selectedTransmission) {
       result = result.filter(
-        (o) => (o.vehicle.transmission || '').toLowerCase() === selectedTransmission.toLowerCase()
+        (o) => normalizeTransmission(o.vehicle.transmission)?.key === selectedTransmission
       );
     }
 
     if (selectedBodyType) {
       result = result.filter(
-        (o) => (o.vehicle.bodyType || '').toLowerCase() === selectedBodyType.toLowerCase()
+        (o) => normalizeBodyType(o.vehicle.bodyType)?.key === selectedBodyType
       );
     }
 
@@ -422,8 +456,8 @@ export const CatalogPage: React.FC = () => {
                 >
                   <option value="">Wszystkie</option>
                   {availableFuels.map((f) => (
-                    <option key={f} value={f}>
-                      {formatFuelType(f)}
+                    <option key={f.key} value={f.key}>
+                      {f.label}
                     </option>
                   ))}
                 </select>
@@ -441,8 +475,8 @@ export const CatalogPage: React.FC = () => {
                 >
                   <option value="">Wszystkie</option>
                   {availableTransmissions.map((t) => (
-                    <option key={t} value={t}>
-                      {formatTransmission(t)}
+                    <option key={t.key} value={t.key}>
+                      {t.label}
                     </option>
                   ))}
                 </select>
@@ -460,8 +494,8 @@ export const CatalogPage: React.FC = () => {
                 >
                   <option value="">Wszystkie</option>
                   {availableBodyTypes.map((b) => (
-                    <option key={b} value={b}>
-                      {formatBodyType(b)}
+                    <option key={b.key} value={b.key}>
+                      {b.label}
                     </option>
                   ))}
                 </select>

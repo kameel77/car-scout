@@ -385,16 +385,16 @@ export const NewCarOfferDetailPage: React.FC = () => {
                         <span className="font-semibold text-gray-900">{offer.vehicle.bodyType}</span>
                       </div>
                     )}
-                    {offer.vehicle.powerHp && (
+                    {Boolean(offer.vehicle.powerHp) && (
                       <div className="p-3 bg-gray-50 rounded-xl">
                         <span className="text-xs text-gray-500 block">Moc silnika</span>
                         <span className="font-semibold text-gray-900">{offer.vehicle.powerHp} KM</span>
                       </div>
                     )}
-                    {offer.vehicle.engineCapacityCm3 && (
+                    {Boolean(offer.vehicle.engineCapacityCm3) && (
                       <div className="p-3 bg-gray-50 rounded-xl">
                         <span className="text-xs text-gray-500 block">Pojemność</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.engineCapacityCm3.toLocaleString('pl-PL')} cm³</span>
+                        <span className="font-semibold text-gray-900">{offer.vehicle.engineCapacityCm3?.toLocaleString('pl-PL')} cm³</span>
                       </div>
                     )}
                     {offer.vehicle.drive && (
@@ -409,7 +409,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
                         <span className="font-semibold text-gray-900">{offer.vehicle.color}</span>
                       </div>
                     )}
-                    {(offer.vehicle.doors || offer.vehicle.seats) && (
+                    {Boolean(offer.vehicle.doors || offer.vehicle.seats) && (
                       <div className="p-3 bg-gray-50 rounded-xl">
                         <span className="text-xs text-gray-500 block">Drzwi / Miejsca</span>
                         <span className="font-semibold text-gray-900">

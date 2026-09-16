@@ -4,6 +4,7 @@ import { verifyEmployeeAuth } from '../auth/employee-auth.middleware.js';
 import {
   resolveRentalRateSource,
   getLowestRateGross,
+  isRentalAllowedB2BOnly,
   ContractPartyOption,
   ResolvedRentalRateSource,
   EmployeeRentalCalculatedRow
@@ -210,14 +211,10 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
           if (eligibleAssignments.length === 0) return null;
 
           let bestGrossRate: number | null = null;
-          let bestRateSource: 'EMPLOYEE_MATRIX' | 'PUBLIC_MATRIX' = 'PUBLIC_MATRIX';
-          const companyNames: string[] = [];
+          let bestRateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' = 'PUBLIC_MATRIX';
+          let bestIsB2b = false;
 
           for (const asg of eligibleAssignments) {
-            if (asg.rentalCompany?.name && !companyNames.includes(asg.rentalCompany.name)) {
-              companyNames.push(asg.rentalCompany.name);
-            }
-
             const resolved = resolveRentalRateSource({
               assignment: asg,
               programMatrixSets: program.matrixSets,
@@ -226,11 +223,14 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
 
             const lowestGross = getLowestRateGross(resolved.rows);
             if (lowestGross !== null) {
+              const optionB2b = isRentalAllowedB2BOnly(resolved.allowedContractParties);
               if (bestGrossRate === null || lowestGross < bestGrossRate) {
                 bestGrossRate = lowestGross;
                 bestRateSource = resolved.rateSource;
+                bestIsB2b = optionB2b;
               } else if (lowestGross === bestGrossRate && resolved.rateSource === 'EMPLOYEE_MATRIX') {
                 bestRateSource = 'EMPLOYEE_MATRIX';
+                bestIsB2b = optionB2b;
               }
             }
           }
@@ -260,12 +260,8 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
             rental: {
               fromMonthlyRateGross: bestGrossRate,
               rateSource: bestRateSource,
-              rentalCompanies: companyNames,
-              isB2b: Boolean(
-                v.isBusinessFeatured ||
-                bestRateSource === 'EMPLOYEE_MATRIX' ||
-                eligibleAssignments.some(asg => (asg.matrixEntries || []).some(e => e.offerType === 'business' || e.offerType === 'b2b') || (asg.employeeMatrixRows || []).length > 0)
-              )
+              rentalCompanies: [],
+              isB2b: bestIsB2b
             },
             benefit: null
           };
@@ -379,15 +375,25 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
 
         return {
           assignmentId: asg.id,
-          rentalCompanyName: asg.rentalCompany?.name || '',
-          rentalCompanySlug: asg.rentalCompany?.slug || null,
-          rentalCompanyLogoUrl: asg.rentalCompany?.logoUrl || null,
           rateSource: resolved.rateSource,
           matrixVersionId: resolved.matrixVersionId,
           allowedContractParties: resolved.allowedContractParties,
+          isB2b: isRentalAllowedB2BOnly(resolved.allowedContractParties),
           rows: sortedRows
         };
       });
+
+      // Wyznaczenie oferty B2B spójnie z listingiem - na podstawie najkorzystniejszego wariantu
+      let bestOption = rentalOptions[0];
+      let lowestGross = Infinity;
+      for (const opt of rentalOptions) {
+        const optMin = opt.rows.length > 0 ? Math.min(...opt.rows.map((r) => r.monthlyRateGross)) : Infinity;
+        if (optMin < lowestGross) {
+          lowestGross = optMin;
+          bestOption = opt;
+        }
+      }
+      const isOfferB2b = bestOption ? isRentalAllowedB2BOnly(bestOption.allowedContractParties) : false;
 
       const rawImages = Array.isArray(vehicle.imageUrls) ? vehicle.imageUrls : [];
       const primaryImage =
@@ -421,14 +427,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
           additionalInfoHeader: vehicle.additionalInfoHeader ?? null,
           additionalInfoContent: vehicle.additionalInfoContent ?? null
         },
-        isB2b: Boolean(
-          vehicle.isBusinessFeatured ||
-          rentalOptions.some((opt: any) =>
-            opt.rateSource === 'EMPLOYEE_MATRIX' ||
-            (opt.allowedContractParties && !opt.allowedContractParties.includes('CONSUMER')) ||
-            (opt.rows || []).some((r: any) => r.offerType === 'business' || r.offerType === 'b2b')
-          )
-        ),
+        isB2b: isOfferB2b,
         rentalOptions,
         benefit: null
       });

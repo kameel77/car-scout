@@ -23,70 +23,86 @@ import {
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
 import { PortalHeader } from '../common/PortalHeader';
 
-function formatFuelType(fuelType: string | null): string {
-  if (!fuelType) return 'Brak danych';
-  switch (fuelType.toUpperCase()) {
-    case 'HYBRID':
-      return 'Hybryda';
-    case 'MILD_HYBRID':
-      return 'Mild Hybrid';
-    case 'PLUG_IN_HYBRID':
-      return 'Plug-in Hybrid';
+function normalizeFuelType(val: string | null): { key: string; label: string } | null {
+  if (!val) return null;
+  const upper = val.toUpperCase().trim();
+  switch (upper) {
     case 'PETROL':
     case 'BENZYNA':
-      return 'Benzyna';
+      return { key: 'petrol', label: 'Benzyna' };
     case 'DIESEL':
-      return 'Diesel';
+      return { key: 'diesel', label: 'Diesel' };
+    case 'HYBRID':
+      return { key: 'hybrid', label: 'Hybryda' };
+    case 'MILD_HYBRID':
+      return { key: 'mild_hybrid', label: 'Mild Hybrid' };
+    case 'PLUG_IN_HYBRID':
+      return { key: 'plug_in_hybrid', label: 'Plug-in Hybrid' };
     case 'ELECTRIC':
-      return 'Elektryczny';
+    case 'ELEKTRYCZNY':
+      return { key: 'electric', label: 'Elektryczny' };
     case 'LPG':
-      return 'LPG';
+      return { key: 'lpg', label: 'LPG' };
+    case 'CNG':
+      return { key: 'cng', label: 'CNG' };
     default:
-      return fuelType;
+      return { key: val.toLowerCase(), label: val };
   }
 }
 
-function formatTransmission(transmission: string | null): string {
-  if (!transmission) return 'Brak danych';
-  switch (transmission.toUpperCase()) {
+function normalizeTransmission(val: string | null): { key: string; label: string } | null {
+  if (!val) return null;
+  const upper = val.toUpperCase().trim();
+  switch (upper) {
     case 'AUTOMATIC':
+    case 'AUTOMAT':
     case 'DSG':
     case 'E-CVT':
     case 'CVT':
-      return 'Automat';
+      return { key: 'automatic', label: 'Automat' };
     case 'MANUAL':
     case 'MANUALNA':
-      return 'Manualna';
+      return { key: 'manual', label: 'Manualna' };
     default:
-      return transmission;
+      return { key: val.toLowerCase(), label: val };
   }
 }
 
-function formatBodyType(bodyType: string | null): string {
-  if (!bodyType) return 'Inne';
-  switch (bodyType.toLowerCase()) {
+function normalizeBodyType(val: string | null): { key: string; label: string } | null {
+  if (!val) return null;
+  const lower = val.toLowerCase().trim();
+  switch (lower) {
     case 'suv':
-      return 'SUV';
+      return { key: 'suv', label: 'SUV' };
     case 'sedan':
-      return 'Sedan';
+      return { key: 'sedan', label: 'Sedan' };
     case 'kombi':
     case 'estate':
-      return 'Kombi';
+      return { key: 'kombi', label: 'Kombi' };
     case 'hatchback':
-      return 'Hatchback';
+      return { key: 'hatchback', label: 'Hatchback' };
     case 'coupe':
-      return 'Coupe';
+      return { key: 'coupe', label: 'Coupe' };
     case 'cabrio':
+    case 'cabriolet':
     case 'convertible':
-      return 'Kabriolet';
+      return { key: 'cabrio', label: 'Kabriolet' };
     case 'minivan':
     case 'van':
-      return 'Minivan';
+      return { key: 'minivan', label: 'Minivan' };
     case 'liftback':
-      return 'Liftback';
+      return { key: 'liftback', label: 'Liftback' };
     default:
-      return bodyType.charAt(0).toUpperCase() + bodyType.slice(1);
+      return { key: lower, label: val.charAt(0).toUpperCase() + val.slice(1) };
   }
+}
+
+function formatFuelType(fuelType: string): string {
+  return normalizeFuelType(fuelType)?.label || fuelType;
+}
+
+function formatTransmission(transmission: string): string {
+  return normalizeTransmission(transmission)?.label || transmission;
 }
 
 export const RentalCatalogPage: React.FC = () => {
@@ -111,13 +127,13 @@ export const RentalCatalogPage: React.FC = () => {
   const [selectedB2bOnly, setSelectedB2bOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<'default' | 'rate_asc' | 'rate_desc'>('default');
 
-  const loadOffers = useCallback(async (searchQuery?: string, signal?: AbortSignal) => {
+  const loadOffers = useCallback(async (signal?: AbortSignal) => {
     setIsLoadingOffers(true);
     setOffersError(null);
     try {
       const res = await fetchEmployeeRentalOffers(
         config.apiUrl || '/api',
-        { search: searchQuery?.trim() || undefined },
+        {},
         signal
       );
       setOffers(res.offers || []);
@@ -134,11 +150,11 @@ export const RentalCatalogPage: React.FC = () => {
 
   useEffect(() => {
     const controller = new AbortController();
-    loadOffers(searchTerm, controller.signal);
+    loadOffers(controller.signal);
     return () => {
       controller.abort();
     };
-  }, [loadOffers, searchTerm]);
+  }, [loadOffers]);
 
   // Compute available facet options from loaded offers
   const availableMakes = useMemo(() => {
@@ -150,31 +166,50 @@ export const RentalCatalogPage: React.FC = () => {
   }, [offers]);
 
   const availableFuels = useMemo(() => {
-    const set = new Set<string>();
+    const map = new Map<string, string>();
     offers.forEach((o) => {
-      if (o.vehicle.fuelType) set.add(o.vehicle.fuelType);
+      const norm = normalizeFuelType(o.vehicle.fuelType);
+      if (norm) map.set(norm.key, norm.label);
     });
-    return Array.from(set).sort();
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
   }, [offers]);
 
   const availableTransmissions = useMemo(() => {
-    const set = new Set<string>();
+    const map = new Map<string, string>();
     offers.forEach((o) => {
-      if (o.vehicle.transmission) set.add(o.vehicle.transmission);
+      const norm = normalizeTransmission(o.vehicle.transmission);
+      if (norm) map.set(norm.key, norm.label);
     });
-    return Array.from(set).sort();
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
   }, [offers]);
 
   const availableBodyTypes = useMemo(() => {
-    const set = new Set<string>();
+    const map = new Map<string, string>();
     offers.forEach((o) => {
-      if (o.vehicle.bodyType) set.add(o.vehicle.bodyType);
+      const norm = normalizeBodyType(o.vehicle.bodyType);
+      if (norm) map.set(norm.key, norm.label);
     });
-    return Array.from(set).sort();
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
   }, [offers]);
 
   const filteredOffers = useMemo(() => {
     let result = [...offers];
+
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase().trim();
+      result = result.filter(
+        (o) =>
+          o.vehicle.make.toLowerCase().includes(q) ||
+          o.vehicle.model.toLowerCase().includes(q) ||
+          (o.vehicle.version && o.vehicle.version.toLowerCase().includes(q))
+      );
+    }
 
     if (selectedMake) {
       result = result.filter(
@@ -184,19 +219,19 @@ export const RentalCatalogPage: React.FC = () => {
 
     if (selectedFuel) {
       result = result.filter(
-        (o) => (o.vehicle.fuelType || '').toLowerCase() === selectedFuel.toLowerCase()
+        (o) => normalizeFuelType(o.vehicle.fuelType)?.key === selectedFuel
       );
     }
 
     if (selectedTransmission) {
       result = result.filter(
-        (o) => (o.vehicle.transmission || '').toLowerCase() === selectedTransmission.toLowerCase()
+        (o) => normalizeTransmission(o.vehicle.transmission)?.key === selectedTransmission
       );
     }
 
     if (selectedBodyType) {
       result = result.filter(
-        (o) => (o.vehicle.bodyType || '').toLowerCase() === selectedBodyType.toLowerCase()
+        (o) => normalizeBodyType(o.vehicle.bodyType)?.key === selectedBodyType
       );
     }
 
@@ -211,7 +246,7 @@ export const RentalCatalogPage: React.FC = () => {
     }
 
     return result;
-  }, [offers, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, selectedB2bOnly, sortBy]);
+  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, selectedB2bOnly, sortBy]);
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
@@ -373,8 +408,8 @@ export const RentalCatalogPage: React.FC = () => {
                 >
                   <option value="">Wszystkie</option>
                   {availableFuels.map((f) => (
-                    <option key={f} value={f}>
-                      {formatFuelType(f)}
+                    <option key={f.key} value={f.key}>
+                      {f.label}
                     </option>
                   ))}
                 </select>
@@ -392,8 +427,8 @@ export const RentalCatalogPage: React.FC = () => {
                 >
                   <option value="">Wszystkie</option>
                   {availableTransmissions.map((t) => (
-                    <option key={t} value={t}>
-                      {formatTransmission(t)}
+                    <option key={t.key} value={t.key}>
+                      {t.label}
                     </option>
                   ))}
                 </select>
@@ -411,8 +446,8 @@ export const RentalCatalogPage: React.FC = () => {
                 >
                   <option value="">Wszystkie</option>
                   {availableBodyTypes.map((b) => (
-                    <option key={b} value={b}>
-                      {formatBodyType(b)}
+                    <option key={b.key} value={b.key}>
+                      {b.label}
                     </option>
                   ))}
                 </select>
@@ -486,7 +521,7 @@ export const RentalCatalogPage: React.FC = () => {
             <p className="text-sm text-gray-600 mt-2 mb-6">{offersError}</p>
             <button
               type="button"
-              onClick={() => loadOffers(searchTerm)}
+              onClick={() => loadOffers()}
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-xs"
             >
               <RefreshCw className="h-4 w-4" />
@@ -589,7 +624,7 @@ export const RentalCatalogPage: React.FC = () => {
                         {offer.vehicle.transmission && (
                           <span className="inline-flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
                             <Gauge className="h-3 w-3 text-gray-400" />
-                            {offer.vehicle.transmission}
+                            {formatTransmission(offer.vehicle.transmission)}
                           </span>
                         )}
                       </div>

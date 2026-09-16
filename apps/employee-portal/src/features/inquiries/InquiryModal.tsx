@@ -21,7 +21,7 @@ export interface RentalDisplayInfo {
   downPaymentPct: number;
   monthlyRateNet: number;
   monthlyRateGross: number;
-  rentalCompanyName: string;
+  rentalCompanyName?: string;
 }
 
 export interface InquiryOfferItem {
@@ -243,9 +243,8 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
               {/* Parametry najmu (jeśli dotyczy) */}
               {rentalDisplay && (
                 <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs space-y-1.5 text-indigo-950">
-                  <div className="font-semibold flex items-center justify-between text-indigo-900 border-b border-indigo-100/80 pb-1.5">
+                  <div className="font-semibold text-indigo-900 border-b border-indigo-100/80 pb-1.5">
                     <span>Wybrane parametry najmu:</span>
-                    <span className="text-[11px] font-normal text-indigo-700">{rentalDisplay.rentalCompanyName}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-indigo-800 pt-1">
                     <div>Okres umowy: <strong>{rentalDisplay.contractMonths} mies.</strong></div>

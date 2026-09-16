@@ -193,7 +193,8 @@ describe('Employee Rental Catalog Isolated Unit Tests', () => {
     expect(offer.vehicle.make).toBe('Audi');
     expect(offer.rental.fromMonthlyRateGross).toBe(2460);
     expect(offer.rental.rateSource).toBe('PUBLIC_MATRIX');
-    expect(offer.rental.rentalCompanies).toEqual(['Ayvens']);
+    expect(offer.rental.rentalCompanies).toEqual([]);
+    expect(offer.rental.isB2b).toBe(false);
     expect(json.nextCursor).toBeNull();
   });
 
@@ -322,9 +323,78 @@ describe('Employee Rental Catalog Isolated Unit Tests', () => {
       expect(json.vehicle.equipmentSafety).toContain('ABS');
       expect(json.rentalOptions).toHaveLength(1);
       expect(json.rentalOptions[0].assignmentId).toBe('asg-1');
-      expect(json.rentalOptions[0].rentalCompanyName).toBe('Ayvens');
+      // Verify supplier branding is stripped
+      expect(json.rentalOptions[0].rentalCompanyName).toBeUndefined();
+      expect(json.rentalOptions[0].rentalCompanySlug).toBeUndefined();
+      expect(json.rentalOptions[0].rentalCompanyLogoUrl).toBeUndefined();
+      // Public matrix fallback allows CONSUMER, so isB2b must be false
+      expect(json.isB2b).toBe(false);
+      expect(json.rentalOptions[0].isB2b).toBe(false);
       expect(json.rentalOptions[0].rows).toHaveLength(1);
       expect(json.rentalOptions[0].rows[0].monthlyRateGross).toBe(2460);
+    });
+
+    it('Sets isB2b to true when allowedContractParties does not contain CONSUMER', async () => {
+      fakePrisma.employeeProgram.findUnique = async () => ({
+        id: programId,
+        scopeIncludeRental: true,
+        matrixSets: [
+          {
+            matrixSet: {
+              id: 'ms-1',
+              rentalCompanyId: 'rc-1',
+              allowedContractParties: ['EMPLOYEE_B2B', 'EMPLOYER_COMPANY'],
+              versions: [
+                {
+                  id: 'mv-1',
+                  status: 'PUBLISHED',
+                  versionNumber: 1,
+                  rows: [
+                    {
+                      assignmentId: 'asg-1',
+                      contractMonths: 36,
+                      annualMileageKm: 20000,
+                      initialPaymentPct: 0,
+                      initialPaymentAmountNet: 0,
+                      monthlyRateNet: 1800,
+                      monthlyRateGross: 2214,
+                      servicesIncluded: ['serwis']
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      });
+
+      fakePrisma.rentalVehicle.findFirst = async () => ({
+        id: 'rv-1',
+        make: 'BMW',
+        model: '320d',
+        version: 'M Sport',
+        productionYear: 2026,
+        rentalAssignments: [
+          {
+            id: 'asg-1',
+            rentalCompanyId: 'rc-1',
+            rentalCompany: { name: 'Secret Fleet Co', slug: 'secret-fleet', logoUrl: null },
+            matrixEntries: []
+          }
+        ]
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/employee/rental-offers/rental-rv-1',
+        headers: { cookie: validSessionCookie }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const json = JSON.parse(res.body);
+      expect(json.isB2b).toBe(true);
+      expect(json.rentalOptions[0].isB2b).toBe(true);
+      expect(json.rentalOptions[0].rentalCompanyName).toBeUndefined();
     });
   });
 });
