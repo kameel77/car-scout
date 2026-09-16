@@ -3,19 +3,30 @@ import { fetchCsrfToken } from '../auth/auth-api';
 export type ContractPartyOption = 'CONSUMER' | 'EMPLOYEE_B2B' | 'EMPLOYER_COMPANY';
 
 export interface RentalSelection {
+  assignmentId: string;
   contractMonths: number;
-  annualMileage: number;
-  downPaymentPct: number;
+  annualMileageKm: number;
+  initialPaymentPct: number;
+  initialPaymentAmountNet?: number;
+  // Aliases dla wstecznej kompatybilności
+  annualMileage?: number;
+  downPaymentPct?: number;
 }
 
 export interface InquiryRentalDetails {
+  assignmentId?: string;
   contractMonths: number;
+  annualMileageKm: number;
   annualMileage: number;
+  initialPaymentPct: number;
   downPaymentPct: number;
+  initialPaymentAmountNet: number;
   downPaymentAmountPln: number;
+  monthlyRateNet: number;
   monthlyRateNetPln: number;
+  monthlyRateGross: number;
   monthlyRateGrossPln: number;
-  rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX';
+  rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' | 'EMPLOYEE_MATRIX';
   rentalCompanyName: string;
 }
 
@@ -122,6 +133,28 @@ export async function submitEmployeeInquiry(
   const base = normalizeBaseUrl(apiUrl);
   const csrfToken = await fetchCsrfToken(apiUrl);
 
+  const rentalSel = payload.rentalSelection
+    ? {
+        assignmentId: payload.rentalSelection.assignmentId,
+        contractMonths: payload.rentalSelection.contractMonths,
+        annualMileageKm:
+          payload.rentalSelection.annualMileageKm ??
+          payload.rentalSelection.annualMileage ??
+          0,
+        initialPaymentPct:
+          payload.rentalSelection.initialPaymentPct ??
+          payload.rentalSelection.downPaymentPct ??
+          0,
+        initialPaymentAmountNet:
+          payload.rentalSelection.initialPaymentAmountNet ?? 0,
+      }
+    : undefined;
+
+  const normalizedPayload: CreateInquiryPayload = {
+    ...payload,
+    ...(rentalSel ? { rentalSelection: rentalSel } : {}),
+  };
+
   const res = await fetch(`${base}/employee/inquiries`, {
     method: 'POST',
     credentials: 'same-origin',
@@ -129,9 +162,9 @@ export async function submitEmployeeInquiry(
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'X-CSRF-Token': csrfToken
+      'X-CSRF-Token': csrfToken,
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(normalizedPayload),
   });
 
   return handleResponseJson<CreateInquiryResponse>(res);
@@ -163,9 +196,53 @@ export async function fetchEmployeeInquiries(
     credentials: 'same-origin',
     signal,
     headers: {
-      'Accept': 'application/json'
-    }
+      'Accept': 'application/json',
+    },
   });
 
-  return handleResponseJson<InquiriesListResponse>(res);
+  const raw = await handleResponseJson<InquiriesListResponse>(res);
+  const inquiries: EmployeeInquiryItem[] = (raw.inquiries || []).map((inq: any) => {
+    if (inq.rental) {
+      const r = inq.rental;
+      const months = Number(r.contractMonths || 0);
+      const mileage = Number(r.annualMileageKm ?? r.annualMileage ?? 0);
+      const downPct = Number(r.initialPaymentPct ?? r.downPaymentPct ?? 0);
+      const downAmount = Number(r.initialPaymentAmountNet ?? r.downPaymentAmountPln ?? 0);
+      const rateNet = Number(r.monthlyRateNet ?? r.monthlyRateNetPln ?? 0);
+      const rateGross = Number(r.monthlyRateGross ?? r.monthlyRateGrossPln ?? 0);
+      const company = r.rentalCompanyName || '';
+      const source =
+        r.rateSource === 'EMPLOYEE_MATRIX'
+          ? 'PARTNER_MATRIX'
+          : (r.rateSource || 'PUBLIC_MATRIX');
+
+      return {
+        ...inq,
+        sourceType: inq.sourceType || 'RENTAL',
+        rental: {
+          ...r,
+          assignmentId: r.assignmentId || '',
+          contractMonths: months,
+          annualMileageKm: mileage,
+          annualMileage: mileage,
+          initialPaymentPct: downPct,
+          downPaymentPct: downPct,
+          initialPaymentAmountNet: downAmount,
+          downPaymentAmountPln: downAmount,
+          monthlyRateNet: rateNet,
+          monthlyRateNetPln: rateNet,
+          monthlyRateGross: rateGross,
+          monthlyRateGrossPln: rateGross,
+          rateSource: source,
+          rentalCompanyName: company,
+        },
+      };
+    }
+    return inq as EmployeeInquiryItem;
+  });
+
+  return {
+    inquiries,
+    nextCursor: raw.nextCursor ?? null,
+  };
 }

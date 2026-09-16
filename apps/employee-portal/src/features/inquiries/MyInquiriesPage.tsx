@@ -353,13 +353,13 @@ export const MyInquiriesPage: React.FC = () => {
                 {inq.rental ? (
                   <div className="pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
                     <div className="text-xs text-gray-500">
-                      {inq.rental.contractMonths} mies. · {inq.rental.annualMileage.toLocaleString('pl-PL')} km/rok
+                      {inq.rental.contractMonths} mies. · {(inq.rental.annualMileageKm ?? inq.rental.annualMileage ?? 0).toLocaleString('pl-PL')} km/rok
                     </div>
                     <div className="text-lg font-bold text-indigo-700 tracking-tight">
-                      {inq.rental.monthlyRateNetPln.toLocaleString('pl-PL')} zł <span className="text-xs font-normal text-gray-500">netto / mc</span>
+                      {(inq.rental.monthlyRateNetPln ?? inq.rental.monthlyRateNet ?? 0).toLocaleString('pl-PL')} zł <span className="text-xs font-normal text-gray-500">netto / mc</span>
                     </div>
                     <div className="text-[11px] text-gray-500">
-                      Wpłata wstępna: {inq.rental.downPaymentPct}% ({inq.rental.downPaymentAmountPln?.toLocaleString('pl-PL')} zł)
+                      Wpłata wstępna: {inq.rental.initialPaymentPct ?? inq.rental.downPaymentPct ?? 0}% ({(inq.rental.initialPaymentAmountNet ?? inq.rental.downPaymentAmountPln ?? 0).toLocaleString('pl-PL')} zł)
                     </div>
                     {inq.rental.rentalCompanyName && (
                       <div className="text-[11px] text-gray-400">

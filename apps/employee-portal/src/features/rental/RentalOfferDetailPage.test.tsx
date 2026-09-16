@@ -59,6 +59,7 @@ const mockRentalOfferDetails: rentalApi.EmployeeRentalOfferDetails = {
   downPaymentPctOptions: [0, 5, 10],
   rentalOptions: [
     {
+      assignmentId: 'comp-1',
       contractMonths: 24,
       annualMileage: 10000,
       downPaymentPct: 0,
@@ -68,6 +69,7 @@ const mockRentalOfferDetails: rentalApi.EmployeeRentalOfferDetails = {
       rateSource: 'PARTNER_MATRIX',
     },
     {
+      assignmentId: 'comp-1',
       contractMonths: 36,
       annualMileage: 20000,
       downPaymentPct: 0,
@@ -77,6 +79,7 @@ const mockRentalOfferDetails: rentalApi.EmployeeRentalOfferDetails = {
       rateSource: 'PARTNER_MATRIX',
     },
     {
+      assignmentId: 'comp-1',
       contractMonths: 36,
       annualMileage: 20000,
       downPaymentPct: 10,
@@ -86,6 +89,7 @@ const mockRentalOfferDetails: rentalApi.EmployeeRentalOfferDetails = {
       rateSource: 'PARTNER_MATRIX',
     },
     {
+      assignmentId: 'comp-1',
       contractMonths: 48,
       annualMileage: 30000,
       downPaymentPct: 5,
@@ -197,11 +201,11 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
         '/api',
         expect.objectContaining({
           offerId: 'rental-offer-1',
-          rentalSelection: {
+          rentalSelection: expect.objectContaining({
             contractMonths: 36,
-            annualMileage: 20000,
-            downPaymentPct: 0,
-          },
+            annualMileageKm: 20000,
+            initialPaymentPct: 0,
+          }),
         })
       );
     });

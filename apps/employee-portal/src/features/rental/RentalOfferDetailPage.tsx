@@ -591,9 +591,13 @@ export const RentalOfferDetailPage: React.FC = () => {
             vehicle: offer.vehicle
           }}
           rentalSelection={{
+            assignmentId: activeOption.assignmentId || offer.rentalCompany?.id || '',
             contractMonths: selectedMonths,
+            annualMileageKm: selectedMileage,
             annualMileage: selectedMileage,
-            downPaymentPct: selectedDownPayment
+            initialPaymentPct: selectedDownPayment,
+            downPaymentPct: selectedDownPayment,
+            initialPaymentAmountNet: activeOption.downPaymentAmountPln || 0
           }}
           rentalDisplay={{
             contractMonths: selectedMonths,

@@ -29,6 +29,7 @@ export interface EmployeeRentalOfferSummary {
 }
 
 export interface RentalOptionItem {
+  assignmentId: string;
   contractMonths: number;
   annualMileage: number;
   downPaymentPct: number;
@@ -164,7 +165,14 @@ export async function fetchEmployeeRentalOfferDetails(
 
   const raw = await handleResponseJson<any>(res);
   if (raw.contractMonthsOptions && raw.rentalOptions && raw.rentalCompany) {
-    return raw as EmployeeRentalOfferDetails;
+    const normalizedOptions = raw.rentalOptions.map((o: any) => ({
+      ...o,
+      assignmentId: o.assignmentId || raw.rentalCompany?.id || 'default_assignment'
+    }));
+    return {
+      ...raw,
+      rentalOptions: normalizedOptions
+    } as EmployeeRentalOfferDetails;
   }
 
   // Surowy backend zwraca rentalOptions jako tablicę grup dostawców z wierszami `rows: [...]`
@@ -173,15 +181,27 @@ export async function fetchEmployeeRentalOfferDetails(
   const allRows = assignmentGroups.flatMap((g: any) =>
     (g.rows || []).map((r: any) => ({
       ...r,
+      assignmentId: g.assignmentId,
       rateSource: g.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX',
     }))
   );
+
+  // Gdy kilku dostawców oferuje ten sam wariant (miesiące, przebieg, wpłata), wybieramy ten z niższą ratą brutto
+  const optionMap = new Map<string, any>();
+  for (const r of allRows) {
+    const key = `${r.contractMonths}-${r.annualMileageKm}-${r.initialPaymentPct}`;
+    const existing = optionMap.get(key);
+    if (!existing || Number(r.monthlyRateGross) < Number(existing.monthlyRateGross)) {
+      optionMap.set(key, r);
+    }
+  }
+  const bestRows = Array.from(optionMap.values());
 
   const contractMonthsSet = new Set<number>();
   const annualMileageSet = new Set<number>();
   const downPaymentPctSet = new Set<number>();
 
-  const flattenedOptions: RentalOptionItem[] = allRows.map((r: any) => {
+  const flattenedOptions: RentalOptionItem[] = bestRows.map((r: any) => {
     const months = Number(r.contractMonths);
     const mileage = Number(r.annualMileageKm);
     const downPct = Number(r.initialPaymentPct);
@@ -191,6 +211,7 @@ export async function fetchEmployeeRentalOfferDetails(
     downPaymentPctSet.add(downPct);
 
     return {
+      assignmentId: r.assignmentId || primaryGroup?.assignmentId || '',
       contractMonths: months,
       annualMileage: mileage,
       downPaymentPct: downPct,

@@ -114,6 +114,7 @@ describe('Employee Portal Rental API Client', () => {
       downPaymentPctOptions: [0, 10],
       rentalOptions: [
         {
+          assignmentId: 'comp_2',
           contractMonths: 36,
           annualMileage: 20000,
           downPaymentPct: 10,
