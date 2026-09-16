@@ -1725,6 +1725,7 @@ model EmployeeProgram {
   memberships          EmployeeMembership[]
   inquiries            EmployeeInquiry[]
   registrationCodes    EmployeeRegistrationCode[]
+  matrixSets           EmployeeProgramMatrixSet[]
 
   @@unique([companyId, id])
   @@map("employee_programs")
@@ -1832,8 +1833,23 @@ model EmployeeMatrixSet {
 
   rentalCompany          RentalCompany             @relation(fields: [rentalCompanyId], references: [id], onDelete: Restrict)
   versions               EmployeeMatrixVersion[]
+  programMatrixSets      EmployeeProgramMatrixSet[]
 
   @@map("employee_matrix_sets")
+}
+
+model EmployeeProgramMatrixSet {
+  id          String            @id @default(cuid())
+  programId   String            @map("program_id")
+  matrixSetId String            @map("matrix_set_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  program     EmployeeProgram   @relation(fields: [programId], references: [id], onDelete: Cascade)
+  matrixSet   EmployeeMatrixSet @relation(fields: [matrixSetId], references: [id], onDelete: Restrict)
+
+  @@unique([programId, matrixSetId])
+  @@index([matrixSetId])
+  @@map("employee_program_matrix_sets")
 }
 
 model EmployeeMatrixVersion {
