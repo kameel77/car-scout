@@ -85,7 +85,7 @@ export async function createLightweightTestApp(options: LightweightAppOptions = 
   });
 
   // Register JWT plugin with platform isolation
-  const jwtSecret = process.env.JWT_SECRET || 'test-jwt-secret-employee-isolated-12345678901234567890';
+  const jwtSecret = process.env.JWT_SECRET || 'test-jwt-secret-employee-isolated';
   const jwtOptions: any = {
     secret: jwtSecret,
     trusted: options.enablePlatformJwtTrust !== false ? trustPlatformJwt : undefined,

@@ -114,7 +114,8 @@ describe('Employee Inquiries - Security & CSRF Enforcement', () => {
 
   beforeEach(async () => {
     app = Fastify();
-    await app.register(jwt, { secret: 'test-isolated-inquiries-secret-123456789' });
+    const jwtSecret = process.env.JWT_SECRET || 'test-jwt-secret-employee-isolated';
+    await app.register(jwt, { secret: jwtSecret });
 
     app.decorate('prisma', {
       employeeAccount: { findUnique: vi.fn() },
