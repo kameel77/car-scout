@@ -217,6 +217,55 @@ describe('Employee Portal - Frontend Integration Suite', () => {
       expect(screen.getByRole('button', { name: /Sprawdź kod/i })).toBeInTheDocument();
     });
 
+    it('redirects unauthenticated user accessing /zapytania to /logowanie', async () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+
+      render(
+        <BrandProvider initialConfig={defaultBrandConfig}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/zapytania']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
+        </BrandProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Zaloguj się do portalu/i })).toBeInTheDocument();
+      });
+    });
+
+    it('renders /zapytania for authenticated employee', async () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
+        id: 'acc_1',
+        email: 'jan@firma.pl',
+        firstName: 'Jan',
+        lastName: 'Kowalski',
+        company: { id: 'c1', name: 'Firma S.A.', slug: 'firma' },
+        program: { id: 'p1', name: 'Program Flotowy', slug: 'flota' },
+      });
+
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ inquiries: [], nextCursor: null }),
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
+      render(
+        <BrandProvider initialConfig={defaultBrandConfig}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/zapytania']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
+        </BrandProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Moje zapytania/i })).toBeInTheDocument();
+      });
+    });
+
     it('renders 404 NotFoundPage for unknown routes', () => {
       render(
         <BrandProvider initialConfig={defaultBrandConfig}>

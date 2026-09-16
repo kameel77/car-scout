@@ -279,4 +279,35 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
       expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
     });
   });
+
+  it('opens InquiryModal when clicking Zapytaj o tę ofertę button on offer card', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
+      offers: mockOffersList,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <CatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
+    });
+
+    const inquiryButtons = screen.getAllByRole('button', { name: /Zapytaj o tę ofertę/i });
+    expect(inquiryButtons.length).toBeGreaterThan(0);
+    fireEvent.click(inquiryButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Zapytaj o tę ofertę/i })).toBeInTheDocument();
+    });
+  });
 });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -16,6 +17,7 @@ import {
   Tag
 } from 'lucide-react';
 import { fetchEmployeeOffers, EmployeeOffer } from './catalog-api';
+import { InquiryModal } from '../inquiries/InquiryModal';
 
 function formatFuelType(fuelType: string): string {
   switch (fuelType.toUpperCase()) {
@@ -54,6 +56,7 @@ function formatTransmission(transmission: string): string {
 export const CatalogPage: React.FC = () => {
   const { config, isLoading: isBrandLoading } = useBrandConfig();
   const { user, isLoading: isAuthLoading, logout, sessionError } = useAuth();
+  const navigate = useNavigate();
   const [logoError, setLogoError] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -62,6 +65,10 @@ export const CatalogPage: React.FC = () => {
   const [offers, setOffers] = useState<EmployeeOffer[]>([]);
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(true);
   const [offersError, setOffersError] = useState<string | null>(null);
+
+  // Inquiry Modal State
+  const [selectedOfferForInquiry, setSelectedOfferForInquiry] = useState<EmployeeOffer | null>(null);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
 
   const loadOffers = useCallback(async (signal?: AbortSignal) => {
     setIsLoadingOffers(true);
@@ -122,20 +129,38 @@ export const CatalogPage: React.FC = () => {
       {/* Top Navbar */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {config.brandLogoUrl && !logoError ? (
-              <img
-                src={config.brandLogoUrl}
-                alt={config.brandName}
-                onError={() => setLogoError(true)}
-                className="h-8 w-auto max-w-[140px] object-contain"
-              />
-            ) : (
-              <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                {config.brandName.charAt(0) || 'P'}
-              </div>
-            )}
-            <span className="font-semibold text-gray-900 hidden sm:inline">{config.brandName}</span>
+          <div className="flex items-center gap-6">
+            <Link to="/katalog" className="flex items-center gap-3">
+              {config.brandLogoUrl && !logoError ? (
+                <img
+                  src={config.brandLogoUrl}
+                  alt={config.brandName}
+                  onError={() => setLogoError(true)}
+                  className="h-8 w-auto max-w-[140px] object-contain"
+                />
+              ) : (
+                <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                  {config.brandName.charAt(0) || 'P'}
+                </div>
+              )}
+              <span className="font-semibold text-gray-900 hidden sm:inline">{config.brandName}</span>
+            </Link>
+
+            {/* Navigation Tabs */}
+            <nav className="flex items-center gap-2">
+              <Link
+                to="/katalog"
+                className="px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 transition-colors"
+              >
+                Katalog ofert
+              </Link>
+              <Link
+                to="/zapytania"
+                className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              >
+                Moje zapytania
+              </Link>
+            </nav>
           </div>
 
           <div className="flex items-center gap-3">
@@ -433,6 +458,17 @@ export const CatalogPage: React.FC = () => {
                       </div>
                       <span className="text-xs text-gray-400 font-medium">brutto</span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedOfferForInquiry(offer);
+                        setIsInquiryModalOpen(true);
+                      }}
+                      className="mt-3.5 w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs flex items-center justify-center gap-2"
+                    >
+                      Zapytaj o tę ofertę
+                    </button>
                   </div>
                 </div>
               </article>
@@ -440,6 +476,17 @@ export const CatalogPage: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Modal zapytania o ofertę */}
+      <InquiryModal
+        isOpen={isInquiryModalOpen}
+        onClose={() => {
+          setIsInquiryModalOpen(false);
+          setSelectedOfferForInquiry(null);
+        }}
+        offer={selectedOfferForInquiry}
+        onViewMyInquiries={() => navigate('/zapytania')}
+      />
     </div>
   );
 };

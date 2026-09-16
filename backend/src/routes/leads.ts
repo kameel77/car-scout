@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { sendLeadEmail } from '../services/email.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { requirePermission } from '../middleware/permissions.js';
+import { generateReference } from '../utils/reference-generator.js';
 import fetch from 'node-fetch';
 
 async function verifyTurnstile(token: string | undefined, ip: string, log: any): Promise<boolean> {
@@ -116,11 +117,6 @@ interface RentalLeadPayload {
     rentalMonthlyRate?: number;
 }
 
-const generateReference = () => {
-    const timestamp = Date.now().toString();
-    return `AF-${timestamp.slice(-8)}`;
-};
-
 const ALLOWED_LEAD_TYPES = new Set([
     'sale',
     'price_negotiation',
@@ -128,7 +124,8 @@ const ALLOWED_LEAD_TYPES = new Set([
     'waitlist',
     'quick_contact',
     'foton_fleet',
-    'foton_lifestyle'
+    'foton_lifestyle',
+    'employee'
 ]);
 
 export async function leadRoutes(fastify: FastifyInstance) {

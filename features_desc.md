@@ -884,3 +884,32 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - **Stan pusty**: estetyczny komunikat informujący o braku dostępnych ofert z kontaktem do opiekuna programu.
     - **Stan błędu**: czytelne powiadomienie o niepowodzeniu pobrania danych z przyciskiem ponowienia zapytania.
   - Wykorzystanie natywnego stanu React (`useState`, `useEffect`) z obsługą anulowania żądań (`AbortController`) i `credentials: 'same-origin'`.
+
+### 68. Zgłoszenia i Zapytania o Ofertę w Portalu Pracowniczym (Etap P3c)
+- **Cel**: Umożliwienie zalogowanemu pracownikowi firmy partnerskiej przesłania zapytania o wybraną ofertę samochodową z katalogu, automatyczne utworzenie leada w CRM z zachowaniem snapshotu wyliczeń oraz podgląd historii swoich zgłoszeń.
+- **Backend API**:
+  - `POST /api/employee/inquiries`:
+    - Idempotentne tworzenie zgłoszenia (`EmployeeInquiry`) powiązanego z nowym leadem w CRM (`Lead`) w jednej transakcji bazodanowej.
+    - Zabezpieczenie podwójną weryfikacją: ciasteczko sesyjne (`verifyEmployeeAuth`) oraz ochrona przed CSRF (`verifyEmployeeCsrf`, nagłówek `X-CSRF-Token`).
+    - Rate limit ograniczający nadużycia do 10 zapytań na minutę per IP.
+    - Generowanie numeru referencyjnego w formacie `AF-...` za pomocą współdzielonej funkcji `generateReference()`. W przypadku kolizji unikalności `reference_number` mechanizm ponawia próbę po 2 ms opóźnienia, gwarantując unikalną milisekundę.
+    - Walidacja Zgody RODO (§3.1a): pole `consentPrivacy: boolean` jest bezwzględnie wymagane w ciele żądania. Wartość `false` lub brak zwraca kod 400 Bad Request. Po wyrażeniu zgody (`true`), na rekordzie `Lead` zapisywany jest timestamp `consentPrivacyAt: new Date()`, natomiast zgoda marketingowa `consentMarketingAt` pozostaje `null`.
+    - Forma finansowania / Strona umowy (`contractParty`): obsługuje `CONSUMER` (osoba prywatna), `EMPLOYEE_B2B` (działalność gospodarcza pracownika) oraz `EMPLOYER_COMPANY` (umowa na firmę pracodawcy). Weryfikacja semantyki sumy (ANY): jeśli program definiuje nadpisania produktowe (`EmployeeProductOverride`), wybrana strona umowy musi być dozwolona w co najmniej jednym aktywnym produkcie. Dla opcji B2B i firmy pracodawcy wymagany jest poprawny numer NIP (10 - 15 znaków).
+    - Snapshotting: serwer pobiera aktualne dane oferty i zapisuje niezmienną migawkę kalkulacji ceny (`calculationSnapshot` z ceną katalogową, pracowniczą, oszczędnością i procentem rabatu) oraz pakietu benefitów (`benefitSnapshot`).
+    - Integracja z CRM Inbox: tworzony `Lead` (z typem `'employee'`) ma przypisany `listingId` oferty, co pozwala doradcom na podgląd specyfikacji pojazdu w skrzynce CRM.
+  - `GET /api/employee/inquiries`:
+    - Zwraca listę zgłoszeń zalogowanego pracownika w ramach ścisłej izolacji konta.
+    - Paginacja keyset (`cursor`, `limit` domyślnie 20, max 50).
+    - Odpowiedź zawiera zagnieżdżone obiekty pojazdu, kalkulacji cenowej, benefitów, statusu oraz numeru referencyjnego z powiązanego leada.
+- **Interfejs Portalu Pracowniczego (`apps/employee-portal`)**:
+  - Przycisk akcji "Zapytaj o tę ofertę" umieszczony na każdej karcie pojazdu w katalogu.
+  - Modal formularza (`InquiryModal`):
+    - Generuje unikalny klucz idempotencji (`crypto.randomUUID()`) per sesję modalu, zachowując go przy ponowieniu próby po błędzie sieciowym.
+    - Dynamiczny wybór strony umowy z warunkowym wyświetlaniem pola NIP dla działalności i firmy pracodawcy.
+    - Automatyczne wstępne wypełnienie danych kontaktowych z kontekstu zalogowanego pracownika (imię, nazwisko, e-mail, telefon).
+    - Opcjonalne pole na uwagi pracownika (do 2000 znaków).
+    - Wymagany checkbox zgody na przetwarzanie danych osobowych z linkiem do Polityki Prywatności.
+    - Dedykowany ekran sukcesu prezentujący nadany numer referencyjny `AF-...` oraz przyciski nawigacji.
+  - Widok historii zapytań (`MyInquiriesPage` na trasie `/zapytania`):
+    - 4 stany widoku: szkielet ładowania (skeleton), lista zgłoszeń z podglądem auta, ceną pracowniczą, statusem i korzyściami, stan pusty z zachętą do przejścia do katalogu oraz stan błędu z przyciskiem ponowienia.
+  - Nawigacja w górnym pasku portalu z przełącznikiem zakładek "Katalog ofert" oraz "Moje zapytania".
