@@ -49,7 +49,7 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
   });
 
   // Fetch available listings for picker
-  const { data: listingsData, isLoading: isListingsLoading } = useQuery({
+  const { data: listingsData, isLoading: isListingsLoading, isError: isListingsError } = useQuery({
     queryKey: ['employee-available-listings', programId, listingSearch],
     queryFn: () => employeeAdminApi.listAvailableListings(programId, listingSearch, token),
     enabled: isAddOpen
@@ -310,6 +310,10 @@ export const SpecialOffersTab: React.FC<Props> = ({ programId, token }) => {
                 <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-100 bg-gray-50/50">
                   {isListingsLoading ? (
                     <div className="p-4 text-center text-xs text-gray-500">Wyszukiwanie pojazdów...</div>
+                  ) : isListingsError ? (
+                    <div className="p-4 text-center text-xs text-red-600">
+                      Nie udało się pobrać listy pojazdów. Spróbuj ponownie.
+                    </div>
                   ) : availableListings.length === 0 ? (
                     <div className="p-4 text-center text-xs text-gray-500">
                       Brak dostępnych pojazdów (lub wszystkie są już w programie).

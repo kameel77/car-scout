@@ -268,7 +268,7 @@ export const employeeAdminApi = {
 
   // Available Listings (for offer picker)
   listAvailableListings: (programId: string, search: string = '', token: string) => {
-    const q = new URLSearchParams();
+    const q = new URLSearchParams({ programId });
     if (search) q.set('search', search);
     return request<{ listings: AvailableListing[] }>(
       `/api/admin/employee-programs/available-listings?${q.toString()}`,
