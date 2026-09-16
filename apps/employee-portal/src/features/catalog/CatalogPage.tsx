@@ -155,6 +155,12 @@ export const CatalogPage: React.FC = () => {
                 Katalog ofert
               </Link>
               <Link
+                to="/najem"
+                className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              >
+                Najem długoterminowy
+              </Link>
+              <Link
                 to="/zapytania"
                 className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
               >

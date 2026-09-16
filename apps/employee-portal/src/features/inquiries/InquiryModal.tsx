@@ -11,13 +11,38 @@ import { EmployeeOffer } from '../catalog/catalog-api';
 import {
   submitEmployeeInquiry,
   ContractPartyOption,
-  CreateInquiryPayload
+  CreateInquiryPayload,
+  RentalSelection
 } from './inquiries-api';
+
+export interface RentalDisplayInfo {
+  contractMonths: number;
+  annualMileage: number;
+  downPaymentPct: number;
+  monthlyRateNet: number;
+  monthlyRateGross: number;
+  rentalCompanyName: string;
+}
+
+export interface InquiryOfferItem {
+  id: string;
+  sourceType?: string;
+  vehicle: {
+    make: string;
+    model: string;
+    version?: string | null;
+  };
+  pricing?: {
+    employeePricePln: number;
+  } | null;
+}
 
 interface InquiryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  offer: EmployeeOffer | null;
+  offer: InquiryOfferItem | EmployeeOffer | null;
+  rentalSelection?: RentalSelection | null;
+  rentalDisplay?: RentalDisplayInfo | null;
   onViewMyInquiries?: () => void;
 }
 
@@ -25,6 +50,8 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   isOpen,
   onClose,
   offer,
+  rentalSelection,
+  rentalDisplay,
   onViewMyInquiries
 }) => {
   const { config } = useBrandConfig();
@@ -100,7 +127,8 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
         contactPhone: contactPhone.trim(),
         consentPrivacy,
         ...(contractParty !== 'CONSUMER' && nip.trim() ? { nip: nip.trim() } : {}),
-        ...(notes.trim() ? { notes: notes.trim() } : {})
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        ...(rentalSelection ? { rentalSelection } : {})
       };
 
       const response = await submitEmployeeInquiry(config.apiUrl, payload);
@@ -128,7 +156,12 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
               {createdReferenceNumber ? 'Zgłoszenie wysłane' : 'Zapytaj o tę ofertę'}
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              {offer.vehicle.make} {offer.vehicle.model} ({offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł)
+              {offer.vehicle.make} {offer.vehicle.model}
+              {rentalDisplay
+                ? ` (${rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto / mies.)`
+                : offer.pricing?.employeePricePln
+                ? ` (${offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł)`
+                : ''}
             </p>
           </div>
           <button
@@ -163,6 +196,14 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                   <span>Wybrany pojazd:</span>
                   <span className="font-medium text-gray-800">{offer.vehicle.make} {offer.vehicle.model}</span>
                 </div>
+                {rentalDisplay && (
+                  <div className="text-xs text-gray-500 mt-1 flex justify-between">
+                    <span>Parametry najmu:</span>
+                    <span className="font-medium text-primary-700">
+                      {rentalDisplay.contractMonths} mies. · {rentalDisplay.annualMileage.toLocaleString('pl-PL')} km · {rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto/mc
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -194,6 +235,22 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                 <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-800">
                   <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>{errorMessage}</div>
+                </div>
+              )}
+
+              {/* Parametry najmu (jeśli dotyczy) */}
+              {rentalDisplay && (
+                <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs space-y-1.5 text-indigo-950">
+                  <div className="font-semibold flex items-center justify-between text-indigo-900 border-b border-indigo-100/80 pb-1.5">
+                    <span>Wybrane parametry najmu:</span>
+                    <span className="text-[11px] font-normal text-indigo-700">{rentalDisplay.rentalCompanyName}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-indigo-800 pt-1">
+                    <div>Okres umowy: <strong>{rentalDisplay.contractMonths} mies.</strong></div>
+                    <div>Limit roczny: <strong>{rentalDisplay.annualMileage.toLocaleString('pl-PL')} km</strong></div>
+                    <div>Wpłata wstępna: <strong>{rentalDisplay.downPaymentPct}%</strong></div>
+                    <div>Rata miesięczna: <strong>{rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto</strong></div>
+                  </div>
                 </div>
               )}
 

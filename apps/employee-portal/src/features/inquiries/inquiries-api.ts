@@ -2,6 +2,23 @@ import { fetchCsrfToken } from '../auth/auth-api';
 
 export type ContractPartyOption = 'CONSUMER' | 'EMPLOYEE_B2B' | 'EMPLOYER_COMPANY';
 
+export interface RentalSelection {
+  contractMonths: number;
+  annualMileage: number;
+  downPaymentPct: number;
+}
+
+export interface InquiryRentalDetails {
+  contractMonths: number;
+  annualMileage: number;
+  downPaymentPct: number;
+  downPaymentAmountPln: number;
+  monthlyRateNetPln: number;
+  monthlyRateGrossPln: number;
+  rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX';
+  rentalCompanyName: string;
+}
+
 export interface CreateInquiryPayload {
   offerId: string;
   idempotencyKey: string;
@@ -12,6 +29,7 @@ export interface CreateInquiryPayload {
   nip?: string;
   notes?: string;
   consentPrivacy: boolean;
+  rentalSelection?: RentalSelection;
 }
 
 export interface InquiryVehicle {
@@ -39,6 +57,7 @@ export interface InquiryBenefit {
 
 export interface EmployeeInquiryItem {
   id: string;
+  sourceType?: 'FINANCING' | 'RENTAL';
   status: string;
   referenceNumber: string | null;
   contractParty: ContractPartyOption;
@@ -51,6 +70,7 @@ export interface EmployeeInquiryItem {
   vehicle: InquiryVehicle | null;
   pricing: InquiryPricing | null;
   benefit: InquiryBenefit | null;
+  rental?: InquiryRentalDetails | null;
 }
 
 export interface CreateInquiryResponse {

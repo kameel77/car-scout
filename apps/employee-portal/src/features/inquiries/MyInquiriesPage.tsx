@@ -130,6 +130,12 @@ export const MyInquiriesPage: React.FC = () => {
                 Katalog ofert
               </Link>
               <Link
+                to="/najem"
+                className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              >
+                Najem długoterminowy
+              </Link>
+              <Link
                 to="/zapytania"
                 className="px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 transition-colors"
               >
@@ -293,6 +299,11 @@ export const MyInquiriesPage: React.FC = () => {
                       <span className="font-mono text-xs font-bold text-primary-700 bg-primary-50 border border-primary-200 px-2 py-0.5 rounded-md">
                         {inq.referenceNumber || inq.id}
                       </span>
+                      {inq.rental && (
+                        <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                          Najem długoterminowy
+                        </span>
+                      )}
                       <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
                         {inq.status === 'NEW' ? 'Nowe' : inq.status}
                       </span>
@@ -338,8 +349,25 @@ export const MyInquiriesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Snapshot Pricing Block */}
-                {inq.pricing && (
+                {/* Snapshot Pricing / Rental Block */}
+                {inq.rental ? (
+                  <div className="pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
+                    <div className="text-xs text-gray-500">
+                      {inq.rental.contractMonths} mies. · {inq.rental.annualMileage.toLocaleString('pl-PL')} km/rok
+                    </div>
+                    <div className="text-lg font-bold text-indigo-700 tracking-tight">
+                      {inq.rental.monthlyRateNetPln.toLocaleString('pl-PL')} zł <span className="text-xs font-normal text-gray-500">netto / mc</span>
+                    </div>
+                    <div className="text-[11px] text-gray-500">
+                      Wpłata wstępna: {inq.rental.downPaymentPct}% ({inq.rental.downPaymentAmountPln?.toLocaleString('pl-PL')} zł)
+                    </div>
+                    {inq.rental.rentalCompanyName && (
+                      <div className="text-[11px] text-gray-400">
+                        Dostawca: {inq.rental.rentalCompanyName}
+                      </div>
+                    )}
+                  </div>
+                ) : inq.pricing ? (
                   <div className="pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
                     <div className="text-xs text-gray-400 line-through">
                       Katalogowa: {inq.pricing.listPricePln.toLocaleString('pl-PL')} zł
@@ -353,7 +381,7 @@ export const MyInquiriesPage: React.FC = () => {
                       </div>
                     )}
                   </div>
-                )}
+                ) : null}
               </article>
             ))}
           </div>
