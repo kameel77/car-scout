@@ -4,6 +4,8 @@ Ten plik dokumentuje działanie kluczowych funkcjonalności aplikacji w przystę
 Każda nowa funkcjonalność lub zmiana zachowania istniejącej powinna mieć tutaj krótki opis.
 
 ## Wcześniejsze pobieranie ofert katalogu
+- Na `/wynajem-dlugoterminowy` HTML preładuje wyłącznie entry lazy chunka tej trasy. Dzięki temu pobieranie widoku może rozpocząć się równolegle z głównym bundlem, bez powrotu do pełnego rekurencyjnego `modulepreload`, który wcześniej konkurował o pasmo z HTML i obrazem LCP.
+- Sekcja treści finansowania i FAQ na `/wynajem-dlugoterminowy` jest ładowana dopiero po katalogu, ponieważ znajduje się pod listą ofert. Jej chunk i zapytanie FAQ nie blokują już pierwszego widoku ani LCP.
 - `/samochody` nie pobiera od razu kalkulatora finansowania, sekcji artykułu ani formularza powiadomień. Są pobierane tylko wtedy, gdy dana sekcja jest potrzebna; nagłówek, lead i pierwsze karty pozostają poza tymi granicami ładowania.
 - Na trasach katalogu GTM rozpoczyna ładowanie po zamontowaniu kart i dwóch klatkach animacji, po wczesnej interakcji lub najpóźniej po 3,5 s. Pozostałe strony korzystają z zakończenia ładowania dokumentu. Tag Assistant, kolejka zdarzeń oraz domyślne zgody pozostają zachowane. Thulium uruchamiane przez GTM korzysta z tej samej kolejności.
 - Domyślne wejście na `/samochody`, `/nowe` i `/uzywane` rozpoczyna publiczne zapytanie o oferty już z HTML, przed uruchomieniem Reacta.
@@ -954,14 +956,15 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - Możliwość oznaczenia oferty jako "Wyklucz ten pojazd z katalogu pracowniczego (isExcluded)".
     - Czerwona plakietka ostrzegawcza "Wykluczenie ze stoku" na kafelkach wykluczonych pojazdów w panelu.
 
-### 70. Feedy Produktowe Marketingowe (Google Merchant Center, Meta Catalog) - Wykluczenie Aut Używanych
-- **Cel**: Dostosowanie katalogów reklamowych i feedów produktowych (`/google-feed.xml`, `/facebook-feed.csv`, `/feed.xml`) do wymogów polityk Google Merchant Center oraz Meta Commerce, które zabraniają promowania aut używanych w standardowych feedach produktowych.
+### 70. Feedy Produktowe Marketingowe (Google Merchant Center, Meta Catalog) - Wykluczenie Aut Używanych i Zgodność Formatów Zdjęć
+- **Cel**: Dostosowanie katalogów reklamowych i feedów produktowych (`/google-feed.xml`, `/facebook-feed.csv`, `/feed.xml`) do wymogów polityk Google Merchant Center / Google Ads oraz Meta Commerce, które zabraniają promowania aut używanych w standardowych feedach produktowych oraz wymagają grafik w formatach PNG, JPG, JPEG lub GIF (zakaz formatu WebP).
 - **Logika selekcji**:
   - **Oferty sprzedaży i leasingu (`Listing`)**: pobierane są wyłącznie pojazdy nowe (`condition = 'NEW'`), niearchiwalne (`isArchived: false`). Wszystkie pojazdy używane (`condition = 'USED'`), w tym pochodzące z integracji giełdowych (np. PewneAuto), są ściśle wykluczone.
   - **Wynajem długoterminowy (`RentalVehicle`)**: pobierane są aktywne pojazdy z warunkiem `condition = 'NEW'`. Ewentualne pojazdy używane są pomijane.
   - **Atrybut stanu (`condition`)**: we wszystkich wygenerowanych feedach (zarówno w XML `<g:condition>`, jak i w CSV) wartość parametru stanu jest zawsze ustawiona na `new`.
+  - **Zgodność formatów zdjęć (Google Ads / Meta)**: funkcja `ensureCompatibleImageFormat` automatycznie mapuje rozszerzenia `.webp` na `.jpg`. Backend Motolii (`serveStaticFile` z biblioteką Sharp) dynamicznie konwertuje pliki WebP z dysku do formatu JPEG w locie przy zapytaniu o `.jpg` z zachowaniem nagłówka `image/jpeg` i buforowania, co zapewnia 100% zgodność z crawlerami Google Ads bez modyfikacji plików źródłowych.
   - **Opis kanału RSS**: zaktualizowano opis w nagłówku feedu XML z wzmianki o autach używanych na "Katalog aktywnych ofert nowych samochodów oraz wynajmu długoterminowego".
-- **Weryfikacja**: Dedykowany test integracyjny `backend/src/routes/__tests__/feeds.test.ts` potwierdza poprawne filtrowanie, obecność aut nowych i wynajmu oraz całkowite wykluczenie aut używanych ze struktury XML i CSV.
+- **Weryfikacja**: Dedykowany test integracyjny `backend/src/routes/__tests__/feeds.test.ts` potwierdza poprawne filtrowanie, obecność aut nowych i wynajmu, całkowite wykluczenie aut używanych oraz bezbłędną konwersję i serwowanie grafik `.jpg` w miejsce `.webp`.
 
 ### 71. Wynajem Długoterminowy w Programie Pracowniczym (Etap E3)
 - **Cel**: Rozszerzenie programu pracowniczego o pełną obsługę najmu długoterminowego aut nowych z dedykowanymi stawkami partnerskimi, osobnym katalogiem ofert oraz integracją kalkulatora dyskretnego i CRM.

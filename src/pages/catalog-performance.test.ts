@@ -28,4 +28,11 @@ describe('public catalog dependency boundaries', () => {
     expect(code).not.toMatch(/import\s+\{[^}]*PillarFinancingCalculator[^}]*\}\s+from/);
     expect(code).not.toMatch(/import\s+\{[^}]*WaitlistForm[^}]*\}\s+from/);
   });
+
+  it('keeps below-fold financing UI outside the rental route static closure', () => {
+    const code = source('src/pages/RentalSearchPage.tsx');
+
+    expect(code).toMatch(/lazy\(\(\) =>\s*import\(['"]@\/components\/FinancingContentSection['"]\)/);
+    expect(code).not.toMatch(/import\s+\{[^}]*FinancingContentSection[^}]*\}\s+from/);
+  });
 });

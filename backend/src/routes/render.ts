@@ -363,6 +363,17 @@ function routeChunkLinks(path: string, manifest: ViteManifest): string[] {
     return links;
 }
 
+// The rental catalog is a lazy route, but its first card can become mobile LCP.
+// Preload only that route entry instead of enabling the old recursive
+// modulepreload fan-out, which competed with the HTML and LCP image.
+function routeEntryPreload(path: string, manifest: ViteManifest): string[] {
+    const route = ROUTE_MODULES.find(r => r.match(path));
+    if (!route || route.module !== 'src/pages/RentalSearchPage.tsx') return [];
+    const entry = manifest[route.module];
+    if (!entry || entry.isEntry) return [];
+    return [`<link rel="preload" as="script" href="/${entry.file}" crossorigin />`];
+}
+
 // Strony marek/modeli mają dynamiczne segmenty w ścieżce więc nie mieszczą się
 // w statycznym PAGINATED_ROUTES — dopisujemy je tu, żeby ?page=N nie było ignorowane.
 function isPaginatedPath(path: string): boolean {
@@ -1028,6 +1039,18 @@ async function renderPage(
             const chunkLinks = routeChunkLinks(path, manifest);
             if (chunkLinks.length) {
                 html = html.replace('</head>', () => `${chunkLinks.join('\n')}\n</head>`);
+            }
+        }
+    }
+
+    // Keep the rental route's single lazy entry on the critical path without
+    // preloading all of its transitive dependencies.
+    if (path === '/wynajem-dlugoterminowy') {
+        const manifest = await getViteManifest();
+        if (manifest) {
+            const preload = routeEntryPreload(path, manifest);
+            if (preload.length) {
+                html = html.replace('</head>', () => `${preload.join('\n')}\n</head>`);
             }
         }
     }

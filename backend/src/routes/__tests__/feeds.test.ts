@@ -93,4 +93,59 @@ describe('Marketing Feeds — /facebook-feed.csv & /google-feed.xml', () => {
     expect(xmlBody).not.toContain('<g:condition>used</g:condition>');
     expect(xmlBody).toContain('<g:condition>new</g:condition>');
   });
+
+  it('converts .webp image URLs to .jpg for Google Ads and Meta compliance', async () => {
+    // Create a new listing with .webp images
+    await app.prisma.listing.create({
+      data: {
+        make: 'TEST_FEED_MAKE',
+        model: 'WebpImageCar',
+        condition: 'NEW',
+        pricePln: 180000,
+        mileageKm: 10,
+        productionYear: 2026,
+        primaryImageUrl: '/uploads/csflow-images/csflow-61916/5.webp',
+        isArchived: false,
+      },
+    });
+
+    // Create a rental vehicle with .webp images
+    await app.prisma.rentalVehicle.create({
+      data: {
+        make: 'TEST_FEED_MAKE',
+        model: 'RentalWebpCar',
+        condition: 'NEW',
+        sellingPrice: 120000,
+        productionYear: 2025,
+        primaryImageUrl: 'https://motolia.pl/uploads/rental-images/xyz/0.webp?v=2',
+        isActive: true,
+      },
+    });
+
+    // Check Facebook CSV Feed
+    const csvRes = await app.inject({ method: 'GET', url: '/facebook-feed.csv' });
+    expect(csvRes.statusCode).toBe(200);
+    const csvBody = csvRes.body;
+    expect(csvBody).toContain('/uploads/csflow-images/csflow-61916/5.jpg');
+    expect(csvBody).not.toContain('/uploads/csflow-images/csflow-61916/5.webp');
+    expect(csvBody).toContain('https://motolia.pl/uploads/rental-images/xyz/0.jpg?v=2');
+    expect(csvBody).not.toContain('0.webp');
+
+    // Check Google XML Feed
+    const xmlRes = await app.inject({ method: 'GET', url: '/google-feed.xml' });
+    expect(xmlRes.statusCode).toBe(200);
+    const xmlBody = xmlRes.body;
+    expect(xmlBody).toContain('/uploads/csflow-images/csflow-61916/5.jpg');
+    expect(xmlBody).toContain('https://motolia.pl/uploads/rental-images/xyz/0.jpg?v=2');
+    expect(xmlBody).not.toContain('.webp');
+
+    // Verify on-the-fly serving of .jpg when the source file on disk is .webp
+    const imgRes = await app.inject({
+      method: 'GET',
+      url: '/uploads/csflow-images/csflow-61916/5.jpg',
+    });
+    expect(imgRes.statusCode).toBe(200);
+    expect(imgRes.headers['content-type']).toBe('image/jpeg');
+    expect(imgRes.rawPayload.length).toBeGreaterThan(0);
+  });
 });

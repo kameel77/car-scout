@@ -216,6 +216,28 @@ describe('GET /api/render', () => {
         }
     });
 
+    it('preloads only the rental route entry when recursive modulepreload is disabled', async () => {
+        const MANIFEST = {
+            'src/pages/RentalSearchPage.tsx': { file: 'assets/RentalSearchPage-rental.js', imports: ['_shared-rental.js'] },
+            '_shared-rental.js': { file: 'assets/shared-rental.js' },
+            'index.html': { file: 'assets/index-main.js', isEntry: true },
+        };
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: unknown) =>
+                String(url).includes('manifest.json')
+                    ? new Response(JSON.stringify(MANIFEST), { status: 200 })
+                    : new Response(TEMPLATE, { status: 200 })
+            )
+        );
+
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/wynajem-dlugoterminowy' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('<link rel="preload" as="script" href="/assets/RentalSearchPage-rental.js" crossorigin />');
+        expect(res.body).not.toContain('shared-rental.js');
+        expect(res.body).not.toContain('<link rel="modulepreload"');
+    });
+
     it('injects window.__APP_SETTINGS__ and window.__CATALOG_PREFETCH__ correctly', async () => {
         const resHome = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(resHome.statusCode).toBe(200);
