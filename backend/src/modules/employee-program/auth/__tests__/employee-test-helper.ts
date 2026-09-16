@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 import { employeeAuthRoutes } from '../employee-auth.routes.js';
 import { employeeCatalogRoutes } from '../../catalog/employee-catalog.routes.js';
+import { employeeRentalCatalogRoutes } from '../../rental/employee-rental-catalog.routes.js';
 import { employeeInquiriesRoutes } from '../../inquiries/employee-inquiries.routes.js';
 import { trustPlatformJwt } from '../../../../middleware/platform-jwt.js';
 
@@ -97,9 +98,10 @@ export async function createLightweightTestApp(options: LightweightAppOptions = 
   app.decorate('prisma', prisma);
   app.decorate('redis', redis);
 
-  // Register employee auth and catalog modules
+  // Register employee auth, catalog, rental, and inquiries modules
   await app.register(employeeAuthRoutes);
   await app.register(employeeCatalogRoutes);
+  await app.register(employeeRentalCatalogRoutes);
   await app.register(employeeInquiriesRoutes);
 
   await app.ready();
