@@ -123,20 +123,26 @@ describe('InquiryModal Component', () => {
     const b2bRadio = screen.getByDisplayValue('EMPLOYEE_B2B');
     fireEvent.click(b2bRadio);
 
-    expect(screen.getByLabelText(/NIP Firmy/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/NIP Firmy/i)).toBeInTheDocument();
+    });
 
     // Select EMPLOYER_COMPANY radio
     const companyRadio = screen.getByDisplayValue('EMPLOYER_COMPANY');
     fireEvent.click(companyRadio);
 
-    expect(screen.getByLabelText(/NIP Firmy/i)).toBeInTheDocument();
-    expect(screen.getByText(/Samochód służbowy finansowany bezpośrednio przez pracodawcę/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/NIP Firmy/i)).toBeInTheDocument();
+      expect(screen.getByText(/Samochód służbowy finansowany bezpośrednio przez pracodawcę/i)).toBeInTheDocument();
+    });
 
     // Select back to CONSUMER
     const consumerRadio = screen.getByDisplayValue('CONSUMER');
     fireEvent.click(consumerRadio);
 
-    expect(screen.queryByLabelText(/NIP Firmy/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByLabelText(/NIP Firmy/i)).not.toBeInTheDocument();
+    });
   });
 
   it('shows error validation when RODO consent is not checked', async () => {

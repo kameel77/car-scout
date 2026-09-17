@@ -1815,6 +1815,7 @@ model EmployeeMembershipAudit {
   programId  String          @map("program_id")
   action     String          @map("action") // CREATED, ROTATED, REVOKED, REINSTATED
   reason     String?         @map("reason")
+  actorUserId String?        @map("actor_user_id")
   createdAt  DateTime        @default(now()) @map("created_at")
 
   account    EmployeeAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)

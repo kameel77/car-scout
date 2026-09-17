@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Building2, KeyRound, Sparkles, FileSpreadsheet, Settings, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Building2, KeyRound, Sparkles, FileSpreadsheet, Settings, ExternalLink, Users } from 'lucide-react';
 import { EmployeeCompanyItem, EmployeeProgramSummary } from '@/services/employee-admin.service';
 import { RegistrationCodesTab } from './RegistrationCodesTab';
 import { SpecialOffersTab } from './SpecialOffersTab';
 import { MatrixImportTab } from './MatrixImportTab';
 import { ProgramSettingsTab } from './ProgramSettingsTab';
+import { EmployeesTab } from './EmployeesTab';
 
 interface Props {
   company: EmployeeCompanyItem;
@@ -86,6 +87,14 @@ export const CompanyDetailView: React.FC<Props> = ({ company, token, onBack }) =
             </TabsTrigger>
 
             <TabsTrigger
+              value="employees"
+              className="flex items-center gap-2 py-2 px-3.5 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all"
+            >
+              <Users className="w-4 h-4" />
+              Pracownicy
+            </TabsTrigger>
+
+            <TabsTrigger
               value="settings"
               className="flex items-center gap-2 py-2 px-3.5 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all"
             >
@@ -96,6 +105,10 @@ export const CompanyDetailView: React.FC<Props> = ({ company, token, onBack }) =
 
           <TabsContent value="codes" className="mt-0 outline-none">
             <RegistrationCodesTab programId={activeProgram.id} token={token} />
+          </TabsContent>
+
+          <TabsContent value="employees" className="mt-0 outline-none">
+            <EmployeesTab companyId={company.id} token={token} />
           </TabsContent>
 
           <TabsContent value="offers" className="mt-0 outline-none">
