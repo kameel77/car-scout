@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { Lead, Listing, FinancingProduct, PrismaClient, RentalVehicle } from '@prisma/client';
 import { FastifyInstance } from 'fastify';
+import type { InquiryCalculationSnapshot } from '../modules/employee-program/inquiries/employee-inquiries.routes.js';
 
 export const resolveLeadRecipient = async (prisma: any): Promise<string | null> => {
     const settings = await prisma.appSettings.findFirst({
@@ -465,35 +466,7 @@ export interface EmployeeInquiryEmailPayload {
         consultantCare?: boolean | null;
         termsText?: string | null;
     } | null;
-    calculationSnapshot: {
-        offerId?: string;
-        sourceType: 'FINANCING' | 'RENTAL';
-        vehicle?: {
-            make?: string;
-            model?: string;
-            version?: string | null;
-            productionYear?: number;
-            primaryImageUrl?: string | null;
-        } | null;
-        pricing?: {
-            listPricePln: number;
-            employeePricePln: number;
-            savingsPln?: number;
-            discountPct: number;
-        } | null;
-        rental?: {
-            rateSource?: string;
-            matrixVersionId?: string | null;
-            rentalCompanyName?: string;
-            assignmentId?: string;
-            contractMonths: number;
-            annualMileageKm: number;
-            initialPaymentPct?: number;
-            initialPaymentAmountNet?: number;
-            monthlyRateNet: number;
-            monthlyRateGross: number;
-        } | null;
-    };
+    calculationSnapshot: InquiryCalculationSnapshot;
 }
 
 export const sendEmployeeInquiryNotificationEmail = async (

@@ -234,7 +234,7 @@ describe('Employee Inquiries Email Notifications', () => {
     };
   };
 
-  it('sends both manager notification and employee confirmation emails on new inquiry', async () => {
+  it('sends both manager notification and employee confirmation emails on new inquiry with rendered content', async () => {
     const headers = generateAuthHeaders('11111111-1111-4111-8111-111111111111');
     const payload = {
       offerId: mockOffer.id,
@@ -272,6 +272,41 @@ describe('Employee Inquiries Email Notifications', () => {
 
     expect(employeeMail).toBeDefined();
     expect(employeeMail.recipientEmail).toBe('adam.nowak@acme.com');
+
+    // End-to-end verification: ensure the inquiry produced by the endpoint renders without missing fields in templates
+    const mockTransporter = {
+      sendMail: vi.fn().mockResolvedValue({ messageId: 'msg_e2e_1' })
+    };
+    const nodemailer = await import('nodemailer');
+    vi.spyOn(nodemailer.default, 'createTransport').mockReturnValue(mockTransporter as any);
+
+    // Render manager notification with endpoint inquiry
+    vi.spyOn(emailService, 'sendEmployeeInquiryNotificationEmail').mockRestore();
+    await emailService.sendEmployeeInquiryNotificationEmail(
+      app,
+      managerMail.inquiry,
+      managerMail.company,
+      managerMail.recipientEmail
+    );
+    expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
+    const managerHtml = mockTransporter.sendMail.mock.calls[0][0].html;
+    expect(managerHtml).toContain('Cena katalogowa:</strong> 100000 zł');
+    expect(managerHtml).toContain('Cena dla pracownika:</strong> 95000 zł');
+    expect(managerHtml).not.toContain('Cena katalogowa:</strong> - zł');
+    expect(managerHtml).not.toContain('Cena dla pracownika:</strong> - zł');
+
+    // Render employee confirmation with endpoint inquiry
+    vi.spyOn(emailService, 'sendEmployeeInquiryConfirmationEmail').mockRestore();
+    mockTransporter.sendMail.mockClear();
+    await emailService.sendEmployeeInquiryConfirmationEmail(
+      app,
+      employeeMail.inquiry,
+      employeeMail.recipientEmail
+    );
+    expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
+    const employeeHtml = mockTransporter.sendMail.mock.calls[0][0].html;
+    expect(employeeHtml).toContain('Cena po rabacie pracowniczym: <strong>95000 zł</strong>');
+    expect(employeeHtml).not.toContain('- zł');
   });
 
   it('does not send duplicate emails on idempotent replay', async () => {

@@ -179,6 +179,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     // Krok 2: Transakcja utworzenia zgłoszenia i powiązanego Leada z pętlą ponowień w razie kolizji reference_number
     const MAX_REF_RETRIES = 3;
     let createdInquiry: any = null;
+    let finalCalculationSnapshot: InquiryCalculationSnapshot | null = null;
 
     for (let attempt = 0; attempt < MAX_REF_RETRIES; attempt++) {
       try {
@@ -559,6 +560,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
             }
           });
 
+          finalCalculationSnapshot = calculationSnapshot;
           return inquiry;
         });
 
@@ -627,7 +629,20 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     (async () => {
       try {
         const leadRecipient = (createdInquiry as any).company?.accountManagerEmail || await resolveLeadRecipient(fastify.prisma);
-        const emailInquiry = createdInquiry as unknown as EmployeeInquiryEmailPayload;
+        const emailInquiry: EmployeeInquiryEmailPayload = {
+          id: createdInquiry.id,
+          contractParty: createdInquiry.contractParty,
+          contactName: createdInquiry.contactName,
+          contactEmail: createdInquiry.contactEmail,
+          contactPhone: createdInquiry.contactPhone,
+          nip: createdInquiry.nip,
+          notes: createdInquiry.notes,
+          lead: createdInquiry.lead,
+          program: (createdInquiry as any).program,
+          company: (createdInquiry as any).company,
+          benefitSnapshot: createdInquiry.benefitSnapshot as any,
+          calculationSnapshot: finalCalculationSnapshot || (createdInquiry.calculationSnapshot as unknown as InquiryCalculationSnapshot)
+        };
         if (leadRecipient) {
           await sendEmployeeInquiryNotificationEmail(
             fastify,
