@@ -158,7 +158,8 @@ export default defineConfig(({ mode }) => {
                 const linkRegex = new RegExp(`<link[^>]*href="[^"]*${key}"[^>]*>`);
                 if (linkRegex.test(html)) {
                   html = html.replace(linkRegex, `<style>${cssContent}</style>`);
-                  delete bundle[key]; // Do not emit the css file anymore since it's fully inlined
+                  // Keep the CSS asset on disk! Vite's dynamic import helper expects lazy chunks
+                  // to preload their associated CSS. Deleting it caused 404 and ErrorBoundary crashes.
                 }
               }
             }

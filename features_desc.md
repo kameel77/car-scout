@@ -1049,3 +1049,11 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     1. Operator klika „Podgląd portalu firmy” przy wybranej firmie lub programie w panelu administratora.
     2. Backend generuje krótkotrwały token podglądu (np. ważny 15 minut) z uprawnieniem tylko-do-odczytu i flagą `isPreview: true`.
     3. Portal pracowniczy otwiera się z żółtym banerem ostrzegawczym u góry informującym: „Tryb podglądu organizacji: [Nazwa Firmy] (akcje zapisu zablokowane) [Zakończ podgląd]”.
+
+## 78. Optymalizacja Wydajności Katalogu Najmu i Karty Oferty (LCP & CSS Preload Fix)
+- **Zachowanie pliku CSS na dysku przy inline-css (`vite.config.ts`)**:
+  - Usunięto usuwanie wygenerowanego pliku CSS (`delete bundle[key]`) w pluginie `inline-css`. Styl główny pozostaje wstrzykiwany inline do `index.html`, natomiast fizyczny plik w `dist/assets/` jest zachowywany na dysku.
+  - Zapobiega to błędom 404 (`Unable to preload CSS for /assets/...`) przy dynamicznym imporcie leniwie ładowanych tras przez preloader Vite (np. `RentalSearchPage`), eliminując awarie `ChunkErrorBoundary` („Wystąpił nieoczekiwany błąd aplikacji”).
+- **Natychmiastowe malowanie pierwszego zdjęcia w galerii oferty (`ImageGallery.tsx`)**:
+  - Wyłączono animację wejściową `initial={{ opacity: 0 }}` dla pierwszego zdjęcia oferty (`selectedIndex === 0`) oraz ustawiono `initial={false}` w `AnimatePresence`.
+  - Pierwsze zdjęcie (element LCP nad foldem) pojawia się natychmiast po załadowaniu bez opóźnienia przezroczystości, przy zachowaniu płynnych animacji 0,2s dla kolejnych przeglądanych zdjęć w galerii.

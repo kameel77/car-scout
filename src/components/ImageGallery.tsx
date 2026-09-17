@@ -76,10 +76,10 @@ export function ImageGallery({ images, title, isReserved }: ImageGalleryProps) {
           onClick={() => setLightboxOpen(true)}
           {...mainSwipe}
         >
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={selectedIndex}
-              initial={{ opacity: 0 }}
+              initial={selectedIndex === 0 ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
