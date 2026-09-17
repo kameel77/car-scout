@@ -798,6 +798,29 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         expect(fetchSpy.mock.calls.length).toBeGreaterThan(fetchCallsCountInitial);
     });
 
+    it('does not serve cached HTML from a previous frontend build', async () => {
+        const currentTemplate = TEMPLATE.replace(
+            '</body>',
+            '<script type="module" src="/assets/index-current.js"></script></body>'
+        );
+        const fetchSpy = vi.fn(async () => new Response(currentTemplate, { status: 200 }));
+        vi.stubGlobal('fetch', fetchSpy);
+
+        await setSsrCache('/faq', {
+            html: '<!doctype html><html><body>OLD BUILD<script type="module" src="/assets/index-old.js"></script></body></html>',
+            status: 200,
+            noindex: false,
+            at: Date.now()
+        });
+
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/faq' });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('OLD BUILD');
+        expect(res.body).toContain('/assets/index-current.js');
+        expect(fetchSpy).toHaveBeenCalled();
+    });
+
     it('serves stale cached HTML immediately and triggers background revalidation', async () => {
         const fetchSpy = vi.fn(async () => new Response(TEMPLATE, { status: 200 }));
         vi.stubGlobal('fetch', fetchSpy);
@@ -839,28 +862,22 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
     });
 
     describe('Cache-Control headers for Edge Caching', () => {
-        it('emits public s-maxage=3600 for anonymous 200 GET and HEAD requests (fresh & cached)', async () => {
+        it('requires edge revalidation for anonymous 200 GET and HEAD requests (fresh & cached)', async () => {
             const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
             expect(res1.statusCode).toBe(200);
-            expect(res1.headers['cache-control']).toBe(
-                'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
-            );
+            expect(res1.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
             expect(res1.headers['vary']).toBe('Accept-Encoding');
 
             // Repeated request (cache hit)
             const res2 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
             expect(res2.statusCode).toBe(200);
-            expect(res2.headers['cache-control']).toBe(
-                'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
-            );
+            expect(res2.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
             expect(res2.headers['vary']).toBe('Accept-Encoding');
 
             // HEAD request
             const resHead = await app.inject({ method: 'HEAD', url: '/api/render?path=/' });
             expect(resHead.statusCode).toBe(200);
-            expect(resHead.headers['cache-control']).toBe(
-                'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
-            );
+            expect(resHead.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
         });
 
         it('emits private no-store for requests with Authorization header', async () => {
@@ -878,9 +895,7 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
                 url: '/api/render?path=/',
                 headers: { cookie: '_ga=GA1.1.123.456; _clsk=abc123sid456' },
             });
-            expect(res.headers['cache-control']).toBe(
-                'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
-            );
+            expect(res.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
         });
 
         it('emits private no-store for /admin routes', async () => {

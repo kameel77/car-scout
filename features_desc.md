@@ -4,6 +4,7 @@ Ten plik dokumentuje działanie kluczowych funkcjonalności aplikacji w przystę
 Każda nowa funkcjonalność lub zmiana zachowania istniejącej powinna mieć tutaj krótki opis.
 
 ## Wcześniejsze pobieranie ofert katalogu
+- Renderowane strony HTML sprawdzają, czy zapisany w Redisie dokument odwołuje się do aktualnego głównego pliku JavaScript. Cache ze starszego wdrożenia jest pomijany, a HTML wymaga rewalidacji na edge, dzięki czemu odświeżenie oferty nie wskazuje na usunięte assety. Jeśli błąd chunka mimo to wystąpi w trakcie wdrożenia, aplikacja automatycznie odświeża stronę najwyżej raz na minutę dla danego URL-a i nie wpada w pętlę przeładowań.
 - Na `/wynajem-dlugoterminowy` HTML preładuje wyłącznie entry lazy chunka tej trasy. Dzięki temu pobieranie widoku może rozpocząć się równolegle z głównym bundlem, bez powrotu do pełnego rekurencyjnego `modulepreload`, który wcześniej konkurował o pasmo z HTML i obrazem LCP.
 - Sekcja treści finansowania i FAQ na `/wynajem-dlugoterminowy` jest ładowana dopiero po katalogu, ponieważ znajduje się pod listą ofert. Jej chunk i zapytanie FAQ nie blokują już pierwszego widoku ani LCP.
 - `/samochody` nie pobiera od razu kalkulatora finansowania, sekcji artykułu ani formularza powiadomień. Są pobierane tylko wtedy, gdy dana sekcja jest potrzebna; nagłówek, lead i pierwsze karty pozostają poza tymi granicami ładowania.

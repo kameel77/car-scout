@@ -15,6 +15,7 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 - [ ] Panel administratora: wybór partnera finansowego przy dodawaniu nowego produktu kredytowego (np. Inbank, Produkt własny) wraz z konfiguracją widoczności na karcie oferty.
 
 ## 3. Optymalizacje
+- [x] **Spójność HTML i assetów po wdrożeniu**: Renderer odrzuca cache SSR wskazujący główny bundle z poprzedniego builda, skraca cache szablonu frontendu i wymusza rewalidację HTML na edge. `ChunkErrorBoundary` dopuszcza tylko jedno automatyczne odświeżenie danego URL-a na minutę, więc brakujący chunk nie powoduje pętli przeładowań.
 - [x] **Rzeczywiste odroczenie sekcji finansowania najmu pod katalogiem**: W `RentalSearchPage.tsx` zastosowano `IntersectionObserver` (`rootMargin: '400px 0px'`), aby sekcja `FinancingContentSection` oraz jej zapytania `/api/content/financing/wynajem` i `/api/faq` ładowały się dopiero przy przewijaniu, a nie przy pierwszym malowaniu.
 - [x] **Dynamiczny preload pierwszego obrazu LCP na najmie**: W `rental-prefetch.ts` skrypt `__RENTAL_PREFETCH__` generuje `<link rel="preload" as="image">` z pełnym `imagesrcset` (600w/900w/1400w) dla pierwszego pobranego pojazdu, redukując opóźnienie odkrycia obrazu LCP.
 - [x] **Wąski preload entry chunków tras dla `/nowe`, `/uzywane` i `/samochody`**: W `render.ts` rozszerzono `routeEntryPreload` o `ConditionPage.tsx` i `SearchPage.tsx`, eliminując dodatkowe RTT na odkrycie lazy chunka bez kaskadowego `modulepreload`.
