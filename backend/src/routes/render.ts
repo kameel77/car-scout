@@ -54,7 +54,9 @@ const FINANCING_FAQ_TYPE: Record<string, string> = {
     '/wynajem-dlugoterminowy': 'wynajem',
 };
 
-const TEMPLATE_TTL_MS = 5 * 60 * 1000;
+// Frontend and backend containers are replaced separately. Keeping an old template
+// for minutes can point browsers at hashed assets removed by the new frontend image.
+const TEMPLATE_TTL_MS = 5 * 1000;
 
 // Strony katalogowe z paginacją SSR (?page=N) — crawlery bez JS widzą kolejne porcje ofert.
 // /leasing i /kredyt celowo bez paginacji: oferty są te same co w /samochody (każde auto
@@ -288,6 +290,22 @@ async function getTemplate(): Promise<string | null> {
         }
         return null;
     }
+}
+
+function getModuleEntryAsset(html: string): string | null {
+    const scriptTags = html.match(/<script\b[^>]*>/gi) ?? [];
+    for (const tag of scriptTags) {
+        if (!/\btype=["']module["']/i.test(tag)) continue;
+        const src = tag.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+        if (src) return src;
+    }
+    return null;
+}
+
+function isCachedHtmlFromActiveBuild(cachedHtml: string, activeTemplate: string): boolean {
+    const activeEntry = getModuleEntryAsset(activeTemplate);
+    if (!activeEntry) return true;
+    return getModuleEntryAsset(cachedHtml) === activeEntry;
 }
 
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
@@ -948,7 +966,9 @@ function getCacheControlHeader(
     if (request.headers.authorization) {
         return 'private, no-store';
     }
-    return 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400';
+    // Rendered HTML references content-hashed assets that disappear on deploy.
+    // Redis still caches the expensive SSR result, so edge storage is unnecessary.
+    return 'public, max-age=0, must-revalidate';
 }
 
 interface RenderResult {
@@ -1156,8 +1176,9 @@ export async function renderRoutes(fastify: FastifyInstance) {
             }
         }
 
+        const activeTemplate = await getTemplate();
         const cached = await getSsrCache(cacheKey);
-        if (cached) {
+        if (cached && (!activeTemplate || isCachedHtmlFromActiveBuild(cached.html, activeTemplate))) {
             if (!isSsrFresh(cached)) {
                 if (markRevalidating(cacheKey)) {
                     (async () => {

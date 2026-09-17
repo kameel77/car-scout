@@ -83,3 +83,37 @@ jobs:
           vuln-type: os,library
           exit-code: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
 
+  # Coolify's own push webhook is deliberately disabled: it fired on push, minutes
+  # before this workflow finished pushing images, so it redeployed the PREVIOUS build.
+  # Triggering from here instead guarantees the images exist before Coolify pulls them.
+  # `needs` also means a CRITICAL Trivy finding on main blocks the deployment.
+  deploy-staging:
+    needs: build-and-push
+    if: github.ref_name == 'staging'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify deployment (staging)
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          curl -fsS --retry 3 --retry-delay 5 \
+            "https://cool.motolia.pl/api/v1/deploy?uuid=qoluqdwea0iq5rmifnwmzvp1" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}"
+
+  # main stays manual on purpose. This job only makes the pending deploy visible,
+  # so a fix cannot sit built-but-unshipped without anyone noticing.
+  notify-main:
+    needs: build-and-push
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Flag images awaiting production deploy
+        run: |
+          {
+            echo "### Obrazy \`main\` gotowe — czekają na ręczne wdrożenie"
+            echo ""
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo ""
+            echo "Wdróż w Coolify: https://cool.motolia.pl → Motolia → production → Redeploy"
+          } >> "$GITHUB_STEP_SUMMARY"
+

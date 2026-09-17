@@ -4,6 +4,12 @@ import { verifyEmployeeAuth, verifyEmployeeCsrf } from '../auth/employee-auth.mi
 import { generateReference } from '../../../utils/reference-generator.js';
 import { calculateOfferPricing } from '../pricing/employee-pricing.utils.js';
 import { resolveRentalRateSource } from '../rental/employee-rental-pricing.utils.js';
+import {
+  resolveLeadRecipient,
+  sendEmployeeInquiryNotificationEmail,
+  sendEmployeeInquiryConfirmationEmail,
+  type EmployeeInquiryEmailPayload
+} from '../../../services/email.js';
 
 export interface InquiryCalculationSnapshot {
   offerId: string;
@@ -173,6 +179,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     // Krok 2: Transakcja utworzenia zgłoszenia i powiązanego Leada z pętlą ponowień w razie kolizji reference_number
     const MAX_REF_RETRIES = 3;
     let createdInquiry: any = null;
+    let finalCalculationSnapshot: InquiryCalculationSnapshot | null = null;
 
     for (let attempt = 0; attempt < MAX_REF_RETRIES; attempt++) {
       try {
@@ -543,10 +550,17 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
             include: {
               lead: {
                 select: { referenceNumber: true }
+              },
+              company: {
+                select: { id: true, name: true, accountManagerEmail: true }
+              },
+              program: {
+                select: { id: true, name: true }
               }
             }
           });
 
+          finalCalculationSnapshot = calculationSnapshot;
           return inquiry;
         });
 
@@ -610,6 +624,44 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
         message: 'Nie udało się przetworzyć zgłoszenia'
       });
     }
+
+    // Fire-and-forget email notifications (Scope 4)
+    (async () => {
+      try {
+        const leadRecipient = (createdInquiry as any).company?.accountManagerEmail || await resolveLeadRecipient(fastify.prisma);
+        const emailInquiry: EmployeeInquiryEmailPayload = {
+          id: createdInquiry.id,
+          contractParty: createdInquiry.contractParty,
+          contactName: createdInquiry.contactName,
+          contactEmail: createdInquiry.contactEmail,
+          contactPhone: createdInquiry.contactPhone,
+          nip: createdInquiry.nip,
+          notes: createdInquiry.notes,
+          lead: createdInquiry.lead,
+          program: (createdInquiry as any).program,
+          company: (createdInquiry as any).company,
+          benefitSnapshot: createdInquiry.benefitSnapshot as any,
+          calculationSnapshot: finalCalculationSnapshot || (createdInquiry.calculationSnapshot as unknown as InquiryCalculationSnapshot)
+        };
+        if (leadRecipient) {
+          await sendEmployeeInquiryNotificationEmail(
+            fastify,
+            emailInquiry,
+            (createdInquiry as any).company || { id: employee.companyId, name: 'Firma' },
+            leadRecipient
+          );
+        }
+        if (createdInquiry.contactEmail) {
+          await sendEmployeeInquiryConfirmationEmail(
+            fastify,
+            emailInquiry,
+            createdInquiry.contactEmail
+          );
+        }
+      } catch (mailErr) {
+        fastify.log.error(mailErr, 'Failed to send employee inquiry notification emails');
+      }
+    })();
 
     const snap = createdInquiry.calculationSnapshot as any;
     return reply.code(201).send({

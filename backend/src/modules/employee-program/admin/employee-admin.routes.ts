@@ -54,6 +54,7 @@ const paginationSchema = z.object({
 const createCompanySchema = z.object({
   name: z.string().trim().min(2).max(150),
   nip: z.string().trim().max(20).optional().nullable(),
+  accountManagerEmail: z.string().trim().email('Nieprawidłowy adres email opiekuna').optional().nullable(),
   programName: z.string().trim().min(2).max(150).optional(),
   defaultDiscountPct: z.coerce.number().min(0).max(100).optional().nullable(),
   description: z.string().trim().max(500).optional().nullable()
@@ -62,6 +63,7 @@ const createCompanySchema = z.object({
 const updateCompanySchema = z.object({
   name: z.string().trim().min(2).max(150).optional(),
   nip: z.string().trim().max(20).optional().nullable(),
+  accountManagerEmail: z.string().trim().email('Nieprawidłowy adres email opiekuna').optional().nullable(),
   isActive: z.boolean().optional()
 });
 
@@ -136,6 +138,10 @@ const createMatrixSetSchema = z.object({
   description: z.string().trim().max(500).optional().nullable()
 });
 
+const revokeMembershipSchema = z.object({
+  reason: z.string().trim().min(3, 'Powód cofnięcia dostępu musi mieć co najmniej 3 znaki').max(500, 'Powód nie może przekraczać 500 znaków')
+});
+
 // ---------------------------------------------------------------------------
 // Employee Admin Routes Plugin
 // ---------------------------------------------------------------------------
@@ -148,6 +154,30 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
         return reply.code(401).send({ error: 'Unauthorized' });
       };
   const adminAuth = [authHandler, requirePermission('platform:settings:write')];
+
+  fastify.setErrorHandler((error: any, _request: FastifyRequest, reply: FastifyReply) => {
+    if (error instanceof z.ZodError) {
+      return reply.code(400).send({
+        error: 'Bad Request',
+        message: 'Błąd walidacji danych wejściowych',
+        details: error.errors
+      });
+    }
+    const statusCode = typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 600
+      ? error.statusCode
+      : 500;
+    if (statusCode >= 500) {
+      fastify.log.error(error, 'Employee admin route internal error occurred');
+      return reply.code(statusCode).send({
+        error: 'Internal Server Error',
+        message: 'Wystąpił błąd serwera'
+      });
+    }
+    return reply.code(statusCode).send({
+      error: error.name || 'Error',
+      message: error.message || 'Wystąpił błąd żądania'
+    });
+  });
 
   // -------------------------------------------------------------------------
   // 1. Companies & Programs
@@ -249,6 +279,7 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
             name: body.name,
             slug: companySlug,
             nip: body.nip || null,
+            accountManagerEmail: body.accountManagerEmail || null,
             isActive: true
           }
         });
@@ -338,6 +369,7 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
         data: {
           ...(body.name !== undefined && { name: body.name }),
           ...(body.nip !== undefined && { nip: body.nip }),
+          ...(body.accountManagerEmail !== undefined && { accountManagerEmail: body.accountManagerEmail }),
           ...(body.isActive !== undefined && { isActive: body.isActive })
         }
       });
@@ -352,6 +384,189 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
       throw err;
     }
   });
+
+  // GET /api/admin/employee-programs/companies/:companyId/accounts
+  fastify.get('/api/admin/employee-programs/companies/:companyId/accounts', { preHandler: adminAuth }, async (request, reply) => {
+    const { companyId } = request.params as { companyId: string };
+    const query = paginationSchema.parse(request.query);
+    const { page, limit, search } = query;
+    const skip = (page - 1) * limit;
+
+    const company = await fastify.prisma.employeeCompany.findUnique({
+      where: { id: companyId }
+    });
+    if (!company) {
+      return reply.code(404).send({ error: 'Firma nie została znaleziona' });
+    }
+
+    const where: Prisma.EmployeeMembershipWhereInput = {
+      companyId,
+      ...(search ? {
+        account: {
+          OR: [
+            { email: { contains: search, mode: 'insensitive' } },
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } }
+          ]
+        }
+      } : {})
+    };
+
+    const [total, memberships] = await Promise.all([
+      fastify.prisma.employeeMembership.count({ where }),
+      fastify.prisma.employeeMembership.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          account: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              isActive: true,
+              lastLoginAt: true,
+              createdAt: true
+            }
+          },
+          program: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          }
+        }
+      })
+    ]);
+
+    const accounts = memberships.map((m) => ({
+      id: m.account.id,
+      membershipId: m.id,
+      email: m.account.email,
+      firstName: m.account.firstName,
+      lastName: m.account.lastName,
+      phone: m.account.phone,
+      program: m.program,
+      isActive: m.isActive && m.account.isActive && m.revokedAt === null,
+      membershipIsActive: m.isActive,
+      revokedAt: m.revokedAt ? m.revokedAt.toISOString() : null,
+      lastLoginAt: m.account.lastLoginAt ? m.account.lastLoginAt.toISOString() : null,
+      createdAt: m.account.createdAt.toISOString()
+    }));
+
+    return reply.send({
+      accounts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  });
+
+  // POST /api/admin/employee-programs/memberships/:membershipId/revoke
+  fastify.post('/api/admin/employee-programs/memberships/:membershipId/revoke', { preHandler: adminAuth }, async (request, reply) => {
+    const { membershipId } = request.params as { membershipId: string };
+    const { reason } = revokeMembershipSchema.parse(request.body);
+    const actorUserId = (request as any).user?.userId || (request as any).user?.id || null;
+
+    const membership = await fastify.prisma.employeeMembership.findUnique({
+      where: { id: membershipId }
+    });
+
+    if (!membership) {
+      return reply.code(404).send({ error: 'Członkostwo nie zostało znalezione' });
+    }
+
+    if (!membership.isActive && membership.revokedAt !== null) {
+      return reply.send({ message: 'Dostęp został już wcześniej cofnięty', membership });
+    }
+
+    const now = new Date();
+    const sessionsValidAfter = new Date(Math.floor(Date.now() / 1000) * 1000);
+
+    const result = await fastify.prisma.$transaction(async (tx) => {
+      const updatedMembership = await tx.employeeMembership.update({
+        where: { id: membershipId },
+        data: {
+          isActive: false,
+          revokedAt: now
+        }
+      });
+
+      await tx.employeeMembershipAudit.create({
+        data: {
+          accountId: membership.accountId,
+          companyId: membership.companyId,
+          programId: membership.programId,
+          action: 'REVOKED',
+          reason,
+          actorUserId
+        }
+      });
+
+      await tx.employeeAccount.update({
+        where: { id: membership.accountId },
+        data: {
+          sessionsValidAfter
+        }
+      });
+
+      return updatedMembership;
+    });
+
+    return reply.send({ message: 'Dostęp został pomyślnie cofnięty', membership: result });
+  });
+
+  // POST /api/admin/employee-programs/memberships/:membershipId/reinstate
+  fastify.post('/api/admin/employee-programs/memberships/:membershipId/reinstate', { preHandler: adminAuth }, async (request, reply) => {
+    const { membershipId } = request.params as { membershipId: string };
+    const actorUserId = (request as any).user?.userId || (request as any).user?.id || null;
+    const reason = typeof (request.body as any)?.reason === 'string' ? (request.body as any).reason.trim() : null;
+
+    const membership = await fastify.prisma.employeeMembership.findUnique({
+      where: { id: membershipId }
+    });
+
+    if (!membership) {
+      return reply.code(404).send({ error: 'Członkostwo nie zostało znalezione' });
+    }
+
+    if (membership.isActive && membership.revokedAt === null) {
+      return reply.send({ message: 'Członkostwo jest już aktywne', membership });
+    }
+
+    const result = await fastify.prisma.$transaction(async (tx) => {
+      const updatedMembership = await tx.employeeMembership.update({
+        where: { id: membershipId },
+        data: {
+          isActive: true,
+          revokedAt: null
+        }
+      });
+
+      await tx.employeeMembershipAudit.create({
+        data: {
+          accountId: membership.accountId,
+          companyId: membership.companyId,
+          programId: membership.programId,
+          action: 'REINSTATED',
+          reason,
+          actorUserId
+        }
+      });
+
+      return updatedMembership;
+    });
+
+    return reply.send({ message: 'Dostęp został pomyślnie przywrócony', membership: result });
+  });
+
 
   // PATCH /api/admin/employee-programs/programs/:programId
   fastify.patch('/api/admin/employee-programs/programs/:programId', { preHandler: adminAuth }, async (request, reply) => {

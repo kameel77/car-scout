@@ -8,6 +8,35 @@ interface State {
   hasError: boolean;
 }
 
+const CHUNK_RELOAD_COOLDOWN_MS = 60_000;
+const CHUNK_RELOAD_KEY_PREFIX = "chunk-reload:";
+
+export function isChunkLoadError(error: Error): boolean {
+  const message = error?.message ?? "";
+  return message.includes("Failed to fetch dynamically imported module") ||
+    message.includes("Importing a module script failed") ||
+    message.includes("Unable to preload CSS");
+}
+
+export function claimChunkReload(
+  storage: Pick<Storage, "getItem" | "setItem">,
+  url: string,
+  now = Date.now()
+): boolean {
+  const key = `${CHUNK_RELOAD_KEY_PREFIX}${url}`;
+  try {
+    const lastReload = Number(storage.getItem(key));
+    if (Number.isFinite(lastReload) && lastReload > 0 && now - lastReload < CHUNK_RELOAD_COOLDOWN_MS) {
+      return false;
+    }
+    storage.setItem(key, String(now));
+    return true;
+  } catch {
+    // Without persistent storage an automatic reload could loop forever.
+    return false;
+  }
+}
+
 export class ChunkErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false
@@ -20,14 +49,10 @@ export class ChunkErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
-    // Check if it's a dynamic import chunk loading error
-    const isChunkError = 
-      error?.message?.includes("Failed to fetch dynamically imported module") || 
-      error?.message?.includes("Importing a module script failed");
-      
-    if (isChunkError) {
+    if (isChunkLoadError(error) && claimChunkReload(window.sessionStorage, window.location.href)) {
       // If a chunk fails to load, the deployment probably changed the file hashes.
-      // Reloading the page will fetch the new index.html with new hashes.
+      // Reload once to fetch the new HTML, but never enter a refresh loop when
+      // an edge or SSR cache keeps serving an obsolete asset reference.
       console.log("Chunk load error detected. Reloading page...");
       window.location.reload();
     }
