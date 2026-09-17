@@ -5,7 +5,7 @@ export interface CalculatedPricing {
   discountPct: number;
 }
 
-function toNumeric(val: number | { toNumber(): number } | string | null | undefined): number | null {
+export function toNumeric(val: number | { toNumber(): number } | string | null | undefined): number | null {
   if (val === null || val === undefined) return null;
   if (typeof val === 'number') return val;
   if (typeof (val as any).toNumber === 'function') return (val as any).toNumber();
