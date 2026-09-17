@@ -40,12 +40,30 @@ export interface EmployeeOfferBenefit {
   termsText: string | null;
 }
 
+export interface EmployeeFinancingOption {
+  productId: string;
+  category: string;              // 'LEASING' | 'CREDIT'
+  label: string;
+  allowedContractParties: string[];
+  b2cStatus: string;
+  minDownPaymentPct: number;
+  maxDownPaymentPct: number;
+  maxResidualPct: number;
+  periods: number[];
+  annualRatePct: number;
+}
+
+export interface EmployeeFinancingConfig {
+  options: EmployeeFinancingOption[];
+}
+
 export interface EmployeeOffer {
   id: string;
   sourceType: string;
   vehicle: EmployeeOfferVehicle;
   pricing: EmployeeOfferPricing;
   benefit: EmployeeOfferBenefit | null;
+  financing?: EmployeeFinancingConfig | null;
 }
 
 export interface EmployeeCatalogResponse {

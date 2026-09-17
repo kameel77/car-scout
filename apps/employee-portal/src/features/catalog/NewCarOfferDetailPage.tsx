@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import {
   fetchEmployeeOfferDetails,
-  EmployeeOffer
+  EmployeeOffer,
+  EmployeeFinancingOption
 } from './catalog-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
@@ -51,6 +52,32 @@ function formatTransmission(tx: string | null | undefined): string {
   return tx;
 }
 
+// Etykieta formy finansowania budowana z kategorii produktu (brief E2 §Zakres 4)
+function getFinancingCategoryLabel(category: string): string {
+  if (category === 'CREDIT') return 'Kredyt / finansowanie konsumenckie';
+  if (category === 'LEASING') return 'Leasing operacyjny (B2B)';
+  return category;
+}
+
+function nearestPeriodTo36(periods: number[]): number {
+  if (periods.length === 0) return 36;
+  return periods.reduce((best, p) => (Math.abs(p - 36) < Math.abs(best - 36) ? p : best), periods[0]);
+}
+
+const DOWN_PAYMENT_PRESETS = [0, 10, 20, 30, 45];
+function buildDownPaymentChipOptions(min: number, max: number): number[] {
+  const filtered = DOWN_PAYMENT_PRESETS.filter((p) => p >= min && p <= max);
+  if (filtered.length > 0) return filtered;
+  return Array.from(new Set([min, max]));
+}
+
+const RESIDUAL_PRESETS = [1, 10, 20, 30];
+function buildResidualChipOptions(max: number): number[] {
+  const filtered = RESIDUAL_PRESETS.filter((p) => p <= max);
+  if (filtered.length > 0) return filtered;
+  return [max];
+}
+
 export const NewCarOfferDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { config, isLoading: isBrandLoading } = useBrandConfig();
@@ -71,6 +98,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
   const [months, setMonths] = useState<number>(36);
   const [downPaymentPct, setDownPaymentPct] = useState<number>(20);
   const [residualPct, setResidualPct] = useState<number>(20);
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState<number>(0);
 
   // Inquiry Modal State
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState<boolean>(false);
@@ -117,6 +145,25 @@ export const NewCarOfferDetailPage: React.FC = () => {
     }
   };
 
+  // E2: Konfiguracja finansowania z programu pracowniczego (nadpisania produktów). Gdy brak
+  // konfiguracji lub pusta lista options — zachowanie kalkulatora identyczne jak przed E2.
+  const financingOptions = offer?.financing?.options ?? [];
+  const hasFinancingConfig = financingOptions.length > 0;
+  const selectedOption: EmployeeFinancingOption | null = hasFinancingConfig
+    ? (financingOptions[selectedOptionIndex] ?? financingOptions[0])
+    : null;
+
+  // Przy załadowaniu oferty lub zmianie wybranej opcji: dopasuj formę finansowania i skoryguj
+  // bieżące wartości kalkulatora do dopuszczonego zakresu wybranej opcji.
+  useEffect(() => {
+    if (!hasFinancingConfig || !selectedOption) return;
+    setContractType(selectedOption.category === 'CREDIT' ? 'CONSUMER' : 'LEASING_B2B');
+    setMonths((prev) => (selectedOption.periods.includes(prev) ? prev : nearestPeriodTo36(selectedOption.periods)));
+    setDownPaymentPct((prev) => Math.min(Math.max(prev, selectedOption.minDownPaymentPct), selectedOption.maxDownPaymentPct));
+    setResidualPct((prev) => Math.min(prev, selectedOption.maxResidualPct));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOptionIndex, offer?.id]);
+
   // Kalkulacja finansowania
   // Standardowy algorytm leasingowy PMT używany w platformie Motolia
   const calculation = useMemo(() => {
@@ -130,8 +177,8 @@ export const NewCarOfferDetailPage: React.FC = () => {
     const residualAmount = Math.round((basePrice * residualPct) / 100);
     const amountToFinance = Math.max(0, basePrice - initialPaymentAmount);
 
-    // Stopa roczna (np. WIBOR + marża ~ 7.5%)
-    const annualRate = 7.5;
+    // Stopa roczna: z konfiguracji programu (annualRatePct), a bez nadpisań — dotychczasowe 7.5%
+    const annualRate = hasFinancingConfig && selectedOption ? selectedOption.annualRatePct : 7.5;
     const monthlyRate = annualRate / 100 / 12;
 
     let monthlyInstallment = 0;
@@ -156,19 +203,22 @@ export const NewCarOfferDetailPage: React.FC = () => {
       installmentNet,
       installmentGross
     };
-  }, [offer, contractType, months, downPaymentPct, residualPct]);
+  }, [offer, contractType, months, downPaymentPct, residualPct, hasFinancingConfig, selectedOption]);
 
   // Tekst podsumowujący konfigurację do przekazania w zapytaniu
   const inquiryInitialNotes = useMemo(() => {
     if (!calculation || !offer) return '';
     const typeLabel = contractType === 'LEASING_B2B' ? 'Leasing operacyjny (B2B)' : 'Kredyt / Finansowanie konsumenckie';
+    const productLabelLine = hasFinancingConfig && selectedOption
+      ? `\n- Wybrany produkt finansowania: ${selectedOption.label}`
+      : '';
     return `[Konfiguracja kalkulatora finansowania]:
 - Typ finansowania: ${typeLabel}
 - Okres umowy: ${months} miesięcy
 - Wpłata własna: ${downPaymentPct}% (${calculation.initialPaymentAmount.toLocaleString('pl-PL')} zł ${contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
 - Wykup końcowy: ${residualPct}% (${calculation.residualAmount.toLocaleString('pl-PL')} zł ${contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-- Szacowana rata: ${calculation.installmentNet.toLocaleString('pl-PL')} zł netto (${calculation.installmentGross.toLocaleString('pl-PL')} zł brutto) / mies.`;
-  }, [calculation, offer, contractType, months, downPaymentPct, residualPct]);
+- Szacowana rata: ${calculation.installmentNet.toLocaleString('pl-PL')} zł netto (${calculation.installmentGross.toLocaleString('pl-PL')} zł brutto) / mies.${productLabelLine}`;
+  }, [calculation, offer, contractType, months, downPaymentPct, residualPct, hasFinancingConfig, selectedOption]);
 
   if (isBrandLoading || isAuthLoading) {
     return (
@@ -559,30 +609,49 @@ export const NewCarOfferDetailPage: React.FC = () => {
                   {/* Contract Type Toggle */}
                   <div>
                     <span className="text-xs font-medium text-gray-500 block mb-2">Forma finansowania</span>
-                    <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
-                      <button
-                        type="button"
-                        onClick={() => setContractType('LEASING_B2B')}
-                        className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
-                          contractType === 'LEASING_B2B'
-                            ? 'bg-white text-gray-900 shadow-xs'
-                            : 'text-gray-500 hover:text-gray-900'
-                        }`}
-                      >
-                        Leasing (B2B)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setContractType('CONSUMER')}
-                        className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
-                          contractType === 'CONSUMER'
-                            ? 'bg-white text-gray-900 shadow-xs'
-                            : 'text-gray-500 hover:text-gray-900'
-                        }`}
-                      >
-                        Kredyt / Prywatnie
-                      </button>
-                    </div>
+                    {hasFinancingConfig ? (
+                      <div className={`grid gap-2 bg-gray-100 p-1 rounded-xl ${financingOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                        {financingOptions.map((option, idx) => (
+                          <button
+                            key={option.productId}
+                            type="button"
+                            onClick={() => setSelectedOptionIndex(idx)}
+                            className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
+                              selectedOptionIndex === idx
+                                ? 'bg-white text-gray-900 shadow-xs'
+                                : 'text-gray-500 hover:text-gray-900'
+                            }`}
+                          >
+                            {getFinancingCategoryLabel(option.category)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setContractType('LEASING_B2B')}
+                          className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
+                            contractType === 'LEASING_B2B'
+                              ? 'bg-white text-gray-900 shadow-xs'
+                              : 'text-gray-500 hover:text-gray-900'
+                          }`}
+                        >
+                          Leasing (B2B)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setContractType('CONSUMER')}
+                          className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
+                            contractType === 'CONSUMER'
+                              ? 'bg-white text-gray-900 shadow-xs'
+                              : 'text-gray-500 hover:text-gray-900'
+                          }`}
+                        >
+                          Kredyt / Prywatnie
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Months Selector */}
@@ -591,22 +660,41 @@ export const NewCarOfferDetailPage: React.FC = () => {
                       <span className="text-xs font-semibold text-gray-700">Okres finansowania</span>
                       <span className="text-xs font-bold text-primary-600">{months} miesięcy</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[24, 36, 48, 60].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setMonths(m)}
-                          className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                            months === m
-                              ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {m} msc
-                        </button>
-                      ))}
-                    </div>
+                    {hasFinancingConfig && selectedOption ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedOption.periods.map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setMonths(m)}
+                            className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
+                              months === m
+                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
+                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {m} msc
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2">
+                        {[24, 36, 48, 60].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setMonths(m)}
+                            className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
+                              months === m
+                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
+                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {m} msc
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Down Payment Selector */}
@@ -619,51 +707,91 @@ export const NewCarOfferDetailPage: React.FC = () => {
                         {contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
                       </span>
                     </div>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {[0, 10, 20, 30, 45].map((pct) => (
-                        <button
-                          key={pct}
-                          type="button"
-                          onClick={() => setDownPaymentPct(pct)}
-                          className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                            downPaymentPct === pct
-                              ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pct}%
-                        </button>
-                      ))}
-                    </div>
+                    {hasFinancingConfig && selectedOption ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {buildDownPaymentChipOptions(selectedOption.minDownPaymentPct, selectedOption.maxDownPaymentPct).map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => setDownPaymentPct(pct)}
+                            className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
+                              downPaymentPct === pct
+                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
+                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[0, 10, 20, 30, 45].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => setDownPaymentPct(pct)}
+                            className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
+                              downPaymentPct === pct
+                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
+                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Residual / Balloon Payment Selector */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-gray-700">Wykup końcowy</span>
-                      <span className="text-xs font-bold text-primary-600">
-                        {residualPct}% (
-                        {calculation ? calculation.residualAmount.toLocaleString('pl-PL') : 0} zł{' '}
-                        {contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-                      </span>
+                  {(!hasFinancingConfig || (selectedOption && selectedOption.maxResidualPct > 0)) && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-gray-700">Wykup końcowy</span>
+                        <span className="text-xs font-bold text-primary-600">
+                          {residualPct}% (
+                          {calculation ? calculation.residualAmount.toLocaleString('pl-PL') : 0} zł{' '}
+                          {contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
+                        </span>
+                      </div>
+                      {hasFinancingConfig && selectedOption ? (
+                        <div className="flex flex-wrap gap-2">
+                          {buildResidualChipOptions(selectedOption.maxResidualPct).map((pct) => (
+                            <button
+                              key={pct}
+                              type="button"
+                              onClick={() => setResidualPct(pct)}
+                              className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
+                                residualPct === pct
+                                  ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
+                                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              {pct}%
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-4 gap-2">
+                          {[1, 10, 20, 30].map((pct) => (
+                            <button
+                              key={pct}
+                              type="button"
+                              onClick={() => setResidualPct(pct)}
+                              className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
+                                residualPct === pct
+                                  ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
+                                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              {pct}%
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[1, 10, 20, 30].map((pct) => (
-                        <button
-                          key={pct}
-                          type="button"
-                          onClick={() => setResidualPct(pct)}
-                          className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                            residualPct === pct
-                              ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pct}%
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  )}
 
                   {/* Result Rate Box */}
                   <div className="pt-4 border-t border-gray-100 bg-gray-50/70 -mx-6 -mb-6 p-6 rounded-b-2xl">
