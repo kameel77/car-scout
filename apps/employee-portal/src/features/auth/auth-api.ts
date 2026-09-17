@@ -173,3 +173,42 @@ export async function logoutEmployee(apiUrl: string): Promise<void> {
 
   await handleResponseJson<{ message: string }>(res);
 }
+
+export async function requestPasswordReset(apiUrl: string, email: string): Promise<{ message: string }> {
+  const base = normalizeBaseUrl(apiUrl);
+  const csrfToken = await fetchCsrfToken(apiUrl);
+
+  const res = await fetch(`${base}/employee/auth/forgot-password`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  return handleResponseJson<{ message: string }>(res);
+}
+
+export async function resetEmployeePassword(
+  apiUrl: string,
+  payload: { token: string; password: string }
+): Promise<{ message: string }> {
+  const base = normalizeBaseUrl(apiUrl);
+  const csrfToken = await fetchCsrfToken(apiUrl);
+
+  const res = await fetch(`${base}/employee/auth/reset-password`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return handleResponseJson<{ message: string }>(res);
+}

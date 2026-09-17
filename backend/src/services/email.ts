@@ -340,3 +340,75 @@ export const sendPasswordResetEmail = async (
         fastify.log.error(error, 'Failed to send password reset email');
     }
 };
+
+export const sendEmployeePasswordResetEmail = async (
+    fastify: FastifyInstance,
+    email: string,
+    resetLink: string,
+    brandName?: string
+) => {
+    const settings = await fastify.prisma.appSettings.findFirst({
+        where: { id: 'default' }
+    });
+
+    if (!settings || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
+        fastify.log.warn('Email SMTP configuration missing in AppSettings. Cannot send employee password reset email.');
+        return;
+    }
+
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+
+    const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: settings.smtpPort === 465,
+        auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPassword
+        },
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+        greetingTimeout: 5000,
+        logger: process.env.NODE_ENV !== 'production',
+        debug: process.env.NODE_ENV !== 'production'
+    });
+
+    const safeBrand = brand.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeLink = resetLink.replace(/"/g, '&quot;');
+
+    const htmlContent = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="margin-bottom: 24px; border-bottom: 1px solid #f1f5f9; padding-bottom: 16px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700;">${safeBrand}</h3>
+            </div>
+            <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-top: 0;">Resetowanie hasła do konta</h2>
+            <p style="margin: 16px 0; color: #334155; font-size: 15px;">Otrzymaliśmy prośbę o zresetowanie hasła dla Twojego konta pracowniczego.</p>
+            <p style="margin: 20px 0;">
+                <a href="${safeLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Ustaw nowe hasło</a>
+            </p>
+            <p style="margin: 16px 0; color: #475569; font-size: 14px;">
+                Link jest ważny przez <strong>30 minut</strong>. Po zmianie hasła wszystkie aktywne sesje na innych urządzeniach zostaną automatycznie wylogowane.
+            </p>
+            <p style="margin: 16px 0; color: #64748b; font-size: 13px;">Jeśli to nie Ty prosiłeś o zmianę hasła, możesz zignorować tę wiadomość — Twoje dotychczasowe hasło pozostanie niezmienione.</p>
+            <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+                Ta wiadomość została wygenerowana automatycznie. Prosimy na nią nie odpowiadać.
+            </div>
+        </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"${safeBrand}" <${settings.smtpFromEmail || settings.smtpUser}>`,
+            to: email,
+            subject: `Resetowanie hasła - ${brand}`,
+            html: htmlContent,
+            headers: {
+                'Auto-Submitted': 'auto-generated',
+                'X-Auto-Response-Suppress': 'All'
+            }
+        });
+        fastify.log.info('Employee password reset email sent successfully');
+    } catch (error) {
+        fastify.log.error(error, 'Failed to send employee password reset email');
+    }
+};

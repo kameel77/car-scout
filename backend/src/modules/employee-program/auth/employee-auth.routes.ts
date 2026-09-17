@@ -1,10 +1,14 @@
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import {
   validateRegistrationCode,
   registerEmployeeWithCode,
   authenticateEmployee,
-  getEmployeeProfile
+  getEmployeeProfile,
+  emailSchema,
+  passwordSchema
 } from './employee-auth.service.js';
 import { verifyEmployeeAuth, verifyEmployeeCsrf } from './employee-auth.middleware.js';
 import { EmployeeJwtPayload } from './employee-auth.types.js';
@@ -21,8 +25,18 @@ import {
   CSRF_COOKIE_NAME,
   SESSION_TTL_SECONDS
 } from './employee-session.helpers.js';
+import { sendEmployeePasswordResetEmail } from '../../../services/email.js';
 
 // Request Validation Schemas with Zod
+const forgotPasswordSchema = z.object({
+  email: emailSchema
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().trim().min(1).max(256),
+  password: passwordSchema
+});
+
 const validateCodeSchema = z.object({
   code: z.string().trim().min(1).max(100)
 });
@@ -387,5 +401,196 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
     ]);
 
     return reply.code(200).send({ message: 'Wylogowano pomyślnie' });
+  });
+
+  // 6. Odzyskiwanie hasła (zapomniane hasło)
+  fastify.post('/api/employee/auth/forgot-password', {
+    preHandler: [verifyEmployeeCsrf],
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
+    const parseResult = forgotPasswordSchema.safeParse(request.body);
+    if (!parseResult.success) {
+      return reply.code(400).send({
+        error: 'Bad Request',
+        message: parseResult.error.errors[0]?.message || 'Niepoprawny format adresu e-mail'
+      });
+    }
+
+    const { email } = parseResult.data;
+    const genericResponse = { message: 'Jeśli konto istnieje, wysłaliśmy link do zmiany hasła.' };
+
+    try {
+      const account = await fastify.prisma.employeeAccount.findUnique({
+        where: { email },
+        include: { membership: true }
+      });
+
+      if (!account || !account.isActive || !account.membership || !account.membership.isActive || account.membership.revokedAt !== null) {
+        return reply.code(200).send(genericResponse);
+      }
+
+      // Limit per konto: maks 3 tokeny w ciągu godziny
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const recentTokensCount = await fastify.prisma.employeePasswordResetToken.count({
+        where: {
+          accountId: account.id,
+          createdAt: { gte: oneHourAgo }
+        }
+      });
+
+      if (recentTokensCount >= 3) {
+        fastify.log.warn('Password reset token rate limit reached for account');
+        return reply.code(200).send(genericResponse);
+      }
+
+      const rawToken = crypto.randomBytes(32).toString('base64url');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min
+      const requestedIp = request.ip || null;
+
+      await fastify.prisma.employeePasswordResetToken.create({
+        data: {
+          accountId: account.id,
+          tokenHash,
+          expiresAt,
+          requestedIp
+        }
+      });
+
+      const portalUrl = process.env.EMPLOYEE_PORTAL_URL?.replace(/\/+$/, '');
+      if (!portalUrl) {
+        fastify.log.warn('EMPLOYEE_PORTAL_URL not configured. Skipping password reset email notification.');
+        return reply.code(200).send(genericResponse);
+      }
+
+      const resetLink = `${portalUrl}/reset-hasla?token=${rawToken}`;
+      // Fire-and-forget: do not await email sending
+      sendEmployeePasswordResetEmail(fastify, email, resetLink).catch((err) => {
+        fastify.log.error(err, 'Failed to send employee password reset email asynchronously');
+      });
+
+      return reply.code(200).send(genericResponse);
+    } catch (err) {
+      fastify.log.error(err, 'Unexpected error during employee forgot-password');
+      return reply.code(200).send(genericResponse);
+    }
+  });
+
+  // 7. Zmiana hasła z tokenem
+  fastify.post('/api/employee/auth/reset-password', {
+    preHandler: [verifyEmployeeCsrf],
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
+    const parseResult = resetPasswordSchema.safeParse(request.body);
+    if (!parseResult.success) {
+      return reply.code(400).send({
+        error: 'Bad Request',
+        message: parseResult.error.errors[0]?.message || 'Nieprawidłowe dane zmiany hasła'
+      });
+    }
+
+    const { token, password } = parseResult.data;
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Hashowanie bcrypt PRZED transakcją, aby nie blokować bazy Postgresa
+    const newPasswordHash = await bcrypt.hash(password, 10);
+    const now = new Date();
+    const sessionsValidAfter = new Date(Math.floor(Date.now() / 1000) * 1000);
+
+    try {
+      await fastify.prisma.$transaction(async (tx) => {
+        // Atomowy updateMany zużywający token
+        const updateResult = await tx.employeePasswordResetToken.updateMany({
+          where: {
+            tokenHash,
+            usedAt: null,
+            expiresAt: { gt: now }
+          },
+          data: {
+            usedAt: now
+          }
+        });
+
+        if (updateResult.count !== 1) {
+          const err: any = new Error('Link wygasł lub został już użyty');
+          err.statusCode = 400;
+          throw err;
+        }
+
+        const tokenRecord = await tx.employeePasswordResetToken.findUnique({
+          where: { tokenHash },
+          include: {
+            account: {
+              include: { membership: true }
+            }
+          }
+        });
+
+        if (
+          !tokenRecord ||
+          !tokenRecord.account ||
+          !tokenRecord.account.isActive ||
+          !tokenRecord.account.membership ||
+          !tokenRecord.account.membership.isActive ||
+          tokenRecord.account.membership.revokedAt !== null
+        ) {
+          const err: any = new Error('Link wygasł lub został już użyty');
+          err.statusCode = 400;
+          throw err;
+        }
+
+        // Unieważnienie wszystkich pozostałych niezużytych tokenów konta
+        await tx.employeePasswordResetToken.updateMany({
+          where: {
+            accountId: tokenRecord.accountId,
+            usedAt: null
+          },
+          data: {
+            usedAt: now
+          }
+        });
+
+        // Aktualizacja konta: nowe hasło + sessionsValidAfter
+        await tx.employeeAccount.update({
+          where: { id: tokenRecord.accountId },
+          data: {
+            passwordHash: newPasswordHash,
+            sessionsValidAfter
+          }
+        });
+      });
+
+      // Wyczyszczenie ciasteczek sesji w odpowiedzi
+      reply.header('Set-Cookie', [
+        formatClearSessionCookie(),
+        formatClearCsrfCookie()
+      ]);
+
+      return reply.code(200).send({
+        message: 'Hasło zostało pomyślnie zmienione. Możesz się teraz zalogować.'
+      });
+    } catch (err: any) {
+      if (err?.statusCode === 400) {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: err.message || 'Link wygasł lub został już użyty'
+        });
+      }
+      fastify.log.error(err, 'Unexpected error during employee reset-password');
+      return reply.code(500).send({
+        error: 'Internal Server Error',
+        message: 'Wystąpił błąd podczas zmiany hasła'
+      });
+    }
   });
 }

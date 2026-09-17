@@ -241,6 +241,18 @@ export async function verifyEmployeeAuth(request: FastifyRequest, reply: Fastify
     }
   }
 
+  if (
+    payload.iat === undefined ||
+    typeof payload.iat !== 'number' ||
+    !Number.isInteger(payload.iat) ||
+    payload.iat <= 0
+  ) {
+    return reply.code(401).send({
+      error: 'Unauthorized',
+      message: 'Nieprawidłowy znacznik czasu tokenu'
+    });
+  }
+
   // 5. Session Redis allowlist check (fail-closed on Redis error)
   // Bind Redis JSON accountId/companyId/programId to JWT claims
   if (!fastify.redis) {
@@ -328,6 +340,19 @@ export async function verifyEmployeeAuth(request: FastifyRequest, reply: Fastify
         error: 'Forbidden',
         message: 'Brak aktywnego przypisania do programu lub firmy'
       });
+    }
+
+    // Unieważnienie starych sesji (np. po resecie hasła)
+    if (account.sessionsValidAfter) {
+      const validAfterMs = account.sessionsValidAfter instanceof Date
+        ? account.sessionsValidAfter.getTime()
+        : new Date(account.sessionsValidAfter).getTime();
+      if (Number.isFinite(validAfterMs) && payload.iat * 1000 < validAfterMs) {
+        return reply.code(401).send({
+          error: 'Unauthorized',
+          message: 'Sesja wygasła lub została unieważniona'
+        });
+      }
     }
 
     // Attach verified employee to request

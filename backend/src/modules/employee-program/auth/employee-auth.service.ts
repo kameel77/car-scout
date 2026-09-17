@@ -11,7 +11,7 @@ const registrationCodeSchema = z
   .min(1, 'Kod rejestracyjny jest wymagany')
   .max(100, 'Kod rejestracyjny może mieć maksymalnie 100 znaków');
 
-const emailSchema = z
+export const emailSchema = z
   .string({ required_error: 'Adres e-mail jest wymagany', invalid_type_error: 'Adres e-mail musi być tekstem' })
   .trim()
   .min(1, 'Adres e-mail jest wymagany')
@@ -19,7 +19,7 @@ const emailSchema = z
   .email('Niepoprawny format adresu e-mail')
   .transform((val) => val.toLowerCase());
 
-const passwordSchema = z
+export const passwordSchema = z
   .string({ required_error: 'Hasło jest wymagane', invalid_type_error: 'Hasło musi być tekstem' })
   .min(8, 'Hasło musi zawierać co najmniej 8 znaków')
   .refine(
