@@ -135,8 +135,16 @@ describe('InquiryModal Component', () => {
       expect(screen.getByLabelText(/NIP Firmy/i)).toBeInTheDocument();
       expect(screen.getByText(/Samochód służbowy finansowany bezpośrednio przez pracodawcę/i)).toBeInTheDocument();
     });
+  });
 
-    // Select back to CONSUMER
+  it('hides NIP field when CONSUMER is selected', async () => {
+    renderModal({ isOpen: true, onClose: vi.fn(), offer: mockOffer });
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Anna Nowak')).toBeInTheDocument();
+    });
+
     const consumerRadio = screen.getByDisplayValue('CONSUMER');
     fireEvent.click(consumerRadio);
 
@@ -150,6 +158,7 @@ describe('InquiryModal Component', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Anna Nowak')).toBeInTheDocument();
     });
 
     const submitBtn = screen.getByRole('button', { name: /Wyślij zapytanie/i });
@@ -165,6 +174,7 @@ describe('InquiryModal Component', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Anna Nowak')).toBeInTheDocument();
     });
 
     // Check RODO checkbox
@@ -208,6 +218,7 @@ describe('InquiryModal Component', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Anna Nowak')).toBeInTheDocument();
     });
 
     // Check RODO
@@ -256,6 +267,7 @@ describe('InquiryModal Component', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Anna Nowak')).toBeInTheDocument();
     });
 
     const rodoCheckbox = screen.getByRole('checkbox');
