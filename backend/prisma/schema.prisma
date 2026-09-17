@@ -1691,6 +1691,7 @@ model EmployeeCompany {
   name              String                     @unique
   slug              String                     @unique
   nip               String?
+  accountManagerEmail String?                  @map("account_manager_email")
   isActive          Boolean                    @default(true) @map("is_active")
   createdAt         DateTime                   @default(now()) @map("created_at")
   updatedAt         DateTime                   @updatedAt @map("updated_at")

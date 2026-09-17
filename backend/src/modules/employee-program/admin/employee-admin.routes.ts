@@ -54,6 +54,7 @@ const paginationSchema = z.object({
 const createCompanySchema = z.object({
   name: z.string().trim().min(2).max(150),
   nip: z.string().trim().max(20).optional().nullable(),
+  accountManagerEmail: z.string().trim().email('Nieprawidłowy adres email opiekuna').optional().nullable(),
   programName: z.string().trim().min(2).max(150).optional(),
   defaultDiscountPct: z.coerce.number().min(0).max(100).optional().nullable(),
   description: z.string().trim().max(500).optional().nullable()
@@ -62,6 +63,7 @@ const createCompanySchema = z.object({
 const updateCompanySchema = z.object({
   name: z.string().trim().min(2).max(150).optional(),
   nip: z.string().trim().max(20).optional().nullable(),
+  accountManagerEmail: z.string().trim().email('Nieprawidłowy adres email opiekuna').optional().nullable(),
   isActive: z.boolean().optional()
 });
 
@@ -270,6 +272,7 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
             name: body.name,
             slug: companySlug,
             nip: body.nip || null,
+            accountManagerEmail: body.accountManagerEmail || null,
             isActive: true
           }
         });
@@ -359,6 +362,7 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
         data: {
           ...(body.name !== undefined && { name: body.name }),
           ...(body.nip !== undefined && { nip: body.nip }),
+          ...(body.accountManagerEmail !== undefined && { accountManagerEmail: body.accountManagerEmail }),
           ...(body.isActive !== undefined && { isActive: body.isActive })
         }
       });

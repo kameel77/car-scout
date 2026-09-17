@@ -23,6 +23,7 @@ export interface EmployeeCompanyItem {
   name: string;
   slug: string;
   nip: string | null;
+  accountManagerEmail?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -254,7 +255,7 @@ export const employeeAdminApi = {
     );
   },
 
-  updateCompany: (companyId: string, data: { name?: string; nip?: string | null; isActive?: boolean }, token: string) => {
+  updateCompany: (companyId: string, data: { name?: string; nip?: string | null; accountManagerEmail?: string | null; isActive?: boolean }, token: string) => {
     return request<{ company: EmployeeCompanyItem }>(
       `/api/admin/employee-programs/companies/${companyId}`,
       { method: 'PATCH', body: JSON.stringify(data) },

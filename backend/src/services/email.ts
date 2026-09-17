@@ -2,6 +2,29 @@ import nodemailer from 'nodemailer';
 import { Lead, Listing, FinancingProduct, PrismaClient, RentalVehicle } from '@prisma/client';
 import { FastifyInstance } from 'fastify';
 
+export const resolveLeadRecipient = async (prisma: any): Promise<string | null> => {
+    const settings = await prisma.appSettings.findFirst({
+        where: { id: 'default' }
+    });
+
+    if (!settings) {
+        return null;
+    }
+
+    let recipientEmail = settings.smtpRecipientEmail;
+
+    if (settings.leadRecipientUserId) {
+        const designatedUser = await prisma.user.findUnique({
+            where: { id: settings.leadRecipientUserId }
+        });
+        if (designatedUser && designatedUser.email) {
+            recipientEmail = designatedUser.email;
+        }
+    }
+
+    return recipientEmail || null;
+};
+
 export const sendLeadEmail = async (
     fastify: FastifyInstance,
     lead: Lead & { listing?: Listing | null, financingProduct?: FinancingProduct | null, rentalVehicle?: RentalVehicle | null },
@@ -28,19 +51,7 @@ export const sendLeadEmail = async (
         return;
     }
 
-    let recipientEmail = settings.smtpRecipientEmail;
-
-    if (settings.leadRecipientUserId) {
-        const designatedUser = await fastify.prisma.user.findUnique({
-            where: { id: settings.leadRecipientUserId }
-        });
-        if (designatedUser && designatedUser.email) {
-            recipientEmail = designatedUser.email;
-            fastify.log.info({ leadRecipientUserId: settings.leadRecipientUserId, email: recipientEmail }, 'Using designated platform user for lead email notification');
-        } else {
-            fastify.log.warn({ leadRecipientUserId: settings.leadRecipientUserId }, 'Designated lead recipient user not found or has no email. Falling back to default SMTP recipient.');
-        }
-    }
+    let recipientEmail = await resolveLeadRecipient(fastify.prisma);
 
     // Lead routing logic (Motolia vs Dealer)
     const dealerId = lead.listing?.dealerId || lead.rentalVehicle?.dealerId;
@@ -410,5 +421,259 @@ export const sendEmployeePasswordResetEmail = async (
         fastify.log.info('Employee password reset email sent successfully');
     } catch (error) {
         fastify.log.error(error, 'Failed to send employee password reset email');
+    }
+};
+
+function escapeHtml(str: unknown): string {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatContractParty(party: string): string {
+    switch (party) {
+        case 'CONSUMER':
+            return 'Osoba prywatna (Konsument)';
+        case 'EMPLOYEE_B2B':
+            return 'Działalność gospodarcza (B2B pracownika)';
+        case 'EMPLOYER_COMPANY':
+            return 'Firma pracodawcy (Finansowanie przez firmę)';
+        default:
+            return party;
+    }
+}
+
+export const sendEmployeeInquiryNotificationEmail = async (
+    fastify: FastifyInstance,
+    inquiry: any,
+    company: { id: string; name: string; accountManagerEmail?: string | null },
+    recipientEmail: string,
+    brandName?: string
+): Promise<void> => {
+    const settings = await fastify.prisma.appSettings.findFirst({
+        where: { id: 'default' }
+    });
+
+    if (!settings || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword || !recipientEmail) {
+        fastify.log.warn('Email SMTP or recipient configuration missing in AppSettings. Cannot send employee inquiry notification email.');
+        return;
+    }
+
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+    const safeBrand = escapeHtml(brand);
+
+    const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: settings.smtpPort === 465,
+        auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPassword
+        },
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+        greetingTimeout: 5000,
+        logger: process.env.NODE_ENV !== 'production',
+        debug: process.env.NODE_ENV !== 'production'
+    });
+
+    const snap = inquiry.calculationSnapshot || {};
+    const vehicle = snap.vehicle || {};
+    const carTitle = [vehicle.make, vehicle.model, vehicle.version].filter(Boolean).join(' ') || 'Pojazd';
+    const refNo = inquiry.lead?.referenceNumber || inquiry.id;
+
+    const partyLabel = formatContractParty(inquiry.contractParty);
+
+    let conditionsHtml = '';
+    if (snap.sourceType === 'RENTAL') {
+        const rate = snap.rental?.monthlyRateGross != null
+            ? `${snap.rental.monthlyRateGross} zł brutto`
+            : `${snap.rental?.monthlyRateNet ?? '-'} zł netto`;
+        conditionsHtml = `
+            <p style="margin: 0 0 4px 0;"><strong>Rata miesięczna:</strong> ${escapeHtml(rate)}</p>
+            <p style="margin: 0 0 4px 0;"><strong>Okres umowy:</strong> ${escapeHtml(snap.rental?.periodMonths ?? '-')} msc</p>
+            <p style="margin: 0 0 4px 0;"><strong>Roczny limit przebiegu:</strong> ${escapeHtml(snap.rental?.annualMileageKm ?? '-')} km</p>
+            <p style="margin: 0 0 4px 0;"><strong>Opłata wstępna:</strong> ${escapeHtml(snap.rental?.initialPaymentAmountNet ?? 0)} zł netto</p>
+        `;
+    } else {
+        conditionsHtml = `
+            <p style="margin: 0 0 4px 0;"><strong>Cena katalogowa:</strong> ${escapeHtml(snap.pricing?.listPrice ?? '-')} zł</p>
+            <p style="margin: 0 0 4px 0;"><strong>Cena dla pracownika:</strong> ${escapeHtml(snap.pricing?.finalPrice ?? '-')} zł (rabat: ${escapeHtml(snap.pricing?.discountPct ?? 0)}%)</p>
+        `;
+    }
+
+    let benefitHtml = '';
+    const benefit = inquiry.benefitSnapshot;
+    if (benefit) {
+        benefitHtml = `
+            <div style="margin-top: 16px; padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h4 style="margin: 0 0 8px 0; color: #0f172a; font-size: 14px;">Przyznane benefity pracownicze:</h4>
+                <p style="margin: 0; font-size: 13px; color: #334155;">${escapeHtml(benefit.name)}</p>
+                ${benefit.moyaCardAmount ? `<p style="margin: 4px 0 0 0; font-size: 13px; color: #334155;">Karta paliwowa Moya: <strong>${escapeHtml(benefit.moyaCardAmount)} zł</strong></p>` : ''}
+                ${benefit.fuelDiscount ? `<p style="margin: 4px 0 0 0; font-size: 13px; color: #334155;">Rabat paliwowy: <strong>${escapeHtml(benefit.fuelDiscount)}</strong></p>` : ''}
+            </div>
+        `;
+    }
+
+    const htmlContent = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700;">${safeBrand}</h3>
+                <span style="font-size: 12px; color: #64748b;">Nowe zapytanie o pojazd - ${escapeHtml(company.name)}</span>
+            </div>
+            <h2 style="color: #0f172a; font-size: 18px; font-weight: 700; margin-top: 0;">Zapytanie nr ${escapeHtml(refNo)}</h2>
+            
+            <div style="margin: 16px 0; padding: 14px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+                <p style="margin: 0 0 6px 0;"><strong>Organizacja:</strong> ${escapeHtml(company.name)}</p>
+                <p style="margin: 0 0 6px 0;"><strong>Program:</strong> ${escapeHtml(inquiry.program?.name || 'Program Pracowniczy')}</p>
+                <p style="margin: 0;"><strong>Strona umowy:</strong> ${escapeHtml(partyLabel)}</p>
+                ${inquiry.nip ? `<p style="margin: 6px 0 0 0;"><strong>NIP firmy:</strong> ${escapeHtml(inquiry.nip)}</p>` : ''}
+            </div>
+
+            <div style="margin: 16px 0;">
+                <h4 style="margin: 0 0 8px 0; color: #0f172a; font-size: 15px;">Wybrany pojazd i warunki:</h4>
+                <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 600; color: #1e3a8a;">${escapeHtml(carTitle)} (${escapeHtml(vehicle.productionYear ?? '-')})</p>
+                ${conditionsHtml}
+                ${benefitHtml}
+            </div>
+
+            <div style="margin: 16px 0; padding: 14px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h4 style="margin: 0 0 8px 0; color: #0f172a; font-size: 14px;">Dane kontaktowe pracownika:</h4>
+                <p style="margin: 0 0 4px 0;"><strong>Imię i nazwisko:</strong> ${escapeHtml(inquiry.contactName)}</p>
+                <p style="margin: 0 0 4px 0;"><strong>E-mail:</strong> <a href="mailto:${escapeHtml(inquiry.contactEmail)}" style="color: #2563eb;">${escapeHtml(inquiry.contactEmail)}</a></p>
+                <p style="margin: 0;"><strong>Telefon:</strong> <a href="tel:${escapeHtml(inquiry.contactPhone)}" style="color: #2563eb;">${escapeHtml(inquiry.contactPhone)}</a></p>
+            </div>
+
+            ${inquiry.notes ? `
+                <div style="margin: 16px 0; padding: 12px; background-color: #f1f5f9; border-radius: 8px; font-size: 13px;">
+                    <strong>Uwagi pracownika:</strong><br />
+                    ${escapeHtml(inquiry.notes)}
+                </div>
+            ` : ''}
+
+            <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+                Wiadomość wygenerowana automatycznie przez platformę ${safeBrand}.
+            </div>
+        </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"${safeBrand}" <${settings.smtpFromEmail || settings.smtpUser}>`,
+            to: recipientEmail,
+            subject: `[Program Pracowniczy] Nowe zapytanie ${refNo} - ${company.name} - ${carTitle}`,
+            html: htmlContent,
+            headers: {
+                'Auto-Submitted': 'auto-generated',
+                'X-Auto-Response-Suppress': 'All'
+            }
+        });
+        fastify.log.info({ refNo, recipientEmail }, 'Employee inquiry notification email sent successfully');
+    } catch (error) {
+        fastify.log.error(error, 'Failed to send employee inquiry notification email');
+    }
+};
+
+export const sendEmployeeInquiryConfirmationEmail = async (
+    fastify: FastifyInstance,
+    inquiry: any,
+    recipientEmail: string,
+    brandName?: string
+): Promise<void> => {
+    const settings = await fastify.prisma.appSettings.findFirst({
+        where: { id: 'default' }
+    });
+
+    if (!settings || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword || !recipientEmail) {
+        fastify.log.warn('Email SMTP or recipient configuration missing in AppSettings. Cannot send employee inquiry confirmation email.');
+        return;
+    }
+
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+    const safeBrand = escapeHtml(brand);
+
+    const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: settings.smtpPort === 465,
+        auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPassword
+        },
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+        greetingTimeout: 5000,
+        logger: process.env.NODE_ENV !== 'production',
+        debug: process.env.NODE_ENV !== 'production'
+    });
+
+    const snap = inquiry.calculationSnapshot || {};
+    const vehicle = snap.vehicle || {};
+    const carTitle = [vehicle.make, vehicle.model, vehicle.version].filter(Boolean).join(' ') || 'Pojazd';
+    const refNo = inquiry.lead?.referenceNumber || inquiry.id;
+
+    let priceSummary = '';
+    if (snap.sourceType === 'RENTAL') {
+        const rate = snap.rental?.monthlyRateGross != null
+            ? `${snap.rental.monthlyRateGross} zł brutto`
+            : `${snap.rental?.monthlyRateNet ?? '-'} zł netto`;
+        priceSummary = `Szacowana rata: <strong>${escapeHtml(rate)}/mc</strong>`;
+    } else if (snap.pricing?.finalPrice != null) {
+        priceSummary = `Cena po rabacie pracowniczym: <strong>${escapeHtml(snap.pricing.finalPrice)} zł</strong>`;
+    }
+
+    const htmlContent = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700;">${safeBrand}</h3>
+            </div>
+            <h2 style="color: #0f172a; font-size: 18px; font-weight: 700; margin-top: 0;">Potwierdzenie przyjęcia zapytania</h2>
+            
+            <p style="color: #334155; font-size: 14px;">
+                Dziękujemy za złożenie zapytania w ramach Twojego firmowego programu samochodowego. Zgłoszenie zostało zarejestrowane pod numerem:
+            </p>
+
+            <div style="margin: 16px 0; padding: 14px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; text-align: center;">
+                <span style="font-size: 13px; color: #1e40af; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Numer zgłoszenia</span>
+                <div style="font-size: 20px; font-weight: 800; color: #1d4ed8; margin-top: 4px;">${escapeHtml(refNo)}</div>
+            </div>
+
+            <div style="margin: 16px 0; padding: 14px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h4 style="margin: 0 0 6px 0; color: #0f172a; font-size: 14px;">Wybrany samochód:</h4>
+                <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #0f172a;">${escapeHtml(carTitle)}</p>
+                ${priceSummary ? `<p style="margin: 0; font-size: 13px; color: #475569;">${priceSummary}</p>` : ''}
+            </div>
+
+            <div style="margin: 20px 0; font-size: 14px; color: #334155;">
+                <h4 style="margin: 0 0 6px 0; color: #0f172a; font-size: 14px;">Co dalej?</h4>
+                <p style="margin: 0;">
+                    Dedykowany doradca programu skontaktuje się z Tobą telefonicznie lub mailowo w ciągu najbliższego dnia roboczego, aby przedstawić szczegółową kalkulację, odpowiedzieć na ewentualne pytania oraz przeprowadzić Cię przez proces zamówienia.
+                </p>
+            </div>
+
+            <div style="margin-top: 28px; padding-top: 14px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+                Wiadomość wygenerowana automatycznie. W razie pytań prosimy powoływać się na numer zgłoszenia: <strong>${escapeHtml(refNo)}</strong>.
+            </div>
+        </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"${safeBrand}" <${settings.smtpFromEmail || settings.smtpUser}>`,
+            to: recipientEmail,
+            subject: `Potwierdzenie zapytania ${refNo} - ${carTitle}`,
+            html: htmlContent,
+            headers: {
+                'Auto-Submitted': 'auto-generated',
+                'X-Auto-Response-Suppress': 'All'
+            }
+        });
+        fastify.log.info({ refNo, recipientEmail }, 'Employee inquiry confirmation email sent successfully');
+    } catch (error) {
+        fastify.log.error(error, 'Failed to send employee inquiry confirmation email');
     }
 };
