@@ -1057,3 +1057,15 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Natychmiastowe malowanie pierwszego zdjęcia w galerii oferty (`ImageGallery.tsx`)**:
   - Wyłączono animację wejściową `initial={{ opacity: 0 }}` dla pierwszego zdjęcia oferty (`selectedIndex === 0`) oraz ustawiono `initial={false}` w `AnimatePresence`.
   - Pierwsze zdjęcie (element LCP nad foldem) pojawia się natychmiast po załadowaniu bez opóźnienia przezroczystości, przy zachowaniu płynnych animacji 0,2s dla kolejnych przeglądanych zdjęć w galerii.
+
+## 79. Dalsza Optymalizacja Katalogów Najmu i Sprzedaży (LCP & CLS Enhancements)
+- **Rzeczywiste odroczenie montowania sekcji finansowania najmu (`RentalSearchPage.tsx`)**:
+  - Wprowadzono wrapper `DeferredFinancingSection` wykorzystujący `IntersectionObserver` z marginesem `rootMargin: '400px 0px'`.
+  - Zapobiega to natychmiastowemu montowaniu komponentu `FinancingContentSection` oraz przedwczesnym zapytaniom do API (`/api/content/financing/wynajem`, `/api/faq?page=financing`) podczas początkowego renderowania katalogu nad foldem.
+- **Wczesny preload i dynamiczny srcset pierwszego zdjęcia w najmie (`rental-prefetch.ts`)**:
+  - Rozszerzono skrypt `__RENTAL_PREFETCH__` o dynamiczne generowanie tagu `<link rel="preload" as="image">` z responsywnym `imagesrcset` (600w/900w/1400w) dla pierwszego pobranego pojazdu.
+  - Eliminuje to opóźnienie odkrycia obrazu LCP na trasie `/wynajem-dlugoterminowy` bez ryzyka serwowania niepasującego zdjęcia przy niezgodności sortowania/filtrów.
+- **Rozszerzenie wąskiego preloadu entry chunków na `/nowe`, `/uzywane` i `/samochody` (`backend/src/routes/render.ts`)**:
+  - Funkcja `routeEntryPreload` emituje teraz preloading skryptu wejściowego trasy również dla `ConditionPage.tsx` oraz `SearchPage.tsx` na pierwszej stronie katalogów, skracając czas oczekiwania na załadowanie głównego widoku bez wprowadzania kaskadowego fan-outu zależności.
+- **Eliminacja przesunięć układu przez logo w stopce (`Footer.tsx`)**:
+  - Dodano jawne atrybuty `width={200}` oraz `height={48}` do znacznika `<img>` logo w stopce serwisu, zapobiegając raportowanym przez audyt problemom CLS (brak określonego rozmiaru grafiki).

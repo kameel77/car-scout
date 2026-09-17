@@ -38,6 +38,40 @@ const FinancingContentSection = lazy(() =>
   import('@/components/FinancingContentSection').then(({ FinancingContentSection: Component }) => ({ default: Component })),
 );
 
+function DeferredFinancingSection() {
+  const { t } = useTranslation();
+  const [shouldRender, setShouldRender] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (shouldRender) return;
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      setShouldRender(true);
+      return;
+    }
+    const node = containerRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setShouldRender(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '400px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [shouldRender]);
+
+  return (
+    <div ref={containerRef} className="min-h-[200px]">
+      {shouldRender ? (
+        <Suspense fallback={<div className="container mt-12 mb-8 text-sm text-muted-foreground" role="status">{t('common.loading')}</div>}>
+          <FinancingContentSection type="wynajem" />
+        </Suspense>
+      ) : null}
+    </div>
+  );
+}
+
 /* ── Helpers ── */
 
 function buildRentalImageList(v: any): string[] {
@@ -875,11 +909,7 @@ export default function RentalSearchPage() {
           </div>
         )}
 
-        <Suspense
-          fallback={<div className="container mt-12 mb-8 text-sm text-muted-foreground" role="status">{t('common.loading')}</div>}
-        >
-          <FinancingContentSection type="wynajem" />
-        </Suspense>
+        <DeferredFinancingSection />
       </main>
       <ScrollToTopButton />
       <Footer />

@@ -29,11 +29,15 @@ describe('rental fetch-ahead', () => {
     await window.__RENTAL_PREFETCH__.p;
     expect(appendChild).toHaveBeenCalledWith(expect.objectContaining({ rel: 'preload', as: 'image', href: '/motolia-placeholder.webp' }));
   });
-  it.each([[], [{ primaryImageUrl: '/real.webp' }], [{ primaryImageUrl: null, imageUrls: ['/real.webp'] }]])('does not hint placeholder for empty results or an image-bearing first offer', async (...vehicles) => {
-    const list = vehicles.flat();
-    const { window, appendChild } = execute(null, '', false, list);
+  it('does not hint image for empty results', async () => {
+    const { window, appendChild } = execute(null, '', false, []);
     await window.__RENTAL_PREFETCH__.p;
     expect(appendChild).not.toHaveBeenCalled();
+  });
+  it('hints real image for an image-bearing first offer', async () => {
+    const { window, appendChild } = execute(null, '', false, [{ primaryImageUrl: '/uploads/rental-images/1/car.webp' }]);
+    await window.__RENTAL_PREFETCH__.p;
+    expect(appendChild).toHaveBeenCalledWith(expect.objectContaining({ rel: 'preload', as: 'image', href: '/uploads/rental-images/1/car-lg.webp' }));
   });
   it.each(['?make=BMW', '?page=2', '?offerType=b2c', '?sortBy=createdAt'])('skips filtered cached HTML %s', search => {
     expect(execute(null, search).fetch).not.toHaveBeenCalled();
