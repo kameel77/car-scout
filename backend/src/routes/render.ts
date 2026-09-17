@@ -363,12 +363,18 @@ function routeChunkLinks(path: string, manifest: ViteManifest): string[] {
     return links;
 }
 
-// The rental catalog is a lazy route, but its first card can become mobile LCP.
-// Preload only that route entry instead of enabling the old recursive
+// The catalog routes are lazy routes, but their first card can become mobile LCP.
+// Preload only the route entry instead of enabling the recursive
 // modulepreload fan-out, which competed with the HTML and LCP image.
 function routeEntryPreload(path: string, manifest: ViteManifest): string[] {
     const route = ROUTE_MODULES.find(r => r.match(path));
-    if (!route || route.module !== 'src/pages/RentalSearchPage.tsx') return [];
+    if (!route) return [];
+    const allowedModules = [
+        'src/pages/RentalSearchPage.tsx',
+        'src/pages/ConditionPage.tsx',
+        'src/pages/SearchPage.tsx'
+    ];
+    if (!allowedModules.includes(route.module)) return [];
     const entry = manifest[route.module];
     if (!entry || entry.isEntry) return [];
     return [`<link rel="preload" as="script" href="/${entry.file}" crossorigin />`];
@@ -1043,9 +1049,9 @@ async function renderPage(
         }
     }
 
-    // Keep the rental route's single lazy entry on the critical path without
-    // preloading all of its transitive dependencies.
-    if (path === '/wynajem-dlugoterminowy') {
+    // Keep the catalog routes' single lazy entry on the critical path without
+    // preloading all of their transitive dependencies.
+    if (['/wynajem-dlugoterminowy', '/nowe', '/uzywane', '/samochody'].includes(path) && page === 1) {
         const manifest = await getViteManifest();
         if (manifest) {
             const preload = routeEntryPreload(path, manifest);
@@ -1067,6 +1073,11 @@ async function renderPage(
     }
 
     // window.__CATALOG_PREFETCH__ — fetch-ahead of the default catalog query (#Task 3)
+    if (path === '/wynajem-dlugoterminowy' && page === 1 && publicSettings) {
+        const sort = String(publicSettings.defaultSortRental || 'minMonthlyRateNet_asc');
+        html = html.replace('</head>', () => `${buildRentalPrefetchScript(sort)}</head>`);
+    }
+
     if (['/nowe', '/uzywane', '/samochody'].includes(path) && page === 1) {
         const ssrPerPage = await getSsrPerPage(fastify);
         const sortKey = (publicSettings as any)?.defaultSortCars || 'price_asc';
@@ -1074,11 +1085,6 @@ async function renderPage(
 
         const prefetchScript = buildCatalogPrefetchScript(path, ssrPerPage, sortKey, currency);
         html = html.replace('</head>', () => `${prefetchScript}</head>`);
-    }
-
-    if (path === '/wynajem-dlugoterminowy' && page === 1 && publicSettings) {
-        const sort = String(publicSettings.defaultSortRental || 'minMonthlyRateNet_asc');
-        html = html.replace('</head>', () => `${buildRentalPrefetchScript(sort)}</head>`);
     }
 
     // window.__HERO_BANNERS__ — initialData React Query dla frontu (#3), tylko na /,

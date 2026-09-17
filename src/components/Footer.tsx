@@ -100,6 +100,8 @@ export function Footer() {
             <img
               src={logo}
               alt="Footer logo"
+              width={200}
+              height={48}
               className="h-auto max-h-12 w-auto max-w-[200px] object-contain"
               loading="lazy"
               decoding="async"
