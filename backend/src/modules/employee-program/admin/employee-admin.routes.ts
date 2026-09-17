@@ -166,9 +166,16 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
     const statusCode = typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 600
       ? error.statusCode
       : 500;
+    if (statusCode >= 500) {
+      fastify.log.error(error, 'Employee admin route internal error occurred');
+      return reply.code(statusCode).send({
+        error: 'Internal Server Error',
+        message: 'Wystąpił błąd serwera'
+      });
+    }
     return reply.code(statusCode).send({
       error: error.name || 'Error',
-      message: error.message || 'Wystąpił błąd serwera'
+      message: error.message || 'Wystąpił błąd żądania'
     });
   });
 

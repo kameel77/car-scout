@@ -340,18 +340,19 @@ describe('Employee Inquiries Email Notifications', () => {
     expect(inquiriesDb.has('c3333333-3333-4333-8333-333333333333')).toBe(true);
   });
 
-  it('verifies that sendEmployeeInquiryConfirmationEmail template does not contain supplier name or fee', async () => {
+  it('verifies that sendEmployeeInquiryConfirmationEmail and sendEmployeeInquiryNotificationEmail correctly handle RENTAL details and supplier anonymity', async () => {
     // Test the actual email template generation
     const mockTransporter = {
       sendMail: vi.fn().mockResolvedValue({ messageId: 'msg_1' })
     };
     vi.spyOn(emailService, 'sendEmployeeInquiryConfirmationEmail').mockRestore();
+    vi.spyOn(emailService, 'sendEmployeeInquiryNotificationEmail').mockRestore();
 
     // Mock nodemailer
     const nodemailer = await import('nodemailer');
     vi.spyOn(nodemailer.default, 'createTransport').mockReturnValue(mockTransporter as any);
 
-    const rentalInquiry = {
+    const rentalInquiry: emailService.EmployeeInquiryEmailPayload = {
       id: 'inq_rent_1',
       lead: { referenceNumber: 'PP-RENT-001' },
       contractParty: 'EMPLOYEE_B2B',
@@ -366,19 +367,21 @@ describe('Employee Inquiries Email Notifications', () => {
           make: 'Audi',
           model: 'A4',
           version: 'S-Line 40 TFSI',
-          productionYear: 2024
+          productionYear: 2024,
+          primaryImageUrl: null
         },
         rental: {
           rentalCompanyName: 'SekretnyDostawcaFlotowy sp. z o.o.', // GITLEAKS:ALLOW
           monthlyRateNet: 2500,
           monthlyRateGross: 3075,
-          periodMonths: 36,
+          contractMonths: 36,
           annualMileageKm: 20000,
           initialPaymentAmountNet: 0
         }
       }
     };
 
+    // 1. Confirmation to employee
     await emailService.sendEmployeeInquiryConfirmationEmail(
       app,
       rentalInquiry,
@@ -387,16 +390,102 @@ describe('Employee Inquiries Email Notifications', () => {
     );
 
     expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
-    const sentHtml: string = mockTransporter.sendMail.mock.calls[0][0].html;
+    const sentEmployeeHtml: string = mockTransporter.sendMail.mock.calls[0][0].html;
 
-    // Must contain vehicle and reference
-    expect(sentHtml).toContain('PP-RENT-001');
-    expect(sentHtml).toContain('Audi');
-    expect(sentHtml).toContain('3075 zł brutto');
+    // Must contain vehicle, reference, and rental period / rate
+    expect(sentEmployeeHtml).toContain('PP-RENT-001');
+    expect(sentEmployeeHtml).toContain('Audi');
+    expect(sentEmployeeHtml).toContain('3075 zł brutto/mc');
+    expect(sentEmployeeHtml).toContain('okres: 36 msc');
 
     // STRICTLY MUST NOT contain supplier name or internal details
-    expect(sentHtml).not.toContain('SekretnyDostawcaFlotowy'); // GITLEAKS:ALLOW
-    expect(sentHtml).not.toContain('5213849201'); // NIP should not be in confirmation to employee
-    expect(sentHtml).not.toContain('Wewnętrzna notatka'); // Notes should not be in confirmation to employee
+    expect(sentEmployeeHtml).not.toContain('SekretnyDostawcaFlotowy'); // GITLEAKS:ALLOW
+    expect(sentEmployeeHtml).not.toContain('5213849201'); // NIP should not be in confirmation to employee
+    expect(sentEmployeeHtml).not.toContain('Wewnętrzna notatka'); // Notes should not be in confirmation to employee
+
+    // 2. Notification to manager
+    mockTransporter.sendMail.mockClear();
+    await emailService.sendEmployeeInquiryNotificationEmail(
+      app,
+      rentalInquiry,
+      { id: 'comp_rent_1', name: 'Firma Partnerska' },
+      'opiekun@motolia.pl'
+    );
+
+    expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
+    const sentManagerHtml: string = mockTransporter.sendMail.mock.calls[0][0].html;
+    expect(sentManagerHtml).toContain('Okres umowy:</strong> 36 msc');
+    expect(sentManagerHtml).not.toContain('Okres umowy:</strong> - msc');
+    expect(sentManagerHtml).toContain('Rata miesięczna:</strong> 3075 zł brutto');
+    expect(sentManagerHtml).toContain('Roczny limit przebiegu:</strong> 20000 km');
+  });
+
+  it('verifies that sendEmployeeInquiryNotificationEmail and sendEmployeeInquiryConfirmationEmail correctly render FINANCING pricing details', async () => {
+    const mockTransporter = {
+      sendMail: vi.fn().mockResolvedValue({ messageId: 'msg_2' })
+    };
+    vi.spyOn(emailService, 'sendEmployeeInquiryConfirmationEmail').mockRestore();
+    vi.spyOn(emailService, 'sendEmployeeInquiryNotificationEmail').mockRestore();
+
+    const nodemailer = await import('nodemailer');
+    vi.spyOn(nodemailer.default, 'createTransport').mockReturnValue(mockTransporter as any);
+
+    const financingInquiry: emailService.EmployeeInquiryEmailPayload = {
+      id: 'inq_fin_1',
+      contractParty: 'CONSUMER',
+      contactName: 'Jan Kowalski',
+      contactEmail: 'jan@kowalski.pl',
+      contactPhone: '+48111222333',
+      notes: 'Zainteresowany leasingiem konsumenckim',
+      lead: { referenceNumber: 'PP-FIN-2026' },
+      program: { id: 'prog_1', name: 'Program Partnerski Acme' },
+      company: { id: 'comp_1', name: 'Acme Corporation' },
+      calculationSnapshot: {
+        sourceType: 'FINANCING',
+        vehicle: {
+          make: 'Toyota',
+          model: 'Corolla',
+          version: 'Comfort 1.8 Hybrid',
+          productionYear: 2024,
+          primaryImageUrl: null
+        },
+        pricing: {
+          listPricePln: 120000,
+          employeePricePln: 108000,
+          savingsPln: 12000,
+          discountPct: 10
+        }
+      }
+    };
+
+    // 1. Manager notification email
+    await emailService.sendEmployeeInquiryNotificationEmail(
+      app,
+      financingInquiry,
+      { id: 'comp_1', name: 'Acme Corporation' },
+      'opiekun@motolia.pl'
+    );
+
+    expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
+    const managerHtml: string = mockTransporter.sendMail.mock.calls[0][0].html;
+    expect(managerHtml).toContain('Cena katalogowa:</strong> 120000 zł');
+    expect(managerHtml).toContain('Cena dla pracownika:</strong> 108000 zł (rabat: 10%)');
+    expect(managerHtml).not.toContain('Cena katalogowa:</strong> - zł');
+    expect(managerHtml).not.toContain('Cena dla pracownika:</strong> - zł');
+
+    // 2. Employee confirmation email
+    mockTransporter.sendMail.mockClear();
+    await emailService.sendEmployeeInquiryConfirmationEmail(
+      app,
+      financingInquiry,
+      'jan@kowalski.pl'
+    );
+
+    expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
+    const employeeHtml: string = mockTransporter.sendMail.mock.calls[0][0].html;
+    expect(employeeHtml).toContain('Cena po rabacie pracowniczym: <strong>108000 zł</strong>');
+    expect(employeeHtml).not.toContain('- zł');
+    expect(employeeHtml).toContain('PP-FIN-2026');
+    expect(employeeHtml).toContain('Toyota Corolla Comfort 1.8 Hybrid');
   });
 });

@@ -447,9 +447,58 @@ function formatContractParty(party: string): string {
     }
 }
 
+export interface EmployeeInquiryEmailPayload {
+    id: string;
+    contractParty: 'CONSUMER' | 'EMPLOYEE_B2B' | 'EMPLOYER_COMPANY' | string;
+    contactName: string;
+    contactEmail: string;
+    contactPhone: string;
+    nip?: string | null;
+    notes?: string | null;
+    lead?: { referenceNumber?: string | null } | null;
+    program?: { id?: string; name?: string } | null;
+    company?: { id?: string; name?: string; accountManagerEmail?: string | null } | null;
+    benefitSnapshot?: {
+        name: string;
+        moyaCardAmount?: number | null;
+        fuelDiscount?: string | null;
+        consultantCare?: boolean | null;
+        termsText?: string | null;
+    } | null;
+    calculationSnapshot: {
+        offerId?: string;
+        sourceType: 'FINANCING' | 'RENTAL';
+        vehicle?: {
+            make?: string;
+            model?: string;
+            version?: string | null;
+            productionYear?: number;
+            primaryImageUrl?: string | null;
+        } | null;
+        pricing?: {
+            listPricePln: number;
+            employeePricePln: number;
+            savingsPln?: number;
+            discountPct: number;
+        } | null;
+        rental?: {
+            rateSource?: string;
+            matrixVersionId?: string | null;
+            rentalCompanyName?: string;
+            assignmentId?: string;
+            contractMonths: number;
+            annualMileageKm: number;
+            initialPaymentPct?: number;
+            initialPaymentAmountNet?: number;
+            monthlyRateNet: number;
+            monthlyRateGross: number;
+        } | null;
+    };
+}
+
 export const sendEmployeeInquiryNotificationEmail = async (
     fastify: FastifyInstance,
-    inquiry: any,
+    inquiry: EmployeeInquiryEmailPayload,
     company: { id: string; name: string; accountManagerEmail?: string | null },
     recipientEmail: string,
     brandName?: string
@@ -481,7 +530,7 @@ export const sendEmployeeInquiryNotificationEmail = async (
         debug: process.env.NODE_ENV !== 'production'
     });
 
-    const snap = inquiry.calculationSnapshot || {};
+    const snap = inquiry.calculationSnapshot;
     const vehicle = snap.vehicle || {};
     const carTitle = [vehicle.make, vehicle.model, vehicle.version].filter(Boolean).join(' ') || 'Pojazd';
     const refNo = inquiry.lead?.referenceNumber || inquiry.id;
@@ -495,14 +544,14 @@ export const sendEmployeeInquiryNotificationEmail = async (
             : `${snap.rental?.monthlyRateNet ?? '-'} zł netto`;
         conditionsHtml = `
             <p style="margin: 0 0 4px 0;"><strong>Rata miesięczna:</strong> ${escapeHtml(rate)}</p>
-            <p style="margin: 0 0 4px 0;"><strong>Okres umowy:</strong> ${escapeHtml(snap.rental?.periodMonths ?? '-')} msc</p>
+            <p style="margin: 0 0 4px 0;"><strong>Okres umowy:</strong> ${escapeHtml(snap.rental?.contractMonths ?? '-')} msc</p>
             <p style="margin: 0 0 4px 0;"><strong>Roczny limit przebiegu:</strong> ${escapeHtml(snap.rental?.annualMileageKm ?? '-')} km</p>
             <p style="margin: 0 0 4px 0;"><strong>Opłata wstępna:</strong> ${escapeHtml(snap.rental?.initialPaymentAmountNet ?? 0)} zł netto</p>
         `;
     } else {
         conditionsHtml = `
-            <p style="margin: 0 0 4px 0;"><strong>Cena katalogowa:</strong> ${escapeHtml(snap.pricing?.listPrice ?? '-')} zł</p>
-            <p style="margin: 0 0 4px 0;"><strong>Cena dla pracownika:</strong> ${escapeHtml(snap.pricing?.finalPrice ?? '-')} zł (rabat: ${escapeHtml(snap.pricing?.discountPct ?? 0)}%)</p>
+            <p style="margin: 0 0 4px 0;"><strong>Cena katalogowa:</strong> ${escapeHtml(snap.pricing?.listPricePln ?? '-')} zł</p>
+            <p style="margin: 0 0 4px 0;"><strong>Cena dla pracownika:</strong> ${escapeHtml(snap.pricing?.employeePricePln ?? '-')} zł (rabat: ${escapeHtml(snap.pricing?.discountPct ?? 0)}%)</p>
         `;
     }
 
@@ -580,7 +629,7 @@ export const sendEmployeeInquiryNotificationEmail = async (
 
 export const sendEmployeeInquiryConfirmationEmail = async (
     fastify: FastifyInstance,
-    inquiry: any,
+    inquiry: EmployeeInquiryEmailPayload,
     recipientEmail: string,
     brandName?: string
 ): Promise<void> => {
@@ -611,7 +660,7 @@ export const sendEmployeeInquiryConfirmationEmail = async (
         debug: process.env.NODE_ENV !== 'production'
     });
 
-    const snap = inquiry.calculationSnapshot || {};
+    const snap = inquiry.calculationSnapshot;
     const vehicle = snap.vehicle || {};
     const carTitle = [vehicle.make, vehicle.model, vehicle.version].filter(Boolean).join(' ') || 'Pojazd';
     const refNo = inquiry.lead?.referenceNumber || inquiry.id;
@@ -621,9 +670,10 @@ export const sendEmployeeInquiryConfirmationEmail = async (
         const rate = snap.rental?.monthlyRateGross != null
             ? `${snap.rental.monthlyRateGross} zł brutto`
             : `${snap.rental?.monthlyRateNet ?? '-'} zł netto`;
-        priceSummary = `Szacowana rata: <strong>${escapeHtml(rate)}/mc</strong>`;
-    } else if (snap.pricing?.finalPrice != null) {
-        priceSummary = `Cena po rabacie pracowniczym: <strong>${escapeHtml(snap.pricing.finalPrice)} zł</strong>`;
+        const period = snap.rental?.contractMonths ? ` (okres: ${snap.rental.contractMonths} msc)` : '';
+        priceSummary = `Szacowana rata: <strong>${escapeHtml(rate)}/mc</strong>${escapeHtml(period)}`;
+    } else if (snap.pricing?.employeePricePln != null) {
+        priceSummary = `Cena po rabacie pracowniczym: <strong>${escapeHtml(snap.pricing.employeePricePln)} zł</strong>`;
     }
 
     const htmlContent = `

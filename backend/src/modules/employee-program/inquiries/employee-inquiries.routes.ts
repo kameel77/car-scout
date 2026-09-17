@@ -7,7 +7,8 @@ import { resolveRentalRateSource } from '../rental/employee-rental-pricing.utils
 import {
   resolveLeadRecipient,
   sendEmployeeInquiryNotificationEmail,
-  sendEmployeeInquiryConfirmationEmail
+  sendEmployeeInquiryConfirmationEmail,
+  type EmployeeInquiryEmailPayload
 } from '../../../services/email.js';
 
 export interface InquiryCalculationSnapshot {
@@ -626,10 +627,11 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     (async () => {
       try {
         const leadRecipient = (createdInquiry as any).company?.accountManagerEmail || await resolveLeadRecipient(fastify.prisma);
+        const emailInquiry = createdInquiry as unknown as EmployeeInquiryEmailPayload;
         if (leadRecipient) {
           await sendEmployeeInquiryNotificationEmail(
             fastify,
-            createdInquiry,
+            emailInquiry,
             (createdInquiry as any).company || { id: employee.companyId, name: 'Firma' },
             leadRecipient
           );
@@ -637,7 +639,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
         if (createdInquiry.contactEmail) {
           await sendEmployeeInquiryConfirmationEmail(
             fastify,
-            createdInquiry,
+            emailInquiry,
             createdInquiry.contactEmail
           );
         }
