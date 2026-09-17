@@ -4,21 +4,14 @@ import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import {
   Car,
-  Fuel,
   ArrowLeft,
-  Calendar,
-  Gauge,
   ShieldCheck,
   CheckCircle,
   Sparkles,
   Layers,
-  ChevronRight,
   Calculator,
-  Building2,
   Tag,
-  Info,
-  Sliders,
-  DollarSign
+  Info
 } from 'lucide-react';
 import {
   fetchEmployeeOfferDetails,
@@ -61,7 +54,7 @@ function formatTransmission(tx: string | null | undefined): string {
 export const NewCarOfferDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { config, isLoading: isBrandLoading } = useBrandConfig();
-  const { user, isLoading: isAuthLoading, logout, sessionError } = useAuth();
+  const { isLoading: isAuthLoading, logout, sessionError } = useAuth();
   const navigate = useNavigate();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);

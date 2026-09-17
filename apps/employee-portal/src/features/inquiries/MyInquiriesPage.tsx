@@ -3,9 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Car,
   Clock,
-  Building2,
-  UserCircle2,
-  LogOut,
   AlertCircle,
   RefreshCw,
   FileQuestion,
@@ -28,7 +25,6 @@ export const MyInquiriesPage: React.FC = () => {
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  const [logoError, setLogoError] = useState(false);
 
   const loadInquiries = useCallback(
     async (signal?: AbortSignal) => {

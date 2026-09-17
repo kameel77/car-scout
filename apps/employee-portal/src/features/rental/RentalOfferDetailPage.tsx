@@ -4,19 +4,11 @@ import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import {
   Car,
-  Fuel,
-  LogOut,
-  Building2,
-  UserCircle2,
   AlertCircle,
-  RefreshCw,
   ArrowLeft,
-  Calendar,
-  Gauge,
   ShieldCheck,
   CheckCircle,
   Sparkles,
-  Layers,
   ChevronRight
 } from 'lucide-react';
 import {
@@ -53,10 +45,9 @@ function formatFuelType(fuelType: string | null): string {
 export const RentalOfferDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { config, isLoading: isBrandLoading } = useBrandConfig();
-  const { user, isLoading: isAuthLoading, logout, sessionError } = useAuth();
+  const { isLoading: isAuthLoading, logout, sessionError } = useAuth();
   const navigate = useNavigate();
 
-  const [logoError, setLogoError] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
