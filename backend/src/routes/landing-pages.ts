@@ -220,16 +220,22 @@ async function resolveRentalVehiclesForLandingPage(fastify: FastifyInstance, ren
       }))
     );
 
-    const minRate = rates.length > 0
-      ? rates.reduce((best: any, current: any) =>
+    const validRates = rates.filter((r: any) => !r.insuranceMissing);
+    const candidateRates = validRates.length > 0 ? validRates : rates;
+
+    const minRate = candidateRates.length > 0
+      ? candidateRates.reduce((best: any, current: any) =>
           current.monthlyRateGross < best.monthlyRateGross ? current : best
         )
       : null;
 
+    const isInsuranceMissing = Boolean(minRate?.insuranceMissing);
+
     return {
       ...v,
-      minMonthlyRateGross: minRate ? Math.ceil(minRate.monthlyRateGross) : null,
-      minMonthlyRateNet: minRate ? Math.ceil(minRate.monthlyRateNet) : null,
+      minMonthlyRateGross: minRate && !isInsuranceMissing ? Math.ceil(minRate.monthlyRateGross) : null,
+      minMonthlyRateNet: minRate && !isInsuranceMissing ? Math.ceil(minRate.monthlyRateNet) : null,
+      insuranceMissing: isInsuranceMissing,
       minRateCompany: minRate?.companyName || null,
       minRateConfig: minRate
         ? {

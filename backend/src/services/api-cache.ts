@@ -413,7 +413,11 @@ export function parseRentalVehiclesQuery(query: Record<string, any>): ParsedRent
     const sortOrder: 'asc' | 'desc' = rawSortOrder === 'asc' ? 'asc' : 'desc';
 
     const rawOfferType = typeof query.offerType === 'string' ? query.offerType.trim().toLowerCase() : undefined;
-    const offerType = rawOfferType === 'business' || rawOfferType === 'consumer' ? rawOfferType : undefined;
+    let offerType: 'business' | 'consumer' | undefined = undefined;
+    if (rawOfferType) {
+        if (['b2b', 'firma', 'business'].includes(rawOfferType)) offerType = 'business';
+        else if (['b2c', 'prywatnie', 'prywatny', 'consumer'].includes(rawOfferType)) offerType = 'consumer';
+    }
 
     const rawPriceBasis = typeof query.priceBasis === 'string' ? query.priceBasis.trim().toLowerCase() : 'gross';
     const priceBasis: 'net' | 'gross' = rawPriceBasis === 'net' ? 'net' : 'gross';

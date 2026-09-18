@@ -41,7 +41,7 @@ describe('Inbox & Qualification Service Logic', () => {
         email: 'new@lead.pl',
         phone: '+48222333444',
         message: 'Nowe zapytanie',
-        createdAt: new Date('2026-07-01T00:00:00Z'),
+        createdAt: new Date(Date.now() + 60000),
       },
     });
 

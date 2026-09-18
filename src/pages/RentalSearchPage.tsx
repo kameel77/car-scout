@@ -441,7 +441,8 @@ export default function RentalSearchPage() {
       capacityTo: capacityTo || undefined,
       condition: condition.length > 0 ? condition.join(',') : undefined,
       sortBy, sortOrder,
-      offerType: clientType === 'consumer' ? 'b2c' : 'b2b'
+      offerType: clientType === 'consumer' ? 'b2c' : 'b2b',
+      priceBasis: clientType === 'business' ? 'net' : 'gross'
     })
   });
 
@@ -853,12 +854,20 @@ export default function RentalSearchPage() {
                   </div>
                   <div className="flex-1" />
                   <div className="pt-3">
-                    {v.minMonthlyRateGross ? (
+                    {v.insuranceMissing ? (
+                      <div className="py-1">
+                        <span className="inline-flex items-center text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-md">
+                          Wycena ubezpieczenia na zapytanie
+                        </span>
+                      </div>
+                    ) : v.minMonthlyRateGross ? (
                       <div>
                         <span className="text-xs text-muted-foreground block mb-1">Rata od</span>
                         <div className="flex items-baseline gap-1.5 flex-wrap">
                           <span className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl tabular-nums whitespace-nowrap" style={{ background: accent, color: accentText }}>
-                            {isBusiness ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23)) : formatNumber(Math.ceil(v.minMonthlyRateGross))}
+                            {isBusiness
+                              ? formatNumber(Math.ceil(v.minMonthlyRateNet ?? v.minMonthlyRateGross))
+                              : formatNumber(Math.ceil(v.minMonthlyRateGross))}
                             <span className="text-base font-semibold ml-0.5">zł</span>
                           </span>
                           <span className="inline-flex items-center gap-1 whitespace-nowrap">
@@ -878,7 +887,9 @@ export default function RentalSearchPage() {
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 tabular-nums whitespace-nowrap">
-                          {isBusiness ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto` : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`}
+                          {isBusiness
+                            ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto`
+                            : (v.minMonthlyRateNet ? `${formatNumber(Math.ceil(v.minMonthlyRateNet))} zł netto` : `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto`)}
                         </div>
                       </div>
                     ) : <span className="text-sm text-muted-foreground">Zapytaj o cenę</span>}
