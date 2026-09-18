@@ -37,6 +37,21 @@ describe('employee-rental-pricing.utils', () => {
       expect(result.monthlyRateGross).toBe(1330); // 1230 + 100
     });
 
+    it('applies INSURANCE_0 with insuranceNet 350 on a 1000/1230 base rate', () => {
+      const entry = {
+        monthlyRateNet: 1000,
+        monthlyRateGross: 1230,
+        insuranceNet: 350
+      };
+      const assignment = {
+        rentalCompany: { insuranceAddMode: 'INSURANCE_0' }
+      };
+
+      const result = calculateRatesWithInsurance(entry, assignment);
+      expect(result.monthlyRateNet).toBe(1350);
+      expect(result.monthlyRateGross).toBe(1580);
+    });
+
     it('respects INSURANCE_INCLUDED', () => {
       const entry = {
         monthlyRateNet: 1000,

@@ -1,3 +1,5 @@
+import { calculateRatesWithInsurance as calculateBaseRatesWithInsurance } from '../../../services/rental-pricing.js';
+
 export type ContractPartyOption = 'CONSUMER' | 'EMPLOYEE_B2B' | 'EMPLOYER_COMPANY';
 export type RentalRateSource = 'EMPLOYEE_MATRIX' | 'PUBLIC_MATRIX';
 
@@ -41,38 +43,11 @@ export function calculateRatesWithInsurance<T extends {
   monthlyRateGross: number;
   servicesIncluded: string[];
 } {
-  const insuranceAddMode =
-    assignment.insuranceAddModeOverride ||
-    assignment.rentalCompany?.insuranceAddMode ||
-    'INSURANCE_23';
-
-  const servicesIncluded =
-    assignment.includedServicesOverride && assignment.includedServicesOverride.length > 0
-      ? assignment.includedServicesOverride
-      : assignment.rentalCompany?.includedServices && assignment.rentalCompany.includedServices.length > 0
-      ? assignment.rentalCompany.includedServices
-      : entry.servicesIncluded || [];
-
-  let finalNet = entry.monthlyRateNet;
-  let finalGross = entry.monthlyRateGross;
-
-  if (entry.insuranceNet) {
-    if (insuranceAddMode === 'INSURANCE_23') {
-      finalNet += entry.insuranceNet;
-      finalGross += entry.insuranceNet * 1.23;
-    } else if (insuranceAddMode === 'INSURANCE_0') {
-      finalNet += entry.insuranceNet;
-      finalGross += entry.insuranceNet;
-    } else if (insuranceAddMode === 'INSURANCE_INCLUDED') {
-      // Insurance is already included
-    }
-  }
-
+  const calculated = calculateBaseRatesWithInsurance(entry, assignment);
   return {
-    ...entry,
-    monthlyRateNet: Math.round(finalNet),
-    monthlyRateGross: Math.round(finalGross),
-    servicesIncluded
+    ...calculated,
+    monthlyRateNet: Math.round(calculated.monthlyRateNet),
+    monthlyRateGross: Math.round(calculated.monthlyRateGross)
   };
 }
 
