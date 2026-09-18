@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { calculateRentalRate } from './rental-pricing.js';
 
 export type QuoteInput = {
     unitIdentifier: string; // id or stockNo
@@ -33,7 +34,10 @@ export type QuoteResult = {
     variant: string;
     breakdown: {
         baseNet: number;
+        baseGross: number;
         insuranceNet: number;
+        insuranceGross: number;
+        excessSurchargeNet: number;
         tiresNet: number;
     };
     monthlyRateNet: number;
@@ -104,8 +108,13 @@ export async function calculateRentalQuote(
             id: true,
             externalVehicleId: true,
             vehicleId: true,
+            insuranceAddModeOverride: true,
+            includedServicesOverride: true,
             vehicle: {
                 select: { id: true, catalogPrice: true }
+            },
+            rentalCompany: {
+                select: { insuranceAddMode: true, includedServices: true }
             }
         }
     });
@@ -197,17 +206,19 @@ export async function calculateRentalQuote(
     const chosenEntry = entries[0];
     const chosenAssignment = matchingAssignments.find(a => a.id === chosenEntry.assignmentId)!;
 
-    const baseNet = chosenEntry.monthlyRateNet;
-    let insuranceNet = 0;
-    if (insurance === '500') {
-        insuranceNet = chosenEntry.insuranceExcess500 ?? 0;
-    } else if (insurance === '0') {
-        insuranceNet = chosenEntry.insuranceNoLimit ?? 0;
-    }
+    const rate = calculateRentalRate(chosenEntry, chosenAssignment, {
+        insuranceExcess: insurance,
+        tiresNoLimit: tires
+    });
 
-    const tiresNet = tires ? (chosenEntry.tiresNoLimit ?? 0) : 0;
-    const monthlyRateNet = Math.round((baseNet + insuranceNet + tiresNet) * 100) / 100;
-    const monthlyRateGross = Math.round(monthlyRateNet * 1.23 * 100) / 100;
+    const baseNet = rate.baseNet;
+    const baseGross = rate.baseGross;
+    const insuranceNet = rate.insuranceNet;
+    const insuranceGross = rate.insuranceGross;
+    const excessSurchargeNet = rate.excessSurchargeNet;
+    const tiresNet = rate.tiresNet;
+    const monthlyRateNet = Math.round(rate.monthlyRateNet * 100) / 100;
+    const monthlyRateGross = Math.round(rate.monthlyRateGross * 100) / 100;
 
     let overMileageNet: number | null = null;
     let overMileageUnavailable = false;
@@ -250,7 +261,10 @@ export async function calculateRentalQuote(
         variant,
         breakdown: {
             baseNet,
+            baseGross,
             insuranceNet,
+            insuranceGross,
+            excessSurchargeNet,
             tiresNet
         },
         monthlyRateNet,

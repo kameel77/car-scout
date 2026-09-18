@@ -213,7 +213,10 @@ describe('Rental Stock & Valuation Engine (Etap 1)', () => {
             expect(data.variant).toBe('base');
             expect(data.breakdown).toEqual({
                 baseNet: 949,
+                baseGross: 1167.27,
                 insuranceNet: 0,
+                insuranceGross: 0,
+                excessSurchargeNet: 0,
                 tiresNet: 0
             });
             expect(data.monthlyRateNet).toBe(949);
@@ -230,7 +233,7 @@ describe('Rental Stock & Valuation Engine (Etap 1)', () => {
 
             expect(res.statusCode).toBe(200);
             const data = JSON.parse(res.body);
-            expect(data.breakdown.insuranceNet).toBe(61);
+            expect(data.breakdown.excessSurchargeNet).toBe(61);
             expect(data.monthlyRateNet).toBe(1010);
             expect(data.overMileageNet).toBe(0.38);
         });
@@ -243,7 +246,7 @@ describe('Rental Stock & Valuation Engine (Etap 1)', () => {
 
             expect(res.statusCode).toBe(200);
             const data = JSON.parse(res.body);
-            expect(data.breakdown.insuranceNet).toBe(180);
+            expect(data.breakdown.excessSurchargeNet).toBe(180);
             expect(data.monthlyRateNet).toBe(1129);
             expect(data.overMileageNet).toBe(0.38);
         });
