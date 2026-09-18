@@ -28,7 +28,8 @@ function buildRentalImageList(v: any): string[] {
 export function RentalListingCard({ v, priority = false }: { v: any; priority?: boolean }) {
   const { t } = useTranslation();
   const { priceType } = usePriceSettings();
-  const isBusiness = priceType === 'net';
+  const storedRentalType = typeof window !== 'undefined' ? localStorage.getItem('rentalClientType') : null;
+  const isBusiness = storedRentalType ? storedRentalType === 'business' : priceType === 'net';
   const accent = 'hsl(var(--accent))';
   const accentText = 'hsl(var(--accent-foreground))';
   const isNew = v.condition === 'NEW';
@@ -69,7 +70,9 @@ export function RentalListingCard({ v, priority = false }: { v: any; priority?: 
             <span className="text-xs text-muted-foreground block mb-1">Rata od</span>
             <div className="flex items-baseline gap-1.5 flex-wrap">
               <span className="inline-flex items-baseline gap-0.5 px-2.5 py-1.5 rounded-lg font-bold text-2xl tabular-nums whitespace-nowrap" style={{ background: accent, color: accentText }}>
-                {isBusiness ? formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23)) : formatNumber(Math.ceil(v.minMonthlyRateGross))}
+                {isBusiness
+                  ? formatNumber(Math.ceil(v.minMonthlyRateNet ?? v.minMonthlyRateGross))
+                  : formatNumber(Math.ceil(v.minMonthlyRateGross))}
                 <span className="text-base font-semibold ml-0.5">zł</span>
               </span>
               <span className="inline-flex items-center gap-1 whitespace-nowrap">
@@ -88,7 +91,11 @@ export function RentalListingCard({ v, priority = false }: { v: any; priority?: 
                 )}
               </span>
             </div>
-            <div className="text-xs text-muted-foreground mt-1 tabular-nums whitespace-nowrap">{isBusiness ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto` : `${formatNumber(Math.ceil(v.minMonthlyRateNet || v.minMonthlyRateGross / 1.23))} zł netto`}</div>
+            <div className="text-xs text-muted-foreground mt-1 tabular-nums whitespace-nowrap">
+              {isBusiness
+                ? `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto`
+                : (v.minMonthlyRateNet ? `${formatNumber(Math.ceil(v.minMonthlyRateNet))} zł netto` : `${formatNumber(Math.ceil(v.minMonthlyRateGross))} zł brutto`)}
+            </div>
           </div>) : <span className="text-sm text-muted-foreground">Zapytaj o cenę</span>}
         </div>
       </div>
