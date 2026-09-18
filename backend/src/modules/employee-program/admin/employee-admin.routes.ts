@@ -5,6 +5,7 @@ import { parse } from 'csv-parse/sync';
 import { Prisma } from '@prisma/client';
 import { requirePermission } from '../../../middleware/permissions.js';
 import { hashRegistrationCode } from '../auth/employee-auth.service.js';
+import { toNumeric } from '../pricing/employee-pricing.utils.js';
 import {
   detectCSVFormat,
   mapCSVRowToMatrixEntry,
@@ -54,6 +55,7 @@ const paginationSchema = z.object({
 const createCompanySchema = z.object({
   name: z.string().trim().min(2).max(150),
   nip: z.string().trim().max(20).optional().nullable(),
+  accountManagerEmail: z.string().trim().email('Nieprawidłowy adres email opiekuna').optional().nullable(),
   programName: z.string().trim().min(2).max(150).optional(),
   defaultDiscountPct: z.coerce.number().min(0).max(100).optional().nullable(),
   description: z.string().trim().max(500).optional().nullable()
@@ -62,6 +64,7 @@ const createCompanySchema = z.object({
 const updateCompanySchema = z.object({
   name: z.string().trim().min(2).max(150).optional(),
   nip: z.string().trim().max(20).optional().nullable(),
+  accountManagerEmail: z.string().trim().email('Nieprawidłowy adres email opiekuna').optional().nullable(),
   isActive: z.boolean().optional()
 });
 
@@ -136,6 +139,24 @@ const createMatrixSetSchema = z.object({
   description: z.string().trim().max(500).optional().nullable()
 });
 
+const revokeMembershipSchema = z.object({
+  reason: z.string().trim().min(3, 'Powód cofnięcia dostępu musi mieć co najmniej 3 znaki').max(500, 'Powód nie może przekraczać 500 znaków')
+});
+
+const productOverrideItemSchema = z.object({
+  financingProductId: z.string().min(1),
+  isEnabled: z.boolean(),
+  b2cStatus: z.enum(['AVAILABLE', 'REQUIRES_CONFIRMATION', 'UNAVAILABLE']),
+  allowedContractParties: z.array(z.enum(['CONSUMER', 'EMPLOYEE_B2B', 'EMPLOYER_COMPANY'])),
+  minDownPaymentPct: z.number().min(0).max(100).nullable(),
+  maxDownPaymentPct: z.number().min(0).max(100).nullable(),
+  allowedPeriods: z.array(z.number().int().positive()).max(12, 'Maksymalnie 12 okresów')
+});
+
+const updateProductOverridesSchema = z.object({
+  overrides: z.array(productOverrideItemSchema)
+});
+
 // ---------------------------------------------------------------------------
 // Employee Admin Routes Plugin
 // ---------------------------------------------------------------------------
@@ -148,6 +169,30 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
         return reply.code(401).send({ error: 'Unauthorized' });
       };
   const adminAuth = [authHandler, requirePermission('platform:settings:write')];
+
+  fastify.setErrorHandler((error: any, _request: FastifyRequest, reply: FastifyReply) => {
+    if (error instanceof z.ZodError) {
+      return reply.code(400).send({
+        error: 'Bad Request',
+        message: 'Błąd walidacji danych wejściowych',
+        details: error.errors
+      });
+    }
+    const statusCode = typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 600
+      ? error.statusCode
+      : 500;
+    if (statusCode >= 500) {
+      fastify.log.error(error, 'Employee admin route internal error occurred');
+      return reply.code(statusCode).send({
+        error: 'Internal Server Error',
+        message: 'Wystąpił błąd serwera'
+      });
+    }
+    return reply.code(statusCode).send({
+      error: error.name || 'Error',
+      message: error.message || 'Wystąpił błąd żądania'
+    });
+  });
 
   // -------------------------------------------------------------------------
   // 1. Companies & Programs
@@ -249,6 +294,7 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
             name: body.name,
             slug: companySlug,
             nip: body.nip || null,
+            accountManagerEmail: body.accountManagerEmail || null,
             isActive: true
           }
         });
@@ -338,6 +384,7 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
         data: {
           ...(body.name !== undefined && { name: body.name }),
           ...(body.nip !== undefined && { nip: body.nip }),
+          ...(body.accountManagerEmail !== undefined && { accountManagerEmail: body.accountManagerEmail }),
           ...(body.isActive !== undefined && { isActive: body.isActive })
         }
       });
@@ -352,6 +399,189 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
       throw err;
     }
   });
+
+  // GET /api/admin/employee-programs/companies/:companyId/accounts
+  fastify.get('/api/admin/employee-programs/companies/:companyId/accounts', { preHandler: adminAuth }, async (request, reply) => {
+    const { companyId } = request.params as { companyId: string };
+    const query = paginationSchema.parse(request.query);
+    const { page, limit, search } = query;
+    const skip = (page - 1) * limit;
+
+    const company = await fastify.prisma.employeeCompany.findUnique({
+      where: { id: companyId }
+    });
+    if (!company) {
+      return reply.code(404).send({ error: 'Firma nie została znaleziona' });
+    }
+
+    const where: Prisma.EmployeeMembershipWhereInput = {
+      companyId,
+      ...(search ? {
+        account: {
+          OR: [
+            { email: { contains: search, mode: 'insensitive' } },
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } }
+          ]
+        }
+      } : {})
+    };
+
+    const [total, memberships] = await Promise.all([
+      fastify.prisma.employeeMembership.count({ where }),
+      fastify.prisma.employeeMembership.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          account: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              isActive: true,
+              lastLoginAt: true,
+              createdAt: true
+            }
+          },
+          program: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          }
+        }
+      })
+    ]);
+
+    const accounts = memberships.map((m) => ({
+      id: m.account.id,
+      membershipId: m.id,
+      email: m.account.email,
+      firstName: m.account.firstName,
+      lastName: m.account.lastName,
+      phone: m.account.phone,
+      program: m.program,
+      isActive: m.isActive && m.account.isActive && m.revokedAt === null,
+      membershipIsActive: m.isActive,
+      revokedAt: m.revokedAt ? m.revokedAt.toISOString() : null,
+      lastLoginAt: m.account.lastLoginAt ? m.account.lastLoginAt.toISOString() : null,
+      createdAt: m.account.createdAt.toISOString()
+    }));
+
+    return reply.send({
+      accounts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  });
+
+  // POST /api/admin/employee-programs/memberships/:membershipId/revoke
+  fastify.post('/api/admin/employee-programs/memberships/:membershipId/revoke', { preHandler: adminAuth }, async (request, reply) => {
+    const { membershipId } = request.params as { membershipId: string };
+    const { reason } = revokeMembershipSchema.parse(request.body);
+    const actorUserId = (request as any).user?.userId || (request as any).user?.id || null;
+
+    const membership = await fastify.prisma.employeeMembership.findUnique({
+      where: { id: membershipId }
+    });
+
+    if (!membership) {
+      return reply.code(404).send({ error: 'Członkostwo nie zostało znalezione' });
+    }
+
+    if (!membership.isActive && membership.revokedAt !== null) {
+      return reply.send({ message: 'Dostęp został już wcześniej cofnięty', membership });
+    }
+
+    const now = new Date();
+    const sessionsValidAfter = new Date(Math.floor(Date.now() / 1000) * 1000);
+
+    const result = await fastify.prisma.$transaction(async (tx) => {
+      const updatedMembership = await tx.employeeMembership.update({
+        where: { id: membershipId },
+        data: {
+          isActive: false,
+          revokedAt: now
+        }
+      });
+
+      await tx.employeeMembershipAudit.create({
+        data: {
+          accountId: membership.accountId,
+          companyId: membership.companyId,
+          programId: membership.programId,
+          action: 'REVOKED',
+          reason,
+          actorUserId
+        }
+      });
+
+      await tx.employeeAccount.update({
+        where: { id: membership.accountId },
+        data: {
+          sessionsValidAfter
+        }
+      });
+
+      return updatedMembership;
+    });
+
+    return reply.send({ message: 'Dostęp został pomyślnie cofnięty', membership: result });
+  });
+
+  // POST /api/admin/employee-programs/memberships/:membershipId/reinstate
+  fastify.post('/api/admin/employee-programs/memberships/:membershipId/reinstate', { preHandler: adminAuth }, async (request, reply) => {
+    const { membershipId } = request.params as { membershipId: string };
+    const actorUserId = (request as any).user?.userId || (request as any).user?.id || null;
+    const reason = typeof (request.body as any)?.reason === 'string' ? (request.body as any).reason.trim() : null;
+
+    const membership = await fastify.prisma.employeeMembership.findUnique({
+      where: { id: membershipId }
+    });
+
+    if (!membership) {
+      return reply.code(404).send({ error: 'Członkostwo nie zostało znalezione' });
+    }
+
+    if (membership.isActive && membership.revokedAt === null) {
+      return reply.send({ message: 'Członkostwo jest już aktywne', membership });
+    }
+
+    const result = await fastify.prisma.$transaction(async (tx) => {
+      const updatedMembership = await tx.employeeMembership.update({
+        where: { id: membershipId },
+        data: {
+          isActive: true,
+          revokedAt: null
+        }
+      });
+
+      await tx.employeeMembershipAudit.create({
+        data: {
+          accountId: membership.accountId,
+          companyId: membership.companyId,
+          programId: membership.programId,
+          action: 'REINSTATED',
+          reason,
+          actorUserId
+        }
+      });
+
+      return updatedMembership;
+    });
+
+    return reply.send({ message: 'Dostęp został pomyślnie przywrócony', membership: result });
+  });
+
 
   // PATCH /api/admin/employee-programs/programs/:programId
   fastify.patch('/api/admin/employee-programs/programs/:programId', { preHandler: adminAuth }, async (request, reply) => {
@@ -1364,5 +1594,149 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
       version,
       sampleRows: rowsSample
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. Product Overrides (E2 — nadpisania produktów finansowych)
+  // -------------------------------------------------------------------------
+
+  // GET /api/admin/employee-programs/programs/:programId/product-overrides
+  fastify.get('/api/admin/employee-programs/programs/:programId/product-overrides', { preHandler: adminAuth }, async (request, reply) => {
+    const { programId } = request.params as { programId: string };
+
+    const program = await fastify.prisma.employeeProgram.findUnique({ where: { id: programId } });
+    if (!program) {
+      return reply.code(404).send({ error: 'Program nie został znaleziony' });
+    }
+
+    const [products, overrides] = await Promise.all([
+      fastify.prisma.financingProduct.findMany({
+        where: { category: { in: ['LEASING', 'CREDIT'] } },
+        orderBy: [{ priority: 'desc' }, { category: 'asc' }]
+      }),
+      fastify.prisma.employeeProductOverride.findMany({ where: { programId } })
+    ]);
+
+    const overrideByProductId = new Map(overrides.map((o) => [o.financingProductId, o]));
+
+    const result = products.map((p) => {
+      const override = overrideByProductId.get(p.id) || null;
+      return {
+        productId: p.id,
+        category: p.category,
+        name: p.name,
+        limits: {
+          maxInitialPayment: p.maxInitialPayment,
+          maxFinalPayment: p.maxFinalPayment,
+          minInstallments: p.minInstallments,
+          maxInstallments: p.maxInstallments,
+          hasBalloonPayment: p.hasBalloonPayment
+        },
+        override: override ? {
+          isEnabled: override.isEnabled,
+          b2cStatus: override.b2cStatus,
+          allowedContractParties: override.allowedContractParties,
+          minDownPaymentPct: toNumeric(override.minDownPaymentPct),
+          maxDownPaymentPct: toNumeric(override.maxDownPaymentPct),
+          allowedPeriods: override.allowedPeriods
+        } : null
+      };
+    });
+
+    return reply.send({ products: result });
+  });
+
+  // PUT /api/admin/employee-programs/programs/:programId/product-overrides
+  fastify.put('/api/admin/employee-programs/programs/:programId/product-overrides', { preHandler: adminAuth }, async (request, reply) => {
+    const { programId } = request.params as { programId: string };
+    const body = updateProductOverridesSchema.parse(request.body);
+
+    const program = await fastify.prisma.employeeProgram.findUnique({ where: { id: programId } });
+    if (!program) {
+      return reply.code(404).send({ error: 'Program nie został znaleziony' });
+    }
+
+    const productIds = body.overrides.map((o) => o.financingProductId);
+    const products = await fastify.prisma.financingProduct.findMany({
+      where: { id: { in: productIds } }
+    });
+    const productById = new Map(products.map((p) => [p.id, p]));
+
+    for (const override of body.overrides) {
+      const product = productById.get(override.financingProductId);
+      const productLabel = product?.name || override.financingProductId;
+
+      if (!product || product.category === 'RENT') {
+        return reply.code(400).send({ error: `Nieznany produkt finansowy lub produkt kategorii najmu: ${productLabel}` });
+      }
+
+      if (
+        override.minDownPaymentPct !== null &&
+        override.maxDownPaymentPct !== null &&
+        override.minDownPaymentPct > override.maxDownPaymentPct
+      ) {
+        return reply.code(400).send({ error: `Minimalna wpłata własna nie może być większa niż maksymalna (produkt: ${productLabel})` });
+      }
+
+      if (override.maxDownPaymentPct !== null && override.maxDownPaymentPct > product.maxInitialPayment) {
+        return reply.code(400).send({ error: `Maksymalna wpłata własna przekracza limit produktu (${product.maxInitialPayment}%) dla: ${productLabel}` });
+      }
+
+      const uniquePeriods = new Set(override.allowedPeriods);
+      if (uniquePeriods.size !== override.allowedPeriods.length) {
+        return reply.code(400).send({ error: `Okresy nie mogą się powtarzać (produkt: ${productLabel})` });
+      }
+
+      for (const period of override.allowedPeriods) {
+        if (period < product.minInstallments || period > product.maxInstallments) {
+          return reply.code(400).send({
+            error: `Okres ${period} msc poza zakresem produktu [${product.minInstallments}-${product.maxInstallments}] (produkt: ${productLabel})`
+          });
+        }
+      }
+
+      if (override.isEnabled && override.allowedContractParties.length === 0) {
+        return reply.code(400).send({ error: `Dopuszczalne strony umowy są wymagane, gdy produkt jest włączony (produkt: ${productLabel})` });
+      }
+    }
+
+    await fastify.prisma.$transaction(async (tx) => {
+      await tx.employeeProductOverride.deleteMany({
+        where: productIds.length > 0
+          ? { programId, financingProductId: { notIn: productIds } }
+          : { programId }
+      });
+
+      for (const override of body.overrides) {
+        await tx.employeeProductOverride.upsert({
+          where: {
+            programId_financingProductId: {
+              programId,
+              financingProductId: override.financingProductId
+            }
+          },
+          create: {
+            programId,
+            financingProductId: override.financingProductId,
+            isEnabled: override.isEnabled,
+            b2cStatus: override.b2cStatus,
+            allowedContractParties: override.allowedContractParties,
+            minDownPaymentPct: override.minDownPaymentPct !== null ? new Prisma.Decimal(override.minDownPaymentPct) : null,
+            maxDownPaymentPct: override.maxDownPaymentPct !== null ? new Prisma.Decimal(override.maxDownPaymentPct) : null,
+            allowedPeriods: override.allowedPeriods
+          },
+          update: {
+            isEnabled: override.isEnabled,
+            b2cStatus: override.b2cStatus,
+            allowedContractParties: override.allowedContractParties,
+            minDownPaymentPct: override.minDownPaymentPct !== null ? new Prisma.Decimal(override.minDownPaymentPct) : null,
+            maxDownPaymentPct: override.maxDownPaymentPct !== null ? new Prisma.Decimal(override.maxDownPaymentPct) : null,
+            allowedPeriods: override.allowedPeriods
+          }
+        });
+      }
+    });
+
+    return reply.send({ success: true });
   });
 }

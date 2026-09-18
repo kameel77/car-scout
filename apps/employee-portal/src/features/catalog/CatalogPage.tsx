@@ -7,9 +7,7 @@ import {
   Fuel,
   Shield,
   Award,
-  LogOut,
   Building2,
-  UserCircle2,
   Sparkles,
   AlertCircle,
   X,
@@ -105,15 +103,10 @@ function formatTransmission(transmission: string): string {
   return normalizeTransmission(transmission)?.label || transmission;
 }
 
-function formatBodyType(bodyType: string | null): string {
-  return normalizeBodyType(bodyType)?.label || 'Inne';
-}
-
 export const CatalogPage: React.FC = () => {
   const { config, isLoading: isBrandLoading } = useBrandConfig();
   const { user, isLoading: isAuthLoading, logout, sessionError } = useAuth();
   const navigate = useNavigate();
-  const [logoError, setLogoError] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
@@ -508,7 +501,7 @@ export const CatalogPage: React.FC = () => {
                 </label>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
+                  onChange={(e) => setSortBy(e.target.value as 'default' | 'price_asc' | 'price_desc' | 'discount_desc')}
                   className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="default">Domyślne</option>

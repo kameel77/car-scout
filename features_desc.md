@@ -1070,3 +1070,27 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Funkcja `routeEntryPreload` emituje teraz preloading skryptu wejściowego trasy również dla `ConditionPage.tsx` oraz `SearchPage.tsx` na pierwszej stronie katalogów, skracając czas oczekiwania na załadowanie głównego widoku bez wprowadzania kaskadowego fan-outu zależności.
 - **Eliminacja przesunięć układu przez logo w stopce (`Footer.tsx`)**:
   - Dodano jawne atrybuty `width={200}` oraz `height={48}` do znacznika `<img>` logo w stopce serwisu, zapobiegając raportowanym przez audyt problemom CLS (brak określonego rozmiaru grafiki).
+
+## 80. Program Pracowniczy - Pakiet Pre-Pilot (CI, Reset Hasła, Zarządzanie Członkostwem, Powiadomienia E-mail)
+- **Zakres 1 - Potok CI dla Employee Portal (`.github/workflows/ci.yml`)**:
+  - Dodano dedykowany job `employee-portal` w potoku GitHub Actions uruchamiany przy zmianach w `apps/employee-portal/**` lub na gałęziach `main`, `staging`, `dev`.
+  - Weryfikuje: instalację zależności (`npm ci`), sprawdzanie typów (`npm run typecheck`), linter (`npm run lint`), testy jednostkowe Vitest (`npm test`) oraz budowanie produkcyjne (`npm run build`).
+  - Naprawiono ostrzeżenia ESLint i błędy typowania w kodzie portalu pracowniczego.
+- **Zakres 2 - Reset hasła pracownika i unieważnianie sesji (`POST /api/employee/auth/forgot-password`, `POST /api/employee/auth/reset-password`)**:
+  - Dodano tabelę `EmployeePasswordResetToken` z bezpiecznym generowaniem tokenów (32 bajty losowe, w bazie skrót SHA-256, ważność 30 minut) i limitem maks. 3 tokenów na godzinę per konto.
+  - Endpoint `forgot-password` z ochroną CSRF i rate limitingiem zawsze zwraca kod 200 z jednolitym komunikatem (ochrona przed enumeracją kont); wysyłka e-maila odbywa się asynchronicznie (fire-and-forget).
+  - W tabeli `EmployeeAccount` dodano pole `sessionsValidAfter` (zaokrąglane w dół do pełnej sekundy przy resecie hasła oraz cofnięciu dostępu).
+  - Middleware autoryzacji pracownika (`verifyEmployeeAuth`) bezwzględnie weryfikuje obecność poprawnego numerycznego znacznika `iat` w tokenie JWT oraz odrzuca sesje wydane przed `sessionsValidAfter` (kod 401).
+  - Dodano strony portalu pracowniczego: `/zapomnialem-hasla` oraz `/reset-hasla?token=...` z walidacją haseł, obsługą błędów i linkiem z widoku logowania.
+- **Zakres 3 - Zarządzanie członkostwem pracowników przez operatora (`admin/employee-admin.routes.ts`, `CompanyDetailView.tsx`)**:
+  - Dodano kolumnę `actorUserId` w tabeli audytu `EmployeeMembershipAudit` do ewidencjonowania identyfikatora operatora wykonującego akcję.
+  - Endpoint `GET /api/admin/employee-programs/companies/:companyId/accounts` z paginacją i wyszukiwaniem po e-mailu pracownika.
+  - Endpointy `POST .../memberships/:membershipId/revoke` (z wymaganym powodem 3-500 znaków, natychmiastowym unieważnieniem sesji `sessionsValidAfter=now` i statusem `isActive=false`) oraz `POST .../memberships/:membershipId/reinstate`.
+  - W panelu administracyjnym w widoku firmy dodano zakładkę „Pracownicy” z listą kont, wyszukiwarką, statusem aktywności, audytem oraz modalem potwierdzenia cofnięcia dostępu z polem na powód.
+- **Zakres 4 - Powiadomienia e-mail o zgłoszeniach i dedykowany opiekun organizacji**:
+  - Dodano kolumnę `accountManagerEmail` w tabeli `EmployeeCompany` oraz możliwość jej edycji w panelu administracyjnym (nowy modal „Edytuj dane organizacji” w `CompanyDetailView.tsx`).
+  - Po pomyślnym utworzeniu zgłoszenia (`POST /api/employee/inquiries`) system asynchronicznie wysyła powiadomienia e-mail bez blokowania odpowiedzi 201:
+    - E-mail do opiekuna: wysyłany na `accountManagerEmail` firmy, lub do głównego odbiorcy leadów platformy (`resolveLeadRecipient`); zawiera pełne zestawienie oferty, wybrane warunki, dane pracownika, uwagi oraz ew. benefit.
+    - E-mail potwierdzający do pracownika: zawiera numer zgłoszenia `PP-...`, dane auta i szacowaną kwotę / ratę, z zachowaniem ścisłej anonimizacji dostawcy (brak nazwy firmy wynajmującej, prowizji, NIP-u i notatek wewnętrznych).
+  - Wszystkie wartości w szablonach HTML są bezpiecznie escapowane (`escapeHtml`).
+

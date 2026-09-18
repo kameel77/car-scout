@@ -5,26 +5,28 @@ export interface CalculatedPricing {
   discountPct: number;
 }
 
+export function toNumeric(val: number | { toNumber(): number } | string | null | undefined): number | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'number') return val;
+  if (typeof (val as any).toNumber === 'function') return (val as any).toNumber();
+  const num = Number(val);
+  return Number.isFinite(num) ? num : null;
+}
+
 export function calculateOfferPricing(
   listPrice: number,
   customPricePln: number | null | undefined,
-  discountPct: number | { toNumber(): number } | null | undefined,
-  defaultDiscountPct: number | { toNumber(): number } | null | undefined,
-  scopeDiscountPct?: number | { toNumber(): number } | null | undefined
+  discountPct: number | { toNumber(): number } | string | null | undefined,
+  defaultDiscountPct: number | { toNumber(): number } | string | null | undefined,
+  scopeDiscountPct?: number | { toNumber(): number } | string | null | undefined
 ): CalculatedPricing {
   const safeListPrice = Math.max(0, listPrice);
   let employeePrice = safeListPrice;
 
   const customPrice = customPricePln !== null && customPricePln !== undefined ? customPricePln : null;
-  const discount = discountPct !== null && discountPct !== undefined
-    ? (typeof discountPct === 'number' ? discountPct : discountPct.toNumber())
-    : null;
-  const defaultDiscount = defaultDiscountPct !== null && defaultDiscountPct !== undefined
-    ? (typeof defaultDiscountPct === 'number' ? defaultDiscountPct : defaultDiscountPct.toNumber())
-    : null;
-  const scopeDiscount = scopeDiscountPct !== null && scopeDiscountPct !== undefined
-    ? (typeof scopeDiscountPct === 'number' ? scopeDiscountPct : scopeDiscountPct.toNumber())
-    : null;
+  const discount = toNumeric(discountPct);
+  const defaultDiscount = toNumeric(defaultDiscountPct);
+  const scopeDiscount = toNumeric(scopeDiscountPct);
 
   // Hierarchia priorytetów (§2.1):
   // 1. wyjątek.customPricePln

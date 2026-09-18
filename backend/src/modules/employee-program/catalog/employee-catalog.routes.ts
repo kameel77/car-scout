@@ -8,6 +8,7 @@ import {
   FormattedVehicle,
   FormattedOffer
 } from '../pricing/employee-pricing.utils.js';
+import { resolveProgramFinancingConfig } from '../pricing/employee-financing-config.utils.js';
 
 export {
   calculateOfferPricing,
@@ -314,6 +315,9 @@ export async function employeeCatalogRoutes(fastify: FastifyInstance) {
       });
     }
 
+    // Jedno wywołanie na żądanie — konfiguracja finansowania współdzielona przez oba scenariusze (A i B)
+    const financing = await resolveProgramFinancingConfig(fastify.prisma, programId);
+
     // Scenariusz A: Wirtualne ID ze stoku (np. listing-clw12345)
     if (offerId.startsWith('listing-')) {
       const listingId = offerId.replace(/^listing-/, '');
@@ -361,7 +365,7 @@ export async function employeeCatalogRoutes(fastify: FastifyInstance) {
         true
       );
 
-      return reply.send(formatted);
+      return reply.send({ ...formatted, financing });
     }
 
     // Scenariusz B: Dedykowany rekord w EmployeeProgramOffer
@@ -412,6 +416,6 @@ export async function employeeCatalogRoutes(fastify: FastifyInstance) {
       true
     );
 
-    return reply.send(formatted);
+    return reply.send({ ...formatted, financing });
   });
 }

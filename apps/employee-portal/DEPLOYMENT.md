@@ -24,7 +24,7 @@ Przy tworzeniu nowego zasobu w Coolify dla `pracownicy-dev.motolia.pl`:
 - **Exposed Port**: `80`
 - **Domena**: `https://pracownicy-dev.motolia.pl`
 
-### Zmienne środowiskowe (Coolify UI):
+### Zmienne środowiskowe kontenera portalu (Coolify UI - Frontend):
 | Zmienna | Przykładowa wartość | Opis |
 |---|---|---|
 | `BACKEND_URL` | `http://motolia-dev-backend:3000` | Adres istniejącego kontenera backendu na sieci `coolify` |
@@ -33,6 +33,12 @@ Przy tworzeniu nowego zasobu w Coolify dla `pracownicy-dev.motolia.pl`:
 | `PORTAL_URL` | `https://pracownicy-dev.motolia.pl` | Główny URL portalu |
 | `PORTAL_API_URL` | `/api` | Relatywna ścieżka do API (same-origin) |
 | `COMPOSE_PROJECT_NAME` | `motolia-employee-portal-dev` | Nazwa instancji / kontenera |
+
+### Zmienne środowiskowe backendu (Coolify UI - Backend API):
+| Zmienna | Przykładowa wartość | Opis |
+|---|---|---|
+| `EMPLOYEE_PORTAL_URL` | `https://pracownicy-dev.motolia.pl` | Bazowy URL portalu pracowniczego, używany m.in. do linków resetu hasła pracownika (`/reset-hasla?token=...`) |
+| `PORTAL_BRAND_NAME` | `Program Samochodowy by Motolia` | Opcjonalna nazwa programu/marki wykorzystywana w szablonach powiadomień e-mail (reset hasła, potwierdzenia zapytań) |
 
 ## 4. Weryfikacja lokalna (Smoke Test)
 1. Budowa obrazu:

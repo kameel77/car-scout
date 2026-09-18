@@ -4,6 +4,8 @@ import { BrandProvider } from './config/BrandContext';
 import { AuthProvider } from './features/auth/AuthContext';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterCodePage } from './features/auth/RegisterCodePage';
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './features/auth/ResetPasswordPage';
 import { ProtectedRoute } from './features/auth/ProtectedRoute';
 import { CatalogPage } from './features/catalog/CatalogPage';
 import { NewCarOfferDetailPage } from './features/catalog/NewCarOfferDetailPage';
@@ -19,6 +21,8 @@ export const AppRoutes: React.FC = () => {
       <Route path="/" element={<Navigate to="/katalog" replace />} />
       <Route path="/logowanie" element={<LoginPage />} />
       <Route path="/rejestracja" element={<RegisterCodePage />} />
+      <Route path="/zapomnialem-hasla" element={<ForgotPasswordPage />} />
+      <Route path="/reset-hasla" element={<ResetPasswordPage />} />
       <Route
         path="/katalog"
         element={

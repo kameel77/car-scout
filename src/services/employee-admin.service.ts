@@ -23,6 +23,7 @@ export interface EmployeeCompanyItem {
   name: string;
   slug: string;
   nip: string | null;
+  accountManagerEmail?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -138,6 +139,35 @@ export interface AvailableRentalAssignment {
   };
 }
 
+export interface EmployeeAccountItem {
+  id: string;
+  membershipId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  program: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  isActive: boolean;
+  membershipIsActive: boolean;
+  revokedAt: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface EmployeeAccountListResponse {
+  accounts: EmployeeAccountItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface ProgramMatrixSetLink {
   id: string;
   programId: string;
@@ -169,6 +199,34 @@ export interface EmployeeMatrixSet {
   description: string | null;
   rentalCompany: { id: string; name: string };
   versions: EmployeeMatrixVersionSummary[];
+}
+
+export type ContractPartyOption = 'CONSUMER' | 'EMPLOYEE_B2B' | 'EMPLOYER_COMPANY';
+export type ProductAvailabilityStatus = 'AVAILABLE' | 'REQUIRES_CONFIRMATION' | 'UNAVAILABLE';
+
+export interface FinancingProductLimits {
+  maxInitialPayment: number;
+  maxFinalPayment: number;
+  minInstallments: number;
+  maxInstallments: number;
+  hasBalloonPayment: boolean;
+}
+
+export interface EmployeeProductOverrideValue {
+  isEnabled: boolean;
+  b2cStatus: ProductAvailabilityStatus;
+  allowedContractParties: ContractPartyOption[];
+  minDownPaymentPct: number | null;
+  maxDownPaymentPct: number | null;
+  allowedPeriods: number[];
+}
+
+export interface EmployeeProductOverrideRow {
+  productId: string;
+  category: string;
+  name: string | null;
+  limits: FinancingProductLimits;
+  override: EmployeeProductOverrideValue | null;
 }
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
@@ -225,7 +283,7 @@ export const employeeAdminApi = {
     );
   },
 
-  updateCompany: (companyId: string, data: { name?: string; nip?: string | null; isActive?: boolean }, token: string) => {
+  updateCompany: (companyId: string, data: { name?: string; nip?: string | null; accountManagerEmail?: string | null; isActive?: boolean }, token: string) => {
     return request<{ company: EmployeeCompanyItem }>(
       `/api/admin/employee-programs/companies/${companyId}`,
       { method: 'PATCH', body: JSON.stringify(data) },
@@ -249,6 +307,37 @@ export const employeeAdminApi = {
     return request<{ program: any }>(
       `/api/admin/employee-programs/programs/${programId}`,
       { method: 'PATCH', body: JSON.stringify(data) },
+      token
+    );
+  },
+
+  // Product Overrides (E2 — nadpisania produktów finansowych)
+  listProductOverrides: (programId: string, token: string) => {
+    return request<{ products: EmployeeProductOverrideRow[] }>(
+      `/api/admin/employee-programs/programs/${programId}/product-overrides`,
+      {},
+      token
+    );
+  },
+
+  updateProductOverrides: (
+    programId: string,
+    data: {
+      overrides: Array<{
+        financingProductId: string;
+        isEnabled: boolean;
+        b2cStatus: ProductAvailabilityStatus;
+        allowedContractParties: ContractPartyOption[];
+        minDownPaymentPct: number | null;
+        maxDownPaymentPct: number | null;
+        allowedPeriods: number[];
+      }>;
+    },
+    token: string
+  ) => {
+    return request<{ success: boolean }>(
+      `/api/admin/employee-programs/programs/${programId}/product-overrides`,
+      { method: 'PUT', body: JSON.stringify(data) },
       token
     );
   },
@@ -470,6 +559,35 @@ export const employeeAdminApi = {
     return request<{ version: any; sampleRows: any[] }>(
       `/api/admin/employee-programs/matrix-versions/${versionId}/preview`,
       {},
+      token
+    );
+  },
+
+  listCompanyAccounts: (companyId: string, params: { page?: number; limit?: number; search?: string } = {}, token: string) => {
+    const q = new URLSearchParams();
+    if (params.page) q.append('page', String(params.page));
+    if (params.limit) q.append('limit', String(params.limit));
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return request<EmployeeAccountListResponse>(
+      `/api/admin/employee-programs/companies/${companyId}/accounts${qs}`,
+      {},
+      token
+    );
+  },
+
+  revokeMembership: (membershipId: string, data: { reason: string }, token: string) => {
+    return request<{ message: string; membership: any }>(
+      `/api/admin/employee-programs/memberships/${membershipId}/revoke`,
+      { method: 'POST', body: JSON.stringify(data) },
+      token
+    );
+  },
+
+  reinstateMembership: (membershipId: string, data: { reason?: string } = {}, token: string) => {
+    return request<{ message: string; membership: any }>(
+      `/api/admin/employee-programs/memberships/${membershipId}/reinstate`,
+      { method: 'POST', body: JSON.stringify(data) },
       token
     );
   }

@@ -5,9 +5,6 @@ import { useAuth } from '../auth/AuthContext';
 import {
   Car,
   Fuel,
-  LogOut,
-  Building2,
-  UserCircle2,
   AlertCircle,
   RefreshCw,
   Search,
@@ -15,7 +12,6 @@ import {
   Gauge,
   Calendar,
   Layers,
-  Filter,
   X,
   SlidersHorizontal,
   Briefcase
@@ -107,9 +103,8 @@ function formatTransmission(transmission: string): string {
 
 export const RentalCatalogPage: React.FC = () => {
   const { config, isLoading: isBrandLoading } = useBrandConfig();
-  const { user, isLoading: isAuthLoading, logout, sessionError } = useAuth();
+  const { isLoading: isAuthLoading, logout, sessionError } = useAuth();
   const navigate = useNavigate();
-  const [logoError, setLogoError] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
@@ -479,7 +474,7 @@ export const RentalCatalogPage: React.FC = () => {
                 </label>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
+                  onChange={(e) => setSortBy(e.target.value as 'default' | 'rate_asc' | 'rate_desc')}
                   className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="default">Domyślne</option>
