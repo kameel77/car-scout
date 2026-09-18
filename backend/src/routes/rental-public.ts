@@ -231,7 +231,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
         let vehicles: any[] = [];
         let total = 0;
-        // When rate filter is active, byCondition computed from the in-memory filtered set —
+        // When rate filter is active, byCondition computed from the in-memory filtered set -
         // overrides the DB-only count from getFilterOptions so tab counts match the listing.
         let byConditionOverride: { NEW: number; USED: number } | undefined;
 
