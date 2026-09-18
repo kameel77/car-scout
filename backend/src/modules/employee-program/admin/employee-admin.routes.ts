@@ -5,6 +5,7 @@ import { parse } from 'csv-parse/sync';
 import { Prisma } from '@prisma/client';
 import { requirePermission } from '../../../middleware/permissions.js';
 import { hashRegistrationCode } from '../auth/employee-auth.service.js';
+import { toNumeric } from '../pricing/employee-pricing.utils.js';
 import {
   detectCSVFormat,
   mapCSVRowToMatrixEntry,
@@ -140,6 +141,20 @@ const createMatrixSetSchema = z.object({
 
 const revokeMembershipSchema = z.object({
   reason: z.string().trim().min(3, 'Powód cofnięcia dostępu musi mieć co najmniej 3 znaki').max(500, 'Powód nie może przekraczać 500 znaków')
+});
+
+const productOverrideItemSchema = z.object({
+  financingProductId: z.string().min(1),
+  isEnabled: z.boolean(),
+  b2cStatus: z.enum(['AVAILABLE', 'REQUIRES_CONFIRMATION', 'UNAVAILABLE']),
+  allowedContractParties: z.array(z.enum(['CONSUMER', 'EMPLOYEE_B2B', 'EMPLOYER_COMPANY'])),
+  minDownPaymentPct: z.number().min(0).max(100).nullable(),
+  maxDownPaymentPct: z.number().min(0).max(100).nullable(),
+  allowedPeriods: z.array(z.number().int().positive()).max(12, 'Maksymalnie 12 okresów')
+});
+
+const updateProductOverridesSchema = z.object({
+  overrides: z.array(productOverrideItemSchema)
 });
 
 // ---------------------------------------------------------------------------
@@ -1579,5 +1594,149 @@ export async function employeeAdminRoutes(fastify: FastifyInstance) {
       version,
       sampleRows: rowsSample
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. Product Overrides (E2 — nadpisania produktów finansowych)
+  // -------------------------------------------------------------------------
+
+  // GET /api/admin/employee-programs/programs/:programId/product-overrides
+  fastify.get('/api/admin/employee-programs/programs/:programId/product-overrides', { preHandler: adminAuth }, async (request, reply) => {
+    const { programId } = request.params as { programId: string };
+
+    const program = await fastify.prisma.employeeProgram.findUnique({ where: { id: programId } });
+    if (!program) {
+      return reply.code(404).send({ error: 'Program nie został znaleziony' });
+    }
+
+    const [products, overrides] = await Promise.all([
+      fastify.prisma.financingProduct.findMany({
+        where: { category: { in: ['LEASING', 'CREDIT'] } },
+        orderBy: [{ priority: 'desc' }, { category: 'asc' }]
+      }),
+      fastify.prisma.employeeProductOverride.findMany({ where: { programId } })
+    ]);
+
+    const overrideByProductId = new Map(overrides.map((o) => [o.financingProductId, o]));
+
+    const result = products.map((p) => {
+      const override = overrideByProductId.get(p.id) || null;
+      return {
+        productId: p.id,
+        category: p.category,
+        name: p.name,
+        limits: {
+          maxInitialPayment: p.maxInitialPayment,
+          maxFinalPayment: p.maxFinalPayment,
+          minInstallments: p.minInstallments,
+          maxInstallments: p.maxInstallments,
+          hasBalloonPayment: p.hasBalloonPayment
+        },
+        override: override ? {
+          isEnabled: override.isEnabled,
+          b2cStatus: override.b2cStatus,
+          allowedContractParties: override.allowedContractParties,
+          minDownPaymentPct: toNumeric(override.minDownPaymentPct),
+          maxDownPaymentPct: toNumeric(override.maxDownPaymentPct),
+          allowedPeriods: override.allowedPeriods
+        } : null
+      };
+    });
+
+    return reply.send({ products: result });
+  });
+
+  // PUT /api/admin/employee-programs/programs/:programId/product-overrides
+  fastify.put('/api/admin/employee-programs/programs/:programId/product-overrides', { preHandler: adminAuth }, async (request, reply) => {
+    const { programId } = request.params as { programId: string };
+    const body = updateProductOverridesSchema.parse(request.body);
+
+    const program = await fastify.prisma.employeeProgram.findUnique({ where: { id: programId } });
+    if (!program) {
+      return reply.code(404).send({ error: 'Program nie został znaleziony' });
+    }
+
+    const productIds = body.overrides.map((o) => o.financingProductId);
+    const products = await fastify.prisma.financingProduct.findMany({
+      where: { id: { in: productIds } }
+    });
+    const productById = new Map(products.map((p) => [p.id, p]));
+
+    for (const override of body.overrides) {
+      const product = productById.get(override.financingProductId);
+      const productLabel = product?.name || override.financingProductId;
+
+      if (!product || product.category === 'RENT') {
+        return reply.code(400).send({ error: `Nieznany produkt finansowy lub produkt kategorii najmu: ${productLabel}` });
+      }
+
+      if (
+        override.minDownPaymentPct !== null &&
+        override.maxDownPaymentPct !== null &&
+        override.minDownPaymentPct > override.maxDownPaymentPct
+      ) {
+        return reply.code(400).send({ error: `Minimalna wpłata własna nie może być większa niż maksymalna (produkt: ${productLabel})` });
+      }
+
+      if (override.maxDownPaymentPct !== null && override.maxDownPaymentPct > product.maxInitialPayment) {
+        return reply.code(400).send({ error: `Maksymalna wpłata własna przekracza limit produktu (${product.maxInitialPayment}%) dla: ${productLabel}` });
+      }
+
+      const uniquePeriods = new Set(override.allowedPeriods);
+      if (uniquePeriods.size !== override.allowedPeriods.length) {
+        return reply.code(400).send({ error: `Okresy nie mogą się powtarzać (produkt: ${productLabel})` });
+      }
+
+      for (const period of override.allowedPeriods) {
+        if (period < product.minInstallments || period > product.maxInstallments) {
+          return reply.code(400).send({
+            error: `Okres ${period} msc poza zakresem produktu [${product.minInstallments}-${product.maxInstallments}] (produkt: ${productLabel})`
+          });
+        }
+      }
+
+      if (override.isEnabled && override.allowedContractParties.length === 0) {
+        return reply.code(400).send({ error: `Dopuszczalne strony umowy są wymagane, gdy produkt jest włączony (produkt: ${productLabel})` });
+      }
+    }
+
+    await fastify.prisma.$transaction(async (tx) => {
+      await tx.employeeProductOverride.deleteMany({
+        where: productIds.length > 0
+          ? { programId, financingProductId: { notIn: productIds } }
+          : { programId }
+      });
+
+      for (const override of body.overrides) {
+        await tx.employeeProductOverride.upsert({
+          where: {
+            programId_financingProductId: {
+              programId,
+              financingProductId: override.financingProductId
+            }
+          },
+          create: {
+            programId,
+            financingProductId: override.financingProductId,
+            isEnabled: override.isEnabled,
+            b2cStatus: override.b2cStatus,
+            allowedContractParties: override.allowedContractParties,
+            minDownPaymentPct: override.minDownPaymentPct !== null ? new Prisma.Decimal(override.minDownPaymentPct) : null,
+            maxDownPaymentPct: override.maxDownPaymentPct !== null ? new Prisma.Decimal(override.maxDownPaymentPct) : null,
+            allowedPeriods: override.allowedPeriods
+          },
+          update: {
+            isEnabled: override.isEnabled,
+            b2cStatus: override.b2cStatus,
+            allowedContractParties: override.allowedContractParties,
+            minDownPaymentPct: override.minDownPaymentPct !== null ? new Prisma.Decimal(override.minDownPaymentPct) : null,
+            maxDownPaymentPct: override.maxDownPaymentPct !== null ? new Prisma.Decimal(override.maxDownPaymentPct) : null,
+            allowedPeriods: override.allowedPeriods
+          }
+        });
+      }
+    });
+
+    return reply.send({ success: true });
   });
 }

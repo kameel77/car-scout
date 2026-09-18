@@ -201,6 +201,34 @@ export interface EmployeeMatrixSet {
   versions: EmployeeMatrixVersionSummary[];
 }
 
+export type ContractPartyOption = 'CONSUMER' | 'EMPLOYEE_B2B' | 'EMPLOYER_COMPANY';
+export type ProductAvailabilityStatus = 'AVAILABLE' | 'REQUIRES_CONFIRMATION' | 'UNAVAILABLE';
+
+export interface FinancingProductLimits {
+  maxInitialPayment: number;
+  maxFinalPayment: number;
+  minInstallments: number;
+  maxInstallments: number;
+  hasBalloonPayment: boolean;
+}
+
+export interface EmployeeProductOverrideValue {
+  isEnabled: boolean;
+  b2cStatus: ProductAvailabilityStatus;
+  allowedContractParties: ContractPartyOption[];
+  minDownPaymentPct: number | null;
+  maxDownPaymentPct: number | null;
+  allowedPeriods: number[];
+}
+
+export interface EmployeeProductOverrideRow {
+  productId: string;
+  category: string;
+  name: string | null;
+  limits: FinancingProductLimits;
+  override: EmployeeProductOverrideValue | null;
+}
+
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -279,6 +307,37 @@ export const employeeAdminApi = {
     return request<{ program: any }>(
       `/api/admin/employee-programs/programs/${programId}`,
       { method: 'PATCH', body: JSON.stringify(data) },
+      token
+    );
+  },
+
+  // Product Overrides (E2 — nadpisania produktów finansowych)
+  listProductOverrides: (programId: string, token: string) => {
+    return request<{ products: EmployeeProductOverrideRow[] }>(
+      `/api/admin/employee-programs/programs/${programId}/product-overrides`,
+      {},
+      token
+    );
+  },
+
+  updateProductOverrides: (
+    programId: string,
+    data: {
+      overrides: Array<{
+        financingProductId: string;
+        isEnabled: boolean;
+        b2cStatus: ProductAvailabilityStatus;
+        allowedContractParties: ContractPartyOption[];
+        minDownPaymentPct: number | null;
+        maxDownPaymentPct: number | null;
+        allowedPeriods: number[];
+      }>;
+    },
+    token: string
+  ) => {
+    return request<{ success: boolean }>(
+      `/api/admin/employee-programs/programs/${programId}/product-overrides`,
+      { method: 'PUT', body: JSON.stringify(data) },
       token
     );
   },

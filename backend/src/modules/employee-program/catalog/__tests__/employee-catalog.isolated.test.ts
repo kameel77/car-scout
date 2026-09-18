@@ -140,6 +140,9 @@ describe('Employee Catalog Isolated & Pricing Unit Tests', () => {
         employeeProgramOffer: {
           findMany: async () => [],
           findUnique: async () => null
+        },
+        employeeProductOverride: {
+          findMany: async () => []
         }
       };
 

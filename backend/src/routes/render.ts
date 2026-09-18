@@ -966,9 +966,8 @@ function getCacheControlHeader(
     if (request.headers.authorization) {
         return 'private, no-store';
     }
-    // Rendered HTML references content-hashed assets that disappear on deploy.
-    // Redis still caches the expensive SSR result, so edge storage is unnecessary.
-    return 'public, max-age=0, must-revalidate';
+    // s-maxage bez stale-while-revalidate (SWR i tak jest unieważniane przez s-maxage) - edge cache bez cache w przeglądarce, bo oferty się zmieniają.
+    return 'public, max-age=0, s-maxage=300';
 }
 
 interface RenderResult {

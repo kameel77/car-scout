@@ -13,13 +13,14 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import { ArrowLeft, Building2, KeyRound, Sparkles, FileSpreadsheet, Settings, ExternalLink, Users, Edit3, Loader2, Mail } from 'lucide-react';
+import { ArrowLeft, Building2, KeyRound, Sparkles, FileSpreadsheet, Settings, ExternalLink, Users, Edit3, Loader2, Mail, CreditCard } from 'lucide-react';
 import { EmployeeCompanyItem, EmployeeProgramSummary, employeeAdminApi } from '@/services/employee-admin.service';
 import { RegistrationCodesTab } from './RegistrationCodesTab';
 import { SpecialOffersTab } from './SpecialOffersTab';
 import { MatrixImportTab } from './MatrixImportTab';
 import { ProgramSettingsTab } from './ProgramSettingsTab';
 import { EmployeesTab } from './EmployeesTab';
+import { ProductOverridesTab } from './ProductOverridesTab';
 
 interface Props {
   company: EmployeeCompanyItem;
@@ -252,6 +253,14 @@ export const CompanyDetailView: React.FC<Props> = ({ company, token, onBack }) =
               <Settings className="w-4 h-4" />
               Ustawienia & Benefity
             </TabsTrigger>
+
+            <TabsTrigger
+              value="product-overrides"
+              className="flex items-center gap-2 py-2 px-3.5 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all"
+            >
+              <CreditCard className="w-4 h-4" />
+              Produkty finansowe
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="codes" className="mt-0 outline-none">
@@ -272,6 +281,10 @@ export const CompanyDetailView: React.FC<Props> = ({ company, token, onBack }) =
 
           <TabsContent value="settings" className="mt-0 outline-none">
             <ProgramSettingsTab program={activeProgram} token={token} />
+          </TabsContent>
+
+          <TabsContent value="product-overrides" className="mt-0 outline-none">
+            <ProductOverridesTab programId={activeProgram.id} token={token} />
           </TabsContent>
         </Tabs>
       ) : (

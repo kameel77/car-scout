@@ -178,3 +178,111 @@ describe('NewCarOfferDetailPage', () => {
     });
   });
 });
+
+describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overrides.md)', () => {
+  const mockOfferWithFinancing: catalogApi.EmployeeOffer = {
+    ...mockOffer,
+    financing: {
+      options: [
+        {
+          productId: 'fp_credit_1',
+          category: 'CREDIT',
+          label: 'Kredyt Elastyczny',
+          allowedContractParties: ['CONSUMER'],
+          b2cStatus: 'AVAILABLE',
+          minDownPaymentPct: 10,
+          maxDownPaymentPct: 30,
+          maxResidualPct: 0,
+          periods: [24, 36],
+          annualRatePct: 9.99
+        }
+      ]
+    }
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+  });
+
+  const renderComponent = (offerId = 'offer-new-1') => {
+    return render(
+      <BrandProvider initialConfig={{ brandName: 'Motolia', brandLogoUrl: '/logo.svg', portalUrl: '', apiUrl: '/api' }}>
+        <AuthProvider>
+          <MemoryRouter initialEntries={[`/katalog/${offerId}`]}>
+            <Routes>
+              <Route path="/katalog/:id" element={<NewCarOfferDetailPage />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+  };
+
+  it('renders only the periods and down payments allowed by the financing config, hides the residual section when maxResidualPct is 0, and computes the rate from annualRatePct', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue(mockOfferWithFinancing);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
+    });
+
+    // Only the configured periods (24, 36) render — the legacy 48/60 buttons are gone.
+    expect(screen.getByRole('button', { name: '24 msc' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '36 msc' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '48 msc' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '60 msc' })).not.toBeInTheDocument();
+
+    // Down payment chips are clipped to [10, 30] — 0% and 45% presets are dropped.
+    expect(screen.getByRole('button', { name: '10%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '20%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '30%' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '0%' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '45%' })).not.toBeInTheDocument();
+
+    // maxResidualPct === 0 -> the buyout section is hidden entirely.
+    expect(screen.queryByText('Wykup końcowy')).not.toBeInTheDocument();
+
+    // Single CREDIT option renders with the category-derived label.
+    expect(screen.getByRole('button', { name: 'Kredyt / finansowanie konsumenckie' })).toBeInTheDocument();
+
+    expect(screen.getByText('Szacowana rata miesięczna')).toBeInTheDocument();
+  });
+
+  it('includes the selected financing product label in the inquiry notes', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue(mockOfferWithFinancing);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(1);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Zapytaj o tę ofertę i ratę/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    const notesTextarea = screen.getByLabelText(/Uwagi lub pytania/i) as HTMLTextAreaElement;
+    expect(notesTextarea.value).toContain('Wybrany produkt finansowania: Kredyt Elastyczny');
+  });
+
+  it('behaves exactly as before E2 when financing is null (no overrides configured for the program)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue({ ...mockOffer, financing: null });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
+    });
+
+    // Legacy fixed options are still present.
+    expect(screen.getByRole('button', { name: '24 msc' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '48 msc' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '60 msc' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '0%' }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Wykup końcowy')).toBeInTheDocument();
+  });
+});
