@@ -25,7 +25,7 @@ import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import {
     Calendar, Gauge, Fuel, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
-    User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone
+    User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone, Info
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { translateTechnicalValue } from '@/utils/i18n-utils';
@@ -537,10 +537,13 @@ export default function RentalDetailPage() {
                             {offers.length > 0 && (
                                 <div className="space-y-3">
                                     {offers.map((offer: any, i: number) => {
-                                        const uniqueCompaniesCount = new Set(offers.map((o: any) => o.company?.id)).size;
-                                        const minPrice = Math.min(...offers.map((o: any) => selectedOfferType === 'business' ? o.monthlyRateNet : o.monthlyRateGross));
+                                        const validOffers = offers.filter((o: any) => !o.insuranceMissing);
+                                        const uniqueCompaniesCount = new Set(validOffers.map((o: any) => o.company?.id)).size;
+                                        const minPrice = validOffers.length > 0
+                                            ? Math.min(...validOffers.map((o: any) => selectedOfferType === 'business' ? o.monthlyRateNet : o.monthlyRateGross))
+                                            : Infinity;
                                         const currentPrice = selectedOfferType === 'business' ? offer.monthlyRateNet : offer.monthlyRateGross;
-                                        const isBest = uniqueCompaniesCount > 1 && currentPrice === minPrice;
+                                        const isBest = !offer.insuranceMissing && uniqueCompaniesCount > 1 && currentPrice === minPrice;
                                         
                                         return (
                                         <div
@@ -584,21 +587,36 @@ export default function RentalDetailPage() {
                                                     <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full font-medium">Najlepsza</span>
                                                 )}
                                             </div>
-                                            <div className="text-3xl font-bold text-gray-900 tabular-nums whitespace-nowrap">
-                                                {selectedOfferType === 'business'
-                                                    ? `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł`
-                                                    : `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł`
-                                                }
-                                                <span className="text-sm font-normal text-muted-foreground whitespace-nowrap">
-                                                    {selectedOfferType === 'business' ? ' netto / mies.' : ' brutto / mies.'}
-                                                </span>
-                                            </div>
-                                            <div className="text-sm text-muted-foreground mt-1 tabular-nums whitespace-nowrap">
-                                                {selectedOfferType === 'business'
-                                                    ? `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł brutto`
-                                                    : `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł netto`
-                                                }
-                                            </div>
+
+                                            {offer.insuranceMissing ? (
+                                                <div className="my-2 p-3 bg-amber-50 border border-amber-200/70 rounded-lg">
+                                                    <div className="flex items-center gap-2 text-amber-800 text-sm font-semibold">
+                                                        <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                                                        Wycena ubezpieczenia na zapytanie
+                                                    </div>
+                                                    <p className="text-xs text-amber-700/80 mt-1">
+                                                        Rata bazowa wynosi {formatNumber(Math.ceil(selectedOfferType === 'business' ? offer.monthlyRateNet : offer.monthlyRateGross))} zł {selectedOfferType === 'business' ? 'netto' : 'brutto'}. Składka ubezpieczeniowa zostanie oszacowana indywidualnie.
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="text-3xl font-bold text-gray-900 tabular-nums whitespace-nowrap">
+                                                        {selectedOfferType === 'business'
+                                                            ? `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł`
+                                                            : `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł`
+                                                        }
+                                                        <span className="text-sm font-normal text-muted-foreground whitespace-nowrap">
+                                                            {selectedOfferType === 'business' ? ' netto / mies.' : ' brutto / mies.'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground mt-1 tabular-nums whitespace-nowrap">
+                                                        {selectedOfferType === 'business'
+                                                            ? `${formatNumber(Math.ceil(offer.monthlyRateGross))} zł brutto`
+                                                            : `${formatNumber(Math.ceil(offer.monthlyRateNet))} zł netto`
+                                                        }
+                                                    </div>
+                                                </>
+                                            )}
 
                                             {offer.servicesIncluded?.length > 0 && (
                                                 <div className="mt-3">

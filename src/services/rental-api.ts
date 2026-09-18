@@ -1,4 +1,4 @@
-// Rental API client — follows same fetch-based pattern as other api modules
+// Rental API client - follows same fetch-based pattern as other api modules
 import { matchesCatalogPrefetch } from '@/utils/catalogPrefetch';
 
 let API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
@@ -86,6 +86,8 @@ export interface RentalCompany {
     isActive: boolean;
     includedServices?: string[];
     insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED';
+    confirmModeConflict?: boolean;
+    confirmMissingInsurance?: boolean;
     _count?: { vehicleAssignments: number };
 }
 
@@ -293,7 +295,19 @@ export const rentalVehiclesApi = {
     }
 };
 
-// ─── Rental Companies API ────────────────────────────────────────
+export interface RentalRateBreakdown {
+    baseNet: number;
+    baseGross: number;
+    insuranceNet: number;
+    insuranceGross: number;
+    excessSurchargeNet: number;
+    tiresNet: number;
+    monthlyRateNet: number;
+    monthlyRateGross: number;
+    servicesIncluded: string[];
+    insuranceAddMode: string;
+    insuranceMissing: boolean;
+}
 
 export const rentalCompaniesApi = {
     list: async (token: string): Promise<{ companies: RentalCompany[] }> => {
@@ -322,6 +336,52 @@ export const rentalCompaniesApi = {
 
     delete: async (id: string, token: string) => {
         return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/${id}`, token, { method: 'DELETE' });
+    },
+
+    getMatrixHealth: async (id: string, token: string): Promise<{
+        companyId: string;
+        companyName: string;
+        insuranceAddMode?: string | null;
+        totalAssignments: number;
+        totalEntries: number;
+        missingInsuranceCount: number;
+        affectedVehiclesCount: number;
+        isHealthy: boolean;
+    }> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/${id}/matrix-health`, token);
+    },
+
+    getCalculationPreview: async (id: string, token: string): Promise<{
+        company: { id: string; name: string; insuranceAddMode?: string | null };
+        hasSample: boolean;
+        message?: string;
+        vehicle?: { id: string; make: string; model: string; version?: string | null; productionYear?: number | null };
+        matrixParams?: { contractMonths: number; annualMileageKm: number; initialPaymentPct: number };
+        breakdown?: RentalRateBreakdown;
+        b2bView?: { primary: string; secondary: string };
+        consumerView?: { primary: string; secondary: string };
+    }> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/${id}/calculation-preview`, token);
+    },
+
+    getMatrixHealthSummary: async (token: string): Promise<{
+        totalCompanies: number;
+        healthyCompaniesCount: number;
+        totalEntriesAll: number;
+        totalMissingAll: number;
+        unhealthyCompanies: Array<{
+            id: string;
+            name: string;
+            insuranceAddMode: string | null;
+            includedServices: string[];
+            totalEntries: number;
+            missingInsuranceCount: number;
+            affectedVehiclesCount: number;
+            suggestedAction: 'SWITCH_TO_ALL_IN' | 'FILL_INSURANCE_NET';
+        }>;
+        isAllHealthy: boolean;
+    }> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/matrix-health-summary`, token);
     }
 };
 

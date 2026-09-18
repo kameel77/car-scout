@@ -309,7 +309,7 @@ describe('Opportunity Lifecycle & Service Logic', () => {
       ],
     });
 
-    // Match attempt on duplicate phone must report ambiguous and create a new customer
+    // Match attempt on duplicate phone must report ambiguous and not auto-merge or create silently
     const ambiguousMatch = await prisma.$transaction((tx) =>
       findOrCreateCustomer(tx, {
         scopeType: PLATFORM_SCOPE.scopeType,
@@ -320,8 +320,9 @@ describe('Opportunity Lifecycle & Service Logic', () => {
     );
 
     expect(ambiguousMatch.isAmbiguous).toBe(true);
-    expect(ambiguousMatch.isNew).toBe(true);
-    expect(ambiguousMatch.customer.fullName).toBe('Nowy Klient C');
+    expect(ambiguousMatch.isNew).toBe(false);
+    expect(ambiguousMatch.customer).toBeNull();
+    expect(ambiguousMatch.candidates?.length).toBe(2);
 
     // 2. Unmatchable phone (e.g. 000000000) does not match another customer with 000000000
     const cust1 = await prisma.$transaction((tx) =>

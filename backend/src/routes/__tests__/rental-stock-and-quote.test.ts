@@ -213,7 +213,10 @@ describe('Rental Stock & Valuation Engine (Etap 1)', () => {
             expect(data.variant).toBe('base');
             expect(data.breakdown).toEqual({
                 baseNet: 949,
+                baseGross: 1167.27,
                 insuranceNet: 0,
+                insuranceGross: 0,
+                excessSurchargeNet: 0,
                 tiresNet: 0
             });
             expect(data.monthlyRateNet).toBe(949);
@@ -230,7 +233,7 @@ describe('Rental Stock & Valuation Engine (Etap 1)', () => {
 
             expect(res.statusCode).toBe(200);
             const data = JSON.parse(res.body);
-            expect(data.breakdown.insuranceNet).toBe(61);
+            expect(data.breakdown.excessSurchargeNet).toBe(61);
             expect(data.monthlyRateNet).toBe(1010);
             expect(data.overMileageNet).toBe(0.38);
         });
@@ -243,7 +246,7 @@ describe('Rental Stock & Valuation Engine (Etap 1)', () => {
 
             expect(res.statusCode).toBe(200);
             const data = JSON.parse(res.body);
-            expect(data.breakdown.insuranceNet).toBe(180);
+            expect(data.breakdown.excessSurchargeNet).toBe(180);
             expect(data.monthlyRateNet).toBe(1129);
             expect(data.overMileageNet).toBe(0.38);
         });
@@ -558,4 +561,122 @@ describe('Rental Stock & Valuation Engine (Etap 1)', () => {
             expect(data.items[0].hasPricing).toBe(true);
         });
     });
+
+    // ── MATRIX HEALTH SUMMARY ENDPOINT ─────────────────────────────────
+    describe('Matrix Health Summary (GET /api/rental-companies/matrix-health-summary)', () => {
+        it('wymaga autoryzacji (401 bez tokenu)', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/rental-companies/matrix-health-summary'
+            });
+            expect(res.statusCode).toBe(401);
+        });
+
+        it('zwraca strukturę podsumowania zdrowia matryc dla zalogowanego managera', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/rental-companies/matrix-health-summary',
+                headers: { authorization: `Bearer ${token}` }
+            });
+            expect(res.statusCode).toBe(200);
+            const data = JSON.parse(res.body);
+            expect(data).toHaveProperty('totalCompanies');
+            expect(data).toHaveProperty('healthyCompaniesCount');
+            expect(data).toHaveProperty('totalEntriesAll');
+            expect(data).toHaveProperty('totalMissingAll');
+            expect(data).toHaveProperty('unhealthyCompanies');
+            expect(data).toHaveProperty('isAllHealthy');
+            expect(Array.isArray(data.unhealthyCompanies)).toBe(true);
+        });
+    });
+
+    // ── BIDIRECTIONAL ALL-IN & INSURANCE MODE VALIDATION ────────────────
+    describe('Bidirectional Rental Company Mode Validation (POST & PATCH)', () => {
+        let createdCompanyId: string | null = null;
+
+        it('POST: odrzuca All-In (INSURANCE_INCLUDED) bez usługi ubezpieczenia (400)', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/rental-companies',
+                headers: { authorization: `Bearer ${token}` },
+                payload: {
+                    name: `Validation Test Company ${Date.now()}`,
+                    insuranceAddMode: 'INSURANCE_INCLUDED',
+                    includedServices: ['serwis', 'opony']
+                }
+            });
+            expect(res.statusCode).toBe(400);
+            const err = JSON.parse(res.body);
+            expect(err.error).toContain('Tryb All-In wymaga zaznaczenia usługi Ubezpieczenie');
+        });
+
+        it('POST: ostrzega i odrzuca tryb zewnętrzny (INSURANCE_23) przy zaznaczonym ubezpieczeniu bez potwierdzenia (400)', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/rental-companies',
+                headers: { authorization: `Bearer ${token}` },
+                payload: {
+                    name: `Conflict Test Company ${Date.now()}`,
+                    insuranceAddMode: 'INSURANCE_23',
+                    includedServices: ['ubezpieczenie', 'serwis']
+                }
+            });
+            expect(res.statusCode).toBe(400);
+            const err = JSON.parse(res.body);
+            expect(err.code).toBe('MODE_CONFLICT_CONFIRMATION_REQUIRED');
+        });
+
+        it('POST: pozwala zapisać tryb zewnętrzny przy zaznaczonym ubezpieczeniu gdy podano confirmModeConflict: true (201)', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/rental-companies',
+                headers: { authorization: `Bearer ${token}` },
+                payload: {
+                    name: `Confirmed Conflict Company ${Date.now()}`,
+                    insuranceAddMode: 'INSURANCE_23',
+                    includedServices: ['ubezpieczenie', 'serwis'],
+                    confirmModeConflict: true
+                }
+            });
+            expect(res.statusCode).toBe(201);
+            const data = JSON.parse(res.body);
+            expect(data.company.id).toBeDefined();
+            createdCompanyId = data.company.id;
+        });
+
+        it('PATCH: odrzuca przestawienie na INSURANCE_23 przy zaznaczonym ubezpieczeniu bez potwierdzenia (400)', async () => {
+            if (!createdCompanyId) return;
+            const res = await app.inject({
+                method: 'PATCH',
+                url: `/api/rental-companies/${createdCompanyId}`,
+                headers: { authorization: `Bearer ${token}` },
+                payload: {
+                    insuranceAddMode: 'INSURANCE_23',
+                    includedServices: ['ubezpieczenie']
+                }
+            });
+            expect(res.statusCode).toBe(400);
+            const err = JSON.parse(res.body);
+            expect(err.code).toBe('MODE_CONFLICT_CONFIRMATION_REQUIRED');
+        });
+
+        it('PATCH: pozwala zapisać po podaniu confirmModeConflict: true (200)', async () => {
+            if (!createdCompanyId) return;
+            const res = await app.inject({
+                method: 'PATCH',
+                url: `/api/rental-companies/${createdCompanyId}`,
+                headers: { authorization: `Bearer ${token}` },
+                payload: {
+                    insuranceAddMode: 'INSURANCE_23',
+                    includedServices: ['ubezpieczenie'],
+                    confirmModeConflict: true
+                }
+            });
+            expect(res.statusCode).toBe(200);
+
+            // Clean up
+            await app.prisma.rentalCompany.delete({ where: { id: createdCompanyId } });
+        });
+    });
 });
+

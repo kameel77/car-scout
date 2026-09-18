@@ -865,19 +865,19 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         it('requires edge revalidation for anonymous 200 GET and HEAD requests (fresh & cached)', async () => {
             const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
             expect(res1.statusCode).toBe(200);
-            expect(res1.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
+            expect(res1.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
             expect(res1.headers['vary']).toBe('Accept-Encoding');
 
             // Repeated request (cache hit)
             const res2 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
             expect(res2.statusCode).toBe(200);
-            expect(res2.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
+            expect(res2.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
             expect(res2.headers['vary']).toBe('Accept-Encoding');
 
             // HEAD request
             const resHead = await app.inject({ method: 'HEAD', url: '/api/render?path=/' });
             expect(resHead.statusCode).toBe(200);
-            expect(resHead.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
+            expect(resHead.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
         });
 
         it('emits private no-store for requests with Authorization header', async () => {
@@ -895,7 +895,7 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
                 url: '/api/render?path=/',
                 headers: { cookie: '_ga=GA1.1.123.456; _clsk=abc123sid456' },
             });
-            expect(res.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
+            expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
         });
 
         it('emits private no-store for /admin routes', async () => {

@@ -6,7 +6,8 @@ import type { RentalCompany } from '@/services/rental-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, X, Building2, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Building2, Check, Eye, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function RentalCompaniesPage() {
     const { token } = useAuth();
@@ -14,18 +15,21 @@ export default function RentalCompaniesPage() {
     const { toast } = useToast();
     const [showAdd, setShowAdd] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [previewCompanyId, setPreviewCompanyId] = useState<string | null>(null);
     const [form, setForm] = useState<{
         name: string;
         contactEmail: string;
         contactPhone: string;
         includedServices: string[];
         insuranceAddMode: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED';
+        confirmModeConflict: boolean;
     }>({ 
         name: '', 
         contactEmail: '', 
         contactPhone: '',
         includedServices: [],
-        insuranceAddMode: 'INSURANCE_23'
+        insuranceAddMode: 'INSURANCE_23',
+        confirmModeConflict: false
     });
 
     const SERVICE_OPTIONS = [
@@ -41,10 +45,29 @@ export default function RentalCompaniesPage() {
         enabled: !!token
     });
 
+    const { data: healthData } = useQuery({
+        queryKey: ['rental-company-health', editingId],
+        queryFn: () => rentalCompaniesApi.getMatrixHealth(editingId!, token!),
+        enabled: !!editingId && !!token
+    });
+
+    const { data: healthSummary } = useQuery({
+        queryKey: ['rental-companies-health-summary'],
+        queryFn: () => rentalCompaniesApi.getMatrixHealthSummary(token!),
+        enabled: !!token
+    });
+
+    const { data: previewData, isLoading: isPreviewLoading } = useQuery({
+        queryKey: ['rental-company-preview', previewCompanyId],
+        queryFn: () => rentalCompaniesApi.getCalculationPreview(previewCompanyId!, token!),
+        enabled: !!previewCompanyId && !!token
+    });
+
     const createMutation = useMutation({
         mutationFn: (data: Partial<RentalCompany>) => rentalCompaniesApi.create(data, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-companies'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-companies-health-summary'] });
             setShowAdd(false);
             resetForm();
             toast({ title: 'Firma dodana' });
@@ -56,6 +79,8 @@ export default function RentalCompaniesPage() {
         mutationFn: ({ id, data }: { id: string; data: Partial<RentalCompany> }) => rentalCompaniesApi.update(id, data, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-companies'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-companies-health-summary'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-company-health'] });
             setEditingId(null);
             resetForm();
             toast({ title: 'Firma zaktualizowana' });
@@ -67,21 +92,66 @@ export default function RentalCompaniesPage() {
         mutationFn: (id: string) => rentalCompaniesApi.delete(id, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-companies'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-companies-health-summary'] });
             toast({ title: 'Firma usunięta' });
         },
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
     });
 
-    const resetForm = () => setForm({ name: '', contactEmail: '', contactPhone: '', includedServices: [], insuranceAddMode: 'INSURANCE_23' });
+    const resetForm = () => setForm({
+        name: '',
+        contactEmail: '',
+        contactPhone: '',
+        includedServices: [],
+        insuranceAddMode: 'INSURANCE_23',
+        confirmModeConflict: false
+    });
+
+    const validateForm = (formData: typeof form) => {
+        const hasInsurance = formData.includedServices.some(s => {
+            const lower = s.toLowerCase();
+            return lower === 'insurance' || lower === 'ubezpieczenie';
+        });
+
+        if (formData.insuranceAddMode === 'INSURANCE_INCLUDED' && !hasInsurance) {
+            toast({
+                title: 'Błąd walidacji',
+                description: 'Tryb All-In wymaga zaznaczenia usługi Ubezpieczenie w liście wliczonych usług',
+                variant: 'destructive'
+            });
+            return false;
+        }
+
+        if ((formData.insuranceAddMode === 'INSURANCE_23' || formData.insuranceAddMode === 'INSURANCE_0') && hasInsurance) {
+            if (!formData.confirmModeConflict) {
+                toast({
+                    title: 'Ostrzeżenie: Sprzeczność konfiguracji',
+                    description: 'Wybrano tryb zewnętrzny przy zaznaczonej usłudze Ubezpieczenie. Przełącz na All-In lub zaznacz pole potwierdzenia zapisu.',
+                    variant: 'destructive'
+                });
+                return false;
+            }
+        }
+
+        return true;
+    };
 
     const startEdit = (company: RentalCompany) => {
         setEditingId(company.id);
+        const normalizedServices = (company.includedServices || []).map(s => {
+            const lower = s.toLowerCase();
+            if (lower === 'ubezpieczenie') return 'insurance';
+            if (lower === 'serwis') return 'service';
+            if (lower === 'opony') return 'tires';
+            return s;
+        });
         setForm({
             name: company.name,
             contactEmail: company.contactEmail || '',
             contactPhone: company.contactPhone || '',
-            includedServices: company.includedServices || [],
-            insuranceAddMode: company.insuranceAddMode || 'INSURANCE_23'
+            includedServices: normalizedServices,
+            insuranceAddMode: company.insuranceAddMode || 'INSURANCE_23',
+            confirmModeConflict: false
         });
     };
 
@@ -95,6 +165,32 @@ export default function RentalCompaniesPage() {
                     <Plus className="w-4 h-4 mr-2" /> Dodaj firmę
                 </Button>
             </div>
+
+            {/* Health summary warning banner */}
+            {healthSummary && !healthSummary.isAllHealthy && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 space-y-2">
+                    <div className="flex items-center gap-2 font-semibold text-sm text-amber-950">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                        <span>Ostrzeżenie jakości danych matrycy ({healthSummary.unhealthyCompanies.length} {healthSummary.unhealthyCompanies.length === 1 ? 'firma wymaga' : 'firmy wymagają'} uwagi)</span>
+                    </div>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                        Wykryto firmy najmowe z brakującą kwotą ubezpieczenia w stawkach zewnętrznych (INSURANCE_23 lub INSURANCE_0).
+                        Pojazdy tych firm są <strong>wyłączone z filtru budżetowego</strong> w wyszukiwarce publicznej i wyświetlają <em>„Wycena ubezpieczenia na zapytanie”</em>:
+                    </p>
+                    <ul className="text-xs space-y-1.5 mt-1 pl-4 list-disc">
+                        {healthSummary.unhealthyCompanies.map(uc => (
+                            <li key={uc.id}>
+                                <span className="font-semibold">{uc.name}</span>: {uc.missingInsuranceCount} pozycji bez ubezpieczenia ({uc.affectedVehiclesCount} aut).
+                                {uc.suggestedAction === 'SWITCH_TO_ALL_IN' && (
+                                    <span className="ml-1.5 text-blue-700 font-medium">
+                                        (Firma ma ubezpieczenie na liście wliczonych usług - zalecana zmiana trybu na All-In)
+                                    </span>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {/* Add form */}
             {showAdd && (
@@ -114,7 +210,7 @@ export default function RentalCompaniesPage() {
                             >
                                 <option value="INSURANCE_23">23% (doliczane do netto, VAT naliczany od całości)</option>
                                 <option value="INSURANCE_0">0% (stała kwota z matrycy osobno na fakturze bez VAT)</option>
-                                <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In — nie doliczaj dodatkowo)</option>
+                                <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In - nie doliczaj dodatkowo)</option>
                             </select>
                         </div>
 
@@ -140,9 +236,41 @@ export default function RentalCompaniesPage() {
                                 ))}
                             </div>
                         </div>
+
+                        {(form.insuranceAddMode === 'INSURANCE_23' || form.insuranceAddMode === 'INSURANCE_0') && form.includedServices.some(s => s.toLowerCase() === 'insurance' || s.toLowerCase() === 'ubezpieczenie') && (
+                            <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-2 col-span-full">
+                                <div className="flex items-center gap-2 font-semibold text-amber-950">
+                                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                    <span>Ostrzeżenie: Wykryto sprzeczność trybu doliczania z listą usług</span>
+                                </div>
+                                <p className="leading-relaxed">
+                                    Wybrano tryb zewnętrzny (<strong>{form.insuranceAddMode === 'INSURANCE_23' ? '23%' : '0%'}</strong>), ale usługa <strong>Ubezpieczenie</strong> jest zaznaczona na liście wliczonych usług. Jeśli ubezpieczenie jest w racie od partnera, poprawnym trybem jest <strong>All-In</strong>.
+                                </p>
+                                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-200/80">
+                                    <Button
+                                        size="sm"
+                                        type="button"
+                                        variant="outline"
+                                        className="h-7 text-xs bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+                                        onClick={() => setForm(p => ({ ...p, insuranceAddMode: 'INSURANCE_INCLUDED', confirmModeConflict: false }))}
+                                    >
+                                        Przełącz na All-In (zalecane)
+                                    </Button>
+                                    <label className="flex items-center gap-1.5 cursor-pointer text-amber-950 font-medium select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.confirmModeConflict}
+                                            onChange={e => setForm(p => ({ ...p, confirmModeConflict: e.target.checked }))}
+                                            className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                                        />
+                                        <span>Potwierdzam zapis trybu zewnętrznego</span>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="flex gap-2">
-                        <Button size="sm" onClick={() => createMutation.mutate(form)} disabled={!form.name || createMutation.isPending}>
+                        <Button size="sm" onClick={() => { if (validateForm(form)) createMutation.mutate(form); }} disabled={!form.name || createMutation.isPending}>
                             {createMutation.isPending ? 'Dodawanie...' : 'Dodaj'}
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>Anuluj</Button>
@@ -157,6 +285,74 @@ export default function RentalCompaniesPage() {
                     <div key={c.id} className="p-4 rounded-xl border bg-white shadow-sm">
                         {editingId === c.id ? (
                             <div className="space-y-3">
+                                {healthData && !healthData.isHealthy && (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-start gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <span className="font-semibold">Ostrzeżenie jakości danych matrycy:</span>
+                                            <p className="mt-0.5">
+                                                Wykryto {healthData.missingInsuranceCount} pozycji w cenniku bez kwoty ubezpieczenia (w {healthData.affectedVehiclesCount} przypisanych pojazdach).
+                                                W ofertach publicznych te warianty będą oznaczone jako "Wycena ubezpieczenia na zapytanie" i wykluczone z filtru budżetowego.
+                                            </p>
+                                            {form.includedServices.some(s => s.toLowerCase() === 'insurance' || s.toLowerCase() === 'ubezpieczenie') && form.insuranceAddMode !== 'INSURANCE_INCLUDED' && (
+                                                <div className="mt-2 pt-2 border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2">
+                                                    <span className="text-amber-900 font-medium">Usługa ubezpieczenia jest zaznaczona w usługach:</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <Button
+                                                            size="sm"
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="h-7 text-xs bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+                                                            onClick={() => setForm(p => ({ ...p, insuranceAddMode: 'INSURANCE_INCLUDED', confirmModeConflict: false }))}
+                                                        >
+                                                            Przełącz na All-In
+                                                        </Button>
+                                                        <label className="flex items-center gap-1.5 cursor-pointer text-amber-950 font-medium select-none">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={form.confirmModeConflict}
+                                                                onChange={e => setForm(p => ({ ...p, confirmModeConflict: e.target.checked }))}
+                                                                className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                                                            />
+                                                            <span>Potwierdzam zapis trybu zewnętrznego</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                                {(!healthData || healthData.isHealthy) && (form.insuranceAddMode === 'INSURANCE_23' || form.insuranceAddMode === 'INSURANCE_0') && form.includedServices.some(s => s.toLowerCase() === 'insurance' || s.toLowerCase() === 'ubezpieczenie') && (
+                                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-2">
+                                        <div className="flex items-center gap-2 font-semibold text-amber-950">
+                                            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                            <span>Ostrzeżenie: Wykryto sprzeczność trybu doliczania z listą usług</span>
+                                        </div>
+                                        <p className="leading-relaxed">
+                                            Wybrano tryb zewnętrzny (<strong>{form.insuranceAddMode === 'INSURANCE_23' ? '23%' : '0%'}</strong>), ale usługa <strong>Ubezpieczenie</strong> jest zaznaczona na liście wliczonych usług. Jeśli ubezpieczenie jest w racie od partnera, poprawnym trybem jest <strong>All-In</strong>.
+                                        </p>
+                                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-200/80">
+                                            <Button
+                                                size="sm"
+                                                type="button"
+                                                variant="outline"
+                                                className="h-7 text-xs bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+                                                onClick={() => setForm(p => ({ ...p, insuranceAddMode: 'INSURANCE_INCLUDED', confirmModeConflict: false }))}
+                                            >
+                                                Przełącz na All-In (zalecane)
+                                            </Button>
+                                            <label className="flex items-center gap-1.5 cursor-pointer text-amber-950 font-medium select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.confirmModeConflict}
+                                                    onChange={e => setForm(p => ({ ...p, confirmModeConflict: e.target.checked }))}
+                                                    className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                                                />
+                                                <span>Potwierdzam zapis trybu zewnętrznego</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
                                     <Input value={form.contactEmail} onChange={e => setForm(p => ({ ...p, contactEmail: e.target.value }))} />
@@ -171,7 +367,7 @@ export default function RentalCompaniesPage() {
                                         >
                                             <option value="INSURANCE_23">23% (doliczane do netto, VAT naliczany od całości)</option>
                                             <option value="INSURANCE_0">0% (stała kwota z matrycy osobno na fakturze bez VAT)</option>
-                                            <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In — nie doliczaj dodatkowo)</option>
+                                            <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In - nie doliczaj dodatkowo)</option>
                                         </select>
                                     </div>
 
@@ -199,7 +395,18 @@ export default function RentalCompaniesPage() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button size="sm" onClick={() => updateMutation.mutate({ id: c.id, data: form })} disabled={updateMutation.isPending}>
+                                    <Button size="sm" onClick={() => {
+                                        if (validateForm(form)) {
+                                            updateMutation.mutate({
+                                                id: c.id,
+                                                data: {
+                                                    ...form,
+                                                    confirmModeConflict: form.confirmModeConflict,
+                                                    confirmMissingInsurance: form.confirmModeConflict
+                                                }
+                                            });
+                                        }
+                                    }} disabled={updateMutation.isPending}>
                                         <Check className="w-3 h-3 mr-1" /> Zapisz
                                     </Button>
                                     <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Anuluj</Button>
@@ -212,8 +419,33 @@ export default function RentalCompaniesPage() {
                                         <Building2 className="w-5 h-5 text-blue-600" />
                                     </div>
                                     <div>
-                                        <div className="font-medium">{c.name}</div>
-                                        <div className="text-xs text-gray-500 space-x-3">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-medium">{c.name}</span>
+                                            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                                                c.insuranceAddMode === 'INSURANCE_INCLUDED'
+                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                    : c.insuranceAddMode === 'INSURANCE_0'
+                                                    ? 'bg-purple-100 text-purple-800'
+                                                    : 'bg-blue-100 text-blue-800'
+                                            }`}>
+                                                {c.insuranceAddMode === 'INSURANCE_INCLUDED'
+                                                    ? 'All-In (wliczone)'
+                                                    : c.insuranceAddMode === 'INSURANCE_0'
+                                                    ? 'Ubezpieczenie 0%'
+                                                    : 'Ubezpieczenie 23%'}
+                                            </span>
+                                            {(() => {
+                                                const unhealthy = healthSummary?.unhealthyCompanies.find(u => u.id === c.id);
+                                                if (!unhealthy) return null;
+                                                return (
+                                                    <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                                                        <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                                        Brak ubezpieczenia ({unhealthy.missingInsuranceCount})
+                                                    </span>
+                                                );
+                                            })()}
+                                        </div>
+                                        <div className="text-xs text-gray-500 space-x-3 mt-0.5">
                                             {c.contactEmail && <span>{c.contactEmail}</span>}
                                             {c.contactPhone && <span>{c.contactPhone}</span>}
                                             <span className="text-blue-600">{c._count?.vehicleAssignments || 0} pojazdów</span>
@@ -221,6 +453,15 @@ export default function RentalCompaniesPage() {
                                     </div>
                                 </div>
                                 <div className="flex gap-1">
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        title="Podgląd kalkulacji (B2B vs Konsument)"
+                                        onClick={() => setPreviewCompanyId(c.id)}
+                                        className="text-gray-600 hover:text-blue-600"
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                    </Button>
                                     <Button size="sm" variant="ghost" onClick={() => startEdit(c)}>
                                         <Edit className="w-4 h-4" />
                                     </Button>
@@ -243,6 +484,63 @@ export default function RentalCompaniesPage() {
                     <p className="text-gray-500 text-center py-8">Brak firm najmowych</p>
                 )}
             </div>
+
+            {/* Calculation Preview Dialog */}
+            <Dialog open={!!previewCompanyId} onOpenChange={open => !open && setPreviewCompanyId(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Podgląd kalkulacji raty</DialogTitle>
+                        <DialogDescription>
+                            Weryfikacja reguł podatkowych i prezentacji raty dla firmy: <span className="font-semibold">{previewData?.company?.name}</span>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {isPreviewLoading ? (
+                        <div className="py-8 text-center text-sm text-gray-500">Ładowanie przykładowej kalkulacji...</div>
+                    ) : !previewData?.hasSample ? (
+                        <div className="py-6 text-sm text-gray-600 text-center">
+                            {previewData?.message || 'Brak przypisanych pojazdów lub wpisów w cenniku dla tej firmy.'}
+                        </div>
+                    ) : (
+                        <div className="space-y-4 pt-2">
+                            <div className="text-xs bg-slate-50 p-2.5 rounded border space-y-1">
+                                <div className="font-medium text-slate-900">
+                                    Przykładowy pojazd: {previewData.vehicle?.make} {previewData.vehicle?.model} {previewData.vehicle?.productionYear ? `(${previewData.vehicle.productionYear})` : ''}
+                                </div>
+                                <div className="text-slate-600">
+                                    Wariant: {previewData.matrixParams?.contractMonths} mies., {previewData.matrixParams?.annualMileageKm?.toLocaleString('pl-PL')} km/rok, wpłata {previewData.matrixParams?.initialPaymentPct}%
+                                </div>
+                                <div className="text-slate-600">
+                                    Tryb ubezpieczenia: <span className="font-semibold text-slate-800">{previewData.company?.insuranceAddMode || 'INSURANCE_23'}</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-lg">
+                                    <div className="text-xs font-semibold text-blue-900 mb-1">Widok B2B (Firma)</div>
+                                    <div className="text-lg font-bold text-blue-700">{previewData.b2bView?.primary}</div>
+                                    <div className="text-xs text-slate-600 mt-1">{previewData.b2bView?.secondary}</div>
+                                </div>
+                                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg">
+                                    <div className="text-xs font-semibold text-emerald-900 mb-1">Widok Konsument</div>
+                                    <div className="text-lg font-bold text-emerald-700">{previewData.consumerView?.primary}</div>
+                                    <div className="text-xs text-slate-600 mt-1">{previewData.consumerView?.secondary}</div>
+                                </div>
+                            </div>
+
+                            {previewData.breakdown && (
+                                <div className="text-xs text-slate-500 border-t pt-2 space-y-1">
+                                    <div>Bazowa rata netto: {previewData.breakdown.baseNet?.toFixed(2)} zł</div>
+                                    <div>Ubezpieczenie netto: {previewData.breakdown.insuranceNet?.toFixed(2)} zł ({previewData.breakdown.insuranceAddMode})</div>
+                                    {previewData.breakdown.insuranceMissing && (
+                                        <div className="text-amber-600 font-medium">Uwaga: Brak kwoty ubezpieczenia (insuranceMissing = true)</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
