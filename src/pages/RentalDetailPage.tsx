@@ -595,7 +595,7 @@ export default function RentalDetailPage() {
                                                         Wycena ubezpieczenia na zapytanie
                                                     </div>
                                                     <p className="text-xs text-amber-700/80 mt-1">
-                                                        Rata bazowa wynosi {formatNumber(Math.ceil(offer.monthlyRateNet))} zł {selectedOfferType === 'business' ? 'netto' : 'brutto'}. Składka ubezpieczeniowa zostanie oszacowana indywidualnie.
+                                                        Rata bazowa wynosi {formatNumber(Math.ceil(selectedOfferType === 'business' ? offer.monthlyRateNet : offer.monthlyRateGross))} zł {selectedOfferType === 'business' ? 'netto' : 'brutto'}. Składka ubezpieczeniowa zostanie oszacowana indywidualnie.
                                                     </p>
                                                 </div>
                                             ) : (

@@ -1096,7 +1096,7 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 
 ## 81. Prezentacja Raty Najmu Długoterminowego (Kanon Obliczeń, Reguły Podatkowe, Trust & Diagnostics)
 - **Kanon obliczeń raty najmu (`rental-pricing.ts`, `rental-public.ts`, `employee-rental-pricing.utils.ts`)**:
-  - Wyekstrahowano kanoniczny moduł kalkulacji raty najmu (`backend/src/modules/employee-program/rental/rental-pricing.ts` oraz `src/modules/employee-program/rental/rental-pricing.ts`).
+  - Wyekstrahowano kanoniczny moduł kalkulacji raty najmu (`backend/src/services/rental-pricing.ts`).
   - Zaimplementowano reguły podatkowe dla trybów ubezpieczenia `INSURANCE_23` (23% VAT na bazę i ubezpieczenie), `INSURANCE_0` (stawka ubezpieczenia zwolniona/0% VAT - kwota ubezpieczenia jest identyczna w widoku netto i brutto; eliminacja błędnego dzielnika `/ 1.23`) oraz `INSURANCE_INCLUDED` (All-In - kwota ubezpieczenia jest już wliczona w ratę bazową).
   - Wyszukiwarka ofert najmu (`RentalSearchPage.tsx`) przekazuje parametr `priceBasis: clientType === 'business' ? 'net' : 'gross'`, harmonizując filtrowanie budżetowe z wybranym trybem prezentacji cen.
   - Karty ofert najmu (`RentalVehicleCard.tsx`, `RentalOfferDetailPage.tsx`, `RentalVehicleCard.tsx` w portalu pracowniczym) posiadają jawne oznaczenia jednostek (`zł netto / mies.` vs `zł brutto / mies.` oraz drugorzędne `zł brutto` vs `zł netto`).

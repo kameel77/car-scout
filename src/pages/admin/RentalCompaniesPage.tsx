@@ -89,7 +89,11 @@ export default function RentalCompaniesPage() {
     const resetForm = () => setForm({ name: '', contactEmail: '', contactPhone: '', includedServices: [], insuranceAddMode: 'INSURANCE_23' });
 
     const validateForm = (formData: typeof form) => {
-        if (formData.insuranceAddMode === 'INSURANCE_INCLUDED' && !formData.includedServices.includes('insurance')) {
+        const hasInsurance = formData.includedServices.some(s => {
+            const lower = s.toLowerCase();
+            return lower === 'insurance' || lower === 'ubezpieczenie';
+        });
+        if (formData.insuranceAddMode === 'INSURANCE_INCLUDED' && !hasInsurance) {
             toast({
                 title: 'Błąd walidacji',
                 description: 'Tryb All-In wymaga zaznaczenia usługi Ubezpieczenie w liście wliczonych usług',
@@ -102,11 +106,18 @@ export default function RentalCompaniesPage() {
 
     const startEdit = (company: RentalCompany) => {
         setEditingId(company.id);
+        const normalizedServices = (company.includedServices || []).map(s => {
+            const lower = s.toLowerCase();
+            if (lower === 'ubezpieczenie') return 'insurance';
+            if (lower === 'serwis') return 'service';
+            if (lower === 'opony') return 'tires';
+            return s;
+        });
         setForm({
             name: company.name,
             contactEmail: company.contactEmail || '',
             contactPhone: company.contactPhone || '',
-            includedServices: company.includedServices || [],
+            includedServices: normalizedServices,
             insuranceAddMode: company.insuranceAddMode || 'INSURANCE_23'
         });
     };
@@ -351,8 +362,8 @@ export default function RentalCompaniesPage() {
 
                             {previewData.breakdown && (
                                 <div className="text-xs text-slate-500 border-t pt-2 space-y-1">
-                                    <div>Bazowa rata netto: {previewData.breakdown.baseMonthlyRateNet?.toFixed(2)} zł</div>
-                                    <div>Ubezpieczenie netto: {previewData.breakdown.insuranceNet?.toFixed(2)} zł ({previewData.breakdown.effectiveInsuranceMode})</div>
+                                    <div>Bazowa rata netto: {previewData.breakdown.baseNet?.toFixed(2)} zł</div>
+                                    <div>Ubezpieczenie netto: {previewData.breakdown.insuranceNet?.toFixed(2)} zł ({previewData.breakdown.insuranceAddMode})</div>
                                     {previewData.breakdown.insuranceMissing && (
                                         <div className="text-amber-600 font-medium">Uwaga: Brak kwoty ubezpieczenia (insuranceMissing = true)</div>
                                     )}

@@ -293,7 +293,19 @@ export const rentalVehiclesApi = {
     }
 };
 
-// ─── Rental Companies API ────────────────────────────────────────
+export interface RentalRateBreakdown {
+    baseNet: number;
+    baseGross: number;
+    insuranceNet: number;
+    insuranceGross: number;
+    excessSurchargeNet: number;
+    tiresNet: number;
+    monthlyRateNet: number;
+    monthlyRateGross: number;
+    servicesIncluded: string[];
+    insuranceAddMode: string;
+    insuranceMissing: boolean;
+}
 
 export const rentalCompaniesApi = {
     list: async (token: string): Promise<{ companies: RentalCompany[] }> => {
@@ -343,7 +355,7 @@ export const rentalCompaniesApi = {
         message?: string;
         vehicle?: { id: string; make: string; model: string; version?: string | null; productionYear?: number | null };
         matrixParams?: { contractMonths: number; annualMileageKm: number; initialPaymentPct: number };
-        breakdown?: any;
+        breakdown?: RentalRateBreakdown;
         b2bView?: { primary: string; secondary: string };
         consumerView?: { primary: string; secondary: string };
     }> => {
