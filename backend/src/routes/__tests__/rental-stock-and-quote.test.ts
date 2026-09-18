@@ -561,4 +561,33 @@ describe('Rental Stock & Valuation Engine (Etap 1)', () => {
             expect(data.items[0].hasPricing).toBe(true);
         });
     });
+
+    // ── MATRIX HEALTH SUMMARY ENDPOINT ─────────────────────────────────
+    describe('Matrix Health Summary (GET /api/rental-companies/matrix-health-summary)', () => {
+        it('wymaga autoryzacji (401 bez tokenu)', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/rental-companies/matrix-health-summary'
+            });
+            expect(res.statusCode).toBe(401);
+        });
+
+        it('zwraca strukturę podsumowania zdrowia matryc dla zalogowanego managera', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/rental-companies/matrix-health-summary',
+                headers: { authorization: `Bearer ${token}` }
+            });
+            expect(res.statusCode).toBe(200);
+            const data = JSON.parse(res.body);
+            expect(data).toHaveProperty('totalCompanies');
+            expect(data).toHaveProperty('healthyCompaniesCount');
+            expect(data).toHaveProperty('totalEntriesAll');
+            expect(data).toHaveProperty('totalMissingAll');
+            expect(data).toHaveProperty('unhealthyCompanies');
+            expect(data).toHaveProperty('isAllHealthy');
+            expect(Array.isArray(data.unhealthyCompanies)).toBe(true);
+        });
+    });
 });
+
