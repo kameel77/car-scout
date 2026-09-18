@@ -6,10 +6,12 @@
  *
  * Usage:
  *   npx tsx src/scripts/check-matrix-health.ts
- *   npx tsx src/scripts/check-matrix-health.ts --fix-all-in
+ *   npx tsx src/scripts/check-matrix-health.ts --fix-all-in          # Dry-run plan
+ *   npx tsx src/scripts/check-matrix-health.ts --fix-all-in --apply  # Non-production DB only
  */
 
 import { PrismaClient } from '@prisma/client';
+import { isProductionHost } from '../services/environment.js';
 
 const prisma = new PrismaClient();
 
@@ -24,6 +26,40 @@ const hasInsuranceService = (services: any): boolean => {
 
 async function main() {
     const shouldFixAllIn = process.argv.includes('--fix-all-in');
+    const hasApplyFlag = process.argv.includes('--apply') || process.argv.includes('--confirm');
+
+    // Extract database host from DATABASE_URL
+    const databaseUrl = process.env.DATABASE_URL || '';
+    let dbHost = 'localhost';
+    try {
+        if (databaseUrl) {
+            const parsed = new URL(databaseUrl);
+            dbHost = parsed.hostname.toLowerCase();
+        }
+    } catch {
+        const match = databaseUrl.match(/@([^:/]+)/);
+        if (match) dbHost = match[1].toLowerCase();
+    }
+
+    const isLocal = dbHost === 'localhost' || dbHost === '127.0.0.1' || dbHost === '::1';
+    const isNonProdDomain =
+        dbHost.endsWith('.local') ||
+        dbHost.endsWith('.test') ||
+        dbHost.includes('dev') ||
+        dbHost.includes('staging') ||
+        dbHost.includes('sslip.io');
+    const isProd = isProductionHost(dbHost);
+    const isNodeEnvProd = process.env.NODE_ENV === 'production';
+    const isRecognizedNonProduction = (isLocal || isNonProdDomain) && !isProd && !isNodeEnvProd;
+
+    if (shouldFixAllIn && !isRecognizedNonProduction) {
+        console.error('\n⛔ BLOKADA BEZPIECZEŃSTWA: Flaga --fix-all-in odmawia działania!');
+        console.error(`   Host bazy danych '${dbHost}' nie został rozpoznany jako środowisko nieprodukcyjne.`);
+        console.error(`   isProductionHost: ${isProd} | NODE_ENV: '${process.env.NODE_ENV || 'brak'}'`);
+        console.error('   Modyfikacja konfiguracji firm na bazie produkcyjnej przez skrypt masowy jest zabroniona.');
+        console.error('   Zmiany konfiguracji na produkcji należy dokonywać ręcznie w panelu administratora.\n');
+        process.exit(1);
+    }
 
     console.log('\n======================================================');
     console.log('   DIAGNOSTYKA MATRYC NAJMU: KONTROLA UBEZPIECZENIA   ');
@@ -140,12 +176,16 @@ async function main() {
                 console.log('   Zalecane działanie: Zmiana trybu na All-In (INSURANCE_INCLUDED).');
 
                 if (shouldFixAllIn) {
-                    console.log(`   [AUTO-FIX] Aktualizuję tryb firmy ${r.name} na INSURANCE_INCLUDED...`);
-                    await prisma.rentalCompany.update({
-                        where: { id: r.id },
-                        data: { insuranceAddMode: 'INSURANCE_INCLUDED' }
-                    });
-                    console.log(`   [AUTO-FIX] Zaktualizowano pomyślnie!`);
+                    if (hasApplyFlag) {
+                        console.log(`   [ZAPIS] Aktualizuję tryb firmy ${r.name} na INSURANCE_INCLUDED...`);
+                        await prisma.rentalCompany.update({
+                            where: { id: r.id },
+                            data: { insuranceAddMode: 'INSURANCE_INCLUDED' }
+                        });
+                        console.log(`   [ZAPIS] Zaktualizowano pomyślnie!`);
+                    } else {
+                        console.log(`   [PLAN ZMIAN / DRY-RUN] Firma ${r.name} zostanie przestawiona na INSURANCE_INCLUDED.`);
+                    }
                 }
             } else {
                 console.log('   Diagnoza: Stawki wymagają zewnętrznego ubezpieczenia, ale brak kwoty insuranceNet w matrycy.');
@@ -157,10 +197,15 @@ async function main() {
         if (!shouldFixAllIn) {
             const hasAutoFixable = reports.some(r => r.canAutoFixAllIn);
             if (hasAutoFixable) {
-                console.log('Wskazówka: Uruchom skrypt z flagą \`--fix-all-in\`, aby automatycznie naprawić firmy mające ubezpieczenie na liście usług:\n');
+                console.log('Wskazówka: Aby przejrzeć plan automatycznej naprawy firm mających ubezpieczenie na liście usług:');
                 console.log('   npx tsx src/scripts/check-matrix-health.ts --fix-all-in\n');
             }
             process.exit(1);
+        } else if (!hasApplyFlag) {
+            console.log('⚠️  TRYB PLANOWANIA (DRY-RUN): Żadne zmiany w bazie danych NIE zostały zapisane.');
+            console.log('   Aby faktycznie zapisać zmiany w bazie nieprodukcyjnej, dodaj flagę --apply:');
+            console.log('   npx tsx src/scripts/check-matrix-health.ts --fix-all-in --apply\n');
+            process.exit(0);
         } else {
             console.log('Naprawa zakończona. Uruchom skrypt ponownie bez flagi, aby zweryfikować stan końcowy.\n');
             process.exit(0);

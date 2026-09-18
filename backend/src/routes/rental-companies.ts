@@ -154,13 +154,14 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
     fastify.post('/api/rental-companies', {
         preHandler: [fastify.authenticate, requirePermission('rental:config:write')]
     }, async (request, reply) => {
-        const { name, contactEmail, contactPhone, logoUrl, includedServices, insuranceAddMode } = request.body as {
+        const { name, contactEmail, contactPhone, logoUrl, includedServices, insuranceAddMode, confirmModeConflict } = request.body as {
             name: string;
             contactEmail?: string;
             contactPhone?: string;
             logoUrl?: string;
             includedServices?: string[];
             insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED';
+            confirmModeConflict?: boolean;
         };
 
         if (!name) {
@@ -169,9 +170,18 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
 
         const effectiveMode = insuranceAddMode || 'INSURANCE_23';
         const effectiveServices = includedServices || [];
-        if (effectiveMode === 'INSURANCE_INCLUDED' && !hasInsuranceService(effectiveServices)) {
+        const hasIns = hasInsuranceService(effectiveServices);
+
+        if (effectiveMode === 'INSURANCE_INCLUDED' && !hasIns) {
             return reply.code(400).send({
                 error: 'Tryb All-In wymaga zaznaczenia usługi Ubezpieczenie w liście wliczonych usług'
+            });
+        }
+
+        if ((effectiveMode === 'INSURANCE_23' || effectiveMode === 'INSURANCE_0') && hasIns && !confirmModeConflict) {
+            return reply.code(400).send({
+                error: `Wykryto sprzeczność konfiguracji: usługa Ubezpieczenie jest zaznaczona na liście usług, a wybrano tryb zewnętrzny (${effectiveMode === 'INSURANCE_23' ? '23%' : '0%'}). Jeśli ubezpieczenie jest zawarte w racie od partnera, wybierz tryb All-In. Wymagane potwierdzenie zapisu.`,
+                code: 'MODE_CONFLICT_CONFIRMATION_REQUIRED'
             });
         }
 
@@ -214,6 +224,8 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
             isActive?: boolean;
             includedServices?: string[];
             insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED';
+            confirmModeConflict?: boolean;
+            confirmMissingInsurance?: boolean;
         };
 
         const existing = await fastify.prisma.rentalCompany.findUnique({ where: { id } });
@@ -223,10 +235,64 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
 
         const effectiveMode = body.insuranceAddMode !== undefined ? body.insuranceAddMode : existing.insuranceAddMode;
         const effectiveServices = body.includedServices !== undefined ? body.includedServices : existing.includedServices;
-        if (effectiveMode === 'INSURANCE_INCLUDED' && !hasInsuranceService(effectiveServices)) {
+        const hasIns = hasInsuranceService(effectiveServices);
+
+        if (effectiveMode === 'INSURANCE_INCLUDED' && !hasIns) {
             return reply.code(400).send({
                 error: 'Tryb All-In wymaga zaznaczenia usługi Ubezpieczenie w liście wliczonych usług'
             });
+        }
+
+        const isExternalMode = effectiveMode === 'INSURANCE_23' || effectiveMode === 'INSURANCE_0';
+        if (isExternalMode) {
+            const assignments = await fastify.prisma.vehicleRentalAssignment.findMany({
+                where: { rentalCompanyId: id, isActive: true },
+                select: {
+                    vehicleId: true,
+                    insuranceAddModeOverride: true,
+                    matrixEntries: { select: { id: true, insuranceNet: true } }
+                }
+            });
+
+            let missingCount = 0;
+            const affectedVehicles = new Set<string>();
+            for (const a of assignments) {
+                const mode = a.insuranceAddModeOverride || effectiveMode;
+                if (mode === 'INSURANCE_23' || mode === 'INSURANCE_0') {
+                    for (const m of a.matrixEntries) {
+                        if (!m.insuranceNet || m.insuranceNet <= 0) {
+                            missingCount++;
+                            affectedVehicles.add(a.vehicleId);
+                        }
+                    }
+                }
+            }
+
+            if (hasIns && missingCount > 0 && !body.confirmModeConflict && !body.confirmMissingInsurance) {
+                return reply.code(400).send({
+                    error: `Wykryto sprzeczność konfiguracji: wybrano tryb zewnętrzny (${effectiveMode === 'INSURANCE_23' ? '23%' : '0%'}) przy zaznaczonej usłudze Ubezpieczenie, a w matrycy brakuje kwoty ubezpieczenia dla ${missingCount} wpisów (${affectedVehicles.size} aut). Spowoduje to wyłączenie tych ofert z filtru budżetowego. Przełącz na All-In lub potwierdź zapis.`,
+                    code: 'MODE_CONFLICT_CONFIRMATION_REQUIRED',
+                    missingCount,
+                    affectedVehiclesCount: affectedVehicles.size,
+                    suggestedAction: 'SWITCH_TO_ALL_IN'
+                });
+            }
+
+            if (hasIns && !body.confirmModeConflict) {
+                return reply.code(400).send({
+                    error: `Wykryto sprzeczność konfiguracji: usługa Ubezpieczenie jest zaznaczona na liście usług, a wybrano tryb zewnętrzny (${effectiveMode === 'INSURANCE_23' ? '23%' : '0%'}). Jeśli ubezpieczenie jest w racie od partnera, wybierz tryb All-In. Wymagane potwierdzenie zapisu.`,
+                    code: 'MODE_CONFLICT_CONFIRMATION_REQUIRED'
+                });
+            }
+
+            if (missingCount > 0 && !body.confirmMissingInsurance && !body.confirmModeConflict) {
+                return reply.code(400).send({
+                    error: `Wybrano tryb zewnętrzny (${effectiveMode === 'INSURANCE_23' ? '23%' : '0%'}), a w matrycy brakuje kwoty ubezpieczenia dla ${missingCount} wpisów (${affectedVehicles.size} aut). Oferty te będą oznaczone jako „Wycena ubezpieczenia na zapytanie” i wyłączone z filtru budżetowego. Wymagane potwierdzenie zapisu.`,
+                    code: 'MISSING_INSURANCE_CONFIRMATION_REQUIRED',
+                    missingCount,
+                    affectedVehiclesCount: affectedVehicles.size
+                });
+            }
         }
 
         const updateData: any = {};

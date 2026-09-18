@@ -27,11 +27,14 @@ async function main() {
         update: {
             name: 'Ayvens',
             isActive: false,
+            insuranceAddMode: 'INSURANCE_INCLUDED',
+            includedServices: ['ubezpieczenie', 'serwis', 'opony'],
         },
         create: {
             name: 'Ayvens',
             slug: 'ayvens',
             isActive: false,
+            insuranceAddMode: 'INSURANCE_INCLUDED',
             includedServices: ['ubezpieczenie', 'serwis', 'opony'],
         },
     });

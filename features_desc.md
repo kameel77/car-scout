@@ -1105,9 +1105,11 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Warianty z `insuranceMissing` są wykluczane z filtru budżetowego (`rentalMonthlyRate` nie filtruje niepełnych kwot bazowych).
   - W widoku publicznym kafelki i tabela porównawcza na karcie oferty zamiast niekompletnej ceny wyświetlają czytelny komunikat „Wycena ubezpieczenia na zapytanie”.
   - Tabela porównawcza ofert sortowana jest po kanonicznej stawce netto (`monthlyRateNet`).
-- **Panel Administratora i Narzędzia Diagnostyczne (`RentalCompaniesPage.tsx`, `rental-companies.ts`)**:
-  - Walidacja formularza firmy najmowej: tryb `INSURANCE_INCLUDED` (All-In) bezwzględnie wymaga zaznaczenia usługi Ubezpieczenie w liście wliczonych usług (blokada w API i interfejsie).
+- **Panel Administratora i Narzędzia Diagnostyczne (`RentalCompaniesPage.tsx`, `rental-companies.ts`, `check-matrix-health.ts`)**:
+  - Obustronna walidacja konfiguracji firmy najmowej: tryb `INSURANCE_INCLUDED` (All-In) bezwzględnie wymaga zaznaczenia usługi Ubezpieczenie w liście wliczonych usług; tryb zewnętrzny (`INSURANCE_23` lub `INSURANCE_0`) przy zaznaczonej usłudze Ubezpieczenie lub brakach stawek w matrycy wymaga jawnego potwierdzenia administratora (`confirmModeConflict`, `confirmMissingInsurance`), zapobiegając przypadkowemu rozjazdowi obietnic ofertowych ze stawkami.
   - Rejestracja zdarzeń audytowych `RENTAL_COMPANY_CREATED` oraz `RENTAL_COMPANY_UPDATED` w logach systemowych Fastify.
-  - Diagnostyka jakości matrycy (`GET /api/rental-companies/:id/matrix-health`): endpoint i ostrzegawczy żółty baner w trybie edycji informujący o liczbie wpisów i pojazdów z brakującym ubezpieczeniem.
+  - Diagnostyka jakości matrycy (`GET /api/rental-companies/:id/matrix-health` oraz globalne podsumowanie `GET /api/rental-companies/matrix-health-summary`): endpointy i banery ostrzegawcze informujące o brakach ubezpieczenia i niespójnościach.
   - Modal podglądu kalkulacji (`GET /api/rental-companies/:id/calculation-preview`): przycisk podglądu (ikona oka) umożliwiający weryfikację rozbicia stawki na przykładowym pojeździe w widoku B2B oraz Konsumenta.
+  - Skrypt bramy przedprodukcyjnej CLI (`backend/src/scripts/check-matrix-health.ts`): weryfikuje kompletność stawek ubezpieczenia, posiada blokadę bezpieczeństwa odmawiającą modyfikacji na bazach produkcyjnych (`isProductionHost`) oraz domyślny tryb planowania (dry-run) wymagający jawnej flagi `--apply` do faktycznego zapisu.
+  - Seed deweloperski Ayvens (`seed-rental-ayvens-dev.ts`): jawnie konfiguruje `insuranceAddMode: 'INSURANCE_INCLUDED'`, gwarantując trwałość poprawnej konfiguracji po ponownym seedowaniu bazy.
 

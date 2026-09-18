@@ -22,12 +22,14 @@ export default function RentalCompaniesPage() {
         contactPhone: string;
         includedServices: string[];
         insuranceAddMode: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED';
+        confirmModeConflict: boolean;
     }>({ 
         name: '', 
         contactEmail: '', 
         contactPhone: '',
         includedServices: [],
-        insuranceAddMode: 'INSURANCE_23'
+        insuranceAddMode: 'INSURANCE_23',
+        confirmModeConflict: false
     });
 
     const SERVICE_OPTIONS = [
@@ -96,13 +98,21 @@ export default function RentalCompaniesPage() {
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
     });
 
-    const resetForm = () => setForm({ name: '', contactEmail: '', contactPhone: '', includedServices: [], insuranceAddMode: 'INSURANCE_23' });
+    const resetForm = () => setForm({
+        name: '',
+        contactEmail: '',
+        contactPhone: '',
+        includedServices: [],
+        insuranceAddMode: 'INSURANCE_23',
+        confirmModeConflict: false
+    });
 
     const validateForm = (formData: typeof form) => {
         const hasInsurance = formData.includedServices.some(s => {
             const lower = s.toLowerCase();
             return lower === 'insurance' || lower === 'ubezpieczenie';
         });
+
         if (formData.insuranceAddMode === 'INSURANCE_INCLUDED' && !hasInsurance) {
             toast({
                 title: 'Błąd walidacji',
@@ -111,6 +121,18 @@ export default function RentalCompaniesPage() {
             });
             return false;
         }
+
+        if ((formData.insuranceAddMode === 'INSURANCE_23' || formData.insuranceAddMode === 'INSURANCE_0') && hasInsurance) {
+            if (!formData.confirmModeConflict) {
+                toast({
+                    title: 'Ostrzeżenie: Sprzeczność konfiguracji',
+                    description: 'Wybrano tryb zewnętrzny przy zaznaczonej usłudze Ubezpieczenie. Przełącz na All-In lub zaznacz pole potwierdzenia zapisu.',
+                    variant: 'destructive'
+                });
+                return false;
+            }
+        }
+
         return true;
     };
 
@@ -128,7 +150,8 @@ export default function RentalCompaniesPage() {
             contactEmail: company.contactEmail || '',
             contactPhone: company.contactPhone || '',
             includedServices: normalizedServices,
-            insuranceAddMode: company.insuranceAddMode || 'INSURANCE_23'
+            insuranceAddMode: company.insuranceAddMode || 'INSURANCE_23',
+            confirmModeConflict: false
         });
     };
 
@@ -213,6 +236,38 @@ export default function RentalCompaniesPage() {
                                 ))}
                             </div>
                         </div>
+
+                        {(form.insuranceAddMode === 'INSURANCE_23' || form.insuranceAddMode === 'INSURANCE_0') && form.includedServices.some(s => s.toLowerCase() === 'insurance' || s.toLowerCase() === 'ubezpieczenie') && (
+                            <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-2 col-span-full">
+                                <div className="flex items-center gap-2 font-semibold text-amber-950">
+                                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                    <span>Ostrzeżenie: Wykryto sprzeczność trybu doliczania z listą usług</span>
+                                </div>
+                                <p className="leading-relaxed">
+                                    Wybrano tryb zewnętrzny (<strong>{form.insuranceAddMode === 'INSURANCE_23' ? '23%' : '0%'}</strong>), ale usługa <strong>Ubezpieczenie</strong> jest zaznaczona na liście wliczonych usług. Jeśli ubezpieczenie jest w racie od partnera, poprawnym trybem jest <strong>All-In</strong>.
+                                </p>
+                                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-200/80">
+                                    <Button
+                                        size="sm"
+                                        type="button"
+                                        variant="outline"
+                                        className="h-7 text-xs bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+                                        onClick={() => setForm(p => ({ ...p, insuranceAddMode: 'INSURANCE_INCLUDED', confirmModeConflict: false }))}
+                                    >
+                                        Przełącz na All-In (zalecane)
+                                    </Button>
+                                    <label className="flex items-center gap-1.5 cursor-pointer text-amber-950 font-medium select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.confirmModeConflict}
+                                            onChange={e => setForm(p => ({ ...p, confirmModeConflict: e.target.checked }))}
+                                            className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                                        />
+                                        <span>Potwierdzam zapis trybu zewnętrznego</span>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="flex gap-2">
                         <Button size="sm" onClick={() => { if (validateForm(form)) createMutation.mutate(form); }} disabled={!form.name || createMutation.isPending}>
@@ -240,19 +295,61 @@ export default function RentalCompaniesPage() {
                                                 W ofertach publicznych te warianty będą oznaczone jako "Wycena ubezpieczenia na zapytanie" i wykluczone z filtru budżetowego.
                                             </p>
                                             {form.includedServices.some(s => s.toLowerCase() === 'insurance' || s.toLowerCase() === 'ubezpieczenie') && form.insuranceAddMode !== 'INSURANCE_INCLUDED' && (
-                                                <div className="mt-2 pt-2 border-t border-amber-200/80 flex items-center justify-between">
+                                                <div className="mt-2 pt-2 border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2">
                                                     <span className="text-amber-900 font-medium">Usługa ubezpieczenia jest zaznaczona w usługach:</span>
-                                                    <Button
-                                                        size="sm"
-                                                        type="button"
-                                                        variant="outline"
-                                                        className="h-7 text-xs bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
-                                                        onClick={() => setForm(p => ({ ...p, insuranceAddMode: 'INSURANCE_INCLUDED' }))}
-                                                    >
-                                                        Przełącz na All-In
-                                                    </Button>
+                                                    <div className="flex items-center gap-3">
+                                                        <Button
+                                                            size="sm"
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="h-7 text-xs bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+                                                            onClick={() => setForm(p => ({ ...p, insuranceAddMode: 'INSURANCE_INCLUDED', confirmModeConflict: false }))}
+                                                        >
+                                                            Przełącz na All-In
+                                                        </Button>
+                                                        <label className="flex items-center gap-1.5 cursor-pointer text-amber-950 font-medium select-none">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={form.confirmModeConflict}
+                                                                onChange={e => setForm(p => ({ ...p, confirmModeConflict: e.target.checked }))}
+                                                                className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                                                            />
+                                                            <span>Potwierdzam zapis trybu zewnętrznego</span>
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             )}
+                                        </div>
+                                    </div>
+                                )}
+                                {(!healthData || healthData.isHealthy) && (form.insuranceAddMode === 'INSURANCE_23' || form.insuranceAddMode === 'INSURANCE_0') && form.includedServices.some(s => s.toLowerCase() === 'insurance' || s.toLowerCase() === 'ubezpieczenie') && (
+                                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-2">
+                                        <div className="flex items-center gap-2 font-semibold text-amber-950">
+                                            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                            <span>Ostrzeżenie: Wykryto sprzeczność trybu doliczania z listą usług</span>
+                                        </div>
+                                        <p className="leading-relaxed">
+                                            Wybrano tryb zewnętrzny (<strong>{form.insuranceAddMode === 'INSURANCE_23' ? '23%' : '0%'}</strong>), ale usługa <strong>Ubezpieczenie</strong> jest zaznaczona na liście wliczonych usług. Jeśli ubezpieczenie jest w racie od partnera, poprawnym trybem jest <strong>All-In</strong>.
+                                        </p>
+                                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-200/80">
+                                            <Button
+                                                size="sm"
+                                                type="button"
+                                                variant="outline"
+                                                className="h-7 text-xs bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+                                                onClick={() => setForm(p => ({ ...p, insuranceAddMode: 'INSURANCE_INCLUDED', confirmModeConflict: false }))}
+                                            >
+                                                Przełącz na All-In (zalecane)
+                                            </Button>
+                                            <label className="flex items-center gap-1.5 cursor-pointer text-amber-950 font-medium select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.confirmModeConflict}
+                                                    onChange={e => setForm(p => ({ ...p, confirmModeConflict: e.target.checked }))}
+                                                    className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                                                />
+                                                <span>Potwierdzam zapis trybu zewnętrznego</span>
+                                            </label>
                                         </div>
                                     </div>
                                 )}
@@ -298,7 +395,18 @@ export default function RentalCompaniesPage() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button size="sm" onClick={() => { if (validateForm(form)) updateMutation.mutate({ id: c.id, data: form }); }} disabled={updateMutation.isPending}>
+                                    <Button size="sm" onClick={() => {
+                                        if (validateForm(form)) {
+                                            updateMutation.mutate({
+                                                id: c.id,
+                                                data: {
+                                                    ...form,
+                                                    confirmModeConflict: form.confirmModeConflict,
+                                                    confirmMissingInsurance: form.confirmModeConflict
+                                                }
+                                            });
+                                        }
+                                    }} disabled={updateMutation.isPending}>
                                         <Check className="w-3 h-3 mr-1" /> Zapisz
                                     </Button>
                                     <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Anuluj</Button>

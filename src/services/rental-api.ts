@@ -1,4 +1,4 @@
-// Rental API client — follows same fetch-based pattern as other api modules
+// Rental API client - follows same fetch-based pattern as other api modules
 import { matchesCatalogPrefetch } from '@/utils/catalogPrefetch';
 
 let API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
@@ -86,6 +86,8 @@ export interface RentalCompany {
     isActive: boolean;
     includedServices?: string[];
     insuranceAddMode?: 'INSURANCE_23' | 'INSURANCE_0' | 'INSURANCE_INCLUDED';
+    confirmModeConflict?: boolean;
+    confirmMissingInsurance?: boolean;
     _count?: { vehicleAssignments: number };
 }
 
