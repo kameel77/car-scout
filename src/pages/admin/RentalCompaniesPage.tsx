@@ -49,6 +49,12 @@ export default function RentalCompaniesPage() {
         enabled: !!editingId && !!token
     });
 
+    const { data: healthSummary } = useQuery({
+        queryKey: ['rental-companies-health-summary'],
+        queryFn: () => rentalCompaniesApi.getMatrixHealthSummary(token!),
+        enabled: !!token
+    });
+
     const { data: previewData, isLoading: isPreviewLoading } = useQuery({
         queryKey: ['rental-company-preview', previewCompanyId],
         queryFn: () => rentalCompaniesApi.getCalculationPreview(previewCompanyId!, token!),
@@ -59,6 +65,7 @@ export default function RentalCompaniesPage() {
         mutationFn: (data: Partial<RentalCompany>) => rentalCompaniesApi.create(data, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-companies'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-companies-health-summary'] });
             setShowAdd(false);
             resetForm();
             toast({ title: 'Firma dodana' });
@@ -70,6 +77,8 @@ export default function RentalCompaniesPage() {
         mutationFn: ({ id, data }: { id: string; data: Partial<RentalCompany> }) => rentalCompaniesApi.update(id, data, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-companies'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-companies-health-summary'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-company-health'] });
             setEditingId(null);
             resetForm();
             toast({ title: 'Firma zaktualizowana' });
@@ -81,6 +90,7 @@ export default function RentalCompaniesPage() {
         mutationFn: (id: string) => rentalCompaniesApi.delete(id, token!),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rental-companies'] });
+            queryClient.invalidateQueries({ queryKey: ['rental-companies-health-summary'] });
             toast({ title: 'Firma usunięta' });
         },
         onError: (e: Error) => toast({ title: 'Błąd', description: e.message, variant: 'destructive' })
@@ -132,6 +142,32 @@ export default function RentalCompaniesPage() {
                     <Plus className="w-4 h-4 mr-2" /> Dodaj firmę
                 </Button>
             </div>
+
+            {/* Health summary warning banner */}
+            {healthSummary && !healthSummary.isAllHealthy && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 space-y-2">
+                    <div className="flex items-center gap-2 font-semibold text-sm text-amber-950">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                        <span>Ostrzeżenie jakości danych matrycy ({healthSummary.unhealthyCompanies.length} {healthSummary.unhealthyCompanies.length === 1 ? 'firma wymaga' : 'firmy wymagają'} uwagi)</span>
+                    </div>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                        Wykryto firmy najmowe z brakującą kwotą ubezpieczenia w stawkach zewnętrznych (INSURANCE_23 lub INSURANCE_0).
+                        Pojazdy tych firm są <strong>wyłączone z filtru budżetowego</strong> w wyszukiwarce publicznej i wyświetlają <em>„Wycena ubezpieczenia na zapytanie”</em>:
+                    </p>
+                    <ul className="text-xs space-y-1.5 mt-1 pl-4 list-disc">
+                        {healthSummary.unhealthyCompanies.map(uc => (
+                            <li key={uc.id}>
+                                <span className="font-semibold">{uc.name}</span>: {uc.missingInsuranceCount} pozycji bez ubezpieczenia ({uc.affectedVehiclesCount} aut).
+                                {uc.suggestedAction === 'SWITCH_TO_ALL_IN' && (
+                                    <span className="ml-1.5 text-blue-700 font-medium">
+                                        (Firma ma ubezpieczenie na liście wliczonych usług - zalecana zmiana trybu na All-In)
+                                    </span>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {/* Add form */}
             {showAdd && (
@@ -197,12 +233,26 @@ export default function RentalCompaniesPage() {
                                 {healthData && !healthData.isHealthy && (
                                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-start gap-2">
                                         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                        <div>
+                                        <div className="flex-1">
                                             <span className="font-semibold">Ostrzeżenie jakości danych matrycy:</span>
                                             <p className="mt-0.5">
                                                 Wykryto {healthData.missingInsuranceCount} pozycji w cenniku bez kwoty ubezpieczenia (w {healthData.affectedVehiclesCount} przypisanych pojazdach).
                                                 W ofertach publicznych te warianty będą oznaczone jako "Wycena ubezpieczenia na zapytanie" i wykluczone z filtru budżetowego.
                                             </p>
+                                            {form.includedServices.some(s => s.toLowerCase() === 'insurance' || s.toLowerCase() === 'ubezpieczenie') && form.insuranceAddMode !== 'INSURANCE_INCLUDED' && (
+                                                <div className="mt-2 pt-2 border-t border-amber-200/80 flex items-center justify-between">
+                                                    <span className="text-amber-900 font-medium">Usługa ubezpieczenia jest zaznaczona w usługach:</span>
+                                                    <Button
+                                                        size="sm"
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="h-7 text-xs bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+                                                        onClick={() => setForm(p => ({ ...p, insuranceAddMode: 'INSURANCE_INCLUDED' }))}
+                                                    >
+                                                        Przełącz na All-In
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -261,7 +311,7 @@ export default function RentalCompaniesPage() {
                                         <Building2 className="w-5 h-5 text-blue-600" />
                                     </div>
                                     <div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <span className="font-medium">{c.name}</span>
                                             <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
                                                 c.insuranceAddMode === 'INSURANCE_INCLUDED'
@@ -276,6 +326,16 @@ export default function RentalCompaniesPage() {
                                                     ? 'Ubezpieczenie 0%'
                                                     : 'Ubezpieczenie 23%'}
                                             </span>
+                                            {(() => {
+                                                const unhealthy = healthSummary?.unhealthyCompanies.find(u => u.id === c.id);
+                                                if (!unhealthy) return null;
+                                                return (
+                                                    <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                                                        <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                                        Brak ubezpieczenia ({unhealthy.missingInsuranceCount})
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                         <div className="text-xs text-gray-500 space-x-3 mt-0.5">
                                             {c.contactEmail && <span>{c.contactEmail}</span>}

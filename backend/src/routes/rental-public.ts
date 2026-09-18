@@ -320,7 +320,10 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             // 4. Sort
             if (isRateSort) {
                 mapped.sort((a, b) => {
-                    const diff = (a.minRate ?? Infinity) - (b.minRate ?? Infinity);
+                    if (a.minRate === null && b.minRate === null) return 0;
+                    if (a.minRate === null) return 1;
+                    if (b.minRate === null) return -1;
+                    const diff = a.minRate - b.minRate;
                     return parsed.sortOrder === 'asc' ? diff : -diff;
                 });
             } else {
@@ -648,7 +651,16 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 };
             })
             .filter((o): o is NonNullable<typeof o> => o !== null)
-            .sort((a, b) => a.monthlyRateNet - b.monthlyRateNet);
+            .sort((a, b) => {
+                // Incomplete offers (insuranceMissing) always at the end
+                if (a.insuranceMissing !== b.insuranceMissing) {
+                    return a.insuranceMissing ? 1 : -1;
+                }
+                // Sort by the rate the user is seeing: gross for consumer, net for B2B
+                return calcOfferType === 'consumer'
+                    ? a.monthlyRateGross - b.monthlyRateGross
+                    : a.monthlyRateNet - b.monthlyRateNet;
+            });
 
         const cheapest = offers.find(o => !o.insuranceMissing) || offers[0] || null;
 

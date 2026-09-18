@@ -360,6 +360,26 @@ export const rentalCompaniesApi = {
         consumerView?: { primary: string; secondary: string };
     }> => {
         return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/${id}/calculation-preview`, token);
+    },
+
+    getMatrixHealthSummary: async (token: string): Promise<{
+        totalCompanies: number;
+        healthyCompaniesCount: number;
+        totalEntriesAll: number;
+        totalMissingAll: number;
+        unhealthyCompanies: Array<{
+            id: string;
+            name: string;
+            insuranceAddMode: string | null;
+            includedServices: string[];
+            totalEntries: number;
+            missingInsuranceCount: number;
+            affectedVehiclesCount: number;
+            suggestedAction: 'SWITCH_TO_ALL_IN' | 'FILL_INSURANCE_NET';
+        }>;
+        isAllHealthy: boolean;
+    }> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/matrix-health-summary`, token);
     }
 };
 

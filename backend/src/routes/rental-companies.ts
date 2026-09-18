@@ -176,6 +176,88 @@ export async function rentalCompanyRoutes(fastify: FastifyInstance) {
         return { company };
     });
 
+    // Global matrix health summary across all rental companies
+    fastify.get('/api/rental-companies/matrix-health-summary', {
+        preHandler: [fastify.authenticate, requirePermission('rental:read')]
+    }, async (_request, _reply) => {
+        const companies = await fastify.prisma.rentalCompany.findMany({
+            select: {
+                id: true,
+                name: true,
+                insuranceAddMode: true,
+                includedServices: true,
+                vehicleAssignments: {
+                    select: {
+                        id: true,
+                        vehicleId: true,
+                        insuranceAddModeOverride: true,
+                        matrixEntries: {
+                            select: { id: true, insuranceNet: true }
+                        }
+                    }
+                }
+            }
+        });
+
+        const unhealthyCompanies: Array<{
+            id: string;
+            name: string;
+            insuranceAddMode: string | null;
+            includedServices: string[];
+            totalEntries: number;
+            missingInsuranceCount: number;
+            affectedVehiclesCount: number;
+            suggestedAction: 'SWITCH_TO_ALL_IN' | 'FILL_INSURANCE_NET';
+        }> = [];
+
+        let totalEntriesAll = 0;
+        let totalMissingAll = 0;
+
+        for (const c of companies) {
+            let companyEntries = 0;
+            let companyMissing = 0;
+            const affectedVehicles = new Set<string>();
+
+            for (const a of c.vehicleAssignments) {
+                const mode = a.insuranceAddModeOverride || c.insuranceAddMode || 'INSURANCE_23';
+                const isExternal = mode === 'INSURANCE_23' || mode === 'INSURANCE_0';
+                for (const m of a.matrixEntries) {
+                    companyEntries++;
+                    if (isExternal && (!m.insuranceNet || m.insuranceNet <= 0)) {
+                        companyMissing++;
+                        affectedVehicles.add(a.vehicleId);
+                    }
+                }
+            }
+
+            totalEntriesAll += companyEntries;
+            totalMissingAll += companyMissing;
+
+            if (companyMissing > 0) {
+                const includesInsuranceInServices = hasInsuranceService(c.includedServices);
+                unhealthyCompanies.push({
+                    id: c.id,
+                    name: c.name,
+                    insuranceAddMode: c.insuranceAddMode,
+                    includedServices: c.includedServices,
+                    totalEntries: companyEntries,
+                    missingInsuranceCount: companyMissing,
+                    affectedVehiclesCount: affectedVehicles.size,
+                    suggestedAction: includesInsuranceInServices ? 'SWITCH_TO_ALL_IN' : 'FILL_INSURANCE_NET'
+                });
+            }
+        }
+
+        return {
+            totalCompanies: companies.length,
+            healthyCompaniesCount: companies.length - unhealthyCompanies.length,
+            totalEntriesAll,
+            totalMissingAll,
+            unhealthyCompanies,
+            isAllHealthy: unhealthyCompanies.length === 0
+        };
+    });
+
     // Matrix health check (warning on missing insurance in matrix)
     fastify.get('/api/rental-companies/:id/matrix-health', {
         preHandler: [fastify.authenticate, requirePermission('rental:read')]
