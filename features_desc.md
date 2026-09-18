@@ -1094,3 +1094,20 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - E-mail potwierdzający do pracownika: zawiera numer zgłoszenia `PP-...`, dane auta i szacowaną kwotę / ratę, z zachowaniem ścisłej anonimizacji dostawcy (brak nazwy firmy wynajmującej, prowizji, NIP-u i notatek wewnętrznych).
   - Wszystkie wartości w szablonach HTML są bezpiecznie escapowane (`escapeHtml`).
 
+## 81. Prezentacja Raty Najmu Długoterminowego (Kanon Obliczeń, Reguły Podatkowe, Trust & Diagnostics)
+- **Kanon obliczeń raty najmu (`rental-pricing.ts`, `rental-public.ts`, `employee-rental-pricing.utils.ts`)**:
+  - Wyekstrahowano kanoniczny moduł kalkulacji raty najmu (`backend/src/modules/employee-program/rental/rental-pricing.ts` oraz `src/modules/employee-program/rental/rental-pricing.ts`).
+  - Zaimplementowano reguły podatkowe dla trybów ubezpieczenia `INSURANCE_23` (23% VAT na bazę i ubezpieczenie), `INSURANCE_0` (stawka ubezpieczenia zwolniona/0% VAT - kwota ubezpieczenia jest identyczna w widoku netto i brutto; eliminacja błędnego dzielnika `/ 1.23`) oraz `INSURANCE_INCLUDED` (All-In - kwota ubezpieczenia jest już wliczona w ratę bazową).
+  - Wyszukiwarka ofert najmu (`RentalSearchPage.tsx`) przekazuje parametr `priceBasis: clientType === 'business' ? 'net' : 'gross'`, harmonizując filtrowanie budżetowe z wybranym trybem prezentacji cen.
+  - Karty ofert najmu (`RentalVehicleCard.tsx`, `RentalOfferDetailPage.tsx`, `RentalVehicleCard.tsx` w portalu pracowniczym) posiadają jawne oznaczenia jednostek (`zł netto / mies.` vs `zł brutto / mies.` oraz drugorzędne `zł brutto` vs `zł netto`).
+- **Jakość danych i obsługa `insuranceMissing`**:
+  - Gdy wariant matrycy wymaga zewnętrznego ubezpieczenia (`INSURANCE_23` lub `INSURANCE_0`), a kwota `insuranceNet` jest równa 0 lub pusta, oznaczana jest flaga `insuranceMissing = true`.
+  - Warianty z `insuranceMissing` są wykluczane z filtru budżetowego (`rentalMonthlyRate` nie filtruje niepełnych kwot bazowych).
+  - W widoku publicznym kafelki i tabela porównawcza na karcie oferty zamiast niekompletnej ceny wyświetlają czytelny komunikat „Wycena ubezpieczenia na zapytanie”.
+  - Tabela porównawcza ofert sortowana jest po kanonicznej stawce netto (`monthlyRateNet`).
+- **Panel Administratora i Narzędzia Diagnostyczne (`RentalCompaniesPage.tsx`, `rental-companies.ts`)**:
+  - Walidacja formularza firmy najmowej: tryb `INSURANCE_INCLUDED` (All-In) bezwzględnie wymaga zaznaczenia usługi Ubezpieczenie w liście wliczonych usług (blokada w API i interfejsie).
+  - Rejestracja zdarzeń audytowych `RENTAL_COMPANY_CREATED` oraz `RENTAL_COMPANY_UPDATED` w logach systemowych Fastify.
+  - Diagnostyka jakości matrycy (`GET /api/rental-companies/:id/matrix-health`): endpoint i ostrzegawczy żółty baner w trybie edycji informujący o liczbie wpisów i pojazdów z brakującym ubezpieczeniem.
+  - Modal podglądu kalkulacji (`GET /api/rental-companies/:id/calculation-preview`): przycisk podglądu (ikona oka) umożliwiający weryfikację rozbicia stawki na przykładowym pojeździe w widoku B2B oraz Konsumenta.
+

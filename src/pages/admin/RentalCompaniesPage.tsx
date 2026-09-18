@@ -6,7 +6,8 @@ import type { RentalCompany } from '@/services/rental-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, X, Building2, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Building2, Check, Eye, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function RentalCompaniesPage() {
     const { token } = useAuth();
@@ -14,6 +15,7 @@ export default function RentalCompaniesPage() {
     const { toast } = useToast();
     const [showAdd, setShowAdd] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [previewCompanyId, setPreviewCompanyId] = useState<string | null>(null);
     const [form, setForm] = useState<{
         name: string;
         contactEmail: string;
@@ -39,6 +41,18 @@ export default function RentalCompaniesPage() {
         queryKey: ['rental-companies'],
         queryFn: () => rentalCompaniesApi.list(token!),
         enabled: !!token
+    });
+
+    const { data: healthData } = useQuery({
+        queryKey: ['rental-company-health', editingId],
+        queryFn: () => rentalCompaniesApi.getMatrixHealth(editingId!, token!),
+        enabled: !!editingId && !!token
+    });
+
+    const { data: previewData, isLoading: isPreviewLoading } = useQuery({
+        queryKey: ['rental-company-preview', previewCompanyId],
+        queryFn: () => rentalCompaniesApi.getCalculationPreview(previewCompanyId!, token!),
+        enabled: !!previewCompanyId && !!token
     });
 
     const createMutation = useMutation({
@@ -73,6 +87,18 @@ export default function RentalCompaniesPage() {
     });
 
     const resetForm = () => setForm({ name: '', contactEmail: '', contactPhone: '', includedServices: [], insuranceAddMode: 'INSURANCE_23' });
+
+    const validateForm = (formData: typeof form) => {
+        if (formData.insuranceAddMode === 'INSURANCE_INCLUDED' && !formData.includedServices.includes('insurance')) {
+            toast({
+                title: 'Błąd walidacji',
+                description: 'Tryb All-In wymaga zaznaczenia usługi Ubezpieczenie w liście wliczonych usług',
+                variant: 'destructive'
+            });
+            return false;
+        }
+        return true;
+    };
 
     const startEdit = (company: RentalCompany) => {
         setEditingId(company.id);
@@ -114,7 +140,7 @@ export default function RentalCompaniesPage() {
                             >
                                 <option value="INSURANCE_23">23% (doliczane do netto, VAT naliczany od całości)</option>
                                 <option value="INSURANCE_0">0% (stała kwota z matrycy osobno na fakturze bez VAT)</option>
-                                <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In — nie doliczaj dodatkowo)</option>
+                                <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In - nie doliczaj dodatkowo)</option>
                             </select>
                         </div>
 
@@ -142,7 +168,7 @@ export default function RentalCompaniesPage() {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Button size="sm" onClick={() => createMutation.mutate(form)} disabled={!form.name || createMutation.isPending}>
+                        <Button size="sm" onClick={() => { if (validateForm(form)) createMutation.mutate(form); }} disabled={!form.name || createMutation.isPending}>
                             {createMutation.isPending ? 'Dodawanie...' : 'Dodaj'}
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>Anuluj</Button>
@@ -157,6 +183,18 @@ export default function RentalCompaniesPage() {
                     <div key={c.id} className="p-4 rounded-xl border bg-white shadow-sm">
                         {editingId === c.id ? (
                             <div className="space-y-3">
+                                {healthData && !healthData.isHealthy && (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-start gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="font-semibold">Ostrzeżenie jakości danych matrycy:</span>
+                                            <p className="mt-0.5">
+                                                Wykryto {healthData.missingInsuranceCount} pozycji w cenniku bez kwoty ubezpieczenia (w {healthData.affectedVehiclesCount} przypisanych pojazdach).
+                                                W ofertach publicznych te warianty będą oznaczone jako "Wycena ubezpieczenia na zapytanie" i wykluczone z filtru budżetowego.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
                                     <Input value={form.contactEmail} onChange={e => setForm(p => ({ ...p, contactEmail: e.target.value }))} />
@@ -171,7 +209,7 @@ export default function RentalCompaniesPage() {
                                         >
                                             <option value="INSURANCE_23">23% (doliczane do netto, VAT naliczany od całości)</option>
                                             <option value="INSURANCE_0">0% (stała kwota z matrycy osobno na fakturze bez VAT)</option>
-                                            <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In — nie doliczaj dodatkowo)</option>
+                                            <option value="INSURANCE_INCLUDED">Wliczone w ratę w matrycy (All-In - nie doliczaj dodatkowo)</option>
                                         </select>
                                     </div>
 
@@ -199,7 +237,7 @@ export default function RentalCompaniesPage() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button size="sm" onClick={() => updateMutation.mutate({ id: c.id, data: form })} disabled={updateMutation.isPending}>
+                                    <Button size="sm" onClick={() => { if (validateForm(form)) updateMutation.mutate({ id: c.id, data: form }); }} disabled={updateMutation.isPending}>
                                         <Check className="w-3 h-3 mr-1" /> Zapisz
                                     </Button>
                                     <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Anuluj</Button>
@@ -212,8 +250,23 @@ export default function RentalCompaniesPage() {
                                         <Building2 className="w-5 h-5 text-blue-600" />
                                     </div>
                                     <div>
-                                        <div className="font-medium">{c.name}</div>
-                                        <div className="text-xs text-gray-500 space-x-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">{c.name}</span>
+                                            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                                                c.insuranceAddMode === 'INSURANCE_INCLUDED'
+                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                    : c.insuranceAddMode === 'INSURANCE_0'
+                                                    ? 'bg-purple-100 text-purple-800'
+                                                    : 'bg-blue-100 text-blue-800'
+                                            }`}>
+                                                {c.insuranceAddMode === 'INSURANCE_INCLUDED'
+                                                    ? 'All-In (wliczone)'
+                                                    : c.insuranceAddMode === 'INSURANCE_0'
+                                                    ? 'Ubezpieczenie 0%'
+                                                    : 'Ubezpieczenie 23%'}
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-gray-500 space-x-3 mt-0.5">
                                             {c.contactEmail && <span>{c.contactEmail}</span>}
                                             {c.contactPhone && <span>{c.contactPhone}</span>}
                                             <span className="text-blue-600">{c._count?.vehicleAssignments || 0} pojazdów</span>
@@ -221,6 +274,15 @@ export default function RentalCompaniesPage() {
                                     </div>
                                 </div>
                                 <div className="flex gap-1">
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        title="Podgląd kalkulacji (B2B vs Konsument)"
+                                        onClick={() => setPreviewCompanyId(c.id)}
+                                        className="text-gray-600 hover:text-blue-600"
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                    </Button>
                                     <Button size="sm" variant="ghost" onClick={() => startEdit(c)}>
                                         <Edit className="w-4 h-4" />
                                     </Button>
@@ -243,6 +305,63 @@ export default function RentalCompaniesPage() {
                     <p className="text-gray-500 text-center py-8">Brak firm najmowych</p>
                 )}
             </div>
+
+            {/* Calculation Preview Dialog */}
+            <Dialog open={!!previewCompanyId} onOpenChange={open => !open && setPreviewCompanyId(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Podgląd kalkulacji raty</DialogTitle>
+                        <DialogDescription>
+                            Weryfikacja reguł podatkowych i prezentacji raty dla firmy: <span className="font-semibold">{previewData?.company?.name}</span>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {isPreviewLoading ? (
+                        <div className="py-8 text-center text-sm text-gray-500">Ładowanie przykładowej kalkulacji...</div>
+                    ) : !previewData?.hasSample ? (
+                        <div className="py-6 text-sm text-gray-600 text-center">
+                            {previewData?.message || 'Brak przypisanych pojazdów lub wpisów w cenniku dla tej firmy.'}
+                        </div>
+                    ) : (
+                        <div className="space-y-4 pt-2">
+                            <div className="text-xs bg-slate-50 p-2.5 rounded border space-y-1">
+                                <div className="font-medium text-slate-900">
+                                    Przykładowy pojazd: {previewData.vehicle?.make} {previewData.vehicle?.model} {previewData.vehicle?.productionYear ? `(${previewData.vehicle.productionYear})` : ''}
+                                </div>
+                                <div className="text-slate-600">
+                                    Wariant: {previewData.matrixParams?.contractMonths} mies., {previewData.matrixParams?.annualMileageKm?.toLocaleString('pl-PL')} km/rok, wpłata {previewData.matrixParams?.initialPaymentPct}%
+                                </div>
+                                <div className="text-slate-600">
+                                    Tryb ubezpieczenia: <span className="font-semibold text-slate-800">{previewData.company?.insuranceAddMode || 'INSURANCE_23'}</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-lg">
+                                    <div className="text-xs font-semibold text-blue-900 mb-1">Widok B2B (Firma)</div>
+                                    <div className="text-lg font-bold text-blue-700">{previewData.b2bView?.primary}</div>
+                                    <div className="text-xs text-slate-600 mt-1">{previewData.b2bView?.secondary}</div>
+                                </div>
+                                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg">
+                                    <div className="text-xs font-semibold text-emerald-900 mb-1">Widok Konsument</div>
+                                    <div className="text-lg font-bold text-emerald-700">{previewData.consumerView?.primary}</div>
+                                    <div className="text-xs text-slate-600 mt-1">{previewData.consumerView?.secondary}</div>
+                                </div>
+                            </div>
+
+                            {previewData.breakdown && (
+                                <div className="text-xs text-slate-500 border-t pt-2 space-y-1">
+                                    <div>Bazowa rata netto: {previewData.breakdown.baseMonthlyRateNet?.toFixed(2)} zł</div>
+                                    <div>Ubezpieczenie netto: {previewData.breakdown.insuranceNet?.toFixed(2)} zł ({previewData.breakdown.effectiveInsuranceMode})</div>
+                                    {previewData.breakdown.insuranceMissing && (
+                                        <div className="text-amber-600 font-medium">Uwaga: Brak kwoty ubezpieczenia (insuranceMissing = true)</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

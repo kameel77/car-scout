@@ -322,6 +322,32 @@ export const rentalCompaniesApi = {
 
     delete: async (id: string, token: string) => {
         return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/${id}`, token, { method: 'DELETE' });
+    },
+
+    getMatrixHealth: async (id: string, token: string): Promise<{
+        companyId: string;
+        companyName: string;
+        insuranceAddMode?: string | null;
+        totalAssignments: number;
+        totalEntries: number;
+        missingInsuranceCount: number;
+        affectedVehiclesCount: number;
+        isHealthy: boolean;
+    }> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/${id}/matrix-health`, token);
+    },
+
+    getCalculationPreview: async (id: string, token: string): Promise<{
+        company: { id: string; name: string; insuranceAddMode?: string | null };
+        hasSample: boolean;
+        message?: string;
+        vehicle?: { id: string; make: string; model: string; version?: string | null; productionYear?: number | null };
+        matrixParams?: { contractMonths: number; annualMileageKm: number; initialPaymentPct: number };
+        breakdown?: any;
+        b2bView?: { primary: string; secondary: string };
+        consumerView?: { primary: string; secondary: string };
+    }> => {
+        return fetchWithAuth(`${API_BASE_URL}/api/rental-companies/${id}/calculation-preview`, token);
     }
 };
 
