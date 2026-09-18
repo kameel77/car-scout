@@ -21,6 +21,7 @@ export interface RentalRateBreakdown {
   monthlyRateGross: number;
   servicesIncluded: string[];
   insuranceAddMode: string;
+  insuranceMissing: boolean;
 }
 
 const resolveAssignmentConfig = (assignment: any): { insuranceAddMode: string; servicesIncluded: string[] } => {
@@ -40,6 +41,10 @@ export const calculateRentalRate = (
 ): RentalRateBreakdown => {
     const { insuranceAddMode, servicesIncluded: resolvedServicesIncluded } = resolveAssignmentConfig(assignment);
     const servicesIncluded = resolvedServicesIncluded.length > 0 ? resolvedServicesIncluded : (entry.servicesIncluded || []);
+
+    const isInsuranceModeExternal = insuranceAddMode === 'INSURANCE_23' || insuranceAddMode === 'INSURANCE_0';
+    const hasInsuranceValue = entry.insuranceNet !== null && entry.insuranceNet !== undefined && entry.insuranceNet > 0;
+    const insuranceMissing = isInsuranceModeExternal && !hasInsuranceValue;
 
     const baseNet = entry.monthlyRateNet;
     const baseGross = entry.monthlyRateGross;
@@ -82,7 +87,8 @@ export const calculateRentalRate = (
         monthlyRateNet,
         monthlyRateGross,
         servicesIncluded,
-        insuranceAddMode
+        insuranceAddMode,
+        insuranceMissing
     };
 };
 
@@ -92,6 +98,7 @@ export const calculateRatesWithInsurance = (entry: any, assignment: any) => {
         ...entry,
         monthlyRateNet: result.monthlyRateNet,
         monthlyRateGross: result.monthlyRateGross,
-        servicesIncluded: result.servicesIncluded
+        servicesIncluded: result.servicesIncluded,
+        insuranceMissing: result.insuranceMissing
     };
 };

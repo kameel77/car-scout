@@ -854,7 +854,13 @@ export default function RentalSearchPage() {
                   </div>
                   <div className="flex-1" />
                   <div className="pt-3">
-                    {v.minMonthlyRateGross ? (
+                    {v.insuranceMissing ? (
+                      <div className="py-1">
+                        <span className="inline-flex items-center text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-md">
+                          Wycena ubezpieczenia na zapytanie
+                        </span>
+                      </div>
+                    ) : v.minMonthlyRateGross ? (
                       <div>
                         <span className="text-xs text-muted-foreground block mb-1">Rata od</span>
                         <div className="flex items-baseline gap-1.5 flex-wrap">

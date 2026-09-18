@@ -276,6 +276,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 for (const a of v.rentalAssignments || []) {
                     for (const mRaw of a.matrixEntries || []) {
                         const m = calculateRatesWithInsurance(mRaw, a);
+                        if (m.insuranceMissing) continue;
                         if (!bestRateEntry) {
                             bestRateEntry = m;
                         } else {
@@ -370,8 +371,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     companySlug: a.rentalCompany.slug
                 })));
 
-            const minRate = allMinRates.length > 0
-                ? allMinRates.reduce((best: any, current: any) => {
+            const validRates = allMinRates.filter((r: any) => !r.insuranceMissing);
+            const candidateRates = validRates.length > 0 ? validRates : allMinRates;
+
+            const minRate = candidateRates.length > 0
+                ? candidateRates.reduce((best: any, current: any) => {
                     if (current.contractMonths < best.contractMonths) return current;
                     if (current.contractMonths > best.contractMonths) return best;
                     if (current.annualMileageKm < best.annualMileageKm) return current;
@@ -383,10 +387,13 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 })
                 : null;
 
+            const isInsuranceMissing = Boolean(minRate?.insuranceMissing);
+
             return {
                 ...v,
-                minMonthlyRateGross: minRate ? Math.ceil(minRate.monthlyRateGross) : null,
-                minMonthlyRateNet: minRate ? Math.ceil(minRate.monthlyRateNet) : null,
+                minMonthlyRateGross: minRate && !isInsuranceMissing ? Math.ceil(minRate.monthlyRateGross) : null,
+                minMonthlyRateNet: minRate && !isInsuranceMissing ? Math.ceil(minRate.monthlyRateNet) : null,
+                insuranceMissing: isInsuranceMissing,
                 minRateCompany: minRate?.companyName || null,
                 minRateConfig: minRate ? {
                     contractMonths: minRate.contractMonths,
@@ -635,12 +642,15 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     monthlyRateNet: Math.ceil(calculatedEntry.monthlyRateNet),
                     monthlyRateGross: Math.ceil(calculatedEntry.monthlyRateGross),
                     servicesIncluded: calculatedEntry.servicesIncluded,
+                    insuranceMissing: Boolean(calculatedEntry.insuranceMissing),
                     initialPaymentAmountNet: calculatedEntry.initialPaymentAmountNet,
                     initialPaymentAmountGross: calculatedEntry.initialPaymentAmountGross
                 };
             })
             .filter((o): o is NonNullable<typeof o> => o !== null)
-            .sort((a, b) => a.monthlyRateGross - b.monthlyRateGross);
+            .sort((a, b) => a.monthlyRateNet - b.monthlyRateNet);
+
+        const cheapest = offers.find(o => !o.insuranceMissing) || offers[0] || null;
 
         return {
             vehicleId: vehicle.id,
@@ -650,7 +660,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 initialPaymentPct: parseFloat(initialPaymentPct)
             },
             offers,
-            cheapest: offers.length > 0 ? offers[0] : null
+            cheapest
         };
     });
 
