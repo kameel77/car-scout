@@ -4,6 +4,8 @@ import { initCSFlowCron } from './services/csflow.service.js';
 import { initPewneAutoCron } from './services/pewneauto.service.js';
 import { bootstrapCsflowSources } from './services/csflow-bootstrap.js';
 import { initReferenceInstallmentsCron } from './services/financing-calc.service.js';
+import { invalidateOfferCache } from './services/cache-invalidation.service.js';
+import { isProductionHost } from './services/environment.js';
 
 dotenv.config();
 
@@ -56,6 +58,47 @@ const start = async () => {
         const port = parseInt(process.env.PORT || '3000');
         await app.listen({ port, host: process.env.HOST || '::' });
         console.log(`🚀 Server listening on port ${port}`);
+
+        // One-off Cloudflare CDN purge after a fresh deploy. Coolify's deploy webhook only triggers
+        // the deploy and doesn't wait for it, so purging from CI would race the new container's boot.
+        // The listening container itself is the reliable "new build is live" signal.
+        // Never blocks/fails startup - errors are logged and swallowed. Production host only,
+        // since staging may share the same Cloudflare zone as production (purge_everything would
+        // wipe prod's cache from a staging deploy).
+        try {
+            const frontendUrl = process.env.FRONTEND_URL;
+            let ownHost = '';
+            if (frontendUrl) {
+                try {
+                    ownHost = new URL(frontendUrl.startsWith('http') ? frontendUrl : `https://${frontendUrl}`).hostname;
+                } catch {
+                    ownHost = '';
+                }
+            }
+
+            if (ownHost && isProductionHost(ownHost)) {
+                const hasCloudflareCreds = !!(process.env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_TOKEN) && !!process.env.CLOUDFLARE_ZONE_ID;
+                if (hasCloudflareCreds) {
+                    invalidateOfferCache(undefined, { purgeEverything: true })
+                        .then((result) => {
+                            if (result.success) {
+                                app.log.info('[PurgeCDN] Cloudflare cache purged on startup');
+                            } else {
+                                app.log.warn('[PurgeCDN] Cloudflare cache purge on startup failed');
+                            }
+                        })
+                        .catch((err) => {
+                            app.log.warn({ err }, '[PurgeCDN] Error purging Cloudflare cache on startup');
+                        });
+                } else {
+                    app.log.info('[PurgeCDN] Skipping startup purge: missing Cloudflare credentials');
+                }
+            } else {
+                app.log.info('[PurgeCDN] Skipping startup purge: not a production host');
+            }
+        } catch (err) {
+            app.log.warn({ err }, '[PurgeCDN] Failed to evaluate startup purge');
+        }
 
         // Data Migration to fix importSource and accidental archives
         try {
