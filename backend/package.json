@@ -20,7 +20,9 @@
         "test:employee:integration": "node scripts/test-employee-integration.mjs",
         "test:watch": "vitest",
         "backfill:images": "tsx src/scripts/backfill-image-ladder.ts",
-        "backfill:images:prod": "node dist/scripts/backfill-image-ladder.js"
+        "backfill:images:prod": "node dist/scripts/backfill-image-ladder.js",
+        "purge:cdn": "tsx src/scripts/purge-cdn.ts",
+        "purge:cdn:prod": "node dist/scripts/purge-cdn.js"
     },
     "prisma": {
         "seed": "tsx prisma/seed.ts"
