@@ -18,7 +18,7 @@ import {
   Car, Building2, User, ChevronDown, ChevronUp, ArrowUpDown, Check, SlidersHorizontal, X, Info
 } from 'lucide-react';
 import { normalizeRentalImageUrl, cn } from '@/lib/utils';
-import { trackViewItemList } from '@/lib/analytics';
+import { trackViewItemList, trackRentalClientTypeChange, trackRentalBudgetFilter } from '@/lib/analytics';
 import { getTransmissionShortLabel, translateTechnicalValue } from '@/utils/i18n-utils';
 import { GearboxIcon } from '@/components/icons/GearboxIcon';
 import { formatNumber } from '@/utils/formatters';
@@ -367,6 +367,13 @@ export default function RentalSearchPage() {
 
   // Sync URL params when filters change
   const urlSyncTimeoutRef = useRef<NodeJS.Timeout>();
+  // Tracks the last price range we already reported to analytics, so the
+  // rental_budget_filter event fires once per settled change, not on mount
+  // and not once per keystroke/slider tick.
+  const trackedPriceRangeRef = useRef<{ from: string; to: string }>({ from: priceFrom, to: priceTo });
+  // Kept in sync with the latest result count so the debounced budget event
+  // (below) can read it without adding a dependency/data fetch of its own.
+  const totalCountRef = useRef(0);
   useEffect(() => {
     if (urlSyncTimeoutRef.current) clearTimeout(urlSyncTimeoutRef.current);
     urlSyncTimeoutRef.current = setTimeout(() => {
@@ -400,6 +407,16 @@ export default function RentalSearchPage() {
       if (params.toString() !== searchParams.toString()) {
         setSearchParams(params, { replace: true });
       }
+
+      if (priceFrom !== trackedPriceRangeRef.current.from || priceTo !== trackedPriceRangeRef.current.to) {
+        trackedPriceRangeRef.current = { from: priceFrom, to: priceTo };
+        trackRentalBudgetFilter({
+          priceFrom: priceFrom ? Number(priceFrom) : null,
+          priceTo: priceTo ? Number(priceTo) : null,
+          priceBasis: clientType === 'business' ? 'net' : 'gross',
+          resultsCount: totalCountRef.current,
+        });
+      }
     }, 100);
     return () => {
       if (urlSyncTimeoutRef.current) clearTimeout(urlSyncTimeoutRef.current);
@@ -413,6 +430,9 @@ export default function RentalSearchPage() {
   ]);
 
   const handleClientTypeChange = (type: ClientType) => {
+    if (type !== clientType) {
+      trackRentalClientTypeChange(type === 'business' ? 'business' : 'consumer', type === 'business' ? 'net' : 'gross');
+    }
     setClientType(type);
     try { localStorage.setItem('rentalClientType', type); } catch { /* ignore */ }
   };
@@ -469,6 +489,7 @@ export default function RentalSearchPage() {
   const isBusiness = clientType === 'business';
   const currentSortOption = rentalSortOptions.find(o => o.sortBy === sortBy && o.sortOrder === sortOrder);
   const totalCount = pagination?.total ?? vehicles.length;
+  useEffect(() => { totalCountRef.current = totalCount; }, [totalCount]);
   const byCondition = filters?.byCondition;
 
   const hasActiveFilters = makes.length > 0 || models.length > 0 || fuelTypes.length > 0 || bodyTypes.length > 0
