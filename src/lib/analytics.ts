@@ -137,6 +137,37 @@ export const trackSelectItem = (item: DynamicRemarketingItem, listName = 'Search
   }
 };
 
+export interface RentalBudgetFilterPayload {
+  priceFrom: number | null;
+  priceTo: number | null;
+  priceBasis: 'net' | 'gross';
+  resultsCount: number;
+}
+
+export const trackRentalClientTypeChange = (clientType: 'business' | 'consumer', priceBasis: 'net' | 'gross') => {
+  const dl = getWindowDataLayer();
+  if (dl) {
+    dl.push({
+      event: 'rental_client_type_change',
+      client_type: clientType,
+      price_basis: priceBasis,
+    });
+  }
+};
+
+export const trackRentalBudgetFilter = (payload: RentalBudgetFilterPayload) => {
+  const dl = getWindowDataLayer();
+  if (dl) {
+    dl.push({
+      event: 'rental_budget_filter',
+      price_from: payload.priceFrom,
+      price_to: payload.priceTo,
+      price_basis: payload.priceBasis,
+      results_count: payload.resultsCount,
+    });
+  }
+};
+
 export const trackLeadSubmit = (payload: LeadSubmitPayload) => {
   const dl = getWindowDataLayer();
   if (dl) {
