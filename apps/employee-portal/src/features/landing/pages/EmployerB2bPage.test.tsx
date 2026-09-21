@@ -89,6 +89,9 @@ describe('EmployerB2bPage Component Suite', () => {
     fireEvent.change(screen.getByLabelText(/Nazwa firmy \*/i), {
       target: { value: 'Tech Solutions Sp. z o.o.' },
     });
+    fireEvent.change(screen.getByLabelText(/NIP firmy/i), {
+      target: { value: '5252525252' },
+    });
     fireEvent.change(screen.getByLabelText(/Służbowy adres e-mail \*/i), {
       target: { value: 'anna.nowak@techsolutions.pl' },
     });
@@ -121,10 +124,16 @@ describe('EmployerB2bPage Component Suite', () => {
       const body = JSON.parse(options.body as string);
       expect(body.leadType).toBe('employer_b2b');
       expect(body.trafficSource).toBe('benefivo_b2b');
-      expect(body.name).toBe('Tech Solutions Sp. z o.o. - Anna Nowak');
+      expect(body.name).toBe('Anna Nowak');
       expect(body.email).toBe('anna.nowak@techsolutions.pl');
       expect(body.phone).toBe('+48 501 234 567');
       expect(body.message).toContain('Wielkość zespołu: 50 - 200 pracowników');
+      expect(body.metadata).toEqual({
+        companyName: 'Tech Solutions Sp. z o.o.',
+        companyNip: '5252525252',
+        teamSize: '50 - 200 pracowników',
+        benefitModel: 'Dostęp pracowniczy (bez kosztów firmy)'
+      });
 
       expect(
         screen.getByRole('heading', { name: /Dziękujemy za kontakt!/i })

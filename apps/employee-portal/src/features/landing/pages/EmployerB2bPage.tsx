@@ -78,13 +78,19 @@ export const EmployerB2bPage: React.FC = () => {
         body: JSON.stringify({
           leadType: 'employer_b2b',
           trafficSource: 'benefivo_b2b',
-          name: `${companyName.trim()} - ${contactName.trim()}`,
+          name: contactName.trim(),
           email: email.trim(),
           phone: phone.trim(),
           preferredContact: 'email',
           message: fullMessage,
           consentPrivacy: true,
-          turnstileToken: turnstileToken || undefined
+          turnstileToken: turnstileToken || undefined,
+          metadata: {
+            companyName: companyName.trim(),
+            companyNip: nip.trim(),
+            teamSize,
+            benefitModel: programModel
+          }
         })
       });
 
