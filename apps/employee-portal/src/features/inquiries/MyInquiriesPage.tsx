@@ -16,6 +16,84 @@ import { PortalHeader } from '../common/PortalHeader';
 import { PortalFooter } from '../common/PortalFooter';
 import { formatCountPl } from '../common/plural';
 
+const INQUIRY_STAGES = [
+  { id: 1, label: 'Nowe' },
+  { id: 2, label: 'Weryfikacja' },
+  { id: 3, label: 'Oferta' },
+  { id: 4, label: 'Umowa' }
+];
+
+function getStageIndex(status: string): number | null {
+  const s = status.toUpperCase();
+  if (['NEW', 'PENDING'].includes(s)) return 1;
+  if (['VERIFICATION', 'IN_REVIEW', 'IN_PROGRESS', 'PROCESSING'].includes(s)) return 2;
+  if (['OFFER', 'OFFER_SENT', 'OFFER_PREPARED'].includes(s)) return 3;
+  if (['CONTRACT', 'COMPLETED', 'SIGNED', 'DELIVERED'].includes(s)) return 4;
+  return null;
+}
+
+export const InquiryStatusTracker: React.FC<{ status: string }> = ({ status }) => {
+  const s = status.toUpperCase();
+  if (s === 'REJECTED' || s === 'CANCELLED') {
+    return (
+      <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl my-2">
+        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+        <span>
+          <span className="font-semibold">{s === 'CANCELLED' ? 'Anulowane' : 'Odrzucone'}</span>
+          {' - '}Skontaktuj się z doradcą, aby poznać szczegóły.
+        </span>
+      </div>
+    );
+  }
+
+  const currentStage = getStageIndex(status);
+  if (currentStage === null) {
+    return (
+      <div className="my-2">
+        <span className="text-xs px-2.5 py-1 rounded-full bg-paper text-ink font-semibold border border-line">
+          {status}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 sm:gap-2 my-2.5 w-full max-w-md">
+      {INQUIRY_STAGES.map((stage, idx) => {
+        const isCurrent = stage.id === currentStage;
+        const isDone = stage.id < currentStage;
+        return (
+          <React.Fragment key={stage.id}>
+            <div
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-colors ${
+                isCurrent
+                  ? 'bg-lime text-ink font-bold shadow-xs'
+                  : isDone
+                  ? 'bg-ink text-paper font-semibold'
+                  : 'bg-paper text-muted border border-line'
+              }`}
+            >
+              {isDone ? (
+                <span className="text-[10px]">✓</span>
+              ) : (
+                <span className="text-[10px]">{stage.id}</span>
+              )}
+              <span>{stage.label}</span>
+            </div>
+            {idx < INQUIRY_STAGES.length - 1 && (
+              <div
+                className={`h-0.5 flex-1 min-w-[6px] sm:min-w-[12px] ${
+                  isDone ? 'bg-ink' : 'bg-line'
+                }`}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+};
+
 export const MyInquiriesPage: React.FC = () => {
   const { config, isLoading: isBrandLoading } = useBrandConfig();
   const { user, logout, sessionError, isLoading: isAuthLoading } = useAuth();
@@ -196,17 +274,25 @@ export const MyInquiriesPage: React.FC = () => {
             <div className="w-14 h-14 bg-lime text-ink rounded-full flex items-center justify-center mx-auto mb-4">
               <FileQuestion className="h-7 w-7" />
             </div>
-            <h3 className="text-lg font-bold font-heading text-ink">Brak złożonych zapytań</h3>
+            <h3 className="text-lg font-bold font-heading text-ink">Nie masz jeszcze zapytań</h3>
             <p className="text-sm text-muted mt-2 mb-6">
               Nie przesłałeś jeszcze żadnego zapytania o auto. Przejdź do katalogu i wybierz ofertę z dedykowanym rabatem.
             </p>
-            <Link
-              to="/katalog"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-ink hover:bg-ink/90 text-paper text-sm font-semibold rounded-full transition-colors shadow-xs"
-            >
-              Przejdź do katalogu
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                to="/katalog"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-ink hover:bg-ink/90 text-paper text-sm font-semibold rounded-full transition-colors shadow-xs"
+              >
+                Przeglądaj katalog
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                to="/najem"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-line hover:bg-paper text-ink text-sm font-medium rounded-full transition-colors"
+              >
+                Oferty najmu
+              </Link>
+            </div>
           </div>
         ) : (
           /* 4. Inquiries List */
@@ -231,7 +317,7 @@ export const MyInquiriesPage: React.FC = () => {
                   </div>
 
                   {/* Vehicle Specs & Snapshot Info */}
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-xs font-bold text-ink bg-lime px-2.5 py-0.5 rounded-full">
                         {inq.referenceNumber || inq.id}
@@ -241,9 +327,6 @@ export const MyInquiriesPage: React.FC = () => {
                           Najem długoterminowy
                         </span>
                       )}
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
-                        {inq.status === 'NEW' ? 'Nowe' : inq.status}
-                      </span>
                       <span className="text-xs text-muted flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {new Date(inq.createdAt).toLocaleDateString('pl-PL', {
@@ -265,7 +348,26 @@ export const MyInquiriesPage: React.FC = () => {
                       )}
                     </h3>
 
-                    <div className="text-xs text-muted mt-1 space-y-0.5">
+                    {/* Status Horizontal Stage Tracker */}
+                    <InquiryStatusTracker status={inq.status} />
+
+                    {/* Advisor Contact / 24h SLA */}
+                    <div className="text-xs text-muted space-y-0.5 mt-1.5">
+                      <p>Doradca skontaktuje się w ciągu 24 godzin roboczych.</p>
+                      {inq.accountManagerEmail && (
+                        <p className="font-medium text-ink">
+                          Dedykowany opiekun programu:{' '}
+                          <a
+                            href={`mailto:${inq.accountManagerEmail}`}
+                            className="underline text-ink hover:text-ink/80"
+                          >
+                            {inq.accountManagerEmail}
+                          </a>
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-muted mt-2 space-y-0.5">
                       <div>
                         <span className="font-medium text-ink">Strona umowy:</span>{' '}
                         {formatPartyLabel(inq.contractParty)}
@@ -328,3 +430,5 @@ export const MyInquiriesPage: React.FC = () => {
     </div>
   );
 };
+
+export default MyInquiriesPage;

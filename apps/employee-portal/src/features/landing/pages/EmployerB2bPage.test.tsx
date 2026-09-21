@@ -90,7 +90,7 @@ describe('EmployerB2bPage Component Suite', () => {
       target: { value: 'Tech Solutions Sp. z o.o.' },
     });
     fireEvent.change(screen.getByLabelText(/NIP firmy/i), {
-      target: { value: '5252525252' },
+      target: { value: '5252344078' },
     });
     fireEvent.change(screen.getByLabelText(/Służbowy adres e-mail \*/i), {
       target: { value: 'anna.nowak@techsolutions.pl' },
@@ -130,7 +130,7 @@ describe('EmployerB2bPage Component Suite', () => {
       expect(body.message).toContain('Wielkość zespołu: 50 - 200 pracowników');
       expect(body.metadata).toEqual({
         companyName: 'Tech Solutions Sp. z o.o.',
-        companyNip: '5252525252',
+        companyNip: '5252344078',
         teamSize: '50 - 200 pracowników',
         benefitModel: 'Dostęp pracowniczy (bez kosztów firmy)'
       });
@@ -139,7 +139,33 @@ describe('EmployerB2bPage Component Suite', () => {
         screen.getByRole('heading', { name: /Dziękujemy za kontakt!/i })
       ).toBeInTheDocument();
       expect(screen.getByText(/B2B-1001/i)).toBeInTheDocument();
+      expect(screen.getByText(/Co wydarzy się dalej\?/i)).toBeInTheDocument();
     });
+  });
+
+  it('validates invalid NIP on blur and blocks form submission', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    renderB2bPage();
+
+    const nipInput = screen.getByLabelText(/NIP firmy/i);
+    fireEvent.change(nipInput, { target: { value: '1234567890' } });
+    fireEvent.blur(nipInput);
+
+    expect(screen.getByText(/Nieprawidłowy NIP/i)).toBeInTheDocument();
+
+    const submitButton = screen.getByRole('button', { name: /Wyślij zapytanie o program/i });
+    fireEvent.click(submitButton);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('renders direct contact bar with b2b contact details', async () => {
+    renderB2bPage();
+
+    expect(screen.getByText(/Kontakt bezpośredni B2B/i)).toBeInTheDocument();
+    expect(screen.getByText(/b2b@benefivo.pl/i)).toBeInTheDocument();
   });
 
   it('displays server error message when API fails', async () => {

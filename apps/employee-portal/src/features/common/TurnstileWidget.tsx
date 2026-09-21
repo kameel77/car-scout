@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -37,6 +37,8 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const [isRendered, setIsRendered] = useState(false);
+  const [isUnavailable, setIsUnavailable] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -59,8 +61,16 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
           },
         });
         widgetIdRef.current = id;
+        if (!isCancelled) {
+          setIsRendered(true);
+          setIsUnavailable(false);
+        }
       } catch (err) {
         console.warn('Failed to render Turnstile widget', err);
+        if (!isCancelled) {
+          setIsUnavailable(true);
+          if (onError) onError();
+        }
       }
     };
 
@@ -78,6 +88,14 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
         document.head.appendChild(script);
       }
 
+      const handleScriptError = () => {
+        if (!isCancelled) {
+          setIsUnavailable(true);
+          if (onError) onError();
+        }
+      };
+      script.addEventListener('error', handleScriptError);
+
       const interval = setInterval(() => {
         if (window.turnstile) {
           clearInterval(interval);
@@ -87,12 +105,17 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
       const timeout = setTimeout(() => {
         clearInterval(interval);
-      }, 5000);
+        if (!widgetIdRef.current && !isCancelled) {
+          setIsUnavailable(true);
+          if (onError) onError();
+        }
+      }, 4000);
 
       return () => {
         isCancelled = true;
         clearInterval(interval);
         clearTimeout(timeout);
+        script?.removeEventListener('error', handleScriptError);
         if (widgetIdRef.current && window.turnstile) {
           try {
             window.turnstile.remove(widgetIdRef.current);
@@ -117,5 +140,21 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     };
   }, [siteKey, theme, onVerify, onExpire, onError]);
 
-  return <div ref={containerRef} className="my-3 min-h-[65px] flex items-center justify-center" />;
+  if (isUnavailable) {
+    return (
+      <div
+        role="alert"
+        className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3 text-center my-2"
+      >
+        Weryfikacja antyspamowa niedostępna - spróbuj odświeżyć stronę.
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={isRendered ? 'my-3 min-h-[65px] flex items-center justify-center' : 'h-0 overflow-hidden'}
+    />
+  );
 };

@@ -5,6 +5,8 @@ export interface PortalBrandConfig {
   apiUrl: string;
   turnstileSiteKey?: string;
   analyticsEnabled?: boolean;
+  b2bPhone?: string;
+  b2bEmail?: string;
 }
 
 export const defaultBrandConfig: PortalBrandConfig = {
@@ -14,6 +16,8 @@ export const defaultBrandConfig: PortalBrandConfig = {
   apiUrl: '/api',
   turnstileSiteKey: '1x00000000000000000000AA',
   analyticsEnabled: false,
+  b2bPhone: '__B2B_PHONE__',
+  b2bEmail: 'b2b@benefivo.pl',
 };
 
 declare global {
@@ -75,6 +79,16 @@ export function validateBrandConfig(raw: unknown): PortalBrandConfig {
     ? obj.analyticsEnabled
     : defaultBrandConfig.analyticsEnabled;
 
+  const b2bPhone =
+    typeof obj.b2bPhone === 'string' && obj.b2bPhone.trim().length > 0
+      ? obj.b2bPhone.trim().slice(0, 30)
+      : defaultBrandConfig.b2bPhone;
+
+  const b2bEmail =
+    typeof obj.b2bEmail === 'string' && obj.b2bEmail.trim().length > 0
+      ? obj.b2bEmail.trim().slice(0, 100)
+      : defaultBrandConfig.b2bEmail;
+
   return {
     brandName,
     brandLogoUrl,
@@ -82,6 +96,8 @@ export function validateBrandConfig(raw: unknown): PortalBrandConfig {
     apiUrl,
     turnstileSiteKey,
     analyticsEnabled,
+    b2bPhone,
+    b2bEmail,
   };
 }
 

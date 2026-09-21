@@ -17,6 +17,9 @@ API_URL="${PORTAL_API_URL:-/api}"
 TURNSTILE_KEY="${TURNSTILE_SITE_KEY:-1x00000000000000000000AA}"
 ANALYTICS="${ANALYTICS_ENABLED:-false}"
 
+B2B_PHONE="${PORTAL_B2B_PHONE:-+48 22 123 45 67}"
+B2B_EMAIL="${PORTAL_B2B_EMAIL:-b2b@benefivo.pl}"
+
 # Normalize ORIGIN without trailing slash
 ORIGIN="${PORTAL_URL%/}"
 
@@ -24,8 +27,9 @@ ORIGIN="${PORTAL_URL%/}"
 jq -n --arg brandName "$BRAND_NAME" --arg brandLogoUrl "$BRAND_LOGO_URL" \
   --arg portalUrl "$ORIGIN" --arg apiUrl "$API_URL" \
   --arg turnstileSiteKey "$TURNSTILE_KEY" \
+  --arg b2bPhone "$B2B_PHONE" --arg b2bEmail "$B2B_EMAIL" \
   --argjson analyticsEnabled "$([ "$ANALYTICS" = "true" ] && echo true || echo false)" \
-  '{brandName: $brandName, brandLogoUrl: $brandLogoUrl, portalUrl: $portalUrl, apiUrl: $apiUrl, turnstileSiteKey: $turnstileSiteKey, analyticsEnabled: $analyticsEnabled}' \
+  '{brandName: $brandName, brandLogoUrl: $brandLogoUrl, portalUrl: $portalUrl, apiUrl: $apiUrl, turnstileSiteKey: $turnstileSiteKey, analyticsEnabled: $analyticsEnabled, b2bPhone: $b2bPhone, b2bEmail: $b2bEmail}' \
   > /usr/share/nginx/html/runtime-config.json
 
 # Substitute __PORTAL_ORIGIN__ placeholder across all static HTML and sitemap.xml files
