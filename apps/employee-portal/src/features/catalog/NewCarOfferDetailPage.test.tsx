@@ -202,6 +202,43 @@ describe('NewCarOfferDetailPage', () => {
       expect(screen.getByText('Nie znaleziono oferty')).toBeInTheDocument();
     });
   });
+
+  it('renders price block with list price, employee price and monetary savings pill, omitting percentage discount tag', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getByText('Cena w programie')).toBeInTheDocument();
+    expect(screen.getByText(/126\s?000 zł/)).toBeInTheDocument();
+    expect(screen.getByText(/Cena katalogowa:\s*140\s?000 zł brutto/)).toBeInTheDocument();
+    expect(screen.getByText(/Oszczędzasz 14\s?000 zł/)).toBeInTheDocument();
+    expect(screen.queryByText(/Rabat -/)).not.toBeInTheDocument();
+  });
+
+  it('hides list price and savings pill completely when savingsPln <= 0', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue({
+      ...mockOffer,
+      pricing: {
+        ...mockOffer.pricing,
+        listPricePln: 110000,
+        employeePricePln: 110000,
+        savingsPln: 0,
+        discountPct: 0,
+      },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getByText('Cena w programie')).toBeInTheDocument();
+    expect(screen.queryByText(/Cena katalogowa:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Oszczędzasz/)).not.toBeInTheDocument();
+  });
 });
 
 describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overrides.md)', () => {

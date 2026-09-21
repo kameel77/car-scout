@@ -9,7 +9,6 @@ import {
   Sparkles,
   Layers,
   Calculator,
-  Tag,
   Info
 } from 'lucide-react';
 import {
@@ -310,17 +309,13 @@ ${rateLine}${productLabelLine}`;
         {/* Offer Detail Content */}
         {!isLoading && offer && (
           <div className="space-y-8">
-            {/* Header / Titles */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-xs">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    {offer.pricing.discountPct > 0 && (
-                      <span className="bg-forest text-paper font-bold text-xs px-3 py-1 rounded-full shadow-xs flex items-center gap-1">
-                        <Tag className="h-3.5 w-3.5" />
-                        Rabat -{String(offer.pricing.discountPct).replace('.', ',')}%
-                      </span>
-                    )}
+            {/* Grid: Photos + Calculator & Benefits */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* 1. Price / Titles Block Card (Mobile: 1st in DOM; Desktop: Col 8-12, Row 1) */}
+              <div className="lg:col-span-5 lg:col-start-8 lg:row-start-1">
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+                  {/* Linia 1: Plakietki (bez Rabatu -X%) */}
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="bg-lime text-ink font-semibold text-xs px-3 py-1 rounded-full">
                       Oferta pracownicza
                     </span>
@@ -330,42 +325,50 @@ ${rateLine}${productLabelLine}`;
                       </span>
                     )}
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-heading">
-                    {offer.vehicle.make} {offer.vehicle.model}
-                  </h1>
-                  {offer.vehicle.version && (
-                    <p className="text-sm sm:text-base text-muted mt-1">
-                      {offer.vehicle.version}
-                    </p>
-                  )}
-                </div>
 
-                {/* Top Pricing Summary Pill */}
-                <div className="bg-paper border border-line rounded-2xl p-4 lg:text-right min-w-[240px]">
-                  {offer.pricing.savingsPln > 0 && (
-                    <div className="text-xs text-muted line-through">
-                      Katalogowa: {offer.pricing.listPricePln.toLocaleString('pl-PL')} zł brutto
-                    </div>
-                  )}
-                  <div className="flex lg:justify-end items-baseline gap-2 mt-0.5">
-                    <span className="text-2xl sm:text-3xl font-black text-ink tracking-tight font-heading">
-                      {offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł
-                    </span>
-                    <span className="text-xs text-muted font-medium">brutto</span>
+                  {/* Linia 2: make + model jako h1, pod spodem version */}
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-heading">
+                      {offer.vehicle.make} {offer.vehicle.model}
+                    </h1>
+                    {offer.vehicle.version && (
+                      <p className="text-sm text-muted mt-1">
+                        {offer.vehicle.version}
+                      </p>
+                    )}
                   </div>
-                  {offer.pricing.savingsPln > 0 && (
-                    <div className="text-xs font-semibold text-forest mt-0.5">
-                      Oszczędzasz {offer.pricing.savingsPln.toLocaleString('pl-PL')} zł
+
+                  {/* Linie 3-5: Ceny i oszczędności (ukryte w całości gdy savingsPln <= 0) */}
+                  <div className="pt-4 border-t border-line space-y-2">
+                    {offer.pricing.savingsPln > 0 && (
+                      <div className="text-xs text-muted line-through">
+                        Cena katalogowa: {offer.pricing.listPricePln.toLocaleString('pl-PL')} zł brutto
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-2xs font-semibold uppercase tracking-wider text-muted block mb-0.5">
+                        Cena w programie
+                      </span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-black text-ink tracking-tight font-heading">
+                          {offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł
+                        </span>
+                        <span className="text-xs font-semibold text-muted">brutto</span>
+                      </div>
                     </div>
-                  )}
+                    {offer.pricing.savingsPln > 0 && (
+                      <div className="pt-1">
+                        <span className="inline-flex items-center gap-1.5 bg-lime text-ink font-semibold text-xs px-3 py-1.5 rounded-full">
+                          Oszczędzasz {offer.pricing.savingsPln.toLocaleString('pl-PL')} zł
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Grid: Photos + Calculator & Benefits */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left Column: Gallery + Specs + Equipment */}
-              <div className="lg:col-span-7 space-y-6">
+              {/* 2. Left Column: Gallery + Specs + Equipment (Mobile: 2nd in DOM; Desktop: Col 1-7, Rows 1-2) */}
+              <div className="lg:col-span-7 lg:col-start-1 lg:row-start-1 lg:row-span-2 space-y-6">
                 {/* Image Gallery */}
                 <div className="bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
                   <ImageGallery
@@ -533,8 +536,8 @@ ${rateLine}${productLabelLine}`;
                 )}
               </div>
 
-              {/* Right Column: Financing Calculator & Inquiry Card */}
-              <div className="lg:col-span-5 space-y-6">
+              {/* 3. Right Column: Benefits & Calculator (Mobile: 3rd in DOM; Desktop: Col 8-12, Row 2) */}
+              <div className="lg:col-span-5 lg:col-start-8 lg:row-start-2 space-y-6">
                 {/* Employee Benefit Package Box */}
                 {offer.benefit && (
                   <div className="p-5 bg-paper border border-line rounded-2xl shadow-xs">
