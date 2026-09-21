@@ -113,7 +113,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       expect(screen.getByText('Finarena Sp. z o.o.')).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('link', { name: /Katalog ofert/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Samochody/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Najem długoterminowy/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Moje zapytania/i })).toBeInTheDocument();
   });

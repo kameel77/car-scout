@@ -131,9 +131,9 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
       expect(screen.getAllByText('1.8 Hybrid Comfort').length).toBeGreaterThanOrEqual(1);
     });
 
-    // Verify default discrete option selected: 36M / 20k km / 0% -> 1450 zł netto
-    expect(screen.getByText(/1\s?450 zł/)).toBeInTheDocument();
-    expect(screen.getByText(/1\s?783,5 zł/)).toBeInTheDocument();
+    // Verify default discrete option selected: 36M / 20k km / 0% -> 1450 zł netto / 1783,5 zł brutto
+    expect(screen.getAllByText(/1\s?450 zł/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/1\s?783,5 zł/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Stawka partnerska')).toBeInTheDocument();
   });
 
@@ -151,12 +151,33 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     const downPayment10Btn = screen.getByRole('button', { name: '10%' });
     fireEvent.click(downPayment10Btn);
 
-    // Rate for 36M / 20k / 10% should be 1150 zł netto
+    // Rate for 36M / 20k / 10% should be 1150 zł netto / 1414,5 zł brutto
     await waitFor(() => {
-      expect(screen.getByText(/1\s?150 zł/)).toBeInTheDocument();
-      expect(screen.getByText(/1\s?414,5 zł/)).toBeInTheDocument();
+      expect(screen.getAllByText(/1\s?150 zł/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/1\s?414,5 zł/).length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/11\s?000 zł/)).toBeInTheDocument(); // 10% down payment amount
     });
+  });
+
+  it('toggles between B2B and Consumer modes and displays appropriate rate priorities', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue(mockRentalOfferDetails);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    // By default for non-B2B offer, clientType is CONSUMER
+    expect(screen.getByText('Rata najmu brutto')).toBeInTheDocument();
+
+    // Toggle to Firma (B2B)
+    const b2bBtn = screen.getByRole('button', { name: /Firma \(B2B\)/i });
+    fireEvent.click(b2bBtn);
+
+    expect(screen.getByText('Rata najmu netto')).toBeInTheDocument();
+    expect(screen.getByText('Rata abonamentowa netto')).toBeInTheDocument();
   });
 
   it('opens InquiryModal with rental selection when user clicks "Zapytaj o tę ofertę"', async () => {

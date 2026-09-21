@@ -3,7 +3,6 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import {
-  Car,
   ArrowLeft,
   ShieldCheck,
   CheckCircle,
@@ -20,6 +19,7 @@ import {
 } from './catalog-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
+import { ImageGallery } from '../common/ImageGallery';
 
 function formatFuelType(fuelType: string | null | undefined): string {
   if (!fuelType) return 'Brak danych';
@@ -91,7 +91,6 @@ export const NewCarOfferDetailPage: React.FC = () => {
   const [offer, setOffer] = useState<EmployeeOffer | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeImageIdx, setActiveImageIdx] = useState<number>(0);
 
   // Financing Calculator State
   const [contractType, setContractType] = useState<'LEASING_B2B' | 'CONSUMER'>('LEASING_B2B');
@@ -259,10 +258,10 @@ export const NewCarOfferDetailPage: React.FC = () => {
             className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-primary-600 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Wróć do katalogu samochodów nowych
+            Wróć do listy samochodów
           </Link>
           <div className="text-xs text-gray-400 font-medium">
-            Katalog pojazdów nowych
+            Samochody
           </div>
         </div>
 
@@ -359,48 +358,13 @@ export const NewCarOfferDetailPage: React.FC = () => {
               <div className="lg:col-span-7 space-y-6">
                 {/* Image Gallery */}
                 <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-                  {offer.vehicle.imageUrls && offer.vehicle.imageUrls.length > 0 ? (
-                    <div>
-                      <div className="relative aspect-[16/10] bg-gray-100 rounded-xl overflow-hidden mb-3">
-                        <img
-                          src={offer.vehicle.imageUrls[activeImageIdx] || offer.vehicle.primaryImageUrl || ''}
-                          alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                          className="w-full h-full object-cover transition-all"
-                        />
-                      </div>
-                      {offer.vehicle.imageUrls.length > 1 && (
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                          {offer.vehicle.imageUrls.map((img, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setActiveImageIdx(idx)}
-                              className={`relative flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all ${
-                                activeImageIdx === idx
-                                  ? 'border-primary-600 ring-2 ring-primary-100'
-                                  : 'border-transparent opacity-70 hover:opacity-100'
-                              }`}
-                            >
-                              <img src={img} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : offer.vehicle.primaryImageUrl ? (
-                    <div className="relative aspect-[16/10] bg-gray-100 rounded-xl overflow-hidden">
-                      <img
-                        src={offer.vehicle.primaryImageUrl}
-                        alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="aspect-[16/10] bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-400 gap-2">
-                      <Car className="h-16 w-16 text-gray-300" />
-                      <span className="text-sm">Brak zdjęć dla tego pojazdu</span>
-                    </div>
-                  )}
+                  <ImageGallery
+                    images={Array.from(
+                      new Set([offer.vehicle.primaryImageUrl, ...(offer.vehicle.imageUrls || [])].filter(Boolean))
+                    ) as string[]}
+                    title={`${offer.vehicle.make} ${offer.vehicle.model}`}
+                    aspectClassName="aspect-[16/10]"
+                  />
                 </div>
 
                 {/* Technical Specifications Grid */}

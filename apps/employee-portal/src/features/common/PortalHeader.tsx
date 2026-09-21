@@ -66,7 +66,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({ onLogout, isLoggingO
                   : 'font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              Katalog ofert
+              Samochody
             </Link>
             <Link
               to="/najem"

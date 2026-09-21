@@ -87,7 +87,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = () => {
                 handleLoginClick();
               }}
             >
-              Katalog ofert ({user.firstName})
+              Samochody ({user.firstName})
             </Link>
             <button
               type="button"

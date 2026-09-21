@@ -1163,3 +1163,28 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
 - **Kontekst Firmy w Karcie Klienta Thulium (`thulium-crm-lookup.service.ts`)**:
   - Podczas wyszukiwania kontaktu po numerze telefonu (np. połączenie przychodzące do call center), serwis sprawdza obecność najświeższego leada B2B i automatycznie dołącza do `custom_fields` atrybuty: `Marka: Benefivo`, `Typ klienta: Pracodawca B2B (program pracowniczy)`, `Firma`, `NIP` oraz `Wielkosc zespolu`.
   - Puste klucze są całkowicie pomijane, a lookup klientów retailowych zachowuje 100% tożsamość z dotychczasowym zachowaniem (pełna ochrona regresyjna).
+
+## 84. Uspójnienie Stylów, Kalkulatorów, Obsługi B2B/Konsument i Galerii Zdjęć w Portalu Pracowniczym (Benefivo)
+- **Nomenklatura i Nawigacja**:
+  - Zmieniono etykietę głównego katalogu z „Katalog ofert” na „Samochody” w nagłówku portalu pracowniczego (`PortalHeader.tsx`) oraz na stronie głównej (`LandingHeader.tsx`).
+  - Uspójniono breadcrumbs na podstronach szczegółów: „← Wróć do listy samochodów” oraz „← Wróć do listy najmu”.
+- **Karuzela Przewijania Zdjęć na Listingach (ImageSwiper)**:
+  - Wdrożono komponent `ImageSwiper.tsx` wykorzystujący natywny hook gestów dotykowych `useSwipe.ts` (`touch-pan-y`, `onTouchStart`, `onTouchMove`, `onTouchEnd`).
+  - Zastosowano bezpieczną obsługę kliknięć z `onClickCapture`, `preventDefault()` i `stopPropagation()`, zapobiegającą przypadkowemu przejściu do karty pojazdu podczas przewijania zdjęć.
+  - Zintegrowano `ImageSwiper` na obu listingach: w katalogu samochodów nowych (`CatalogPage.tsx`) oraz w katalogu najmu długoterminowego (`RentalCatalogPage.tsx`), w tym deduplikację zdjęć z `primaryImageUrl` i zachowanie badge'ów rabatowych/statusu.
+  - Na listingu najmu kontener zdjęcia pojazdu został owinięty w bezpośredni, klikalny link prowadzący do widoku szczegółów oferty (`/najem/:id`).
+- **Galeria Zdjęć z Pełnoekranowym Lightboxem (ImageGallery)**:
+  - Zaimplementowano komponent `ImageGallery.tsx` na wzór standardu marki Motolia dla widoków szczegółów oferty (`NewCarOfferDetailPage.tsx` oraz `RentalOfferDetailPage.tsx`).
+  - Funkcjonalności: główne zdjęcie w proporcjach `aspect-[16/10]`, wskaźnik lupy (`ZoomIn`), strzałki nawigacyjne Chevron, licznik zdjęć `X / Y`, poziomy pasek miniatur z automatyczną detekcją przewijania i odpornością na środowiska bez natywnego `ResizeObserver` (JSDOM).
+  - Pełnoekranowy modal Lightbox: czarne tło `bg-black/95` z `backdrop-blur`, nawigacja klawiaturą (`ArrowLeft`, `ArrowRight`, `Escape`), blokada przewijania tła (`document.body.style.overflow = 'hidden'`) oraz wsparcie gestów swipe na urządzeniach mobilnych.
+- **Odświeżenie i Uspójnienie Kalkulatora Najmu Długoterminowego (`RentalOfferDetailPage.tsx`)**:
+  - Całkowita rezygnacja z palety fioletowo-indygo na rzecz tożsamości Benefivo (leśna zieleń `#0f2d1e`, `primary-600`, `primary-700`, `emerald-600`).
+  - Górna karta nagłówkowa: nazwa pojazdu, wersja, rocznik, badge stawki partnerskiej / katalogowej oraz elegancka pigułka ceny miesięcznej ze statusem „Abonament all-inclusive”.
+  - Obsługa klienta B2B oraz Osoby Prywatnej (Konsument):
+    - Wprowadzono przełącznik `[Firma (B2B)]` oraz `[Osoba prywatna]`.
+    - W przypadku ofert oznaczonych flagą `offer.isB2b === true`, opcja „Osoba prywatna” jest zablokowana (`disabled`) z czytelnym komunikatem informacyjnym.
+    - Dla klienta B2B priorytetową stawką jest kwota netto (rata brutto jako pomocnicza); dla konsumenta priorytetem jest rata brutto.
+  - Uproszczenie i optymalizacja przestrzeni kafli kalkulatora:
+    - Zastąpiono wielkie 2-kolumnowe kafle z napisem `... km / rok` zwięzłym nagłówkiem „Limity przebiegu (km/rok)” oraz kompaktowymi pigułkami: `10 tys.`, `15 tys.`, `20 tys.`, `25 tys.`, `30 tys.`, `40 tys.`.
+    - Pigułki okresu umowy w stylu `24 msc`, `36 msc`, `48 msc` oraz zwięzłe warianty wpłaty wstępnej.
+  - Przycisk CTA `Zapytaj o tę ofertę i ratę` otwiera zaktualizowany `InquiryModal` z przekazaniem wybranego typu klienta (`initialContractParty`), kontekstowymi etykietami formularza oraz wyliczeniami dopasowanymi do profilu B2B lub konsumenckiego.

@@ -21,6 +21,7 @@ export interface RentalDisplayInfo {
   downPaymentPct: number;
   monthlyRateNet: number;
   monthlyRateGross: number;
+  isConsumer?: boolean;
   rentalCompanyName?: string;
 }
 
@@ -43,6 +44,7 @@ interface InquiryModalProps {
   offer: InquiryOfferItem | EmployeeOffer | null;
   rentalSelection?: RentalSelection | null;
   rentalDisplay?: RentalDisplayInfo | null;
+  initialContractParty?: ContractPartyOption;
   initialNotes?: string;
   onViewMyInquiries?: () => void;
 }
@@ -53,6 +55,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   offer,
   rentalSelection,
   rentalDisplay,
+  initialContractParty,
   initialNotes,
   onViewMyInquiries
 }) => {
@@ -60,7 +63,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   const { user } = useAuth();
 
   const [idempotencyKey, setIdempotencyKey] = useState<string>('');
-  const [contractParty, setContractParty] = useState<ContractPartyOption>('CONSUMER');
+  const [contractParty, setContractParty] = useState<ContractPartyOption>(initialContractParty || 'CONSUMER');
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -76,7 +79,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   useEffect(() => {
     if (isOpen && offer) {
       setIdempotencyKey(crypto.randomUUID());
-      setContractParty('CONSUMER');
+      setContractParty(initialContractParty || 'CONSUMER');
       setContactName(user ? `${user.firstName} ${user.lastName}`.trim() : '');
       setContactEmail(user ? user.email : '');
       setContactPhone(user?.phone || '');
@@ -87,7 +90,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
       setErrorMessage(null);
       setCreatedReferenceNumber(null);
     }
-  }, [isOpen, offer, user, initialNotes]);
+  }, [isOpen, offer, user, initialContractParty, initialNotes]);
 
   if (!isOpen || !offer) return null;
 
@@ -242,15 +245,22 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
 
               {/* Parametry najmu (jeśli dotyczy) */}
               {rentalDisplay && (
-                <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs space-y-1.5 text-indigo-950">
-                  <div className="font-semibold text-indigo-900 border-b border-indigo-100/80 pb-1.5">
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-100 rounded-xl text-xs space-y-1.5 text-emerald-950">
+                  <div className="font-semibold text-emerald-900 border-b border-emerald-100/80 pb-1.5">
                     <span>Wybrane parametry najmu:</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-indigo-800 pt-1">
+                  <div className="grid grid-cols-2 gap-2 text-emerald-800 pt-1">
                     <div>Okres umowy: <strong>{rentalDisplay.contractMonths} mies.</strong></div>
                     <div>Limit roczny: <strong>{rentalDisplay.annualMileage.toLocaleString('pl-PL')} km</strong></div>
                     <div>Wpłata wstępna: <strong>{rentalDisplay.downPaymentPct}%</strong></div>
-                    <div>Rata miesięczna: <strong>{rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto</strong></div>
+                    <div>
+                      Rata miesięczna:{' '}
+                      <strong>
+                        {rentalDisplay.isConsumer
+                          ? `${rentalDisplay.monthlyRateGross.toLocaleString('pl-PL')} zł brutto`
+                          : `${rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto`}
+                      </strong>
+                    </div>
                   </div>
                 </div>
               )}
@@ -272,7 +282,9 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                     />
                     <div className="ml-3 text-xs">
                       <div className="font-semibold text-gray-900">Osoba prywatna (Konsument)</div>
-                      <div className="text-gray-500 mt-0.5">Pożyczka konsumencka lub zakup prywatny</div>
+                      <div className="text-gray-500 mt-0.5">
+                        {rentalDisplay ? 'Najem konsumencki na osobę fizyczną' : 'Pożyczka konsumencka lub zakup prywatny'}
+                      </div>
                     </div>
                   </label>
 
@@ -287,7 +299,9 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                     />
                     <div className="ml-3 text-xs">
                       <div className="font-semibold text-gray-900">Działalność gospodarcza (B2B pracownika)</div>
-                      <div className="text-gray-500 mt-0.5">Leasing operacyjny na jednoosobową działalność</div>
+                      <div className="text-gray-500 mt-0.5">
+                        {rentalDisplay ? 'Najem długoterminowy dla firm (faktura VAT)' : 'Leasing operacyjny na jednoosobową działalność'}
+                      </div>
                     </div>
                   </label>
 

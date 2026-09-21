@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
 import { PortalHeader } from '../common/PortalHeader';
+import { ImageSwiper } from '../common/ImageSwiper';
 
 function normalizeFuelType(val: string | null): { key: string; label: string } | null {
   if (!val) return null;
@@ -328,7 +329,7 @@ export const RentalCatalogPage: React.FC = () => {
         <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5">
-              <Layers className="h-6 w-6 text-indigo-600" />
+              <Layers className="h-6 w-6 text-primary-600" />
               Najem długoterminowy
             </h1>
             <p className="text-sm text-gray-500 mt-1">
@@ -343,7 +344,7 @@ export const RentalCatalogPage: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Szukaj po marce lub modelu..."
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-xs"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white shadow-xs"
             />
           </div>
         </div>
@@ -353,7 +354,7 @@ export const RentalCatalogPage: React.FC = () => {
           <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-xs space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
+                <SlidersHorizontal className="h-4 w-4 text-primary-600" />
                 <span>Filtry</span>
                 <span className="text-xs font-normal text-gray-400">
                   (Dostępne oferty: <strong>{filteredOffers.length}</strong>)
@@ -363,7 +364,7 @@ export const RentalCatalogPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-800 transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                   Wyczyść filtry
@@ -380,7 +381,7 @@ export const RentalCatalogPage: React.FC = () => {
                 <select
                   value={selectedMake}
                   onChange={(e) => setSelectedMake(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">Wszystkie</option>
                   {availableMakes.map((m) => (
@@ -399,7 +400,7 @@ export const RentalCatalogPage: React.FC = () => {
                 <select
                   value={selectedFuel}
                   onChange={(e) => setSelectedFuel(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">Wszystkie</option>
                   {availableFuels.map((f) => (
@@ -418,7 +419,7 @@ export const RentalCatalogPage: React.FC = () => {
                 <select
                   value={selectedTransmission}
                   onChange={(e) => setSelectedTransmission(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">Wszystkie</option>
                   {availableTransmissions.map((t) => (
@@ -437,7 +438,7 @@ export const RentalCatalogPage: React.FC = () => {
                 <select
                   value={selectedBodyType}
                   onChange={(e) => setSelectedBodyType(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">Wszystkie</option>
                   {availableBodyTypes.map((b) => (
@@ -475,7 +476,7 @@ export const RentalCatalogPage: React.FC = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'default' | 'rate_asc' | 'rate_desc')}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="default">Domyślne</option>
                   <option value="rate_asc">Rata: od najniższej</option>
@@ -517,7 +518,7 @@ export const RentalCatalogPage: React.FC = () => {
             <button
               type="button"
               onClick={() => loadOffers()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-xs"
             >
               <RefreshCw className="h-4 w-4" />
               Spróbuj ponownie
@@ -526,7 +527,7 @@ export const RentalCatalogPage: React.FC = () => {
         ) : filteredOffers.length === 0 ? (
           /* 3. Empty State */
           <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center max-w-lg mx-auto shadow-xs my-10">
-            <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 bg-primary-50 text-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <Car className="h-7 w-7" />
             </div>
             <h3 className="text-lg font-bold text-gray-900">Brak dostępnych ofert najmu</h3>
@@ -549,9 +550,9 @@ export const RentalCatalogPage: React.FC = () => {
           /* 4. Offers Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredOffers.map((offer) => {
-              const primaryImg =
-                offer.vehicle.primaryImageUrl ||
-                (offer.vehicle.imageUrls && offer.vehicle.imageUrls[0]);
+              const rentalImages = Array.from(
+                new Set([offer.vehicle.primaryImageUrl, ...(offer.vehicle.imageUrls || [])].filter(Boolean))
+              ) as string[];
 
               return (
                 <div
@@ -559,21 +560,19 @@ export const RentalCatalogPage: React.FC = () => {
                   className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
                 >
                   <div>
-                    {/* Vehicle Photo Container */}
-                    <div className="relative h-48 bg-gray-100 overflow-hidden">
-                      {primaryImg ? (
-                        <img
-                          src={primaryImg}
-                          alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                          <Car className="h-16 w-16" />
-                        </div>
-                      )}
+                    {/* Vehicle Photo Container - Link to offer */}
+                    <Link
+                      to={`/najem/${offer.id}`}
+                      className="relative h-48 bg-gray-100 overflow-hidden block group cursor-pointer"
+                      aria-label={`${offer.vehicle.make} ${offer.vehicle.model}`}
+                    >
+                      <ImageSwiper
+                        images={rentalImages}
+                        alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
+                        aspectClassName="h-48 w-full"
+                      />
 
-                      <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
                         {offer.isB2b && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-xs">
                             Oferta B2B
@@ -589,13 +588,15 @@ export const RentalCatalogPage: React.FC = () => {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Vehicle Specs and Pricing */}
                     <div className="p-5 space-y-3">
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                          {offer.vehicle.make} {offer.vehicle.model}
+                          <Link to={`/najem/${offer.id}`} className="hover:text-primary-600 transition-colors">
+                            {offer.vehicle.make} {offer.vehicle.model}
+                          </Link>
                         </h3>
                         {offer.vehicle.version && (
                           <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
@@ -630,7 +631,7 @@ export const RentalCatalogPage: React.FC = () => {
                           <div className="text-2xs uppercase tracking-wider text-gray-400 font-semibold">
                             Rata abonamentu
                           </div>
-                          <div className="text-lg font-bold text-indigo-700 tracking-tight">
+                          <div className="text-lg font-bold text-primary-700 tracking-tight">
                             od {offer.minMonthlyRateNet.toLocaleString('pl-PL')} zł{' '}
                             <span className="text-xs font-normal text-gray-500">netto / mc</span>
                           </div>
@@ -649,7 +650,7 @@ export const RentalCatalogPage: React.FC = () => {
                   <div className="p-4 bg-gray-50/70 border-t border-gray-100">
                     <Link
                       to={`/najem/${offer.id}`}
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs"
+                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs"
                     >
                       Konfiguruj ratę i zapytaj
                       <ArrowRight className="h-4 w-4" />

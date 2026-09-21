@@ -20,6 +20,7 @@ import {
 import { fetchEmployeeOffers, EmployeeOffer } from './catalog-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
+import { ImageSwiper } from '../common/ImageSwiper';
 
 function normalizeFuelType(val: string | null): { key: string; label: string } | null {
   if (!val) return null;
@@ -604,38 +605,36 @@ export const CatalogPage: React.FC = () => {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             data-testid="catalog-offers-grid"
           >
-            {filteredOffers.map((offer) => (
-              <article
-                key={offer.id}
-                className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
-              >
-                {/* Image Box */}
-                <Link
-                  to={`/katalog/${offer.id}`}
-                  className="relative aspect-[16/10] bg-gray-100 overflow-hidden block group"
-                >
-                  {offer.vehicle.primaryImageUrl ? (
-                    <img
-                      src={offer.vehicle.primaryImageUrl}
-                      alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-1 bg-gray-50">
-                      <Car className="h-10 w-10 text-gray-300" />
-                      <span className="text-xs">Brak zdjęcia</span>
-                    </div>
-                  )}
+            {filteredOffers.map((offer) => {
+              const carImages = [
+                offer.vehicle.primaryImageUrl,
+                ...(offer.vehicle.imageUrls || []).filter((u) => u !== offer.vehicle.primaryImageUrl),
+              ].filter(Boolean) as string[];
 
-                  {/* Discount Badge */}
-                  {offer.pricing.discountPct > 0 && (
-                    <div className="absolute top-3 left-3 bg-emerald-600 text-white font-bold text-xs px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1">
-                      <Tag className="h-3 w-3" />
-                      <span>-{String(offer.pricing.discountPct).replace('.', ',')}%</span>
-                    </div>
-                  )}
-                </Link>
+              return (
+                <article
+                  key={offer.id}
+                  className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
+                >
+                  {/* Image Box */}
+                  <Link
+                    to={`/katalog/${offer.id}`}
+                    className="relative aspect-[16/10] bg-gray-100 overflow-hidden block group"
+                  >
+                    <ImageSwiper
+                      images={carImages}
+                      alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
+                      aspectClassName="aspect-[16/10]"
+                    />
+
+                    {/* Discount Badge */}
+                    {offer.pricing.discountPct > 0 && (
+                      <div className="absolute top-3 left-3 bg-emerald-600 text-white font-bold text-xs px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1 z-10 pointer-events-none">
+                        <Tag className="h-3 w-3" />
+                        <span>-{String(offer.pricing.discountPct).replace('.', ',')}%</span>
+                      </div>
+                    )}
+                  </Link>
 
                 {/* Content Box */}
                 <div className="p-5 flex-1 flex flex-col justify-between gap-4">
@@ -733,8 +732,9 @@ export const CatalogPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </main>
