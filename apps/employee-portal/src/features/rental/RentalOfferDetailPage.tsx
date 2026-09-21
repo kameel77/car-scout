@@ -201,10 +201,10 @@ export const RentalOfferDetailPage: React.FC = () => {
 
   if (isBrandLoading || isAuthLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <div className="text-gray-500 text-sm">Ładowanie portalu...</div>
+          <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin" />
+          <div className="text-muted text-sm">Ładowanie portalu...</div>
         </div>
       </div>
     );
@@ -213,7 +213,7 @@ export const RentalOfferDetailPage: React.FC = () => {
   const activeError = logoutError || sessionError;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-paper flex flex-col">
       {/* Top Navbar */}
       <PortalHeader onLogout={handleLogout} isLoggingOut={isLoggingOut} />
 
@@ -248,21 +248,21 @@ export const RentalOfferDetailPage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <Link
             to="/najem"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Wróć do listy najmu
           </Link>
-          <div className="text-xs text-gray-400 font-medium">
+          <div className="text-xs text-muted font-medium">
             Najem długoterminowy
           </div>
         </div>
 
         {/* Loading State */}
         {isLoading && (
-          <div className="py-24 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-gray-200">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-            <div className="text-gray-500 text-sm">Pobieranie oferty najmu...</div>
+          <div className="py-24 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-line">
+            <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin" />
+            <div className="text-muted text-sm">Pobieranie oferty najmu...</div>
           </div>
         )}
 
@@ -281,7 +281,7 @@ export const RentalOfferDetailPage: React.FC = () => {
             </p>
             <Link
               to="/najem"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink hover:bg-forest text-paper text-sm font-semibold rounded-xl transition-colors shadow-xs"
             >
               Wróć do katalogu najmu
             </Link>
@@ -292,7 +292,7 @@ export const RentalOfferDetailPage: React.FC = () => {
         {!isLoading && offer && (
           <div className="space-y-8">
             {/* Header / Titles Card */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-xs">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-line shadow-xs">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -301,53 +301,53 @@ export const RentalOfferDetailPage: React.FC = () => {
                         Oferta B2B
                       </span>
                     ) : (
-                      <span className="bg-emerald-50 text-emerald-700 font-semibold text-xs px-3 py-1 rounded-full border border-emerald-200">
+                      <span className="bg-paper text-ink font-semibold text-xs px-3 py-1 rounded-full border border-line">
                         Dla firm i osób prywatnych
                       </span>
                     )}
                     {offer.rateSource === 'PARTNER_MATRIX' ? (
-                      <span className="bg-emerald-600 text-white font-bold text-xs px-3 py-1 rounded-full shadow-xs flex items-center gap-1">
+                      <span className="bg-lime text-ink font-bold text-xs px-3 py-1 rounded-full shadow-xs flex items-center gap-1">
                         <Sparkles className="h-3.5 w-3.5" />
                         Stawka partnerska programu
                       </span>
                     ) : (
-                      <span className="bg-gray-100 text-gray-700 font-semibold text-xs px-3 py-1 rounded-full">
+                      <span className="bg-paper text-muted font-semibold text-xs px-3 py-1 rounded-full border border-line">
                         Stawka katalogowa Motolia
                       </span>
                     )}
                     {offer.vehicle.productionYear && (
-                      <span className="bg-gray-100 text-gray-700 font-semibold text-xs px-3 py-1 rounded-full">
+                      <span className="bg-paper text-muted font-semibold text-xs px-3 py-1 rounded-full border border-line">
                         Rocznik {offer.vehicle.productionYear}
                       </span>
                     )}
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-heading">
                     {offer.vehicle.make} {offer.vehicle.model}
                   </h1>
                   {offer.vehicle.version && (
-                    <p className="text-sm sm:text-base text-gray-600 mt-1">
+                    <p className="text-sm sm:text-base text-muted mt-1">
                       {offer.vehicle.version}
                     </p>
                   )}
                 </div>
 
                 {/* Top Pricing Summary Pill */}
-                <div className="bg-primary-50/50 border border-primary-100 rounded-2xl p-4 lg:text-right min-w-[240px]">
-                  <div className="text-xs text-gray-500 font-medium">
+                <div className="bg-paper border border-line rounded-2xl p-4 lg:text-right min-w-[240px]">
+                  <div className="text-xs text-muted font-medium">
                     {clientType === 'CONSUMER' ? 'Rata najmu brutto' : 'Rata najmu netto'}
                   </div>
                   <div className="flex lg:justify-end items-baseline gap-2 mt-0.5">
-                    <span className="text-2xl sm:text-3xl font-black text-primary-600 tracking-tight">
+                    <span className="text-2xl sm:text-3xl font-black text-ink tracking-tight font-heading">
                       {(clientType === 'CONSUMER'
                         ? (activeOption?.monthlyRateGross ?? (minRate.gross < Infinity ? minRate.gross : 0))
                         : (activeOption?.monthlyRateNet ?? (minRate.net < Infinity ? minRate.net : 0))
                       ).toLocaleString('pl-PL')} zł
                     </span>
-                    <span className="text-xs text-gray-500 font-medium">
+                    <span className="text-xs text-muted font-medium">
                       {clientType === 'CONSUMER' ? 'brutto / mc' : 'netto / mc'}
                     </span>
                   </div>
-                  <div className="text-xs font-semibold text-emerald-700 mt-0.5">
+                  <div className="text-xs font-semibold text-forest mt-0.5">
                     Abonament all-inclusive
                   </div>
                 </div>
@@ -359,7 +359,7 @@ export const RentalOfferDetailPage: React.FC = () => {
               {/* Left Column: Gallery + Specs + Equipment (7 cols) */}
               <div className="lg:col-span-7 space-y-6">
                 {/* Image Gallery with Lightbox */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+                <div className="bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
                   <ImageGallery
                     images={allImages}
                     title={`${offer.vehicle.make} ${offer.vehicle.model}`}
@@ -368,59 +368,59 @@ export const RentalOfferDetailPage: React.FC = () => {
                 </div>
 
                 {/* Vehicle Specifications Grid */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
-                  <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-primary-600" />
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs">
+                  <h3 className="text-base font-bold text-ink mb-4 flex items-center gap-2 font-heading">
+                    <Layers className="h-5 w-5 text-forest" />
                     Dane techniczne
                   </h3>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <span className="text-xs text-gray-500 block">Rok produkcji</span>
-                      <span className="font-semibold text-gray-900">{offer.vehicle.productionYear}</span>
+                    <div className="p-3 bg-paper rounded-xl border border-line">
+                      <span className="text-xs text-muted block">Rok produkcji</span>
+                      <span className="font-semibold text-ink">{offer.vehicle.productionYear}</span>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <span className="text-xs text-gray-500 block">Paliwo</span>
-                      <span className="font-semibold text-gray-900">{formatFuelType(offer.vehicle.fuelType)}</span>
+                    <div className="p-3 bg-paper rounded-xl border border-line">
+                      <span className="text-xs text-muted block">Paliwo</span>
+                      <span className="font-semibold text-ink">{formatFuelType(offer.vehicle.fuelType)}</span>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <span className="text-xs text-gray-500 block">Skrzynia biegów</span>
-                      <span className="font-semibold text-gray-900">{formatTransmission(offer.vehicle.transmission)}</span>
+                    <div className="p-3 bg-paper rounded-xl border border-line">
+                      <span className="text-xs text-muted block">Skrzynia biegów</span>
+                      <span className="font-semibold text-ink">{formatTransmission(offer.vehicle.transmission)}</span>
                     </div>
                     {offer.vehicle.bodyType && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Nadwozie</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.bodyType}</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Nadwozie</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.bodyType}</span>
                       </div>
                     )}
                     {Boolean(offer.vehicle.powerHp) && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Moc silnika</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.powerHp} KM</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Moc silnika</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.powerHp} KM</span>
                       </div>
                     )}
                     {Boolean(offer.vehicle.engineCapacityCm3) && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Pojemność</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.engineCapacityCm3?.toLocaleString('pl-PL')} cm³</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Pojemność</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.engineCapacityCm3?.toLocaleString('pl-PL')} cm³</span>
                       </div>
                     )}
                     {offer.vehicle.drive && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Napęd</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.drive}</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Napęd</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.drive}</span>
                       </div>
                     )}
                     {offer.vehicle.color && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Kolor</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.color}</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Kolor</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.color}</span>
                       </div>
                     )}
                     {Boolean(offer.vehicle.doors || offer.vehicle.seats) && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Drzwi / Miejsca</span>
-                        <span className="font-semibold text-gray-900">
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Drzwi / Miejsca</span>
+                        <span className="font-semibold text-ink">
                           {offer.vehicle.doors ? `${offer.vehicle.doors} drzwi` : ''}
                           {offer.vehicle.doors && offer.vehicle.seats ? ' / ' : ''}
                           {offer.vehicle.seats ? `${offer.vehicle.seats} miejsc` : ''}
@@ -435,21 +435,21 @@ export const RentalOfferDetailPage: React.FC = () => {
                   offer.vehicle.equipmentComfortExtras?.length ||
                   offer.vehicle.equipmentAudioMultimedia?.length ||
                   offer.vehicle.equipmentOther?.length) ? (
-                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-6">
-                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5 text-primary-600" />
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-6">
+                    <h3 className="text-base font-bold text-ink flex items-center gap-2 font-heading">
+                      <ShieldCheck className="h-5 w-5 text-forest" />
                       Wyposażenie pojazdu
                     </h3>
 
                     {offer.vehicle.equipmentSafety && offer.vehicle.equipmentSafety.length > 0 && (
                       <div>
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
                           Bezpieczeństwo i asystenci
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
                           {offer.vehicle.equipmentSafety.map((item, idx) => (
                             <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                              <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
                               <span>{item}</span>
                             </div>
                           ))}
@@ -458,14 +458,14 @@ export const RentalOfferDetailPage: React.FC = () => {
                     )}
 
                     {offer.vehicle.equipmentComfortExtras && offer.vehicle.equipmentComfortExtras.length > 0 && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                      <div className="pt-4 border-t border-line">
+                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
                           Komfort i funkcjonalność
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
                           {offer.vehicle.equipmentComfortExtras.map((item, idx) => (
                             <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-primary-600 shrink-0 mt-0.5" />
+                              <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
                               <span>{item}</span>
                             </div>
                           ))}
@@ -474,14 +474,14 @@ export const RentalOfferDetailPage: React.FC = () => {
                     )}
 
                     {offer.vehicle.equipmentAudioMultimedia && offer.vehicle.equipmentAudioMultimedia.length > 0 && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                      <div className="pt-4 border-t border-line">
+                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
                           Multimedia i łączność
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
                           {offer.vehicle.equipmentAudioMultimedia.map((item, idx) => (
                             <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-primary-600 shrink-0 mt-0.5" />
+                              <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
                               <span>{item}</span>
                             </div>
                           ))}
@@ -490,14 +490,14 @@ export const RentalOfferDetailPage: React.FC = () => {
                     )}
 
                     {offer.vehicle.equipmentOther && offer.vehicle.equipmentOther.length > 0 && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                      <div className="pt-4 border-t border-line">
+                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
                           Pozostałe elementy
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
                           {offer.vehicle.equipmentOther.map((item, idx) => (
                             <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                              <CheckCircle className="h-4 w-4 text-muted shrink-0 mt-0.5" />
                               <span>{item}</span>
                             </div>
                           ))}
@@ -509,40 +509,40 @@ export const RentalOfferDetailPage: React.FC = () => {
 
                 {/* Dodatkowe informacje o pojeździe */}
                 {offer.vehicle.additionalInfoContent && (
-                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
-                    <h3 className="text-base font-bold text-gray-900 mb-3">
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs">
+                    <h3 className="text-base font-bold text-ink mb-3 font-heading">
                       {offer.vehicle.additionalInfoHeader || 'Dodatkowe informacje o pojeździe'}
                     </h3>
-                    <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                    <p className="text-sm text-muted whitespace-pre-line leading-relaxed">
                       {offer.vehicle.additionalInfoContent}
                     </p>
                   </div>
                 )}
 
                 {/* Benefits in Rental */}
-                <div className="p-5 bg-gradient-to-br from-primary-50 to-emerald-50/50 border border-primary-200/80 rounded-2xl shadow-xs space-y-3">
-                  <div className="flex items-center gap-2 text-primary-900 font-bold text-base">
-                    <ShieldCheck className="h-5 w-5 text-primary-600" />
+                <div className="p-5 bg-paper border border-line rounded-2xl shadow-xs space-y-3">
+                  <div className="flex items-center gap-2 text-ink font-bold text-base font-heading">
+                    <ShieldCheck className="h-5 w-5 text-forest" />
                     <h4>Co zawiera abonament najmu długoterminowego?</h4>
                   </div>
-                  <p className="text-xs text-gray-600 mb-2">
+                  <p className="text-xs text-muted mb-2">
                     Stała rata miesięczna obejmuje kompleksową obsługę Twojego pojazdu bez nieprzewidzianych wydatków:
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm text-gray-800">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm text-ink">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-forest shrink-0" />
                       <span>Pełne ubezpieczenie OC / AC / NNW</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-forest shrink-0" />
                       <span>Kompletny pakiet serwisowy i przeglądy</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-forest shrink-0" />
                       <span>Auto zastępcze w razie awarii lub kolizji</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-forest shrink-0" />
                       <span>Dedykowany doradca flotowy Benefivo</span>
                     </div>
                   </div>
@@ -551,28 +551,28 @@ export const RentalOfferDetailPage: React.FC = () => {
 
               {/* Right Column: Rate Calculator & Inquiry (5 cols) */}
               <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6 sticky top-24">
-                  <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 sticky top-24">
+                  <div className="flex items-center justify-between border-b border-line pb-4">
                     <div className="flex items-center gap-2">
-                      <Calculator className="h-5 w-5 text-primary-600" />
-                      <h3 className="font-bold text-gray-900 text-base">Konfigurator abonamentu</h3>
+                      <Calculator className="h-5 w-5 text-forest" />
+                      <h3 className="font-bold text-ink text-base font-heading">Konfigurator abonamentu</h3>
                     </div>
-                    <span className="text-xs font-semibold text-primary-700 bg-primary-50 px-2.5 py-1 rounded-full">
+                    <span className="text-xs font-semibold text-ink bg-lime px-2.5 py-1 rounded-full">
                       Abonament all-inclusive
                     </span>
                   </div>
 
                   {/* Client Type Toggle (B2B vs Consumer) */}
                   <div>
-                    <span className="text-xs font-medium text-gray-500 block mb-2">Klient / Forma umowy</span>
-                    <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
+                    <span className="text-xs font-medium text-muted block mb-2">Klient / Forma umowy</span>
+                    <div className="grid grid-cols-2 gap-2 bg-paper p-1 rounded-xl border border-line">
                       <button
                         type="button"
                         onClick={() => setClientType('B2B')}
                         className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
                           clientType === 'B2B'
-                            ? 'bg-white text-gray-900 shadow-xs'
-                            : 'text-gray-500 hover:text-gray-900'
+                            ? 'bg-white text-ink shadow-xs'
+                            : 'text-muted hover:text-ink'
                         }`}
                       >
                         Firma (B2B)
@@ -584,10 +584,10 @@ export const RentalOfferDetailPage: React.FC = () => {
                         title={offer.isB2b ? 'Oferta dostępna wyłącznie dla firm (B2B)' : undefined}
                         className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
                           offer.isB2b
-                            ? 'opacity-40 cursor-not-allowed text-gray-400'
+                            ? 'opacity-40 cursor-not-allowed text-muted'
                             : clientType === 'CONSUMER'
-                            ? 'bg-white text-gray-900 shadow-xs'
-                            : 'text-gray-500 hover:text-gray-900'
+                            ? 'bg-white text-ink shadow-xs'
+                            : 'text-muted hover:text-ink'
                         }`}
                       >
                         Osoba prywatna
@@ -604,8 +604,8 @@ export const RentalOfferDetailPage: React.FC = () => {
                   {/* Okres umowy */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-gray-700">Okres umowy</span>
-                      <span className="text-xs font-bold text-primary-600">{selectedMonths} miesięcy</span>
+                      <span className="text-xs font-semibold text-ink">Okres umowy</span>
+                      <span className="text-xs font-bold text-forest">{selectedMonths} miesięcy</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {offer.contractMonthsOptions.map((months) => (
@@ -615,8 +615,8 @@ export const RentalOfferDetailPage: React.FC = () => {
                           onClick={() => setSelectedMonths(months)}
                           className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
                             selectedMonths === months
-                              ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                              ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
+                              : 'border-line text-ink hover:bg-paper'
                           }`}
                         >
                           {months} msc
@@ -628,8 +628,8 @@ export const RentalOfferDetailPage: React.FC = () => {
                   {/* Limity przebiegu (km/rok) */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-gray-700">Limity przebiegu (km/rok)</span>
-                      <span className="text-xs font-bold text-primary-600">
+                      <span className="text-xs font-semibold text-ink">Limity przebiegu (km/rok)</span>
+                      <span className="text-xs font-bold text-forest">
                         {selectedMileage >= 1000 ? `${selectedMileage / 1000} tys. km/rok` : `${selectedMileage} km/rok`}
                       </span>
                     </div>
@@ -643,8 +643,8 @@ export const RentalOfferDetailPage: React.FC = () => {
                             onClick={() => setSelectedMileage(mileage)}
                             className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
                               selectedMileage === mileage
-                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                                ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
+                                : 'border-line text-ink hover:bg-paper'
                             }`}
                           >
                             {label}
@@ -657,8 +657,8 @@ export const RentalOfferDetailPage: React.FC = () => {
                   {/* Wpłata wstępna */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-gray-700">Wpłata wstępna</span>
-                      <span className="text-xs font-bold text-primary-600">
+                      <span className="text-xs font-semibold text-ink">Wpłata wstępna</span>
+                      <span className="text-xs font-bold text-forest">
                         {selectedDownPayment?.label || '0%'}
                         {selectedDownPayment && selectedDownPayment.amountNet > 0
                           ? ` (${selectedDownPayment.amountNet.toLocaleString('pl-PL')} zł netto)`
@@ -678,8 +678,8 @@ export const RentalOfferDetailPage: React.FC = () => {
                             onClick={() => setSelectedDownPayment(downOpt)}
                             className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
                               isSelected
-                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                                ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
+                                : 'border-line text-ink hover:bg-paper'
                             }`}
                           >
                             {downOpt.label}
@@ -690,17 +690,17 @@ export const RentalOfferDetailPage: React.FC = () => {
                   </div>
 
                   {/* Wynik Kalkulacji */}
-                  <div className="pt-4 border-t border-gray-100 bg-gray-50/70 -mx-6 -mb-6 p-6 rounded-b-2xl">
+                  <div className="pt-4 border-t border-line bg-paper -mx-6 -mb-6 p-6 rounded-b-2xl">
                     {activeOption ? (
                       <>
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs text-gray-500 font-medium">Typ stawki:</span>
+                          <span className="text-xs text-muted font-medium">Typ stawki:</span>
                           {activeOption.rateSource === 'PARTNER_MATRIX' ? (
-                            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <span className="text-xs font-semibold text-ink bg-lime px-2 py-0.5 rounded-full">
                               Stawka partnerska
                             </span>
                           ) : (
-                            <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">
+                            <span className="text-xs font-medium text-muted bg-white px-2 py-0.5 rounded-full border border-line">
                               Stawka katalogowa
                             </span>
                           )}
@@ -710,45 +710,45 @@ export const RentalOfferDetailPage: React.FC = () => {
                           {clientType === 'CONSUMER' ? (
                             <>
                               <div>
-                                <span className="text-xs font-medium text-gray-500 block">Rata abonamentowa brutto</span>
+                                <span className="text-xs font-medium text-muted block">Rata abonamentowa brutto</span>
                                 <div className="flex items-baseline gap-2">
-                                  <span className="text-3xl font-black text-gray-900 tracking-tight">
+                                  <span className="text-3xl font-black text-ink tracking-tight font-heading">
                                     {activeOption.monthlyRateGross.toLocaleString('pl-PL')} zł
                                   </span>
-                                  <span className="text-xs font-semibold text-gray-500">brutto / msc</span>
+                                  <span className="text-xs font-semibold text-muted">brutto / msc</span>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <span className="text-sm font-bold text-gray-600 block">
+                                <span className="text-sm font-bold text-muted block font-heading">
                                   {activeOption.monthlyRateNet.toLocaleString('pl-PL')} zł
                                 </span>
-                                <span className="text-[11px] text-gray-400">netto / msc</span>
+                                <span className="text-[11px] text-muted">netto / msc</span>
                               </div>
                             </>
                           ) : (
                             <>
                               <div>
-                                <span className="text-xs font-medium text-gray-500 block">Rata abonamentowa netto</span>
+                                <span className="text-xs font-medium text-muted block">Rata abonamentowa netto</span>
                                 <div className="flex items-baseline gap-2">
-                                  <span className="text-3xl font-black text-gray-900 tracking-tight">
+                                  <span className="text-3xl font-black text-ink tracking-tight font-heading">
                                     {activeOption.monthlyRateNet.toLocaleString('pl-PL')} zł
                                   </span>
-                                  <span className="text-xs font-semibold text-gray-500">netto / msc</span>
+                                  <span className="text-xs font-semibold text-muted">netto / msc</span>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <span className="text-sm font-bold text-gray-600 block">
+                                <span className="text-sm font-bold text-muted block font-heading">
                                   {activeOption.monthlyRateGross.toLocaleString('pl-PL')} zł
                                 </span>
-                                <span className="text-[11px] text-gray-400">brutto / msc</span>
+                                <span className="text-[11px] text-muted">brutto / msc</span>
                               </div>
                             </>
                           )}
                         </div>
 
-                        <div className="text-xs text-gray-500 flex justify-between border-t border-gray-200/80 pt-2.5">
+                        <div className="text-xs text-muted flex justify-between border-t border-line pt-2.5">
                           <span>Wpłata wstępna:</span>
-                          <span className="font-semibold text-gray-900">
+                          <span className="font-semibold text-ink">
                             {activeOption.downPaymentAmountPln > 0
                               ? `${activeOption.downPaymentAmountPln.toLocaleString('pl-PL')} zł netto`
                               : activeOption.downPaymentPct > 0
@@ -768,13 +768,13 @@ export const RentalOfferDetailPage: React.FC = () => {
                       type="button"
                       disabled={!activeOption}
                       onClick={() => setIsInquiryModalOpen(true)}
-                      className="w-full mt-4 inline-flex items-center justify-center gap-2 py-3.5 px-6 bg-primary-600 hover:bg-primary-700 text-white font-bold text-base rounded-xl transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full mt-4 inline-flex items-center justify-center gap-2 py-3.5 px-6 bg-ink hover:bg-forest text-paper font-bold text-base rounded-xl transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Zapytaj o tę ofertę i ratę
                       <ChevronRight className="h-5 w-5" />
                     </button>
 
-                    <p className="text-2xs text-gray-400 text-center mt-3">
+                    <p className="text-2xs text-muted text-center mt-3">
                       Przesłanie zapytania jest bezpłatne i niezobowiązujące. Doradca Benefivo skontaktuje się z Tobą w ciągu 24 godzin.
                     </p>
                   </div>

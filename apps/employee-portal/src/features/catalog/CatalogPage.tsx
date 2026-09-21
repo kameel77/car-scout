@@ -279,10 +279,10 @@ export const CatalogPage: React.FC = () => {
 
   if (isBrandLoading || isAuthLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <div className="text-gray-500 text-sm">Ładowanie portalu...</div>
+          <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin" />
+          <div className="text-muted text-sm font-medium">Ładowanie oferty samochodów...</div>
         </div>
       </div>
     );
@@ -291,7 +291,7 @@ export const CatalogPage: React.FC = () => {
   const activeError = logoutError || sessionError;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-paper flex flex-col">
       {/* Top Navbar */}
       <PortalHeader onLogout={handleLogout} isLoggingOut={isLoggingOut} />
 
@@ -304,75 +304,75 @@ export const CatalogPage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-              <span className="font-medium">{activeError}</span>
+              <span>{activeError}</span>
             </div>
-            {logoutError && (
-              <button
-                type="button"
-                onClick={() => setLogoutError(null)}
-                className="text-red-500 hover:text-red-700 p-1 rounded-md"
-                aria-label="Zamknij powiadomienie"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setLogoutError(null);
+                navigate('/logowanie');
+              }}
+              className="text-xs font-semibold text-red-900 underline hover:text-red-700"
+            >
+              Zaloguj ponownie
+            </button>
           </div>
         </div>
       )}
 
       {/* Program Subheader (Mobile only) */}
       {user && (
-        <div className="md:hidden bg-primary-50/60 border-b border-primary-100 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 text-gray-700">
+        <div className="md:hidden bg-lime/20 border-b border-line px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 text-ink">
           <div className="flex items-center gap-1">
-            <Building2 className="h-3.5 w-3.5 text-primary-700" />
+            <Building2 className="h-3.5 w-3.5 text-forest" />
             <span>Firma: <strong>{user.company?.name}</strong></span>
           </div>
-          <span className="px-2 py-0.5 rounded-full bg-white text-primary-800 font-medium border border-primary-200 text-[11px]">
+          <span className="px-2 py-0.5 rounded-full bg-white text-ink font-semibold border border-line text-[11px]">
             {user.program?.name}
           </span>
         </div>
       )}
 
       {/* Hero Banner */}
-      <div className="bg-white border-b border-gray-100 py-10">
+      <div className="bg-white border-b border-line py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md text-xs font-medium mb-3">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-lime text-ink rounded-full text-xs font-semibold mb-3">
+            <Sparkles className="h-3.5 w-3.5 text-ink" />
             Program aktywny dla organizacji {user?.company?.name || ''}
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-3xl font-bold font-heading text-ink tracking-tight">
             Dedykowana oferta samochodów dla pracowników
           </h1>
-          <p className="mt-2 text-base text-gray-600 max-w-3xl leading-relaxed">
+          <p className="mt-2 text-base text-muted max-w-3xl leading-relaxed">
             Nowe samochody w najmie długoterminowym oraz leasingu na preferencyjnych warunkach partnerskich z pakietem benefitów pracowniczych.
           </p>
 
           <div className="mt-8">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
               Pakiet benefitów w programie {user?.program?.name || 'partnerskim'}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-xs">
-                <Shield className="h-6 w-6 text-primary-600 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-4 bg-paper rounded-2xl border border-line shadow-xs">
+                <Shield className="h-6 w-6 text-forest flex-shrink-0" />
                 <div>
-                  <div className="font-semibold text-sm text-gray-900">Specjalne warunki flotowe</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Dedykowane matryce i rabaty cenowe</div>
+                  <div className="font-semibold text-sm text-ink">Specjalne warunki flotowe</div>
+                  <div className="text-xs text-muted mt-0.5">Dedykowane matryce i rabaty cenowe</div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-xs">
-                <Fuel className="h-6 w-6 text-primary-600 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-4 bg-paper rounded-2xl border border-line shadow-xs">
+                <Fuel className="h-6 w-6 text-forest flex-shrink-0" />
                 <div>
-                  <div className="font-semibold text-sm text-gray-900">Pakiet paliwowy Moya</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Karta z zasileniem i rabat na stacjach</div>
+                  <div className="font-semibold text-sm text-ink">Pakiet paliwowy Moya</div>
+                  <div className="text-xs text-muted mt-0.5">Karta z zasileniem i rabat na stacjach</div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-xs">
-                <Award className="h-6 w-6 text-primary-600 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-4 bg-paper rounded-2xl border border-line shadow-xs">
+                <Award className="h-6 w-6 text-forest flex-shrink-0" />
                 <div>
-                  <div className="font-semibold text-sm text-gray-900">Opieka doradcy Motolii</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Indywidualny kontakt i wsparcie formalności</div>
+                  <div className="font-semibold text-sm text-ink">Opieka doradcy Motolii</div>
+                  <div className="text-xs text-muted mt-0.5">Indywidualny kontakt i wsparcie formalności</div>
                 </div>
               </div>
             </div>
@@ -384,32 +384,32 @@ export const CatalogPage: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full">
         {/* Filters Bar */}
         {!offersError && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-xs space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <SlidersHorizontal className="h-4 w-4 text-primary-600" />
+          <div className="bg-white border border-line rounded-2xl p-4 mb-6 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <SlidersHorizontal className="h-4 w-4 text-ink" />
                 <span>Filtry</span>
-                <span className="text-xs font-normal text-gray-400">
+                <span className="text-xs font-normal text-muted">
                   (Dostępne oferty: <strong>{filteredOffers.length}</strong>)
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="relative w-full sm:w-64">
-                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-gray-400" />
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted" />
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Szukaj po marce lub modelu..."
-                    className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white shadow-xs"
+                    className="w-full pl-9 pr-3 py-1.5 border border-line rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ink bg-white shadow-xs"
                   />
                 </div>
                 {hasActiveFilters && (
                   <button
                     type="button"
                     onClick={resetFilters}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-800 transition-colors shrink-0"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink hover:underline transition-colors shrink-0"
                   >
                     <X className="h-3.5 w-3.5" />
                     Wyczyść filtry
@@ -421,13 +421,13 @@ export const CatalogPage: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               {/* Marka */}
               <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Marka
                 </label>
                 <select
                   value={selectedMake}
                   onChange={(e) => setSelectedMake(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="">Wszystkie</option>
                   {availableMakes.map((m) => (
@@ -440,13 +440,13 @@ export const CatalogPage: React.FC = () => {
 
               {/* Paliwo */}
               <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Paliwo
                 </label>
                 <select
                   value={selectedFuel}
                   onChange={(e) => setSelectedFuel(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="">Wszystkie</option>
                   {availableFuels.map((f) => (
@@ -459,13 +459,13 @@ export const CatalogPage: React.FC = () => {
 
               {/* Skrzynia */}
               <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Skrzynia
                 </label>
                 <select
                   value={selectedTransmission}
                   onChange={(e) => setSelectedTransmission(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="">Wszystkie</option>
                   {availableTransmissions.map((t) => (
@@ -478,13 +478,13 @@ export const CatalogPage: React.FC = () => {
 
               {/* Nadwozie */}
               <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Nadwozie
                 </label>
                 <select
                   value={selectedBodyType}
                   onChange={(e) => setSelectedBodyType(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="">Wszystkie</option>
                   {availableBodyTypes.map((b) => (
@@ -497,13 +497,13 @@ export const CatalogPage: React.FC = () => {
 
               {/* Sortowanie */}
               <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Sortowanie
                 </label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'default' | 'price_asc' | 'price_desc' | 'discount_desc')}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="default">Domyślne</option>
                   <option value="price_asc">Cena: od najniższej</option>
@@ -562,7 +562,7 @@ export const CatalogPage: React.FC = () => {
               onClick={() => {
                 loadOffers();
               }}
-              className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg shadow-xs transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 bg-ink hover:bg-ink/90 text-paper text-sm font-semibold rounded-full shadow-xs transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink"
             >
               <RefreshCw className="h-4 w-4" />
               Spróbuj ponownie
@@ -572,18 +572,18 @@ export const CatalogPage: React.FC = () => {
 
         {!isLoadingOffers && !offersError && filteredOffers.length === 0 && (
           <div
-            className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-xs max-w-xl mx-auto"
+            className="bg-white rounded-2xl border border-line p-12 text-center shadow-xs max-w-xl mx-auto"
             data-testid="catalog-empty-state"
           >
-            <div className="mx-auto h-14 w-14 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center mb-4">
+            <div className="mx-auto h-14 w-14 bg-paper text-muted rounded-2xl flex items-center justify-center mb-4">
               <Car className="h-7 w-7" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-lg font-bold font-heading text-ink">
               {hasActiveFilters
                 ? 'Brak ofert spełniających kryteria'
                 : 'Brak ofert przypisanych do Twojego programu'}
             </h2>
-            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+            <p className="mt-2 text-sm text-muted leading-relaxed">
               {hasActiveFilters
                 ? 'Żadna oferta nie pasuje do wybranych filtrów. Spróbuj zmienić lub zresetować kryteria wyszukiwania.'
                 : 'W tej chwili w Twoim programie partnerskim nie ma dostępnych ofert specjalnych. Skontaktuj się z opiekunem programu w swojej firmie lub doradcą Motolii, aby dowiedzieć się o planowanych transzach pojazdów.'}
@@ -592,7 +592,7 @@ export const CatalogPage: React.FC = () => {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-xs"
+                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-ink hover:bg-ink/90 text-paper text-xs font-semibold rounded-full transition-colors shadow-xs"
               >
                 Wyczyść filtry
               </button>
@@ -614,12 +614,12 @@ export const CatalogPage: React.FC = () => {
               return (
                 <article
                   key={offer.id}
-                  className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
+                  className="bg-white rounded-2xl border border-line overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
                 >
                   {/* Image Box */}
                   <Link
                     to={`/katalog/${offer.id}`}
-                    className="relative aspect-[16/10] bg-gray-100 overflow-hidden block group"
+                    className="relative aspect-[16/10] bg-paper overflow-hidden block group"
                   >
                     <ImageSwiper
                       images={carImages}
@@ -629,7 +629,7 @@ export const CatalogPage: React.FC = () => {
 
                     {/* Discount Badge */}
                     {offer.pricing.discountPct > 0 && (
-                      <div className="absolute top-3 left-3 bg-emerald-600 text-white font-bold text-xs px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1 z-10 pointer-events-none">
+                      <div className="absolute top-3 left-3 bg-ink text-paper font-semibold text-xs px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1 z-10 pointer-events-none">
                         <Tag className="h-3 w-3" />
                         <span>-{String(offer.pricing.discountPct).replace('.', ',')}%</span>
                       </div>
@@ -639,32 +639,32 @@ export const CatalogPage: React.FC = () => {
                 {/* Content Box */}
                 <div className="p-5 flex-1 flex flex-col justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 leading-snug">
+                    <h3 className="text-lg font-bold font-heading text-ink leading-snug">
                       <Link
                         to={`/katalog/${offer.id}`}
-                        className="hover:text-primary-600 transition-colors"
+                        className="hover:underline transition-colors"
                       >
                         {offer.vehicle.make} {offer.vehicle.model}
                       </Link>
                     </h3>
                     {offer.vehicle.version && (
-                      <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">
+                      <p className="text-xs text-muted line-clamp-1 mt-0.5">
                         {offer.vehicle.version}
                       </p>
                     )}
 
                     {/* Specs Chips */}
-                    <div className="flex flex-wrap gap-1.5 mt-3 text-[11px] text-gray-600 font-medium">
-                      <span className="px-2 py-0.5 bg-gray-100 rounded-md">
+                    <div className="flex flex-wrap gap-1.5 mt-3 text-[11px] text-muted font-medium">
+                      <span className="px-2 py-0.5 bg-paper rounded-md">
                         {offer.vehicle.productionYear}
                       </span>
                       {offer.vehicle.fuelType && (
-                        <span className="px-2 py-0.5 bg-gray-100 rounded-md">
+                        <span className="px-2 py-0.5 bg-paper rounded-md">
                           {formatFuelType(offer.vehicle.fuelType)}
                         </span>
                       )}
                       {offer.vehicle.transmission && (
-                        <span className="px-2 py-0.5 bg-gray-100 rounded-md">
+                        <span className="px-2 py-0.5 bg-paper rounded-md">
                           {formatTransmission(offer.vehicle.transmission)}
                         </span>
                       )}
@@ -672,12 +672,12 @@ export const CatalogPage: React.FC = () => {
 
                     {/* Benefit Policy Badge */}
                     {offer.benefit && (
-                      <div className="mt-3.5 p-2.5 bg-primary-50/70 border border-primary-100 rounded-xl flex items-start gap-2 text-xs text-primary-900">
-                        <Shield className="h-4 w-4 text-primary-600 flex-shrink-0 mt-0.5" />
+                      <div className="mt-3.5 p-2.5 bg-paper border border-line rounded-xl flex items-start gap-2 text-xs text-ink">
+                        <Shield className="h-4 w-4 text-forest flex-shrink-0 mt-0.5" />
                         <div className="leading-tight">
-                          <div className="font-semibold text-primary-900">{offer.benefit.name}</div>
+                          <div className="font-semibold text-ink">{offer.benefit.name}</div>
                           {(offer.benefit.moyaCardAmount || offer.benefit.fuelDiscount) && (
-                            <div className="text-[11px] text-primary-700 mt-0.5">
+                            <div className="text-[11px] text-muted mt-0.5">
                               {offer.benefit.moyaCardAmount && `Karta ${offer.benefit.moyaCardAmount} zł`}
                               {offer.benefit.moyaCardAmount && offer.benefit.fuelDiscount && ' • '}
                               {offer.benefit.fuelDiscount && `Rabat ${offer.benefit.fuelDiscount}`}
@@ -689,13 +689,13 @@ export const CatalogPage: React.FC = () => {
                   </div>
 
                   {/* Pricing Block */}
-                  <div className="pt-4 border-t border-gray-100 flex flex-col justify-end">
+                  <div className="pt-4 border-t border-line flex flex-col justify-end">
                     {offer.pricing.savingsPln > 0 && (
-                      <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                      <div className="flex items-center justify-between text-xs text-muted mb-1">
                         <span className="line-through">
                           Cena katalogowa: {offer.pricing.listPricePln.toLocaleString('pl-PL')} zł
                         </span>
-                        <span className="text-emerald-700 font-medium">
+                        <span className="text-ink font-semibold bg-lime px-2 py-0.5 rounded-full text-[11px]">
                           Oszczędzasz {offer.pricing.savingsPln.toLocaleString('pl-PL')} zł
                         </span>
                       </div>
@@ -703,18 +703,18 @@ export const CatalogPage: React.FC = () => {
 
                     <div className="flex items-baseline justify-between">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 block">Cena pracownicza</span>
-                        <span className="text-2xl font-black text-primary-600 tracking-tight">
+                        <span className="text-xs font-medium text-muted block">Cena pracownicza</span>
+                        <span className="text-2xl font-black text-ink tracking-tight">
                           {offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł
                         </span>
                       </div>
-                      <span className="text-xs text-gray-400 font-medium">brutto</span>
+                      <span className="text-xs text-muted font-medium">brutto</span>
                     </div>
 
                     <div className="mt-3.5 flex flex-col gap-2">
                       <Link
                         to={`/katalog/${offer.id}`}
-                        className="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5"
+                        className="w-full py-3 px-4 bg-ink hover:bg-ink/90 text-paper font-semibold text-sm rounded-full transition-colors shadow-xs flex items-center justify-center gap-1.5"
                       >
                         <span>Szczegóły i kalkulator raty</span>
                         <ChevronRight className="h-4 w-4" />
@@ -725,7 +725,7 @@ export const CatalogPage: React.FC = () => {
                           setSelectedOfferForInquiry(offer);
                           setIsInquiryModalOpen(true);
                         }}
-                        className="w-full py-2 px-3 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors text-center"
+                        className="w-full py-2 px-3 text-xs font-semibold text-muted hover:text-ink hover:bg-paper rounded-full transition-colors text-center"
                       >
                         Zapytaj o tę ofertę
                       </button>

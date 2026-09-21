@@ -87,17 +87,17 @@ export const MyInquiriesPage: React.FC = () => {
 
   if (isBrandLoading || isAuthLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <div className="text-gray-500 text-sm">Ładowanie danych...</div>
+          <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin" />
+          <div className="text-muted text-sm">Ładowanie danych...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-paper flex flex-col">
       {/* Top Navbar */}
       <PortalHeader onLogout={handleLogout} isLoggingOut={isLoggingOut} />
 
@@ -130,14 +130,14 @@ export const MyInquiriesPage: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Moje zapytania</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-2xl font-bold font-heading text-ink tracking-tight">Moje zapytania</h1>
+            <p className="text-sm text-muted mt-1">
               Historia zapytań o oferty samochodowe złożonych w programie partnerskim.
             </p>
           </div>
           <Link
             to="/katalog"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors shadow-xs self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-line hover:bg-paper text-ink text-sm font-semibold rounded-full transition-colors shadow-xs self-start sm:self-auto"
           >
             Przeglądaj katalog
             <ArrowRight className="h-4 w-4" />
@@ -150,7 +150,7 @@ export const MyInquiriesPage: React.FC = () => {
             {[1, 2, 3].map((idx) => (
               <div
                 key={idx}
-                className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs animate-pulse flex flex-col md:flex-row gap-5"
+                className="bg-white border border-line rounded-2xl p-5 shadow-xs animate-pulse flex flex-col md:flex-row gap-5"
               >
                 <div className="w-full md:w-48 h-32 bg-gray-200 rounded-xl flex-shrink-0" />
                 <div className="flex-1 space-y-3 py-1">
@@ -170,12 +170,12 @@ export const MyInquiriesPage: React.FC = () => {
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Nie udało się pobrać zapytań</h3>
-            <p className="text-sm text-gray-600 mt-2 mb-6">{fetchError}</p>
+            <h3 className="text-lg font-bold font-heading text-ink">Nie udało się pobrać zapytań</h3>
+            <p className="text-sm text-muted mt-2 mb-6">{fetchError}</p>
             <button
               type="button"
               onClick={() => loadInquiries()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink hover:bg-ink/90 text-paper text-sm font-semibold rounded-full transition-colors shadow-xs"
             >
               <RefreshCw className="h-4 w-4" />
               Spróbuj ponownie
@@ -183,17 +183,17 @@ export const MyInquiriesPage: React.FC = () => {
           </div>
         ) : inquiries.length === 0 ? (
           /* 3. Empty State */
-          <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center max-w-lg mx-auto shadow-xs my-10">
-            <div className="w-14 h-14 bg-primary-50 text-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white border border-line rounded-2xl p-12 text-center max-w-lg mx-auto shadow-xs my-10">
+            <div className="w-14 h-14 bg-lime text-ink rounded-full flex items-center justify-center mx-auto mb-4">
               <FileQuestion className="h-7 w-7" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Brak złożonych zapytań</h3>
-            <p className="text-sm text-gray-500 mt-2 mb-6">
+            <h3 className="text-lg font-bold font-heading text-ink">Brak złożonych zapytań</h3>
+            <p className="text-sm text-muted mt-2 mb-6">
               Nie przesłałeś jeszcze żadnego zapytania o auto. Przejdź do katalogu i wybierz ofertę z dedykowanym rabatem.
             </p>
             <Link
               to="/katalog"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-ink hover:bg-ink/90 text-paper text-sm font-semibold rounded-full transition-colors shadow-xs"
             >
               Przejdź do katalogu
               <ArrowRight className="h-4 w-4" />
@@ -224,18 +224,18 @@ export const MyInquiriesPage: React.FC = () => {
                   {/* Vehicle Specs & Snapshot Info */}
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-bold text-primary-700 bg-primary-50 border border-primary-200 px-2 py-0.5 rounded-md">
+                      <span className="font-mono text-xs font-bold text-ink bg-lime px-2.5 py-0.5 rounded-full">
                         {inq.referenceNumber || inq.id}
                       </span>
                       {inq.rental && (
-                        <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                        <span className="text-xs px-2.5 py-0.5 rounded-full bg-paper text-ink font-semibold border border-line">
                           Najem długoterminowy
                         </span>
                       )}
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
                         {inq.status === 'NEW' ? 'Nowe' : inq.status}
                       </span>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <span className="text-xs text-muted flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {new Date(inq.createdAt).toLocaleDateString('pl-PL', {
                           day: '2-digit',
@@ -247,29 +247,29 @@ export const MyInquiriesPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-gray-900 mt-1">
+                    <h3 className="text-base font-bold font-heading text-ink mt-1">
                       {inq.vehicle ? `${inq.vehicle.make} ${inq.vehicle.model}` : 'Pojazd z oferty'}
                       {inq.vehicle?.version && (
-                        <span className="text-gray-500 font-normal text-xs ml-2">
+                        <span className="text-muted font-normal text-xs ml-2">
                           {inq.vehicle.version}
                         </span>
                       )}
                     </h3>
 
-                    <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+                    <div className="text-xs text-muted mt-1 space-y-0.5">
                       <div>
-                        <span className="font-medium text-gray-700">Strona umowy:</span>{' '}
+                        <span className="font-medium text-ink">Strona umowy:</span>{' '}
                         {formatPartyLabel(inq.contractParty)}
-                        {inq.nip && <span className="ml-1 text-gray-400">(NIP: {inq.nip})</span>}
+                        {inq.nip && <span className="ml-1 text-muted">(NIP: {inq.nip})</span>}
                       </div>
                       {inq.notes && (
-                        <div className="italic text-gray-400 line-clamp-1">
+                        <div className="italic text-muted line-clamp-1">
                           &quot;{inq.notes}&quot;
                         </div>
                       )}
                       {inq.benefit && (
-                        <div className="inline-flex items-center gap-1.5 text-xs text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md font-medium mt-1">
-                          <Gift className="h-3 w-3 text-primary-600" />
+                        <div className="inline-flex items-center gap-1.5 text-xs text-ink bg-lime/30 px-2.5 py-0.5 rounded-full font-medium mt-1">
+                          <Gift className="h-3 w-3 text-ink" />
                           <span>{inq.benefit.name}</span>
                         </div>
                       )}
@@ -279,33 +279,33 @@ export const MyInquiriesPage: React.FC = () => {
 
                 {/* Snapshot Pricing / Rental Block */}
                 {inq.rental ? (
-                  <div className="pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
-                    <div className="text-xs text-gray-500">
+                  <div className="pt-3 md:pt-0 border-t md:border-t-0 border-line w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
+                    <div className="text-xs text-muted">
                       {inq.rental.contractMonths} mies. · {(inq.rental.annualMileageKm ?? inq.rental.annualMileage ?? 0).toLocaleString('pl-PL')} km/rok
                     </div>
-                    <div className="text-lg font-bold text-indigo-700 tracking-tight">
-                      {(inq.rental.monthlyRateNetPln ?? inq.rental.monthlyRateNet ?? 0).toLocaleString('pl-PL')} zł <span className="text-xs font-normal text-gray-500">netto / mc</span>
+                    <div className="text-lg font-black text-ink tracking-tight">
+                      {(inq.rental.monthlyRateNetPln ?? inq.rental.monthlyRateNet ?? 0).toLocaleString('pl-PL')} zł <span className="text-xs font-normal text-muted">netto / mc</span>
                     </div>
-                    <div className="text-[11px] text-gray-500">
+                    <div className="text-[11px] text-muted">
                       Wpłata wstępna: {inq.rental.initialPaymentPct ?? inq.rental.downPaymentPct ?? 0}% ({(inq.rental.initialPaymentAmountNet ?? inq.rental.downPaymentAmountPln ?? 0).toLocaleString('pl-PL')} zł)
                     </div>
                     {inq.rental.rentalCompanyName && (
-                      <div className="text-[11px] text-gray-400">
+                      <div className="text-[11px] text-muted">
                         Dostawca: {inq.rental.rentalCompanyName}
                       </div>
                     )}
                   </div>
                 ) : inq.pricing ? (
-                  <div className="pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
-                    <div className="text-xs text-gray-400 line-through">
+                  <div className="pt-3 md:pt-0 border-t md:border-t-0 border-line w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
+                    <div className="text-xs text-muted line-through">
                       Katalogowa: {inq.pricing.listPricePln.toLocaleString('pl-PL')} zł
                     </div>
-                    <div className="text-lg font-bold text-primary-600 tracking-tight">
+                    <div className="text-lg font-black text-ink tracking-tight">
                       {inq.pricing.employeePricePln.toLocaleString('pl-PL')} zł
                     </div>
                     {inq.pricing.savingsPln > 0 && (
-                      <div className="text-[11px] text-emerald-700 font-medium">
-                        Oszczędność {inq.pricing.savingsPln.toLocaleString('pl-PL')} zł
+                      <div className="text-[11px] text-ink bg-lime px-2 py-0.5 rounded-full font-semibold">
+                        Oszczędzasz {inq.pricing.savingsPln.toLocaleString('pl-PL')} zł
                       </div>
                     )}
                   </div>

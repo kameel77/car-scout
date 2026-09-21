@@ -7,13 +7,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-        },
+        ink: '#202820',
+        paper: '#F7F8F2',
+        lime: '#D5F478',
+        forest: '#34483D',
+        line: '#DDE1D5',
+        muted: '#61685E',
+      },
+      fontFamily: {
+        heading: ['"Plus Jakarta Sans"', 'sans-serif'],
+        sans: ['"DM Sans"', 'sans-serif'],
       },
     },
   },

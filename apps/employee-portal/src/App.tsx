@@ -40,9 +40,9 @@ const MyInquiriesPage = lazy(() =>
 );
 
 const FallbackSpinner: React.FC = () => (
-  <div className="min-h-screen bg-[#F7F8F2] flex flex-col items-center justify-center gap-3">
-    <div className="w-8 h-8 border-2 border-[#0f2d1e]/15 border-t-[#0f2d1e] rounded-full animate-spin" />
-    <span className="text-xs text-[#0f2d1e]/60 font-medium tracking-wide">Ładowanie...</span>
+  <div className="min-h-screen bg-paper flex flex-col items-center justify-center gap-3">
+    <div className="w-8 h-8 border-2 border-ink/15 border-t-ink rounded-full animate-spin" />
+    <span className="text-xs text-muted font-medium tracking-wide">Ładowanie...</span>
   </div>
 );
 
