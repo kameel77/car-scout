@@ -1325,8 +1325,11 @@ export const leadsApi = {
         return response.json();
     },
 
-    getLeads: async (token: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/leads`, {
+    getLeads: async (token: string, leadType?: string) => {
+        const url = leadType
+            ? `${API_BASE_URL}/api/leads?leadType=${encodeURIComponent(leadType)}`
+            : `${API_BASE_URL}/api/leads`;
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
