@@ -40,7 +40,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({ onLogout, isLoggingO
     <header className="bg-white border-b border-line sticky top-0 z-20 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link to="/katalog" className="flex items-center gap-3">
+          <Link to="/katalog" className="flex items-center">
             {config.brandLogoUrl && !logoError ? (
               <img
                 src={config.brandLogoUrl}
@@ -49,11 +49,10 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({ onLogout, isLoggingO
                 className="h-8 w-auto max-w-[140px] object-contain"
               />
             ) : (
-              <div className="h-8 px-2.5 bg-lime rounded-full flex items-center justify-center text-ink font-heading font-extrabold text-sm">
-                {config.brandName.charAt(0) || 'B'}
-              </div>
+              <span className="font-heading font-extrabold text-xl text-ink tracking-tight lowercase">
+                benefivo
+              </span>
             )}
-            <span className="font-semibold text-ink hidden sm:inline">{config.brandName}</span>
           </Link>
 
           {/* Navigation Tabs */}

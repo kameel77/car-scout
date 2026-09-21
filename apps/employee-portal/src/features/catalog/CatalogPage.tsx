@@ -25,6 +25,7 @@ import { calculateDefaultOfferInstallment } from './financing';
 import { formatCountPl } from '../common/plural';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
+import { PortalFooter } from '../common/PortalFooter';
 import { ImageSwiper } from '../common/ImageSwiper';
 
 function normalizeFuelType(val: string | null): { key: string; label: string } | null {
@@ -820,6 +821,8 @@ export const CatalogPage: React.FC = () => {
           </div>
         )}
       </main>
+
+      <PortalFooter />
 
       {/* Modal zapytania o ofertę */}
       <InquiryModal

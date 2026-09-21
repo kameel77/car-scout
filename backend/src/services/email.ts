@@ -412,7 +412,7 @@ export const sendEmployeePasswordResetEmail = async (
         return;
     }
 
-    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Benefivo';
 
     const transporter = nodemailer.createTransport({
         host: settings.smtpHost,
@@ -529,7 +529,7 @@ export const sendEmployeeInquiryNotificationEmail = async (
         return;
     }
 
-    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Benefivo';
     const safeBrand = escapeHtml(brand);
 
     const transporter = nodemailer.createTransport({
@@ -659,7 +659,7 @@ export const sendEmployeeInquiryConfirmationEmail = async (
         return;
     }
 
-    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Benefivo';
     const safeBrand = escapeHtml(brand);
 
     const transporter = nodemailer.createTransport({

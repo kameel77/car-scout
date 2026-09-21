@@ -19,6 +19,7 @@ import {
 } from './rental-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
+import { PortalFooter } from '../common/PortalFooter';
 import { ImageGallery } from '../common/ImageGallery';
 
 function formatFuelType(fuelType: string | null | undefined): string {
@@ -786,6 +787,8 @@ export const RentalOfferDetailPage: React.FC = () => {
           </div>
         )}
       </main>
+
+      <PortalFooter />
 
       {/* Modal Zapytania o Ofertę */}
       {offer && activeOption && (

@@ -19,7 +19,7 @@ services:
     environment:
       # Link to existing backend alias on the shared coolify network (or private bridge)
       BACKEND_URL: ${BACKEND_URL:?Set the verified environment-qualified backend URL}
-      PORTAL_BRAND_NAME: ${PORTAL_BRAND_NAME:-Program Samochodowy by Motolia}
+      PORTAL_BRAND_NAME: ${PORTAL_BRAND_NAME:-Benefivo}
       PORTAL_BRAND_LOGO_URL: ${PORTAL_BRAND_LOGO_URL:-/logo.svg}
       PORTAL_URL: ${PORTAL_URL:-https://pracownicy-dev.motolia.pl}
       PORTAL_API_URL: "/api"

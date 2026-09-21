@@ -21,6 +21,7 @@ import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-
 import { RateRangeFilter } from '../catalog/RateRangeFilter';
 import { formatCountPl } from '../common/plural';
 import { PortalHeader } from '../common/PortalHeader';
+import { PortalFooter } from '../common/PortalFooter';
 import { ImageSwiper } from '../common/ImageSwiper';
 
 function normalizeFuelType(val: string | null): { key: string; label: string } | null {
@@ -700,6 +701,7 @@ export const RentalCatalogPage: React.FC = () => {
           </div>
         )}
       </main>
+      <PortalFooter />
     </div>
   );
 };

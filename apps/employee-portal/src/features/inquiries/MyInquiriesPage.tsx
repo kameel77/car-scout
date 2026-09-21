@@ -13,6 +13,7 @@ import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import { fetchEmployeeInquiries, EmployeeInquiryItem } from './inquiries-api';
 import { PortalHeader } from '../common/PortalHeader';
+import { PortalFooter } from '../common/PortalFooter';
 import { formatCountPl } from '../common/plural';
 
 export const MyInquiriesPage: React.FC = () => {
@@ -323,6 +324,7 @@ export const MyInquiriesPage: React.FC = () => {
           </div>
         )}
       </main>
+      <PortalFooter />
     </div>
   );
 };

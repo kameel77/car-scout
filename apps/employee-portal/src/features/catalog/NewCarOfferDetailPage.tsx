@@ -18,6 +18,7 @@ import {
 } from './catalog-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
+import { PortalFooter } from '../common/PortalFooter';
 import { ImageGallery } from '../common/ImageGallery';
 import { calculateInstallment, nearestPeriodTo36 } from './financing';
 import { formatCountPl } from '../common/plural';
@@ -811,6 +812,8 @@ ${rateLine}${productLabelLine}`;
           </div>
         )}
       </main>
+
+      <PortalFooter />
 
       {/* Inquiry Modal */}
       {offer && (
