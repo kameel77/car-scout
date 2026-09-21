@@ -66,6 +66,34 @@ const mockOffer: catalogApi.EmployeeOffer = {
     fuelDiscount: '15 gr/l',
     consultantCare: true,
     termsText: null
+  },
+  financing: {
+    options: [
+      {
+        productId: 'prod-credit-1',
+        category: 'CREDIT',
+        label: 'Kredyt promocyjny',
+        allowedContractParties: ['CONSUMER'],
+        b2cStatus: 'AVAILABLE',
+        minDownPaymentPct: 0,
+        maxDownPaymentPct: 45,
+        maxResidualPct: 30,
+        periods: [24, 36, 48, 60],
+        annualRatePct: 6.5
+      },
+      {
+        productId: 'prod-leasing-1',
+        category: 'LEASING',
+        label: 'Leasing operacyjny',
+        allowedContractParties: ['COMPANY'],
+        b2cStatus: 'AVAILABLE',
+        minDownPaymentPct: 0,
+        maxDownPaymentPct: 45,
+        maxResidualPct: 30,
+        periods: [24, 36, 48, 60],
+        annualRatePct: 7.0
+      }
+    ]
   }
 };
 
@@ -333,7 +361,7 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     expect(notesTextarea.value).toContain('Wybrany produkt finansowania: Kredyt Elastyczny');
   });
 
-  it('behaves exactly as before E2 when financing is null (no overrides configured for the program)', async () => {
+  it('renders "Rata na zapytanie" card and consultant inquiry button when financing is null', async () => {
     vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue({ ...mockOffer, financing: null });
 
     renderComponent();
@@ -342,12 +370,23 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
       expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
     });
 
-    // Legacy fixed options are still present.
-    expect(screen.getByRole('button', { name: '24 msc' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '48 msc' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '60 msc' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: '0%' }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Wykup końcowy')).toBeInTheDocument();
+    expect(screen.getByText('Rata na zapytanie')).toBeInTheDocument();
+    expect(screen.getByText(/Dla tej oferty program nie posiada ustandaryzowanej matrycy rat/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Zapytaj doradcę o ratę/i })).toBeInTheDocument();
+
+    // Interactive calculator controls are not rendered
+    expect(screen.queryByRole('button', { name: '24 msc' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '48 msc' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '60 msc' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Wykup końcowy')).not.toBeInTheDocument();
+
+    // Clicking inquiry opens modal with "Rata na zapytanie" pre-filled notes
+    fireEvent.click(screen.getByRole('button', { name: /Zapytaj doradcę o ratę/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    const notesTextarea = screen.getByLabelText(/Uwagi lub pytania/i) as HTMLTextAreaElement;
+    expect(notesTextarea.value).toContain('Finansowanie: Rata na zapytanie');
   });
 
   it('applies sticky positioning only to the calculator card (Errata E3)', async () => {

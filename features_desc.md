@@ -1227,4 +1227,12 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - Backend (`POST /api/employee/auth/change-password`): weryfikacja bcrypt bieżącego hasła, walidacja długości (8 - 72 bajty z czytelnym komunikatem błędu), unieważnienie innych sesji w Redis (`del ep:session:${jti}`) oraz ustawienie `sessionsValidAfter` w bazie.
     - Zgodność z Errata E8: wystawienie nowego tokena sesyjnego dla bieżącego urządzenia z czasem `iat: nowSec` i zsynchronizowanym `sessionsValidAfter = new Date(nowSec * 1000)`, co eliminuje wyścig podsekundowy i pozwala użytkownikowi kontynuować pracę bez konieczności ponownego logowania.
     - Asynchroniczne powiadomienie e-mail o zmianie hasła (`sendEmployeePasswordChangedEmail`) informujące o zabezpieczeniu konta.
+- **Pełna Migracja Tokenów Kolorystycznych (Eliminacja `gray-*`)**:
+  - W 8 plikach portalu pracowniczego (`RentalCatalogPage`, `RentalOfferDetailPage`, `CatalogPage`, `NewCarOfferDetailPage`, `MyInquiriesPage`, `InquiryModal`, `ImageGallery`, `ImageSwiper`) zastąpiono wszystkie 55 wystąpień klas Tailwind `gray-*` semantycznymi tokenami marki Benefivo (`ink`, `paper`, `line`, `muted`), przywracając 100% spójność wizualną systemu designu.
+- **Rzetelna Wycena i Obsługa Stanu „Rata na zapytanie”**:
+  - Usunięto sztuczny, zaszyty w kodzie fallback stopy procentowej 7,5% rocznie w kalkulatorze finansowania i wyliczaniu domyślnej raty (`calculateDefaultOfferInstallment`).
+  - Oferty bez skonfigurowanej matrycy produktów finansowych w programie pracowniczym (`financing === null` lub puste `options`) są jawnie oznaczane jako „Rata na zapytanie” (plakietka na zdjęciu pojazdu oraz w sekcji ceny pracowniczej) i nie są wyceniane na bazie fikcyjnych założeń.
+  - Na stronie szczegółów pojazdu (`NewCarOfferDetailPage.tsx`) zamiast interaktywnego kalkulatora z fałszywymi suwakami wyświetlana jest czytelna karta informacyjna „Rata na zapytanie” z bezpośrednim przyciskiem akcji „Zapytaj doradcę o ratę”, który otwiera modal zapytania z predefiniowaną notatką informującą o prośbie o dedykowaną kalkulację doradcy.
+  - Filtr raty miesięcznej w katalogu (`minRate` / `maxRate`) nie wyklucza po cichu ofert nieposiadających matrycy finansowania - oferty bez wycenionej raty pozostają widoczne z etykietą „Rata na zapytanie”.
+  - Przy sortowaniu po racie (`rate_asc`, `rate_desc`) oferty z ratą na zapytanie są pozycjonowane na końcu listy.
 

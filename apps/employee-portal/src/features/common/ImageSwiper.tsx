@@ -39,11 +39,11 @@ export const ImageSwiper: React.FC<ImageSwiperProps> = ({
 
   if (total === 0) {
     return (
-      <div className={`relative overflow-hidden bg-gray-100 flex items-center justify-center ${aspectClassName}`}>
+      <div className={`relative overflow-hidden bg-paper flex items-center justify-center ${aspectClassName}`}>
         {fallback || (
-          <div className="flex flex-col items-center justify-center text-gray-300 gap-1">
-            <Car className="h-10 w-10 text-gray-300" />
-            <span className="text-xs text-gray-400">Brak zdjęcia</span>
+          <div className="flex flex-col items-center justify-center text-muted gap-1">
+            <Car className="h-10 w-10 text-muted" />
+            <span className="text-xs text-muted">Brak zdjęcia</span>
           </div>
         )}
       </div>
@@ -54,7 +54,7 @@ export const ImageSwiper: React.FC<ImageSwiperProps> = ({
 
   return (
     <div
-      className={`relative overflow-hidden bg-gray-100 select-none touch-pan-y group ${aspectClassName}`}
+      className={`relative overflow-hidden bg-paper select-none touch-pan-y group ${aspectClassName}`}
       {...swipe}
     >
       <img

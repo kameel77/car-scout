@@ -4,6 +4,7 @@ import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import {
   ArrowLeft,
+  ArrowRight,
   ShieldCheck,
   CheckCircle,
   Sparkles,
@@ -208,9 +209,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
   // Kalkulacja finansowania
   // Standardowy algorytm leasingowy PMT używany w platformie Motolia
   const calculation = useMemo(() => {
-    if (!offer) return null;
-
-    const annualRate = hasFinancingConfig && selectedOption ? selectedOption.annualRatePct : 7.5;
+    if (!offer || !hasFinancingConfig || !selectedOption || typeof selectedOption.annualRatePct !== 'number') return null;
 
     return calculateInstallment({
       employeePriceGrossPln: offer.pricing.employeePricePln,
@@ -218,15 +217,21 @@ export const NewCarOfferDetailPage: React.FC = () => {
       months,
       downPaymentPct,
       residualPct,
-      annualRatePct: annualRate
+      annualRatePct: selectedOption.annualRatePct
     });
   }, [offer, contractType, months, downPaymentPct, residualPct, hasFinancingConfig, selectedOption]);
 
   // Tekst podsumowujący konfigurację do przekazania w zapytaniu
   const inquiryInitialNotes = useMemo(() => {
-    if (!calculation || !offer) return '';
+    if (!offer) return '';
+    if (!hasFinancingConfig || !calculation) {
+      return `[Zapytanie o ofertę]:
+- Pojazd: ${offer.vehicle.make} ${offer.vehicle.model} ${offer.vehicle.version || ''}
+- Cena pracownicza: ${offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł brutto
+- Finansowanie: Rata na zapytanie (prośba o indywidualną kalkulację doradcy)`;
+    }
     const typeLabel = contractType === 'CONSUMER' ? 'Kredyt / Finansowanie konsumenckie' : 'Leasing operacyjny (B2B)';
-    const productLabelLine = hasFinancingConfig && selectedOption
+    const productLabelLine = selectedOption
       ? `\n- Wybrany produkt finansowania: ${selectedOption.label}`
       : '';
     const rateLine = contractType === 'CONSUMER'
@@ -297,7 +302,7 @@ ${rateLine}${productLabelLine}`;
         {/* Error State */}
         {!isLoading && error && (
           <div className="p-8 bg-white rounded-2xl border border-red-200 text-center max-w-xl mx-auto my-12 shadow-xs">
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Nie udało się załadować oferty</h2>
+            <h2 className="text-lg font-bold text-ink mb-2">Nie udało się załadować oferty</h2>
             <p className="text-sm text-red-600 mb-6">{error}</p>
             <div className="flex justify-center gap-3">
               <button
@@ -310,7 +315,7 @@ ${rateLine}${productLabelLine}`;
               <button
                 type="button"
                 onClick={() => navigate('/katalog')}
-                className="px-5 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+                className="px-5 py-2.5 border border-line hover:bg-paper text-ink text-sm font-semibold rounded-xl transition-colors"
               >
                 Wróć do katalogu
               </button>
@@ -552,23 +557,23 @@ ${rateLine}${productLabelLine}`;
                   </div>
                 )}
 
-                {/* Financing Calculator Box */}
-                <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20 lg:z-10">
-                  <div className="flex items-center justify-between border-b border-line pb-4">
-                    <div className="flex items-center gap-2">
-                      <Calculator className="h-5 w-5 text-forest" />
-                      <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
+                {/* Financing Calculator Box or Rata na zapytanie */}
+                {hasFinancingConfig && selectedOption ? (
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20 lg:z-10">
+                    <div className="flex items-center justify-between border-b border-line pb-4">
+                      <div className="flex items-center gap-2">
+                        <Calculator className="h-5 w-5 text-forest" />
+                        <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
+                      </div>
+                      <span className="text-xs font-semibold text-ink bg-lime px-2.5 py-1 rounded-full">
+                        Cena pracownicza
+                      </span>
                     </div>
-                    <span className="text-xs font-semibold text-ink bg-lime px-2.5 py-1 rounded-full">
-                      Cena pracownicza
-                    </span>
-                  </div>
 
-                  {/* Contract Type Toggle */}
-                  <div>
-                    <span className="text-xs font-medium text-gray-500 block mb-2">Forma finansowania</span>
-                    {hasFinancingConfig ? (
-                      <div className={`grid gap-2 bg-gray-100 p-1 rounded-xl ${financingOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {/* Contract Type Toggle */}
+                    <div>
+                      <span className="text-xs font-medium text-muted block mb-2">Forma finansowania</span>
+                      <div className={`grid gap-2 bg-paper p-1 rounded-xl border border-line ${financingOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                         {financingOptions.map((option, idx) => (
                           <button
                             key={option.productId}
@@ -584,41 +589,14 @@ ${rateLine}${productLabelLine}`;
                           </button>
                         ))}
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2 bg-paper p-1 rounded-xl border border-line">
-                        <button
-                          type="button"
-                          onClick={() => setContractType('CONSUMER')}
-                          className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
-                            contractType === 'CONSUMER'
-                              ? 'bg-white text-ink shadow-xs'
-                              : 'text-muted hover:text-ink'
-                          }`}
-                        >
-                          Prywatnie
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setContractType('LEASING_B2B')}
-                          className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
-                            contractType === 'LEASING_B2B'
-                              ? 'bg-white text-ink shadow-xs'
-                              : 'text-muted hover:text-ink'
-                          }`}
-                        >
-                          Rozliczam B2B
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Months Selector */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-ink">Okres finansowania</span>
-                      <span className="text-xs font-bold text-forest">{months} miesięcy</span>
                     </div>
-                    {hasFinancingConfig && selectedOption ? (
+
+                    {/* Months Selector */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-ink">Okres finansowania</span>
+                        <span className="text-xs font-bold text-forest">{months} miesięcy</span>
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {selectedOption.periods.map((m) => (
                           <button
@@ -635,38 +613,22 @@ ${rateLine}${productLabelLine}`;
                           </button>
                         ))}
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-4 gap-2">
-                        {[24, 36, 48, 60].map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            onClick={() => setMonths(m)}
-                            className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                              months === m
-                                ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
-                                : 'border-line text-ink hover:bg-paper'
-                            }`}
-                          >
-                            {m} msc
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Down Payment Selector */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-ink">Wpłata wstępna</span>
-                      <span className="text-xs font-bold text-forest">
-                        {downPaymentPct}% (
-                        {calculation ? calculation.initialPaymentAmount.toLocaleString('pl-PL') : 0} zł{' '}
-                        {contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-                      </span>
                     </div>
-                    {hasFinancingConfig && selectedOption ? (
-                      <div className="flex flex-wrap gap-1.5">
+
+                    {/* Down Payment Selector */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-ink">Wpłata początkowa</span>
+                        <div className="text-right">
+                          <span className="text-xs font-bold text-forest">{downPaymentPct}%</span>
+                          {calculation && (
+                            <span className="text-2xs text-muted block">
+                              {calculation.initialPaymentAmount.toLocaleString('pl-PL')} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         {buildDownPaymentChipOptions(selectedOption.minDownPaymentPct, selectedOption.maxDownPaymentPct).map((pct) => (
                           <button
                             key={pct}
@@ -682,38 +644,22 @@ ${rateLine}${productLabelLine}`;
                           </button>
                         ))}
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {[0, 10, 20, 30, 45].map((pct) => (
-                          <button
-                            key={pct}
-                            type="button"
-                            onClick={() => setDownPaymentPct(pct)}
-                            className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                              downPaymentPct === pct
-                                ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
-                                : 'border-line text-ink hover:bg-paper'
-                            }`}
-                          >
-                            {pct}%
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Residual / Balloon Payment Selector */}
-                  {(!hasFinancingConfig || (selectedOption && selectedOption.maxResidualPct > 0)) && (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-ink">Wykup końcowy</span>
-                        <span className="text-xs font-bold text-forest">
-                          {residualPct}% (
-                          {calculation ? calculation.residualAmount.toLocaleString('pl-PL') : 0} zł{' '}
-                          {contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-                        </span>
-                      </div>
-                      {hasFinancingConfig && selectedOption ? (
+                    {/* Residual Value Selector (if available) */}
+                    {selectedOption.maxResidualPct > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-ink">Wykup końcowy</span>
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-forest">{residualPct}%</span>
+                            {calculation && (
+                              <span className="text-2xs text-muted block">
+                                {calculation.residualAmount.toLocaleString('pl-PL')} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           {buildResidualChipOptions(selectedOption.maxResidualPct).map((pct) => (
                             <button
@@ -730,83 +676,93 @@ ${rateLine}${productLabelLine}`;
                             </button>
                           ))}
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-4 gap-2">
-                          {[1, 10, 20, 30].map((pct) => (
-                            <button
-                              key={pct}
-                              type="button"
-                              onClick={() => setResidualPct(pct)}
-                              className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                                residualPct === pct
-                                  ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
-                                  : 'border-line text-ink hover:bg-paper'
-                              }`}
-                            >
-                              {pct}%
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {/* Result Rate Box */}
-                  <div className="pt-4 border-t border-line bg-paper -mx-6 -mb-6 p-6 rounded-b-2xl">
-                    <div className="flex items-baseline justify-between mb-2">
-                      {contractType === 'CONSUMER' ? (
-                        <>
-                          <div>
-                            <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-3xl font-black text-ink tracking-tight font-heading">
-                                {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
-                              </span>
-                              <span className="text-xs font-semibold text-muted">brutto / mies.</span>
+                    {/* Result Rate Box */}
+                    <div className="pt-4 border-t border-line bg-paper -mx-6 -mb-6 p-6 rounded-b-2xl">
+                      <div className="flex items-baseline justify-between mb-2">
+                        {contractType === 'CONSUMER' ? (
+                          <>
+                            <div>
+                              <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-black text-ink tracking-tight font-heading">
+                                  {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
+                                </span>
+                                <span className="text-xs font-semibold text-muted">brutto / mies.</span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-sm font-bold text-muted block font-heading">
-                              {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
-                            </span>
-                            <span className="text-[11px] text-muted">netto / mies.</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div>
-                            <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-3xl font-black text-ink tracking-tight font-heading">
+                            <div className="text-right">
+                              <span className="text-sm font-bold text-muted block font-heading">
                                 {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
                               </span>
-                              <span className="text-xs font-semibold text-muted">netto / mies.</span>
+                              <span className="text-[11px] text-muted">netto / mies.</span>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-sm font-bold text-muted block font-heading">
-                              {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
-                            </span>
-                            <span className="text-[11px] text-muted">brutto / mies.</span>
-                          </div>
-                        </>
-                      )}
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-black text-ink tracking-tight font-heading">
+                                  {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
+                                </span>
+                                <span className="text-xs font-semibold text-muted">netto / mies.</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-bold text-muted block font-heading">
+                                {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
+                              </span>
+                              <span className="text-[11px] text-muted">brutto / mies.</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="text-[11px] text-muted mb-4 flex items-center gap-1.5">
+                        <Info className="h-3.5 w-3.5 text-muted flex-shrink-0" />
+                        <span>Kalkulacja ma charakter orientacyjny. Rzeczywiste warunki zależą od oceny zdolności finansowej.</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsInquiryModalOpen(true)}
+                        className="w-full py-3 px-4 bg-ink hover:bg-forest text-paper font-bold text-sm rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+                      >
+                        Zapytaj o tę ofertę i ratę
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-5 lg:sticky lg:top-20 lg:z-10">
+                    <div className="flex items-center justify-between border-b border-line pb-4">
+                      <div className="flex items-center gap-2">
+                        <Calculator className="h-5 w-5 text-forest" />
+                        <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
+                      </div>
+                      <span className="text-xs font-semibold text-ink bg-paper border border-line px-2.5 py-1 rounded-full">
+                        Rata na zapytanie
+                      </span>
                     </div>
 
-                    <div className="text-[11px] text-muted mb-4 flex items-center gap-1.5">
-                      <Info className="h-3.5 w-3.5 text-muted flex-shrink-0" />
-                      <span>Kalkulacja ma charakter orientacyjny. Rzeczywiste warunki zależą od oceny zdolności finansowej.</span>
+                    <div className="p-4 bg-paper rounded-xl border border-line">
+                      <p className="text-xs text-muted leading-relaxed">
+                        Dla tej oferty program nie posiada ustandaryzowanej matrycy rat. Dedykowany doradca przygotuje dla Ciebie indywidualną kalkulację finansowania (leasing konsumencki, pożyczka lub leasing B2B) dopasowaną do Twoich preferencji.
+                      </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setIsInquiryModalOpen(true)}
-                      className="w-full py-3 px-4 bg-ink hover:bg-forest text-paper font-bold text-sm rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+                      className="w-full py-3.5 px-6 bg-ink hover:bg-forest text-paper font-semibold text-sm rounded-full transition-colors shadow-xs flex items-center justify-center gap-2"
                     >
-                      Zapytaj o tę ofertę i ratę
+                      <span>Zapytaj doradcę o ratę</span>
+                      <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

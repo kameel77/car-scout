@@ -251,11 +251,17 @@ export const CatalogPage: React.FC = () => {
     }
 
     if (minRate !== '') {
-      result = result.filter(({ installment }) => installment.installmentGross >= Number(minRate));
+      result = result.filter(({ installment }) => {
+        if (!installment) return true;
+        return installment.installmentGross >= Number(minRate);
+      });
     }
 
     if (maxRate !== '') {
-      result = result.filter(({ installment }) => installment.installmentGross <= Number(maxRate));
+      result = result.filter(({ installment }) => {
+        if (!installment) return true;
+        return installment.installmentGross <= Number(maxRate);
+      });
     }
 
     if (sortBy === 'price_asc') {
@@ -265,12 +271,22 @@ export const CatalogPage: React.FC = () => {
     } else if (sortBy === 'discount_desc') {
       result.sort((a, b) => b.offer.pricing.discountPct - a.offer.pricing.discountPct);
     } else if (sortBy === 'rate_asc') {
-      result.sort((a, b) => a.installment.installmentGross - b.installment.installmentGross);
+      result.sort((a, b) => {
+        if (!a.installment && !b.installment) return 0;
+        if (!a.installment) return 1;
+        if (!b.installment) return -1;
+        return a.installment.installmentGross - b.installment.installmentGross;
+      });
     } else if (sortBy === 'rate_desc') {
-      result.sort((a, b) => b.installment.installmentGross - a.installment.installmentGross);
+      result.sort((a, b) => {
+        if (!a.installment && !b.installment) return 0;
+        if (!a.installment) return 1;
+        if (!b.installment) return -1;
+        return b.installment.installmentGross - a.installment.installmentGross;
+      });
     }
 
-    return result.map((item) => item.offer);
+    return result;
   }, [offersWithInstallments, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, minRate, maxRate, sortBy]);
 
   const secondaryFiltersCount = (selectedFuel ? 1 : 0) + (selectedTransmission ? 1 : 0) + (selectedBodyType ? 1 : 0);
@@ -608,21 +624,21 @@ export const CatalogPage: React.FC = () => {
             {Array.from({ length: 6 }).map((_, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs animate-pulse flex flex-col"
+                className="bg-white rounded-2xl border border-line overflow-hidden shadow-xs animate-pulse flex flex-col"
               >
-                <div className="aspect-[16/10] bg-gray-200 w-full" />
+                <div className="aspect-[16/10] bg-line w-full" />
                 <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
                   <div className="space-y-2">
-                    <div className="h-5 bg-gray-200 rounded w-3/4" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2" />
+                    <div className="h-5 bg-line rounded w-3/4" />
+                    <div className="h-4 bg-line rounded w-1/2" />
                     <div className="flex gap-2 pt-2">
-                      <div className="h-5 bg-gray-200 rounded w-14" />
-                      <div className="h-5 bg-gray-200 rounded w-16" />
+                      <div className="h-5 bg-line rounded w-14" />
+                      <div className="h-5 bg-line rounded w-16" />
                     </div>
                   </div>
-                  <div className="pt-4 border-t border-gray-100 space-y-2">
-                    <div className="h-3 bg-gray-200 rounded w-24" />
-                    <div className="h-7 bg-gray-200 rounded w-32" />
+                  <div className="pt-4 border-t border-line space-y-2">
+                    <div className="h-3 bg-line rounded w-24" />
+                    <div className="h-7 bg-line rounded w-32" />
                   </div>
                 </div>
               </div>
@@ -638,8 +654,8 @@ export const CatalogPage: React.FC = () => {
             <div className="mx-auto h-12 w-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-3">
               <AlertCircle className="h-6 w-6" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900">Nie udało się załadować ofert</h2>
-            <p className="mt-1 text-sm text-gray-600 leading-relaxed">{offersError}</p>
+            <h2 className="text-lg font-bold text-ink font-heading">Nie udało się załadować ofert</h2>
+            <p className="mt-1 text-sm text-muted leading-relaxed">{offersError}</p>
             <button
               type="button"
               onClick={() => {
@@ -688,7 +704,7 @@ export const CatalogPage: React.FC = () => {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             data-testid="catalog-offers-grid"
           >
-            {filteredOffers.map((offer) => {
+            {filteredOffers.map(({ offer, installment }) => {
               const carImages = [
                 offer.vehicle.primaryImageUrl,
                 ...(offer.vehicle.imageUrls || []).filter((u) => u !== offer.vehicle.primaryImageUrl),
@@ -715,6 +731,13 @@ export const CatalogPage: React.FC = () => {
                       <div className="absolute top-3 left-3 bg-ink text-paper font-semibold text-xs px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1 z-10 pointer-events-none">
                         <Tag className="h-3 w-3" />
                         <span>-{String(offer.pricing.discountPct).replace('.', ',')}%</span>
+                      </div>
+                    )}
+
+                    {/* Rata na zapytanie Badge */}
+                    {!installment && (
+                      <div className="absolute top-3 right-3 bg-paper/95 text-ink font-semibold text-xs px-2.5 py-1 rounded-full shadow-xs border border-line z-10 pointer-events-none">
+                        Rata na zapytanie
                       </div>
                     )}
                   </Link>
@@ -794,12 +817,28 @@ export const CatalogPage: React.FC = () => {
                       <span className="text-xs text-muted font-medium">brutto</span>
                     </div>
 
+                    {installment ? (
+                      <div className="mt-2 flex items-baseline justify-between text-xs text-muted">
+                        <span>Szacowana rata:</span>
+                        <span className="font-bold text-ink">
+                          od {installment.installmentGross.toLocaleString('pl-PL')} zł brutto / mies.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex items-center justify-between text-xs">
+                        <span className="text-muted">Finansowanie:</span>
+                        <span className="font-semibold text-ink bg-paper border border-line px-2 py-0.5 rounded-md">
+                          Rata na zapytanie
+                        </span>
+                      </div>
+                    )}
+
                     <div className="mt-3.5 flex flex-col gap-2">
                       <Link
                         to={`/katalog/${offer.id}`}
                         className="w-full py-3 px-4 bg-ink hover:bg-ink/90 text-paper font-semibold text-sm rounded-full transition-colors shadow-xs flex items-center justify-center gap-1.5"
                       >
-                        <span>Szczegóły i kalkulator raty</span>
+                        <span>{installment ? 'Szczegóły i kalkulator raty' : 'Szczegóły oferty'}</span>
                         <ChevronRight className="h-4 w-4" />
                       </Link>
                       <button

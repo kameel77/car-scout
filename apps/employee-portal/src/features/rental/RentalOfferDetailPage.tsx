@@ -276,8 +276,8 @@ export const RentalOfferDetailPage: React.FC = () => {
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Nie znaleziono oferty najmu</h3>
-            <p className="text-sm text-gray-600 mt-2 mb-6">
+            <h3 className="text-lg font-bold text-ink font-heading">Nie znaleziono oferty najmu</h3>
+            <p className="text-sm text-muted mt-2 mb-6">
               {error || 'Podana oferta nie istnieje lub została wycofana z programu.'}
             </p>
             <Link

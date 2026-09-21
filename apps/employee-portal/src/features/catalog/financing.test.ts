@@ -68,7 +68,7 @@ describe('Financing calculations (financing.ts)', () => {
     expect(nearestPeriodTo36([48, 60])).toBe(48);
   });
 
-  it('calculateDefaultOfferInstallment calculates default installment with or without program overrides', () => {
+  it('calculateDefaultOfferInstallment returns null when no financing config or options provided (Rata na zapytanie)', () => {
     const mockOffer: EmployeeOffer = {
       id: 'off_1',
       sourceType: 'FINANCING',
@@ -92,10 +92,10 @@ describe('Financing calculations (financing.ts)', () => {
       benefit: null
     };
 
-    const resWithoutConfig = calculateDefaultOfferInstallment(mockOffer, null);
-    expect(resWithoutConfig.installmentGross).toBeGreaterThan(0);
+    expect(calculateDefaultOfferInstallment(mockOffer, null)).toBeNull();
+    expect(calculateDefaultOfferInstallment(mockOffer, { options: [] })).toBeNull();
 
-    const resWithConfig = calculateDefaultOfferInstallment(mockOffer, {
+    const resLowRate = calculateDefaultOfferInstallment(mockOffer, {
       options: [
         {
           productId: 'p1',
@@ -107,11 +107,31 @@ describe('Financing calculations (financing.ts)', () => {
           maxDownPaymentPct: 30,
           maxResidualPct: 25,
           periods: [24, 36, 48],
-          annualRatePct: 6.0
+          annualRatePct: 5.0
         }
       ]
     });
-    // Niższa stopa (6.0% vs 7.5%) powinna dać niższą ratę
-    expect(resWithConfig.installmentGross).toBeLessThan(resWithoutConfig.installmentGross);
+    expect(resLowRate).not.toBeNull();
+    expect(resLowRate!.installmentGross).toBeGreaterThan(0);
+
+    const resHighRate = calculateDefaultOfferInstallment(mockOffer, {
+      options: [
+        {
+          productId: 'p2',
+          category: 'CREDIT',
+          label: 'Kredyt standardowy',
+          allowedContractParties: ['CONSUMER'],
+          b2cStatus: 'AVAILABLE',
+          minDownPaymentPct: 10,
+          maxDownPaymentPct: 30,
+          maxResidualPct: 25,
+          periods: [24, 36, 48],
+          annualRatePct: 9.0
+        }
+      ]
+    });
+    expect(resHighRate).not.toBeNull();
+    // Niższa stopa (5.0% vs 9.0%) powinna dać niższą ratę
+    expect(resLowRate!.installmentGross).toBeLessThan(resHighRate!.installmentGross);
   });
 });

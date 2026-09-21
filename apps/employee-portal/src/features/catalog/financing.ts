@@ -6,7 +6,7 @@ export interface InstallmentCalculationParams {
   months: number;
   downPaymentPct: number;
   residualPct: number;
-  annualRatePct?: number;
+  annualRatePct: number;
 }
 
 export interface InstallmentCalculationResult {
@@ -36,7 +36,7 @@ export function calculateInstallment(params: InstallmentCalculationParams): Inst
     months,
     downPaymentPct,
     residualPct,
-    annualRatePct = 7.5
+    annualRatePct
   } = params;
 
   const employeeNet = Math.round(employeeGross / 1.23);
@@ -74,24 +74,33 @@ export function calculateInstallment(params: InstallmentCalculationParams): Inst
 
 /**
  * Wylicza domyślną ratę miesięczną dla oferty nowego samochodu w katalogu (dla filtrowania i sortowania).
+ * Zwraca null, gdy oferta lub program nie posiada skonfigurowanych parametrów finansowania
+ * (zapobiega to wyświetlaniu zmyślonych szacunków i filtrowaniu po fikcyjnych liczbach).
  * Domyślnie kalkulacja wariantu konsumenckiego (brutto).
  */
 export function calculateDefaultOfferInstallment(
   offer: EmployeeOffer,
   financingConfig?: EmployeeFinancingConfig | null
-): InstallmentCalculationResult {
+): InstallmentCalculationResult | null {
   const options = financingConfig?.options ?? offer.financing?.options ?? [];
-  const creditOption = options.find((opt) => opt.category === 'CREDIT') ?? options[0];
+  if (!options || options.length === 0) {
+    return null;
+  }
 
-  const annualRatePct = creditOption ? creditOption.annualRatePct : 7.5;
-  const periods = creditOption ? creditOption.periods : [24, 36, 48, 60];
+  const creditOption = options.find((opt) => opt.category === 'CREDIT') ?? options[0];
+  if (!creditOption || typeof creditOption.annualRatePct !== 'number') {
+    return null;
+  }
+
+  const annualRatePct = creditOption.annualRatePct;
+  const periods = creditOption.periods && creditOption.periods.length > 0 ? creditOption.periods : [24, 36, 48, 60];
   const months = nearestPeriodTo36(periods);
 
-  const minDown = creditOption ? creditOption.minDownPaymentPct : 0;
-  const maxDown = creditOption ? creditOption.maxDownPaymentPct : 45;
+  const minDown = creditOption.minDownPaymentPct ?? 0;
+  const maxDown = creditOption.maxDownPaymentPct ?? 45;
   const downPaymentPct = Math.min(Math.max(20, minDown), maxDown);
 
-  const maxResidual = creditOption ? creditOption.maxResidualPct : 30;
+  const maxResidual = creditOption.maxResidualPct ?? 30;
   const residualPct = Math.min(20, maxResidual);
 
   return calculateInstallment({

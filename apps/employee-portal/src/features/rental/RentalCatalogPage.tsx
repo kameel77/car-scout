@@ -556,8 +556,8 @@ export const RentalCatalogPage: React.FC = () => {
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Nie udało się pobrać ofert najmu</h3>
-            <p className="text-sm text-gray-600 mt-2 mb-6">{offersError}</p>
+            <h3 className="text-lg font-bold text-ink font-heading">Nie udało się pobrać ofert najmu</h3>
+            <p className="text-sm text-muted mt-2 mb-6">{offersError}</p>
             <button
               type="button"
               onClick={() => loadOffers()}
@@ -583,7 +583,7 @@ export const RentalCatalogPage: React.FC = () => {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-line text-ink text-sm font-medium rounded-xl hover:bg-paper transition-colors"
               >
                 Wyczyść filtry
               </button>
@@ -600,13 +600,13 @@ export const RentalCatalogPage: React.FC = () => {
               return (
                 <div
                   key={offer.id}
-                  className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
+                  className="bg-white border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
                 >
                   <div>
                     {/* Vehicle Photo Container - Link to offer */}
                     <Link
                       to={`/najem/${offer.id}`}
-                      className="relative h-48 bg-gray-100 overflow-hidden block group cursor-pointer"
+                      className="relative h-48 bg-paper overflow-hidden block group cursor-pointer"
                       aria-label={`${offer.vehicle.make} ${offer.vehicle.model}`}
                     >
                       <ImageSwiper

@@ -52,6 +52,22 @@ const mockOffersList: catalogApi.EmployeeOffer[] = [
       savingsPln: 5752,
       discountPct: 8.0,
     },
+    financing: {
+      options: [
+        {
+          productId: 'prod_yaris_credit',
+          category: 'CREDIT',
+          label: 'Kredyt promocyjny',
+          allowedContractParties: ['CONSUMER'],
+          b2cStatus: 'AVAILABLE',
+          minDownPaymentPct: 10,
+          maxDownPaymentPct: 30,
+          maxResidualPct: 20,
+          periods: [24, 36, 48],
+          annualRatePct: 7.5,
+        },
+      ],
+    },
     benefit: {
       name: 'Pakiet Powitalny Moya',
       moyaCardAmount: 500,
@@ -79,6 +95,22 @@ const mockOffersList: catalogApi.EmployeeOffer[] = [
       employeePricePln: 159988,
       savingsPln: 13912,
       discountPct: 8.0,
+    },
+    financing: {
+      options: [
+        {
+          productId: 'prod_tayron_credit',
+          category: 'CREDIT',
+          label: 'Kredyt promocyjny',
+          allowedContractParties: ['CONSUMER'],
+          b2cStatus: 'AVAILABLE',
+          minDownPaymentPct: 10,
+          maxDownPaymentPct: 30,
+          maxResidualPct: 20,
+          periods: [24, 36, 48],
+          annualRatePct: 7.5,
+        },
+      ],
     },
     benefit: null,
   },
@@ -387,6 +419,61 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     expect(screen.queryByText('Skrzynia')).not.toBeInTheDocument();
     fireEvent.click(moreBtn);
     expect(screen.getByText('Skrzynia')).toBeInTheDocument();
+  });
+
+  it('renders "Rata na zapytanie" for offers without financing config and keeps them visible under rate filtering', async () => {
+    const offerWithoutFinancing: catalogApi.EmployeeOffer = {
+      id: 'offer_cupra',
+      sourceType: 'FINANCING',
+      vehicle: {
+        make: 'Cupra',
+        model: 'Formentor',
+        version: '1.5 TSI',
+        productionYear: 2026,
+        fuelType: 'PETROL',
+        transmission: 'AUTOMATIC',
+        bodyType: 'SUV',
+        primaryImageUrl: null,
+        imageUrls: [],
+      },
+      pricing: {
+        listPricePln: 145000,
+        employeePricePln: 135000,
+        savingsPln: 10000,
+        discountPct: 6.9,
+      },
+      financing: null,
+      benefit: null,
+    };
+
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
+      offers: [mockOffersList[0], offerWithoutFinancing],
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <CatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Cupra Formentor')).toBeInTheDocument();
+    });
+
+    // Badge and label for offer without financing
+    expect(screen.getAllByText('Rata na zapytanie').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Szczegóły oferty')).toBeInTheDocument();
+
+    // When rate filter (< 1500) is clicked, unconfigured offer does not silently drop
+    fireEvent.click(screen.getByRole('button', { name: '< 1500' }));
+    expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
+    expect(screen.getByText('Cupra Formentor')).toBeInTheDocument();
   });
 });
 

@@ -84,8 +84,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   if (total === 0) {
     return (
-      <div className={`relative ${aspectClassName} bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-400 gap-2 border border-gray-200`}>
-        <Car className="h-16 w-16 text-gray-300" />
+      <div className={`relative ${aspectClassName} bg-paper rounded-xl flex flex-col items-center justify-center text-muted gap-2 border border-line`}>
+        <Car className="h-16 w-16 text-muted" />
         <span className="text-sm">Brak zdjęć dla tego pojazdu</span>
       </div>
     );
@@ -95,7 +95,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     <div className="space-y-3">
       {/* Main Image Container */}
       <div
-        className={`relative ${aspectClassName} bg-gray-100 rounded-xl overflow-hidden cursor-pointer group select-none touch-pan-y shadow-xs`}
+        className={`relative ${aspectClassName} bg-paper rounded-xl overflow-hidden cursor-pointer group select-none touch-pan-y shadow-xs`}
         onClick={() => setLightboxOpen(true)}
         {...mainSwipe}
       >
@@ -182,7 +182,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 type="button"
                 aria-label="Przewiń miniatury w lewo"
                 onClick={() => scrollThumbs('prev')}
-                className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-md hover:bg-white z-10"
+                className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white z-10"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
@@ -190,7 +190,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 type="button"
                 aria-label="Przewiń miniatury w prawo"
                 onClick={() => scrollThumbs('next')}
-                className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-md hover:bg-white z-10"
+                className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white z-10"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>

@@ -239,11 +239,11 @@ export const MyInquiriesPage: React.FC = () => {
                 key={idx}
                 className="bg-white border border-line rounded-2xl p-5 shadow-xs animate-pulse flex flex-col md:flex-row gap-5"
               >
-                <div className="w-full md:w-48 h-32 bg-gray-200 rounded-xl flex-shrink-0" />
+                <div className="w-full md:w-48 h-32 bg-line rounded-xl flex-shrink-0" />
                 <div className="flex-1 space-y-3 py-1">
-                  <div className="h-5 bg-gray-200 rounded-md w-1/3" />
-                  <div className="h-4 bg-gray-200 rounded-md w-1/4" />
-                  <div className="h-4 bg-gray-200 rounded-md w-1/2" />
+                  <div className="h-5 bg-line rounded-md w-1/3" />
+                  <div className="h-4 bg-line rounded-md w-1/4" />
+                  <div className="h-4 bg-line rounded-md w-1/2" />
                 </div>
               </div>
             ))}
@@ -300,11 +300,11 @@ export const MyInquiriesPage: React.FC = () => {
             {inquiries.map((inq) => (
               <article
                 key={inq.id}
-                className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs hover:border-gray-300 transition-colors flex flex-col md:flex-row gap-5 items-start md:items-center justify-between"
+                className="bg-white border border-line rounded-2xl p-5 shadow-xs hover:border-ink/20 transition-colors flex flex-col md:flex-row gap-5 items-start md:items-center justify-between"
               >
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full md:w-auto">
                   {/* Vehicle Thumbnail */}
-                  <div className="w-full sm:w-36 h-24 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <div className="w-full sm:w-36 h-24 bg-paper rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                     {inq.vehicle?.primaryImageUrl ? (
                       <img
                         src={inq.vehicle.primaryImageUrl}
@@ -312,7 +312,7 @@ export const MyInquiriesPage: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Car className="h-8 w-8 text-gray-300" />
+                      <Car className="h-8 w-8 text-muted" />
                     )}
                   </div>
 

@@ -155,12 +155,12 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
     >
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between bg-paper/70">
           <div>
-            <h2 id="modal-headline" className="text-lg font-bold text-gray-900 leading-tight">
+            <h2 id="modal-headline" className="text-lg font-bold text-ink leading-tight">
               {createdReferenceNumber ? 'Zgłoszenie wysłane' : 'Zapytaj o tę ofertę'}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {offer.vehicle.make} {offer.vehicle.model}
               {rentalDisplay
                 ? ` (${(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet).toLocaleString('pl-PL')} zł ${rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.)`
@@ -173,7 +173,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Zamknij modal"
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 text-muted hover:text-ink rounded-lg hover:bg-paper transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -187,8 +187,8 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
               <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Dziękujemy za przesłanie zgłoszenia!</h3>
-              <p className="text-sm text-gray-600 mt-2 max-w-sm">
+              <h3 className="text-xl font-bold text-ink">Dziękujemy za przesłanie zgłoszenia!</h3>
+              <p className="text-sm text-muted mt-2 max-w-sm">
                 Twój dedykowany opiekun programu pracowniczego skontaktuje się z Tobą w ciągu 24 godzin w celu przedstawienia szczegółów.
               </p>
 
