@@ -3,13 +3,17 @@ export interface PortalBrandConfig {
   brandLogoUrl: string;
   portalUrl: string;
   apiUrl: string;
+  turnstileSiteKey?: string;
+  analyticsEnabled?: boolean;
 }
 
 export const defaultBrandConfig: PortalBrandConfig = {
-  brandName: 'Program Samochodowy by Motolia',
-  brandLogoUrl: '/logo.svg',
-  portalUrl: '',
+  brandName: 'Benefivo',
+  brandLogoUrl: '/static/logo-dark.svg',
+  portalUrl: 'https://benefivo.pl',
   apiUrl: '/api',
+  turnstileSiteKey: '1x00000000000000000000AA',
+  analyticsEnabled: false,
 };
 
 declare global {
@@ -36,7 +40,6 @@ export function validateBrandConfig(raw: unknown): PortalBrandConfig {
     // Dozwolone wyłącznie bezpieczne ścieżki względne (zaczynające się od pojedynczego /) lub pełny HTTPS
     if ((trimmed.startsWith('/') && !trimmed.startsWith('//')) || trimmed.startsWith('https://')) {
       try {
-        // Jeśli URL zaczyna się od https://, sprawdzamy poprawność syntaktyczną
         if (trimmed.startsWith('https://')) {
           new URL(trimmed);
         }
@@ -63,11 +66,22 @@ export function validateBrandConfig(raw: unknown): PortalBrandConfig {
     }
   }
 
+  let turnstileSiteKey = defaultBrandConfig.turnstileSiteKey;
+  if (typeof obj.turnstileSiteKey === 'string' && obj.turnstileSiteKey.trim().length > 0) {
+    turnstileSiteKey = obj.turnstileSiteKey.trim();
+  }
+
+  const analyticsEnabled = typeof obj.analyticsEnabled === 'boolean'
+    ? obj.analyticsEnabled
+    : defaultBrandConfig.analyticsEnabled;
+
   return {
     brandName,
     brandLogoUrl,
     portalUrl,
     apiUrl,
+    turnstileSiteKey,
+    analyticsEnabled,
   };
 }
 

@@ -2,11 +2,64 @@
 <html lang="pl">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Program Samochodowy dla Pracowników</title>
+    <meta name="theme-color" content="#F7F8F2" />
+    <link rel="icon" type="image/svg+xml" href="/static/symbol.svg" />
+
+    <!-- Preload critical fonts for instant LCP -->
+    <link rel="preload" href="/static/font-6.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/static/font-0.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/static/fonts.css" />
+
+    <title>Benefivo - dobre rzeczy jadą z Tobą | Samochód jako benefit</title>
+    <meta name="description" content="Najem i leasing aut na warunkach dla pracowników. Poznaj program motoryzacyjny dla Twojej firmy. Powered by Motolia." />
+    <link rel="canonical" href="__PORTAL_ORIGIN__/" />
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Benefivo" />
+    <meta property="og:title" content="Benefivo - Dobre rzeczy jadą z Tobą" />
+    <meta property="og:description" content="Najem i leasing aut na warunkach dla pracowników. Poznaj program motoryzacyjny dla Twojej firmy. Powered by Motolia." />
+    <meta property="og:url" content="__PORTAL_ORIGIN__/" />
+    <meta property="og:image" content="__PORTAL_ORIGIN__/static/og-benefivo.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Benefivo - Dobre rzeczy jadą z Tobą" />
+    <meta name="twitter:description" content="Najem i leasing aut na warunkach dla pracowników. Poznaj program motoryzacyjny dla Twojej firmy. Powered by Motolia." />
+    <meta name="twitter:image" content="__PORTAL_ORIGIN__/static/og-benefivo.png" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "__PORTAL_ORIGIN__/#organization",
+          "name": "Benefivo",
+          "url": "__PORTAL_ORIGIN__/",
+          "logo": "__PORTAL_ORIGIN__/static/logo-dark.svg",
+          "parentOrganization": {
+            "@type": "Organization",
+            "name": "Motolia Sp. z o.o.",
+            "url": "https://motolia.pl"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "__PORTAL_ORIGIN__/#website",
+          "url": "__PORTAL_ORIGIN__/",
+          "name": "Benefivo",
+          "publisher": {
+            "@id": "__PORTAL_ORIGIN__/#organization"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
-  <body class="bg-gray-50 text-gray-900 min-h-screen">
+  <body class="min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

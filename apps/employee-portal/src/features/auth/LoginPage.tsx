@@ -152,7 +152,7 @@ export const LoginPage: React.FC = () => {
           </div>
         </form>
 
-        <div className="text-center pt-3 border-t border-gray-100">
+        <div className="text-center pt-3 border-t border-gray-100 space-y-2">
           <p className="text-sm text-gray-600">
             Pierwszy raz w programie?{' '}
             <Link
@@ -163,6 +163,14 @@ export const LoginPage: React.FC = () => {
               Dołącz z kodem firmy
             </Link>
           </p>
+          <div>
+            <Link
+              to="/"
+              className="text-xs text-gray-500 hover:text-gray-700 transition-colors inline-flex items-center gap-1"
+            >
+              ← Wróć do strony głównej benefivo.pl
+            </Link>
+          </div>
         </div>
       </div>
     </div>
