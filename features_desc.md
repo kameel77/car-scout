@@ -1142,3 +1142,24 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Logowanie (`/login`): kluczowanie blokady w Redis per para `email:IP` (`ep:login:fail:${normalizedEmail}:${request.ip}`) po 10 próbach na 15 minut. Zewnętrzny atakujący nie jest w stanie zablokować pracownika w jego biurze ani w domu. Licznik błędów inkrementowany jest wyłącznie przy błędach autoryzacji (401/403) i pomijany przy wyjątkach bazy danych (500).
   - Walidacja kodów (`/validate-code`): podniesiono limit trasy do 600 req/min oraz próg blokady IP w Redis do 250 nieudanych prób na 10 minut z wykluczeniem błędów 500, co w pełni zabezpiecza masowy onboarding setek pracowników z jednego biura (np. Action S.A.).
   - Pozostałe trasy programu pracowniczego: telemetria podniesiona do 1200 req/min, reset/odzyskiwanie hasła do 150/15 min, katalogi ofert do 600 req/min, zgłoszenia zapytań do 120 req/min.
+
+## 83. Dystynkcja Leadów Benefivo B2B w Backoffice, Pipeline CRM i Routing Thulium
+- **Strukturyzacja Metadanych B2B w Schemacie Prisma i Walidacja Zod**:
+  - W modelu `Lead` dodano addytywne pole `metadata Json? @map("metadata")` (bezpieczne dla `prisma db push`, w 100% wstecznie kompatybilne).
+  - W `backend/src/routes/leads.ts` dodano schemat `employerB2bMetadataSchema` (walidacja `.strict()` pól `companyName`, `companyNip`, `teamSize`, `benefitModel`). Formularz na `benefivo.pl/dla-firm` przesyła imię i nazwisko kontaktu w polu `name`, a dane firmy w obiekcie `metadata`.
+- **Routing Pocztowy i Separacja Kolejek Zgłoszeń w Thulium**:
+  - Wprowadzono zmienną środowiskową `BENEFIVO_LEAD_RECIPIENT_EMAIL` umożliwiającą skierowanie powiadomień B2B na dedykowaną skrzynkę podpiętą pod osobną kolejkę ticketów w Thulium (np. `b2b@benefivo.pl`), z bezpiecznym fallbackiem na ogólnego odbiorcę leada.
+  - Generowanie numeru referencyjnego: zapytania `employer_b2b` otrzymują prefiks `BNF-` (np. `BNF-2026-12345678`), zachowując `AF-` dla standardowych leadów retailowych.
+  - Tytuł powiadomienia e-mail bezwzględnie rozpoczyna się prefiksem `[Benefivo]`, a do wiadomości dołączane są techniczne nagłówki MIME (`X-Lead-Brand: Benefivo`, `X-Lead-Type: employer_b2b`, `X-Lead-Traffic-Source: benefivo_b2b`) dla reguł automatycznej kategoryzacji poczty.
+- **Panel Administratora / Backoffice (`LeadList.tsx`)**:
+  - Pasek filtrów API: dodano filtr `selectedLeadType` z zakładką `Benefivo B2B` (`?leadType=employer_b2b`), zapytującą backend i filtrującą listę po stronie bazy danych.
+  - Identyfikacja wizualna: w tabeli leadów zapytania B2B wyróżnione są elegancką plakietką marki `Benefivo B2B` (tło leśna zieleń `#0f2d1e`, tekst `#F7F8F2`, bez emoji). W kolumnie pojazdu wyświetlana jest etykieta „Program pracowniczy (B2B)”, nazwa firmy oraz numer referencyjny `BNF-`.
+  - Karta firmy w oknie szczegółów: zamiast pustych pól pojazdu i marży brokera renderowana jest dedykowana karta firmy zawierająca nazwę, NIP z przyciskiem szybkiego kopiowania do schowka, wielkość zespołu, model benefitu i źródło zgłoszenia. Sekcja danych dealera jest automatycznie ukrywana dla zapytań pracodawców.
+  - Wyszukiwarka tekstowa w panelu przeszukuje leady także po numerze referencyjnym, nazwie firmy oraz NIP-ie.
+- **Pipeline CRM (Inbox & Kwalifikacja Spraw)**:
+  - Trasa `GET /api/pipeline/inbox` przyjmuje zwalidowany przez Zod parametr `?leadType=` oraz zwraca metadane i typ leada.
+  - Automatyczne reguły kwalifikacji: przy konwersji leada `employer_b2b` na sprawę domyślnym źródłem leada jest `LeadSourceChannel.PARTNER`, `leadSourceDetail: 'benefivo_b2b'`, typ klienta: `ClientType.B2B`, a dane firmy i NIP są automatycznie przenoszone z metadanych leada do rekordu klienta w Pipeline.
+  - Interfejs Inboxa: w widoku kolejki (`QueueView.tsx`) dodano szybki filtr `Benefivo B2B`, w widoku tablicy (`BoardView.tsx`) kafelki B2B posiadają plakietkę marki i nazwę firmy, a w modalnym oknie kwalifikacji (`QualifyLeadModal.tsx`) formularz automatycznie pre-populuje dane firmy i typ B2B.
+- **Kontekst Firmy w Karcie Klienta Thulium (`thulium-crm-lookup.service.ts`)**:
+  - Podczas wyszukiwania kontaktu po numerze telefonu (np. połączenie przychodzące do call center), serwis sprawdza obecność najświeższego leada B2B i automatycznie dołącza do `custom_fields` atrybuty: `Marka: Benefivo`, `Typ klienta: Pracodawca B2B (program pracowniczy)`, `Firma`, `NIP` oraz `Wielkosc zespolu`.
+  - Puste klucze są całkowicie pomijane, a lookup klientów retailowych zachowuje 100% tożsamość z dotychczasowym zachowaniem (pełna ochrona regresyjna).
