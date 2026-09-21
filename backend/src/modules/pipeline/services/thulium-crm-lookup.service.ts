@@ -1,4 +1,4 @@
-import { PrismaClient, PipelinePhase, PipelineApplicationState } from '@prisma/client';
+import { Prisma, PrismaClient, PipelinePhase, PipelineApplicationState } from '@prisma/client';
 import { isUnmatchablePhone, normalizePhone } from './customer.service.js';
 
 export type ThuliumCrmCustomer = {
@@ -75,7 +75,22 @@ export async function lookupCustomerByPhone(
     where: { phone: normalized },
     orderBy: { updatedAt: 'desc' },
   });
-  if (!customer) {
+
+  // Check for the most recent employer_b2b lead for this phone number
+  const b2bLead = prisma.lead?.findFirst
+    ? await prisma.lead.findFirst({
+        where: {
+          leadType: 'employer_b2b',
+          OR: [
+            { phone: normalized },
+            { phone: phoneNumber },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : null;
+
+  if (!customer && !b2bLead) {
     return null;
   }
 
@@ -118,26 +133,35 @@ export async function lookupCustomerByPhone(
     },
   };
 
-  const [openOpportunity, openCount] = await Promise.all([
-    prisma.pipelineOpportunity.findFirst({
-      where: { customerId: customer.id, status: 'OPEN' },
-      orderBy: { createdAt: 'desc' },
-      include: opportunityInclude,
-    }),
-    prisma.pipelineOpportunity.count({
-      where: { customerId: customer.id, status: 'OPEN' },
-    }),
-  ]);
+  let opportunity: Prisma.PipelineOpportunityGetPayload<{
+    include: typeof opportunityInclude;
+  }> | null = null;
+  let openCount = 0;
 
-  const opportunity =
-    openOpportunity ??
-    (await prisma.pipelineOpportunity.findFirst({
-      where: { customerId: customer.id },
-      orderBy: { createdAt: 'desc' },
-      include: opportunityInclude,
-    }));
+  if (customer) {
+    const [openOpportunity, count] = await Promise.all([
+      prisma.pipelineOpportunity.findFirst({
+        where: { customerId: customer.id, status: 'OPEN' },
+        orderBy: { createdAt: 'desc' },
+        include: opportunityInclude,
+      }),
+      prisma.pipelineOpportunity.count({
+        where: { customerId: customer.id, status: 'OPEN' },
+      }),
+    ]);
 
-  const { name, surname } = splitFullName(customer.fullName);
+    openCount = count;
+    opportunity =
+      openOpportunity ??
+      (await prisma.pipelineOpportunity.findFirst({
+        where: { customerId: customer.id },
+        orderBy: { createdAt: 'desc' },
+        include: opportunityInclude,
+      }));
+  }
+
+  const fullName = customer?.fullName || b2bLead?.name || '';
+  const { name, surname } = splitFullName(fullName);
 
   const customFields: Record<string, string> = {};
 
@@ -185,13 +209,39 @@ export async function lookupCustomerByPhone(
     }
   }
 
+  if (b2bLead) {
+    customFields['Marka'] = 'Benefivo';
+    customFields['Typ klienta'] = 'Pracodawca B2B (program pracowniczy)';
+
+    const metadata = (b2bLead.metadata && typeof b2bLead.metadata === 'object' ? b2bLead.metadata : null) as {
+      companyName?: string;
+      companyNip?: string;
+      teamSize?: string;
+      benefitModel?: string;
+    } | null;
+
+    if (metadata?.companyName?.trim()) {
+      customFields['Firma'] = metadata.companyName.trim();
+    }
+    if (metadata?.companyNip?.trim()) {
+      customFields['NIP'] = metadata.companyNip.trim();
+    }
+    if (metadata?.teamSize?.trim()) {
+      customFields['Wielkosc zespolu'] = metadata.teamSize.trim();
+    }
+  }
+
+  const b2bMeta = (b2bLead?.metadata && typeof b2bLead.metadata === 'object' ? b2bLead.metadata : null) as {
+    companyNip?: string;
+  } | null;
+
   return {
     name,
     surname,
     phone_number: [normalized],
-    email: customer.email ?? null,
-    nip: customer.companyNip ?? null,
-    identifier: opportunity?.number ?? null,
+    email: customer?.email ?? (b2bLead?.email ?? null),
+    nip: customer?.companyNip ?? (b2bMeta?.companyNip ?? null),
+    identifier: opportunity?.number ?? (b2bLead?.referenceNumber ?? null),
     custom_fields: customFields,
   };
 }
