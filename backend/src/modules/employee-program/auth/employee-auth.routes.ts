@@ -95,7 +95,7 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
   fastify.get('/api/employee/auth/csrf', {
     config: {
       rateLimit: {
-        max: 60,
+        max: 600,
         timeWindow: '1 minute'
       }
     }
@@ -129,7 +129,7 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
   fastify.post('/api/employee/auth/validate-code', {
     config: {
       rateLimit: {
-        max: 20,
+        max: 600,
         timeWindow: '1 minute'
       }
     }
@@ -143,10 +143,32 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      if (fastify.redis) {
+        const codeFailKey = `ep:code:fail:${request.ip}`;
+        const currentFails = await fastify.redis.get(codeFailKey);
+        if (currentFails && parseInt(currentFails, 10) >= 250) {
+          return reply.code(429).send({
+            error: 'Too Many Requests',
+            message: 'Zbyt wiele nieudanych prób walidacji kodu z tego adresu IP. Odczekaj 10 minut.'
+          });
+        }
+      }
+
       const result = await validateRegistrationCode(fastify.prisma, parsed.data.code);
       return reply.code(200).send(result);
     } catch (err: any) {
       const status = typeof err.statusCode === 'number' ? err.statusCode : 500;
+      if (status < 500 && fastify.redis && typeof fastify.redis.incr === 'function') {
+        try {
+          const codeFailKey = `ep:code:fail:${request.ip}`;
+          const fails = await fastify.redis.incr(codeFailKey);
+          if (fails === 1 && typeof fastify.redis.expire === 'function') {
+            await fastify.redis.expire(codeFailKey, 600); // 10 min
+          }
+        } catch {
+          // Redis failure tracking should not crash the error reply
+        }
+      }
       if (status >= 500) {
         fastify.log.error('Employee validate-code failure');
         return reply.code(500).send({
@@ -166,7 +188,7 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
     preHandler: [verifyEmployeeCsrf],
     config: {
       rateLimit: {
-        max: 10,
+        max: 300,
         timeWindow: '1 minute'
       }
     }
@@ -242,7 +264,7 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
     preHandler: [verifyEmployeeCsrf],
     config: {
       rateLimit: {
-        max: 15,
+        max: 300,
         timeWindow: '1 minute'
       }
     }
@@ -255,8 +277,26 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
       });
     }
 
+    const normalizedEmail = parsed.data.email.toLowerCase().trim();
+    const accountLockKey = `ep:login:fail:${normalizedEmail}:${request.ip}`;
+
+    if (fastify.redis) {
+      const currentFails = await fastify.redis.get(accountLockKey);
+      if (currentFails && parseInt(currentFails, 10) >= 10) {
+        return reply.code(429).send({
+          error: 'Too Many Requests',
+          message: 'Zbyt wiele nieudanych prób logowania na to konto z tego adresu IP. Spróbuj ponownie za 15 minut.'
+        });
+      }
+    }
+
     try {
       const authResult = await authenticateEmployee(fastify.prisma, parsed.data.email, parsed.data.password);
+
+      // Reset failure counter on successful authentication
+      if (fastify.redis) {
+        await fastify.redis.del(accountLockKey);
+      }
 
       const jti = generateJti();
       const jwtPayload: EmployeeJwtPayload = {
@@ -314,6 +354,16 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
       });
     } catch (err: any) {
       const status = typeof err.statusCode === 'number' ? err.statusCode : 500;
+      if ((status === 401 || status === 403) && fastify.redis && typeof fastify.redis.incr === 'function') {
+        try {
+          const fails = await fastify.redis.incr(accountLockKey);
+          if (fails === 1 && typeof fastify.redis.expire === 'function') {
+            await fastify.redis.expire(accountLockKey, 900); // 15 min
+          }
+        } catch {
+          // Redis failure tracking should not crash the error reply
+        }
+      }
       if (status >= 500) {
         fastify.log.error('Employee login failure');
         return reply.code(500).send({
@@ -408,7 +458,7 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
     preHandler: [verifyEmployeeCsrf],
     config: {
       rateLimit: {
-        max: 10,
+        max: 150,
         timeWindow: '15 minutes'
       }
     }
@@ -486,7 +536,7 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
     preHandler: [verifyEmployeeCsrf],
     config: {
       rateLimit: {
-        max: 10,
+        max: 150,
         timeWindow: '15 minutes'
       }
     }

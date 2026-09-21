@@ -125,13 +125,14 @@ const ALLOWED_LEAD_TYPES = new Set([
     'quick_contact',
     'foton_fleet',
     'foton_lifestyle',
-    'employee'
+    'employee',
+    'employer_b2b'
 ]);
 
 export async function leadRoutes(fastify: FastifyInstance) {
     // Create new lead from public form (sale)
     fastify.post('/api/leads', {
-        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+        config: { rateLimit: { max: 30, timeWindow: '1 minute' } }
     }, async (request, reply) => {
         const data = request.body as LeadPayload & { turnstileToken?: string };
 
@@ -188,6 +189,21 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 financingProduct: true
             }
         });
+
+        // Record telemetry in Redis for B2B conversion tracking
+        if (fastify.redis) {
+            try {
+                const today = new Date().toISOString().slice(0, 10);
+                const dailyKey = `analytics:daily:${today}`;
+                const evName = validLeadType === 'employer_b2b' ? 'b2b_lead_submitted' : 'lead_submitted';
+                const cleanPath = validLeadType === 'employer_b2b' ? '/dla-firm' : '/';
+                await fastify.redis.hincrby(dailyKey, `event_path:${evName}:${cleanPath}`, 1);
+                await fastify.redis.hincrby(dailyKey, `event:${evName}`, 1);
+                await fastify.redis.expire(dailyKey, 86400 * 90);
+            } catch {
+                // Redis error should not fail lead creation
+            }
+        }
 
         // Wyślij powiadomienie email (nie blokując odpowiedzi API)
         sendLeadEmail(fastify, lead as any, getBaseUrl(request)).catch((err: any) => {

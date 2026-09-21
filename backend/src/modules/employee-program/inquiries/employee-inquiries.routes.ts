@@ -135,7 +135,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     preHandler: [verifyEmployeeAuth, verifyEmployeeCsrf],
     config: {
       rateLimit: {
-        max: 10,
+        max: 120,
         timeWindow: '1 minute'
       }
     }
@@ -683,7 +683,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     preHandler: [verifyEmployeeAuth],
     config: {
       rateLimit: {
-        max: 60,
+        max: 300,
         timeWindow: '1 minute'
       }
     }

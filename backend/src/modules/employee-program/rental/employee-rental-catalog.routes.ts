@@ -95,7 +95,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
       preHandler: [verifyEmployeeAuth],
       config: {
         rateLimit: {
-          max: 60,
+          max: 600,
           timeWindow: '1 minute'
         }
       }
@@ -283,7 +283,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
       preHandler: [verifyEmployeeAuth],
       config: {
         rateLimit: {
-          max: 60,
+          max: 600,
           timeWindow: '1 minute'
         }
       }

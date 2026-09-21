@@ -40,7 +40,8 @@ export const sendLeadEmail = async (
 
     // Derive site name for branding
     const domainName = frontendUrl.replace(/^https?:\/\/(www\.)?/, '');
-    const siteName = domainName.toLowerCase().includes('motolia') ? 'Motolia' : 'CarSalon';
+    const isBenefivo = lead.leadType === 'employer_b2b' || domainName.toLowerCase().includes('benefivo') || (lead.trafficSource && lead.trafficSource.toLowerCase().includes('benefivo'));
+    const siteName = isBenefivo ? 'Benefivo' : (domainName.toLowerCase().includes('motolia') ? 'Motolia' : 'CarSalon');
 
     // Get settings from database
     const settings = await fastify.prisma.appSettings.findFirst({
@@ -101,7 +102,8 @@ export const sendLeadEmail = async (
     const isPriceNegotiation = lead.leadType === 'price_negotiation';
     const isWaitlist = lead.leadType === 'waitlist';
     const isRental = lead.leadType === 'rental' || !!lead.rentalVehicleId;
-    const isQuickContact = lead.leadType === 'quick_contact' || (!lead.listingId && !lead.rentalVehicleId && !isPriceNegotiation && !isWaitlist);
+    const isEmployerB2B = lead.leadType === 'employer_b2b';
+    const isQuickContact = lead.leadType === 'quick_contact' || (!lead.listingId && !lead.rentalVehicleId && !isPriceNegotiation && !isWaitlist && !isEmployerB2B);
     const isFinancingLead = !!lead.financingProductId || !!lead.financingAmount;
 
     // Name formatting: if empty, placeholder, or not provided, format as literal 'null'
@@ -125,7 +127,10 @@ export const sendLeadEmail = async (
     let subjectTitle = 'Szybki kontakt';
     let subjectEntity = lead.phone ? lead.phone : (formattedName !== 'null' ? formattedName : 'Nowe zgłoszenie');
 
-    if (isPriceNegotiation) {
+    if (isEmployerB2B) {
+        subjectTitle = 'Zapytanie B2B - Program Pracowniczy';
+        subjectEntity = formattedName !== 'null' ? formattedName : (lead.phone || lead.email || 'Nowa firma');
+    } else if (isPriceNegotiation) {
         subjectTitle = 'Negocjacja ceny';
         subjectEntity = lead.listing ? `${lead.listing.make} ${lead.listing.model}` : (lead.phone || (formattedName !== 'null' ? formattedName : 'Oferta'));
     } else if (isWaitlist) {
@@ -174,7 +179,9 @@ export const sendLeadEmail = async (
         .join('-');
 
     let leadTypeDescription = 'Zapytanie ogólne / Szybki kontakt';
-    if (isPriceNegotiation) {
+    if (isEmployerB2B) {
+        leadTypeDescription = 'Program Pracowniczy B2B (Dla pracodawców)';
+    } else if (isPriceNegotiation) {
         leadTypeDescription = 'Negocjacja ceny pojazdu';
     } else if (isWaitlist) {
         leadTypeDescription = 'Lista oczekujących - powiadomienie o nowej ofercie';
@@ -225,7 +232,9 @@ export const sendLeadEmail = async (
     ` : '';
 
     let headingTitle = 'Nowe zapytanie od klienta';
-    if (isPriceNegotiation) {
+    if (isEmployerB2B) {
+        headingTitle = 'Nowe zapytanie B2B - Program Pracowniczy Benefivo';
+    } else if (isPriceNegotiation) {
         headingTitle = 'Nowa propozycja negocjacji ceny';
     } else if (isWaitlist) {
         headingTitle = 'Nowe zgłoszenie na listę oczekujących';
@@ -236,6 +245,9 @@ export const sendLeadEmail = async (
     } else if (isFinancingLead) {
         headingTitle = 'Nowe zgłoszenie finansowania';
     }
+
+    const adminBaseUrl = (process.env.FRONTEND_URL || 'https://motolia.pl').replace(/\/+$/, '');
+    const adminLeadLink = `${adminBaseUrl}/admin/leads/${lead.id}`;
 
     const headingSubtitle = formattedName !== 'null'
         ? safeFormattedName
@@ -269,6 +281,14 @@ export const sendLeadEmail = async (
                 ${lead.trafficSource ? `<li><strong>Źródło ruchu (Source/UTM):</strong> ${lead.trafficSource}</li>` : ''}
                 ${lead.landingPageId ? `<li><strong>Landing Page ID:</strong> ${lead.landingPageId}</li>` : ''}
             </ul>
+
+            ${isEmployerB2B ? `
+            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                <h4 style="color: #065f46; margin-top: 0;">Zapytanie od pracodawcy / zarządu</h4>
+                <p style="margin: 0 0 10px 0; font-size: 14px; color: #047857;">Zgłoszenie B2B z serwisu <strong>benefivo.pl</strong>. Wymaga bezpośredniego kontaktu doradcy flotowego Motolia.</p>
+                <a href="${adminLeadLink}" style="display: inline-block; background-color: #059669; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 13px;">Otwórz zgłoszenie w panelu CRM Motolia &rarr;</a>
+            </div>
+            ` : ''}
 
             ${listingDetails}
             ${rentalDetails}

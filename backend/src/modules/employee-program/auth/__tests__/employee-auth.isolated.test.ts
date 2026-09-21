@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import bcrypt from 'bcrypt';
@@ -75,6 +75,23 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
       del: async (key: string) => {
         if (redisFailNext) throw new Error('Redis connection lost');
         return fakeRedisStore.delete(key) ? 1 : 0;
+      },
+      incr: async (key: string) => {
+        if (redisFailNext) throw new Error('Redis connection lost');
+        const current = parseInt(fakeRedisStore.get(key)?.val || '0', 10);
+        const next = current + 1;
+        const ttl = fakeRedisStore.get(key)?.ttl || 0;
+        fakeRedisStore.set(key, { val: String(next), ttl });
+        return next;
+      },
+      expire: async (key: string, seconds: number) => {
+        if (redisFailNext) throw new Error('Redis connection lost');
+        const entry = fakeRedisStore.get(key);
+        if (entry) {
+          entry.ttl = seconds;
+          return 1;
+        }
+        return 0;
       }
     };
 
@@ -402,6 +419,23 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
       expect(json.message).toBe('Wystąpił błąd podczas walidacji kodu');
       expect(JSON.stringify(json)).not.toContain('Database password hash leak');
     });
+
+    it('locks IP after 250 failed validate-code attempts with 429 Too Many Requests', async () => {
+      fakeRedisStore.set('ep:code:fail:127.0.0.1', { val: '250', ttl: 600 });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/validate-code',
+        payload: {
+          code: 'ACTION123'
+        }
+      });
+
+      expect(res.statusCode).toBe(429);
+      const json = res.json();
+      expect(json.error).toBe('Too Many Requests');
+      expect(json.message).toContain('Zbyt wiele nieudanych prób walidacji kodu');
+    });
   });
 
   describe('POST /api/employee/auth/login with cookie sessions', () => {
@@ -471,6 +505,142 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
       expect(parsedStored.accountId).toBe(mockAccount.id);
       expect(parsedStored.companyId).toBe('comp_action');
       expect(parsedStored.programId).toBe('prog_action_auto');
+    });
+
+    it('locks account after 10 failed login attempts with 429 Too Many Requests while allowing other accounts from same IP (NAT resilience)', async () => {
+      const csrf = generateSignedCsrfToken(app.jwt);
+      const targetEmail = 'target.user@action.pl';
+      const otherEmail = 'colleague@action.pl';
+
+      // Simulate 10 failed login attempts on targetEmail
+      for (let i = 1; i <= 10; i++) {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/employee/auth/login',
+          headers: {
+            host: 'localhost:3000',
+            origin: 'https://localhost:3000',
+            cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+            [CSRF_HEADER_NAME]: csrf
+          },
+          payload: {
+            email: targetEmail,
+            password: 'WrongPassword999!'
+          }
+        });
+
+        // First 9 attempts fail with 401 Unauthorized
+        // 10th attempt records the 10th failure and fails with 401
+        expect(res.statusCode).toBe(401);
+      }
+
+      // Verify Redis failure key was created with 15 min TTL (900s) keyed by email:IP
+      const lockKey = `ep:login:fail:${targetEmail}:127.0.0.1`;
+      const entry = fakeRedisStore.get(lockKey);
+      expect(entry).toBeDefined();
+      expect(parseInt(entry!.val, 10)).toBe(10);
+      expect(entry!.ttl).toBe(900);
+
+      // 11th attempt for targetEmail from SAME IP is blocked with 429 Too Many Requests
+      const blockedRes = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/login',
+        headers: {
+          host: 'localhost:3000',
+          origin: 'https://localhost:3000',
+          cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          email: targetEmail,
+          password: 'AnyPassword!'
+        }
+      });
+
+      expect(blockedRes.statusCode).toBe(429);
+      const blockedJson = blockedRes.json();
+      expect(blockedJson.error).toBe('Too Many Requests');
+      expect(blockedJson.message).toContain('Zbyt wiele nieudanych prób logowania');
+
+      // Colleague behind the SAME corporate NAT IP trying with different email is NOT blocked
+      const colleagueRes = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/login',
+        headers: {
+          host: 'localhost:3000',
+          origin: 'https://localhost:3000',
+          cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          email: otherEmail,
+          password: 'WrongPassword!'
+        }
+      });
+
+      // Returns 401 (processed normally, not blocked by 429)
+      expect(colleagueRes.statusCode).toBe(401);
+    });
+
+    it('does not increment login failure counter when service throws unexpected 500 error', async () => {
+      const csrf = generateSignedCsrfToken(app.jwt);
+      const errorEmail = 'db.fail.user@action.pl';
+      const lockKey = `ep:login:fail:${errorEmail}:127.0.0.1`;
+
+      // Mock prisma findUnique to throw unhandled DB error
+      const origFindUnique = (app as any).prisma.employeeAccount.findUnique;
+      (app as any).prisma.employeeAccount.findUnique = vi.fn().mockRejectedValueOnce(new Error('PostgreSQL connection lost'));
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/login',
+        headers: {
+          host: 'localhost:3000',
+          origin: 'https://localhost:3000',
+          cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          email: errorEmail,
+          password: 'AnyPassword!'
+        }
+      });
+
+      expect(res.statusCode).toBe(500);
+      // Redis failure key must NOT be created on server/DB error!
+      expect(fakeRedisStore.has(lockKey)).toBe(false);
+
+      // Restore
+      (app as any).prisma.employeeAccount.findUnique = origFindUnique;
+    });
+
+    it('clears login failure counter from Redis upon successful authentication', async () => {
+      const csrf = generateSignedCsrfToken(app.jwt);
+      const lockKey = `ep:login:fail:${mockAccount.email.toLowerCase().trim()}:127.0.0.1`;
+
+      // Pre-seed 3 failed attempts
+      fakeRedisStore.set(lockKey, { val: '3', ttl: 900 });
+      expect(fakeRedisStore.has(lockKey)).toBe(true);
+
+      // Successful login
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/login',
+        headers: {
+          host: 'localhost:3000',
+          origin: 'https://localhost:3000',
+          cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          email: mockAccount.email,
+          password: 'Password123!'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      // Key should be deleted from Redis
+      expect(fakeRedisStore.has(lockKey)).toBe(false);
     });
   });
 
