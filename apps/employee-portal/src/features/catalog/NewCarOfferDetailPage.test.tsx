@@ -142,7 +142,32 @@ describe('NewCarOfferDetailPage', () => {
 
     // Rate heading is displayed
     expect(screen.getByText('Szacowana rata miesięczna')).toBeInTheDocument();
-    expect(screen.getByText(/netto \/ msc/)).toBeInTheDocument();
+    expect(screen.getByText(/brutto \/ mies\./)).toBeInTheDocument();
+    expect(screen.getByText(/netto \/ mies\./)).toBeInTheDocument();
+  });
+
+  it('defaults to consumer financing with gross rate as primary figure, and inverts on B2B toggle', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
+    });
+
+    const consumerBtn = screen.getByRole('button', { name: 'Prywatnie' });
+    const b2bBtn = screen.getByRole('button', { name: 'Rozliczam B2B' });
+    expect(consumerBtn).toBeInTheDocument();
+    expect(b2bBtn).toBeInTheDocument();
+
+    // In consumer mode, the large font heading is gross rate
+    const grossSuffix = screen.getByText(/brutto \/ mies\./);
+    expect(grossSuffix.previousElementSibling?.className).toContain('text-3xl');
+
+    // Toggle to B2B
+    fireEvent.click(b2bBtn);
+
+    // In B2B mode, the large font heading is net rate
+    const netSuffix = screen.getByText(/netto \/ mies\./);
+    expect(netSuffix.previousElementSibling?.className).toContain('text-3xl');
   });
 
   it('opens inquiry modal with calculated financing notes when clicking CTA', async () => {
@@ -245,7 +270,7 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     expect(screen.queryByText('Wykup końcowy')).not.toBeInTheDocument();
 
     // Single CREDIT option renders with the category-derived label.
-    expect(screen.getByRole('button', { name: 'Kredyt / finansowanie konsumenckie' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Prywatnie' })).toBeInTheDocument();
 
     expect(screen.getByText('Szacowana rata miesięczna')).toBeInTheDocument();
   });

@@ -155,7 +155,7 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     await waitFor(() => {
       expect(screen.getAllByText(/1\s?150 zł/).length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText(/1\s?414,5 zł/).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText(/11\s?000 zł/)).toBeInTheDocument(); // 10% down payment amount
+      expect(screen.getByText(/13\s?530 zł/)).toBeInTheDocument(); // 10% down payment amount in brutto
     });
   });
 
@@ -171,9 +171,10 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
 
     // By default for non-B2B offer, clientType is CONSUMER
     expect(screen.getByText('Rata najmu brutto')).toBeInTheDocument();
+    expect(screen.getByText('Rata abonamentowa brutto')).toBeInTheDocument();
 
-    // Toggle to Firma (B2B)
-    const b2bBtn = screen.getByRole('button', { name: /Firma \(B2B\)/i });
+    // Toggle to Rozliczam B2B
+    const b2bBtn = screen.getByRole('button', { name: /Rozliczam B2B/i });
     fireEvent.click(b2bBtn);
 
     expect(screen.getByText('Rata najmu netto')).toBeInTheDocument();

@@ -54,8 +54,8 @@ function formatTransmission(tx: string | null | undefined): string {
 
 // Etykieta formy finansowania budowana z kategorii produktu (brief E2 §Zakres 4)
 function getFinancingCategoryLabel(category: string): string {
-  if (category === 'CREDIT') return 'Kredyt / finansowanie konsumenckie';
-  if (category === 'LEASING') return 'Leasing operacyjny (B2B)';
+  if (category === 'CREDIT') return 'Prywatnie';
+  if (category === 'LEASING') return 'Rozliczam B2B';
   return category;
 }
 
@@ -93,7 +93,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Financing Calculator State
-  const [contractType, setContractType] = useState<'LEASING_B2B' | 'CONSUMER'>('LEASING_B2B');
+  const [contractType, setContractType] = useState<'LEASING_B2B' | 'CONSUMER'>('CONSUMER');
   const [months, setMonths] = useState<number>(36);
   const [downPaymentPct, setDownPaymentPct] = useState<number>(20);
   const [residualPct, setResidualPct] = useState<number>(20);
@@ -146,7 +146,14 @@ export const NewCarOfferDetailPage: React.FC = () => {
 
   // E2: Konfiguracja finansowania z programu pracowniczego (nadpisania produktów). Gdy brak
   // konfiguracji lub pusta lista options — zachowanie kalkulatora identyczne jak przed E2.
-  const financingOptions = offer?.financing?.options ?? [];
+  const financingOptions = useMemo(() => {
+    const raw = offer?.financing?.options ?? [];
+    return [...raw].sort((a, b) => {
+      if (a.category === 'CREDIT' && b.category !== 'CREDIT') return -1;
+      if (a.category !== 'CREDIT' && b.category === 'CREDIT') return 1;
+      return 0;
+    });
+  }, [offer?.financing?.options]);
   const hasFinancingConfig = financingOptions.length > 0;
   const selectedOption: EmployeeFinancingOption | null = hasFinancingConfig
     ? (financingOptions[selectedOptionIndex] ?? financingOptions[0])
@@ -207,16 +214,19 @@ export const NewCarOfferDetailPage: React.FC = () => {
   // Tekst podsumowujący konfigurację do przekazania w zapytaniu
   const inquiryInitialNotes = useMemo(() => {
     if (!calculation || !offer) return '';
-    const typeLabel = contractType === 'LEASING_B2B' ? 'Leasing operacyjny (B2B)' : 'Kredyt / Finansowanie konsumenckie';
+    const typeLabel = contractType === 'CONSUMER' ? 'Kredyt / Finansowanie konsumenckie' : 'Leasing operacyjny (B2B)';
     const productLabelLine = hasFinancingConfig && selectedOption
       ? `\n- Wybrany produkt finansowania: ${selectedOption.label}`
       : '';
+    const rateLine = contractType === 'CONSUMER'
+      ? `- Szacowana rata: ${calculation.installmentGross.toLocaleString('pl-PL')} zł brutto (${calculation.installmentNet.toLocaleString('pl-PL')} zł netto) / mies.`
+      : `- Szacowana rata: ${calculation.installmentNet.toLocaleString('pl-PL')} zł netto (${calculation.installmentGross.toLocaleString('pl-PL')} zł brutto) / mies.`;
     return `[Konfiguracja kalkulatora finansowania]:
 - Typ finansowania: ${typeLabel}
 - Okres umowy: ${months} miesięcy
-- Wpłata własna: ${downPaymentPct}% (${calculation.initialPaymentAmount.toLocaleString('pl-PL')} zł ${contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-- Wykup końcowy: ${residualPct}% (${calculation.residualAmount.toLocaleString('pl-PL')} zł ${contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-- Szacowana rata: ${calculation.installmentNet.toLocaleString('pl-PL')} zł netto (${calculation.installmentGross.toLocaleString('pl-PL')} zł brutto) / mies.${productLabelLine}`;
+- Wpłata własna: ${downPaymentPct}% (${calculation.initialPaymentAmount.toLocaleString('pl-PL')} zł ${contractType === 'CONSUMER' ? 'brutto' : 'netto'})
+- Wykup końcowy: ${residualPct}% (${calculation.residualAmount.toLocaleString('pl-PL')} zł ${contractType === 'CONSUMER' ? 'brutto' : 'netto'})
+${rateLine}${productLabelLine}`;
   }, [calculation, offer, contractType, months, downPaymentPct, residualPct, hasFinancingConfig, selectedOption]);
 
   if (isBrandLoading || isAuthLoading) {
@@ -582,8 +592,8 @@ export const NewCarOfferDetailPage: React.FC = () => {
                             onClick={() => setSelectedOptionIndex(idx)}
                             className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
                               selectedOptionIndex === idx
-                                ? 'bg-white text-gray-900 shadow-xs'
-                                : 'text-gray-500 hover:text-gray-900'
+                                ? 'bg-white text-ink shadow-xs'
+                                : 'text-muted hover:text-ink'
                             }`}
                           >
                             {getFinancingCategoryLabel(option.category)}
@@ -591,28 +601,28 @@ export const NewCarOfferDetailPage: React.FC = () => {
                         ))}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
-                        <button
-                          type="button"
-                          onClick={() => setContractType('LEASING_B2B')}
-                          className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
-                            contractType === 'LEASING_B2B'
-                              ? 'bg-white text-gray-900 shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900'
-                          }`}
-                        >
-                          Leasing (B2B)
-                        </button>
+                      <div className="grid grid-cols-2 gap-2 bg-paper p-1 rounded-xl border border-line">
                         <button
                           type="button"
                           onClick={() => setContractType('CONSUMER')}
                           className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
                             contractType === 'CONSUMER'
-                              ? 'bg-white text-gray-900 shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900'
+                              ? 'bg-white text-ink shadow-xs'
+                              : 'text-muted hover:text-ink'
                           }`}
                         >
-                          Kredyt / Prywatnie
+                          Prywatnie
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setContractType('LEASING_B2B')}
+                          className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
+                            contractType === 'LEASING_B2B'
+                              ? 'bg-white text-ink shadow-xs'
+                              : 'text-muted hover:text-ink'
+                          }`}
+                        >
+                          Rozliczam B2B
                         </button>
                       </div>
                     )}
@@ -760,21 +770,43 @@ export const NewCarOfferDetailPage: React.FC = () => {
                   {/* Result Rate Box */}
                   <div className="pt-4 border-t border-line bg-paper -mx-6 -mb-6 p-6 rounded-b-2xl">
                     <div className="flex items-baseline justify-between mb-2">
-                      <div>
-                        <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-black text-ink tracking-tight font-heading">
-                            {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
-                          </span>
-                          <span className="text-xs font-semibold text-muted">netto / msc</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-muted block font-heading">
-                          {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
-                        </span>
-                        <span className="text-[11px] text-muted">brutto / msc</span>
-                      </div>
+                      {contractType === 'CONSUMER' ? (
+                        <>
+                          <div>
+                            <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-black text-ink tracking-tight font-heading">
+                                {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
+                              </span>
+                              <span className="text-xs font-semibold text-muted">brutto / mies.</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-muted block font-heading">
+                              {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
+                            </span>
+                            <span className="text-[11px] text-muted">netto / mies.</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-black text-ink tracking-tight font-heading">
+                                {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
+                              </span>
+                              <span className="text-xs font-semibold text-muted">netto / mies.</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-muted block font-heading">
+                              {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
+                            </span>
+                            <span className="text-[11px] text-muted">brutto / mies.</span>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <div className="text-[11px] text-muted mb-4 flex items-center gap-1.5">

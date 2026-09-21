@@ -163,9 +163,9 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
             <p className="text-xs text-gray-500 mt-0.5">
               {offer.vehicle.make} {offer.vehicle.model}
               {rentalDisplay
-                ? ` (${rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto / mies.)`
+                ? ` (${(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet).toLocaleString('pl-PL')} zł ${rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.)`
                 : offer.pricing?.employeePricePln
-                ? ` (${offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł)`
+                ? ` (${offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł brutto)`
                 : ''}
             </p>
           </div>
@@ -205,7 +205,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                   <div className="text-xs text-muted mt-1 flex justify-between">
                     <span>Parametry najmu:</span>
                     <span className="font-medium text-ink">
-                      {rentalDisplay.contractMonths} mies. · {rentalDisplay.annualMileage.toLocaleString('pl-PL')} km · {rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto/mc
+                      {rentalDisplay.contractMonths} mies. · {rentalDisplay.annualMileage.toLocaleString('pl-PL')} km · {(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet).toLocaleString('pl-PL')} zł {rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.
                     </span>
                   </div>
                 )}

@@ -344,7 +344,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                       ).toLocaleString('pl-PL')} zł
                     </span>
                     <span className="text-xs text-muted font-medium">
-                      {clientType === 'CONSUMER' ? 'brutto / mc' : 'netto / mc'}
+                      {clientType === 'CONSUMER' ? 'brutto / mies.' : 'netto / mies.'}
                     </span>
                   </div>
                   <div className="text-xs font-semibold text-forest mt-0.5">
@@ -568,17 +568,6 @@ export const RentalOfferDetailPage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2 bg-paper p-1 rounded-xl border border-line">
                       <button
                         type="button"
-                        onClick={() => setClientType('B2B')}
-                        className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
-                          clientType === 'B2B'
-                            ? 'bg-white text-ink shadow-xs'
-                            : 'text-muted hover:text-ink'
-                        }`}
-                      >
-                        Firma (B2B)
-                      </button>
-                      <button
-                        type="button"
                         disabled={offer.isB2b}
                         onClick={() => setClientType('CONSUMER')}
                         title={offer.isB2b ? 'Oferta dostępna wyłącznie dla firm (B2B)' : undefined}
@@ -590,7 +579,18 @@ export const RentalOfferDetailPage: React.FC = () => {
                             : 'text-muted hover:text-ink'
                         }`}
                       >
-                        Osoba prywatna
+                        Prywatnie
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setClientType('B2B')}
+                        className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
+                          clientType === 'B2B'
+                            ? 'bg-white text-ink shadow-xs'
+                            : 'text-muted hover:text-ink'
+                        }`}
+                      >
+                        Rozliczam B2B
                       </button>
                     </div>
                     {offer.isB2b && (
@@ -661,7 +661,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                       <span className="text-xs font-bold text-forest">
                         {selectedDownPayment?.label || '0%'}
                         {selectedDownPayment && selectedDownPayment.amountNet > 0
-                          ? ` (${selectedDownPayment.amountNet.toLocaleString('pl-PL')} zł netto)`
+                          ? ` (${(clientType === 'CONSUMER' ? Math.round(selectedDownPayment.amountNet * 1.23) : selectedDownPayment.amountNet).toLocaleString('pl-PL')} zł ${clientType === 'CONSUMER' ? 'brutto' : 'netto'})`
                           : ''}
                       </span>
                     </div>
@@ -715,14 +715,14 @@ export const RentalOfferDetailPage: React.FC = () => {
                                   <span className="text-3xl font-black text-ink tracking-tight font-heading">
                                     {activeOption.monthlyRateGross.toLocaleString('pl-PL')} zł
                                   </span>
-                                  <span className="text-xs font-semibold text-muted">brutto / msc</span>
+                                  <span className="text-xs font-semibold text-muted">brutto / mies.</span>
                                 </div>
                               </div>
                               <div className="text-right">
                                 <span className="text-sm font-bold text-muted block font-heading">
                                   {activeOption.monthlyRateNet.toLocaleString('pl-PL')} zł
                                 </span>
-                                <span className="text-[11px] text-muted">netto / msc</span>
+                                <span className="text-[11px] text-muted">netto / mies.</span>
                               </div>
                             </>
                           ) : (
@@ -733,14 +733,14 @@ export const RentalOfferDetailPage: React.FC = () => {
                                   <span className="text-3xl font-black text-ink tracking-tight font-heading">
                                     {activeOption.monthlyRateNet.toLocaleString('pl-PL')} zł
                                   </span>
-                                  <span className="text-xs font-semibold text-muted">netto / msc</span>
+                                  <span className="text-xs font-semibold text-muted">netto / mies.</span>
                                 </div>
                               </div>
                               <div className="text-right">
                                 <span className="text-sm font-bold text-muted block font-heading">
                                   {activeOption.monthlyRateGross.toLocaleString('pl-PL')} zł
                                 </span>
-                                <span className="text-[11px] text-muted">brutto / msc</span>
+                                <span className="text-[11px] text-muted">brutto / mies.</span>
                               </div>
                             </>
                           )}
@@ -750,7 +750,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                           <span>Wpłata wstępna:</span>
                           <span className="font-semibold text-ink">
                             {activeOption.downPaymentAmountPln > 0
-                              ? `${activeOption.downPaymentAmountPln.toLocaleString('pl-PL')} zł netto`
+                              ? `${(clientType === 'CONSUMER' ? Math.round(activeOption.downPaymentAmountPln * 1.23) : activeOption.downPaymentAmountPln).toLocaleString('pl-PL')} zł ${clientType === 'CONSUMER' ? 'brutto' : 'netto'}`
                               : activeOption.downPaymentPct > 0
                               ? `${activeOption.downPaymentPct}%`
                               : '0 zł'}

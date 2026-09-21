@@ -632,11 +632,11 @@ export const RentalCatalogPage: React.FC = () => {
                             Rata abonamentu
                           </div>
                           <div className="text-lg font-bold text-ink tracking-tight font-heading">
-                            od {offer.minMonthlyRateNet.toLocaleString('pl-PL')} zł{' '}
-                            <span className="text-xs font-normal text-muted">netto / mc</span>
+                            od {offer.minMonthlyRateGross.toLocaleString('pl-PL')} zł{' '}
+                            <span className="text-xs font-normal text-muted">brutto / mies.</span>
                           </div>
                           <div className="text-[11px] text-muted">
-                            od {offer.minMonthlyRateGross.toLocaleString('pl-PL')} zł brutto
+                            od {offer.minMonthlyRateNet.toLocaleString('pl-PL')} zł netto / mies.
                           </div>
                         </div>
                         <div className="text-2xs text-muted">
