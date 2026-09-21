@@ -1,0 +1,42 @@
+[
+  {
+    "file": "friends.webp",
+    "source": "https://www.pexels.com/photo/3753039/",
+    "cdn": "https://images.pexels.com/photos/3753039/pexels-photo-3753039.jpeg?auto=compress&cs=tinysrgb&w=1500",
+    "dimensions": [
+      1500,
+      989
+    ],
+    "usage": "Zdjęcie ilustracyjne, nie opinia klienta ani oferta konkretnego pojazdu."
+  },
+  {
+    "file": "driver.webp",
+    "source": "https://www.pexels.com/photo/7144214/",
+    "cdn": "https://images.pexels.com/photos/7144214/pexels-photo-7144214.jpeg?auto=compress&cs=tinysrgb&w=1500",
+    "dimensions": [
+      1500,
+      1000
+    ],
+    "usage": "Zdjęcie ilustracyjne, nie opinia klienta ani oferta konkretnego pojazdu."
+  },
+  {
+    "file": "weekend.webp",
+    "source": "https://www.pexels.com/photo/4827666/",
+    "cdn": "https://images.pexels.com/photos/4827666/pexels-photo-4827666.jpeg?auto=compress&cs=tinysrgb&w=1500",
+    "dimensions": [
+      1500,
+      2250
+    ],
+    "usage": "Zdjęcie ilustracyjne, nie opinia klienta ani oferta konkretnego pojazdu."
+  },
+  {
+    "file": "charging.webp",
+    "source": "https://www.pexels.com/photo/9799991/",
+    "cdn": "https://images.pexels.com/photos/9799991/pexels-photo-9799991.jpeg?auto=compress&cs=tinysrgb&w=1500",
+    "dimensions": [
+      1500,
+      2000
+    ],
+    "usage": "Zdjęcie ilustracyjne, nie opinia klienta ani oferta konkretnego pojazdu."
+  }
+]
