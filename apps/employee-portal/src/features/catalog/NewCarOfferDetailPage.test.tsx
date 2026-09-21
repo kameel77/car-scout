@@ -347,4 +347,24 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     expect(screen.getAllByRole('button', { name: '0%' }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Wykup końcowy')).toBeInTheDocument();
   });
+
+  it('applies sticky positioning only to the calculator card (Errata E3)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue(mockOffer);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
+    });
+
+    const calculatorHeading = screen.getByText('Kalkulator finansowania');
+    const calculatorCard = calculatorHeading.closest('.lg\\:sticky');
+    expect(calculatorCard).toBeInTheDocument();
+    expect(calculatorCard).toHaveClass('lg:top-20');
+
+    // Price block must be static (not inside sticky wrapper)
+    const h1Heading = screen.getByRole('heading', { level: 1 });
+    const priceCardSticky = h1Heading.closest('.lg\\:sticky');
+    expect(priceCardSticky).toBeNull();
+  });
 });

@@ -544,7 +544,7 @@ ${rateLine}${productLabelLine}`;
                 )}
 
                 {/* Financing Calculator Box */}
-                <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6">
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20 lg:z-10">
                   <div className="flex items-center justify-between border-b border-line pb-4">
                     <div className="flex items-center gap-2">
                       <Calculator className="h-5 w-5 text-forest" />
