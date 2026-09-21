@@ -33,6 +33,12 @@ describe('Benefivo LandingPage Component Suite', () => {
       expect(
         screen.getByText(/Najem i leasing auta na warunkach dla pracowników/i)
       ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: /Mam kod firmy - aktywuj dostęp/i })
+      ).toHaveAttribute('href', '/rejestracja');
+      expect(
+        screen.getByRole('link', { name: /Jesteś pracodawcą\? Przejdź do oferty dla firm/i })
+      ).toHaveAttribute('href', '/dla-firm');
     });
 
     const loginLinks = screen.getAllByRole('link', { name: /Zaloguj się/i });
@@ -43,8 +49,8 @@ describe('Benefivo LandingPage Component Suite', () => {
   it('opens employee journey dialog and allows copying HR message', async () => {
     renderLandingPage();
 
-    // Find the CTA "Chcę skorzystać"
-    const ctaButton = screen.getByRole('button', { name: /Chcę skorzystać/i });
+    // Find the CTA "Mojej firmy nie ma w programie"
+    const ctaButton = screen.getByRole('button', { name: /Mojej firmy nie ma w programie/i });
     fireEvent.click(ctaButton);
 
     await waitFor(() => {

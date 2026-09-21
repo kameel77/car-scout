@@ -157,4 +157,58 @@ describe('RegisterCodePage Component', () => {
       expect(screen.getByText('Nieprawidłowy lub nieaktywny kod firmy')).toBeInTheDocument();
     });
   });
+
+  it('auto-validates company code from ?kod= query parameter on mount and advances to step 2', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+    const validateSpy = vi.spyOn(authApi, 'validateCompanyCode').mockResolvedValue({
+      valid: true,
+      companyId: 'c1',
+      companyName: 'Action S.A.',
+      programId: 'p1',
+      programName: 'Action Auto Program',
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/rejestracja?kod=DEEPLINK-123']}>
+            <RegisterCodePage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(validateSpy).toHaveBeenCalledWith('/api', 'DEEPLINK-123');
+      expect(screen.getByText('Action S.A.')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Imię/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Utwórz konto/i })).toBeInTheDocument();
+    });
+  });
+
+  it('auto-validates company code from ?code= query parameter on mount', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+    const validateSpy = vi.spyOn(authApi, 'validateCompanyCode').mockResolvedValue({
+      valid: true,
+      companyId: 'c1',
+      companyName: 'Action S.A.',
+      programId: 'p1',
+      programName: 'Action Auto Program',
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/rejestracja?code=TEST-CODE']}>
+            <RegisterCodePage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(validateSpy).toHaveBeenCalledWith('/api', 'TEST-CODE');
+      expect(screen.getByText('Action S.A.')).toBeInTheDocument();
+    });
+  });
 });

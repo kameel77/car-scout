@@ -1,11 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 
 export interface HeroSectionProps {
   onOpenEmployeeDialog: () => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenEmployeeDialog }) => {
+  const { isAuthenticated } = useAuth();
+
   return (
     <section className="hero wrap" aria-labelledby="hero-title">
       <div className="hero-copy">
@@ -27,25 +30,41 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenEmployeeDialog }
         </p>
 
         <div className="hero-actions">
-          <button
-            className="button button-dark"
-            type="button"
-            onClick={onOpenEmployeeDialog}
-          >
-            Chcę skorzystać <span aria-hidden="true">&rarr;</span>
-          </button>
-          <Link className="text-link" to="/dla-firm">
-            Szukam benefitu dla firmy <span aria-hidden="true">↗</span>
-          </Link>
+          {isAuthenticated ? (
+            <Link className="button button-lime" to="/katalog">
+              Przejdź do katalogu <span aria-hidden="true">&rarr;</span>
+            </Link>
+          ) : (
+            <>
+              <Link className="button button-lime" to="/rejestracja">
+                Mam kod firmy - aktywuj dostęp <span aria-hidden="true">&rarr;</span>
+              </Link>
+              <button
+                className="button button-outline"
+                type="button"
+                onClick={onOpenEmployeeDialog}
+              >
+                Mojej firmy nie ma w programie <span aria-hidden="true">&rarr;</span>
+              </button>
+            </>
+          )}
         </div>
 
-        <div className="mt-3">
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm text-stone-600">
           <Link
-            to="/logowanie"
-            className="text-xs font-semibold text-stone-500 hover:text-stone-900 inline-flex items-center gap-1"
+            to="/dla-firm"
+            className="hover:text-stone-900 inline-flex items-center gap-1 transition-colors"
           >
-            Masz już konto w programie? Zaloguj się &rarr;
+            Jesteś pracodawcą? Przejdź do oferty dla firm <span aria-hidden="true">&rarr;</span>
           </Link>
+          {!isAuthenticated && (
+            <Link
+              to="/logowanie"
+              className="hover:text-stone-900 inline-flex items-center gap-1 transition-colors"
+            >
+              Masz już konto? Zaloguj się <span aria-hidden="true">&rarr;</span>
+            </Link>
+          )}
         </div>
 
         <div className="endorsement">

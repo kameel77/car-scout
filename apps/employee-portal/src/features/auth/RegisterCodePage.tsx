@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from './AuthContext';
 import { validateCompanyCode, ValidateCodeResponse } from './auth-api';
+import { trackEvent } from '../analytics/analytics';
 import { ShieldCheck, ArrowLeft, AlertCircle, Loader2, Building, CheckCircle2 } from 'lucide-react';
 
 export const RegisterCodePage: React.FC = () => {
   const { config } = useBrandConfig();
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Step 1: Code validation
   const [code, setCode] = useState('');
@@ -23,6 +25,42 @@ export const RegisterCodePage: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasAutoValidatedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasAutoValidatedRef.current) return;
+    const paramCode = searchParams.get('kod') || searchParams.get('code');
+    if (!paramCode) return;
+
+    const trimmed = paramCode.trim().toUpperCase();
+    if (!trimmed) return;
+
+    hasAutoValidatedRef.current = true;
+    setCode(trimmed);
+    trackEvent('register_deeplink_used', { codeLength: trimmed.length }, config.apiUrl, config.analyticsEnabled);
+
+    setIsSubmitting(true);
+    setError(null);
+
+    validateCompanyCode(config.apiUrl, trimmed)
+      .then((data) => {
+        if (data.valid) {
+          setValidatedData(data);
+        } else {
+          setError('Kod dostępu z linku jest nieprawidłowy');
+        }
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Weryfikacja kodu nie powiodła się');
+        }
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
+  }, [searchParams, config.apiUrl, config.analyticsEnabled]);
 
   const handleValidateCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +126,7 @@ export const RegisterCodePage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await register({
-        code: code.trim().toUpperCase(),
+        code: (code || searchParams.get('kod') || searchParams.get('code') || '').trim().toUpperCase(),
         firstName: trimmedFirst,
         lastName: trimmedLast,
         email: trimmedEmail,
