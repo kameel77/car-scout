@@ -545,7 +545,7 @@ ${rateLine}${productLabelLine}`;
                       {offer.benefit.consultantCare && (
                         <div className="flex items-center gap-2 text-ink">
                           <CheckCircle className="h-4 w-4 text-forest flex-shrink-0" />
-                          <span>Dedykowany doradca flotowy i obsługa formalności door-to-door</span>
+                          <span>Dedykowany doradca flotowy</span>
                         </div>
                       )}
                     </div>

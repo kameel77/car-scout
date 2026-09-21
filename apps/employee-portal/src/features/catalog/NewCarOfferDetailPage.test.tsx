@@ -116,6 +116,8 @@ describe('NewCarOfferDetailPage', () => {
     // Benefit
     expect(screen.getByText('Pakiet Benefit Moya & Flota')).toBeInTheDocument();
     expect(screen.getByText(/Karta paliwowa Moya/)).toBeInTheDocument();
+    expect(screen.getByText('Dedykowany doradca flotowy')).toBeInTheDocument();
+    expect(screen.queryByText(/door-to-door/i)).not.toBeInTheDocument();
   });
 
   it('renders financing calculator and updates calculations on parameter selection', async () => {
