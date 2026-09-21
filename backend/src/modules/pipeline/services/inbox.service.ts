@@ -29,6 +29,7 @@ export type ListInboxParams = {
   limit?: number;
   offset?: number;
   cutoffDate?: Date;
+  leadType?: string;
 };
 
 export async function listInboxLeads(
@@ -42,6 +43,7 @@ export async function listInboxLeads(
   const where: Prisma.LeadWhereInput = {
     pipelineOpportunity: { is: null },
     createdAt: { gte: cutoffDate },
+    ...(params.leadType ? { leadType: params.leadType } : {}),
   };
 
   const [leads, total] = await Promise.all([
@@ -123,43 +125,56 @@ export async function qualifyLead(
     throw new Error(`Lead ${input.leadId} jest już powiązany ze sprawą ${lead.pipelineOpportunity.number}`);
   }
 
+  // Extract metadata if present
+  const meta = (lead.metadata && typeof lead.metadata === 'object' ? lead.metadata : null) as {
+    companyName?: string;
+    companyNip?: string;
+  } | null;
+
   // Determine lead source
   let leadSource: LeadSourceChannel = input.leadSource ?? LeadSourceChannel.ORGANIC;
+  let leadSourceDetail: string | null = input.leadSourceDetail ?? lead.trafficSource ?? null;
+
   if (!input.leadSource) {
-    const src = lead.trafficSource?.toLowerCase() || '';
-    if (src.includes('meta') || src.includes('facebook')) {
-      leadSource = LeadSourceChannel.META;
-    } else if (src.includes('google')) {
-      leadSource = LeadSourceChannel.GOOGLE;
-    } else if (src.includes('dealer')) {
-      leadSource = LeadSourceChannel.DEALER;
-    } else if (src.includes('partner')) {
+    if (lead.leadType === 'employer_b2b') {
       leadSource = LeadSourceChannel.PARTNER;
-    } else if (src.includes('tv')) {
-      leadSource = LeadSourceChannel.TV;
-    } else if (src) {
-      leadSource = LeadSourceChannel.OTHER;
+      leadSourceDetail = input.leadSourceDetail ?? 'benefivo_b2b';
     } else {
-      leadSource = LeadSourceChannel.ORGANIC;
+      const src = lead.trafficSource?.toLowerCase() || '';
+      if (src.includes('meta') || src.includes('facebook')) {
+        leadSource = LeadSourceChannel.META;
+      } else if (src.includes('google')) {
+        leadSource = LeadSourceChannel.GOOGLE;
+      } else if (src.includes('dealer')) {
+        leadSource = LeadSourceChannel.DEALER;
+      } else if (src.includes('partner')) {
+        leadSource = LeadSourceChannel.PARTNER;
+      } else if (src.includes('tv')) {
+        leadSource = LeadSourceChannel.TV;
+      } else if (src) {
+        leadSource = LeadSourceChannel.OTHER;
+      } else {
+        leadSource = LeadSourceChannel.ORGANIC;
+      }
     }
   }
 
   // Determine customer client type if possible
-  const clientType = input.clientType ?? ClientType.B2C;
+  const clientType = input.clientType ?? (lead.leadType === 'employer_b2b' ? ClientType.B2B : ClientType.B2C);
 
   // Create Opportunity
   const opportunity = await createOpportunity(tx, {
     scopeType: input.scopeType,
     scopeId: input.scopeId,
     leadSource,
-    leadSourceDetail: input.leadSourceDetail ?? lead.trafficSource ?? null,
+    leadSourceDetail,
     clientType,
     financingType: input.financingType ?? null,
     customerName: (input.customerName && input.customerName.trim()) || lead.name || 'Klient z formularza',
     customerPhone: input.customerPhone !== undefined ? input.customerPhone : lead.phone,
     customerEmail: input.customerEmail !== undefined ? input.customerEmail : lead.email,
-    companyName: input.companyName !== undefined ? input.companyName : null,
-    companyNip: input.companyNip !== undefined ? input.companyNip : null,
+    companyName: input.companyName !== undefined ? input.companyName : (meta?.companyName ?? null),
+    companyNip: input.companyNip !== undefined ? input.companyNip : (meta?.companyNip ?? null),
     sourceLeadId: lead.id,
     ownerUserId: input.ownerUserId ?? null,
     nextActionType: input.nextActionType ?? 'CALL_FIRST',

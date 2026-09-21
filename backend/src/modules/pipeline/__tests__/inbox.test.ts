@@ -170,4 +170,96 @@ describe('Inbox & Qualification Service Logic', () => {
     expect(spamOpp.lostComment).toBe('Spam formularza kontaktowego');
     expect(spamOpp.sourceLeadId).toBe(spamLead.id);
   });
+
+  it('filters inbox leads by leadType', async () => {
+    const b2bLead = await prisma.lead.create({
+      data: {
+        referenceNumber: makeRef(),
+        name: 'Firma B2B Test',
+        email: 'b2b@benefivo.test',
+        phone: '+48555444333',
+        message: 'Zapytanie B2B',
+        leadType: 'employer_b2b',
+        trafficSource: 'benefivo_b2b',
+        metadata: {
+          companyName: 'Acme Corp',
+          companyNip: '5252525252',
+          teamSize: '50-100',
+        },
+      },
+    });
+
+    const retailLead = await prisma.lead.create({
+      data: {
+        referenceNumber: makeRef(),
+        name: 'Klient Indywidualny',
+        email: 'retail@motolia.test',
+        phone: '+48666555444',
+        message: 'Zapytanie o auto',
+        leadType: 'sale',
+      },
+    });
+
+    const b2bInbox = await listInboxLeads(prisma, {
+      scopeType: PLATFORM_SCOPE.scopeType,
+      scopeId: PLATFORM_SCOPE.scopeId,
+      leadType: 'employer_b2b',
+      cutoffDate: new Date('2020-01-01'),
+    });
+    const b2bIds = b2bInbox.leads.map((l) => l.id);
+    expect(b2bIds).toContain(b2bLead.id);
+    expect(b2bIds).not.toContain(retailLead.id);
+
+    const allInbox = await listInboxLeads(prisma, {
+      scopeType: PLATFORM_SCOPE.scopeType,
+      scopeId: PLATFORM_SCOPE.scopeId,
+      cutoffDate: new Date('2020-01-01'),
+    });
+    const allIds = allInbox.leads.map((l) => l.id);
+    expect(allIds).toContain(b2bLead.id);
+    expect(allIds).toContain(retailLead.id);
+  });
+
+  it('qualifying an employer_b2b lead defaults leadSource to PARTNER, leadSourceDetail to benefivo_b2b, and extracts company metadata', async () => {
+    const b2bLead = await prisma.lead.create({
+      data: {
+        referenceNumber: makeRef(),
+        name: 'Anna HR Manager',
+        email: 'anna.hr@korpo.pl',
+        phone: '+48777888999',
+        message: 'Chcemy wdrożyć program',
+        leadType: 'employer_b2b',
+        trafficSource: 'benefivo_b2b',
+        metadata: {
+          companyName: 'Tech Innovators Sp. z o.o.',
+          companyNip: '1234567890',
+          teamSize: '100+',
+          benefitModel: 'co_financing',
+        },
+      },
+    });
+
+    const opportunity = await prisma.$transaction((tx) =>
+      qualifyLead(tx, {
+        leadId: b2bLead.id,
+        scopeType: PLATFORM_SCOPE.scopeType,
+        scopeId: PLATFORM_SCOPE.scopeId,
+        actor: { type: PipelineActorType.USER, label: 'Kamil' },
+      })
+    );
+
+    expect(opportunity.id).toBeTruthy();
+    expect(opportunity.sourceLeadId).toBe(b2bLead.id);
+    expect(opportunity.leadSource).toBe(LeadSourceChannel.PARTNER);
+    expect(opportunity.leadSourceDetail).toBe('benefivo_b2b');
+    expect(opportunity.clientType).toBe('B2B');
+
+    const customer = await prisma.pipelineCustomer.findUnique({
+      where: { id: opportunity.customerId },
+    });
+    expect(customer?.fullName).toBe('Anna HR Manager');
+    expect(customer?.companyName).toBe('Tech Innovators Sp. z o.o.');
+    expect(customer?.companyNip).toBe('1234567890');
+    expect(customer?.clientType).toBe('B2B');
+  });
 });

@@ -13,7 +13,7 @@ export const PIPELINE_KEYS = {
   queue: (filters?: QueueFilterParams) => [...PIPELINE_KEYS.all, 'queue', filters] as const,
   opportunities: (filters?: Record<string, unknown>) => [...PIPELINE_KEYS.all, 'opportunities', filters] as const,
   opportunity: (id: string) => [...PIPELINE_KEYS.all, 'opportunity', id] as const,
-  inbox: (params?: { limit?: number; offset?: number }) => [...PIPELINE_KEYS.all, 'inbox', params] as const,
+  inbox: (params?: { limit?: number; offset?: number; leadType?: string }) => [...PIPELINE_KEYS.all, 'inbox', params] as const,
   dictionaries: () => [...PIPELINE_KEYS.all, 'dictionaries'] as const,
 };
 
@@ -58,7 +58,7 @@ export function usePipelineDictionaries() {
   });
 }
 
-export function useInboxLeads(params?: { limit?: number; offset?: number }) {
+export function useInboxLeads(params?: { limit?: number; offset?: number; leadType?: string }) {
   return useQuery({
     queryKey: PIPELINE_KEYS.inbox(params),
     queryFn: () => pipelineApi.getInbox(params),

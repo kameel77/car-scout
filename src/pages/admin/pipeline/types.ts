@@ -233,6 +233,13 @@ export type InboxLeadSummary = {
   message: string;
   trafficSource: string | null;
   leadType: string;
+  referenceNumber?: string | null;
+  metadata?: {
+    companyName?: string;
+    companyNip?: string;
+    teamSize?: string;
+    benefitModel?: string;
+  } | null;
   createdAt: string;
   listingId: string | null;
   rentalVehicleId: string | null;

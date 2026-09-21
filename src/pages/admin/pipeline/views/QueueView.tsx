@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   QueueResponse,
   PipelineOpportunitySummary,
@@ -7,6 +7,7 @@ import {
 } from '../types';
 import { QueueRow } from '../components/QueueRow';
 import { InboxRow } from '../components/InboxRow';
+import { Button } from '@/components/ui/button';
 import { AlertTriangle, Calendar, HelpCircle, Hourglass, Inbox, Loader2 } from 'lucide-react';
 
 const WAITING_REASON_LABEL: Record<WaitingOpportunitySummary['waitingReason'], string> = {
@@ -42,6 +43,8 @@ export function QueueView({
   onQualifyLead: (lead: InboxLeadSummary) => void;
   onDismissLead: (lead: InboxLeadSummary) => void;
 }) {
+  const [inboxFilter, setInboxFilter] = useState<'all' | 'employer_b2b'>('all');
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-16 text-muted-foreground gap-3">
@@ -54,6 +57,11 @@ export function QueueView({
   if (!queue) return null;
 
   const { overdue, today, waiting, noAction, inbox, counts } = queue;
+
+  const filteredInbox = useMemo(() => {
+    if (inboxFilter === 'all') return inbox;
+    return inbox.filter((l) => l.leadType === 'employer_b2b');
+  }, [inbox, inboxFilter]);
 
   return (
     <div className="space-y-8">
@@ -160,21 +168,44 @@ export function QueueView({
 
       {/* 3. INBOX SECTION (🔵 Nowe zapytania) */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400">
-            <Inbox className="w-4 h-4" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="p-1 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400">
+              <Inbox className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-base text-blue-700 dark:text-blue-400">
+              Nowe zapytania z Inboxu ({counts.inbox})
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              Leady czekające na 30-sekundową kwalifikację i przypisanie
+            </span>
           </div>
-          <h3 className="font-bold text-base text-blue-700 dark:text-blue-400">
-            Nowe zapytania z Inboxu ({counts.inbox})
-          </h3>
-          <span className="text-xs text-muted-foreground">
-            Leady czekające na 30-sekundową kwalifikację i przypisanie
-          </span>
+
+          <div className="flex items-center gap-1.5 self-start sm:self-auto">
+            <Button
+              type="button"
+              variant={inboxFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className="h-7 text-xs px-2.5"
+              onClick={() => setInboxFilter('all')}
+            >
+              Wszystkie ({inbox.length})
+            </Button>
+            <Button
+              type="button"
+              variant={inboxFilter === 'employer_b2b' ? 'default' : 'outline'}
+              size="sm"
+              className={`h-7 text-xs px-2.5 ${inboxFilter === 'employer_b2b' ? 'bg-[#0f2d1e] hover:bg-[#1a4a32] text-[#F7F8F2]' : ''}`}
+              onClick={() => setInboxFilter('employer_b2b')}
+            >
+              Benefivo B2B ({inbox.filter((l) => l.leadType === 'employer_b2b').length})
+            </Button>
+          </div>
         </div>
 
-        {inbox.length > 0 ? (
+        {filteredInbox.length > 0 ? (
           <div className="space-y-2">
-            {inbox.map((lead) => (
+            {filteredInbox.map((lead) => (
               <InboxRow
                 key={lead.id}
                 lead={lead}
@@ -185,7 +216,9 @@ export function QueueView({
           </div>
         ) : (
           <div className="p-6 text-center rounded-xl border border-dashed text-xs text-muted-foreground bg-muted/20">
-            Inbox jest pusty — brak oczekujących leadów.
+            {inboxFilter === 'employer_b2b'
+              ? 'Brak oczekujących leadów Benefivo B2B w Inboxie.'
+              : 'Inbox jest pusty - brak oczekujących leadów.'}
           </div>
         )}
       </section>

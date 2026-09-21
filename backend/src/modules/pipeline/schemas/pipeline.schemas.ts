@@ -91,6 +91,12 @@ export const dismissLeadSchema = z.object({
   comment: z.string().optional().nullable(),
 });
 
+export const inboxQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).optional().default(50),
+  offset: z.coerce.number().min(0).optional().default(0),
+  leadType: z.string().optional(),
+});
+
 export const listOpportunitiesQuerySchema = z.object({
   phase: z.nativeEnum(PipelinePhase).optional(),
   status: z.nativeEnum(OpportunityStatus).optional(),

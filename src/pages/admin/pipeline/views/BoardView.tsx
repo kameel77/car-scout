@@ -68,14 +68,26 @@ function KanbanColumn({
             inboxLeads.map((lead) => (
               <div
                 key={lead.id}
-                className="p-3 bg-blue-50/50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900 text-xs space-y-2"
+                className={`p-3 ${lead.leadType === 'employer_b2b' ? 'bg-stone-50/70 dark:bg-stone-900/50 border-stone-200 dark:border-stone-800' : 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900'} rounded-xl border text-xs space-y-2`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-foreground">{lead.name}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {lead.trafficSource || 'Formularz'}
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-bold text-foreground truncate">{lead.name}</span>
+                    {lead.leadType === 'employer_b2b' && (
+                      <span className="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#0f2d1e] text-[#F7F8F2]">
+                        Benefivo B2B
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground shrink-0">
+                    {lead.leadType === 'employer_b2b' ? 'benefivo.pl' : (lead.trafficSource || 'Formularz')}
                   </span>
                 </div>
+                {lead.leadType === 'employer_b2b' && lead.metadata?.companyName && (
+                  <div className="text-[11px] font-semibold text-stone-800 dark:text-stone-200 truncate">
+                    {lead.metadata.companyName} {lead.metadata.companyNip ? `(NIP: ${lead.metadata.companyNip})` : ''}
+                  </div>
+                )}
                 <div className="text-[11px] text-muted-foreground">{lead.phone || lead.email}</div>
                 {lead.message && (
                   <p className="text-[11px] text-foreground/80 italic line-clamp-2">
