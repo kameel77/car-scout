@@ -8,7 +8,7 @@ import fetch from 'node-fetch';
 
 export const employerB2bMetadataSchema = z.object({
     companyName: z.string().trim().min(1).max(200),
-    companyNip: z.string().trim().max(15).regex(/^[0-9\-]*$/, 'NIP może zawierać tylko cyfry i myślniki'),
+    companyNip: z.string().trim().max(15).regex(/^[0-9-]*$/, 'NIP może zawierać tylko cyfry i myślniki'),
     teamSize: z.string().trim().max(60),
     benefitModel: z.string().trim().max(120),
 }).strict();

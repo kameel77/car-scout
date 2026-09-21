@@ -45,6 +45,13 @@ export function QueueView({
 }) {
   const [inboxFilter, setInboxFilter] = useState<'all' | 'employer_b2b'>('all');
 
+  const inbox = queue?.inbox;
+  const filteredInbox = useMemo(() => {
+    if (!inbox) return [];
+    if (inboxFilter === 'all') return inbox;
+    return inbox.filter((l) => l.leadType === 'employer_b2b');
+  }, [inbox, inboxFilter]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-16 text-muted-foreground gap-3">
@@ -56,12 +63,7 @@ export function QueueView({
 
   if (!queue) return null;
 
-  const { overdue, today, waiting, noAction, inbox, counts } = queue;
-
-  const filteredInbox = useMemo(() => {
-    if (inboxFilter === 'all') return inbox;
-    return inbox.filter((l) => l.leadType === 'employer_b2b');
-  }, [inbox, inboxFilter]);
+  const { overdue, today, waiting, noAction, counts } = queue;
 
   return (
     <div className="space-y-8">
@@ -189,7 +191,7 @@ export function QueueView({
               className="h-7 text-xs px-2.5"
               onClick={() => setInboxFilter('all')}
             >
-              Wszystkie ({inbox.length})
+              Wszystkie ({inbox?.length ?? 0})
             </Button>
             <Button
               type="button"
@@ -198,7 +200,7 @@ export function QueueView({
               className={`h-7 text-xs px-2.5 ${inboxFilter === 'employer_b2b' ? 'bg-[#0f2d1e] hover:bg-[#1a4a32] text-[#F7F8F2]' : ''}`}
               onClick={() => setInboxFilter('employer_b2b')}
             >
-              Benefivo B2B ({inbox.filter((l) => l.leadType === 'employer_b2b').length})
+              Benefivo B2B ({inbox?.filter((l) => l.leadType === 'employer_b2b').length ?? 0})
             </Button>
           </div>
         </div>
