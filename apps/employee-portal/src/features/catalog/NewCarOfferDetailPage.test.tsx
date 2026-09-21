@@ -413,4 +413,18 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     expect(screen.queryByText('Audio i multimedia')).not.toBeInTheDocument();
     expect(screen.queryByText('Pozostałe elementy')).not.toBeInTheDocument();
   });
+
+  it('renders compact benefits bar with 3 items above calculator and drops szybka ścieżka (Zakres 9)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue(mockOffer);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Gwarancja wynegocjowanego rabatu flotowego')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Brak ukrytych opłat i prowizji przygotowawczej')).toBeInTheDocument();
+    expect(screen.getByText('Opieka doradcy na każdym etapie odbioru auta')).toBeInTheDocument();
+    expect(screen.queryByText(/Szybka ścieżka weryfikacji wniosku/i)).not.toBeInTheDocument();
+  });
 });

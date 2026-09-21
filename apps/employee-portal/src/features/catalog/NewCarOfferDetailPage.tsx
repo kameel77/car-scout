@@ -500,6 +500,24 @@ ${rateLine}${productLabelLine}`;
 
               {/* 3. Right Column: Benefits & Calculator (Mobile: 3rd in DOM; Desktop: Col 8-12, Row 2) */}
               <div className="lg:col-span-5 lg:col-start-8 lg:row-start-2 space-y-6">
+                {/* Dlaczego warto - Compact Benefits Bar */}
+                <div className="p-3.5 bg-paper border border-line rounded-2xl shadow-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-ink">
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Gwarancja wynegocjowanego rabatu flotowego</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Brak ukrytych opłat i prowizji przygotowawczej</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Opieka doradcy na każdym etapie odbioru auta</span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Employee Benefit Package Box */}
                 {offer.benefit && (
                   <div className="p-5 bg-paper border border-line rounded-2xl shadow-xs">
@@ -787,17 +805,6 @@ ${rateLine}${productLabelLine}`;
                       Zapytaj o tę ofertę i ratę
                     </button>
                   </div>
-                </div>
-
-                {/* Additional Guidance Box */}
-                <div className="p-4 bg-white rounded-2xl border border-gray-200 text-xs text-gray-500 space-y-2">
-                  <div className="font-semibold text-gray-700">Dlaczego warto przez program pracowniczy?</div>
-                  <ul className="space-y-1 list-disc list-inside text-gray-600">
-                    <li>Gwarancja wynegocjowanego rabatu flotowego</li>
-                    <li>Brak ukrytych opłat i prowizji przygotowawczej</li>
-                    <li>Szybka ścieżka weryfikacji wniosku</li>
-                    <li>Opieka doradcy na każdym etapie odbioru auta</li>
-                  </ul>
                 </div>
               </div>
             </div>
