@@ -14,9 +14,12 @@ import {
   Layers,
   X,
   SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
   Briefcase
 } from 'lucide-react';
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
+import { RateRangeFilter } from '../catalog/RateRangeFilter';
 import { PortalHeader } from '../common/PortalHeader';
 import { ImageSwiper } from '../common/ImageSwiper';
 
@@ -121,6 +124,9 @@ export const RentalCatalogPage: React.FC = () => {
   const [selectedTransmission, setSelectedTransmission] = useState<string>('');
   const [selectedBodyType, setSelectedBodyType] = useState<string>('');
   const [selectedB2bOnly, setSelectedB2bOnly] = useState<boolean>(false);
+  const [minRate, setMinRate] = useState<number | ''>('');
+  const [maxRate, setMaxRate] = useState<number | ''>('');
+  const [showMoreFilters, setShowMoreFilters] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<'default' | 'rate_asc' | 'rate_desc'>('default');
 
   const loadOffers = useCallback(async (signal?: AbortSignal) => {
@@ -235,14 +241,28 @@ export const RentalCatalogPage: React.FC = () => {
       result = result.filter((o) => Boolean(o.isB2b));
     }
 
+    if (minRate !== '') {
+      result = result.filter((o) => o.minMonthlyRateGross >= Number(minRate));
+    }
+
+    if (maxRate !== '') {
+      result = result.filter((o) => o.minMonthlyRateGross <= Number(maxRate));
+    }
+
     if (sortBy === 'rate_asc') {
-      result.sort((a, b) => a.minMonthlyRateNet - b.minMonthlyRateNet);
+      result.sort((a, b) => a.minMonthlyRateGross - b.minMonthlyRateGross);
     } else if (sortBy === 'rate_desc') {
-      result.sort((a, b) => b.minMonthlyRateNet - a.minMonthlyRateNet);
+      result.sort((a, b) => b.minMonthlyRateGross - a.minMonthlyRateGross);
     }
 
     return result;
-  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, selectedB2bOnly, sortBy]);
+  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, selectedB2bOnly, minRate, maxRate, sortBy]);
+
+  const secondaryFiltersCount =
+    (selectedFuel ? 1 : 0) +
+    (selectedTransmission ? 1 : 0) +
+    (selectedBodyType ? 1 : 0) +
+    (selectedB2bOnly ? 1 : 0);
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
@@ -251,6 +271,8 @@ export const RentalCatalogPage: React.FC = () => {
     selectedTransmission ||
     selectedBodyType ||
     selectedB2bOnly ||
+    minRate !== '' ||
+    maxRate !== '' ||
     sortBy !== 'default'
   );
 
@@ -261,6 +283,8 @@ export const RentalCatalogPage: React.FC = () => {
     setSelectedTransmission('');
     setSelectedBodyType('');
     setSelectedB2bOnly(false);
+    setMinRate('');
+    setMaxRate('');
     setSortBy('default');
   };
 
@@ -372,9 +396,22 @@ export const RentalCatalogPage: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {/* Marka */}
-              <div>
+            {/* Primary filters row: Rate (1st), Make (2nd), Sort, More filters button */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-start">
+              {/* 1. Rata miesięczna */}
+              <div className="lg:col-span-5">
+                <RateRangeFilter
+                  minRate={minRate}
+                  maxRate={maxRate}
+                  onChange={(min, max) => {
+                    setMinRate(min);
+                    setMaxRate(max);
+                  }}
+                />
+              </div>
+
+              {/* 2. Marka */}
+              <div className="lg:col-span-3">
                 <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Marka
                 </label>
@@ -383,7 +420,7 @@ export const RentalCatalogPage: React.FC = () => {
                   onChange={(e) => setSelectedMake(e.target.value)}
                   className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
-                  <option value="">Wszystkie</option>
+                  <option value="">Wszystkie marki</option>
                   {availableMakes.map((m) => (
                     <option key={m} value={m}>
                       {m}
@@ -392,84 +429,8 @@ export const RentalCatalogPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Paliwo */}
-              <div>
-                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
-                  Paliwo
-                </label>
-                <select
-                  value={selectedFuel}
-                  onChange={(e) => setSelectedFuel(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableFuels.map((f) => (
-                    <option key={f.key} value={f.key}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Skrzynia */}
-              <div>
-                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
-                  Skrzynia
-                </label>
-                <select
-                  value={selectedTransmission}
-                  onChange={(e) => setSelectedTransmission(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableTransmissions.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Nadwozie */}
-              <div>
-                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
-                  Nadwozie
-                </label>
-                <select
-                  value={selectedBodyType}
-                  onChange={(e) => setSelectedBodyType(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableBodyTypes.map((b) => (
-                    <option key={b.key} value={b.key}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Oferta B2B toggle button */}
-              <div>
-                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
-                  Opcja B2B
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setSelectedB2bOnly(!selectedB2bOnly)}
-                  className={`w-full text-xs py-2 px-2.5 rounded-xl border font-medium flex items-center justify-center gap-1.5 transition-colors ${
-                    selectedB2bOnly
-                      ? 'bg-amber-500 border-amber-600 text-white shadow-xs'
-                      : 'bg-paper border-line text-ink hover:bg-white'
-                  }`}
-                >
-                  <Briefcase className="h-3.5 w-3.5" />
-                  <span>Tylko B2B</span>
-                </button>
-              </div>
-
-              {/* Sortowanie */}
-              <div>
+              {/* 3. Sortowanie */}
+              <div className="lg:col-span-2">
                 <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Sortowanie
                 </label>
@@ -483,7 +444,115 @@ export const RentalCatalogPage: React.FC = () => {
                   <option value="rate_desc">Rata: od najwyższej</option>
                 </select>
               </div>
+
+              {/* 4. Przycisk "Więcej filtrów" */}
+              <div className="lg:col-span-2 flex sm:justify-start lg:justify-end pt-5">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreFilters((prev) => !prev)}
+                  className={`w-full lg:w-auto inline-flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl border transition-colors ${
+                    showMoreFilters || secondaryFiltersCount > 0
+                      ? 'bg-ink text-white border-ink'
+                      : 'bg-paper text-ink border-line hover:bg-white'
+                  }`}
+                  aria-expanded={showMoreFilters}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>Więcej filtrów</span>
+                  {secondaryFiltersCount > 0 && (
+                    <span className="ml-1 bg-lime text-ink text-2xs font-bold px-1.5 py-0.5 rounded-full">
+                      {secondaryFiltersCount}
+                    </span>
+                  )}
+                  {showMoreFilters ? (
+                    <ChevronUp className="h-3.5 w-3.5 ml-0.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Secondary filters row (collapsible) */}
+            {showMoreFilters && (
+              <div className="pt-3 border-t border-line grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                {/* Paliwo */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Paliwo
+                  </label>
+                  <select
+                    value={selectedFuel}
+                    onChange={(e) => setSelectedFuel(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableFuels.map((f) => (
+                      <option key={f.key} value={f.key}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Skrzynia */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Skrzynia
+                  </label>
+                  <select
+                    value={selectedTransmission}
+                    onChange={(e) => setSelectedTransmission(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableTransmissions.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Nadwozie */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Nadwozie
+                  </label>
+                  <select
+                    value={selectedBodyType}
+                    onChange={(e) => setSelectedBodyType(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableBodyTypes.map((b) => (
+                      <option key={b.key} value={b.key}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Oferta B2B toggle button */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Opcja B2B
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedB2bOnly(!selectedB2bOnly)}
+                    className={`w-full text-xs py-2 px-2.5 rounded-xl border font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                      selectedB2bOnly
+                        ? 'bg-amber-500 border-amber-600 text-white shadow-xs'
+                        : 'bg-paper border-line text-ink hover:bg-white'
+                    }`}
+                  >
+                    <Briefcase className="h-3.5 w-3.5" />
+                    <span>Tylko B2B</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

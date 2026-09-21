@@ -349,5 +349,44 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
     expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
   });
+
+  it('filters offers by monthly rate preset and expands secondary filters', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
+      offers: mockOffersList,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <CatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
+      expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
+    });
+
+    // Toyota Yaris default rate is under 1500 zł/mies.
+    // Volkswagen Tayron default rate is ~3000 zł/mies.
+    fireEvent.click(screen.getByRole('button', { name: '< 1500' }));
+    expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
+    expect(screen.queryByText('Volkswagen Tayron')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '2500 - 3500' }));
+    expect(screen.queryByText('Toyota Yaris')).not.toBeInTheDocument();
+    expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
+
+    // Toggle more filters
+    const moreBtn = screen.getByRole('button', { name: /Więcej filtrów/i });
+    expect(screen.queryByText('Skrzynia')).not.toBeInTheDocument();
+    fireEvent.click(moreBtn);
+    expect(screen.getByText('Skrzynia')).toBeInTheDocument();
+  });
 });
 

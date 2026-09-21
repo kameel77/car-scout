@@ -14,10 +14,14 @@ import {
   RefreshCw,
   Tag,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Search,
   SlidersHorizontal
 } from 'lucide-react';
-import { fetchEmployeeOffers, EmployeeOffer } from './catalog-api';
+import { fetchEmployeeOffers, EmployeeOffer, EmployeeFinancingConfig } from './catalog-api';
+import { RateRangeFilter } from './RateRangeFilter';
+import { calculateDefaultOfferInstallment } from './financing';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
 import { ImageSwiper } from '../common/ImageSwiper';
@@ -122,7 +126,11 @@ export const CatalogPage: React.FC = () => {
   const [selectedFuel, setSelectedFuel] = useState<string>('');
   const [selectedTransmission, setSelectedTransmission] = useState<string>('');
   const [selectedBodyType, setSelectedBodyType] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'discount_desc'>('default');
+  const [minRate, setMinRate] = useState<number | ''>('');
+  const [maxRate, setMaxRate] = useState<number | ''>('');
+  const [showMoreFilters, setShowMoreFilters] = useState<boolean>(false);
+  const [financingConfig, setFinancingConfig] = useState<EmployeeFinancingConfig | null>(null);
+  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'discount_desc' | 'rate_asc' | 'rate_desc'>('default');
 
   // Inquiry Modal State
   const [selectedOfferForInquiry, setSelectedOfferForInquiry] = useState<EmployeeOffer | null>(null);
@@ -134,6 +142,7 @@ export const CatalogPage: React.FC = () => {
     try {
       const res = await fetchEmployeeOffers(config.apiUrl || '/api', {}, signal);
       setOffers(res.offers || []);
+      setFinancingConfig(res.financing ?? null);
     } catch (err: unknown) {
       if (signal?.aborted) return;
       const msg = err instanceof Error ? err.message : 'Nie udało się pobrać listy ofert';
@@ -195,13 +204,20 @@ export const CatalogPage: React.FC = () => {
       .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
   }, [offers]);
 
+  const offersWithInstallments = useMemo(() => {
+    return offers.map((offer) => ({
+      offer,
+      installment: calculateDefaultOfferInstallment(offer, financingConfig)
+    }));
+  }, [offers, financingConfig]);
+
   const filteredOffers = useMemo(() => {
-    let result = [...offers];
+    let result = [...offersWithInstallments];
 
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase().trim();
       result = result.filter(
-        (o) =>
+        ({ offer: o }) =>
           o.vehicle.make.toLowerCase().includes(q) ||
           o.vehicle.model.toLowerCase().includes(q) ||
           (o.vehicle.version && o.vehicle.version.toLowerCase().includes(q))
@@ -210,38 +226,52 @@ export const CatalogPage: React.FC = () => {
 
     if (selectedMake) {
       result = result.filter(
-        (o) => o.vehicle.make.toLowerCase() === selectedMake.toLowerCase()
+        ({ offer: o }) => o.vehicle.make.toLowerCase() === selectedMake.toLowerCase()
       );
     }
 
     if (selectedFuel) {
       result = result.filter(
-        (o) => normalizeFuelType(o.vehicle.fuelType)?.key === selectedFuel
+        ({ offer: o }) => normalizeFuelType(o.vehicle.fuelType)?.key === selectedFuel
       );
     }
 
     if (selectedTransmission) {
       result = result.filter(
-        (o) => normalizeTransmission(o.vehicle.transmission)?.key === selectedTransmission
+        ({ offer: o }) => normalizeTransmission(o.vehicle.transmission)?.key === selectedTransmission
       );
     }
 
     if (selectedBodyType) {
       result = result.filter(
-        (o) => normalizeBodyType(o.vehicle.bodyType)?.key === selectedBodyType
+        ({ offer: o }) => normalizeBodyType(o.vehicle.bodyType)?.key === selectedBodyType
       );
     }
 
-    if (sortBy === 'price_asc') {
-      result.sort((a, b) => a.pricing.employeePricePln - b.pricing.employeePricePln);
-    } else if (sortBy === 'price_desc') {
-      result.sort((a, b) => b.pricing.employeePricePln - a.pricing.employeePricePln);
-    } else if (sortBy === 'discount_desc') {
-      result.sort((a, b) => b.pricing.discountPct - a.pricing.discountPct);
+    if (minRate !== '') {
+      result = result.filter(({ installment }) => installment.installmentGross >= Number(minRate));
     }
 
-    return result;
-  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, sortBy]);
+    if (maxRate !== '') {
+      result = result.filter(({ installment }) => installment.installmentGross <= Number(maxRate));
+    }
+
+    if (sortBy === 'price_asc') {
+      result.sort((a, b) => a.offer.pricing.employeePricePln - b.offer.pricing.employeePricePln);
+    } else if (sortBy === 'price_desc') {
+      result.sort((a, b) => b.offer.pricing.employeePricePln - a.offer.pricing.employeePricePln);
+    } else if (sortBy === 'discount_desc') {
+      result.sort((a, b) => b.offer.pricing.discountPct - a.offer.pricing.discountPct);
+    } else if (sortBy === 'rate_asc') {
+      result.sort((a, b) => a.installment.installmentGross - b.installment.installmentGross);
+    } else if (sortBy === 'rate_desc') {
+      result.sort((a, b) => b.installment.installmentGross - a.installment.installmentGross);
+    }
+
+    return result.map((item) => item.offer);
+  }, [offersWithInstallments, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, minRate, maxRate, sortBy]);
+
+  const secondaryFiltersCount = (selectedFuel ? 1 : 0) + (selectedTransmission ? 1 : 0) + (selectedBodyType ? 1 : 0);
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
@@ -249,6 +279,8 @@ export const CatalogPage: React.FC = () => {
     selectedFuel ||
     selectedTransmission ||
     selectedBodyType ||
+    minRate !== '' ||
+    maxRate !== '' ||
     sortBy !== 'default'
   );
 
@@ -258,6 +290,8 @@ export const CatalogPage: React.FC = () => {
     setSelectedFuel('');
     setSelectedTransmission('');
     setSelectedBodyType('');
+    setMinRate('');
+    setMaxRate('');
     setSortBy('default');
   };
 
@@ -418,9 +452,22 @@ export const CatalogPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-              {/* Marka */}
-              <div>
+            {/* Primary filters row: Rate (1st), Make (2nd), Sort, More filters button */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-start">
+              {/* 1. Rata miesięczna */}
+              <div className="lg:col-span-5">
+                <RateRangeFilter
+                  minRate={minRate}
+                  maxRate={maxRate}
+                  onChange={(min, max) => {
+                    setMinRate(min);
+                    setMaxRate(max);
+                  }}
+                />
+              </div>
+
+              {/* 2. Marka */}
+              <div className="lg:col-span-3">
                 <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Marka
                 </label>
@@ -429,7 +476,7 @@ export const CatalogPage: React.FC = () => {
                   onChange={(e) => setSelectedMake(e.target.value)}
                   className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
-                  <option value="">Wszystkie</option>
+                  <option value="">Wszystkie marki</option>
                   {availableMakes.map((m) => (
                     <option key={m} value={m}>
                       {m}
@@ -438,80 +485,114 @@ export const CatalogPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Paliwo */}
-              <div>
-                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
-                  Paliwo
-                </label>
-                <select
-                  value={selectedFuel}
-                  onChange={(e) => setSelectedFuel(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableFuels.map((f) => (
-                    <option key={f.key} value={f.key}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Skrzynia */}
-              <div>
-                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
-                  Skrzynia
-                </label>
-                <select
-                  value={selectedTransmission}
-                  onChange={(e) => setSelectedTransmission(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableTransmissions.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Nadwozie */}
-              <div>
-                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
-                  Nadwozie
-                </label>
-                <select
-                  value={selectedBodyType}
-                  onChange={(e) => setSelectedBodyType(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableBodyTypes.map((b) => (
-                    <option key={b.key} value={b.key}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Sortowanie */}
-              <div>
+              {/* 3. Sortowanie */}
+              <div className="lg:col-span-2">
                 <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Sortowanie
                 </label>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'default' | 'price_asc' | 'price_desc' | 'discount_desc')}
+                  onChange={(e) => setSortBy(e.target.value as 'default' | 'price_asc' | 'price_desc' | 'discount_desc' | 'rate_asc' | 'rate_desc')}
                   className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="default">Domyślne</option>
+                  <option value="rate_asc">Rata: od najniższej</option>
+                  <option value="rate_desc">Rata: od najwyższej</option>
                   <option value="price_asc">Cena: od najniższej</option>
                   <option value="price_desc">Cena: od najwyższej</option>
                   <option value="discount_desc">Największy rabat</option>
                 </select>
               </div>
+
+              {/* 4. Przycisk "Więcej filtrów" */}
+              <div className="lg:col-span-2 flex sm:justify-start lg:justify-end pt-5">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreFilters((prev) => !prev)}
+                  className={`w-full lg:w-auto inline-flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl border transition-colors ${
+                    showMoreFilters || secondaryFiltersCount > 0
+                      ? 'bg-ink text-white border-ink'
+                      : 'bg-paper text-ink border-line hover:bg-white'
+                  }`}
+                  aria-expanded={showMoreFilters}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>Więcej filtrów</span>
+                  {secondaryFiltersCount > 0 && (
+                    <span className="ml-1 bg-lime text-ink text-2xs font-bold px-1.5 py-0.5 rounded-full">
+                      {secondaryFiltersCount}
+                    </span>
+                  )}
+                  {showMoreFilters ? (
+                    <ChevronUp className="h-3.5 w-3.5 ml-0.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Secondary filters row (collapsible) */}
+            {showMoreFilters && (
+              <div className="pt-3 border-t border-line grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Paliwo */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Paliwo
+                  </label>
+                  <select
+                    value={selectedFuel}
+                    onChange={(e) => setSelectedFuel(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableFuels.map((f) => (
+                      <option key={f.key} value={f.key}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Skrzynia */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Skrzynia
+                  </label>
+                  <select
+                    value={selectedTransmission}
+                    onChange={(e) => setSelectedTransmission(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableTransmissions.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Nadwozie */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Nadwozie
+                  </label>
+                  <select
+                    value={selectedBodyType}
+                    onChange={(e) => setSelectedBodyType(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableBodyTypes.map((b) => (
+                      <option key={b.key} value={b.key}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

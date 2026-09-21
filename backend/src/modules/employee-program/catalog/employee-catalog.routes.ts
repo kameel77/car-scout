@@ -277,8 +277,11 @@ export async function employeeCatalogRoutes(fastify: FastifyInstance) {
       );
     });
 
+    const financing = await resolveProgramFinancingConfig(fastify.prisma, programId);
+
     return reply.send({
       offers,
+      financing,
       nextCursor
     });
   });

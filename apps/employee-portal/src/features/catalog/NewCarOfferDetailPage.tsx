@@ -19,6 +19,7 @@ import {
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
 import { ImageGallery } from '../common/ImageGallery';
+import { calculateInstallment, nearestPeriodTo36 } from './financing';
 
 function formatFuelType(fuelType: string | null | undefined): string {
   if (!fuelType) return 'Brak danych';
@@ -56,11 +57,6 @@ function getFinancingCategoryLabel(category: string): string {
   if (category === 'CREDIT') return 'Prywatnie';
   if (category === 'LEASING') return 'Rozliczam B2B';
   return category;
-}
-
-function nearestPeriodTo36(periods: number[]): number {
-  if (periods.length === 0) return 36;
-  return periods.reduce((best, p) => (Math.abs(p - 36) < Math.abs(best - 36) ? p : best), periods[0]);
 }
 
 const DOWN_PAYMENT_PRESETS = [0, 10, 20, 30, 45];
@@ -174,40 +170,16 @@ export const NewCarOfferDetailPage: React.FC = () => {
   const calculation = useMemo(() => {
     if (!offer) return null;
 
-    const employeeGross = offer.pricing.employeePricePln;
-    const employeeNet = Math.round(employeeGross / 1.23);
-
-    const basePrice = contractType === 'LEASING_B2B' ? employeeNet : employeeGross;
-    const initialPaymentAmount = Math.round((basePrice * downPaymentPct) / 100);
-    const residualAmount = Math.round((basePrice * residualPct) / 100);
-    const amountToFinance = Math.max(0, basePrice - initialPaymentAmount);
-
-    // Stopa roczna: z konfiguracji programu (annualRatePct), a bez nadpisań — dotychczasowe 7.5%
     const annualRate = hasFinancingConfig && selectedOption ? selectedOption.annualRatePct : 7.5;
-    const monthlyRate = annualRate / 100 / 12;
 
-    let monthlyInstallment = 0;
-    if (monthlyRate === 0) {
-      monthlyInstallment = (amountToFinance - residualAmount) / (months || 1);
-    } else {
-      const pow = Math.pow(1 + monthlyRate, months);
-      monthlyInstallment = (amountToFinance * monthlyRate - (residualAmount * monthlyRate) / pow) / (1 - 1 / pow);
-    }
-
-    const installmentRounded = Math.max(0, Math.round(monthlyInstallment));
-    const installmentNet = contractType === 'LEASING_B2B' ? installmentRounded : Math.round(installmentRounded / 1.23);
-    const installmentGross = contractType === 'LEASING_B2B' ? Math.round(installmentRounded * 1.23) : installmentRounded;
-
-    return {
-      basePrice,
-      employeeNet,
-      employeeGross,
-      initialPaymentAmount,
-      residualAmount,
-      amountToFinance,
-      installmentNet,
-      installmentGross
-    };
+    return calculateInstallment({
+      employeePriceGrossPln: offer.pricing.employeePricePln,
+      contractType,
+      months,
+      downPaymentPct,
+      residualPct,
+      annualRatePct: annualRate
+    });
   }, [offer, contractType, months, downPaymentPct, residualPct, hasFinancingConfig, selectedOption]);
 
   // Tekst podsumowujący konfigurację do przekazania w zapytaniu

@@ -242,6 +242,10 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
     });
 
+    // Click Więcej filtrów to access B2B filter button
+    const moreBtn = screen.getByRole('button', { name: /Więcej filtrów/i });
+    fireEvent.click(moreBtn);
+
     // Click B2B filter button
     const b2bBtn = screen.getByRole('button', { name: /Tylko B2B/i });
     fireEvent.click(b2bBtn);
@@ -256,6 +260,49 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
 
     // Both should be visible again
     expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+    expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+  });
+
+  it('filters rental offers by monthly rate preset', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: [
+        {
+          ...mockRentalOffersList[0],
+          minMonthlyRateGross: 1350,
+        },
+        {
+          ...mockRentalOffersList[1],
+          minMonthlyRateGross: 2200,
+        },
+      ],
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+    });
+
+    // Toyota Corolla minMonthlyRateGross = 1350 (< 1500)
+    // Skoda Octavia minMonthlyRateGross = 2200 (1500 - 2500)
+    fireEvent.click(screen.getByRole('button', { name: '< 1500' }));
+
+    expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+    expect(screen.queryByText('Skoda Octavia')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '1500 - 2500' }));
+    expect(screen.queryByText('Toyota Corolla')).not.toBeInTheDocument();
     expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
   });
 });
