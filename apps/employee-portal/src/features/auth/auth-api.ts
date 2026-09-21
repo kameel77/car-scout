@@ -212,3 +212,57 @@ export async function resetEmployeePassword(
 
   return handleResponseJson<{ message: string }>(res);
 }
+
+export interface UpdateProfilePayload {
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export async function updateEmployeeProfile(
+  apiUrl: string,
+  payload: UpdateProfilePayload
+): Promise<EmployeeUser> {
+  const base = normalizeBaseUrl(apiUrl);
+  const csrfToken = await fetchCsrfToken(apiUrl);
+
+  const res = await fetch(`${base}/employee/auth/me`, {
+    method: 'PATCH',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await handleResponseJson<{ employee: EmployeeUser }>(res);
+  return data.employee;
+}
+
+export async function changeEmployeePassword(
+  apiUrl: string,
+  payload: ChangePasswordPayload
+): Promise<{ message: string }> {
+  const base = normalizeBaseUrl(apiUrl);
+  const csrfToken = await fetchCsrfToken(apiUrl);
+
+  const res = await fetch(`${base}/employee/auth/change-password`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return handleResponseJson<{ message: string }>(res);
+}

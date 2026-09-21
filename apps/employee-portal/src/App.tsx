@@ -38,6 +38,9 @@ const RentalOfferDetailPage = lazy(() =>
 const MyInquiriesPage = lazy(() =>
   import('./features/inquiries/MyInquiriesPage').then((m) => ({ default: m.MyInquiriesPage }))
 );
+const AccountPage = lazy(() =>
+  import('./features/account/AccountPage').then((m) => ({ default: m.AccountPage }))
+);
 
 const FallbackSpinner: React.FC = () => (
   <div className="min-h-screen bg-paper flex flex-col items-center justify-center gap-3">
@@ -124,6 +127,16 @@ export const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <Suspense fallback={<FallbackSpinner />}>
               <MyInquiriesPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konto"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<FallbackSpinner />}>
+              <AccountPage />
             </Suspense>
           </ProtectedRoute>
         }

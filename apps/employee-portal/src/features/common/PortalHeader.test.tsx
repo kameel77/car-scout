@@ -88,4 +88,41 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
     const fallback = screen.getByText('benefivo');
     expect(fallback).toBeInTheDocument();
   });
+
+  it('renders user menu button and opens dropdown menu with Moje dane, Zmiana hasła and Wyloguj', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+
+    render(
+      <BrandProvider initialConfig={{ brandName: 'Benefivo', brandLogoUrl: '/static/logo-dark.svg', portalUrl: '', apiUrl: '/api' }}>
+        <AuthProvider>
+          <MemoryRouter>
+            <PortalHeader />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    // Find user button
+    const userBtn = await screen.findByRole('button', { name: /Menu użytkownika: Jan Kowalski/i });
+    expect(userBtn).toBeInTheDocument();
+    expect(userBtn).toHaveAttribute('aria-haspopup', 'menu');
+    expect(userBtn).toHaveAttribute('aria-expanded', 'false');
+
+    // Click to open
+    fireEvent.click(userBtn);
+    expect(userBtn).toHaveAttribute('aria-expanded', 'true');
+
+    // Check menu items
+    const daneLink = screen.getByRole('menuitem', { name: /Moje dane/i });
+    expect(daneLink).toBeInTheDocument();
+    expect(daneLink).toHaveAttribute('href', '/konto');
+
+    const hasloLink = screen.getByRole('menuitem', { name: /Zmiana hasła/i });
+    expect(hasloLink).toBeInTheDocument();
+    expect(hasloLink).toHaveAttribute('href', '/konto#haslo');
+
+    // Press Escape to close
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(userBtn).toHaveAttribute('aria-expanded', 'false');
+  });
 });

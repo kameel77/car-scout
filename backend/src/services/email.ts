@@ -469,6 +469,74 @@ export const sendEmployeePasswordResetEmail = async (
     }
 };
 
+export const sendEmployeePasswordChangedEmail = async (
+    fastify: FastifyInstance,
+    email: string,
+    brandName?: string
+) => {
+    const settings = await fastify.prisma.appSettings.findFirst({
+        where: { id: 'default' }
+    });
+
+    if (!settings || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
+        fastify.log.warn('Email SMTP configuration missing in AppSettings. Cannot send employee password changed confirmation email.');
+        return;
+    }
+
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Benefivo';
+
+    const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: settings.smtpPort === 465,
+        auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPassword
+        },
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+        greetingTimeout: 5000,
+        logger: process.env.NODE_ENV !== 'production',
+        debug: process.env.NODE_ENV !== 'production'
+    });
+
+    const safeBrand = brand.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const htmlContent = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="margin-bottom: 24px; border-bottom: 1px solid #f1f5f9; padding-bottom: 16px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700;">${safeBrand}</h3>
+            </div>
+            <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-top: 0;">Twoje hasło zostało zmienione</h2>
+            <p style="margin: 16px 0; color: #334155; font-size: 15px;">Hasło do Twojego konta pracowniczego w ${safeBrand} zostało pomyślnie zaktualizowane.</p>
+            <p style="margin: 16px 0; color: #475569; font-size: 14px;">
+                Wszystkie pozostałe aktywne sesje na innych urządzeniach zostały wylogowane ze względów bezpieczeństwa.
+            </p>
+            <p style="margin: 16px 0; color: #64748b; font-size: 13px;">Jeśli ta zmiana nie została dokonana przez Ciebie, natychmiast skontaktuj się z administratorem lub zresetuj hasło na stronie logowania.</p>
+            <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+                Ta wiadomość została wygenerowana automatycznie. Prosimy na nią nie odpowiadać.
+            </div>
+        </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"${safeBrand}" <${settings.smtpFromEmail || settings.smtpUser}>`,
+            to: email,
+            subject: `Hasło zostało zmienione - ${brand}`,
+            html: htmlContent,
+            text: `Twoje hasło do konta ${brand} zostało pomyślnie zmienione. Pozostałe sesje zostały wylogowane.`,
+            headers: {
+                'Auto-Submitted': 'auto-generated',
+                'X-Auto-Response-Suppress': 'All'
+            }
+        });
+        fastify.log.info('Employee password changed confirmation email sent successfully');
+    } catch (error) {
+        fastify.log.error(error, 'Failed to send employee password changed confirmation email');
+    }
+};
+
 function escapeHtml(str: unknown): string {
     if (str == null) return '';
     return String(str)

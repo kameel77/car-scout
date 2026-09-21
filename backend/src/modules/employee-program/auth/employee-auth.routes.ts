@@ -25,7 +25,10 @@ import {
   CSRF_COOKIE_NAME,
   SESSION_TTL_SECONDS
 } from './employee-session.helpers.js';
-import { sendEmployeePasswordResetEmail } from '../../../services/email.js';
+import {
+  sendEmployeePasswordResetEmail,
+  sendEmployeePasswordChangedEmail
+} from '../../../services/email.js';
 
 // Request Validation Schemas with Zod
 const forgotPasswordSchema = z.object({
@@ -53,6 +56,21 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().trim().email().max(255),
   password: z.string().min(1).max(128)
+});
+
+const updateProfileSchema = z.object({
+  firstName: z.string().trim().max(100).optional().nullable(),
+  lastName: z.string().trim().max(100).optional().nullable(),
+  phone: z.string().trim().max(50).optional().nullable()
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Obecne hasło jest wymagane').max(128),
+  newPassword: z.string().min(8, 'Hasło musi zawierać co najmniej 8 znaków')
+    .refine(
+      (val) => Buffer.byteLength(val, 'utf8') <= 72,
+      'Hasło jest za długie (maks. 72 znaki)'
+    )
 });
 
 export async function employeeAuthRoutes(fastify: FastifyInstance) {
@@ -403,6 +421,54 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // 4b. Aktualizacja profilu zalogowanego pracownika
+  fastify.patch('/api/employee/auth/me', {
+    preHandler: [verifyEmployeeAuth, verifyEmployeeCsrf],
+    config: {
+      rateLimit: {
+        max: 300,
+        timeWindow: '1 minute'
+      }
+    }
+  }, async (request, reply) => {
+    const employee = (request as any).employee;
+    const parsed = updateProfileSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: 'Bad Request',
+        message: parsed.error.errors[0]?.message || 'Nieprawidłowe dane aktualizacji profilu'
+      });
+    }
+
+    try {
+      const updateData: { firstName?: string | null; lastName?: string | null; phone?: string | null } = {};
+      if (parsed.data.firstName !== undefined) updateData.firstName = parsed.data.firstName;
+      if (parsed.data.lastName !== undefined) updateData.lastName = parsed.data.lastName;
+      if (parsed.data.phone !== undefined) updateData.phone = parsed.data.phone;
+
+      await fastify.prisma.employeeAccount.update({
+        where: { id: employee.accountId },
+        data: updateData
+      });
+
+      const profile = await getEmployeeProfile(fastify.prisma, employee.accountId);
+      return reply.code(200).send({ employee: profile });
+    } catch (err: any) {
+      const status = typeof err.statusCode === 'number' ? err.statusCode : 500;
+      if (status >= 500) {
+        fastify.log.error('Employee updateProfile failure');
+        return reply.code(500).send({
+          error: 'Internal Server Error',
+          message: 'Wystąpił błąd podczas aktualizacji profilu'
+        });
+      }
+      return reply.code(status).send({
+        error: status === 404 ? 'Not Found' : 'Bad Request',
+        message: err.message || 'Błąd aktualizacji profilu'
+      });
+    }
+  });
+
   // 5. Wylogowanie
   fastify.post('/api/employee/auth/logout', {
     preHandler: [verifyEmployeeCsrf]
@@ -637,6 +703,132 @@ export async function employeeAuthRoutes(fastify: FastifyInstance) {
         });
       }
       fastify.log.error(err, 'Unexpected error during employee reset-password');
+      return reply.code(500).send({
+        error: 'Internal Server Error',
+        message: 'Wystąpił błąd podczas zmiany hasła'
+      });
+    }
+  });
+
+  // 8. Zmiana hasła przez zalogowanego pracownika
+  fastify.post('/api/employee/auth/change-password', {
+    preHandler: [verifyEmployeeAuth, verifyEmployeeCsrf],
+    config: {
+      rateLimit: {
+        max: 300,
+        timeWindow: '1 minute'
+      }
+    }
+  }, async (request, reply) => {
+    const employee = (request as any).employee;
+    const parsed = changePasswordSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: 'Bad Request',
+        message: parsed.error.errors[0]?.message || 'Nieprawidłowe dane formularza zmiany hasła'
+      });
+    }
+
+    const { currentPassword, newPassword } = parsed.data;
+
+    try {
+      const account = await fastify.prisma.employeeAccount.findUnique({
+        where: { id: employee.accountId }
+      });
+
+      if (!account || !account.isActive) {
+        return reply.code(403).send({
+          error: 'Forbidden',
+          message: 'Konto jest nieaktywne'
+        });
+      }
+
+      const isCurrentValid = await bcrypt.compare(currentPassword, account.passwordHash);
+      if (!isCurrentValid) {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'Nieprawidłowe obecne hasło'
+        });
+      }
+
+      // Hashowanie bcrypt przed zapisem do bazy
+      const newPasswordHash = await bcrypt.hash(newPassword, 10);
+      const nowSec = Math.floor(Date.now() / 1000);
+      const sessionsValidAfter = new Date(nowSec * 1000);
+
+      await fastify.prisma.employeeAccount.update({
+        where: { id: employee.accountId },
+        data: {
+          passwordHash: newPasswordHash,
+          sessionsValidAfter
+        }
+      });
+
+      // Usunięcie starej sesji z Redis dla bieżącego tokena
+      try {
+        const cookies = parseCookiesConstrained(request.headers.cookie);
+        const sessionJwt = cookies.get(SESSION_COOKIE_NAME);
+        if (sessionJwt) {
+          const payload = fastify.jwt.verify<EmployeeJwtPayload>(sessionJwt);
+          if (payload?.jti && fastify.redis) {
+            await fastify.redis.del(`ep:session:${payload.jti}`);
+          }
+        }
+      } catch {
+        // Ignoruj błąd parsowania starej sesji
+      }
+
+      // Wystawienie nowej sesji dla bieżącego urządzenia z iat równym nowSec
+      const newJti = generateJti();
+      const jwtPayload: EmployeeJwtPayload = {
+        accountId: employee.accountId,
+        email: employee.email,
+        companyId: employee.companyId,
+        programId: employee.programId,
+        realm: 'employee',
+        aud: 'employee-portal',
+        jti: newJti,
+        iat: nowSec
+      };
+
+      const newToken = fastify.jwt.sign(jwtPayload, { expiresIn: '7d' });
+
+      if (fastify.redis) {
+        await fastify.redis.set(
+          `ep:session:${newJti}`,
+          JSON.stringify({
+            accountId: employee.accountId,
+            companyId: employee.companyId,
+            programId: employee.programId,
+            createdAt: new Date(nowSec * 1000).toISOString()
+          }),
+          'EX',
+          SESSION_TTL_SECONDS
+        );
+      }
+
+      const csrfToken = generateSignedCsrfToken(fastify.jwt);
+      reply.header('Set-Cookie', [
+        formatSessionCookie(newToken),
+        formatCsrfCookie(csrfToken)
+      ]);
+
+      // Fire-and-forget powiadomienie mailowe o zmianie hasła
+      sendEmployeePasswordChangedEmail(fastify, employee.email).catch((err) => {
+        fastify.log.error(err, 'Failed to send employee password changed confirmation email');
+      });
+
+      return reply.code(200).send({
+        message: 'Hasło zmienione. Pozostałe urządzenia zostały wylogowane.'
+      });
+    } catch (err: any) {
+      if (err?.statusCode === 400 || err?.statusCode === 403) {
+        return reply.code(err.statusCode).send({
+          error: err.statusCode === 403 ? 'Forbidden' : 'Bad Request',
+          message: err.message
+        });
+      }
+      fastify.log.error(err, 'Unexpected error during employee change-password');
       return reply.code(500).send({
         error: 'Internal Server Error',
         message: 'Wystąpił błąd podczas zmiany hasła'
