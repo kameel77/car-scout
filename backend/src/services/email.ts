@@ -26,6 +26,48 @@ export const resolveLeadRecipient = async (prisma: any): Promise<string | null> 
     return recipientEmail || null;
 };
 
+export const determineLeadRecipient = async (
+    prisma: any,
+    lead: { leadType?: string | null; listing?: Listing | null; rentalVehicle?: RentalVehicle | null },
+    log?: any
+): Promise<string | null> => {
+    // Dedicated recipient for Benefivo B2B leads
+    if (lead.leadType === 'employer_b2b') {
+        const benefivoRecipient = process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL?.trim();
+        if (benefivoRecipient) {
+            log?.info?.({ email: benefivoRecipient }, 'B2B lead routing: sending to BENEFIVO_LEAD_RECIPIENT_EMAIL');
+            return benefivoRecipient;
+        }
+        log?.info?.('B2B lead routing: BENEFIVO_LEAD_RECIPIENT_EMAIL not configured, using default recipient');
+    }
+
+    // Lead routing logic (Motolia vs Dealer)
+    const dealerId = lead.listing?.dealerId || lead.rentalVehicle?.dealerId;
+    if (dealerId) {
+        const dealerSettings = await prisma.dealerSettings.findUnique({
+            where: { dealerId }
+        });
+
+        if (dealerSettings?.leadRouting === 'DEALER') {
+            const dealer = await prisma.dealer.findUnique({
+                where: { id: dealerId },
+                select: { contactEmail: true, contactEmailService: true }
+            });
+
+            const targetDealerEmail = dealerSettings.smtpRecipientEmail || dealer?.contactEmailService || dealer?.contactEmail;
+
+            if (targetDealerEmail) {
+                log?.info?.({ dealerId, email: targetDealerEmail }, 'Lead routing set to DEALER. Routing lead to dealer email.');
+                return targetDealerEmail;
+            } else {
+                log?.warn?.({ dealerId }, 'Lead routing set to DEALER, but dealer has no contact email. Falling back to default.');
+            }
+        }
+    }
+
+    return resolveLeadRecipient(prisma);
+};
+
 export const sendLeadEmail = async (
     fastify: FastifyInstance,
     lead: Lead & { listing?: Listing | null, financingProduct?: FinancingProduct | null, rentalVehicle?: RentalVehicle | null },
@@ -53,31 +95,7 @@ export const sendLeadEmail = async (
         return;
     }
 
-    let recipientEmail = await resolveLeadRecipient(fastify.prisma);
-
-    // Lead routing logic (Motolia vs Dealer)
-    const dealerId = lead.listing?.dealerId || lead.rentalVehicle?.dealerId;
-    if (dealerId) {
-        const dealerSettings = await fastify.prisma.dealerSettings.findUnique({
-            where: { dealerId }
-        });
-        
-        if (dealerSettings?.leadRouting === 'DEALER') {
-            const dealer = await fastify.prisma.dealer.findUnique({
-                where: { id: dealerId },
-                select: { contactEmail: true, contactEmailService: true }
-            });
-            
-            const targetDealerEmail = dealerSettings.smtpRecipientEmail || dealer?.contactEmailService || dealer?.contactEmail;
-            
-            if (targetDealerEmail) {
-                recipientEmail = targetDealerEmail;
-                fastify.log.info({ dealerId, email: recipientEmail }, 'Lead routing set to DEALER. Routing lead to dealer email.');
-            } else {
-                fastify.log.warn({ dealerId }, 'Lead routing set to DEALER, but dealer has no contact email. Falling back to default.');
-            }
-        }
-    }
+    const recipientEmail = await determineLeadRecipient(fastify.prisma, lead, fastify.log);
 
     if (!settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword || !recipientEmail) {
         fastify.log.warn('Email SMTP or recipient configuration missing in AppSettings. Skipping email notification.');
@@ -152,7 +170,8 @@ export const sendLeadEmail = async (
         subjectEntity = lead.phone ? lead.phone : (formattedName !== 'null' ? formattedName : 'Zgłoszenie');
     }
 
-    const subject = `[${siteName}] [${lead.referenceNumber}] ${subjectTitle}: ${subjectEntity}`;
+    const subjectPrefix = isEmployerB2B ? '[Benefivo]' : `[${siteName}]`;
+    const subject = `${subjectPrefix} [${lead.referenceNumber}] ${subjectTitle}: ${subjectEntity}`;
 
     const listingSlug = lead.listing?.slug || [
         lead.listing?.make,
@@ -312,7 +331,12 @@ export const sendLeadEmail = async (
             html: htmlContent,
             headers: {
                 'Auto-Submitted': 'auto-generated',
-                'X-Auto-Response-Suppress': 'All'
+                'X-Auto-Response-Suppress': 'All',
+                ...(isEmployerB2B ? {
+                    'X-Lead-Brand': 'Benefivo',
+                    'X-Lead-Type': 'employer_b2b',
+                    'X-Lead-Traffic-Source': lead.trafficSource || 'benefivo_b2b',
+                } : {})
             }
         });
         fastify.log.info(`Email notification sent for lead ${lead.id} to ${recipientEmail}`);

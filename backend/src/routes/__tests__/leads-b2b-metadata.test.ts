@@ -60,6 +60,7 @@ describe('B2B Lead Metadata Validation and Persistence', () => {
         expect(saved).not.toBeNull();
         expect(saved?.name).toBe('Jan Kowalski');
         expect(saved?.leadType).toBe('employer_b2b');
+        expect(saved?.referenceNumber).toMatch(/^BNF-/);
         expect(saved?.metadata).toEqual({
             companyName: 'Acme Corp Sp. z o.o.',
             companyNip: '123-456-78-90',
@@ -161,6 +162,7 @@ describe('B2B Lead Metadata Validation and Persistence', () => {
         const saved = await app.prisma.lead.findUnique({ where: { id: body.lead.id } });
         expect(saved).not.toBeNull();
         expect(saved?.leadType).toBe('sale');
+        expect(saved?.referenceNumber).toMatch(/^AF-/);
         expect(saved?.metadata).toBeNull();
     });
 

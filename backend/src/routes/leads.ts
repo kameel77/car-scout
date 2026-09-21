@@ -197,7 +197,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 preferredContact: data.preferredContact || (data.phone ? 'phone' : 'email'),
                 message: data.message || 'Zapytanie o ofertę.',
                 status: 'new',
-                referenceNumber: generateReference(),
+                referenceNumber: generateReference(validLeadType === 'employer_b2b' ? 'BNF' : 'AF'),
                 consentMarketingAt: data.consentMarketing ? new Date() : null,
                 consentPrivacyAt: data.consentPrivacy ? new Date() : null,
                 // Financing data

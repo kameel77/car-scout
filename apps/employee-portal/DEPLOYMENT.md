@@ -54,6 +54,7 @@ Ten dokument opisuje architekturę wdrożenia i konfigurację produkcyjną dla p
 | `FRONTEND_URL` | `https://motolia.pl` | Główny adres panelu CRM backoffice, używany w powiadomieniach o leadach B2B do odnośników `/admin/leads/:id` |
 | `TURNSTILE_SECRET_KEY` | `0x4AAAAAAA...` | Prywatny klucz Cloudflare do weryfikacji zgłoszeń formularza B2B |
 | `CORS_ORIGINS` | `https://benefivo.pl,https://www.benefivo.pl,https://motolia.pl` | Whitelist dozwolonych domen dla zapytań CORS z przeglądarki |
+| `BENEFIVO_LEAD_RECIPIENT_EMAIL` | `b2b@benefivo.pl` (lub adres skrzynki kolejki w Thulium) | Dedykowany adres e-mail dla zgłoszeń B2B programu pracowniczego (`employer_b2b`). Gdy ustawiony, powiadomienia trafiają prosto na tę skrzynkę (np. powiązaną z kolejką Benefivo B2B w Thulium) zamiast do domyślnego odbiorcy z AppSettings. |
 
 ## 4. Weryfikacja lokalna i testy kontenera
 
