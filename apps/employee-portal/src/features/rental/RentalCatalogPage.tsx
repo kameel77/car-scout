@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
 import { RateRangeFilter } from '../catalog/RateRangeFilter';
+import { formatCountPl } from '../common/plural';
 import { PortalHeader } from '../common/PortalHeader';
 import { ImageSwiper } from '../common/ImageSwiper';
 
@@ -381,7 +382,7 @@ export const RentalCatalogPage: React.FC = () => {
                 <SlidersHorizontal className="h-4 w-4 text-forest" />
                 <span>Filtry</span>
                 <span className="text-xs font-normal text-muted">
-                  (Dostępne oferty: <strong>{filteredOffers.length}</strong>)
+                  ({formatCountPl(filteredOffers.length, ['dostępna oferta', 'dostępne oferty', 'dostępnych ofert'])})
                 </span>
               </div>
               {hasActiveFilters && (
@@ -709,7 +710,7 @@ export const RentalCatalogPage: React.FC = () => {
                           </div>
                         </div>
                         <div className="text-2xs text-muted">
-                          {offer.optionsCount} wariantów
+                          {formatCountPl(offer.optionsCount, ['wariant', 'warianty', 'wariantów'])}
                         </div>
                       </div>
                     </div>

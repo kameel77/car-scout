@@ -13,6 +13,7 @@ import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import { fetchEmployeeInquiries, EmployeeInquiryItem } from './inquiries-api';
 import { PortalHeader } from '../common/PortalHeader';
+import { formatCountPl } from '../common/plural';
 
 export const MyInquiriesPage: React.FC = () => {
   const { config, isLoading: isBrandLoading } = useBrandConfig();
@@ -130,7 +131,14 @@ export const MyInquiriesPage: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold font-heading text-ink tracking-tight">Moje zapytania</h1>
+            <h1 className="text-2xl font-bold font-heading text-ink tracking-tight flex items-center gap-2">
+              <span>Moje zapytania</span>
+              {!isLoadingInquiries && inquiries.length > 0 && (
+                <span className="text-xs font-normal text-muted">
+                  ({formatCountPl(inquiries.length, ['zapytanie', 'zapytania', 'zapytań'])})
+                </span>
+              )}
+            </h1>
             <p className="text-sm text-muted mt-1">
               Historia zapytań o oferty samochodowe złożonych w programie partnerskim.
             </p>

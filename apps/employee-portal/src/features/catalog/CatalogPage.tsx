@@ -22,6 +22,7 @@ import {
 import { fetchEmployeeOffers, EmployeeOffer, EmployeeFinancingConfig } from './catalog-api';
 import { RateRangeFilter } from './RateRangeFilter';
 import { calculateDefaultOfferInstallment } from './financing';
+import { formatCountPl } from '../common/plural';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
 import { ImageSwiper } from '../common/ImageSwiper';
@@ -424,7 +425,7 @@ export const CatalogPage: React.FC = () => {
                 <SlidersHorizontal className="h-4 w-4 text-ink" />
                 <span>Filtry</span>
                 <span className="text-xs font-normal text-muted">
-                  (Dostępne oferty: <strong>{filteredOffers.length}</strong>)
+                  ({formatCountPl(filteredOffers.length, ['dostępna oferta', 'dostępne oferty', 'dostępnych ofert'])})
                 </span>
               </div>
 
