@@ -232,4 +232,21 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
       );
     });
   });
+
+  it('displays B2B exclusive notice banner when offer is B2B-only', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue({
+      ...mockRentalOfferDetails,
+      isB2b: true,
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getByText('Ta oferta jest dostępna wyłącznie dla firm (rozliczenie B2B).')).toBeInTheDocument();
+    expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
+  });
 });

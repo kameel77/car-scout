@@ -15,8 +15,7 @@ import {
   X,
   SlidersHorizontal,
   ChevronDown,
-  ChevronUp,
-  Briefcase
+  ChevronUp
 } from 'lucide-react';
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
 import { RateRangeFilter } from '../catalog/RateRangeFilter';
@@ -124,7 +123,6 @@ export const RentalCatalogPage: React.FC = () => {
   const [selectedFuel, setSelectedFuel] = useState<string>('');
   const [selectedTransmission, setSelectedTransmission] = useState<string>('');
   const [selectedBodyType, setSelectedBodyType] = useState<string>('');
-  const [selectedB2bOnly, setSelectedB2bOnly] = useState<boolean>(false);
   const [minRate, setMinRate] = useState<number | ''>('');
   const [maxRate, setMaxRate] = useState<number | ''>('');
   const [showMoreFilters, setShowMoreFilters] = useState<boolean>(false);
@@ -238,10 +236,6 @@ export const RentalCatalogPage: React.FC = () => {
       );
     }
 
-    if (selectedB2bOnly) {
-      result = result.filter((o) => Boolean(o.isB2b));
-    }
-
     if (minRate !== '') {
       result = result.filter((o) => o.minMonthlyRateGross >= Number(minRate));
     }
@@ -257,13 +251,12 @@ export const RentalCatalogPage: React.FC = () => {
     }
 
     return result;
-  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, selectedB2bOnly, minRate, maxRate, sortBy]);
+  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, minRate, maxRate, sortBy]);
 
   const secondaryFiltersCount =
     (selectedFuel ? 1 : 0) +
     (selectedTransmission ? 1 : 0) +
-    (selectedBodyType ? 1 : 0) +
-    (selectedB2bOnly ? 1 : 0);
+    (selectedBodyType ? 1 : 0);
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
@@ -271,7 +264,6 @@ export const RentalCatalogPage: React.FC = () => {
     selectedFuel ||
     selectedTransmission ||
     selectedBodyType ||
-    selectedB2bOnly ||
     minRate !== '' ||
     maxRate !== '' ||
     sortBy !== 'default'
@@ -283,7 +275,6 @@ export const RentalCatalogPage: React.FC = () => {
     setSelectedFuel('');
     setSelectedTransmission('');
     setSelectedBodyType('');
-    setSelectedB2bOnly(false);
     setMinRate('');
     setMaxRate('');
     setSortBy('default');
@@ -533,25 +524,6 @@ export const RentalCatalogPage: React.FC = () => {
                     ))}
                   </select>
                 </div>
-
-                {/* Oferta B2B toggle button */}
-                <div>
-                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
-                    Opcja B2B
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedB2bOnly(!selectedB2bOnly)}
-                    className={`w-full text-xs py-2 px-2.5 rounded-xl border font-medium flex items-center justify-center gap-1.5 transition-colors ${
-                      selectedB2bOnly
-                        ? 'bg-amber-500 border-amber-600 text-white shadow-xs'
-                        : 'bg-paper border-line text-ink hover:bg-white'
-                    }`}
-                  >
-                    <Briefcase className="h-3.5 w-3.5" />
-                    <span>Tylko B2B</span>
-                  </button>
-                </div>
               </div>
             )}
           </div>
@@ -644,17 +616,13 @@ export const RentalCatalogPage: React.FC = () => {
 
                       <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
                         {offer.isB2b && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-xs">
-                            Oferta B2B
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-ink text-white shadow-xs">
+                            Tylko B2B
                           </span>
                         )}
-                        {offer.rateSource === 'PARTNER_MATRIX' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white shadow-xs">
+                        {offer.rateSource === 'PARTNER_MATRIX' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-lime text-ink shadow-xs">
                             Stawka partnerska
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-800/80 text-white shadow-xs backdrop-blur-xs">
-                            Stawka katalogowa
                           </span>
                         )}
                       </div>

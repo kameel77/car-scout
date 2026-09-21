@@ -159,9 +159,9 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Oferta B2B')).toBeInTheDocument();
+    expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
     expect(screen.getByText('Stawka partnerska')).toBeInTheDocument();
-    expect(screen.getByText('Stawka katalogowa')).toBeInTheDocument();
+    expect(screen.queryByText('Stawka katalogowa')).not.toBeInTheDocument();
     expect(screen.getByText(/od 1\s?450 zł/)).toBeInTheDocument();
     expect(screen.getByText(/od 1\s?620 zł/)).toBeInTheDocument();
     expect(screen.queryByText(/Dostawca:/i)).not.toBeInTheDocument();
@@ -220,7 +220,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
-  it('filters offers by B2B only and clears filters', async () => {
+  it('displays all rental offers with Tylko B2B badge on B2B offers without filter toggle', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
     vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
       offers: mockRentalOffersList,
@@ -242,25 +242,15 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
     });
 
-    // Click Więcej filtrów to access B2B filter button
+    // Toyota Corolla has isB2b: true -> has "Tylko B2B" badge
+    expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
+
+    // Click Więcej filtrów
     const moreBtn = screen.getByRole('button', { name: /Więcej filtrów/i });
     fireEvent.click(moreBtn);
 
-    // Click B2B filter button
-    const b2bBtn = screen.getByRole('button', { name: /Tylko B2B/i });
-    fireEvent.click(b2bBtn);
-
-    // Only Toyota (which is B2B) should be visible
-    expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
-    expect(screen.queryByText('Skoda Octavia')).not.toBeInTheDocument();
-
-    // Click clear filters
-    const clearBtn = screen.getByRole('button', { name: /Wyczyść filtry/i });
-    fireEvent.click(clearBtn);
-
-    // Both should be visible again
-    expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
-    expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+    // There should NOT be any "Tylko B2B" or "Opcja B2B" filter button in filters
+    expect(screen.queryByRole('button', { name: /Tylko B2B/i })).not.toBeInTheDocument();
   });
 
   it('filters rental offers by monthly rate preset', async () => {

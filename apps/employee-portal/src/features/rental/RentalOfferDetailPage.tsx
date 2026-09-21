@@ -297,8 +297,8 @@ export const RentalOfferDetailPage: React.FC = () => {
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     {offer.isB2b ? (
-                      <span className="bg-amber-500 text-white font-bold text-xs px-3 py-1 rounded-full shadow-xs">
-                        Oferta B2B
+                      <span className="bg-ink text-white font-bold text-xs px-3 py-1 rounded-full shadow-xs">
+                        Tylko B2B
                       </span>
                     ) : (
                       <span className="bg-paper text-ink font-semibold text-xs px-3 py-1 rounded-full border border-line">
@@ -562,6 +562,14 @@ export const RentalOfferDetailPage: React.FC = () => {
                     </span>
                   </div>
 
+                  {/* B2B Exclusive Notice Banner */}
+                  {offer.isB2b && (
+                    <div className="p-3.5 bg-lime/30 border border-line rounded-xl flex items-center gap-2.5 text-xs font-semibold text-ink">
+                      <AlertCircle className="h-4 w-4 text-forest shrink-0" />
+                      <span>Ta oferta jest dostępna wyłącznie dla firm (rozliczenie B2B).</span>
+                    </div>
+                  )}
+
                   {/* Client Type Toggle (B2B vs Consumer) */}
                   <div>
                     <span className="text-xs font-medium text-muted block mb-2">Klient / Forma umowy</span>
@@ -593,12 +601,6 @@ export const RentalOfferDetailPage: React.FC = () => {
                         Rozliczam B2B
                       </button>
                     </div>
-                    {offer.isB2b && (
-                      <p className="text-[11px] text-amber-700 mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3 shrink-0" />
-                        Oferta dostępna wyłącznie dla podmiotów gospodarczych (B2B).
-                      </p>
-                    )}
                   </div>
 
                   {/* Okres umowy */}
