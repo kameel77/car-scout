@@ -496,6 +496,17 @@ export const analyticsApi = {
         );
 
         return response.json();
+    },
+
+    getTelemetrySummary: async (days: number = 7, token: string) => {
+        const response = await fetch(
+            `${API_BASE_URL}/api/analytics/telemetry/summary?days=${days}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        if (!response.ok) {
+            throw new Error('Failed to fetch telemetry summary');
+        }
+        return response.json();
     }
 };
 

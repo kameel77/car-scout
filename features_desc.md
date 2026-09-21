@@ -1113,3 +1113,32 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Skrypt bramy przedprodukcyjnej CLI (`backend/src/scripts/check-matrix-health.ts`): weryfikuje kompletność stawek ubezpieczenia, posiada blokadę bezpieczeństwa odmawiającą modyfikacji na bazach produkcyjnych (`isProductionHost`) oraz domyślny tryb planowania (dry-run) wymagający jawnej flagi `--apply` do faktycznego zapisu.
   - Seed deweloperski Ayvens (`seed-rental-ayvens-dev.ts`): jawnie konfiguruje `insuranceAddMode: 'INSURANCE_INCLUDED'`, gwarantując trwałość poprawnej konfiguracji po ponownym seedowaniu bazy.
 
+## 82. Platforma Najmu Pracowniczego Benefivo (benefivo.pl)
+- **Strona główna i tożsamość marki (`/`)**:
+  - Uruchomienie publicznego landing page najmu pracowniczego pod marką Benefivo w dedykowanej domenie `benefivo.pl` (zintegrowana w `apps/employee-portal`).
+  - Scoped style CSS (`.benefivo-landing`), pełna zgodność z księgą znaku (Brand Book), sekcje: Hero, kafelki kategorii, korzyści pracownicze, 3 kroki do auta, teaser dla pracodawców, FAQ, modale informacyjne (najem, leasing, podróż pracownika z gotowym szablonem wiadomości do HR).
+  - Nawigacja zintegrowana ze stanem autoryzacji: niezalogowani użytkownicy widzą przycisk „Zaloguj się” prowadzący do `/logowanie`, natomiast po zalogowaniu widoczne są przejścia do katalogu i wylogowania.
+  - Na stronie `/logowanie` dodano link powrotny: „← Wróć do strony głównej benefivo.pl”.
+- **Dedykowany kanał pozyskiwania firm (`/dla-firm`)**:
+  - Dedykowana, linkowalna podstrona z formularzem zgłoszeniowym dla osób decyzyjnych (HR / Zarząd / Fleet Manager).
+  - Integracja z backendowym API CRM: `POST /api/leads` z `leadType: 'employer_b2b'` oraz `trafficSource: 'benefivo_b2b'`.
+  - Obsługa zabezpieczenia Cloudflare Turnstile: automatyczny fallback na klucz testowy w trybie dev oraz fail-safe w `docker-entrypoint.sh` przy włączonym indeksowaniu (`INDEXING_ENABLED=true`).
+  - Dedykowany szablon powiadomień e-mail dla leadów B2B: oznaczenie programu Benefivo, nazwa firmy i pracodawcy, bezpośredni odnośnik do panelu CRM Motolia (`process.env.FRONTEND_URL/admin/leads/:id`).
+- **Podstawy prawne i zgodność RODO (`/regulamin`, `/prywatnosc`)**:
+  - `/regulamin`: Wersja 1.0 (z dnia 21 września 2026 r.), określenie roli Motolia Sp. z o.o. jako operatora technologicznego, jasna separacja odpowiedzialności trójstronnej (Benefivo/Motolia - Finansujący/Wynajmujący - Pracodawca - Pracownik), bezpłatny charakter korzystania z portalu dla pracownika.
+  - `/prywatnosc`: Wersja 1.0 (z dnia 21 września 2026 r.), dane Administratora Danych Osobowych (Motolia Sp. z o.o., NIP: 9512579189, KRS: 0001061451), podstawy przetwarzania (art. 6 ust. 1 lit. b, c, f RODO), uprawnienia osób, deklaracja Privacy-First oraz polityka plików cookies.
+- **Optymalizacja Ładowania (Eager Landing & Lazy Catalog)**:
+  - Zastosowano właściwy kierunek dzielenia kodu (code-splitting): strona główna (`LandingPage`) jest importowana bezpośrednio (eager) w głównym bundlu, co eliminuje oczekiwanie na dodatkowy chunk na ścieżce LCP dla anonimowych użytkowników.
+  - Ciężkie moduły wewnętrznego katalogu dla zalogowanych pracowników (`CatalogPage`, `RentalCatalogPage`, `NewCarOfferDetailPage`, `RentalOfferDetailPage`, `MyInquiriesPage`) są ładowane leniwie (`React.lazy`), dzięki czemu waga początkowego bundla spadła z 322 KB do 228 KB.
+  - Komponent ładowania (`FallbackSpinner`) dopasowano w 100% do tożsamości Benefivo (tło Paper `#F7F8F2`, spinner i typografia `#0f2d1e`), eliminując granatowy błysk ekranu podczas przechodzenia między trasami.
+- **Rozdzielenie Cache Nginx (Unhashed Public vs Hashed Bundles)**:
+  - Pliki statyczne marki przeniesiono do katalogu `/static/` (loga SVG/PNG, fonty WOFF2, grafiki WebP, banner OG) z bezpieczną polityką cache `public, max-age=86400, stale-while-revalidate=604800`, co umożliwia ich natychmiastową podmianę i rewalidację w Cloudflare.
+  - Katalog `/assets/` został zarezerwowany wyłącznie dla hashowanych chunków wyjściowych Vite z polityką `public, max-age=31536000, immutable`.
+- **Telemetria Cookieless z Wymiarem Ścieżki & Panel Admina**:
+  - Rozszerzono strukturę zdarzeń w Redis o wymiar ścieżki (`path`) w hashu dziennym `analytics:daily:${date}` (pola `event_path:${eventName}:${cleanPath}`, `view:${cleanPath}`, `event:${eventName}`, `path:${cleanPath}`).
+  - Dodano endpoint `GET /api/analytics/telemetry/summary` zwracający podsumowanie odsłon, zdarzeń, lejków konwersji i osi czasu dzień po dniu.
+  - Zaimplementowano dedykowany komponent `TelemetryDashboard` w panelu administracyjnym (`/admin/analytics`), umożliwiający bieżącą analizę ruchu na `/dla-firm`, liczby przesłanych zapytań B2B oraz wskaźnika konwersji (%).
+- **Ochrona przed DoS, Awariami Bazy i Skalowanie dla Korporacyjnego NAT**:
+  - Logowanie (`/login`): kluczowanie blokady w Redis per para `email:IP` (`ep:login:fail:${normalizedEmail}:${request.ip}`) po 10 próbach na 15 minut. Zewnętrzny atakujący nie jest w stanie zablokować pracownika w jego biurze ani w domu. Licznik błędów inkrementowany jest wyłącznie przy błędach autoryzacji (401/403) i pomijany przy wyjątkach bazy danych (500).
+  - Walidacja kodów (`/validate-code`): podniesiono limit trasy do 600 req/min oraz próg blokady IP w Redis do 250 nieudanych prób na 10 minut z wykluczeniem błędów 500, co w pełni zabezpiecza masowy onboarding setek pracowników z jednego biura (np. Action S.A.).
+  - Pozostałe trasy programu pracowniczego: telemetria podniesiona do 1200 req/min, reset/odzyskiwanie hasła do 150/15 min, katalogi ofert do 600 req/min, zgłoszenia zapytań do 120 req/min.
