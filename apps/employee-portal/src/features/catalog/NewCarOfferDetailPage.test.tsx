@@ -367,4 +367,50 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     const priceCardSticky = h1Heading.closest('.lg\\:sticky');
     expect(priceCardSticky).toBeNull();
   });
+
+  it('renders equipment groups as collapsed native details accordions with plural counts (Zakres 8)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue(mockOffer);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Wyposażenie pojazdu')).toBeInTheDocument();
+    });
+
+    // Check titles and plural counts
+    expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();
+    expect(screen.getByText('(1 pozycja)')).toBeInTheDocument(); // equipmentOther has 1 item
+    expect(screen.getAllByText('(2 pozycje)').length).toBe(3); // safety, comfort, audio have 2 items each
+
+    // Check that accordions are collapsed by default
+    const detailsElements = document.querySelectorAll('details');
+    expect(detailsElements.length).toBe(4);
+    detailsElements.forEach((d) => {
+      expect(d).not.toHaveAttribute('open');
+    });
+  });
+
+  it('does not render equipment accordion if the group is empty (Zakres 8)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue({
+      ...mockOffer,
+      vehicle: {
+        ...mockOffer.vehicle,
+        equipmentSafety: ['System PCS'],
+        equipmentComfortExtras: [],
+        equipmentAudioMultimedia: undefined as any,
+        equipmentOther: [],
+      },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Wyposażenie pojazdu')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();
+    expect(screen.queryByText('Komfort i funkcjonalność')).not.toBeInTheDocument();
+    expect(screen.queryByText('Audio i multimedia')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pozostałe elementy')).not.toBeInTheDocument();
+  });
 });

@@ -20,6 +20,45 @@ import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
 import { ImageGallery } from '../common/ImageGallery';
 import { calculateInstallment, nearestPeriodTo36 } from './financing';
+import { formatCountPl } from '../common/plural';
+
+interface EquipmentAccordionProps {
+  title: string;
+  items: string[];
+}
+
+const EquipmentAccordion: React.FC<EquipmentAccordionProps> = ({ title, items }) => {
+  if (!items || items.length === 0) return null;
+
+  return (
+    <details className="group py-1">
+      <summary className="flex items-center justify-between gap-4 py-3 min-h-[44px] cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm font-semibold text-ink hover:text-forest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 rounded-xl">
+        <span className="flex items-center gap-2">
+          <span>{title}</span>
+          <span className="text-xs font-normal text-muted">
+            ({formatCountPl(items.length, ['pozycja', 'pozycje', 'pozycji'])})
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="text-lg font-light text-muted group-open:rotate-45 transition-transform duration-200 motion-reduce:transition-none leading-none select-none px-1"
+        >
+          +
+        </span>
+      </summary>
+      <div className="pb-4 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
+          {items.map((item, idx) => (
+            <div key={idx} className="flex items-start gap-2">
+              <CheckCircle className="h-4 w-4 text-forest flex-shrink-0 mt-0.5" />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </details>
+  );
+};
 
 function formatFuelType(fuelType: string | null | undefined): string {
   if (!fuelType) return 'Brak danych';
@@ -419,79 +458,30 @@ ${rateLine}${productLabelLine}`;
                   offer.vehicle.equipmentComfortExtras?.length ||
                   offer.vehicle.equipmentAudioMultimedia?.length ||
                   offer.vehicle.equipmentOther?.length) ? (
-                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-6">
-                    <h3 className="text-base font-bold text-ink flex items-center gap-2 font-heading">
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+                    <h3 className="text-base font-bold text-ink flex items-center gap-2 font-heading pb-2 border-b border-line">
                       <ShieldCheck className="h-5 w-5 text-forest" />
                       Wyposażenie pojazdu
                     </h3>
 
-                    {/* Bezpieczeństwo */}
-                    {offer.vehicle.equipmentSafety && offer.vehicle.equipmentSafety.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
-                          Bezpieczeństwo i asystenci
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-                          {offer.vehicle.equipmentSafety.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-forest flex-shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Komfort i dodatki */}
-                    {offer.vehicle.equipmentComfortExtras && offer.vehicle.equipmentComfortExtras.length > 0 && (
-                      <div className="pt-4 border-t border-line">
-                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
-                          Komfort i funkcjonalność
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-                          {offer.vehicle.equipmentComfortExtras.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-forest flex-shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Audio i Multimedia */}
-                    {offer.vehicle.equipmentAudioMultimedia && offer.vehicle.equipmentAudioMultimedia.length > 0 && (
-                      <div className="pt-4 border-t border-line">
-                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
-                          Multimedia i łączność
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-                          {offer.vehicle.equipmentAudioMultimedia.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-forest flex-shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Inne */}
-                    {offer.vehicle.equipmentOther && offer.vehicle.equipmentOther.length > 0 && (
-                      <div className="pt-4 border-t border-line">
-                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
-                          Pozostałe elementy
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-                          {offer.vehicle.equipmentOther.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-muted flex-shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="divide-y divide-line">
+                      <EquipmentAccordion
+                        title="Bezpieczeństwo i asystenci"
+                        items={offer.vehicle.equipmentSafety || []}
+                      />
+                      <EquipmentAccordion
+                        title="Komfort i funkcjonalność"
+                        items={offer.vehicle.equipmentComfortExtras || []}
+                      />
+                      <EquipmentAccordion
+                        title="Audio i multimedia"
+                        items={offer.vehicle.equipmentAudioMultimedia || []}
+                      />
+                      <EquipmentAccordion
+                        title="Pozostałe elementy"
+                        items={offer.vehicle.equipmentOther || []}
+                      />
+                    </div>
                   </div>
                 ) : null}
 
