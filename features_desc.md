@@ -1188,3 +1188,43 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
     - Zastąpiono wielkie 2-kolumnowe kafle z napisem `... km / rok` zwięzłym nagłówkiem „Limity przebiegu (km/rok)” oraz kompaktowymi pigułkami: `10 tys.`, `15 tys.`, `20 tys.`, `25 tys.`, `30 tys.`, `40 tys.`.
     - Pigułki okresu umowy w stylu `24 msc`, `36 msc`, `48 msc` oraz zwięzłe warianty wpłaty wstępnej.
   - Przycisk CTA `Zapytaj o tę ofertę i ratę` otwiera zaktualizowany `InquiryModal` z przekazaniem wybranego typu klienta (`initialContractParty`), kontekstowymi etykietami formularza oraz wyliczeniami dopasowanymi do profilu B2B lub konsumenckiego.
+
+## 85. Kompleksowe Odświeżenie UX Portalu Pracowniczego Benefivo (brief-ux-portal-refresh)
+- **Tożsamość Wizualna i Tokeny Marki w Tailwind**:
+  - Zmapowano tokeny marki w `tailwind.config.js` (`brand-forest`, `brand-forest-light`, `brand-cream`, `brand-accent`, `brand-muted`) oraz zastąpiono pozostałości stylów indygo/niebieskich w całym portalu.
+- **Ścieżka Onboardingu „Mam kod” w Hero & Deep-Link do Rejestracji**:
+  - W sekcji Hero dodano bezpośrednią interakcję „Mam kod od pracodawcy” z polem tekstowym i natychmiastowym przejściem do rejestracji.
+  - Strona rejestracji (`RegisterCodePage.tsx`) obsługuje parametr URL `?kod=...` z automatyczną pre-populacją i natychmiastową walidacją kodu firmy.
+- **Domyślne Finansowanie Konsumenckie i Priorytet Raty Brutto**:
+  - Domyślną opcją finansowania dla pracowników jest konsument (leasing konsumencki / pożyczka leasingowa).
+  - Główną eksponowaną kwotą w kalkulatorze i na kartach jest rata brutto (rata netto jako informacja pomocnicza).
+- **Hierarchia Informacji i Pozycjonowanie Bloku Ceny/Rabatu**:
+  - Blok podsumowania ceny bazowej i naliczonego rabatu partnerskiego przeniesiono bezpośrednio nad kalkulator finansowy, gwarantując czytelność korzyści przed konfiguracją raty.
+  - Pasek korzyści „Dlaczego warto dołączyć” przeniesiono nad kolumnę kalkulatora.
+- **Filtr Widełek Raty Miesięcznej na Listingach**:
+  - Wdrożono komponent suwaka zakresu raty miesięcznej (`RateRangeFilter.tsx`) w katalogu samochodów nowych (`CatalogPage.tsx`) oraz na listingu najmu (`RentalCatalogPage.tsx`).
+- **Poprawna Odmiana Liczebników w Języku Polskim**:
+  - Wprowadzono uniwersalny helper `formatPolishPlural` (`src/utils/plural.ts`) zapewniający gramatycznie poprawną odmianę rzeczowników (np. 1 samochód, 2-4 samochody, 5 samochodów, ofert/oferty itp.).
+- **Dostępność Ofert Najmu z Oznaczeniem B2B**:
+  - Listing najmu prezentuje pełną gamę pojazdów, a oferty dostępne wyłącznie w procedurze firmowej posiadają elegancką plakietkę „Tylko dla firm (B2B)” bezpośrednio na zdjęciu pojazdu.
+- **Kolumna Kalkulatora i Akordeony Wyposażenia**:
+  - Prawa kolumna kalkulatora finansowego posiada klasę sticky (`sticky top-24`), pozostając w polu widzenia użytkownika podczas przewijania długiej specyfikacji auta.
+  - Długa lista elementów wyposażenia seryjnego i dodatkowego została pogrupowana w zwijane akordeony z nagłówkami kategorii.
+- **Spójność Brandingu w Nagłówku**:
+  - Wyeliminowano podwójne logo; nagłówek prezentuje wyłącznie tożsamość marki programu.
+- **Weryfikacja Handoffu i Usunięcie Twierdzenia „Door-to-door”**:
+  - Usunięto nieaktualne zapewnienia o dostawie door-to-door w komunikacji landing page i portalu.
+- **Usprawnienia Formularza B2B dla Pracodawców (`/dla-firm`)**:
+  - Formularz B2B zoptymalizowano pod kątem czytelności i responsywności.
+  - Wdrożono algorytm sprawdzania sumy kontrolnej polskiego NIP (`validatePolishNip` z wagami `[6, 5, 7, 2, 3, 4, 5, 6, 7] % 11` i odrzuceniem powtarzających się cyfr).
+  - Zabezpieczono kontener Cloudflare Turnstile przed skakaniem wysokości (`layout shift`) i dodano bezpośredni pasek kontaktu telefonicznego i mailowego (`__B2B_PHONE__`, `b2b@benefivo.pl`).
+  - Dodano wizualny tracker statusu zgłoszeń `InquiryStatusTracker` (4 etapy: Nowe -> Weryfikacja -> Oferta -> Umowa) oraz dedykowany alert w przypadku odrzucenia zgłoszenia.
+- **Menu Użytkownika i Dedykowana Strona Ustawień Konta (`/konto`)**:
+  - W `PortalHeader.tsx` wdrożono dostępne menu użytkownika (`aria-haspopup="menu"`, `aria-expanded`, obsługa klawisza Escape i kliknięcia poza menu) z odnośnikami: „Moje dane” (`/konto`), „Zmiana hasła” (`/konto#haslo`) oraz „Wyloguj”.
+  - Strona `/konto` (`AccountPage.tsx`):
+    - Sekcja „Moje dane”: edycja imienia, nazwiska, numeru telefonu (`PATCH /api/employee/auth/me` z ochroną CSRF), podgląd niemodyfikowalnego adresu e-mail oraz danych firmy i programu pracodawcy.
+    - Sekcja „Zmiana hasła”: bieżące hasło, nowe hasło z dynamicznym wskaźnikiem siły hasła (kolorystyka i wagi), potwierdzenie hasła, opcja podglądu hasła (Eye/EyeOff) oraz auto-scroll do sekcji przy wejściu z kotwicą `#haslo`.
+    - Backend (`POST /api/employee/auth/change-password`): weryfikacja bcrypt bieżącego hasła, walidacja długości (8 - 72 bajty z czytelnym komunikatem błędu), unieważnienie innych sesji w Redis (`del ep:session:${jti}`) oraz ustawienie `sessionsValidAfter` w bazie.
+    - Zgodność z Errata E8: wystawienie nowego tokena sesyjnego dla bieżącego urządzenia z czasem `iat: nowSec` i zsynchronizowanym `sessionsValidAfter = new Date(nowSec * 1000)`, co eliminuje wyścig podsekundowy i pozwala użytkownikowi kontynuować pracę bez konieczności ponownego logowania.
+    - Asynchroniczne powiadomienie e-mail o zmianie hasła (`sendEmployeePasswordChangedEmail`) informujące o zabezpieczeniu konta.
+
