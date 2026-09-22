@@ -21,7 +21,7 @@ import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
 import { PortalFooter } from '../common/PortalFooter';
 import { ImageGallery } from '../common/ImageGallery';
-import { calculateInstallment, nearestPeriodTo36 } from './financing';
+import { calculateInstallment, nearestPeriodTo36, formatPln, DEFAULT_FINANCING_OPTIONS } from './financing';
 import { formatCountPl } from '../common/plural';
 
 interface EquipmentAccordionProps {
@@ -181,9 +181,11 @@ export const NewCarOfferDetailPage: React.FC = () => {
   };
 
   // E2: Konfiguracja finansowania z programu pracowniczego (nadpisania produktów). Gdy brak
-  // konfiguracji lub pusta lista options — zachowanie kalkulatora identyczne jak przed E2.
+  // konfiguracji lub pusta lista options - domyślne formy finansowania (Kredyt i Leasing po 7,5%).
   const financingOptions = useMemo(() => {
-    const raw = offer?.financing?.options ?? [];
+    const raw = (offer?.financing?.options && offer.financing.options.length > 0)
+      ? offer.financing.options
+      : DEFAULT_FINANCING_OPTIONS;
     return [...raw].sort((a, b) => {
       if (a.category === 'CREDIT' && b.category !== 'CREDIT') return -1;
       if (a.category !== 'CREDIT' && b.category === 'CREDIT') return 1;
@@ -227,7 +229,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
     if (!hasFinancingConfig || !calculation) {
       return `[Zapytanie o ofertę]:
 - Pojazd: ${offer.vehicle.make} ${offer.vehicle.model} ${offer.vehicle.version || ''}
-- Cena pracownicza: ${offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł brutto
+- Cena pracownicza: ${formatPln(offer.pricing.employeePricePln)} zł brutto
 - Finansowanie: Rata na zapytanie (prośba o indywidualną kalkulację doradcy)`;
     }
     const typeLabel = contractType === 'CONSUMER' ? 'Kredyt / Finansowanie konsumenckie' : 'Leasing operacyjny (B2B)';
@@ -235,13 +237,13 @@ export const NewCarOfferDetailPage: React.FC = () => {
       ? `\n- Wybrany produkt finansowania: ${selectedOption.label}`
       : '';
     const rateLine = contractType === 'CONSUMER'
-      ? `- Szacowana rata: ${calculation.installmentGross.toLocaleString('pl-PL')} zł brutto (${calculation.installmentNet.toLocaleString('pl-PL')} zł netto) / mies.`
-      : `- Szacowana rata: ${calculation.installmentNet.toLocaleString('pl-PL')} zł netto (${calculation.installmentGross.toLocaleString('pl-PL')} zł brutto) / mies.`;
+      ? `- Szacowana rata: ${formatPln(calculation.installmentGross)} zł brutto (${formatPln(calculation.installmentNet)} zł netto) / mies.`
+      : `- Szacowana rata: ${formatPln(calculation.installmentNet)} zł netto (${formatPln(calculation.installmentGross)} zł brutto) / mies.`;
     return `[Konfiguracja kalkulatora finansowania]:
 - Typ finansowania: ${typeLabel}
 - Okres umowy: ${months} miesięcy
-- Wpłata własna: ${downPaymentPct}% (${calculation.initialPaymentAmount.toLocaleString('pl-PL')} zł ${contractType === 'CONSUMER' ? 'brutto' : 'netto'})
-- Wykup końcowy: ${residualPct}% (${calculation.residualAmount.toLocaleString('pl-PL')} zł ${contractType === 'CONSUMER' ? 'brutto' : 'netto'})
+- Wpłata własna: ${downPaymentPct}% (${formatPln(calculation.initialPaymentAmount)} zł ${contractType === 'CONSUMER' ? 'brutto' : 'netto'})
+- Wykup końcowy: ${residualPct}% (${formatPln(calculation.residualAmount)} zł ${contractType === 'CONSUMER' ? 'brutto' : 'netto'})
 ${rateLine}${productLabelLine}`;
   }, [calculation, offer, contractType, months, downPaymentPct, residualPct, hasFinancingConfig, selectedOption]);
 
@@ -327,65 +329,9 @@ ${rateLine}${productLabelLine}`;
         {!isLoading && offer && (
           <div className="space-y-8">
             {/* Grid: Photos + Calculator & Benefits */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* 1. Price / Titles Block Card (Mobile: 1st in DOM; Desktop: Col 8-12, Row 1) */}
-              <div className="lg:col-span-5 lg:col-start-8 lg:row-start-1">
-                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
-                  {/* Linia 1: Plakietki (bez Rabatu -X%) */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-lime text-ink font-semibold text-xs px-3 py-1 rounded-full">
-                      Oferta pracownicza
-                    </span>
-                    {offer.vehicle.productionYear && (
-                      <span className="bg-paper text-ink font-semibold text-xs px-3 py-1 rounded-full border border-line">
-                        Rocznik {offer.vehicle.productionYear}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Linia 2: make + model jako h1, pod spodem version */}
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-heading">
-                      {offer.vehicle.make} {offer.vehicle.model}
-                    </h1>
-                    {offer.vehicle.version && (
-                      <p className="text-sm text-muted mt-1">
-                        {offer.vehicle.version}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Linie 3-5: Ceny i oszczędności (ukryte w całości gdy savingsPln <= 0) */}
-                  <div className="pt-4 border-t border-line space-y-2">
-                    {offer.pricing.savingsPln > 0 && (
-                      <div className="text-xs text-muted line-through">
-                        Cena katalogowa: {offer.pricing.listPricePln.toLocaleString('pl-PL')} zł brutto
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-2xs font-semibold uppercase tracking-wider text-muted block mb-0.5">
-                        Cena w programie
-                      </span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-ink tracking-tight font-heading">
-                          {offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł
-                        </span>
-                        <span className="text-xs font-semibold text-muted">brutto</span>
-                      </div>
-                    </div>
-                    {offer.pricing.savingsPln > 0 && (
-                      <div className="pt-1">
-                        <span className="inline-flex items-center gap-1.5 bg-lime text-ink font-semibold text-xs px-3 py-1.5 rounded-full">
-                          Oszczędzasz {offer.pricing.savingsPln.toLocaleString('pl-PL')} zł
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. Left Column: Gallery + Specs + Equipment (Mobile: 2nd in DOM; Desktop: Col 1-7, Rows 1-2) */}
-              <div className="lg:col-span-7 lg:col-start-1 lg:row-start-1 lg:row-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* 1. Left Column: Gallery + Specs + Equipment (Col 1-7 on desktop, 2nd on mobile) */}
+              <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
                 {/* Image Gallery */}
                 <div className="bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
                   <ImageGallery
@@ -431,7 +377,7 @@ ${rateLine}${productLabelLine}`;
                     {Boolean(offer.vehicle.engineCapacityCm3) && (
                       <div className="p-3 bg-paper rounded-xl border border-line">
                         <span className="text-xs text-muted block">Pojemność</span>
-                        <span className="font-semibold text-ink">{offer.vehicle.engineCapacityCm3?.toLocaleString('pl-PL')} cm³</span>
+                        <span className="font-semibold text-ink">{formatPln(offer.vehicle.engineCapacityCm3)} cm³</span>
                       </div>
                     )}
                     {offer.vehicle.drive && (
@@ -504,8 +450,77 @@ ${rateLine}${productLabelLine}`;
                 )}
               </div>
 
-              {/* 3. Right Column: Benefits & Calculator (Mobile: 3rd in DOM; Desktop: Col 8-12, Row 2) */}
-              <div className="lg:col-span-5 lg:col-start-8 lg:row-start-2 space-y-6">
+              {/* 2. Right Column: Pricing Hero + Benefits + Calculator (Col 8-12 on desktop, 1st on mobile) */}
+              <div className="lg:col-span-5 space-y-6 order-1 lg:order-2">
+                {/* Title & Pricing Hero Card */}
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+                  {/* Linia 1: Plakietki */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-lime text-ink font-semibold text-xs px-3 py-1 rounded-full">
+                      Oferta pracownicza
+                    </span>
+                    {offer.vehicle.productionYear && (
+                      <span className="bg-paper text-ink font-semibold text-xs px-3 py-1 rounded-full border border-line">
+                        Rocznik {offer.vehicle.productionYear}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Linia 2: make + model jako h1, pod spodem version */}
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-heading">
+                      {offer.vehicle.make} {offer.vehicle.model}
+                    </h1>
+                    {offer.vehicle.version && (
+                      <p className="text-sm text-muted mt-1">
+                        {offer.vehicle.version}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Linia 3: Przekreślona cena katalogowa + oszczędności */}
+                  {offer.pricing.listPricePln > offer.pricing.employeePricePln && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span className="text-xs text-muted line-through">
+                        Cena katalogowa: {formatPln(offer.pricing.listPricePln)} zł brutto
+                      </span>
+                      <span className="inline-flex items-center bg-lime text-ink font-semibold text-[11px] px-2.5 py-0.5 rounded-full">
+                        Oszczędzasz {formatPln(offer.pricing.savingsPln)} zł
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Linia 4: BOHATER - Szacowana rata miesięczna (sprzedaż raty) */}
+                  <div className="pt-3 border-t border-line space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xs font-bold uppercase tracking-wider text-muted block">
+                        Szacowana rata miesięczna
+                      </span>
+                      <span className="text-xs font-semibold text-forest">
+                        {contractType === 'CONSUMER' ? 'Kredyt konsumencki' : 'Leasing operacyjny'}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl sm:text-4xl font-black text-ink tracking-tight font-heading">
+                        {calculation
+                          ? formatPln(contractType === 'CONSUMER' ? calculation.installmentGross : calculation.installmentNet)
+                          : 'od -'} zł
+                      </span>
+                      <span className="text-xs font-semibold text-muted">
+                        {contractType === 'CONSUMER' ? 'brutto / mies.' : 'netto / mies.'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Linia 5: DRUGORZĘDNA - Cena pojazdu w programie */}
+                  <div className="pt-2 border-t border-line/60 flex items-center justify-between text-xs">
+                    <span className="text-muted font-medium">Cena w programie</span>
+                    <span className="font-bold text-ink">
+                      {formatPln(offer.pricing.employeePricePln)} zł brutto
+                    </span>
+                  </div>
+                </div>
+
                 {/* Dlaczego warto - Compact Benefits Bar */}
                 <div className="p-3.5 bg-paper border border-line rounded-2xl shadow-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-ink">
@@ -538,7 +553,7 @@ ${rateLine}${productLabelLine}`;
                       {offer.benefit.moyaCardAmount && (
                         <div className="flex items-center gap-2 text-ink">
                           <CheckCircle className="h-4 w-4 text-forest flex-shrink-0" />
-                          <span>Karta paliwowa Moya na kwotę <strong>{offer.benefit.moyaCardAmount.toLocaleString('pl-PL')} zł</strong></span>
+                          <span>Karta paliwowa Moya na kwotę <strong>{formatPln(offer.benefit.moyaCardAmount)} zł</strong></span>
                         </div>
                       )}
                       {offer.benefit.fuelDiscount && (
@@ -623,7 +638,7 @@ ${rateLine}${productLabelLine}`;
                           <span className="text-xs font-bold text-forest">{downPaymentPct}%</span>
                           {calculation && (
                             <span className="text-2xs text-muted block">
-                              {calculation.initialPaymentAmount.toLocaleString('pl-PL')} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
+                              {formatPln(calculation.initialPaymentAmount)} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
                             </span>
                           )}
                         </div>
@@ -655,7 +670,7 @@ ${rateLine}${productLabelLine}`;
                             <span className="text-xs font-bold text-forest">{residualPct}%</span>
                             {calculation && (
                               <span className="text-2xs text-muted block">
-                                {calculation.residualAmount.toLocaleString('pl-PL')} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
+                                {formatPln(calculation.residualAmount)} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
                               </span>
                             )}
                           </div>
@@ -688,14 +703,14 @@ ${rateLine}${productLabelLine}`;
                               <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
                               <div className="flex items-baseline gap-2">
                                 <span className="text-3xl font-black text-ink tracking-tight font-heading">
-                                  {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
+                                  {calculation ? formatPln(calculation.installmentGross) : '0'} zł
                                 </span>
                                 <span className="text-xs font-semibold text-muted">brutto / mies.</span>
                               </div>
                             </div>
                             <div className="text-right">
                               <span className="text-sm font-bold text-muted block font-heading">
-                                {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
+                                {calculation ? formatPln(calculation.installmentNet) : '0'} zł
                               </span>
                               <span className="text-[11px] text-muted">netto / mies.</span>
                             </div>
@@ -706,14 +721,14 @@ ${rateLine}${productLabelLine}`;
                               <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
                               <div className="flex items-baseline gap-2">
                                 <span className="text-3xl font-black text-ink tracking-tight font-heading">
-                                  {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
+                                  {calculation ? formatPln(calculation.installmentNet) : '0'} zł
                                 </span>
                                 <span className="text-xs font-semibold text-muted">netto / mies.</span>
                               </div>
                             </div>
                             <div className="text-right">
                               <span className="text-sm font-bold text-muted block font-heading">
-                                {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
+                                {calculation ? formatPln(calculation.installmentGross) : '0'} zł
                               </span>
                               <span className="text-[11px] text-muted">brutto / mies.</span>
                             </div>

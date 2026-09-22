@@ -14,6 +14,7 @@ import {
   CreateInquiryPayload,
   RentalSelection
 } from './inquiries-api';
+import { formatPln } from '../catalog/financing';
 
 export interface RentalDisplayInfo {
   contractMonths: number;
@@ -153,7 +154,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
       aria-labelledby="modal-headline"
       className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
     >
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-line flex items-center justify-between bg-paper/70">
           <div>
@@ -163,9 +164,9 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
             <p className="text-xs text-muted mt-0.5">
               {offer.vehicle.make} {offer.vehicle.model}
               {rentalDisplay
-                ? ` (${(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet).toLocaleString('pl-PL')} zł ${rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.)`
+                ? ` (${formatPln(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet)} zł ${rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.)`
                 : offer.pricing?.employeePricePln
-                ? ` (${offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł brutto)`
+                ? ` (${formatPln(offer.pricing.employeePricePln)} zł brutto)`
                 : ''}
             </p>
           </div>
@@ -205,7 +206,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                   <div className="text-xs text-muted mt-1 flex justify-between">
                     <span>Parametry najmu:</span>
                     <span className="font-medium text-ink">
-                      {rentalDisplay.contractMonths} mies. · {rentalDisplay.annualMileage.toLocaleString('pl-PL')} km · {(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet).toLocaleString('pl-PL')} zł {rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.
+                      {rentalDisplay.contractMonths} mies. · {formatPln(rentalDisplay.annualMileage)} km · {formatPln(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet)} zł {rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.
                     </span>
                   </div>
                 )}
@@ -251,14 +252,14 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-emerald-800 pt-1">
                     <div>Okres umowy: <strong>{rentalDisplay.contractMonths} mies.</strong></div>
-                    <div>Limit roczny: <strong>{rentalDisplay.annualMileage.toLocaleString('pl-PL')} km</strong></div>
+                    <div>Limit roczny: <strong>{formatPln(rentalDisplay.annualMileage)} km</strong></div>
                     <div>Wpłata wstępna: <strong>{rentalDisplay.downPaymentPct}%</strong></div>
                     <div>
                       Rata miesięczna:{' '}
                       <strong>
                         {rentalDisplay.isConsumer
-                          ? `${rentalDisplay.monthlyRateGross.toLocaleString('pl-PL')} zł brutto`
-                          : `${rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto`}
+                          ? `${formatPln(rentalDisplay.monthlyRateGross)} zł brutto`
+                          : `${formatPln(rentalDisplay.monthlyRateNet)} zł netto`}
                       </strong>
                     </div>
                   </div>
@@ -270,53 +271,59 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                 <label className="block text-xs font-semibold text-ink uppercase tracking-wider mb-2">
                   Forma finansowania / Strona umowy *
                 </label>
-                <div className="space-y-2">
-                  <label className={`flex items-start p-3 border rounded-xl cursor-pointer transition-colors ${contractParty === 'CONSUMER' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
-                    <input
-                      type="radio"
-                      name="contractParty"
-                      value="CONSUMER"
-                      checked={contractParty === 'CONSUMER'}
-                      onChange={() => setContractParty('CONSUMER')}
-                      className="mt-0.5 accent-ink text-ink focus:ring-ink"
-                    />
-                    <div className="ml-3 text-xs">
-                      <div className="font-semibold text-ink">Osoba prywatna (Konsument)</div>
-                      <div className="text-muted mt-0.5">
-                        {rentalDisplay ? 'Najem konsumencki na osobę fizyczną' : 'Pożyczka konsumencka lub zakup prywatny'}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label className={`flex flex-col justify-between p-3.5 border rounded-xl cursor-pointer transition-colors ${contractParty === 'CONSUMER' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="contractParty"
+                        value="CONSUMER"
+                        checked={contractParty === 'CONSUMER'}
+                        onChange={() => setContractParty('CONSUMER')}
+                        className="mt-0.5 accent-ink text-ink focus:ring-ink shrink-0"
+                      />
+                      <div>
+                        <div className="font-semibold text-xs text-ink leading-snug">Osoba prywatna (Konsument)</div>
+                        <div className="text-[11px] text-muted mt-1 leading-snug">
+                          {rentalDisplay ? 'Najem konsumencki na osobę fizyczną' : 'Pożyczka konsumencka lub zakup prywatny'}
+                        </div>
                       </div>
                     </div>
                   </label>
 
-                  <label className={`flex items-start p-3 border rounded-xl cursor-pointer transition-colors ${contractParty === 'EMPLOYEE_B2B' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
-                    <input
-                      type="radio"
-                      name="contractParty"
-                      value="EMPLOYEE_B2B"
-                      checked={contractParty === 'EMPLOYEE_B2B'}
-                      onChange={() => setContractParty('EMPLOYEE_B2B')}
-                      className="mt-0.5 accent-ink text-ink focus:ring-ink"
-                    />
-                    <div className="ml-3 text-xs">
-                      <div className="font-semibold text-ink">Działalność gospodarcza (B2B pracownika)</div>
-                      <div className="text-muted mt-0.5">
-                        {rentalDisplay ? 'Najem długoterminowy dla firm (faktura VAT)' : 'Leasing operacyjny na jednoosobową działalność'}
+                  <label className={`flex flex-col justify-between p-3.5 border rounded-xl cursor-pointer transition-colors ${contractParty === 'EMPLOYEE_B2B' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="contractParty"
+                        value="EMPLOYEE_B2B"
+                        checked={contractParty === 'EMPLOYEE_B2B'}
+                        onChange={() => setContractParty('EMPLOYEE_B2B')}
+                        className="mt-0.5 accent-ink text-ink focus:ring-ink shrink-0"
+                      />
+                      <div>
+                        <div className="font-semibold text-xs text-ink leading-snug">Działalność gospodarcza (B2B pracownika)</div>
+                        <div className="text-[11px] text-muted mt-1 leading-snug">
+                          {rentalDisplay ? 'Najem długoterminowy dla firm (faktura VAT)' : 'Leasing operacyjny na jednoosobową działalność'}
+                        </div>
                       </div>
                     </div>
                   </label>
 
-                  <label className={`flex items-start p-3 border rounded-xl cursor-pointer transition-colors ${contractParty === 'EMPLOYER_COMPANY' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
-                    <input
-                      type="radio"
-                      name="contractParty"
-                      value="EMPLOYER_COMPANY"
-                      checked={contractParty === 'EMPLOYER_COMPANY'}
-                      onChange={() => setContractParty('EMPLOYER_COMPANY')}
-                      className="mt-0.5 accent-ink text-ink focus:ring-ink"
-                    />
-                    <div className="ml-3 text-xs">
-                      <div className="font-semibold text-ink">Firma pracodawcy (Finansowanie przez firmę)</div>
-                      <div className="text-muted mt-0.5">Samochód służbowy finansowany bezpośrednio przez pracodawcę</div>
+                  <label className={`flex flex-col justify-between p-3.5 border rounded-xl cursor-pointer transition-colors ${contractParty === 'EMPLOYER_COMPANY' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="contractParty"
+                        value="EMPLOYER_COMPANY"
+                        checked={contractParty === 'EMPLOYER_COMPANY'}
+                        onChange={() => setContractParty('EMPLOYER_COMPANY')}
+                        className="mt-0.5 accent-ink text-ink focus:ring-ink shrink-0"
+                      />
+                      <div>
+                        <div className="font-semibold text-xs text-ink leading-snug">Firma pracodawcy (Finansowanie przez firmę)</div>
+                        <div className="text-[11px] text-muted mt-1 leading-snug">Samochód służbowy finansowany bezpośrednio przez pracodawcę</div>
+                      </div>
                     </div>
                   </label>
                 </div>
@@ -393,12 +400,12 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                 </label>
                 <textarea
                   id="inquiry-notes"
-                  rows={2}
+                  rows={4}
                   maxLength={2000}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="np. preferowany okres leasingu, wysokość wpłaty wstępnej..."
-                  className="w-full px-3.5 py-2.5 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink resize-none"
+                  className="w-full px-3.5 py-2.5 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink resize-y min-h-[110px]"
                 />
               </div>
 

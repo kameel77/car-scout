@@ -9,6 +9,7 @@ import {
   CheckCircle,
   Sparkles,
   ChevronRight,
+  ChevronDown,
   Calculator,
   Layers
 } from 'lucide-react';
@@ -21,6 +22,46 @@ import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
 import { PortalFooter } from '../common/PortalFooter';
 import { ImageGallery } from '../common/ImageGallery';
+import { formatPln } from '../catalog/financing';
+
+function formatCountPl(count: number, forms: [string, string, string]): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (count === 1) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms[1];
+  return forms[2];
+}
+
+const countLabel = (n: number) => `(${n} ${formatCountPl(n, ['pozycja', 'pozycje', 'pozycji'])})`;
+
+interface EquipmentAccordionProps {
+  title: string;
+  items: string[];
+}
+
+const EquipmentAccordion: React.FC<EquipmentAccordionProps> = ({ title, items }) => {
+  if (!items || items.length === 0) return null;
+
+  return (
+    <details className="group py-3 first:pt-0 last:pb-0">
+      <summary className="flex items-center justify-between cursor-pointer list-none select-none text-sm font-semibold text-ink hover:text-forest transition-colors">
+        <span className="flex items-center gap-2">
+          <span>{title}</span>
+          <span className="text-xs font-normal text-muted">{countLabel(items.length)}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 text-muted transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-2 text-sm text-ink">
+        {items.map((item, idx) => (
+          <div key={idx} className="flex items-start gap-2">
+            <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+};
 
 function formatFuelType(fuelType: string | null | undefined): string {
   if (!fuelType) return 'Brak danych';
@@ -57,7 +98,7 @@ function formatMileageChip(mileage: number): string {
   if (mileage >= 1000 && mileage % 1000 === 0) {
     return `${mileage / 1000} tys.`;
   }
-  return `${mileage.toLocaleString('pl-PL')} km`;
+  return `${formatPln(mileage)} km`;
 }
 
 export const RentalOfferDetailPage: React.FC = () => {
@@ -330,6 +371,13 @@ export const RentalOfferDetailPage: React.FC = () => {
                       {offer.vehicle.version}
                     </p>
                   )}
+                  {Boolean(offer.vehicle.catalogPrice) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <span className="text-xs text-muted line-through">
+                        Cena katalogowa: {formatPln(offer.vehicle.catalogPrice)} zł brutto
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Top Pricing Summary Pill */}
@@ -339,10 +387,11 @@ export const RentalOfferDetailPage: React.FC = () => {
                   </div>
                   <div className="flex lg:justify-end items-baseline gap-2 mt-0.5">
                     <span className="text-2xl sm:text-3xl font-black text-ink tracking-tight font-heading">
-                      {(clientType === 'CONSUMER'
-                        ? (activeOption?.monthlyRateGross ?? (minRate.gross < Infinity ? minRate.gross : 0))
-                        : (activeOption?.monthlyRateNet ?? (minRate.net < Infinity ? minRate.net : 0))
-                      ).toLocaleString('pl-PL')} zł
+                      {formatPln(
+                        clientType === 'CONSUMER'
+                          ? (activeOption?.monthlyRateGross ?? (minRate.gross < Infinity ? minRate.gross : 0))
+                          : (activeOption?.monthlyRateNet ?? (minRate.net < Infinity ? minRate.net : 0))
+                      )} zł
                     </span>
                     <span className="text-xs text-muted font-medium">
                       {clientType === 'CONSUMER' ? 'brutto / mies.' : 'netto / mies.'}
@@ -403,7 +452,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                     {Boolean(offer.vehicle.engineCapacityCm3) && (
                       <div className="p-3 bg-paper rounded-xl border border-line">
                         <span className="text-xs text-muted block">Pojemność</span>
-                        <span className="font-semibold text-ink">{offer.vehicle.engineCapacityCm3?.toLocaleString('pl-PL')} cm³</span>
+                        <span className="font-semibold text-ink">{formatPln(offer.vehicle.engineCapacityCm3)} cm³</span>
                       </div>
                     )}
                     {offer.vehicle.drive && (
@@ -436,75 +485,30 @@ export const RentalOfferDetailPage: React.FC = () => {
                   offer.vehicle.equipmentComfortExtras?.length ||
                   offer.vehicle.equipmentAudioMultimedia?.length ||
                   offer.vehicle.equipmentOther?.length) ? (
-                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-6">
-                    <h3 className="text-base font-bold text-ink flex items-center gap-2 font-heading">
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+                    <h3 className="text-base font-bold text-ink flex items-center gap-2 font-heading pb-2 border-b border-line">
                       <ShieldCheck className="h-5 w-5 text-forest" />
                       Wyposażenie pojazdu
                     </h3>
 
-                    {offer.vehicle.equipmentSafety && offer.vehicle.equipmentSafety.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
-                          Bezpieczeństwo i asystenci
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-                          {offer.vehicle.equipmentSafety.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {offer.vehicle.equipmentComfortExtras && offer.vehicle.equipmentComfortExtras.length > 0 && (
-                      <div className="pt-4 border-t border-line">
-                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
-                          Komfort i funkcjonalność
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-                          {offer.vehicle.equipmentComfortExtras.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {offer.vehicle.equipmentAudioMultimedia && offer.vehicle.equipmentAudioMultimedia.length > 0 && (
-                      <div className="pt-4 border-t border-line">
-                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
-                          Multimedia i łączność
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-                          {offer.vehicle.equipmentAudioMultimedia.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {offer.vehicle.equipmentOther && offer.vehicle.equipmentOther.length > 0 && (
-                      <div className="pt-4 border-t border-line">
-                        <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">
-                          Pozostałe elementy
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-                          {offer.vehicle.equipmentOther.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-muted shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="divide-y divide-line">
+                      <EquipmentAccordion
+                        title="Bezpieczeństwo i asystenci"
+                        items={offer.vehicle.equipmentSafety || []}
+                      />
+                      <EquipmentAccordion
+                        title="Komfort i funkcjonalność"
+                        items={offer.vehicle.equipmentComfortExtras || []}
+                      />
+                      <EquipmentAccordion
+                        title="Multimedia i łączność"
+                        items={offer.vehicle.equipmentAudioMultimedia || []}
+                      />
+                      <EquipmentAccordion
+                        title="Pozostałe elementy"
+                        items={offer.vehicle.equipmentOther || []}
+                      />
+                    </div>
                   </div>
                 ) : null}
 
@@ -552,7 +556,58 @@ export const RentalOfferDetailPage: React.FC = () => {
 
               {/* Right Column: Rate Calculator & Inquiry (5 cols) */}
               <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 sticky top-24">
+                {/* Dlaczego warto - Compact Benefits Bar */}
+                <div className="p-3.5 bg-paper border border-line rounded-2xl shadow-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-ink">
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Gwarancja wynegocjowanego rabatu flotowego</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Brak ukrytych opłat i prowizji przygotowawczej</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Opieka doradcy na każdym etapie odbioru auta</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Employee Benefit Package Box (jeśli występuje) */}
+                {offer.benefit && (
+                  <div className="p-5 bg-paper border border-line rounded-2xl shadow-xs">
+                    <div className="flex items-center gap-2 mb-2 text-ink font-bold text-base font-heading">
+                      <Sparkles className="h-5 w-5 text-forest" />
+                      <span>{offer.benefit.name}</span>
+                    </div>
+                    <p className="text-xs text-muted mb-4">
+                      Specjalny pakiet benefitów przyznany w ramach programu partnerskiego Twojego pracodawcy.
+                    </p>
+                    <div className="space-y-2 text-sm">
+                      {offer.benefit.moyaCardAmount && (
+                        <div className="flex items-center gap-2 text-ink">
+                          <CheckCircle className="h-4 w-4 text-forest flex-shrink-0" />
+                          <span>Karta paliwowa Moya na kwotę <strong>{formatPln(offer.benefit.moyaCardAmount)} zł</strong></span>
+                        </div>
+                      )}
+                      {offer.benefit.fuelDiscount && (
+                        <div className="flex items-center gap-2 text-ink">
+                          <CheckCircle className="h-4 w-4 text-forest flex-shrink-0" />
+                          <span>Rabat na paliwo: <strong>{offer.benefit.fuelDiscount}</strong></span>
+                        </div>
+                      )}
+                      {offer.benefit.consultantCare && (
+                        <div className="flex items-center gap-2 text-ink">
+                          <CheckCircle className="h-4 w-4 text-forest flex-shrink-0" />
+                          <span>Dedykowany doradca flotowy i asysta formalna</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20">
                   <div className="flex items-center justify-between border-b border-line pb-4">
                     <div className="flex items-center gap-2">
                       <Calculator className="h-5 w-5 text-forest" />
@@ -664,7 +719,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                       <span className="text-xs font-bold text-forest">
                         {selectedDownPayment?.label || '0%'}
                         {selectedDownPayment && selectedDownPayment.amountNet > 0
-                          ? ` (${(clientType === 'CONSUMER' ? Math.round(selectedDownPayment.amountNet * 1.23) : selectedDownPayment.amountNet).toLocaleString('pl-PL')} zł ${clientType === 'CONSUMER' ? 'brutto' : 'netto'})`
+                          ? ` (${formatPln(clientType === 'CONSUMER' ? Math.round(selectedDownPayment.amountNet * 1.23) : selectedDownPayment.amountNet)} zł ${clientType === 'CONSUMER' ? 'brutto' : 'netto'})`
                           : ''}
                       </span>
                     </div>
@@ -716,14 +771,14 @@ export const RentalOfferDetailPage: React.FC = () => {
                                 <span className="text-xs font-medium text-muted block">Rata abonamentowa brutto</span>
                                 <div className="flex items-baseline gap-2">
                                   <span className="text-3xl font-black text-ink tracking-tight font-heading">
-                                    {activeOption.monthlyRateGross.toLocaleString('pl-PL')} zł
+                                    {formatPln(activeOption.monthlyRateGross)} zł
                                   </span>
                                   <span className="text-xs font-semibold text-muted">brutto / mies.</span>
                                 </div>
                               </div>
                               <div className="text-right">
                                 <span className="text-sm font-bold text-muted block font-heading">
-                                  {activeOption.monthlyRateNet.toLocaleString('pl-PL')} zł
+                                  {formatPln(activeOption.monthlyRateNet)} zł
                                 </span>
                                 <span className="text-[11px] text-muted">netto / mies.</span>
                               </div>
@@ -734,14 +789,14 @@ export const RentalOfferDetailPage: React.FC = () => {
                                 <span className="text-xs font-medium text-muted block">Rata abonamentowa netto</span>
                                 <div className="flex items-baseline gap-2">
                                   <span className="text-3xl font-black text-ink tracking-tight font-heading">
-                                    {activeOption.monthlyRateNet.toLocaleString('pl-PL')} zł
+                                    {formatPln(activeOption.monthlyRateNet)} zł
                                   </span>
                                   <span className="text-xs font-semibold text-muted">netto / mies.</span>
                                 </div>
                               </div>
                               <div className="text-right">
                                 <span className="text-sm font-bold text-muted block font-heading">
-                                  {activeOption.monthlyRateGross.toLocaleString('pl-PL')} zł
+                                  {formatPln(activeOption.monthlyRateGross)} zł
                                 </span>
                                 <span className="text-[11px] text-muted">brutto / mies.</span>
                               </div>
@@ -753,7 +808,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                           <span>Wpłata wstępna:</span>
                           <span className="font-semibold text-ink">
                             {activeOption.downPaymentAmountPln > 0
-                              ? `${(clientType === 'CONSUMER' ? Math.round(activeOption.downPaymentAmountPln * 1.23) : activeOption.downPaymentAmountPln).toLocaleString('pl-PL')} zł ${clientType === 'CONSUMER' ? 'brutto' : 'netto'}`
+                              ? `${formatPln(clientType === 'CONSUMER' ? Math.round(activeOption.downPaymentAmountPln * 1.23) : activeOption.downPaymentAmountPln)} zł ${clientType === 'CONSUMER' ? 'brutto' : 'netto'}`
                               : activeOption.downPaymentPct > 0
                               ? `${activeOption.downPaymentPct}%`
                               : '0 zł'}
@@ -777,7 +832,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                       <ChevronRight className="h-5 w-5" />
                     </button>
 
-                    <p className="text-2xs text-muted text-center mt-3">
+                    <p className="text-[11px] leading-relaxed text-muted text-center mt-3">
                       Przesłanie zapytania jest bezpłatne i niezobowiązujące. Doradca Benefivo skontaktuje się z Tobą w ciągu 24 godzin.
                     </p>
                   </div>

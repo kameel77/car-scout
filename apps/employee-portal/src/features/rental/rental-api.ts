@@ -1,9 +1,13 @@
+import { formatPln } from '../catalog/financing';
+import { EmployeeOfferBenefit } from '../catalog/catalog-api';
+
 export interface RentalVehicle {
   id: string;
   make: string;
   model: string;
   version: string | null;
   productionYear: number;
+  catalogPrice?: number | null;
   fuelType: string | null;
   transmission: string | null;
   bodyType: string | null;
@@ -40,6 +44,7 @@ export interface EmployeeRentalOfferSummary {
   minMonthlyRateGross: number;
   optionsCount: number;
   isB2b?: boolean;
+  benefit?: EmployeeOfferBenefit | null;
 }
 
 export interface RentalInitialPaymentOption {
@@ -72,6 +77,7 @@ export interface EmployeeRentalOfferDetails {
   downPaymentOptions?: RentalInitialPaymentOption[];
   rentalOptions: RentalOptionItem[];
   isB2b?: boolean;
+  benefit?: EmployeeOfferBenefit | null;
 }
 
 export interface EmployeeRentalCatalogResponse {
@@ -240,7 +246,7 @@ export async function fetchEmployeeRentalOfferDetails(
 
     const downKey = `${downPct}-${downAmountNet}`;
     if (!downPaymentMap.has(downKey)) {
-      let label = `${downAmountNet.toLocaleString('pl-PL')} zł`;
+      let label = `${formatPln(downAmountNet)} zł`;
       if (downAmountNet === 0 && downPct > 0) {
         label = `${downPct}%`;
       } else if (downAmountNet === 0 && downPct === 0) {

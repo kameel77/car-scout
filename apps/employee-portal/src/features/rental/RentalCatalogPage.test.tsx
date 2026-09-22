@@ -115,7 +115,11 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
 
     expect(screen.getByRole('link', { name: /Samochody/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Najem długoterminowy/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Moje zapytania/i })).toBeInTheDocument();
+
+    // Open user menu to find Moje zapytania
+    const userBtn = screen.getByRole('button', { name: /Menu użytkownika/i });
+    fireEvent.click(userBtn);
+    expect(screen.getByRole('menuitem', { name: /Moje zapytania/i })).toBeInTheDocument();
   });
 
   it('shows loading skeleton while fetching offers', async () => {

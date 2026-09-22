@@ -39,6 +39,9 @@ function formatListingOffer(
   isDetail: boolean = false
 ): FormattedOffer {
   const listPrice = listing.pricePln ?? 0;
+  const catalogPrice = typeof listing.catalogPrice === 'number' && listing.catalogPrice > 0
+    ? listing.catalogPrice
+    : null;
   const rawImages = Array.isArray(listing.imageUrls) ? listing.imageUrls : [];
   const vehicle: FormattedVehicle = {
     id: listing.id,
@@ -77,7 +80,8 @@ function formatListingOffer(
     customPricePln,
     discountPct,
     programDefaultDiscountPct,
-    programScopeDiscountPct
+    programScopeDiscountPct,
+    catalogPrice
   );
 
   const benefit: FormattedBenefit | null = benefitPolicy

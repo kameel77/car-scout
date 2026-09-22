@@ -23,6 +23,7 @@ import { formatCountPl } from '../common/plural';
 import { PortalHeader } from '../common/PortalHeader';
 import { PortalFooter } from '../common/PortalFooter';
 import { ImageSwiper } from '../common/ImageSwiper';
+import { formatPln } from '../catalog/financing';
 
 function normalizeFuelType(val: string | null): { key: string; label: string } | null {
   if (!val) return null;
@@ -671,11 +672,11 @@ export const RentalCatalogPage: React.FC = () => {
                             Rata abonamentu
                           </div>
                           <div className="text-lg font-bold text-ink tracking-tight font-heading">
-                            od {offer.minMonthlyRateGross.toLocaleString('pl-PL')} zł{' '}
+                            od {formatPln(offer.minMonthlyRateGross)} zł{' '}
                             <span className="text-xs font-normal text-muted">brutto / mies.</span>
                           </div>
                           <div className="text-[11px] text-muted">
-                            od {offer.minMonthlyRateNet.toLocaleString('pl-PL')} zł netto / mies.
+                            od {formatPln(offer.minMonthlyRateNet)} zł netto / mies.
                           </div>
                         </div>
                         <div className="text-2xs text-muted">

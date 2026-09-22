@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { fetchEmployeeOffers, EmployeeOffer, EmployeeFinancingConfig } from './catalog-api';
 import { RateRangeFilter } from './RateRangeFilter';
-import { calculateDefaultOfferInstallment } from './financing';
+import { calculateDefaultOfferInstallment, formatPln } from './financing';
 import { formatCountPl } from '../common/plural';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
@@ -799,10 +799,10 @@ export const CatalogPage: React.FC = () => {
                     {offer.pricing.savingsPln > 0 && (
                       <div className="flex items-center justify-between text-xs text-muted mb-1">
                         <span className="line-through">
-                          Cena katalogowa: {offer.pricing.listPricePln.toLocaleString('pl-PL')} zł
+                          Cena katalogowa: {formatPln(offer.pricing.listPricePln)} zł
                         </span>
                         <span className="text-ink font-semibold bg-lime px-2 py-0.5 rounded-full text-[11px]">
-                          Oszczędzasz {offer.pricing.savingsPln.toLocaleString('pl-PL')} zł
+                          Oszczędzasz {formatPln(offer.pricing.savingsPln)} zł
                         </span>
                       </div>
                     )}
@@ -811,7 +811,7 @@ export const CatalogPage: React.FC = () => {
                       <div>
                         <span className="text-xs font-medium text-muted block">Cena pracownicza</span>
                         <span className="text-2xl font-black text-ink tracking-tight">
-                          {offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł
+                          {formatPln(offer.pricing.employeePricePln)} zł
                         </span>
                       </div>
                       <span className="text-xs text-muted font-medium">brutto</span>
@@ -821,7 +821,7 @@ export const CatalogPage: React.FC = () => {
                       <div className="mt-2 flex items-baseline justify-between text-xs text-muted">
                         <span>Szacowana rata:</span>
                         <span className="font-bold text-ink">
-                          od {installment.installmentGross.toLocaleString('pl-PL')} zł brutto / mies.
+                          od {formatPln(installment.installmentGross)} zł brutto / mies.
                         </span>
                       </div>
                     ) : (

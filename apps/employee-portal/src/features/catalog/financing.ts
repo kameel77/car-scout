@@ -1,4 +1,4 @@
-import { EmployeeFinancingConfig, EmployeeOffer } from './catalog-api';
+import { EmployeeFinancingConfig, EmployeeFinancingOption, EmployeeOffer } from './catalog-api';
 
 export interface InstallmentCalculationParams {
   employeePriceGrossPln: number;
@@ -19,6 +19,49 @@ export interface InstallmentCalculationResult {
   installmentNet: number;
   installmentGross: number;
 }
+
+/**
+ * Formatuje liczbę ze spacją jako separatorem tysięcy (np. 81 800 zł).
+ * Deterministyczna implementacja odporna na różnice w silnikach JS i fontach bez wąskiej spacji.
+ */
+export function formatPln(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined || !Number.isFinite(amount)) return '0';
+  const rounded = Math.round(amount * 100) / 100;
+  const parts = rounded.toString().split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return parts.join(',');
+}
+
+/**
+ * Domyślne warianty finansowania dla oferty samochodowej, gdy program nie ma zdefiniowanych
+ * dedykowanych nadpisań w bazie danych (standardowa stopa 7,5% rocznie, Kredyt i Leasing).
+ */
+export const DEFAULT_FINANCING_OPTIONS: EmployeeFinancingOption[] = [
+  {
+    productId: 'default-credit',
+    label: 'Kredyt konsumencki',
+    category: 'CREDIT',
+    allowedContractParties: ['CONSUMER'],
+    b2cStatus: 'AVAILABLE',
+    annualRatePct: 7.5,
+    periods: [24, 36, 48, 60],
+    minDownPaymentPct: 0,
+    maxDownPaymentPct: 45,
+    maxResidualPct: 30
+  },
+  {
+    productId: 'default-leasing',
+    label: 'Leasing operacyjny B2B',
+    category: 'LEASING',
+    allowedContractParties: ['COMPANY'],
+    b2cStatus: 'AVAILABLE',
+    annualRatePct: 7.5,
+    periods: [24, 36, 48, 60],
+    minDownPaymentPct: 0,
+    maxDownPaymentPct: 45,
+    maxResidualPct: 30
+  }
+];
 
 export function nearestPeriodTo36(periods: number[]): number {
   if (periods.length === 0) return 36;

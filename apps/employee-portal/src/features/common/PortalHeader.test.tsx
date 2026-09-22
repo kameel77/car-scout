@@ -108,11 +108,18 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
     expect(userBtn).toHaveAttribute('aria-haspopup', 'menu');
     expect(userBtn).toHaveAttribute('aria-expanded', 'false');
 
+    // Main nav should not contain Moje zapytania
+    expect(screen.queryByRole('link', { name: /Moje zapytania/i })).not.toBeInTheDocument();
+
     // Click to open
     fireEvent.click(userBtn);
     expect(userBtn).toHaveAttribute('aria-expanded', 'true');
 
     // Check menu items
+    const zapytaniaLink = screen.getByRole('menuitem', { name: /Moje zapytania/i });
+    expect(zapytaniaLink).toBeInTheDocument();
+    expect(zapytaniaLink).toHaveAttribute('href', '/zapytania');
+
     const daneLink = screen.getByRole('menuitem', { name: /Moje dane/i });
     expect(daneLink).toBeInTheDocument();
     expect(daneLink).toHaveAttribute('href', '/konto');

@@ -171,9 +171,9 @@ describe('NewCarOfferDetailPage', () => {
     fireEvent.click(tenPctBtns[1]);
 
     // Rate heading is displayed
-    expect(screen.getByText('Szacowana rata miesięczna')).toBeInTheDocument();
-    expect(screen.getByText(/brutto \/ mies\./)).toBeInTheDocument();
-    expect(screen.getByText(/netto \/ mies\./)).toBeInTheDocument();
+    expect(screen.getAllByText('Szacowana rata miesięczna').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/brutto \/ mies\./).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/netto \/ mies\./).length).toBeGreaterThanOrEqual(1);
   });
 
   it('defaults to consumer financing with gross rate as primary figure, and inverts on B2B toggle', async () => {
@@ -189,15 +189,15 @@ describe('NewCarOfferDetailPage', () => {
     expect(b2bBtn).toBeInTheDocument();
 
     // In consumer mode, the large font heading is gross rate
-    const grossSuffix = screen.getByText(/brutto \/ mies\./);
-    expect(grossSuffix.previousElementSibling?.className).toContain('text-3xl');
+    const grossSuffix = screen.getAllByText(/brutto \/ mies\./);
+    expect(grossSuffix[0].previousElementSibling?.className).toContain('text-3xl');
 
     // Toggle to B2B
     fireEvent.click(b2bBtn);
 
     // In B2B mode, the large font heading is net rate
-    const netSuffix = screen.getByText(/netto \/ mies\./);
-    expect(netSuffix.previousElementSibling?.className).toContain('text-3xl');
+    const netSuffix = screen.getAllByText(/netto \/ mies\./);
+    expect(netSuffix[0].previousElementSibling?.className).toContain('text-3xl');
   });
 
   it('opens inquiry modal with calculated financing notes when clicking CTA', async () => {
@@ -339,7 +339,7 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     // Single CREDIT option renders with the category-derived label.
     expect(screen.getByRole('button', { name: 'Prywatnie' })).toBeInTheDocument();
 
-    expect(screen.getByText('Szacowana rata miesięczna')).toBeInTheDocument();
+    expect(screen.getAllByText('Szacowana rata miesięczna').length).toBeGreaterThanOrEqual(1);
   });
 
   it('includes the selected financing product label in the inquiry notes', async () => {
@@ -361,7 +361,7 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     expect(notesTextarea.value).toContain('Wybrany produkt finansowania: Kredyt Elastyczny');
   });
 
-  it('renders "Rata na zapytanie" card and consultant inquiry button when financing is null', async () => {
+  it('falls back to default financing options (kredyt & leasing) when financing is null so calculator remains functional', async () => {
     vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue({ ...mockOffer, financing: null });
 
     renderComponent();
@@ -370,23 +370,26 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
       expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Rata na zapytanie')).toBeInTheDocument();
-    expect(screen.getByText(/Dla tej oferty program nie posiada ustandaryzowanej matrycy rat/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Zapytaj doradcę o ratę/i })).toBeInTheDocument();
+    // Both consumer credit and B2B leasing options are available
+    expect(screen.getByRole('button', { name: 'Prywatnie' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rozliczam B2B' })).toBeInTheDocument();
 
-    // Interactive calculator controls are not rendered
-    expect(screen.queryByRole('button', { name: '24 msc' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '48 msc' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '60 msc' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Wykup końcowy')).not.toBeInTheDocument();
+    // Standard period chips are available
+    expect(screen.getByRole('button', { name: '24 msc' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '36 msc' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '48 msc' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '60 msc' })).toBeInTheDocument();
 
-    // Clicking inquiry opens modal with "Rata na zapytanie" pre-filled notes
-    fireEvent.click(screen.getByRole('button', { name: /Zapytaj doradcę o ratę/i }));
+    // Rates are calculated
+    expect(screen.getAllByText('Szacowana rata miesięczna').length).toBeGreaterThanOrEqual(1);
+
+    // Clicking inquiry CTA opens modal with pre-filled calculated financing notes
+    fireEvent.click(screen.getByRole('button', { name: /Zapytaj o tę ofertę i ratę/i }));
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
     const notesTextarea = screen.getByLabelText(/Uwagi lub pytania/i) as HTMLTextAreaElement;
-    expect(notesTextarea.value).toContain('Finansowanie: Rata na zapytanie');
+    expect(notesTextarea.value).toContain('Konfiguracja kalkulatora finansowania');
   });
 
   it('applies sticky positioning only to the calculator card (Errata E3)', async () => {

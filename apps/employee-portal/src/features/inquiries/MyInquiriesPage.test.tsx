@@ -267,7 +267,7 @@ describe('MyInquiriesPage Component', () => {
     expect(screen.getByText(/Audi A4/i)).toBeInTheDocument();
     expect(screen.getByText(/36\s*mies\.\s*·/i)).toBeInTheDocument();
     expect(screen.getByText(/20[\s\u00a0]?000\s*km\/rok/i)).toBeInTheDocument();
-    expect(screen.getByText(/2450\s*zł/i)).toBeInTheDocument();
+    expect(screen.getByText(/2[\s\u00a0]?450\s*zł/i)).toBeInTheDocument();
     expect(screen.getByText(/netto \/ mc/i)).toBeInTheDocument();
     expect(screen.getByText(/Wpłata wstępna: 10%/i)).toBeInTheDocument();
     expect(screen.getByText(/15[\s\u00a0]?000\s*zł/i)).toBeInTheDocument();

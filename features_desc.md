@@ -1236,3 +1236,32 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Filtr raty miesięcznej w katalogu (`minRate` / `maxRate`) nie wyklucza po cichu ofert nieposiadających matrycy finansowania - oferty bez wycenionej raty pozostają widoczne z etykietą „Rata na zapytanie”.
   - Przy sortowaniu po racie (`rate_asc`, `rate_desc`) oferty z ratą na zapytanie są pozycjonowane na końcu listy.
 
+### 84. Usprawnienia UX i Prezentacji Ofert Portalu Pracowniczego (Benefivo)
+
+Wdrożono pakiet 7 kluczowych usprawnień interfejsu i logiki prezentacji ofert na platformie pracowniczej:
+
+- **1. Reorganizacja Nawigacji - Przeniesienie „Moje zapytania” do Menu Konta**:
+  - W `PortalHeader.tsx` usunięto odnośnik „Moje zapytania” z głównego paska nawigacji, zachowując czysty podział na katalogi („Samochody” i „Najem długoterminowy”).
+  - Odnośnik „Moje zapytania” (`/zapytania`) umieszczono w rozwijanym menu profilu użytkownika (`Menu użytkownika: ...`) z ikoną `FileText`, obok „Moje dane”, „Zmiana hasła” i „Wyloguj”.
+- **2. Eliminacja Nadmiarowego Odstępu na Karcie Oferty Pojazdu**:
+  - Rozwiązano problem pustej przestrzeni pomiędzy kafelkiem ceny a kalkulatorem finansowym (`NewCarOfferDetailPage.tsx`). Przyczyną było wymuszenie wysokości przez tracki CSS Grid (`row-start-1` i `row-start-2` spięte z wysokością lewej kolumny galerii).
+  - Prawą kolumnę ujednolicono w semantyczny, naturalny kontener `lg:col-span-5 space-y-6`, dzięki czemu elementy układają się bez luk.
+- **3. Prymat Raty Miesięcznej i Przekreślona Cena Katalogowa**:
+  - Zgodnie z modelem biznesowym sprzedaży ratalnej, głównym elementem karty podsumowania (`NewCarOfferDetailPage.tsx`) stała się „Szacowana rata miesięczna” (wyróżniona typografią 3xl/4xl font-black) z oznaczeniem brutto/netto i formy finansowania.
+  - Informacja o cenie całkowitej („Cena w programie”) została przeniesiona na pozycję drugorzędną.
+  - Dodano ekspozycję przekreślonej ceny katalogowej (`Cena katalogowa: ... zł brutto`) pobieranej z `listing.catalogPrice` i obliczanej w backendzie (`effectiveListPrice = Math.max(safeListPrice, safeCatalogPrice)`), z plakietką kwotowych oszczędności pracownika.
+- **4. Dostępność Kalkulatora Kredytu i Leasingu dla Ofert Samochodowych**:
+  - Przywrócono pełną interaktywność kalkulatora finansowego dla ofert niemających zdefiniowanych dedykowanych nadpisań w bazie danych, wykorzystując standardową konfigurację bazową `DEFAULT_FINANCING_OPTIONS` (Kredyt konsumencki i Leasing operacyjny B2B przy stopie 7,5% rocznie, z okresami 24, 36, 48, 60 msc).
+- **5. Zoptymalizowany Układ Modalu Zapytania na Desktopie**:
+  - W `InquiryModal.tsx` poszerzono okno dialogowe na desktopie do `max-w-3xl w-full`.
+  - Trzy opcje formy finansowania (Kredyt konsumencki, Leasing B2B, Zakup za gotówkę) rozplanowano horyzontalnie w 3 kolumnach obok siebie (`grid grid-cols-1 md:grid-cols-3 gap-3`).
+  - Powiększono pole tekstowe na uwagi i pytania do doradcy (`rows={4}`, `min-h-[110px]`).
+- **6. Pełna Spójność Wizualna Oferty Najmu Długoterminowego z Ofertą Samochodów**:
+  - Karta oferty najmu (`RentalOfferDetailPage.tsx`) została dostosowana do standardu oferty samochodowej:
+    - Przekreślona cena katalogowa pojazdu (`offer.vehicle.catalogPrice`) przekazywana z bazy danych (`RentalVehicle.catalogPrice`).
+    - Długa lista wyposażenia zastąpiona zwijanymi, natywnymi akordeonami `<details>` (`EquipmentAccordion`) z gramatyczną odmianą liczby pozycji (`formatCountPl`).
+    - Kompaktowy pasek korzyści („Dlaczego warto: Gwarancja wynegocjowanego rabatu flotowego...”) oraz dedykowany boks pakietu benefitów pracodawcy (`offer.benefit`) nad kalkulatorem.
+    - Zmniejszony font klauzuli informacyjnej kalkulatora (`text-[11px] leading-relaxed text-muted`).
+- **7. Deterministyczny Separator Tysięcy we Wszystkich Kalkulatorach i Kartach**:
+  - Zaimplementowano helper `formatPln()` w `src/features/catalog/financing.ts`, który zastąpił natywne `toLocaleString('pl-PL')` w całym portalu pracowniczym.
+  - Helper eliminuje problem znikających wąskich spacji (`\u202F`) w fontach webowych, formatując liczby ze stałą spacją ASCII jako separatorem tysięcy (np. `81 800 zł`), zarówno dla liczb całkowitych, jak i kwot z częścią dziesiętną.

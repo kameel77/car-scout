@@ -249,4 +249,51 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     expect(screen.getByText('Ta oferta jest dostępna wyłącznie dla firm (rozliczenie B2B).')).toBeInTheDocument();
     expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
   });
+
+  it('renders crossed-out catalog price, equipment accordions, and benefits bar analogously to car offers', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue({
+      ...mockRentalOfferDetails,
+      vehicle: {
+        ...mockRentalOfferDetails.vehicle,
+        catalogPrice: 140000,
+        equipmentSafety: ['System PCS', 'Tempomat adaptacyjny'],
+        equipmentComfortExtras: ['Klimatyzacja automatyczna'],
+      },
+      benefit: {
+        name: 'Pakiet Benefit Moya & Flota',
+        moyaCardAmount: 500,
+        fuelDiscount: '15 gr/l',
+        consultantCare: true,
+        termsText: null,
+      },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    // 1. Catalog price crossed out
+    expect(screen.getByText(/Cena katalogowa:\s*140\s?000 zł brutto/)).toBeInTheDocument();
+
+    // 2. Equipment accordions
+    expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();
+    expect(screen.getByText('(2 pozycje)')).toBeInTheDocument();
+    expect(screen.getByText('Komfort i funkcjonalność')).toBeInTheDocument();
+    expect(screen.getByText('(1 pozycja)')).toBeInTheDocument();
+
+    // 3. Compact benefits bar
+    expect(screen.getByText('Gwarancja wynegocjowanego rabatu flotowego')).toBeInTheDocument();
+    expect(screen.getByText('Brak ukrytych opłat i prowizji przygotowawczej')).toBeInTheDocument();
+
+    // 4. Benefit package
+    expect(screen.getByText('Pakiet Benefit Moya & Flota')).toBeInTheDocument();
+    expect(screen.getByText(/Karta paliwowa Moya na kwotę/)).toBeInTheDocument();
+
+    // 5. Smaller disclaimer font text
+    const disclaimer = screen.getByText(/Przesłanie zapytania jest bezpłatne i niezobowiązujące/);
+    expect(disclaimer.className).toContain('text-[11px]');
+  });
 });

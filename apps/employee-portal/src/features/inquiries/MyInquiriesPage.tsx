@@ -15,6 +15,7 @@ import { fetchEmployeeInquiries, EmployeeInquiryItem } from './inquiries-api';
 import { PortalHeader } from '../common/PortalHeader';
 import { PortalFooter } from '../common/PortalFooter';
 import { formatCountPl } from '../common/plural';
+import { formatPln } from '../catalog/financing';
 
 const INQUIRY_STAGES = [
   { id: 1, label: 'Nowe' },
@@ -392,13 +393,13 @@ export const MyInquiriesPage: React.FC = () => {
                 {inq.rental ? (
                   <div className="pt-3 md:pt-0 border-t md:border-t-0 border-line w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
                     <div className="text-xs text-muted">
-                      {inq.rental.contractMonths} mies. · {(inq.rental.annualMileageKm ?? inq.rental.annualMileage ?? 0).toLocaleString('pl-PL')} km/rok
+                      {inq.rental.contractMonths} mies. · {formatPln(inq.rental.annualMileageKm ?? inq.rental.annualMileage ?? 0)} km/rok
                     </div>
                     <div className="text-lg font-black text-ink tracking-tight">
-                      {(inq.rental.monthlyRateNetPln ?? inq.rental.monthlyRateNet ?? 0).toLocaleString('pl-PL')} zł <span className="text-xs font-normal text-muted">netto / mc</span>
+                      {formatPln(inq.rental.monthlyRateNetPln ?? inq.rental.monthlyRateNet ?? 0)} zł <span className="text-xs font-normal text-muted">netto / mc</span>
                     </div>
                     <div className="text-[11px] text-muted">
-                      Wpłata wstępna: {inq.rental.initialPaymentPct ?? inq.rental.downPaymentPct ?? 0}% ({(inq.rental.initialPaymentAmountNet ?? inq.rental.downPaymentAmountPln ?? 0).toLocaleString('pl-PL')} zł)
+                      Wpłata wstępna: {inq.rental.initialPaymentPct ?? inq.rental.downPaymentPct ?? 0}% ({formatPln(inq.rental.initialPaymentAmountNet ?? inq.rental.downPaymentAmountPln ?? 0)} zł)
                     </div>
                     {inq.rental.rentalCompanyName && (
                       <div className="text-[11px] text-muted">
@@ -409,14 +410,14 @@ export const MyInquiriesPage: React.FC = () => {
                 ) : inq.pricing ? (
                   <div className="pt-3 md:pt-0 border-t md:border-t-0 border-line w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
                     <div className="text-xs text-muted line-through">
-                      Katalogowa: {inq.pricing.listPricePln.toLocaleString('pl-PL')} zł
+                      Katalogowa: {formatPln(inq.pricing.listPricePln)} zł
                     </div>
                     <div className="text-lg font-black text-ink tracking-tight">
-                      {inq.pricing.employeePricePln.toLocaleString('pl-PL')} zł
+                      {formatPln(inq.pricing.employeePricePln)} zł
                     </div>
                     {inq.pricing.savingsPln > 0 && (
                       <div className="text-[11px] text-ink bg-lime px-2 py-0.5 rounded-full font-semibold">
-                        Oszczędzasz {inq.pricing.savingsPln.toLocaleString('pl-PL')} zł
+                        Oszczędzasz {formatPln(inq.pricing.savingsPln)} zł
                       </div>
                     )}
                   </div>

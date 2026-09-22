@@ -18,6 +18,9 @@ export default {
         heading: ['"Plus Jakarta Sans"', 'sans-serif'],
         sans: ['"DM Sans"', 'sans-serif'],
       },
+      fontSize: {
+        '2xs': '0.6875rem', // 11px
+      },
     },
   },
   plugins: [],
