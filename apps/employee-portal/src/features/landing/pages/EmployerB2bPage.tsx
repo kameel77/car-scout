@@ -151,16 +151,28 @@ export const EmployerB2bPage: React.FC = () => {
       <main className="wrap py-12">
         {/* Intro */}
         <section className="mb-14">
-          <p className="eyebrow mb-3">DLA PRACODAWCÓW I ZARZĄDU</p>
+          <p className="eyebrow mb-3">DLA FIRM</p>
           <h1 className="text-3xl sm:text-5xl !font-bold tracking-tight text-ink !mb-8 !leading-tight">
-            Nowoczesny benefit motoryzacyjny.<br />
+            Daj pracownikom więcej możliwości za kierownicą.<br />
             <span className="block text-muted !font-normal text-2xl sm:text-3xl mt-2 tracking-normal">
-              Zero kosztów wdrożenia dla Twojej firmy.
+              Bez kosztów dla firmy.
             </span>
           </h1>
-          <p className="text-lg text-muted max-w-2xl leading-relaxed">
-            Benefivo łączy Twój zespół z preferencyjną ofertą najmu i leasingu aut oraz pakietem usług towarzyszących. Obsługę operacyjną, doradztwo i procesy finansowe realizuje doświadczony zespół Motolii.
+          <p className="text-lg text-muted max-w-2xl leading-relaxed mb-8">
+            Podpisz umowę o współpracy, a Twój zespół otrzyma dostęp do specjalnych ofert na samochody i usługi motoryzacyjne. Pracownicy sami zdecydują, czy chcą z nich skorzystać. Przygotowaniem ofert i obsługą programu zajmuje się Motolia.
           </p>
+          <div className="flex flex-wrap gap-4 items-center">
+            <a
+              href="#kontakt-b2b"
+              className="button button-lime inline-flex items-center gap-2"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('kontakt-b2b')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Porozmawiajmy o współpracy <span aria-hidden="true">&rarr;</span>
+            </a>
+          </div>
         </section>
 
         {/* Benefits Grid */}
@@ -169,9 +181,9 @@ export const EmployerB2bPage: React.FC = () => {
             <div className="w-10 h-10 rounded-full bg-lime flex items-center justify-center font-bold text-ink mb-4">
               01
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-ink">Brak ryzyka i obciążeń</h3>
+            <h3 className="text-xl font-semibold mb-2 text-ink">Bez kosztów po stronie firmy</h3>
             <p className="text-sm text-muted leading-relaxed">
-              Program nie obciąża bilansu ani zdolności kredytowej pracodawcy. Umowy mogą być zawierane bezpośrednio z pracownikiem lub w modelu dofinansowania przez firmę.
+              Udostępniasz pracownikom program na podstawie umowy o współpracy. Sam dostęp do ofert nie wymaga finansowania samochodów przez pracodawcę.
             </p>
           </div>
 
@@ -179,9 +191,9 @@ export const EmployerB2bPage: React.FC = () => {
             <div className="w-10 h-10 rounded-full bg-lime flex items-center justify-center font-bold text-ink mb-4">
               02
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-ink">Preferencyjne stawki</h3>
+            <h3 className="text-xl font-semibold mb-2 text-ink">Oferty przygotowane dla Twojego zespołu</h3>
             <p className="text-sm text-muted leading-relaxed">
-              Pracownicy zyskują dostęp do stawek korporacyjnych, rabatów flotowych i pakietów serwisowych niedostępnych w standardowych salonach dealerskich.
+              Pracownicy otrzymują dostęp do warunków i propozycji motoryzacyjnych dostępnych w programie ich firmy.
             </p>
           </div>
 
@@ -189,10 +201,44 @@ export const EmployerB2bPage: React.FC = () => {
             <div className="w-10 h-10 rounded-full bg-lime flex items-center justify-center font-bold text-ink mb-4">
               03
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-ink">Kompleksowa obsługa</h3>
+            <h3 className="text-xl font-semibold mb-2 text-ink">Obsługa po naszej stronie</h3>
             <p className="text-sm text-muted leading-relaxed">
-              Dedykowany opiekun floty, portal pracowniczy z ofertami i pełne wsparcie administracyjne w przygotowaniu dokumentów - bez angażowania Twojego działu kadr.
+              Motolia przygotowuje ofertę, wspiera pracowników w wyborze rozwiązania i prowadzi dalszy proces związany z samochodem.
             </p>
+          </div>
+        </section>
+
+        {/* How We Start Section */}
+        <section className="mb-16">
+          <div className="mb-8">
+            <p className="eyebrow mb-2">PROSTY PROCES</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-ink">Jak zaczynamy?</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-stone-200">
+              <div className="w-8 h-8 rounded-full bg-lime/40 text-ink flex items-center justify-center font-bold text-xs mb-3">
+                01
+              </div>
+              <p className="text-base font-medium text-ink">Poznajemy potrzeby Twojej firmy i zespołu.</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-stone-200">
+              <div className="w-8 h-8 rounded-full bg-lime/40 text-ink flex items-center justify-center font-bold text-xs mb-3">
+                02
+              </div>
+              <p className="text-base font-medium text-ink">Ustalamy zakres programu i podpisujemy umowę.</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-stone-200">
+              <div className="w-8 h-8 rounded-full bg-lime/40 text-ink flex items-center justify-center font-bold text-xs mb-3">
+                03
+              </div>
+              <p className="text-base font-medium text-ink">Przygotowujemy dostęp oraz materiały do przekazania pracownikom.</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-stone-200">
+              <div className="w-8 h-8 rounded-full bg-lime/40 text-ink flex items-center justify-center font-bold text-xs mb-3">
+                04
+              </div>
+              <p className="text-base font-medium text-ink">Pracownicy samodzielnie przeglądają oferty i kontaktują się z Motolią.</p>
+            </div>
           </div>
         </section>
 
@@ -227,7 +273,7 @@ export const EmployerB2bPage: React.FC = () => {
         </div>
 
         {/* Lead Form Box */}
-        <section className="bg-white rounded-3xl border border-stone-200 p-8 sm:p-12 shadow-xs max-w-3xl mx-auto">
+        <section id="kontakt-b2b" className="bg-white rounded-3xl border border-stone-200 p-8 sm:p-12 shadow-xs max-w-3xl mx-auto scroll-mt-8">
           {referenceNumber ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-lime text-ink rounded-full flex items-center justify-center mx-auto text-2xl mb-4 font-bold">
@@ -255,10 +301,10 @@ export const EmployerB2bPage: React.FC = () => {
             <>
               <div className="mb-8">
                 <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-2">
-                  Porozmawiajmy o programie dla Twojej firmy
+                  Sprawdźmy, jak Benefivo może działać w Twojej firmie
                 </h2>
                 <p className="text-muted text-sm">
-                  Wypełnij krótki formularz, a przygotujemy dopasowaną propozycję wdrożenia programu w Twojej organizacji.
+                  Zostaw kontakt. Porozmawiamy o potrzebach zespołu i przygotujemy propozycję współpracy.
                 </p>
               </div>
 
@@ -527,7 +573,7 @@ export const EmployerB2bPage: React.FC = () => {
                     disabled={isSubmitting}
                     className="button button-dark w-full text-center justify-center font-bold"
                   >
-                    {isSubmitting ? 'Wysyłanie...' : 'Wyślij zapytanie o program dla firm →'}
+                    {isSubmitting ? 'Wysyłanie...' : 'Zapytaj o współpracę'}
                   </button>
                 </div>
               </form>

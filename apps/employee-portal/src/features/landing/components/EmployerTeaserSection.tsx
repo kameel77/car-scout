@@ -5,7 +5,7 @@ export const EmployerTeaserSection: React.FC = () => {
   return (
     <section id="dla-firm" className="employer-section wrap" aria-labelledby="employer-title">
       <div className="employer-copy">
-        <p className="eyebrow">DLA ŚREDNICH I DUŻYCH FIRM</p>
+        <p className="eyebrow">DLA FIRM</p>
         <h2 id="employer-title">
           Dobry pracodawca<br />
           daje więcej<br />
