@@ -32,25 +32,30 @@ export function formatPln(amount: number | null | undefined): string {
   return parts.join(',');
 }
 
+export const KNOWN_FINANCING_PRODUCTS = {
+  VEHIS_LEASING: 'cmolkh9n60004nqqx2330k2sc', // gitleaks:allow
+  INBANK_CREDIT: 'cmolkcx1i0002nqqx01mgk3cz', // gitleaks:allow
+} as const;
+
 /**
  * Domyślne warianty finansowania dla oferty samochodowej, gdy program nie ma zdefiniowanych
- * dedykowanych nadpisań w bazie danych (standardowa stopa 7,5% rocznie, Kredyt i Leasing).
+ * dedykowanych nadpisań w bazie danych (realistyczne stawki: Inbank 9,3% bez wykupu, Vehis 7,5% z wykupem).
  */
 export const DEFAULT_FINANCING_OPTIONS: EmployeeFinancingOption[] = [
   {
-    productId: 'default-credit',
+    productId: KNOWN_FINANCING_PRODUCTS.INBANK_CREDIT,
     label: 'Kredyt samochodowy',
     category: 'CREDIT',
     allowedContractParties: ['CONSUMER', 'EMPLOYEE_B2B'],
     b2cStatus: 'AVAILABLE',
-    annualRatePct: 7.5,
+    annualRatePct: 9.3,
     periods: [24, 36, 48, 60],
     minDownPaymentPct: 0,
     maxDownPaymentPct: 45,
-    maxResidualPct: 30
+    maxResidualPct: 0 // Kredyt konsumencki standardowo spłaca całe auto do zera
   },
   {
-    productId: 'default-leasing',
+    productId: KNOWN_FINANCING_PRODUCTS.VEHIS_LEASING,
     label: 'Leasing operacyjny B2B',
     category: 'LEASING',
     allowedContractParties: ['COMPANY'],
@@ -59,7 +64,7 @@ export const DEFAULT_FINANCING_OPTIONS: EmployeeFinancingOption[] = [
     periods: [24, 36, 48, 60],
     minDownPaymentPct: 0,
     maxDownPaymentPct: 45,
-    maxResidualPct: 30
+    maxResidualPct: 40 // Leasing operacyjny z wykupem balonowym do 40%
   }
 ];
 

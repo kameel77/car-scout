@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { useBrandConfig } from '../../../config/BrandContext';
 import { trackEvent } from '../../analytics/analytics';
@@ -50,11 +51,20 @@ export const LandingHeader: React.FC<LandingHeaderProps> = () => {
       <button
         className="menu-button"
         type="button"
+        aria-label={menuOpen ? 'Zamknij menu' : 'Otwórz menu nawigacji'}
         aria-controls="landing-navigation"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen(!menuOpen)}
       >
-        Menu <span aria-hidden="true">{menuOpen ? '✕' : '☰'}</span>
+        {menuOpen ? (
+          <X className="h-5 w-5 text-ink" aria-hidden="true" />
+        ) : (
+          <div className="w-5 h-3.5 flex flex-col justify-between items-center" aria-hidden="true">
+            <span className="w-full h-0.5 bg-ink rounded-full" />
+            <span className="w-full h-0.5 bg-ink rounded-full" />
+            <span className="w-full h-0.5 bg-ink rounded-full" />
+          </div>
+        )}
       </button>
 
       <nav

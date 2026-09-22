@@ -292,6 +292,13 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     // 4. 'Wartość alternatywna:' label removed, alternative amount in parentheses
     expect(screen.queryByText(/Wartość alternatywna:/i)).not.toBeInTheDocument();
 
+    // 5. 'W cenie abonamentu' badge removed from services header
+    expect(screen.queryByText(/W cenie abonamentu/i)).not.toBeInTheDocument();
+
+    // 6. Operator rate type ('Typ stawki', 'Stawka katalogowa') hidden from customer calculator
+    expect(screen.queryByText(/Typ stawki/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Stawka katalogowa/i)).not.toBeInTheDocument();
+
     // 2. Equipment accordions
     expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();
     expect(screen.getByText('(2 pozycje)')).toBeInTheDocument();
@@ -309,5 +316,33 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     // 5. Smaller disclaimer font text
     const disclaimer = screen.getByText(/Przesłanie zapytania jest bezpłatne i niezobowiązujące/);
     expect(disclaimer.className).toContain('text-[11px]');
+  });
+
+  it('renders mobile sticky bars (top bar on scroll and bottom bar with home link, calculator button, and inquiry button)', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue(mockRentalOfferDetails);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Mobile bottom bar links & buttons
+    const homeLink = screen.getByRole('link', { name: /Strona główna najmu/i });
+    expect(homeLink).toHaveAttribute('href', '/najem');
+
+    const scrollToCalcBtn = screen.getByRole('button', { name: /Przejdź do konfiguratora abonamentu/i });
+    expect(scrollToCalcBtn).toBeInTheDocument();
+
+    const askOfferBtn = screen.getByRole('button', { name: /Zapytaj o ofertę$/i });
+    expect(askOfferBtn).toBeInTheDocument();
+
+    // Trigger scroll to display top sticky bar
+    fireEvent.scroll(window, { target: { scrollY: 300 } });
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(2);
+    });
   });
 });

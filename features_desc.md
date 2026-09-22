@@ -1349,3 +1349,60 @@ Wdrożono dedykowany pulpit powitalny pracownika oraz ujednolicono układ filtr�
   - Zastąpiono nieobsługiwaną klasę `hover:text-forest-dark` bezpiecznym wariantem `hover:text-forest/80`.
   - W `PortalHeader.tsx` odnośnik logo został zabezpieczony warunkiem `to={isAuthenticated || isLoading ? '/dashboard' : '/'}`, gwarantując powrót na stronę główną dla sesji niezalogowanej.
   - W `RentalCatalogPage.tsx` ujednolicono strukturę odstępów (`space-y-6` na znaczniku `<main>`) symetrycznie do `CatalogPage.tsx`.
+
+### 89. Rozdział Produktowy Leasingu B2B i Kredytu oraz Optymalizacja Mobile UI/UX (Standard Superauto.pl)
+
+Wdrożono rozdzielenie produktów finansowania w kalkulatorze samochodowym oraz pełne dostosowanie układu mobilnego do standardu Superauto.pl:
+
+- **1. Rozdział Produktowy Kredytu Konsumenckiego i Leasingu Operacyjnego B2B**:
+  - Wyeliminowano uproszczoną symulację zamieniającą wyłącznie netto i brutto.
+  - Zintegrowano rzeczywiste odpytywanie endpointu `/api/financing/calculate` z rozróżnieniem produktów: Kredyt konsumencki Inbank (`cmolkcx1i0002nqqx01mgk3cz`) dla trybu „Prywatnie” oraz Leasing operacyjny Vehis (`cmolkh9n60004nqqx2330k2sc`) dla trybu „Rozliczam B2B”.
+  - Zachowano mechanizm offline fallback do wzorcowego silnika `calculateInstallment` w przypadku braku łączności z API.
+- **2. Etykiety i Prezentacja Formy Finansowania**:
+  - Główne przyciski wyboru zachowują czytelne nazwy: `Prywatnie` oraz `Rozliczam B2B`.
+  - W nagłówku sekcji obok napisu `Forma finansowania` dodano dynamiczną etykietę: `Kredyt samochodowy` (gdy wybrana opcja Prywatnie) lub `Leasing operacyjny` (gdy wybrana opcja Rozliczam B2B).
+  - W podsumowaniu zapytania ofertowego (`inquiryInitialNotes`) precyzyjnie przekazywana jest nazwa produktu i forma prawna umowy.
+- **3. Ukrywanie Opcji Wykupu Końcowego dla Kredytu Konsumenckiego**:
+  - W trybie `Prywatnie` (Kredyt konsumencki) sekcja wykupu końcowego (`residualPct`) jest całkowicie ukrywana w interfejsie (`residualPct = 0%`, pełna spłata kapitału w ratach).
+  - W trybie `Rozliczam B2B` (Leasing operacyjny) opcja wykupu końcowego pozostaje w pełni dostępna (chipy 1%, 10%, 20%, 30%, 40% z wyliczeniem kwoty netto).
+- **4. Brandowane Hamburger Menu na Mobile (`PortalHeader.tsx`, `LandingHeader.tsx`, `landing.css`)**:
+  - Zastąpiono surowy tekst `Menu ☰` na stronie głównej oraz ściśnięty nagłówek po zalogowaniu minimalistycznym przyciskiem z 3 poziomymi kreskami w barwach Benefivo (zmienianym płynnie w `X` po otwarciu).
+  - W nagłówku zalogowanego pracownika (`PortalHeader.tsx`) dodano mobilny drawer zawierający wizytówkę pracownika i firmy, linki nawigacyjne (`Pulpit programu`, `Samochody`, `Najem długoterminowy`, `Moje zapytania`, `Moje dane i konto`) oraz przycisk wylogowania.
+- **5. Nowa Kolejność Wyświetlania Elementów na Mobile (Wzór Superauto.pl)**:
+  - Na ekranach mobilnych zastosowano sekwencję: 1. Galeria zdjęć -> 2. Tytuł i cena z ratą -> 3. Korzyści flotowe -> 4. Dane techniczne -> 5. Wyposażenie pojazdu -> 6. Informacje dodatkowe -> 7. Kalkulator finansowania.
+  - Zaimplementowano nowoczesną architekturę CSS z wykorzystaniem `display: contents` na kolumnach desktopowych, co pozwoliło uzyskać idealną kolejność flex-order na mobile bez duplikacji drzewa DOM, bez powielania ID `#kalkulator-finansowania` i z zachowaniem dostępności (a11y).
+- **6. Pływająca Dolna Belka na Mobile (Sticky Bottom Bar)**:
+  - Przyklejona do dolnej krawędzi ekranu belka mobilna z rozmyciem tła (`backdrop-blur-md`), zawierająca szacowaną ratę miesięczną (brutto dla prywatnie, netto dla B2B), przycisk szybkiego przewinięcia do kalkulatora `[ 🧮 ]` oraz główny przycisk `[ ZAPYTAJ O OFERTĘ ]` otwierający modal zapytania z gotową konfiguracją.
+
+### 90. Dopracowanie Mobilnych Belek i Układu Karty Pojazdu (Samochody Nowe i Najem Długoterminowy)
+
+Wdrożono 6 ulepszeń UI/UX na kartach pojazdów (`NewCarOfferDetailPage.tsx`, `RentalOfferDetailPage.tsx`, `ImageGallery.tsx`):
+
+- **1. Pełna Szerokość Elementów na Mobile (`w-full`)**:
+  - Wszystkie karty i sekcje na widokach szczegółów oferty (galeria, dane techniczne, wyposażenie, korzyści, informacje dodatkowe, kalkulator) zostały rozszerzone do pełnej szerokości ekranu na urządzeniach mobilnych (`w-full`), eliminując wąskie karty i puste marginesy boczne.
+- **2. Optymalizacja Featured Zdjęcia w Galerii (`ImageGallery.tsx`)**:
+  - Usunięto błąd silnika WebKit/Safari powodujący gigantyczne przeskalowanie zdjęcia głównego i rozpychanie siatki na urządzeniach mobilnych.
+  - Zastosowano pozycjonowanie absolutne obrazu `absolute inset-0 w-full h-full object-cover object-center` wewnątrz kontenera o zdefiniowanym współczynniku proporcji (`aspectClassName`) i maksymalnej wysokości `max-h-[460px]`.
+- **3. Usunięcie Plakietki „Cena dla Ciebie” z Nagłówka Kalkulatora**:
+  - Z nagłówka kalkulatora w `NewCarOfferDetailPage.tsx` usunięto plakietkę `Cena dla Ciebie`, upraszczając nagłówek do czystego tytułu `Kalkulator finansowania` i redukując szum wizualny.
+- **4. Pływająca Górna Belka na Mobile (Sticky Top Bar ze Scrollem)**:
+  - Zarówno w ofercie samochodów nowych, jak i w najmie długoterminowym zaimplementowano dyskretną górną belkę mobilną (`fixed top-0 inset-x-0 z-40`), która pojawia się płynnie po przewinięciu strony w dół (`scrollY > 220`).
+  - Belka prezentuje markę, model, rocznik/wersję oraz aktualną ratę miesięczną z wyróżnieniem netto/brutto na tle z rozmyciem (`bg-white/95 backdrop-blur-md border-b border-line`).
+- **5. Zoptymalizowana Dolna Belka na Mobile (Home, Kalkulator, CTA)**:
+  - Dolna belka mobilna (`fixed bottom-0 inset-x-0 z-40`) została uporządkowana do 3 kluczowych akcji:
+    1. Przycisk / odnośnik Home (`Home` z `lucide-react`) powracający do katalogu głównego (`/katalog` dla samochodów, `/najem` dla najmu),
+    2. Przycisk kalkulatora (`Calculator` z `lucide-react`) płynnie scrollujący stronę do kalkulatora finansowania / abonamentu,
+    3. Przycisk akcji `Zapytaj o ofertę` otwierający modal zapytania z prekonfigurowaną ratą.
+- **6. Spójność Architektury Pomiędzy Samochodami a Najmem**:
+  - W `RentalOfferDetailPage.tsx` wprowadzono analogiczny układ kolumn z `display: contents lg:block`, zoptymalizowaną sekwencję mobilną `order-1` do `order-7`, identyczne zachowanie belek pływających oraz dedykowany identyfikator `#kalkulator-najmu` dla płynnego scrollowania.
+- **7. Dopasowanie Wysokości Górnej Belki do Menu Głównego (`h-16`)**:
+  - Górna belka mobilna w obu widokach szczegółów (`NewCarOfferDetailPage.tsx` i `RentalOfferDetailPage.tsx`) otrzymała wysokość dokładnie odpowiadającą menu głównemu (`h-16`, 64px), dzięki czemu całkowicie pokrywa belkę nawigacji i zapobiega wystawaniu jej krawędzi od spodu.
+  - Zwiększono rozmiar typografii: marka i model do `text-base font-bold`, a rata miesięczna do wyrazistego `text-lg sm:text-xl font-black`.
+- **8. Bezpieczny Offset Przewijania do Kalkulatora**:
+  - Zaimplementowano programowy offset nagłówka (`headerOffset = 76px`) w funkcji `scrollToCalculator` oraz klasę `scroll-mt-20` na kartach kalkulatora w obu widokach, dzięki czemu po kliknięciu przycisku kalkulatora na dolnej belce początek formularza zatrzymuje się w optymalnym odstępie poniżej przyklejonego menu.
+- **9. Usunięcie Etykiety „W cenie abonamentu” i Brandowane Badge Usług**:
+  - Z nagłówka sekcji usług najmu usunięto zbędny napis `W cenie abonamentu`, a ikony pozycji wchodzących w skład raty zastąpiono limonkowymi badge'ami w kolorystyce Benefivo (`w-5 h-5 rounded-full bg-lime text-forest shadow-2xs`) z ikoną `Check`.
+- **10. Ukrycie Typu Stawki przed Pracownikiem**:
+  - Z widoku podsumowania kalkulatora najmu usunięto wiersz `Typ stawki: Stawka katalogowa / Stawka partnerska`. Informacja ta stanowi parametr operacyjny i została zarejestrowana na liście funkcjonalności jako widok dedykowany wyłącznie dla roli operatora platformy.
+- **11. Eliminacja Białego Pola na Dole Kalkulatora (WebKit/iOS Safari)**:
+  - Przebudowano strukturę kontenera kalkulatora na czysty podział dwusekcyjny wewnątrz karty z `overflow-hidden`. Wyeliminowano ujemne marginesy `-mx-6 -mb-6`, co definitywnie usunęło błąd silnika WebKit na urządzeniach mobilnych powodujący renderowanie białego marginesu na dole szarego boksu podsumowania raty.
