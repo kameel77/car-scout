@@ -117,8 +117,8 @@ function buildResidualChipOptions(max: number): number[] {
 
 export const NewCarOfferDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { config, isLoading: isBrandLoading } = useBrandConfig();
-  const { isLoading: isAuthLoading, logout, sessionError } = useAuth();
+  const { config } = useBrandConfig();
+  const { logout, sessionError } = useAuth();
   const navigate = useNavigate();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -138,7 +138,6 @@ export const NewCarOfferDetailPage: React.FC = () => {
 
   // Live API calculation state
   const [apiCalculation, setApiCalculation] = useState<{ installmentNet: number; installmentGross: number } | null>(null);
-  const [isCalculatingApi, setIsCalculatingApi] = useState<boolean>(false);
 
   // Inquiry Modal State
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState<boolean>(false);
@@ -240,7 +239,6 @@ export const NewCarOfferDetailPage: React.FC = () => {
     const controller = new AbortController();
 
     const timer = setTimeout(async () => {
-      setIsCalculatingApi(true);
       try {
         const isLeasing = contractType === 'LEASING_B2B';
         const grossPrice = offer.pricing.employeePricePln;
@@ -283,10 +281,6 @@ export const NewCarOfferDetailPage: React.FC = () => {
         if (!isCancelled) {
           setApiCalculation(null);
         }
-      } finally {
-        if (!isCancelled) {
-          setIsCalculatingApi(false);
-        }
       }
     }, 350);
 
@@ -295,6 +289,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
       clearTimeout(timer);
       controller.abort();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     offer?.id,
     offer?.pricing?.employeePricePln,
