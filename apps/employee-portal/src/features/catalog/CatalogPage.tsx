@@ -4,11 +4,7 @@ import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import {
   Car,
-  Fuel,
   Shield,
-  Award,
-  Building2,
-  Sparkles,
   AlertCircle,
   X,
   RefreshCw,
@@ -112,7 +108,7 @@ function formatTransmission(transmission: string): string {
 
 export const CatalogPage: React.FC = () => {
   const { config, isLoading: isBrandLoading } = useBrandConfig();
-  const { user, isLoading: isAuthLoading, logout, sessionError } = useAuth();
+  const { isLoading: isAuthLoading, logout, sessionError } = useAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -356,71 +352,21 @@ export const CatalogPage: React.FC = () => {
         </div>
       )}
 
-      {/* Program Subheader (Mobile only) */}
-      {user && (
-        <div className="md:hidden bg-lime/20 border-b border-line px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 text-ink">
-          <div className="flex items-center gap-1">
-            <Building2 className="h-3.5 w-3.5 text-forest" />
-            <span>Firma: <strong>{user.company?.name}</strong></span>
-          </div>
-          <span className="px-2 py-0.5 rounded-full bg-white text-ink font-semibold border border-line text-[11px]">
-            {user.program?.name}
-          </span>
-        </div>
-      )}
-
-      {/* Hero Banner */}
-      <div className="bg-white border-b border-line py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-lime text-ink rounded-full text-xs font-semibold mb-3">
-            <Sparkles className="h-3.5 w-3.5 text-ink" />
-            Program aktywny dla organizacji {user?.company?.name || ''}
-          </div>
-          <h1 className="text-3xl font-bold font-heading text-ink tracking-tight">
-            Dedykowana oferta samochodów dla pracowników
-          </h1>
-          <p className="mt-2 text-base text-muted max-w-3xl leading-relaxed">
-            Nowe samochody w najmie długoterminowym oraz leasingu na preferencyjnych warunkach partnerskich z pakietem benefitów pracowniczych.
-          </p>
-
-          <div className="mt-8">
-            <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
-              Pakiet benefitów w programie {user?.program?.name || 'partnerskim'}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-paper rounded-2xl border border-line shadow-xs">
-                <Shield className="h-6 w-6 text-forest flex-shrink-0" />
-                <div>
-                  <div className="font-semibold text-sm text-ink">Specjalne warunki flotowe</div>
-                  <div className="text-xs text-muted mt-0.5">Dedykowane matryce i rabaty cenowe</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-paper rounded-2xl border border-line shadow-xs">
-                <Fuel className="h-6 w-6 text-forest flex-shrink-0" />
-                <div>
-                  <div className="font-semibold text-sm text-ink">Pakiet paliwowy Moya</div>
-                  <div className="text-xs text-muted mt-0.5">Karta z zasileniem i rabat na stacjach</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-paper rounded-2xl border border-line shadow-xs">
-                <Award className="h-6 w-6 text-forest flex-shrink-0" />
-                <div>
-                  <div className="font-semibold text-sm text-ink">Opieka doradcy Motolii</div>
-                  <div className="text-xs text-muted mt-0.5">Indywidualny kontakt i wsparcie formalności</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Real Catalog Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold font-heading text-ink tracking-tight flex items-center gap-2.5">
+            <Car className="h-6 w-6 text-forest" />
+            Samochody
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            Nowe samochody w kredycie samochodowym oraz leasingu na preferencyjnych warunkach partnerskich.
+          </p>
+        </div>
+
         {/* Filters Bar */}
         {!offersError && (
-          <div className="bg-white border border-line rounded-2xl p-4 mb-6 shadow-xs space-y-3">
+          <div data-testid="filters-card" className="bg-white border border-line rounded-2xl p-4 shadow-xs space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-ink">
                 <SlidersHorizontal className="h-4 w-4 text-ink" />
@@ -437,6 +383,7 @@ export const CatalogPage: React.FC = () => {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    aria-label="Szukaj po marce lub modelu"
                     placeholder="Szukaj po marce lub modelu..."
                     className="w-full pl-9 pr-3 py-1.5 border border-line rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ink bg-white shadow-xs"
                   />

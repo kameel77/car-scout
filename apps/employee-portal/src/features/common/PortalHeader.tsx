@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { UserCircle2, Building2, LogOut, ChevronDown, KeyRound, Settings, FileText } from 'lucide-react';
+import { UserCircle2, Building2, LogOut, ChevronDown, KeyRound, Settings, FileText, LayoutDashboard } from 'lucide-react';
 import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 
@@ -11,7 +11,7 @@ export interface PortalHeaderProps {
 
 export const PortalHeader: React.FC<PortalHeaderProps> = ({ onLogout, isLoggingOut = false }) => {
   const { config } = useBrandConfig();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   const [logoError, setLogoError] = useState(false);
   const [internalLoggingOut, setInternalLoggingOut] = useState(false);
@@ -64,7 +64,10 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({ onLogout, isLoggingO
     <header className="bg-white border-b border-line sticky top-0 z-20 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link to="/katalog" className="flex items-center">
+          <Link
+            to={isAuthenticated || isLoading ? '/dashboard' : '/'}
+            className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-forest rounded-lg"
+          >
             {config.brandLogoUrl && !logoError ? (
               <img
                 src={config.brandLogoUrl}
@@ -136,6 +139,16 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({ onLogout, isLoggingO
                     <p className="text-[11px] text-muted uppercase tracking-wider font-bold">Firma</p>
                     <p className="text-xs font-semibold text-ink">{user.company?.name || 'Firma'}</p>
                   </div>
+
+                  <Link
+                    to="/dashboard"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-ink hover:bg-paper transition-colors font-medium min-h-[44px]"
+                  >
+                    <LayoutDashboard className="h-4 w-4 text-muted" />
+                    <span>Pulpit programu</span>
+                  </Link>
 
                   <Link
                     to="/zapytania"

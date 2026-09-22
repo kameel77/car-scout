@@ -121,7 +121,7 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders employee info and company/program badges in header', async () => {
+  it('renders employee info and navigation tabs in header', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
     vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
       offers: mockOffersList,
@@ -141,8 +141,10 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     await waitFor(() => {
       expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
       expect(screen.getAllByText('Action S.A.').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Action Flota Plus').length).toBeGreaterThanOrEqual(1);
     });
+
+    expect(screen.getByRole('link', { name: /Samochody/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Najem długoterminowy/i })).toBeInTheDocument();
   });
 
   it('renders live offers list with exact pricing, discount badges, and benefit packages', async () => {
@@ -165,6 +167,11 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('catalog-offers-grid')).toBeInTheDocument();
     });
+
+    expect(
+      screen.getByRole('heading', { name: 'Samochody', level: 1 })
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('filters-card')).toBeInTheDocument();
 
     // Toyota Yaris
     expect(screen.getByText(/Toyota Yaris/i)).toBeInTheDocument();

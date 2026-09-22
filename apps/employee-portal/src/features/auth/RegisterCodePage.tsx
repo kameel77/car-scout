@@ -133,7 +133,7 @@ export const RegisterCodePage: React.FC = () => {
         phone: trimmedPhone || undefined,
         password,
       });
-      navigate('/katalog', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

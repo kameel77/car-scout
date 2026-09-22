@@ -80,14 +80,14 @@ export const LandingHeader: React.FC<LandingHeaderProps> = () => {
         {user ? (
           <div className="flex items-center gap-2">
             <Link
-              to="/katalog"
+              to="/dashboard"
               className="nav-login"
               onClick={() => {
                 setMenuOpen(false);
                 handleLoginClick();
               }}
             >
-              Samochody ({user.firstName})
+              Pulpit ({user.firstName})
             </Link>
             <button
               type="button"

@@ -46,6 +46,7 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
     // No secondary text next to logo
     const link = logo.closest('a');
     expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/dashboard');
     expect(link?.textContent).toBe(''); // Only the img inside
   });
 
@@ -116,6 +117,10 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
     expect(userBtn).toHaveAttribute('aria-expanded', 'true');
 
     // Check menu items
+    const dashboardLink = screen.getByRole('menuitem', { name: /Pulpit programu/i });
+    expect(dashboardLink).toBeInTheDocument();
+    expect(dashboardLink).toHaveAttribute('href', '/dashboard');
+
     const zapytaniaLink = screen.getByRole('menuitem', { name: /Moje zapytania/i });
     expect(zapytaniaLink).toBeInTheDocument();
     expect(zapytaniaLink).toHaveAttribute('href', '/zapytania');
@@ -131,5 +136,23 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
     // Press Escape to close
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(userBtn).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('links logo to / when user is not authenticated and not loading', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+
+    render(
+      <BrandProvider initialConfig={{ brandName: 'Benefivo', brandLogoUrl: '/static/logo-dark.svg', portalUrl: '', apiUrl: '/api' }}>
+        <AuthProvider>
+          <MemoryRouter>
+            <PortalHeader />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    const logo = await screen.findByRole('img', { name: 'Benefivo' });
+    const link = logo.closest('a');
+    expect(link).toHaveAttribute('href', '/');
   });
 });

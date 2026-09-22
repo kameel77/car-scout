@@ -31,8 +31,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenEmployeeDialog }
 
         <div className="hero-actions">
           {isAuthenticated ? (
-            <Link className="button button-lime" to="/katalog">
-              Przejdź do katalogu <span aria-hidden="true">&rarr;</span>
+            <Link className="button button-lime" to="/dashboard">
+              Przejdź do pulpitu <span aria-hidden="true">&rarr;</span>
             </Link>
           ) : (
             <>

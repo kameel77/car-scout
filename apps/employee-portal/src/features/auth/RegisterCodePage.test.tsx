@@ -74,7 +74,7 @@ describe('RegisterCodePage Component', () => {
     });
   });
 
-  it('submits registration successfully and navigates to /katalog', async () => {
+  it('submits registration successfully and navigates to /dashboard', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
     vi.spyOn(authApi, 'validateCompanyCode').mockResolvedValue({
       valid: true,
@@ -99,7 +99,7 @@ describe('RegisterCodePage Component', () => {
           <MemoryRouter initialEntries={['/rejestracja']}>
             <Routes>
               <Route path="/rejestracja" element={<RegisterCodePage />} />
-              <Route path="/katalog" element={<div>Widok Katalogu</div>} />
+              <Route path="/dashboard" element={<div>Pulpit Programu</div>} />
             </Routes>
           </MemoryRouter>
         </AuthProvider>
@@ -132,7 +132,7 @@ describe('RegisterCodePage Component', () => {
         lastName: 'Kowalski',
         phone: '+48123456789',
       });
-      expect(screen.getByText('Widok Katalogu')).toBeInTheDocument();
+      expect(screen.getByText('Pulpit Programu')).toBeInTheDocument();
     });
   });
 

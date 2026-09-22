@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { RentalCatalogPage } from './RentalCatalogPage';
@@ -298,6 +298,41 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
     fireEvent.click(screen.getByRole('button', { name: '1500 - 2500' }));
     expect(screen.queryByText('Toyota Corolla')).not.toBeInTheDocument();
     expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+  });
+
+  it('renders search input inside filters card and filters offers by search term', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: mockRentalOffersList,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+    });
+
+    const filtersCard = screen.getByTestId('filters-card');
+    expect(filtersCard).toBeInTheDocument();
+
+    const searchInput = within(filtersCard).getByPlaceholderText(/Szukaj po marce lub modelu/i);
+    expect(searchInput).toBeInTheDocument();
+    expect(searchInput).toHaveAttribute('aria-label', 'Szukaj po marce lub modelu');
+
+    fireEvent.change(searchInput, { target: { value: 'Corolla' } });
+
+    expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+    expect(screen.queryByText('Skoda Octavia')).not.toBeInTheDocument();
   });
 });
 

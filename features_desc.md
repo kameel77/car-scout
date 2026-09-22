@@ -1318,3 +1318,34 @@ Wdrożono 5 poprawek wizualnych i funkcjonalnych w widokach szczegółów ofert:
 - **5. Zastąpienie Etykiety „Wartość alternatywna:” Przejrzystą Kwotą w Nawiasie**:
   - Wyeliminowano nieintuicyjną etykietę `Wartość alternatywna:` z karty bohatera cenowego oraz kalkulatora.
   - Alternatywna stawka (odpowiednio brutto dla firm lub netto dla konsumentów) jest podawana w nawiasie obok raty głównej: `({kwota} zł brutto)` / `({kwota} zł netto)` z zachowaniem mniejszego fontu (`text-xs text-muted`) jako wartości drugorzędnej.
+
+### 88. Dedykowany Pulpit Pracownika po Zalogowaniu oraz Ujednolicenie Paska Filtrów w Najmie
+
+Wdrożono dedykowany pulpit powitalny pracownika oraz ujednolicono układ filtrów pomiędzy katalogiem samochodów a najmem:
+
+- **1. Dedykowany Pulpit Pracownika (`/dashboard` - ProgramDashboardPage)**:
+  - Utworzono podstronę `/dashboard` stanowiącą główny punkt wejścia dla zalogowanego pracownika po rejestracji lub zalogowaniu.
+  - Sekcja statusu programu: zielona plakietka `✨ Program aktywny dla organizacji {Firma}`, nagłówek H1 `Dedykowana oferta samochodów dla pracowników` oraz 3 kafelki benefitów (`Specjalne warunki flotowe`, `Pakiet paliwowy Moya`, `Opieka doradcy Motolii`).
+  - Karty szybkiego dostępu: bezpośrednie kafelki nawigacyjne do `Samochody nowe` (`/katalog`), `Najem długoterminowy` (`/najem`) oraz `Moje zapytania` (`/zapytania`).
+  - Sposób działania programu („Jak działa program partnerski Benefivo?”): 4 filary (Rabaty flotowe, Wybór B2B lub prywatnie, 0 zł ukrytych opłat, Dedykowany doradca).
+  - Proces korzystania z oferty („Krok po kroku: Jak odebrać auto?”): 4 numerowane kroki (01: Wybór auta i kalkulacja, 02: Bezpłatne zapytanie online, 03: Rozmowa z doradcą w 24h, 04: Podpisanie umowy i odbiór).
+  - Sekcja pomocy i bezpośredni kontakt z doradcami floty Motolii.
+- **2. Nawigacja i Routing**:
+  - W `PortalHeader.tsx`: kliknięcie w logo kieruje zalogowanego użytkownika na `/dashboard`. W rozwijanym menu profilu dodano pozycję `Pulpit programu` (z ikoną `LayoutDashboard`) jako pierwszy element listy.
+  - W `LoginPage.tsx` oraz `RegisterCodePage.tsx`: domyślny fallback po pomyślnym zalogowaniu / rejestracji został zmieniony na `/dashboard` (przy zachowaniu `location.state.from` dla deep-linków).
+  - W `LandingHeader.tsx` i `HeroSection.tsx`: przyciski przejścia dla zalogowanego użytkownika kierują na `/dashboard`.
+- **3. Ujednolicenie Paska Filtrów w Najmie Długoterminowym (`RentalCatalogPage.tsx`)**:
+  - Usunięto zewnętrzne pole wyszukiwania z nagłówka strony najmu.
+  - Wyszukiwarkę przeniesiono do prawego górnego rogu karty filtrów (`data-testid="filters-card"`), obok licznika dostępnych ofert i przycisku czyszczenia filtrów (`w-full sm:w-64`, `aria-label="Szukaj po marce lub modelu"`), osiągając 100% spójności wizualnej i funkcjonalnej z katalogiem samochodów.
+- **4. Kompaktowy Nagłówek Katalogu Samochodów (`CatalogPage.tsx`)**:
+  - Przeniesiono baner korzyści na `/dashboard`, wprowadzając w katalogu czysty nagłówek H1 `Samochody` z podtytułem o kredycie i leasingu.
+  - Usunięto nieużywane ikony i zmienne, dodano `data-testid="filters-card"` oraz etykietę dostępności na wyszukiwarce.
+- **5. Bezpieczeństwo Crawlerów (SEO)**:
+  - W `docker-entrypoint.sh` dodano wpisy `Disallow: /dashboard` oraz `Disallow: /konto` do dynamicznego pliku `robots.txt`, zabezpieczając prywatne trasy pracownicze przed indeksacją.
+- **6. Spójność Wizualna i Responsywny Padding Sekcji Benefitów (`landing.css`)**:
+  - W sekcji `.benefits-section` na stronie głównej wyrównano padding wewnętrzny do standardu karty pracodawcy (`padding: 50px 48px;` na desktopie, `padding: 36px 30px;` poniżej 1100px oraz `padding: 30px 20px;` poniżej 720px), eliminując błąd przyklejenia treści do krawędzi zielonego tła (poprzednio brak `padding-inline`).
+- **7. Zalecenia Audytu Claude Code i Dynamiczny Brand Config**:
+  - W `ProgramDashboardPage.tsx` zintegrowano dynamiczne wartości marki (`config.brandName`, `config.b2bEmail`) z `BrandContext` zamiast zahardkodowanych ciągów tekstowych.
+  - Zastąpiono nieobsługiwaną klasę `hover:text-forest-dark` bezpiecznym wariantem `hover:text-forest/80`.
+  - W `PortalHeader.tsx` odnośnik logo został zabezpieczony warunkiem `to={isAuthenticated || isLoading ? '/dashboard' : '/'}`, gwarantując powrót na stronę główną dla sesji niezalogowanej.
+  - W `RentalCatalogPage.tsx` ujednolicono strukturę odstępów (`space-y-6` na znaczniku `<main>`) symetrycznie do `CatalogPage.tsx`.

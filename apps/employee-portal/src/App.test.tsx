@@ -176,7 +176,34 @@ describe('Employee Portal - Frontend Integration Suite', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
-        expect(screen.getByText('Dedykowana oferta samochodów dla pracowników')).toBeInTheDocument();
+        expect(
+          screen.getByRole('heading', { name: 'Samochody', level: 1 })
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('displays authenticated employee dashboard when authenticated on /dashboard', async () => {
+      window.history.pushState({}, '', '/dashboard');
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
+        id: 'acc_1',
+        email: 'jan@firma.pl',
+        firstName: 'Jan',
+        lastName: 'Kowalski',
+        company: { id: 'c1', name: 'Firma S.A.', slug: 'firma' },
+        program: { id: 'p1', name: 'Program Flotowy', slug: 'flota' },
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
+        expect(
+          screen.getByRole('heading', {
+            name: 'Dedykowana oferta samochodów dla pracowników',
+            level: 1,
+          })
+        ).toBeInTheDocument();
+        expect(screen.getByText(/Program aktywny dla organizacji Firma S\.A\./i)).toBeInTheDocument();
       });
     });
   });

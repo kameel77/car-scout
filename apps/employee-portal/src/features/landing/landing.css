@@ -595,7 +595,7 @@
 /* Benefits Section */
 .benefivo-landing .benefits-section {
   background: #eef1e6;
-  padding-block: 65px;
+  padding: 50px 48px;
   border-radius: 32px;
   margin-block: 30px;
 }
@@ -1030,6 +1030,9 @@
   .benefivo-landing .employer-copy {
     padding: 36px 30px;
   }
+  .benefivo-landing .benefits-section {
+    padding: 36px 30px;
+  }
 }
 
 @media (max-width: 800px) {
@@ -1071,6 +1074,12 @@
 @media (max-width: 720px) {
   .benefivo-landing .wrap {
     width: calc(100% - 36px);
+  }
+  .benefivo-landing .benefits-section {
+    padding: 30px 20px;
+  }
+  .benefivo-landing .employer-copy {
+    padding: 30px 20px;
   }
   .benefivo-landing .site-header {
     height: 84px;

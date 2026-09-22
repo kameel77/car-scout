@@ -342,52 +342,53 @@ export const RentalCatalogPage: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header & Search */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold font-heading text-ink tracking-tight flex items-center gap-2.5">
-              <Layers className="h-6 w-6 text-forest" />
-              Najem długoterminowy
-            </h1>
-            <p className="text-sm text-muted mt-1">
-              Nowe samochody w stałym abonamencie z pełnym pakietem serwisowym i ubezpieczeniem.
-            </p>
-          </div>
-
-          <div className="relative max-w-md w-full">
-            <Search className="h-4 w-4 absolute left-3 top-3 text-muted" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Szukaj po marce lub modelu..."
-              className="w-full pl-9 pr-4 py-2 border border-line rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ink bg-white shadow-xs text-ink"
-            />
-          </div>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold font-heading text-ink tracking-tight flex items-center gap-2.5">
+            <Layers className="h-6 w-6 text-forest" />
+            Najem długoterminowy
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            Nowe samochody w stałym abonamencie z pełnym pakietem serwisowym i ubezpieczeniem.
+          </p>
         </div>
 
         {/* Filters Bar */}
         {!offersError && (
-          <div className="bg-white border border-line rounded-2xl p-4 mb-6 shadow-xs space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+          <div data-testid="filters-card" className="bg-white border border-line rounded-2xl p-4 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <SlidersHorizontal className="h-4 w-4 text-forest" />
+                <SlidersHorizontal className="h-4 w-4 text-ink" />
                 <span>Filtry</span>
                 <span className="text-xs font-normal text-muted">
                   ({formatCountPl(filteredOffers.length, ['dostępna oferta', 'dostępne oferty', 'dostępnych ofert'])})
                 </span>
               </div>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink hover:underline transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Wyczyść filtry
-                </button>
-              )}
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-full sm:w-64">
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    aria-label="Szukaj po marce lub modelu"
+                    placeholder="Szukaj po marce lub modelu..."
+                    className="w-full pl-9 pr-3 py-1.5 border border-line rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ink bg-white shadow-xs"
+                  />
+                </div>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink hover:underline transition-colors shrink-0"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Wyczyść filtry
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Primary filters row: Rate (1st), Make (2nd), Sort, More filters button */}

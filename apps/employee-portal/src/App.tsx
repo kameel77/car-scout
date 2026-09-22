@@ -23,6 +23,9 @@ const PrivacyPolicyPage = lazy(() =>
 );
 
 // Lazy load heavy internal authenticated catalog & inquiry modules
+const ProgramDashboardPage = lazy(() =>
+  import('./features/dashboard/ProgramDashboardPage').then((m) => ({ default: m.ProgramDashboardPage }))
+);
 const CatalogPage = lazy(() =>
   import('./features/catalog/CatalogPage').then((m) => ({ default: m.CatalogPage }))
 );
@@ -81,6 +84,16 @@ export const AppRoutes: React.FC = () => {
       <Route path="/rejestracja" element={<RegisterCodePage />} />
       <Route path="/zapomnialem-hasla" element={<ForgotPasswordPage />} />
       <Route path="/reset-hasla" element={<ResetPasswordPage />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<FallbackSpinner />}>
+              <ProgramDashboardPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/katalog"
         element={

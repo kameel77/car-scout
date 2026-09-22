@@ -40,9 +40,9 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await login({ email: trimmedEmail, password });
-      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/katalog';
+      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard';
       // Tylko bezpieczne wewnętrzne ścieżki
-      const safeTarget = from.startsWith('/') && !from.startsWith('//') ? from : '/katalog';
+      const safeTarget = from.startsWith('/') && !from.startsWith('//') ? from : '/dashboard';
       navigate(safeTarget, { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {

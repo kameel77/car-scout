@@ -129,4 +129,23 @@ describe('Benefivo LandingPage Component Suite', () => {
     fireEvent.click(menuButton);
     expect(menuButton).toHaveAttribute('aria-expanded', 'false');
   });
+
+  it('renders dashboard CTA buttons for authenticated user', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
+      id: 'acc_123',
+      email: 'jan@firma.pl',
+      firstName: 'Jan',
+      lastName: 'Kowalski',
+      company: { id: 'c1', name: 'Firma Sp. z o.o.', slug: 'firma' },
+      program: { id: 'p1', name: 'Flota', slug: 'flota' },
+    });
+
+    renderLandingPage();
+
+    await waitFor(() => {
+      const dashboardLinks = screen.getAllByRole('link', { name: /Pulpit|Przejdź do pulpitu/i });
+      expect(dashboardLinks.length).toBeGreaterThan(0);
+      expect(dashboardLinks.some((l) => l.getAttribute('href') === '/dashboard')).toBe(true);
+    });
+  });
 });

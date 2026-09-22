@@ -47,6 +47,8 @@ Allow: /
 Allow: /dla-firm
 Allow: /regulamin
 Allow: /prywatnosc
+Disallow: /dashboard
+Disallow: /konto
 Disallow: /katalog
 Disallow: /najem
 Disallow: /zapytania
