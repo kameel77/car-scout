@@ -58,7 +58,7 @@ export const FaqSection: React.FC = () => {
             <span aria-hidden="true">+</span>
           </summary>
           <p>
-            Skorzystaj z przycisku „Chcę skorzystać”, aby skopiować gotową propozycję wiadomości do swojego działu HR. Możesz też polecić program osobom odpowiedzialnym za benefity w Twojej organizacji.
+            Kliknij „Moja firma nie ma jeszcze Benefivo”. Przygotowaliśmy krótką wiadomość, którą możesz przesłać osobie odpowiedzialnej za benefity w Twojej firmie.
           </p>
         </details>
       </div>

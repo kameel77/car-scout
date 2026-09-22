@@ -11,9 +11,7 @@ export const BenefitsSection: React.FC = () => {
             początek.
           </h2>
           <p>
-            Codzienne wydatki? Pomyśleliśmy i o nich.
-            <br />
-            Poznaj korzyści planowane w programie Benefivo.
+            W zależności od programu Twojej firmy możesz zyskać dostęp także do ofert związanych z tankowaniem, serwisem, oponami i pielęgnacją auta.
           </p>
           <a className="text-link mt-4" href="#jak-to-dziala">
             Zobacz, jak dołączyć <span aria-hidden="true">&rarr;</span>
@@ -42,27 +40,42 @@ export const BenefitsSection: React.FC = () => {
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 21V3h10v18M2 21h14M4 10h10m0 3h3v5a2 2 0 0 0 4 0V9l-4-4m2 2v4h2" />
             </svg>
-            <h3>Karta paliwowa</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3>Karta paliwowa</h3>
+              <span className="text-[11px] font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
+                Zakres zależy od programu firmy
+              </span>
+            </div>
             <p>Wygodne rozliczenia i korzyści przy tankowaniu.</p>
           </div>
           <div>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m4 10 2-6h12l2 6M3 10h18v8H3zM6 18v2m12-2v2M6 14h2m8 0h2" />
             </svg>
-            <h3>Serwis i opony</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3>Serwis i opony</h3>
+              <span className="text-[11px] font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
+                Zakres zależy od programu firmy
+              </span>
+            </div>
             <p>Kompleksowa opieka i zniżki na obsługę samochodu.</p>
           </div>
           <div>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z" />
             </svg>
-            <h3>Myjnie i pielęgnacja</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3>Myjnie i pielęgnacja</h3>
+              <span className="text-[11px] font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
+                Zakres zależy od programu firmy
+              </span>
+            </div>
             <p>Czystość i komfort na każdej trasie.</p>
           </div>
         </div>
 
         <p className="fine-print col-span-full">
-          Zakres benefitów i partnerzy zostaną sprecyzowani w ofercie programu dla danej firmy. Prezentowana karta jest wizualizacją koncepcji.
+          Prezentowana karta jest wizualizacją koncepcji. Zakres benefitów i partnerzy zostaną sprecyzowani w ofercie programu dla danej firmy.
         </p>
       </div>
     </section>

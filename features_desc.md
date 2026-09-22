@@ -1406,3 +1406,41 @@ Wdrożono 6 ulepszeń UI/UX na kartach pojazdów (`NewCarOfferDetailPage.tsx`, `
   - Z widoku podsumowania kalkulatora najmu usunięto wiersz `Typ stawki: Stawka katalogowa / Stawka partnerska`. Informacja ta stanowi parametr operacyjny i została zarejestrowana na liście funkcjonalności jako widok dedykowany wyłącznie dla roli operatora platformy.
 - **11. Eliminacja Białego Pola na Dole Kalkulatora (WebKit/iOS Safari)**:
   - Przebudowano strukturę kontenera kalkulatora na czysty podział dwusekcyjny wewnątrz karty z `overflow-hidden`. Wyeliminowano ujemne marginesy `-mx-6 -mb-6`, co definitywnie usunęło błąd silnika WebKit na urządzeniach mobilnych powodujący renderowanie białego marginesu na dole szarego boksu podsumowania raty.
+
+### 91. Aktualizacja Treści i Hierarchii CTA Benefivo (Homepage i Dla Firm)
+
+Wdrożono kompleksowe odświeżenie treści oraz hierarchii przycisków na publicznych stronach serwisu Benefivo (`LandingPage.tsx` oraz `EmployerB2bPage.tsx`):
+
+- **1. Strona główna (`/`) - Komunikacja do Pracownika**:
+  - **Hero**: Zachowano nagłówek `Dobre rzeczy jadą z Tobą.`, wprowadzono nowy opis: *"Samochód do pracy, na weekend i do codziennych spraw? Sprawdź oferty najmu i leasingu przygotowane dla pracowników Twojej firmy. Wybierz rozwiązanie, które pasuje do Twoich planów."*.
+  - **Hierarchia CTA**:
+    - Główny przycisk: `Mam kod firmy. Aktywuję dostęp` (prowadzi do `/rejestracja`).
+    - Drugi przycisk: `Moja firma nie ma jeszcze Benefivo` (otwiera modal z gotową wiadomością do HR).
+    - Link dla pracodawcy: dyskretny odnośnik tekstowy `Jesteś pracodawcą? Przejdź do oferty dla firm →` poniżej głównych przycisków pracowniczych.
+  - **Sekcja „Jak to działa” (`StepsSection.tsx`)**: Trzy konkretne, lżejsze kroki:
+    - 01: *Sprawdź dostęp w swojej firmie* - *"Masz kod? Aktywuj konto. Jeśli Twoja firma nie korzysta jeszcze z Benefivo, wyślij gotową propozycję do HR."*
+    - 02: *Znajdź ofertę dla siebie* - *"Porównaj samochody, formy finansowania i warunki dostępne w programie Twojej firmy."*
+    - 03: *Wybierz i ruszaj* - *"Poznaj pełne warunki, złóż wniosek i podpisz umowę, jeśli oferta Ci odpowiada."*
+  - **Sekcja korzyści (`BenefitsSection.tsx`)**: Nowe wprowadzenie: *"Auto to dopiero początek. W zależności od programu Twojej firmy możesz zyskać dostęp także do ofert związanych z tankowaniem, serwisem, oponami i pielęgnacją auta."*, dodanie oznaczeń *"Zakres zależy od programu firmy"* w limonkowych plakietkach przy każdej usłudze.
+  - **FAQ (`FaqSection.tsx`)**: Nowa odpowiedź na pytanie o brak programu w firmie ze wskazaniem na przycisk `Moja firma nie ma jeszcze Benefivo`.
+  - **Ujednolicenie wielkości firm**: Usunięto sformułowanie *"Dla średnich i dużych firm"* na rzecz uniwersalnego *"DLA FIRM"*.
+
+- **2. Strona „Dla firm” (`/dla-firm/`) - Komunikacja do Pracodawcy i HR**:
+  - **Hero**: Nagłówek `Daj pracownikom więcej możliwości za kierownicą.` z podtytułem `Bez kosztów dla firmy.`; nowy opis: *"Podpisz umowę o współpracy, a Twój zespół otrzyma dostęp do specjalnych ofert na samochody i usługi motoryzacyjne. Pracownicy sami zdecydują, czy chcą z nich skorzystać. Przygotowaniem ofert i obsługą programu zajmuje się Motolia."*.
+  - **Przycisk Hero**: Nowy przycisk `Porozmawiajmy o współpracy` z płynnym przewijaniem strony do formularza kontaktowego `#kontakt-b2b`.
+  - **3 Filary Korzyści**:
+    - 01: *Bez kosztów po stronie firmy* - *"Udostępniasz pracownikom program na podstawie umowy o współpracy. Sam dostęp do ofert nie wymaga finansowania samochodów przez pracodawcę."*
+    - 02: *Oferty przygotowane dla Twojego zespołu* - *"Pracownicy otrzymują dostęp do warunków i propozycji motoryzacyjnych dostępnych w programie ich firmy."*
+    - 03: *Obsługa po naszej stronie* - *"Motolia przygotowuje ofertę, wspiera pracowników w wyborze rozwiązania i prowadzi dalszy proces związany z samochodem."*
+  - **Nowa Sekcja „Jak zaczynamy?”**: Cztery czytelne kroki wdrożenia przed formularzem leada:
+    - 01: *"Poznajemy potrzeby Twojej firmy i zespołu."*
+    - 02: *"Ustalamy zakres programu i podpisujemy umowę."*
+    - 03: *"Przygotowujemy dostęp oraz materiały do przekazania pracownikom."*
+    - 04: *"Pracownicy samodzielnie przeglądają oferty i kontaktują się z Motolią."*
+  - **Formularz kontaktowy (`#kontakt-b2b`)**:
+    - Nagłówek: `Sprawdźmy, jak Benefivo może działać w Twojej firmie`.
+    - Podtytuł: `Zostaw kontakt. Porozmawiamy o potrzebach zespołu i przygotujemy propozycję współpracy.`.
+    - Przycisk wysyłki: `Zapytaj o współpracę`.
+    - Nienaruszona logika walidacji (Zod/NIP/email/telefon), ochrona antyspamowa Cloudflare Turnstile oraz endpoint `POST /api/leads`.
+  - **Synchronizacja SEO i Pre-rendering (`generate-static-pages.js`)**:
+    - Zaktualizowano meta opisy OpenGraph i Twitter Cards dla stron `index.html` oraz `dla-firm.html`.
