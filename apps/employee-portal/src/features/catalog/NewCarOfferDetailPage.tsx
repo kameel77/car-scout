@@ -232,7 +232,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
 - Cena pracownicza: ${formatPln(offer.pricing.employeePricePln)} zł brutto
 - Finansowanie: Rata na zapytanie (prośba o indywidualną kalkulację doradcy)`;
     }
-    const typeLabel = contractType === 'CONSUMER' ? 'Kredyt / Finansowanie konsumenckie' : 'Leasing operacyjny (B2B)';
+    const typeLabel = contractType === 'CONSUMER' ? 'Kredyt samochodowy' : 'Leasing operacyjny (B2B)';
     const productLabelLine = selectedOption
       ? `\n- Wybrany produkt finansowania: ${selectedOption.label}`
       : '';
@@ -497,7 +497,7 @@ ${rateLine}${productLabelLine}`;
                         Szacowana rata miesięczna
                       </span>
                       <span className="text-xs font-semibold text-forest">
-                        {contractType === 'CONSUMER' ? 'Kredyt konsumencki' : 'Leasing operacyjny'}
+                        {contractType === 'CONSUMER' ? 'Kredyt samochodowy' : 'Leasing operacyjny'}
                       </span>
                     </div>
                     <div className="flex items-baseline gap-2">

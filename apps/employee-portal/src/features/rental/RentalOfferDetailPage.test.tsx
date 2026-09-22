@@ -134,7 +134,7 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     // Verify default discrete option selected: 36M / 20k km / 0% -> 1450 zł netto / 1783,5 zł brutto
     expect(screen.getAllByText(/1\s?450 zł/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/1\s?783,5 zł/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Stawka partnerska')).toBeInTheDocument();
+    expect(screen.getAllByText('Stawka partnerska').length).toBeGreaterThanOrEqual(1);
   });
 
   it('updates monthly rate when user clicks on different contract parameters', async () => {

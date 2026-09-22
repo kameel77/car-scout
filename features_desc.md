@@ -1265,3 +1265,23 @@ Wdrożono pakiet 7 kluczowych usprawnień interfejsu i logiki prezentacji ofert 
 - **7. Deterministyczny Separator Tysięcy we Wszystkich Kalkulatorach i Kartach**:
   - Zaimplementowano helper `formatPln()` w `src/features/catalog/financing.ts`, który zastąpił natywne `toLocaleString('pl-PL')` w całym portalu pracowniczym.
   - Helper eliminuje problem znikających wąskich spacji (`\u202F`) w fontach webowych, formatując liczby ze stałą spacją ASCII jako separatorem tysięcy (np. `81 800 zł`), zarówno dla liczb całkowitych, jak i kwot z częścią dziesiętną.
+
+### 85. Ujednolicenie Karty Najmu z Ofertą Samochodową, Kredyt Samochodowy i Zakres Usług
+
+Wdrożono 3 kluczowe doprecyzowania interfejsu ofertowego w portalu pracowniczym:
+
+- **1. Ujednolicenie Układu Podstrony Najmu (`RentalOfferDetailPage.tsx`)**:
+  - Usunięto horyzontalny, pełnoszerokościowy nagłówek rozciągający się ponad całym gridem.
+  - Karta nagłówkowo-cenowa (plakietki B2B/B2C/stawka partnerska, rocznik, tytuł H1 marka i model, wersja, bohater raty miesięcznej oraz przekreślona cena katalogowa) została przeniesiona na szczyt prawej kolumny (`lg:col-span-5 space-y-6 order-1 lg:order-2`), dokładnie tak jak na podstronie oferty samochodowej (`NewCarOfferDetailPage.tsx`).
+  - Lewa kolumna (`lg:col-span-7 space-y-6 order-2 lg:order-1`) rozpoczyna się bezpośrednio pod breadcrumbs od galerii zdjęć, specyfikacji technicznej i akordeonów wyposażenia.
+- **2. Zmiana Nazwy: „Kredyt konsumencki” -> „Kredyt samochodowy”**:
+  - W konfiguracji finansowania (`apps/employee-portal/src/features/catalog/financing.ts`) oraz na karcie oferty samochodowej (`NewCarOfferDetailPage.tsx`) zastąpiono określenia „Kredyt konsumencki” oraz „Kredyt / Finansowanie konsumenckie” profesjonalnym terminem „Kredyt samochodowy”.
+- **3. Zakres Usług w Racie Najmu z Car-Scout (Usunięcie „Abonament All-inclusive”)**:
+  - Usunięto etykiety „Abonament all-inclusive” z karty bohatera cenowego oraz zieloną plakietkę z nagłówka kalkulatora abonamentu.
+  - Wewnątrz karty konfiguratora abonamentu (bezpośrednio przed blokiem wyniku kalkulacji i przyciskiem CTA) dodano sekcję „Zakres usług w racie najmu” („W cenie abonamentu”) z ikonami checkmark:
+    - Serwis i przeglądy okresowe (ASO)
+    - Pełne ubezpieczenie (OC, AC, NNW)
+    - Obsługa i wymiana opon
+    - Całodobowe Assistance 24/7 i auto zastępcze
+  - Backend (`employee-rental-catalog.routes.ts`) oraz klient API (`rental-api.ts`) przekazują pole `servicesIncluded` zdefiniowane w przypisaniach dostawców wynajmu (`rentalAssignments`), z pełnym mapowaniem etykiet z car-scout (`RentalDetailPage.tsx`).
+

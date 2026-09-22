@@ -39,9 +39,9 @@ export function formatPln(amount: number | null | undefined): string {
 export const DEFAULT_FINANCING_OPTIONS: EmployeeFinancingOption[] = [
   {
     productId: 'default-credit',
-    label: 'Kredyt konsumencki',
+    label: 'Kredyt samochodowy',
     category: 'CREDIT',
-    allowedContractParties: ['CONSUMER'],
+    allowedContractParties: ['CONSUMER', 'EMPLOYEE_B2B'],
     b2cStatus: 'AVAILABLE',
     annualRatePct: 7.5,
     periods: [24, 36, 48, 60],

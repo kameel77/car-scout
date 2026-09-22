@@ -63,6 +63,26 @@ const EquipmentAccordion: React.FC<EquipmentAccordionProps> = ({ title, items })
   );
 };
 
+// Zakres usług w najmie długoterminowym (zbieżny ze specyfikacją car-scout)
+const RENTAL_SERVICES_MAP: Record<string, { label: string; desc: string }> = {
+  insurance: { label: 'Pełne ubezpieczenie', desc: 'OC, AC, NNW w racie' },
+  ubezpieczenie: { label: 'Pełne ubezpieczenie', desc: 'OC, AC, NNW w racie' },
+  service: { label: 'Serwis i przeglądy', desc: 'Przeglądy okresowe i naprawy ASO' },
+  serwis: { label: 'Serwis i przeglądy', desc: 'Przeglądy okresowe i naprawy ASO' },
+  tires: { label: 'Obsługa opon', desc: 'Sezonowa wymiana i przechowywanie' },
+  opony: { label: 'Obsługa opon', desc: 'Sezonowa wymiana i przechowywanie' },
+  other: { label: 'Assistance 24/7', desc: 'Całodobowa pomoc i auto zastępcze' },
+  assistance: { label: 'Assistance 24/7', desc: 'Całodobowa pomoc i auto zastępcze' },
+  inne: { label: 'Assistance 24/7', desc: 'Całodobowa pomoc i auto zastępcze' }
+};
+
+const DEFAULT_RENTAL_SERVICES = [
+  { label: 'Serwis i przeglądy', desc: 'Przeglądy okresowe i naprawy ASO' },
+  { label: 'Pełne ubezpieczenie', desc: 'OC, AC, NNW w racie' },
+  { label: 'Obsługa opon', desc: 'Sezonowa wymiana i przechowywanie' },
+  { label: 'Assistance 24/7', desc: 'Całodobowa pomoc i auto zastępcze' }
+];
+
 function formatFuelType(fuelType: string | null | undefined): string {
   if (!fuelType) return 'Brak danych';
   switch (fuelType.toUpperCase()) {
@@ -241,6 +261,24 @@ export const RentalOfferDetailPage: React.FC = () => {
         label: `${pct}%`
       }));
 
+  // Zakres usług wliczonych w ratę najmu (z aktywnego wariantu, oferty lub standardowy z car-scout)
+  const includedServices = useMemo(() => {
+    const raw = activeOption?.servicesIncluded && activeOption.servicesIncluded.length > 0
+      ? activeOption.servicesIncluded
+      : (offer?.servicesIncluded && offer.servicesIncluded.length > 0
+          ? offer.servicesIncluded
+          : null);
+
+    if (!raw || raw.length === 0) {
+      return DEFAULT_RENTAL_SERVICES;
+    }
+
+    return raw.map((key) => {
+      const normalized = key.toLowerCase().trim();
+      return RENTAL_SERVICES_MAP[normalized] || { label: key, desc: 'W cenie abonamentu' };
+    });
+  }, [activeOption, offer]);
+
   if (isBrandLoading || isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-paper">
@@ -332,83 +370,10 @@ export const RentalOfferDetailPage: React.FC = () => {
 
         {/* Offer Details Content */}
         {!isLoading && offer && (
-          <div className="space-y-8">
-            {/* Header / Titles Card */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-line shadow-xs">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    {offer.isB2b ? (
-                      <span className="bg-ink text-white font-bold text-xs px-3 py-1 rounded-full shadow-xs">
-                        Tylko B2B
-                      </span>
-                    ) : (
-                      <span className="bg-paper text-ink font-semibold text-xs px-3 py-1 rounded-full border border-line">
-                        Dla firm i osób prywatnych
-                      </span>
-                    )}
-                    {offer.rateSource === 'PARTNER_MATRIX' ? (
-                      <span className="bg-lime text-ink font-bold text-xs px-3 py-1 rounded-full shadow-xs flex items-center gap-1">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Stawka partnerska programu
-                      </span>
-                    ) : (
-                      <span className="bg-paper text-muted font-semibold text-xs px-3 py-1 rounded-full border border-line">
-                        Stawka katalogowa Motolia
-                      </span>
-                    )}
-                    {offer.vehicle.productionYear && (
-                      <span className="bg-paper text-muted font-semibold text-xs px-3 py-1 rounded-full border border-line">
-                        Rocznik {offer.vehicle.productionYear}
-                      </span>
-                    )}
-                  </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-heading">
-                    {offer.vehicle.make} {offer.vehicle.model}
-                  </h1>
-                  {offer.vehicle.version && (
-                    <p className="text-sm sm:text-base text-muted mt-1">
-                      {offer.vehicle.version}
-                    </p>
-                  )}
-                  {Boolean(offer.vehicle.catalogPrice) && (
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <span className="text-xs text-muted line-through">
-                        Cena katalogowa: {formatPln(offer.vehicle.catalogPrice)} zł brutto
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Top Pricing Summary Pill */}
-                <div className="bg-paper border border-line rounded-2xl p-4 lg:text-right min-w-[240px]">
-                  <div className="text-xs text-muted font-medium">
-                    {clientType === 'CONSUMER' ? 'Rata najmu brutto' : 'Rata najmu netto'}
-                  </div>
-                  <div className="flex lg:justify-end items-baseline gap-2 mt-0.5">
-                    <span className="text-2xl sm:text-3xl font-black text-ink tracking-tight font-heading">
-                      {formatPln(
-                        clientType === 'CONSUMER'
-                          ? (activeOption?.monthlyRateGross ?? (minRate.gross < Infinity ? minRate.gross : 0))
-                          : (activeOption?.monthlyRateNet ?? (minRate.net < Infinity ? minRate.net : 0))
-                      )} zł
-                    </span>
-                    <span className="text-xs text-muted font-medium">
-                      {clientType === 'CONSUMER' ? 'brutto / mies.' : 'netto / mies.'}
-                    </span>
-                  </div>
-                  <div className="text-xs font-semibold text-forest mt-0.5">
-                    Abonament all-inclusive
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Grid: Photos + Calculator & Benefits */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left Column: Gallery + Specs + Equipment (7 cols) */}
-              <div className="lg:col-span-7 space-y-6">
-                {/* Image Gallery with Lightbox */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* 1. Left Column: Gallery + Specs + Equipment (Col 1-7 on desktop, 2nd on mobile) */}
+            <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
+              {/* Image Gallery with Lightbox */}
                 <div className="bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
                   <ImageGallery
                     images={allImages}
@@ -554,8 +519,95 @@ export const RentalOfferDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Right Column: Rate Calculator & Inquiry (5 cols) */}
-              <div className="lg:col-span-5 space-y-6">
+              {/* 2. Right Column: Pricing Hero + Benefits + Calculator (Col 8-12 on desktop, 1st on mobile) */}
+              <div className="lg:col-span-5 space-y-6 order-1 lg:order-2">
+                {/* Title & Pricing Hero Card */}
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+                  {/* Linia 1: Plakietki */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {offer.isB2b ? (
+                      <span className="bg-ink text-white font-bold text-xs px-3 py-1 rounded-full shadow-xs">
+                        Tylko B2B
+                      </span>
+                    ) : (
+                      <span className="bg-lime text-ink font-semibold text-xs px-3 py-1 rounded-full">
+                        Dla firm i osób prywatnych
+                      </span>
+                    )}
+                    {offer.rateSource === 'PARTNER_MATRIX' ? (
+                      <span className="bg-paper text-ink font-semibold text-xs px-3 py-1 rounded-full border border-line flex items-center gap-1">
+                        <Sparkles className="h-3.5 w-3.5 text-forest" />
+                        Stawka partnerska
+                      </span>
+                    ) : (
+                      <span className="bg-paper text-muted font-semibold text-xs px-3 py-1 rounded-full border border-line">
+                        Stawka Motolia
+                      </span>
+                    )}
+                    {offer.vehicle.productionYear && (
+                      <span className="bg-paper text-ink font-semibold text-xs px-3 py-1 rounded-full border border-line">
+                        Rocznik {offer.vehicle.productionYear}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Linia 2: make + model jako h1, pod spodem version */}
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-heading">
+                      {offer.vehicle.make} {offer.vehicle.model}
+                    </h1>
+                    {offer.vehicle.version && (
+                      <p className="text-sm text-muted mt-1">
+                        {offer.vehicle.version}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Linia 3: BOHATER - Rata najmu (sprzedaż raty) */}
+                  <div className="pt-3 border-t border-line space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xs font-bold uppercase tracking-wider text-muted block">
+                        {clientType === 'CONSUMER' ? 'Rata najmu brutto' : 'Rata najmu netto'}
+                      </span>
+                      <span className="text-xs font-semibold text-forest">
+                        {clientType === 'CONSUMER' ? 'Wynajem konsumencki' : 'Najem B2B'}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl sm:text-4xl font-black text-ink tracking-tight font-heading">
+                        {formatPln(
+                          clientType === 'CONSUMER'
+                            ? (activeOption?.monthlyRateGross ?? (minRate.gross < Infinity ? minRate.gross : 0))
+                            : (activeOption?.monthlyRateNet ?? (minRate.net < Infinity ? minRate.net : 0))
+                        )} zł
+                      </span>
+                      <span className="text-xs font-semibold text-muted">
+                        {clientType === 'CONSUMER' ? 'brutto / mies.' : 'netto / mies.'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted pt-0.5">
+                      <span>Wartość alternatywna:</span>
+                      <span className="font-semibold text-ink">
+                        {formatPln(
+                          clientType === 'CONSUMER'
+                            ? (activeOption?.monthlyRateNet ?? (minRate.net < Infinity ? minRate.net : 0))
+                            : (activeOption?.monthlyRateGross ?? (minRate.gross < Infinity ? minRate.gross : 0))
+                        )} zł {clientType === 'CONSUMER' ? 'netto' : 'brutto'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Linia 4: Cena katalogowa */}
+                  {Boolean(offer.vehicle.catalogPrice) && (
+                    <div className="pt-3 border-t border-line flex items-center justify-between text-xs">
+                      <span className="text-muted">Cena katalogowa pojazdu:</span>
+                      <span className="text-muted line-through font-medium">
+                        Cena katalogowa: {formatPln(offer.vehicle.catalogPrice)} zł brutto
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 {/* Dlaczego warto - Compact Benefits Bar */}
                 <div className="p-3.5 bg-paper border border-line rounded-2xl shadow-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-ink">
@@ -607,15 +659,12 @@ export const RentalOfferDetailPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20">
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-6 lg:sticky lg:top-20 lg:z-10">
                   <div className="flex items-center justify-between border-b border-line pb-4">
                     <div className="flex items-center gap-2">
                       <Calculator className="h-5 w-5 text-forest" />
                       <h3 className="font-bold text-ink text-base font-heading">Konfigurator abonamentu</h3>
                     </div>
-                    <span className="text-xs font-semibold text-ink bg-lime px-2.5 py-1 rounded-full">
-                      Abonament all-inclusive
-                    </span>
                   </div>
 
                   {/* B2B Exclusive Notice Banner */}
@@ -747,6 +796,27 @@ export const RentalOfferDetailPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Zakres usług w cenie najmu (przeniesione z car-scout) */}
+                  <div className="pt-4 border-t border-line space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-ink">Zakres usług w racie najmu</span>
+                      <span className="text-2xs font-semibold text-forest uppercase tracking-wider">W cenie abonamentu</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {includedServices.map((service, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-xs">
+                          <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold text-ink">{service.label}</span>
+                            {service.desc && (
+                              <p className="text-[11px] text-muted leading-tight">{service.desc}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Wynik Kalkulacji */}
                   <div className="pt-4 border-t border-line bg-paper -mx-6 -mb-6 p-6 rounded-b-2xl">
                     {activeOption ? (
@@ -839,7 +909,6 @@ export const RentalOfferDetailPage: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
         )}
       </main>
 

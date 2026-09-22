@@ -122,8 +122,10 @@ describe('Employee Portal Rental API Client', () => {
           monthlyRateNet: 1620,
           monthlyRateGross: 1992.6,
           rateSource: 'PUBLIC_MATRIX',
+          servicesIncluded: [],
         },
       ],
+      servicesIncluded: [],
     };
 
     const fakeFetch = vi.fn().mockResolvedValue({

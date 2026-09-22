@@ -63,6 +63,7 @@ export interface RentalOptionItem {
   monthlyRateNet: number;
   monthlyRateGross: number;
   rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX';
+  servicesIncluded?: string[];
 }
 
 export interface EmployeeRentalOfferDetails {
@@ -77,6 +78,7 @@ export interface EmployeeRentalOfferDetails {
   downPaymentOptions?: RentalInitialPaymentOption[];
   rentalOptions: RentalOptionItem[];
   isB2b?: boolean;
+  servicesIncluded?: string[];
   benefit?: EmployeeOfferBenefit | null;
 }
 
@@ -197,10 +199,12 @@ export async function fetchEmployeeRentalOfferDetails(
   if (raw.contractMonthsOptions && raw.rentalOptions && raw.rentalCompany) {
     const normalizedOptions = raw.rentalOptions.map((o: any) => ({
       ...o,
-      assignmentId: o.assignmentId || raw.rentalCompany?.id || 'default_assignment'
+      assignmentId: o.assignmentId || raw.rentalCompany?.id || 'default_assignment',
+      servicesIncluded: Array.isArray(o.servicesIncluded) ? o.servicesIncluded : (raw.servicesIncluded || []),
     }));
     return {
       ...raw,
+      servicesIncluded: Array.isArray(raw.servicesIncluded) ? raw.servicesIncluded : [],
       rentalOptions: normalizedOptions
     } as EmployeeRentalOfferDetails;
   }
@@ -269,6 +273,9 @@ export async function fetchEmployeeRentalOfferDetails(
       monthlyRateNet: Number(r.monthlyRateNet),
       monthlyRateGross: Number(r.monthlyRateGross),
       rateSource: r.rateSource as 'PARTNER_MATRIX' | 'PUBLIC_MATRIX',
+      servicesIncluded: Array.isArray(r.servicesIncluded)
+        ? r.servicesIncluded
+        : (Array.isArray(primaryGroup?.servicesIncluded) ? primaryGroup.servicesIncluded : []),
     };
   });
 
@@ -283,6 +290,9 @@ export async function fetchEmployeeRentalOfferDetails(
   const rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' =
     primaryGroup?.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX';
   const isB2b = Boolean(raw.isB2b ?? false);
+  const servicesIncluded = Array.isArray(raw.servicesIncluded)
+    ? raw.servicesIncluded
+    : (Array.isArray(primaryGroup?.servicesIncluded) ? primaryGroup.servicesIncluded : []);
 
   return {
     id: raw.id,
@@ -300,5 +310,6 @@ export async function fetchEmployeeRentalOfferDetails(
     downPaymentOptions,
     rentalOptions: flattenedOptions,
     isB2b,
+    servicesIncluded,
   };
 }
