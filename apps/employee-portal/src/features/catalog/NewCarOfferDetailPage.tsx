@@ -10,7 +10,8 @@ import {
   Sparkles,
   Layers,
   Calculator,
-  Info
+  Info,
+  ChevronDown
 } from 'lucide-react';
 import {
   fetchEmployeeOfferDetails,
@@ -33,30 +34,23 @@ const EquipmentAccordion: React.FC<EquipmentAccordionProps> = ({ title, items })
   if (!items || items.length === 0) return null;
 
   return (
-    <details className="group py-1">
-      <summary className="flex items-center justify-between gap-4 py-3 min-h-[44px] cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm font-semibold text-ink hover:text-forest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 rounded-xl">
+    <details className="group py-3 first:pt-0 last:pb-0">
+      <summary className="flex items-center justify-between cursor-pointer list-none select-none text-sm font-semibold text-ink hover:text-forest transition-colors">
         <span className="flex items-center gap-2">
           <span>{title}</span>
           <span className="text-xs font-normal text-muted">
             ({formatCountPl(items.length, ['pozycja', 'pozycje', 'pozycji'])})
           </span>
         </span>
-        <span
-          aria-hidden="true"
-          className="text-lg font-light text-muted group-open:rotate-45 transition-transform duration-200 motion-reduce:transition-none leading-none select-none px-1"
-        >
-          +
-        </span>
+        <ChevronDown className="h-4 w-4 text-muted transition-transform duration-200 group-open:rotate-180" />
       </summary>
-      <div className="pb-4 pt-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
-          {items.map((item, idx) => (
-            <div key={idx} className="flex items-start gap-2">
-              <CheckCircle className="h-4 w-4 text-forest flex-shrink-0 mt-0.5" />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-2 text-sm text-ink">
+        {items.map((item, idx) => (
+          <div key={idx} className="flex items-start gap-2">
+            <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
+            <span>{item}</span>
+          </div>
+        ))}
       </div>
     </details>
   );

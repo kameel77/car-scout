@@ -1302,3 +1302,19 @@ Wdrożono 7 kluczowych usprawnień interfejsu cenowego na listingu, widoku szcze
 - **7. Usunięcie Plakietek „Rata na zapytanie” ze Zdjęć Pojazdów**:
   - Z kafelków pojazdów na listingu (`CatalogPage.tsx`) usunięto plakietkę `Rata na zapytanie`. Wszystkie oferty prezentują natychmiastowo wyliczoną szacunkową ratę miesięczną.
 
+### 87. Dopracowanie Interfejsu Ofert Samochodowych i Najmu Długoterminowego (Styl Accordiona, Usługi i Wartość Alternatywna)
+
+Wdrożono 5 poprawek wizualnych i funkcjonalnych w widokach szczegółów ofert:
+
+- **1. Ujednolicenie Stylu Accordiona Wyposażenia („Samochody” i „Wynajem”)**:
+  - Komponent `EquipmentAccordion` w `NewCarOfferDetailPage.tsx` został zaktualizowany do identycznego stylu jak w `RentalOfferDetailPage.tsx`.
+  - Zastąpiono obracający się znak plusa `+` estetyczną ikoną `ChevronDown` z `lucide-react` obracającą się o 180 stopni (`group-open:rotate-180`) oraz wyrównano paddingi i interakcję w nagłówkach sekcji.
+- **2. Brak Przekreślenia Ceny Katalogowej w Ofertach Najmu Długoterminowego**:
+  - W `RentalOfferDetailPage.tsx` cena katalogowa pojazdu (`Cena katalogowa: ... zł brutto`) jest prezentowana bez stylu przekreślenia (`line-through`), ponieważ najem opiera się na racie abonamentowej, a cena katalogowa stanowi jedynie punkt odniesienia wartości auta.
+- **3. Usunięcie Nadmiarowego Boksu „Co zawiera abonament..” pod Wyposażeniem**:
+  - W `RentalOfferDetailPage.tsx` usunięto zduplikowany boks „Co zawiera abonament najmu długoterminowego?” znajdujący się pod sekcją wyposażenia, gdyż pełny zakres usług jest wyczerpująco prezentowany bezpośrednio w kalkulatorze raty najmu.
+- **4. Większy Font Nagłówka „Zakres usług w racie najmu” w Kalkulatorze**:
+  - Zwiększono rozmiar fontu etykiety w kalkulatorze najmu (`RentalOfferDetailPage.tsx`) z `text-xs` do wyrazistego `text-sm sm:text-base font-bold text-ink font-heading`.
+- **5. Zastąpienie Etykiety „Wartość alternatywna:” Przejrzystą Kwotą w Nawiasie**:
+  - Wyeliminowano nieintuicyjną etykietę `Wartość alternatywna:` z karty bohatera cenowego oraz kalkulatora.
+  - Alternatywna stawka (odpowiednio brutto dla firm lub netto dla konsumentów) jest podawana w nawiasie obok raty głównej: `({kwota} zł brutto)` / `({kwota} zł netto)` z zachowaniem mniejszego fontu (`text-xs text-muted`) jako wartości drugorzędnej.

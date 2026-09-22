@@ -250,7 +250,7 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
   });
 
-  it('renders crossed-out catalog price, equipment accordions, and benefits bar analogously to car offers', async () => {
+  it('renders uncrossed catalog price, equipment accordions, and benefits bar analogously to car offers', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
     vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue({
       ...mockRentalOfferDetails,
@@ -275,9 +275,22 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
       expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
     });
 
-    // 1. Catalog price crossed out
+    // 1. Catalog price NOT crossed out in rental
     expect(screen.getByText('Cena katalogowa:')).toBeInTheDocument();
-    expect(screen.getByText(/140\s?000 zł brutto/)).toBeInTheDocument();
+    const catalogPriceEl = screen.getByText(/140\s?000 zł brutto/);
+    expect(catalogPriceEl).toBeInTheDocument();
+    expect(catalogPriceEl.className).not.toContain('line-through');
+
+    // 2. Duplicate 'Co zawiera abonament..' removed under equipment
+    expect(screen.queryByText('Co zawiera abonament najmu długoterminowego?')).not.toBeInTheDocument();
+
+    // 3. 'Zakres usług w racie najmu' has larger font
+    const servicesHeader = screen.getByText('Zakres usług w racie najmu');
+    expect(servicesHeader).toBeInTheDocument();
+    expect(servicesHeader.className).toContain('font-bold');
+
+    // 4. 'Wartość alternatywna:' label removed, alternative amount in parentheses
+    expect(screen.queryByText(/Wartość alternatywna:/i)).not.toBeInTheDocument();
 
     // 2. Equipment accordions
     expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();

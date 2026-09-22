@@ -489,34 +489,6 @@ export const RentalOfferDetailPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Benefits in Rental */}
-                <div className="p-5 bg-paper border border-line rounded-2xl shadow-xs space-y-3">
-                  <div className="flex items-center gap-2 text-ink font-bold text-base font-heading">
-                    <ShieldCheck className="h-5 w-5 text-forest" />
-                    <h4>Co zawiera abonament najmu długoterminowego?</h4>
-                  </div>
-                  <p className="text-xs text-muted mb-2">
-                    Stała rata miesięczna obejmuje kompleksową obsługę Twojego pojazdu bez nieprzewidzianych wydatków:
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm text-ink">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-forest shrink-0" />
-                      <span>Pełne ubezpieczenie OC / AC / NNW</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-forest shrink-0" />
-                      <span>Kompletny pakiet serwisowy i przeglądy</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-forest shrink-0" />
-                      <span>Auto zastępcze w razie awarii lub kolizji</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-forest shrink-0" />
-                      <span>Dedykowany doradca flotowy Benefivo</span>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* 2. Right Column: Pricing Hero + Benefits + Calculator (Col 8-12 on desktop, 1st on mobile) */}
@@ -573,7 +545,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                         {clientType === 'CONSUMER' ? 'Wynajem konsumencki' : 'Najem B2B'}
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="text-3xl sm:text-4xl font-black text-ink tracking-tight font-heading">
                         {formatPln(
                           clientType === 'CONSUMER'
@@ -584,15 +556,12 @@ export const RentalOfferDetailPage: React.FC = () => {
                       <span className="text-xs font-semibold text-muted">
                         {clientType === 'CONSUMER' ? 'brutto / mies.' : 'netto / mies.'}
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted pt-0.5">
-                      <span>Wartość alternatywna:</span>
-                      <span className="font-semibold text-ink">
-                        {formatPln(
+                      <span className="text-xs text-muted">
+                        ({formatPln(
                           clientType === 'CONSUMER'
                             ? (activeOption?.monthlyRateNet ?? (minRate.net < Infinity ? minRate.net : 0))
                             : (activeOption?.monthlyRateGross ?? (minRate.gross < Infinity ? minRate.gross : 0))
-                        )} zł {clientType === 'CONSUMER' ? 'netto' : 'brutto'}
+                        )} zł {clientType === 'CONSUMER' ? 'netto' : 'brutto'})
                       </span>
                     </div>
                   </div>
@@ -602,7 +571,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                     <div className="pt-3 border-t border-line flex items-center justify-between text-xs">
                       <span className="text-muted">Cena katalogowa:</span>
                       <span className="text-muted font-medium">
-                        <span className="line-through">{formatPln(offer.vehicle.catalogPrice)} zł brutto</span>
+                        {formatPln(offer.vehicle.catalogPrice)} zł brutto
                       </span>
                     </div>
                   )}
@@ -799,7 +768,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                   {/* Zakres usług w cenie najmu (przeniesione z car-scout) */}
                   <div className="pt-4 border-t border-line space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-ink">Zakres usług w racie najmu</span>
+                      <span className="text-sm sm:text-base font-bold text-ink font-heading">Zakres usług w racie najmu</span>
                       <span className="text-2xs font-semibold text-forest uppercase tracking-wider">W cenie abonamentu</span>
                     </div>
                     <div className="grid grid-cols-1 gap-2">
@@ -839,7 +808,7 @@ export const RentalOfferDetailPage: React.FC = () => {
                             <>
                               <div>
                                 <span className="text-xs font-medium text-muted block">Rata abonamentowa brutto</span>
-                                <div className="flex items-baseline gap-2">
+                                <div className="flex items-baseline gap-2 flex-wrap">
                                   <span className="text-3xl font-black text-ink tracking-tight font-heading">
                                     {formatPln(activeOption.monthlyRateGross)} zł
                                   </span>
@@ -847,17 +816,16 @@ export const RentalOfferDetailPage: React.FC = () => {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <span className="text-sm font-bold text-muted block font-heading">
-                                  {formatPln(activeOption.monthlyRateNet)} zł
+                                <span className="text-xs text-muted">
+                                  ({formatPln(activeOption.monthlyRateNet)} zł netto)
                                 </span>
-                                <span className="text-[11px] text-muted">netto / mies.</span>
                               </div>
                             </>
                           ) : (
                             <>
                               <div>
                                 <span className="text-xs font-medium text-muted block">Rata abonamentowa netto</span>
-                                <div className="flex items-baseline gap-2">
+                                <div className="flex items-baseline gap-2 flex-wrap">
                                   <span className="text-3xl font-black text-ink tracking-tight font-heading">
                                     {formatPln(activeOption.monthlyRateNet)} zł
                                   </span>
@@ -865,10 +833,9 @@ export const RentalOfferDetailPage: React.FC = () => {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <span className="text-sm font-bold text-muted block font-heading">
-                                  {formatPln(activeOption.monthlyRateGross)} zł
+                                <span className="text-xs text-muted">
+                                  ({formatPln(activeOption.monthlyRateGross)} zł brutto)
                                 </span>
-                                <span className="text-[11px] text-muted">brutto / mies.</span>
                               </div>
                             </>
                           )}
