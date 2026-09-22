@@ -26,6 +26,48 @@ export const resolveLeadRecipient = async (prisma: any): Promise<string | null> 
     return recipientEmail || null;
 };
 
+export const determineLeadRecipient = async (
+    prisma: any,
+    lead: { leadType?: string | null; listing?: Listing | null; rentalVehicle?: RentalVehicle | null },
+    log?: any
+): Promise<string | null> => {
+    // Dedicated recipient for Benefivo B2B leads
+    if (lead.leadType === 'employer_b2b') {
+        const benefivoRecipient = process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL?.trim();
+        if (benefivoRecipient) {
+            log?.info?.({ email: benefivoRecipient }, 'B2B lead routing: sending to BENEFIVO_LEAD_RECIPIENT_EMAIL');
+            return benefivoRecipient;
+        }
+        log?.info?.('B2B lead routing: BENEFIVO_LEAD_RECIPIENT_EMAIL not configured, using default recipient');
+    }
+
+    // Lead routing logic (Motolia vs Dealer)
+    const dealerId = lead.listing?.dealerId || lead.rentalVehicle?.dealerId;
+    if (dealerId) {
+        const dealerSettings = await prisma.dealerSettings.findUnique({
+            where: { dealerId }
+        });
+
+        if (dealerSettings?.leadRouting === 'DEALER') {
+            const dealer = await prisma.dealer.findUnique({
+                where: { id: dealerId },
+                select: { contactEmail: true, contactEmailService: true }
+            });
+
+            const targetDealerEmail = dealerSettings.smtpRecipientEmail || dealer?.contactEmailService || dealer?.contactEmail;
+
+            if (targetDealerEmail) {
+                log?.info?.({ dealerId, email: targetDealerEmail }, 'Lead routing set to DEALER. Routing lead to dealer email.');
+                return targetDealerEmail;
+            } else {
+                log?.warn?.({ dealerId }, 'Lead routing set to DEALER, but dealer has no contact email. Falling back to default.');
+            }
+        }
+    }
+
+    return resolveLeadRecipient(prisma);
+};
+
 export const sendLeadEmail = async (
     fastify: FastifyInstance,
     lead: Lead & { listing?: Listing | null, financingProduct?: FinancingProduct | null, rentalVehicle?: RentalVehicle | null },
@@ -40,7 +82,8 @@ export const sendLeadEmail = async (
 
     // Derive site name for branding
     const domainName = frontendUrl.replace(/^https?:\/\/(www\.)?/, '');
-    const siteName = domainName.toLowerCase().includes('motolia') ? 'Motolia' : 'CarSalon';
+    const isBenefivo = lead.leadType === 'employer_b2b' || domainName.toLowerCase().includes('benefivo') || (lead.trafficSource && lead.trafficSource.toLowerCase().includes('benefivo'));
+    const siteName = isBenefivo ? 'Benefivo' : (domainName.toLowerCase().includes('motolia') ? 'Motolia' : 'CarSalon');
 
     // Get settings from database
     const settings = await fastify.prisma.appSettings.findFirst({
@@ -52,31 +95,7 @@ export const sendLeadEmail = async (
         return;
     }
 
-    let recipientEmail = await resolveLeadRecipient(fastify.prisma);
-
-    // Lead routing logic (Motolia vs Dealer)
-    const dealerId = lead.listing?.dealerId || lead.rentalVehicle?.dealerId;
-    if (dealerId) {
-        const dealerSettings = await fastify.prisma.dealerSettings.findUnique({
-            where: { dealerId }
-        });
-        
-        if (dealerSettings?.leadRouting === 'DEALER') {
-            const dealer = await fastify.prisma.dealer.findUnique({
-                where: { id: dealerId },
-                select: { contactEmail: true, contactEmailService: true }
-            });
-            
-            const targetDealerEmail = dealerSettings.smtpRecipientEmail || dealer?.contactEmailService || dealer?.contactEmail;
-            
-            if (targetDealerEmail) {
-                recipientEmail = targetDealerEmail;
-                fastify.log.info({ dealerId, email: recipientEmail }, 'Lead routing set to DEALER. Routing lead to dealer email.');
-            } else {
-                fastify.log.warn({ dealerId }, 'Lead routing set to DEALER, but dealer has no contact email. Falling back to default.');
-            }
-        }
-    }
+    const recipientEmail = await determineLeadRecipient(fastify.prisma, lead, fastify.log);
 
     if (!settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword || !recipientEmail) {
         fastify.log.warn('Email SMTP or recipient configuration missing in AppSettings. Skipping email notification.');
@@ -101,7 +120,8 @@ export const sendLeadEmail = async (
     const isPriceNegotiation = lead.leadType === 'price_negotiation';
     const isWaitlist = lead.leadType === 'waitlist';
     const isRental = lead.leadType === 'rental' || !!lead.rentalVehicleId;
-    const isQuickContact = lead.leadType === 'quick_contact' || (!lead.listingId && !lead.rentalVehicleId && !isPriceNegotiation && !isWaitlist);
+    const isEmployerB2B = lead.leadType === 'employer_b2b';
+    const isQuickContact = lead.leadType === 'quick_contact' || (!lead.listingId && !lead.rentalVehicleId && !isPriceNegotiation && !isWaitlist && !isEmployerB2B);
     const isFinancingLead = !!lead.financingProductId || !!lead.financingAmount;
 
     // Name formatting: if empty, placeholder, or not provided, format as literal 'null'
@@ -125,7 +145,10 @@ export const sendLeadEmail = async (
     let subjectTitle = 'Szybki kontakt';
     let subjectEntity = lead.phone ? lead.phone : (formattedName !== 'null' ? formattedName : 'Nowe zgłoszenie');
 
-    if (isPriceNegotiation) {
+    if (isEmployerB2B) {
+        subjectTitle = 'Zapytanie B2B - Program Pracowniczy';
+        subjectEntity = formattedName !== 'null' ? formattedName : (lead.phone || lead.email || 'Nowa firma');
+    } else if (isPriceNegotiation) {
         subjectTitle = 'Negocjacja ceny';
         subjectEntity = lead.listing ? `${lead.listing.make} ${lead.listing.model}` : (lead.phone || (formattedName !== 'null' ? formattedName : 'Oferta'));
     } else if (isWaitlist) {
@@ -147,7 +170,8 @@ export const sendLeadEmail = async (
         subjectEntity = lead.phone ? lead.phone : (formattedName !== 'null' ? formattedName : 'Zgłoszenie');
     }
 
-    const subject = `[${siteName}] [${lead.referenceNumber}] ${subjectTitle}: ${subjectEntity}`;
+    const subjectPrefix = isEmployerB2B ? '[Benefivo]' : `[${siteName}]`;
+    const subject = `${subjectPrefix} [${lead.referenceNumber}] ${subjectTitle}: ${subjectEntity}`;
 
     const listingSlug = lead.listing?.slug || [
         lead.listing?.make,
@@ -174,7 +198,9 @@ export const sendLeadEmail = async (
         .join('-');
 
     let leadTypeDescription = 'Zapytanie ogólne / Szybki kontakt';
-    if (isPriceNegotiation) {
+    if (isEmployerB2B) {
+        leadTypeDescription = 'Program Pracowniczy B2B (Dla pracodawców)';
+    } else if (isPriceNegotiation) {
         leadTypeDescription = 'Negocjacja ceny pojazdu';
     } else if (isWaitlist) {
         leadTypeDescription = 'Lista oczekujących - powiadomienie o nowej ofercie';
@@ -225,7 +251,9 @@ export const sendLeadEmail = async (
     ` : '';
 
     let headingTitle = 'Nowe zapytanie od klienta';
-    if (isPriceNegotiation) {
+    if (isEmployerB2B) {
+        headingTitle = 'Nowe zapytanie B2B - Program Pracowniczy Benefivo';
+    } else if (isPriceNegotiation) {
         headingTitle = 'Nowa propozycja negocjacji ceny';
     } else if (isWaitlist) {
         headingTitle = 'Nowe zgłoszenie na listę oczekujących';
@@ -236,6 +264,9 @@ export const sendLeadEmail = async (
     } else if (isFinancingLead) {
         headingTitle = 'Nowe zgłoszenie finansowania';
     }
+
+    const adminBaseUrl = (process.env.FRONTEND_URL || 'https://motolia.pl').replace(/\/+$/, '');
+    const adminLeadLink = `${adminBaseUrl}/admin/leads/${lead.id}`;
 
     const headingSubtitle = formattedName !== 'null'
         ? safeFormattedName
@@ -270,6 +301,14 @@ export const sendLeadEmail = async (
                 ${lead.landingPageId ? `<li><strong>Landing Page ID:</strong> ${lead.landingPageId}</li>` : ''}
             </ul>
 
+            ${isEmployerB2B ? `
+            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                <h4 style="color: #065f46; margin-top: 0;">Zapytanie od pracodawcy / zarządu</h4>
+                <p style="margin: 0 0 10px 0; font-size: 14px; color: #047857;">Zgłoszenie B2B z serwisu <strong>benefivo.pl</strong>. Wymaga bezpośredniego kontaktu doradcy flotowego Motolia.</p>
+                <a href="${adminLeadLink}" style="display: inline-block; background-color: #059669; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 13px;">Otwórz zgłoszenie w panelu CRM Motolia &rarr;</a>
+            </div>
+            ` : ''}
+
             ${listingDetails}
             ${rentalDetails}
             ${financingDetails}
@@ -292,7 +331,12 @@ export const sendLeadEmail = async (
             html: htmlContent,
             headers: {
                 'Auto-Submitted': 'auto-generated',
-                'X-Auto-Response-Suppress': 'All'
+                'X-Auto-Response-Suppress': 'All',
+                ...(isEmployerB2B ? {
+                    'X-Lead-Brand': 'Benefivo',
+                    'X-Lead-Type': 'employer_b2b',
+                    'X-Lead-Traffic-Source': lead.trafficSource || 'benefivo_b2b',
+                } : {})
             }
         });
         fastify.log.info(`Email notification sent for lead ${lead.id} to ${recipientEmail}`);
@@ -368,7 +412,7 @@ export const sendEmployeePasswordResetEmail = async (
         return;
     }
 
-    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Benefivo';
 
     const transporter = nodemailer.createTransport({
         host: settings.smtpHost,
@@ -422,6 +466,74 @@ export const sendEmployeePasswordResetEmail = async (
         fastify.log.info('Employee password reset email sent successfully');
     } catch (error) {
         fastify.log.error(error, 'Failed to send employee password reset email');
+    }
+};
+
+export const sendEmployeePasswordChangedEmail = async (
+    fastify: FastifyInstance,
+    email: string,
+    brandName?: string
+) => {
+    const settings = await fastify.prisma.appSettings.findFirst({
+        where: { id: 'default' }
+    });
+
+    if (!settings || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
+        fastify.log.warn('Email SMTP configuration missing in AppSettings. Cannot send employee password changed confirmation email.');
+        return;
+    }
+
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Benefivo';
+
+    const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: settings.smtpPort === 465,
+        auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPassword
+        },
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+        greetingTimeout: 5000,
+        logger: process.env.NODE_ENV !== 'production',
+        debug: process.env.NODE_ENV !== 'production'
+    });
+
+    const safeBrand = brand.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const htmlContent = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="margin-bottom: 24px; border-bottom: 1px solid #f1f5f9; padding-bottom: 16px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700;">${safeBrand}</h3>
+            </div>
+            <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-top: 0;">Twoje hasło zostało zmienione</h2>
+            <p style="margin: 16px 0; color: #334155; font-size: 15px;">Hasło do Twojego konta pracowniczego w ${safeBrand} zostało pomyślnie zaktualizowane.</p>
+            <p style="margin: 16px 0; color: #475569; font-size: 14px;">
+                Wszystkie pozostałe aktywne sesje na innych urządzeniach zostały wylogowane ze względów bezpieczeństwa.
+            </p>
+            <p style="margin: 16px 0; color: #64748b; font-size: 13px;">Jeśli ta zmiana nie została dokonana przez Ciebie, natychmiast skontaktuj się z administratorem lub zresetuj hasło na stronie logowania.</p>
+            <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+                Ta wiadomość została wygenerowana automatycznie. Prosimy na nią nie odpowiadać.
+            </div>
+        </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"${safeBrand}" <${settings.smtpFromEmail || settings.smtpUser}>`,
+            to: email,
+            subject: `Hasło zostało zmienione - ${brand}`,
+            html: htmlContent,
+            text: `Twoje hasło do konta ${brand} zostało pomyślnie zmienione. Pozostałe sesje zostały wylogowane.`,
+            headers: {
+                'Auto-Submitted': 'auto-generated',
+                'X-Auto-Response-Suppress': 'All'
+            }
+        });
+        fastify.log.info('Employee password changed confirmation email sent successfully');
+    } catch (error) {
+        fastify.log.error(error, 'Failed to send employee password changed confirmation email');
     }
 };
 
@@ -485,7 +597,7 @@ export const sendEmployeeInquiryNotificationEmail = async (
         return;
     }
 
-    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Benefivo';
     const safeBrand = escapeHtml(brand);
 
     const transporter = nodemailer.createTransport({
@@ -615,7 +727,7 @@ export const sendEmployeeInquiryConfirmationEmail = async (
         return;
     }
 
-    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Program Samochodowy by Motolia';
+    const brand = brandName || process.env.PORTAL_BRAND_NAME || 'Benefivo';
     const safeBrand = escapeHtml(brand);
 
     const transporter = nodemailer.createTransport({

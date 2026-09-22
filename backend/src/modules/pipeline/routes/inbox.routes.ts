@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { requirePermission } from '../../../middleware/permissions.js';
-import { qualifyLeadSchema, dismissLeadSchema } from '../schemas/pipeline.schemas.js';
+import { qualifyLeadSchema, dismissLeadSchema, inboxQuerySchema } from '../schemas/pipeline.schemas.js';
 import { listInboxLeads, executeQualifyLead, executeDismissLeadAsSpam } from '../services/inbox.service.js';
 import { getPipelineScope, getActorFromRequest } from './scope-helper.js';
 
@@ -13,13 +13,14 @@ export async function registerInboxRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const scope = getPipelineScope(request);
-      const query = request.query as { limit?: string; offset?: string };
+      const query = inboxQuerySchema.parse(request.query ?? {});
 
       const result = await listInboxLeads(app.prisma, {
         scopeType: scope.scopeType,
         scopeId: scope.scopeId,
-        limit: query.limit ? parseInt(query.limit, 10) : undefined,
-        offset: query.offset ? parseInt(query.offset, 10) : undefined,
+        limit: query.limit,
+        offset: query.offset,
+        leadType: query.leadType,
       });
 
       return reply.send(result);

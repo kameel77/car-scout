@@ -151,4 +151,137 @@ describe('sendLeadEmail', () => {
             'X-Auto-Response-Suppress': 'All'
         });
     });
+
+    it('should route B2B lead to BENEFIVO_LEAD_RECIPIENT_EMAIL, prefix subject with [Benefivo], and attach MIME headers', async () => {
+        const sendMailMock = (nodemailer.createTransport() as any).sendMail;
+        sendMailMock.mockClear();
+
+        const originalEnv = process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL;
+        process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL = 'b2b@benefivo.pl';
+
+        try {
+            const mockB2bLead = {
+                id: 'lead-b2b-1',
+                name: 'Kamil Tonkowicz',
+                email: 'kamil@company.pl',
+                phone: '502358645',
+                preferredContact: 'email',
+                message: 'Firma: Acme (NIP: 1234567890)',
+                referenceNumber: 'BNF-04013827',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                leadType: 'employer_b2b',
+                trafficSource: 'benefivo_b2b',
+            };
+
+            const mockFastify = {
+                prisma: {
+                    appSettings: {
+                        findFirst: vi.fn().mockResolvedValue({
+                            id: 'default',
+                            smtpHost: 'smtp.example.com',
+                            smtpPort: 465,
+                            smtpUser: 'kontakt@motolia.pl',
+                            smtpPassword: 'password',
+                            smtpRecipientEmail: 'lead@motolia.pl',
+                        })
+                    },
+                    user: { findUnique: vi.fn() },
+                    dealerSettings: { findUnique: vi.fn() },
+                    dealer: { findUnique: vi.fn() }
+                },
+                log: {
+                    info: vi.fn(),
+                    warn: vi.fn(),
+                    error: vi.fn()
+                }
+            };
+
+            await sendLeadEmail(mockFastify as any, mockB2bLead as any, 'https://benefivo.pl');
+
+            expect(sendMailMock).toHaveBeenCalledTimes(1);
+            const sentMailArgs = sendMailMock.mock.calls[0][0];
+
+            // 1. Recipient routed to BENEFIVO_LEAD_RECIPIENT_EMAIL
+            expect(sentMailArgs.to).toBe('b2b@benefivo.pl');
+
+            // 2. Subject prefixed with [Benefivo]
+            expect(sentMailArgs.subject).toMatch(/^\[Benefivo\] \[BNF-04013827\] Zapytanie B2B - Program Pracowniczy:/);
+
+            // 3. MIME headers attached
+            expect(sentMailArgs.headers).toEqual({
+                'Auto-Submitted': 'auto-generated',
+                'X-Auto-Response-Suppress': 'All',
+                'X-Lead-Brand': 'Benefivo',
+                'X-Lead-Type': 'employer_b2b',
+                'X-Lead-Traffic-Source': 'benefivo_b2b'
+            });
+        } finally {
+            if (originalEnv !== undefined) {
+                process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL = originalEnv;
+            } else {
+                delete process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL;
+            }
+        }
+    });
+
+    it('should fallback to default recipient when BENEFIVO_LEAD_RECIPIENT_EMAIL is not set for B2B lead', async () => {
+        const sendMailMock = (nodemailer.createTransport() as any).sendMail;
+        sendMailMock.mockClear();
+
+        const originalEnv = process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL;
+        delete process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL;
+
+        try {
+            const mockB2bLead = {
+                id: 'lead-b2b-2',
+                name: 'Kamil Tonkowicz',
+                email: 'kamil@company.pl',
+                phone: '502358645',
+                preferredContact: 'email',
+                message: 'Test message',
+                referenceNumber: 'BNF-04013828',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                leadType: 'employer_b2b',
+                trafficSource: 'benefivo_b2b',
+            };
+
+            const mockFastify = {
+                prisma: {
+                    appSettings: {
+                        findFirst: vi.fn().mockResolvedValue({
+                            id: 'default',
+                            smtpHost: 'smtp.example.com',
+                            smtpPort: 465,
+                            smtpUser: 'kontakt@motolia.pl',
+                            smtpPassword: 'password',
+                            smtpRecipientEmail: 'default-lead@motolia.pl',
+                        })
+                    },
+                    user: { findUnique: vi.fn() },
+                    dealerSettings: { findUnique: vi.fn() },
+                    dealer: { findUnique: vi.fn() }
+                },
+                log: {
+                    info: vi.fn(),
+                    warn: vi.fn(),
+                    error: vi.fn()
+                }
+            };
+
+            await sendLeadEmail(mockFastify as any, mockB2bLead as any, 'https://benefivo.pl');
+
+            expect(sendMailMock).toHaveBeenCalledTimes(1);
+            const sentMailArgs = sendMailMock.mock.calls[0][0];
+
+            // Falls back to AppSettings default recipient
+            expect(sentMailArgs.to).toBe('default-lead@motolia.pl');
+            expect(mockFastify.log.warn).not.toHaveBeenCalledWith(expect.stringContaining('BENEFIVO_LEAD_RECIPIENT_EMAIL'));
+        } finally {
+            if (originalEnv !== undefined) {
+                process.env.BENEFIVO_LEAD_RECIPIENT_EMAIL = originalEnv;
+            }
+        }
+    });
 });

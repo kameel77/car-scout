@@ -3,13 +3,21 @@ export interface PortalBrandConfig {
   brandLogoUrl: string;
   portalUrl: string;
   apiUrl: string;
+  turnstileSiteKey?: string;
+  analyticsEnabled?: boolean;
+  b2bPhone?: string;
+  b2bEmail?: string;
 }
 
 export const defaultBrandConfig: PortalBrandConfig = {
-  brandName: 'Program Samochodowy by Motolia',
-  brandLogoUrl: '/logo.svg',
-  portalUrl: '',
+  brandName: 'Benefivo',
+  brandLogoUrl: '/static/logo-dark.svg',
+  portalUrl: 'https://benefivo.pl',
   apiUrl: '/api',
+  turnstileSiteKey: '1x00000000000000000000AA',
+  analyticsEnabled: false,
+  b2bPhone: '__B2B_PHONE__',
+  b2bEmail: 'b2b@benefivo.pl',
 };
 
 declare global {
@@ -36,7 +44,6 @@ export function validateBrandConfig(raw: unknown): PortalBrandConfig {
     // Dozwolone wyłącznie bezpieczne ścieżki względne (zaczynające się od pojedynczego /) lub pełny HTTPS
     if ((trimmed.startsWith('/') && !trimmed.startsWith('//')) || trimmed.startsWith('https://')) {
       try {
-        // Jeśli URL zaczyna się od https://, sprawdzamy poprawność syntaktyczną
         if (trimmed.startsWith('https://')) {
           new URL(trimmed);
         }
@@ -63,11 +70,34 @@ export function validateBrandConfig(raw: unknown): PortalBrandConfig {
     }
   }
 
+  let turnstileSiteKey = defaultBrandConfig.turnstileSiteKey;
+  if (typeof obj.turnstileSiteKey === 'string' && obj.turnstileSiteKey.trim().length > 0) {
+    turnstileSiteKey = obj.turnstileSiteKey.trim();
+  }
+
+  const analyticsEnabled = typeof obj.analyticsEnabled === 'boolean'
+    ? obj.analyticsEnabled
+    : defaultBrandConfig.analyticsEnabled;
+
+  const b2bPhone =
+    typeof obj.b2bPhone === 'string' && obj.b2bPhone.trim().length > 0
+      ? obj.b2bPhone.trim().slice(0, 30)
+      : defaultBrandConfig.b2bPhone;
+
+  const b2bEmail =
+    typeof obj.b2bEmail === 'string' && obj.b2bEmail.trim().length > 0
+      ? obj.b2bEmail.trim().slice(0, 100)
+      : defaultBrandConfig.b2bEmail;
+
   return {
     brandName,
     brandLogoUrl,
     portalUrl,
     apiUrl,
+    turnstileSiteKey,
+    analyticsEnabled,
+    b2bPhone,
+    b2bEmail,
   };
 }
 

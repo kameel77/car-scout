@@ -3,7 +3,16 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'DM Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  color: #202820;
+  background-color: #f7f8f2;
+}
+
+@layer utilities {
+  .focus-brand {
+    outline: 3px solid #202820;
+    outline-offset: 4px;
+  }
 }

@@ -3,15 +3,15 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useBrandConfig } from '../../config/BrandContext';
 import { useAuth } from '../auth/AuthContext';
 import {
-  Car,
   ArrowLeft,
+  ArrowRight,
   ShieldCheck,
   CheckCircle,
   Sparkles,
   Layers,
   Calculator,
-  Tag,
-  Info
+  Info,
+  ChevronDown
 } from 'lucide-react';
 import {
   fetchEmployeeOfferDetails,
@@ -20,6 +20,41 @@ import {
 } from './catalog-api';
 import { InquiryModal } from '../inquiries/InquiryModal';
 import { PortalHeader } from '../common/PortalHeader';
+import { PortalFooter } from '../common/PortalFooter';
+import { ImageGallery } from '../common/ImageGallery';
+import { calculateInstallment, nearestPeriodTo36, formatPln, DEFAULT_FINANCING_OPTIONS } from './financing';
+import { formatCountPl } from '../common/plural';
+
+interface EquipmentAccordionProps {
+  title: string;
+  items: string[];
+}
+
+const EquipmentAccordion: React.FC<EquipmentAccordionProps> = ({ title, items }) => {
+  if (!items || items.length === 0) return null;
+
+  return (
+    <details className="group py-3 first:pt-0 last:pb-0">
+      <summary className="flex items-center justify-between cursor-pointer list-none select-none text-sm font-semibold text-ink hover:text-forest transition-colors">
+        <span className="flex items-center gap-2">
+          <span>{title}</span>
+          <span className="text-xs font-normal text-muted">
+            ({formatCountPl(items.length, ['pozycja', 'pozycje', 'pozycji'])})
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 text-muted transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-2 text-sm text-ink">
+        {items.map((item, idx) => (
+          <div key={idx} className="flex items-start gap-2">
+            <CheckCircle className="h-4 w-4 text-forest shrink-0 mt-0.5" />
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+};
 
 function formatFuelType(fuelType: string | null | undefined): string {
   if (!fuelType) return 'Brak danych';
@@ -54,14 +89,9 @@ function formatTransmission(tx: string | null | undefined): string {
 
 // Etykieta formy finansowania budowana z kategorii produktu (brief E2 §Zakres 4)
 function getFinancingCategoryLabel(category: string): string {
-  if (category === 'CREDIT') return 'Kredyt / finansowanie konsumenckie';
-  if (category === 'LEASING') return 'Leasing operacyjny (B2B)';
+  if (category === 'CREDIT') return 'Prywatnie';
+  if (category === 'LEASING') return 'Rozliczam B2B';
   return category;
-}
-
-function nearestPeriodTo36(periods: number[]): number {
-  if (periods.length === 0) return 36;
-  return periods.reduce((best, p) => (Math.abs(p - 36) < Math.abs(best - 36) ? p : best), periods[0]);
 }
 
 const DOWN_PAYMENT_PRESETS = [0, 10, 20, 30, 45];
@@ -91,10 +121,9 @@ export const NewCarOfferDetailPage: React.FC = () => {
   const [offer, setOffer] = useState<EmployeeOffer | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeImageIdx, setActiveImageIdx] = useState<number>(0);
 
   // Financing Calculator State
-  const [contractType, setContractType] = useState<'LEASING_B2B' | 'CONSUMER'>('LEASING_B2B');
+  const [contractType, setContractType] = useState<'LEASING_B2B' | 'CONSUMER'>('CONSUMER');
   const [months, setMonths] = useState<number>(36);
   const [downPaymentPct, setDownPaymentPct] = useState<number>(20);
   const [residualPct, setResidualPct] = useState<number>(20);
@@ -146,8 +175,17 @@ export const NewCarOfferDetailPage: React.FC = () => {
   };
 
   // E2: Konfiguracja finansowania z programu pracowniczego (nadpisania produktów). Gdy brak
-  // konfiguracji lub pusta lista options — zachowanie kalkulatora identyczne jak przed E2.
-  const financingOptions = offer?.financing?.options ?? [];
+  // konfiguracji lub pusta lista options - domyślne formy finansowania (Kredyt i Leasing po 7,5%).
+  const financingOptions = useMemo(() => {
+    const raw = (offer?.financing?.options && offer.financing.options.length > 0)
+      ? offer.financing.options
+      : DEFAULT_FINANCING_OPTIONS;
+    return [...raw].sort((a, b) => {
+      if (a.category === 'CREDIT' && b.category !== 'CREDIT') return -1;
+      if (a.category !== 'CREDIT' && b.category === 'CREDIT') return 1;
+      return 0;
+    });
+  }, [offer?.financing?.options]);
   const hasFinancingConfig = financingOptions.length > 0;
   const selectedOption: EmployeeFinancingOption | null = hasFinancingConfig
     ? (financingOptions[selectedOptionIndex] ?? financingOptions[0])
@@ -167,65 +205,48 @@ export const NewCarOfferDetailPage: React.FC = () => {
   // Kalkulacja finansowania
   // Standardowy algorytm leasingowy PMT używany w platformie Motolia
   const calculation = useMemo(() => {
-    if (!offer) return null;
+    if (!offer || !hasFinancingConfig || !selectedOption || typeof selectedOption.annualRatePct !== 'number') return null;
 
-    const employeeGross = offer.pricing.employeePricePln;
-    const employeeNet = Math.round(employeeGross / 1.23);
-
-    const basePrice = contractType === 'LEASING_B2B' ? employeeNet : employeeGross;
-    const initialPaymentAmount = Math.round((basePrice * downPaymentPct) / 100);
-    const residualAmount = Math.round((basePrice * residualPct) / 100);
-    const amountToFinance = Math.max(0, basePrice - initialPaymentAmount);
-
-    // Stopa roczna: z konfiguracji programu (annualRatePct), a bez nadpisań — dotychczasowe 7.5%
-    const annualRate = hasFinancingConfig && selectedOption ? selectedOption.annualRatePct : 7.5;
-    const monthlyRate = annualRate / 100 / 12;
-
-    let monthlyInstallment = 0;
-    if (monthlyRate === 0) {
-      monthlyInstallment = (amountToFinance - residualAmount) / (months || 1);
-    } else {
-      const pow = Math.pow(1 + monthlyRate, months);
-      monthlyInstallment = (amountToFinance * monthlyRate - (residualAmount * monthlyRate) / pow) / (1 - 1 / pow);
-    }
-
-    const installmentRounded = Math.max(0, Math.round(monthlyInstallment));
-    const installmentNet = contractType === 'LEASING_B2B' ? installmentRounded : Math.round(installmentRounded / 1.23);
-    const installmentGross = contractType === 'LEASING_B2B' ? Math.round(installmentRounded * 1.23) : installmentRounded;
-
-    return {
-      basePrice,
-      employeeNet,
-      employeeGross,
-      initialPaymentAmount,
-      residualAmount,
-      amountToFinance,
-      installmentNet,
-      installmentGross
-    };
+    return calculateInstallment({
+      employeePriceGrossPln: offer.pricing.employeePricePln,
+      contractType,
+      months,
+      downPaymentPct,
+      residualPct,
+      annualRatePct: selectedOption.annualRatePct
+    });
   }, [offer, contractType, months, downPaymentPct, residualPct, hasFinancingConfig, selectedOption]);
 
   // Tekst podsumowujący konfigurację do przekazania w zapytaniu
   const inquiryInitialNotes = useMemo(() => {
-    if (!calculation || !offer) return '';
-    const typeLabel = contractType === 'LEASING_B2B' ? 'Leasing operacyjny (B2B)' : 'Kredyt / Finansowanie konsumenckie';
-    const productLabelLine = hasFinancingConfig && selectedOption
+    if (!offer) return '';
+    if (!hasFinancingConfig || !calculation) {
+      return `[Zapytanie o ofertę]:
+- Pojazd: ${offer.vehicle.make} ${offer.vehicle.model} ${offer.vehicle.version || ''}
+- Cena dla Ciebie: ${formatPln(offer.pricing.employeePricePln)} zł brutto
+- Finansowanie: Rata na zapytanie (prośba o indywidualną kalkulację doradcy)`;
+    }
+    const typeLabel = contractType === 'CONSUMER' ? 'Kredyt samochodowy' : 'Leasing operacyjny (B2B)';
+    const productLabelLine = selectedOption
       ? `\n- Wybrany produkt finansowania: ${selectedOption.label}`
       : '';
+    const rateLine = contractType === 'CONSUMER'
+      ? `- Szacowana rata: ${formatPln(calculation.installmentGross)} zł brutto (${formatPln(calculation.installmentNet)} zł netto) / mies.`
+      : `- Szacowana rata: ${formatPln(calculation.installmentNet)} zł netto (${formatPln(calculation.installmentGross)} zł brutto) / mies.`;
     return `[Konfiguracja kalkulatora finansowania]:
 - Typ finansowania: ${typeLabel}
 - Okres umowy: ${months} miesięcy
-- Wpłata własna: ${downPaymentPct}% (${calculation.initialPaymentAmount.toLocaleString('pl-PL')} zł ${contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-- Wykup końcowy: ${residualPct}% (${calculation.residualAmount.toLocaleString('pl-PL')} zł ${contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-- Szacowana rata: ${calculation.installmentNet.toLocaleString('pl-PL')} zł netto (${calculation.installmentGross.toLocaleString('pl-PL')} zł brutto) / mies.${productLabelLine}`;
+- Wpłata własna: ${downPaymentPct}% (${formatPln(calculation.initialPaymentAmount)} zł ${contractType === 'CONSUMER' ? 'brutto' : 'netto'})
+- Wykup końcowy: ${residualPct}% (${formatPln(calculation.residualAmount)} zł ${contractType === 'CONSUMER' ? 'brutto' : 'netto'})
+${rateLine}${productLabelLine}`;
   }, [calculation, offer, contractType, months, downPaymentPct, residualPct, hasFinancingConfig, selectedOption]);
 
   if (isBrandLoading || isAuthLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <div className="text-gray-500 text-sm">Ładowanie oferty...</div>
+          <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin" />
+          <div className="text-muted text-sm">Ładowanie oferty...</div>
         </div>
       </div>
     );
@@ -234,7 +255,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
   const activeError = logoutError || sessionError;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-paper flex flex-col">
       {/* Top Navbar */}
       <PortalHeader onLogout={handleLogout} isLoggingOut={isLoggingOut} />
 
@@ -256,41 +277,41 @@ export const NewCarOfferDetailPage: React.FC = () => {
         <div className="mb-6 flex items-center justify-between">
           <Link
             to="/katalog"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-primary-600 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Wróć do katalogu samochodów nowych
+            Wróć do listy samochodów
           </Link>
-          <div className="text-xs text-gray-400 font-medium">
-            Katalog pojazdów nowych
+          <div className="text-xs text-muted font-medium">
+            Samochody
           </div>
         </div>
 
         {/* Loading State */}
         {isLoading && (
-          <div className="py-24 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-gray-200">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-            <div className="text-gray-500 text-sm">Pobieranie szczegółów pojazdu...</div>
+          <div className="py-24 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-line">
+            <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin" />
+            <div className="text-muted text-sm">Pobieranie szczegółów pojazdu...</div>
           </div>
         )}
 
         {/* Error State */}
         {!isLoading && error && (
           <div className="p-8 bg-white rounded-2xl border border-red-200 text-center max-w-xl mx-auto my-12 shadow-xs">
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Nie udało się załadować oferty</h2>
+            <h2 className="text-lg font-bold text-ink mb-2">Nie udało się załadować oferty</h2>
             <p className="text-sm text-red-600 mb-6">{error}</p>
             <div className="flex justify-center gap-3">
               <button
                 type="button"
                 onClick={() => loadDetails()}
-                className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                className="px-5 py-2.5 bg-ink hover:bg-forest text-paper text-sm font-semibold rounded-xl transition-colors"
               >
                 Spróbuj ponownie
               </button>
               <button
                 type="button"
                 onClick={() => navigate('/katalog')}
-                className="px-5 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+                className="px-5 py-2.5 border border-line hover:bg-paper text-ink text-sm font-semibold rounded-xl transition-colors"
               >
                 Wróć do katalogu
               </button>
@@ -301,161 +322,74 @@ export const NewCarOfferDetailPage: React.FC = () => {
         {/* Offer Detail Content */}
         {!isLoading && offer && (
           <div className="space-y-8">
-            {/* Header / Titles */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-xs">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    {offer.pricing.discountPct > 0 && (
-                      <span className="bg-emerald-600 text-white font-bold text-xs px-3 py-1 rounded-full shadow-xs flex items-center gap-1">
-                        <Tag className="h-3.5 w-3.5" />
-                        Rabat -{String(offer.pricing.discountPct).replace('.', ',')}%
-                      </span>
-                    )}
-                    <span className="bg-primary-50 text-primary-700 font-semibold text-xs px-3 py-1 rounded-full border border-primary-100">
-                      Oferta pracownicza
-                    </span>
-                    {offer.vehicle.productionYear && (
-                      <span className="bg-gray-100 text-gray-700 font-semibold text-xs px-3 py-1 rounded-full">
-                        Rocznik {offer.vehicle.productionYear}
-                      </span>
-                    )}
-                  </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                    {offer.vehicle.make} {offer.vehicle.model}
-                  </h1>
-                  {offer.vehicle.version && (
-                    <p className="text-sm sm:text-base text-gray-600 mt-1">
-                      {offer.vehicle.version}
-                    </p>
-                  )}
-                </div>
-
-                {/* Top Pricing Summary Pill */}
-                <div className="bg-primary-50/50 border border-primary-100 rounded-2xl p-4 lg:text-right min-w-[240px]">
-                  {offer.pricing.savingsPln > 0 && (
-                    <div className="text-xs text-gray-400 line-through">
-                      Katalogowa: {offer.pricing.listPricePln.toLocaleString('pl-PL')} zł brutto
-                    </div>
-                  )}
-                  <div className="flex lg:justify-end items-baseline gap-2 mt-0.5">
-                    <span className="text-2xl sm:text-3xl font-black text-primary-600 tracking-tight">
-                      {offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł
-                    </span>
-                    <span className="text-xs text-gray-500 font-medium">brutto</span>
-                  </div>
-                  {offer.pricing.savingsPln > 0 && (
-                    <div className="text-xs font-semibold text-emerald-700 mt-0.5">
-                      Oszczędzasz {offer.pricing.savingsPln.toLocaleString('pl-PL')} zł
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* Grid: Photos + Calculator & Benefits */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left Column: Gallery + Specs + Equipment */}
-              <div className="lg:col-span-7 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* 1. Left Column: Gallery + Specs + Equipment (Col 1-7 on desktop, 2nd on mobile) */}
+              <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
                 {/* Image Gallery */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-                  {offer.vehicle.imageUrls && offer.vehicle.imageUrls.length > 0 ? (
-                    <div>
-                      <div className="relative aspect-[16/10] bg-gray-100 rounded-xl overflow-hidden mb-3">
-                        <img
-                          src={offer.vehicle.imageUrls[activeImageIdx] || offer.vehicle.primaryImageUrl || ''}
-                          alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                          className="w-full h-full object-cover transition-all"
-                        />
-                      </div>
-                      {offer.vehicle.imageUrls.length > 1 && (
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                          {offer.vehicle.imageUrls.map((img, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setActiveImageIdx(idx)}
-                              className={`relative flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all ${
-                                activeImageIdx === idx
-                                  ? 'border-primary-600 ring-2 ring-primary-100'
-                                  : 'border-transparent opacity-70 hover:opacity-100'
-                              }`}
-                            >
-                              <img src={img} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : offer.vehicle.primaryImageUrl ? (
-                    <div className="relative aspect-[16/10] bg-gray-100 rounded-xl overflow-hidden">
-                      <img
-                        src={offer.vehicle.primaryImageUrl}
-                        alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="aspect-[16/10] bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-400 gap-2">
-                      <Car className="h-16 w-16 text-gray-300" />
-                      <span className="text-sm">Brak zdjęć dla tego pojazdu</span>
-                    </div>
-                  )}
+                <div className="bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
+                  <ImageGallery
+                    images={Array.from(
+                      new Set([offer.vehicle.primaryImageUrl, ...(offer.vehicle.imageUrls || [])].filter(Boolean))
+                    ) as string[]}
+                    title={`${offer.vehicle.make} ${offer.vehicle.model}`}
+                    aspectClassName="aspect-[16/10]"
+                  />
                 </div>
 
                 {/* Technical Specifications Grid */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
-                  <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-primary-600" />
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs">
+                  <h3 className="text-base font-bold text-ink mb-4 flex items-center gap-2 font-heading">
+                    <Layers className="h-5 w-5 text-forest" />
                     Dane techniczne
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <span className="text-xs text-gray-500 block">Rok produkcji</span>
-                      <span className="font-semibold text-gray-900">{offer.vehicle.productionYear}</span>
+                    <div className="p-3 bg-paper rounded-xl border border-line">
+                      <span className="text-xs text-muted block">Rok produkcji</span>
+                      <span className="font-semibold text-ink">{offer.vehicle.productionYear}</span>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <span className="text-xs text-gray-500 block">Paliwo</span>
-                      <span className="font-semibold text-gray-900">{formatFuelType(offer.vehicle.fuelType)}</span>
+                    <div className="p-3 bg-paper rounded-xl border border-line">
+                      <span className="text-xs text-muted block">Paliwo</span>
+                      <span className="font-semibold text-ink">{formatFuelType(offer.vehicle.fuelType)}</span>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <span className="text-xs text-gray-500 block">Skrzynia biegów</span>
-                      <span className="font-semibold text-gray-900">{formatTransmission(offer.vehicle.transmission)}</span>
+                    <div className="p-3 bg-paper rounded-xl border border-line">
+                      <span className="text-xs text-muted block">Skrzynia biegów</span>
+                      <span className="font-semibold text-ink">{formatTransmission(offer.vehicle.transmission)}</span>
                     </div>
                     {offer.vehicle.bodyType && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Nadwozie</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.bodyType}</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Nadwozie</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.bodyType}</span>
                       </div>
                     )}
                     {Boolean(offer.vehicle.powerHp) && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Moc silnika</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.powerHp} KM</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Moc silnika</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.powerHp} KM</span>
                       </div>
                     )}
                     {Boolean(offer.vehicle.engineCapacityCm3) && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Pojemność</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.engineCapacityCm3?.toLocaleString('pl-PL')} cm³</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Pojemność</span>
+                        <span className="font-semibold text-ink">{formatPln(offer.vehicle.engineCapacityCm3)} cm³</span>
                       </div>
                     )}
                     {offer.vehicle.drive && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Napęd</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.drive}</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Napęd</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.drive}</span>
                       </div>
                     )}
                     {offer.vehicle.color && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Kolor</span>
-                        <span className="font-semibold text-gray-900">{offer.vehicle.color}</span>
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Kolor</span>
+                        <span className="font-semibold text-ink">{offer.vehicle.color}</span>
                       </div>
                     )}
                     {Boolean(offer.vehicle.doors || offer.vehicle.seats) && (
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <span className="text-xs text-gray-500 block">Drzwi / Miejsca</span>
-                        <span className="font-semibold text-gray-900">
+                      <div className="p-3 bg-paper rounded-xl border border-line">
+                        <span className="text-xs text-muted block">Drzwi / Miejsca</span>
+                        <span className="font-semibold text-ink">
                           {offer.vehicle.doors ? `${offer.vehicle.doors} drzwi` : ''}
                           {offer.vehicle.doors && offer.vehicle.seats ? ' / ' : ''}
                           {offer.vehicle.seats ? `${offer.vehicle.seats} miejsc` : ''}
@@ -470,147 +404,185 @@ export const NewCarOfferDetailPage: React.FC = () => {
                   offer.vehicle.equipmentComfortExtras?.length ||
                   offer.vehicle.equipmentAudioMultimedia?.length ||
                   offer.vehicle.equipmentOther?.length) ? (
-                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-6">
-                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5 text-primary-600" />
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+                    <h3 className="text-base font-bold text-ink flex items-center gap-2 font-heading pb-2 border-b border-line">
+                      <ShieldCheck className="h-5 w-5 text-forest" />
                       Wyposażenie pojazdu
                     </h3>
 
-                    {/* Bezpieczeństwo */}
-                    {offer.vehicle.equipmentSafety && offer.vehicle.equipmentSafety.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                          Bezpieczeństwo i asystenci
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
-                          {offer.vehicle.equipmentSafety.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Komfort i dodatki */}
-                    {offer.vehicle.equipmentComfortExtras && offer.vehicle.equipmentComfortExtras.length > 0 && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                          Komfort i funkcjonalność
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
-                          {offer.vehicle.equipmentComfortExtras.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-primary-600 flex-shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Audio i Multimedia */}
-                    {offer.vehicle.equipmentAudioMultimedia && offer.vehicle.equipmentAudioMultimedia.length > 0 && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                          Multimedia i łączność
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
-                          {offer.vehicle.equipmentAudioMultimedia.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-primary-600 flex-shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Inne */}
-                    {offer.vehicle.equipmentOther && offer.vehicle.equipmentOther.length > 0 && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                          Pozostałe elementy
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
-                          {offer.vehicle.equipmentOther.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="divide-y divide-line">
+                      <EquipmentAccordion
+                        title="Bezpieczeństwo i asystenci"
+                        items={offer.vehicle.equipmentSafety || []}
+                      />
+                      <EquipmentAccordion
+                        title="Komfort i funkcjonalność"
+                        items={offer.vehicle.equipmentComfortExtras || []}
+                      />
+                      <EquipmentAccordion
+                        title="Audio i multimedia"
+                        items={offer.vehicle.equipmentAudioMultimedia || []}
+                      />
+                      <EquipmentAccordion
+                        title="Pozostałe elementy"
+                        items={offer.vehicle.equipmentOther || []}
+                      />
+                    </div>
                   </div>
                 ) : null}
 
                 {/* Additional info / description if present */}
                 {offer.vehicle.additionalInfoContent && (
-                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
-                    <h3 className="text-base font-bold text-gray-900 mb-3">
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs">
+                    <h3 className="text-base font-bold text-ink mb-3 font-heading">
                       {offer.vehicle.additionalInfoHeader || 'Dodatkowe informacje o pojeździe'}
                     </h3>
-                    <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                    <p className="text-sm text-muted whitespace-pre-line leading-relaxed">
                       {offer.vehicle.additionalInfoContent}
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Right Column: Financing Calculator & Inquiry Card */}
-              <div className="lg:col-span-5 space-y-6">
+              {/* 2. Right Column: Pricing Hero + Benefits + Calculator (Col 8-12 on desktop, 1st on mobile) */}
+              <div className="lg:col-span-5 space-y-6 order-1 lg:order-2">
+                {/* Title & Pricing Hero Card */}
+                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+                  {/* Linia 1: Plakietki */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-lime text-ink font-semibold text-xs px-3 py-1 rounded-full">
+                      Oferta pracownicza
+                    </span>
+                    {offer.vehicle.productionYear && (
+                      <span className="bg-paper text-ink font-semibold text-xs px-3 py-1 rounded-full border border-line">
+                        Rocznik {offer.vehicle.productionYear}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Linia 2: make + model jako h1, pod spodem version */}
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-heading">
+                      {offer.vehicle.make} {offer.vehicle.model}
+                    </h1>
+                    {offer.vehicle.version && (
+                      <p className="text-sm text-muted mt-1">
+                        {offer.vehicle.version}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Linia 3: Przekreślona cena katalogowa + oszczędności */}
+                  {offer.pricing.listPricePln > offer.pricing.employeePricePln && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span className="text-xs text-muted">
+                        Cena katalogowa: <span className="line-through">{formatPln(offer.pricing.listPricePln)} zł brutto</span>
+                      </span>
+                      <span className="inline-flex items-center bg-lime text-ink font-semibold text-[11px] px-2.5 py-0.5 rounded-full">
+                        Oszczędzasz {formatPln(offer.pricing.savingsPln)} zł
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Linia 4: BOHATER - Szacowana rata miesięczna (sprzedaż raty) */}
+                  <div className="pt-3 border-t border-line space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xs font-bold uppercase tracking-wider text-muted block">
+                        Twoja rata
+                      </span>
+                      <span className="text-xs font-semibold text-forest">
+                        {contractType === 'CONSUMER' ? 'Kredyt samochodowy' : 'Leasing operacyjny'}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl sm:text-4xl font-black text-ink tracking-tight font-heading">
+                        {calculation
+                          ? formatPln(contractType === 'CONSUMER' ? calculation.installmentGross : calculation.installmentNet)
+                          : 'od -'} zł
+                      </span>
+                      <span className="text-xs font-semibold text-muted">
+                        {contractType === 'CONSUMER' ? 'brutto / mies.' : 'netto / mies.'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Linia 5: DRUGORZĘDNA - Cena pojazdu dla Ciebie */}
+                  <div className="pt-2 border-t border-line/60 flex items-center justify-between text-xs">
+                    <span className="text-muted font-medium">Cena dla Ciebie</span>
+                    <span className="font-bold text-ink">
+                      {formatPln(offer.pricing.employeePricePln)} zł brutto
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dlaczego warto - Compact Benefits Bar */}
+                <div className="p-3.5 bg-paper border border-line rounded-2xl shadow-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-ink">
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Gwarancja wynegocjowanego rabatu flotowego</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Brak ukrytych opłat i prowizji przygotowawczej</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
+                      <span className="font-medium leading-tight">Opieka doradcy na każdym etapie odbioru auta</span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Employee Benefit Package Box */}
                 {offer.benefit && (
-                  <div className="p-5 bg-gradient-to-br from-primary-50 to-emerald-50/50 border border-primary-200/80 rounded-2xl shadow-xs">
-                    <div className="flex items-center gap-2 mb-2 text-primary-900 font-bold text-base">
-                      <Sparkles className="h-5 w-5 text-primary-600" />
+                  <div className="p-5 bg-paper border border-line rounded-2xl shadow-xs">
+                    <div className="flex items-center gap-2 mb-2 text-ink font-bold text-base font-heading">
+                      <Sparkles className="h-5 w-5 text-forest" />
                       <span>{offer.benefit.name}</span>
                     </div>
-                    <p className="text-xs text-gray-600 mb-4">
+                    <p className="text-xs text-muted mb-4">
                       Specjalny pakiet benefitów przyznany w ramach programu partnerskiego Twojego pracodawcy.
                     </p>
                     <div className="space-y-2 text-sm">
                       {offer.benefit.moyaCardAmount && (
-                        <div className="flex items-center gap-2 text-gray-800">
-                          <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                          <span>Karta paliwowa Moya na kwotę <strong>{offer.benefit.moyaCardAmount.toLocaleString('pl-PL')} zł</strong></span>
+                        <div className="flex items-center gap-2 text-ink">
+                          <CheckCircle className="h-4 w-4 text-forest flex-shrink-0" />
+                          <span>Karta paliwowa Moya na kwotę <strong>{formatPln(offer.benefit.moyaCardAmount)} zł</strong></span>
                         </div>
                       )}
                       {offer.benefit.fuelDiscount && (
-                        <div className="flex items-center gap-2 text-gray-800">
-                          <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                        <div className="flex items-center gap-2 text-ink">
+                          <CheckCircle className="h-4 w-4 text-forest flex-shrink-0" />
                           <span>Stały rabat na paliwo: <strong>{offer.benefit.fuelDiscount}</strong></span>
                         </div>
                       )}
                       {offer.benefit.consultantCare && (
-                        <div className="flex items-center gap-2 text-gray-800">
-                          <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                          <span>Dedykowany doradca flotowy i obsługa formalności door-to-door</span>
+                        <div className="flex items-center gap-2 text-ink">
+                          <CheckCircle className="h-4 w-4 text-forest flex-shrink-0" />
+                          <span>Dedykowany doradca flotowy</span>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Financing Calculator Box */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6">
-                  <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                    <div className="flex items-center gap-2">
-                      <Calculator className="h-5 w-5 text-primary-600" />
-                      <h3 className="font-bold text-gray-900 text-base">Kalkulator finansowania</h3>
+                {/* Financing Calculator Box or Rata na zapytanie */}
+                {hasFinancingConfig && selectedOption ? (
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20 lg:z-10">
+                    <div className="flex items-center justify-between border-b border-line pb-4">
+                      <div className="flex items-center gap-2">
+                        <Calculator className="h-5 w-5 text-forest" />
+                        <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
+                      </div>
+                      <span className="text-xs font-semibold text-ink bg-lime px-2.5 py-1 rounded-full">
+                        Cena dla Ciebie
+                      </span>
                     </div>
-                    <span className="text-xs font-semibold text-primary-700 bg-primary-50 px-2.5 py-1 rounded-full">
-                      Cena pracownicza
-                    </span>
-                  </div>
 
-                  {/* Contract Type Toggle */}
-                  <div>
-                    <span className="text-xs font-medium text-gray-500 block mb-2">Forma finansowania</span>
-                    {hasFinancingConfig ? (
-                      <div className={`grid gap-2 bg-gray-100 p-1 rounded-xl ${financingOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {/* Contract Type Toggle */}
+                    <div>
+                      <span className="text-xs font-medium text-muted block mb-2">Forma finansowania</span>
+                      <div className={`grid gap-2 bg-paper p-1 rounded-xl border border-line ${financingOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                         {financingOptions.map((option, idx) => (
                           <button
                             key={option.productId}
@@ -618,49 +590,22 @@ export const NewCarOfferDetailPage: React.FC = () => {
                             onClick={() => setSelectedOptionIndex(idx)}
                             className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
                               selectedOptionIndex === idx
-                                ? 'bg-white text-gray-900 shadow-xs'
-                                : 'text-gray-500 hover:text-gray-900'
+                                ? 'bg-white text-ink shadow-xs'
+                                : 'text-muted hover:text-ink'
                             }`}
                           >
                             {getFinancingCategoryLabel(option.category)}
                           </button>
                         ))}
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
-                        <button
-                          type="button"
-                          onClick={() => setContractType('LEASING_B2B')}
-                          className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
-                            contractType === 'LEASING_B2B'
-                              ? 'bg-white text-gray-900 shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900'
-                          }`}
-                        >
-                          Leasing (B2B)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setContractType('CONSUMER')}
-                          className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
-                            contractType === 'CONSUMER'
-                              ? 'bg-white text-gray-900 shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900'
-                          }`}
-                        >
-                          Kredyt / Prywatnie
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Months Selector */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-gray-700">Okres finansowania</span>
-                      <span className="text-xs font-bold text-primary-600">{months} miesięcy</span>
                     </div>
-                    {hasFinancingConfig && selectedOption ? (
+
+                    {/* Months Selector */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-ink">Okres finansowania</span>
+                        <span className="text-xs font-bold text-forest">{months} miesięcy</span>
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {selectedOption.periods.map((m) => (
                           <button
@@ -669,46 +614,30 @@ export const NewCarOfferDetailPage: React.FC = () => {
                             onClick={() => setMonths(m)}
                             className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
                               months === m
-                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                                ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
+                                : 'border-line text-ink hover:bg-paper'
                             }`}
                           >
                             {m} msc
                           </button>
                         ))}
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-4 gap-2">
-                        {[24, 36, 48, 60].map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            onClick={() => setMonths(m)}
-                            className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                              months === m
-                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                            }`}
-                          >
-                            {m} msc
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Down Payment Selector */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-gray-700">Wpłata wstępna</span>
-                      <span className="text-xs font-bold text-primary-600">
-                        {downPaymentPct}% (
-                        {calculation ? calculation.initialPaymentAmount.toLocaleString('pl-PL') : 0} zł{' '}
-                        {contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-                      </span>
                     </div>
-                    {hasFinancingConfig && selectedOption ? (
-                      <div className="flex flex-wrap gap-1.5">
+
+                    {/* Down Payment Selector */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-ink">Wpłata początkowa</span>
+                        <div className="text-right">
+                          <span className="text-xs font-bold text-forest">{downPaymentPct}%</span>
+                          {calculation && (
+                            <span className="text-2xs text-muted block">
+                              {formatPln(calculation.initialPaymentAmount)} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         {buildDownPaymentChipOptions(selectedOption.minDownPaymentPct, selectedOption.maxDownPaymentPct).map((pct) => (
                           <button
                             key={pct}
@@ -716,46 +645,30 @@ export const NewCarOfferDetailPage: React.FC = () => {
                             onClick={() => setDownPaymentPct(pct)}
                             className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
                               downPaymentPct === pct
-                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                                ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
+                                : 'border-line text-ink hover:bg-paper'
                             }`}
                           >
                             {pct}%
                           </button>
                         ))}
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {[0, 10, 20, 30, 45].map((pct) => (
-                          <button
-                            key={pct}
-                            type="button"
-                            onClick={() => setDownPaymentPct(pct)}
-                            className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                              downPaymentPct === pct
-                                ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                            }`}
-                          >
-                            {pct}%
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Residual / Balloon Payment Selector */}
-                  {(!hasFinancingConfig || (selectedOption && selectedOption.maxResidualPct > 0)) && (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-gray-700">Wykup końcowy</span>
-                        <span className="text-xs font-bold text-primary-600">
-                          {residualPct}% (
-                          {calculation ? calculation.residualAmount.toLocaleString('pl-PL') : 0} zł{' '}
-                          {contractType === 'LEASING_B2B' ? 'netto' : 'brutto'})
-                        </span>
-                      </div>
-                      {hasFinancingConfig && selectedOption ? (
+                    {/* Residual Value Selector (if available) */}
+                    {selectedOption.maxResidualPct > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-ink">Wykup końcowy</span>
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-forest">{residualPct}%</span>
+                            {calculation && (
+                              <span className="text-2xs text-muted block">
+                                {formatPln(calculation.residualAmount)} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           {buildResidualChipOptions(selectedOption.maxResidualPct).map((pct) => (
                             <button
@@ -764,85 +677,108 @@ export const NewCarOfferDetailPage: React.FC = () => {
                               onClick={() => setResidualPct(pct)}
                               className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
                                 residualPct === pct
-                                  ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                                  ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
+                                  : 'border-line text-ink hover:bg-paper'
                               }`}
                             >
                               {pct}%
                             </button>
                           ))}
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-4 gap-2">
-                          {[1, 10, 20, 30].map((pct) => (
-                            <button
-                              key={pct}
-                              type="button"
-                              onClick={() => setResidualPct(pct)}
-                              className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                                residualPct === pct
-                                  ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-100'
-                                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              {pct}%
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Result Rate Box */}
-                  <div className="pt-4 border-t border-gray-100 bg-gray-50/70 -mx-6 -mb-6 p-6 rounded-b-2xl">
-                    <div className="flex items-baseline justify-between mb-2">
-                      <div>
-                        <span className="text-xs font-medium text-gray-500 block">Szacowana rata miesięczna</span>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-black text-gray-900 tracking-tight">
-                            {calculation ? calculation.installmentNet.toLocaleString('pl-PL') : 0} zł
-                          </span>
-                          <span className="text-xs font-semibold text-gray-500">netto / msc</span>
-                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-gray-600 block">
-                          {calculation ? calculation.installmentGross.toLocaleString('pl-PL') : 0} zł
-                        </span>
-                        <span className="text-[11px] text-gray-400">brutto / msc</span>
+                    )}
+
+                    {/* Result Rate Box */}
+                    <div className="pt-4 border-t border-line bg-paper -mx-6 -mb-6 p-6 rounded-b-2xl">
+                      <div className="flex items-baseline justify-between mb-2">
+                        {contractType === 'CONSUMER' ? (
+                          <>
+                            <div>
+                              <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-black text-ink tracking-tight font-heading">
+                                  {calculation ? formatPln(calculation.installmentGross) : '0'} zł
+                                </span>
+                                <span className="text-xs font-semibold text-muted">brutto / mies.</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-bold text-muted block font-heading">
+                                {calculation ? formatPln(calculation.installmentNet) : '0'} zł
+                              </span>
+                              <span className="text-[11px] text-muted">netto / mies.</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <span className="text-xs font-medium text-muted block">Szacowana rata miesięczna</span>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-black text-ink tracking-tight font-heading">
+                                  {calculation ? formatPln(calculation.installmentNet) : '0'} zł
+                                </span>
+                                <span className="text-xs font-semibold text-muted">netto / mies.</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-bold text-muted block font-heading">
+                                {calculation ? formatPln(calculation.installmentGross) : '0'} zł
+                              </span>
+                              <span className="text-[11px] text-muted">brutto / mies.</span>
+                            </div>
+                          </>
+                        )}
                       </div>
+
+                      <div className="text-[11px] text-muted mb-4 flex items-center gap-1.5">
+                        <Info className="h-3.5 w-3.5 text-muted flex-shrink-0" />
+                        <span>Kalkulacja ma charakter orientacyjny. Rzeczywiste warunki zależą od oceny zdolności finansowej.</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsInquiryModalOpen(true)}
+                        className="w-full py-3 px-4 bg-ink hover:bg-forest text-paper font-bold text-sm rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+                      >
+                        Zapytaj o tę ofertę i ratę
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-5 lg:sticky lg:top-20 lg:z-10">
+                    <div className="flex items-center justify-between border-b border-line pb-4">
+                      <div className="flex items-center gap-2">
+                        <Calculator className="h-5 w-5 text-forest" />
+                        <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
+                      </div>
+                      <span className="text-xs font-semibold text-ink bg-paper border border-line px-2.5 py-1 rounded-full">
+                        Rata na zapytanie
+                      </span>
                     </div>
 
-                    <div className="text-[11px] text-gray-500 mb-4 flex items-center gap-1.5">
-                      <Info className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                      <span>Kalkulacja ma charakter orientacyjny. Rzeczywiste warunki zależą od oceny zdolności finansowej.</span>
+                    <div className="p-4 bg-paper rounded-xl border border-line">
+                      <p className="text-xs text-muted leading-relaxed">
+                        Dla tej oferty program nie posiada ustandaryzowanej matrycy rat. Dedykowany doradca przygotuje dla Ciebie indywidualną kalkulację finansowania (leasing konsumencki, pożyczka lub leasing B2B) dopasowaną do Twoich preferencji.
+                      </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setIsInquiryModalOpen(true)}
-                      className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-bold text-sm rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+                      className="w-full py-3.5 px-6 bg-ink hover:bg-forest text-paper font-semibold text-sm rounded-full transition-colors shadow-xs flex items-center justify-center gap-2"
                     >
-                      Zapytaj o tę ofertę i ratę
+                      <span>Zapytaj doradcę o ratę</span>
+                      <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
-                </div>
-
-                {/* Additional Guidance Box */}
-                <div className="p-4 bg-white rounded-2xl border border-gray-200 text-xs text-gray-500 space-y-2">
-                  <div className="font-semibold text-gray-700">Dlaczego warto przez program pracowniczy?</div>
-                  <ul className="space-y-1 list-disc list-inside text-gray-600">
-                    <li>Gwarancja wynegocjowanego rabatu flotowego</li>
-                    <li>Brak ukrytych opłat i prowizji przygotowawczej</li>
-                    <li>Szybka ścieżka weryfikacji wniosku</li>
-                    <li>Opieka doradcy na każdym etapie odbioru auta</li>
-                  </ul>
-                </div>
+                )}
               </div>
             </div>
           </div>
         )}
       </main>
+
+      <PortalFooter />
 
       {/* Inquiry Modal */}
       {offer && (

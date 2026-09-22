@@ -52,6 +52,22 @@ const mockOffersList: catalogApi.EmployeeOffer[] = [
       savingsPln: 5752,
       discountPct: 8.0,
     },
+    financing: {
+      options: [
+        {
+          productId: 'prod_yaris_credit',
+          category: 'CREDIT',
+          label: 'Kredyt promocyjny',
+          allowedContractParties: ['CONSUMER'],
+          b2cStatus: 'AVAILABLE',
+          minDownPaymentPct: 10,
+          maxDownPaymentPct: 30,
+          maxResidualPct: 20,
+          periods: [24, 36, 48],
+          annualRatePct: 7.5,
+        },
+      ],
+    },
     benefit: {
       name: 'Pakiet Powitalny Moya',
       moyaCardAmount: 500,
@@ -80,6 +96,22 @@ const mockOffersList: catalogApi.EmployeeOffer[] = [
       savingsPln: 13912,
       discountPct: 8.0,
     },
+    financing: {
+      options: [
+        {
+          productId: 'prod_tayron_credit',
+          category: 'CREDIT',
+          label: 'Kredyt promocyjny',
+          allowedContractParties: ['CONSUMER'],
+          b2cStatus: 'AVAILABLE',
+          minDownPaymentPct: 10,
+          maxDownPaymentPct: 30,
+          maxResidualPct: 20,
+          periods: [24, 36, 48],
+          annualRatePct: 7.5,
+        },
+      ],
+    },
     benefit: null,
   },
 ];
@@ -89,7 +121,7 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders employee info and company/program badges in header', async () => {
+  it('renders employee info and navigation tabs in header', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
     vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
       offers: mockOffersList,
@@ -109,8 +141,10 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     await waitFor(() => {
       expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
       expect(screen.getAllByText('Action S.A.').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Action Flota Plus').length).toBeGreaterThanOrEqual(1);
     });
+
+    expect(screen.getByRole('link', { name: /Samochody/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Najem długoterminowy/i })).toBeInTheDocument();
   });
 
   it('renders live offers list with exact pricing, discount badges, and benefit packages', async () => {
@@ -133,6 +167,11 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('catalog-offers-grid')).toBeInTheDocument();
     });
+
+    expect(
+      screen.getByRole('heading', { name: 'Samochody', level: 1 })
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('filters-card')).toBeInTheDocument();
 
     // Toyota Yaris
     expect(screen.getByText(/Toyota Yaris/i)).toBeInTheDocument();
@@ -348,6 +387,97 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     // Both should be visible
     expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
     expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
+  });
+
+  it('filters offers by monthly rate preset and expands secondary filters', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
+      offers: mockOffersList,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <CatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
+      expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
+    });
+
+    // Toyota Yaris default rate is under 1500 zł/mies.
+    // Volkswagen Tayron default rate is ~3000 zł/mies.
+    fireEvent.click(screen.getByRole('button', { name: '< 1500' }));
+    expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
+    expect(screen.queryByText('Volkswagen Tayron')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '2500 - 3500' }));
+    expect(screen.queryByText('Toyota Yaris')).not.toBeInTheDocument();
+    expect(screen.getByText('Volkswagen Tayron')).toBeInTheDocument();
+
+    // Toggle more filters
+    const moreBtn = screen.getByRole('button', { name: /Więcej filtrów/i });
+    expect(screen.queryByText('Skrzynia')).not.toBeInTheDocument();
+    fireEvent.click(moreBtn);
+    expect(screen.getByText('Skrzynia')).toBeInTheDocument();
+  });
+
+  it('calculates rate using default financing for offers without custom financing config and removes Rata na zapytanie pills', async () => {
+    const offerWithoutFinancing: catalogApi.EmployeeOffer = {
+      id: 'offer_cupra',
+      sourceType: 'FINANCING',
+      vehicle: {
+        make: 'Cupra',
+        model: 'Formentor',
+        version: '1.5 TSI',
+        productionYear: 2026,
+        fuelType: 'PETROL',
+        transmission: 'AUTOMATIC',
+        bodyType: 'SUV',
+        primaryImageUrl: null,
+        imageUrls: [],
+      },
+      pricing: {
+        listPricePln: 145000,
+        employeePricePln: 135000,
+        savingsPln: 10000,
+        discountPct: 6.9,
+      },
+      financing: null,
+      benefit: null,
+    };
+
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(catalogApi, 'fetchEmployeeOffers').mockResolvedValue({
+      offers: [mockOffersList[0], offerWithoutFinancing],
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <CatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Cupra Formentor')).toBeInTheDocument();
+    });
+
+    // Verify rate is calculated and "Rata na zapytanie" is removed
+    expect(screen.queryByText('Rata na zapytanie')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Twoja rata:').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Cena dla Ciebie').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Szczegóły oferty').length).toBeGreaterThanOrEqual(2);
   });
 });
 

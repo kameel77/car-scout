@@ -74,7 +74,7 @@ describe('RegisterCodePage Component', () => {
     });
   });
 
-  it('submits registration successfully and navigates to /katalog', async () => {
+  it('submits registration successfully and navigates to /dashboard', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
     vi.spyOn(authApi, 'validateCompanyCode').mockResolvedValue({
       valid: true,
@@ -99,7 +99,7 @@ describe('RegisterCodePage Component', () => {
           <MemoryRouter initialEntries={['/rejestracja']}>
             <Routes>
               <Route path="/rejestracja" element={<RegisterCodePage />} />
-              <Route path="/katalog" element={<div>Widok Katalogu</div>} />
+              <Route path="/dashboard" element={<div>Pulpit Programu</div>} />
             </Routes>
           </MemoryRouter>
         </AuthProvider>
@@ -132,7 +132,7 @@ describe('RegisterCodePage Component', () => {
         lastName: 'Kowalski',
         phone: '+48123456789',
       });
-      expect(screen.getByText('Widok Katalogu')).toBeInTheDocument();
+      expect(screen.getByText('Pulpit Programu')).toBeInTheDocument();
     });
   });
 
@@ -155,6 +155,60 @@ describe('RegisterCodePage Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Nieprawidłowy lub nieaktywny kod firmy')).toBeInTheDocument();
+    });
+  });
+
+  it('auto-validates company code from ?kod= query parameter on mount and advances to step 2', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+    const validateSpy = vi.spyOn(authApi, 'validateCompanyCode').mockResolvedValue({
+      valid: true,
+      companyId: 'c1',
+      companyName: 'Action S.A.',
+      programId: 'p1',
+      programName: 'Action Auto Program',
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/rejestracja?kod=DEEPLINK-123']}>
+            <RegisterCodePage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(validateSpy).toHaveBeenCalledWith('/api', 'DEEPLINK-123');
+      expect(screen.getByText('Action S.A.')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Imię/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Utwórz konto/i })).toBeInTheDocument();
+    });
+  });
+
+  it('auto-validates company code from ?code= query parameter on mount', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+    const validateSpy = vi.spyOn(authApi, 'validateCompanyCode').mockResolvedValue({
+      valid: true,
+      companyId: 'c1',
+      companyName: 'Action S.A.',
+      programId: 'p1',
+      programName: 'Action Auto Program',
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/rejestracja?code=TEST-CODE']}>
+            <RegisterCodePage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(validateSpy).toHaveBeenCalledWith('/api', 'TEST-CODE');
+      expect(screen.getByText('Action S.A.')).toBeInTheDocument();
     });
   });
 });

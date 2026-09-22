@@ -1113,3 +1113,239 @@ finalUrl: https://twoja-domena.pl/?offer=b2ZmZXJEaXNjb3VudD01MDAw
   - Skrypt bramy przedprodukcyjnej CLI (`backend/src/scripts/check-matrix-health.ts`): weryfikuje kompletność stawek ubezpieczenia, posiada blokadę bezpieczeństwa odmawiającą modyfikacji na bazach produkcyjnych (`isProductionHost`) oraz domyślny tryb planowania (dry-run) wymagający jawnej flagi `--apply` do faktycznego zapisu.
   - Seed deweloperski Ayvens (`seed-rental-ayvens-dev.ts`): jawnie konfiguruje `insuranceAddMode: 'INSURANCE_INCLUDED'`, gwarantując trwałość poprawnej konfiguracji po ponownym seedowaniu bazy.
 
+## 82. Platforma Najmu Pracowniczego Benefivo (benefivo.pl)
+- **Strona główna i tożsamość marki (`/`)**:
+  - Uruchomienie publicznego landing page najmu pracowniczego pod marką Benefivo w dedykowanej domenie `benefivo.pl` (zintegrowana w `apps/employee-portal`).
+  - Scoped style CSS (`.benefivo-landing`), pełna zgodność z księgą znaku (Brand Book), sekcje: Hero, kafelki kategorii, korzyści pracownicze, 3 kroki do auta, teaser dla pracodawców, FAQ, modale informacyjne (najem, leasing, podróż pracownika z gotowym szablonem wiadomości do HR).
+  - Nawigacja zintegrowana ze stanem autoryzacji: niezalogowani użytkownicy widzą przycisk „Zaloguj się” prowadzący do `/logowanie`, natomiast po zalogowaniu widoczne są przejścia do katalogu i wylogowania.
+  - Na stronie `/logowanie` dodano link powrotny: „← Wróć do strony głównej benefivo.pl”.
+- **Dedykowany kanał pozyskiwania firm (`/dla-firm`)**:
+  - Dedykowana, linkowalna podstrona z formularzem zgłoszeniowym dla osób decyzyjnych (HR / Zarząd / Fleet Manager).
+  - Integracja z backendowym API CRM: `POST /api/leads` z `leadType: 'employer_b2b'` oraz `trafficSource: 'benefivo_b2b'`.
+  - Obsługa zabezpieczenia Cloudflare Turnstile: automatyczny fallback na klucz testowy w trybie dev oraz fail-safe w `docker-entrypoint.sh` przy włączonym indeksowaniu (`INDEXING_ENABLED=true`).
+  - Dedykowany szablon powiadomień e-mail dla leadów B2B: oznaczenie programu Benefivo, nazwa firmy i pracodawcy, bezpośredni odnośnik do panelu CRM Motolia (`process.env.FRONTEND_URL/admin/leads/:id`).
+- **Podstawy prawne i zgodność RODO (`/regulamin`, `/prywatnosc`)**:
+  - `/regulamin`: Wersja 1.0 (z dnia 21 września 2026 r.), określenie roli Motolia Sp. z o.o. jako operatora technologicznego, jasna separacja odpowiedzialności trójstronnej (Benefivo/Motolia - Finansujący/Wynajmujący - Pracodawca - Pracownik), bezpłatny charakter korzystania z portalu dla pracownika.
+  - `/prywatnosc`: Wersja 1.0 (z dnia 21 września 2026 r.), dane Administratora Danych Osobowych (Motolia Sp. z o.o., NIP: 9512579189, KRS: 0001061451), podstawy przetwarzania (art. 6 ust. 1 lit. b, c, f RODO), uprawnienia osób, deklaracja Privacy-First oraz polityka plików cookies.
+- **Optymalizacja Ładowania (Eager Landing & Lazy Catalog)**:
+  - Zastosowano właściwy kierunek dzielenia kodu (code-splitting): strona główna (`LandingPage`) jest importowana bezpośrednio (eager) w głównym bundlu, co eliminuje oczekiwanie na dodatkowy chunk na ścieżce LCP dla anonimowych użytkowników.
+  - Ciężkie moduły wewnętrznego katalogu dla zalogowanych pracowników (`CatalogPage`, `RentalCatalogPage`, `NewCarOfferDetailPage`, `RentalOfferDetailPage`, `MyInquiriesPage`) są ładowane leniwie (`React.lazy`), dzięki czemu waga początkowego bundla spadła z 322 KB do 228 KB.
+  - Komponent ładowania (`FallbackSpinner`) dopasowano w 100% do tożsamości Benefivo (tło Paper `#F7F8F2`, spinner i typografia `#0f2d1e`), eliminując granatowy błysk ekranu podczas przechodzenia między trasami.
+- **Rozdzielenie Cache Nginx (Unhashed Public vs Hashed Bundles)**:
+  - Pliki statyczne marki przeniesiono do katalogu `/static/` (loga SVG/PNG, fonty WOFF2, grafiki WebP, banner OG) z bezpieczną polityką cache `public, max-age=86400, stale-while-revalidate=604800`, co umożliwia ich natychmiastową podmianę i rewalidację w Cloudflare.
+  - Katalog `/assets/` został zarezerwowany wyłącznie dla hashowanych chunków wyjściowych Vite z polityką `public, max-age=31536000, immutable`.
+- **Telemetria Cookieless z Wymiarem Ścieżki & Panel Admina**:
+  - Rozszerzono strukturę zdarzeń w Redis o wymiar ścieżki (`path`) w hashu dziennym `analytics:daily:${date}` (pola `event_path:${eventName}:${cleanPath}`, `view:${cleanPath}`, `event:${eventName}`, `path:${cleanPath}`).
+  - Dodano endpoint `GET /api/analytics/telemetry/summary` zwracający podsumowanie odsłon, zdarzeń, lejków konwersji i osi czasu dzień po dniu.
+  - Zaimplementowano dedykowany komponent `TelemetryDashboard` w panelu administracyjnym (`/admin/analytics`), umożliwiający bieżącą analizę ruchu na `/dla-firm`, liczby przesłanych zapytań B2B oraz wskaźnika konwersji (%).
+- **Ochrona przed DoS, Awariami Bazy i Skalowanie dla Korporacyjnego NAT**:
+  - Logowanie (`/login`): kluczowanie blokady w Redis per para `email:IP` (`ep:login:fail:${normalizedEmail}:${request.ip}`) po 10 próbach na 15 minut. Zewnętrzny atakujący nie jest w stanie zablokować pracownika w jego biurze ani w domu. Licznik błędów inkrementowany jest wyłącznie przy błędach autoryzacji (401/403) i pomijany przy wyjątkach bazy danych (500).
+  - Walidacja kodów (`/validate-code`): podniesiono limit trasy do 600 req/min oraz próg blokady IP w Redis do 250 nieudanych prób na 10 minut z wykluczeniem błędów 500, co w pełni zabezpiecza masowy onboarding setek pracowników z jednego biura (np. Action S.A.).
+  - Pozostałe trasy programu pracowniczego: telemetria podniesiona do 1200 req/min, reset/odzyskiwanie hasła do 150/15 min, katalogi ofert do 600 req/min, zgłoszenia zapytań do 120 req/min.
+
+## 83. Dystynkcja Leadów Benefivo B2B w Backoffice, Pipeline CRM i Routing Thulium
+- **Strukturyzacja Metadanych B2B w Schemacie Prisma i Walidacja Zod**:
+  - W modelu `Lead` dodano addytywne pole `metadata Json? @map("metadata")` (bezpieczne dla `prisma db push`, w 100% wstecznie kompatybilne).
+  - W `backend/src/routes/leads.ts` dodano schemat `employerB2bMetadataSchema` (walidacja `.strict()` pól `companyName`, `companyNip`, `teamSize`, `benefitModel`). Formularz na `benefivo.pl/dla-firm` przesyła imię i nazwisko kontaktu w polu `name`, a dane firmy w obiekcie `metadata`.
+- **Routing Pocztowy i Separacja Kolejek Zgłoszeń w Thulium**:
+  - Wprowadzono zmienną środowiskową `BENEFIVO_LEAD_RECIPIENT_EMAIL` umożliwiającą skierowanie powiadomień B2B na dedykowaną skrzynkę podpiętą pod osobną kolejkę ticketów w Thulium (np. `b2b@benefivo.pl`), z bezpiecznym fallbackiem na ogólnego odbiorcę leada.
+  - Generowanie numeru referencyjnego: zapytania `employer_b2b` otrzymują prefiks `BNF-` (np. `BNF-2026-12345678`), zachowując `AF-` dla standardowych leadów retailowych.
+  - Tytuł powiadomienia e-mail bezwzględnie rozpoczyna się prefiksem `[Benefivo]`, a do wiadomości dołączane są techniczne nagłówki MIME (`X-Lead-Brand: Benefivo`, `X-Lead-Type: employer_b2b`, `X-Lead-Traffic-Source: benefivo_b2b`) dla reguł automatycznej kategoryzacji poczty.
+- **Panel Administratora / Backoffice (`LeadList.tsx`)**:
+  - Pasek filtrów API: dodano filtr `selectedLeadType` z zakładką `Benefivo B2B` (`?leadType=employer_b2b`), zapytującą backend i filtrującą listę po stronie bazy danych.
+  - Identyfikacja wizualna: w tabeli leadów zapytania B2B wyróżnione są elegancką plakietką marki `Benefivo B2B` (tło leśna zieleń `#0f2d1e`, tekst `#F7F8F2`, bez emoji). W kolumnie pojazdu wyświetlana jest etykieta „Program pracowniczy (B2B)”, nazwa firmy oraz numer referencyjny `BNF-`.
+  - Karta firmy w oknie szczegółów: zamiast pustych pól pojazdu i marży brokera renderowana jest dedykowana karta firmy zawierająca nazwę, NIP z przyciskiem szybkiego kopiowania do schowka, wielkość zespołu, model benefitu i źródło zgłoszenia. Sekcja danych dealera jest automatycznie ukrywana dla zapytań pracodawców.
+  - Wyszukiwarka tekstowa w panelu przeszukuje leady także po numerze referencyjnym, nazwie firmy oraz NIP-ie.
+- **Pipeline CRM (Inbox & Kwalifikacja Spraw)**:
+  - Trasa `GET /api/pipeline/inbox` przyjmuje zwalidowany przez Zod parametr `?leadType=` oraz zwraca metadane i typ leada.
+  - Automatyczne reguły kwalifikacji: przy konwersji leada `employer_b2b` na sprawę domyślnym źródłem leada jest `LeadSourceChannel.PARTNER`, `leadSourceDetail: 'benefivo_b2b'`, typ klienta: `ClientType.B2B`, a dane firmy i NIP są automatycznie przenoszone z metadanych leada do rekordu klienta w Pipeline.
+  - Interfejs Inboxa: w widoku kolejki (`QueueView.tsx`) dodano szybki filtr `Benefivo B2B`, w widoku tablicy (`BoardView.tsx`) kafelki B2B posiadają plakietkę marki i nazwę firmy, a w modalnym oknie kwalifikacji (`QualifyLeadModal.tsx`) formularz automatycznie pre-populuje dane firmy i typ B2B.
+- **Kontekst Firmy w Karcie Klienta Thulium (`thulium-crm-lookup.service.ts`)**:
+  - Podczas wyszukiwania kontaktu po numerze telefonu (np. połączenie przychodzące do call center), serwis sprawdza obecność najświeższego leada B2B i automatycznie dołącza do `custom_fields` atrybuty: `Marka: Benefivo`, `Typ klienta: Pracodawca B2B (program pracowniczy)`, `Firma`, `NIP` oraz `Wielkosc zespolu`.
+  - Puste klucze są całkowicie pomijane, a lookup klientów retailowych zachowuje 100% tożsamość z dotychczasowym zachowaniem (pełna ochrona regresyjna).
+
+## 84. Uspójnienie Stylów, Kalkulatorów, Obsługi B2B/Konsument i Galerii Zdjęć w Portalu Pracowniczym (Benefivo)
+- **Nomenklatura i Nawigacja**:
+  - Zmieniono etykietę głównego katalogu z „Katalog ofert” na „Samochody” w nagłówku portalu pracowniczego (`PortalHeader.tsx`) oraz na stronie głównej (`LandingHeader.tsx`).
+  - Uspójniono breadcrumbs na podstronach szczegółów: „← Wróć do listy samochodów” oraz „← Wróć do listy najmu”.
+- **Karuzela Przewijania Zdjęć na Listingach (ImageSwiper)**:
+  - Wdrożono komponent `ImageSwiper.tsx` wykorzystujący natywny hook gestów dotykowych `useSwipe.ts` (`touch-pan-y`, `onTouchStart`, `onTouchMove`, `onTouchEnd`).
+  - Zastosowano bezpieczną obsługę kliknięć z `onClickCapture`, `preventDefault()` i `stopPropagation()`, zapobiegającą przypadkowemu przejściu do karty pojazdu podczas przewijania zdjęć.
+  - Zintegrowano `ImageSwiper` na obu listingach: w katalogu samochodów nowych (`CatalogPage.tsx`) oraz w katalogu najmu długoterminowego (`RentalCatalogPage.tsx`), w tym deduplikację zdjęć z `primaryImageUrl` i zachowanie badge'ów rabatowych/statusu.
+  - Na listingu najmu kontener zdjęcia pojazdu został owinięty w bezpośredni, klikalny link prowadzący do widoku szczegółów oferty (`/najem/:id`).
+- **Galeria Zdjęć z Pełnoekranowym Lightboxem (ImageGallery)**:
+  - Zaimplementowano komponent `ImageGallery.tsx` na wzór standardu marki Motolia dla widoków szczegółów oferty (`NewCarOfferDetailPage.tsx` oraz `RentalOfferDetailPage.tsx`).
+  - Funkcjonalności: główne zdjęcie w proporcjach `aspect-[16/10]`, wskaźnik lupy (`ZoomIn`), strzałki nawigacyjne Chevron, licznik zdjęć `X / Y`, poziomy pasek miniatur z automatyczną detekcją przewijania i odpornością na środowiska bez natywnego `ResizeObserver` (JSDOM).
+  - Pełnoekranowy modal Lightbox: czarne tło `bg-black/95` z `backdrop-blur`, nawigacja klawiaturą (`ArrowLeft`, `ArrowRight`, `Escape`), blokada przewijania tła (`document.body.style.overflow = 'hidden'`) oraz wsparcie gestów swipe na urządzeniach mobilnych.
+- **Odświeżenie i Uspójnienie Kalkulatora Najmu Długoterminowego (`RentalOfferDetailPage.tsx`)**:
+  - Całkowita rezygnacja z palety fioletowo-indygo na rzecz tożsamości Benefivo (leśna zieleń `#0f2d1e`, `primary-600`, `primary-700`, `emerald-600`).
+  - Górna karta nagłówkowa: nazwa pojazdu, wersja, rocznik, badge stawki partnerskiej / katalogowej oraz elegancka pigułka ceny miesięcznej ze statusem „Abonament all-inclusive”.
+  - Obsługa klienta B2B oraz Osoby Prywatnej (Konsument):
+    - Wprowadzono przełącznik `[Firma (B2B)]` oraz `[Osoba prywatna]`.
+    - W przypadku ofert oznaczonych flagą `offer.isB2b === true`, opcja „Osoba prywatna” jest zablokowana (`disabled`) z czytelnym komunikatem informacyjnym.
+    - Dla klienta B2B priorytetową stawką jest kwota netto (rata brutto jako pomocnicza); dla konsumenta priorytetem jest rata brutto.
+  - Uproszczenie i optymalizacja przestrzeni kafli kalkulatora:
+    - Zastąpiono wielkie 2-kolumnowe kafle z napisem `... km / rok` zwięzłym nagłówkiem „Limity przebiegu (km/rok)” oraz kompaktowymi pigułkami: `10 tys.`, `15 tys.`, `20 tys.`, `25 tys.`, `30 tys.`, `40 tys.`.
+    - Pigułki okresu umowy w stylu `24 msc`, `36 msc`, `48 msc` oraz zwięzłe warianty wpłaty wstępnej.
+  - Przycisk CTA `Zapytaj o tę ofertę i ratę` otwiera zaktualizowany `InquiryModal` z przekazaniem wybranego typu klienta (`initialContractParty`), kontekstowymi etykietami formularza oraz wyliczeniami dopasowanymi do profilu B2B lub konsumenckiego.
+
+## 85. Kompleksowe Odświeżenie UX Portalu Pracowniczego Benefivo (brief-ux-portal-refresh)
+- **Tożsamość Wizualna i Tokeny Marki w Tailwind**:
+  - Zmapowano tokeny marki w `tailwind.config.js` (`brand-forest`, `brand-forest-light`, `brand-cream`, `brand-accent`, `brand-muted`) oraz zastąpiono pozostałości stylów indygo/niebieskich w całym portalu.
+- **Ścieżka Onboardingu „Mam kod” w Hero & Deep-Link do Rejestracji**:
+  - W sekcji Hero dodano bezpośrednią interakcję „Mam kod od pracodawcy” z polem tekstowym i natychmiastowym przejściem do rejestracji.
+  - Strona rejestracji (`RegisterCodePage.tsx`) obsługuje parametr URL `?kod=...` z automatyczną pre-populacją i natychmiastową walidacją kodu firmy.
+- **Domyślne Finansowanie Konsumenckie i Priorytet Raty Brutto**:
+  - Domyślną opcją finansowania dla pracowników jest konsument (leasing konsumencki / pożyczka leasingowa).
+  - Główną eksponowaną kwotą w kalkulatorze i na kartach jest rata brutto (rata netto jako informacja pomocnicza).
+- **Hierarchia Informacji i Pozycjonowanie Bloku Ceny/Rabatu**:
+  - Blok podsumowania ceny bazowej i naliczonego rabatu partnerskiego przeniesiono bezpośrednio nad kalkulator finansowy, gwarantując czytelność korzyści przed konfiguracją raty.
+  - Pasek korzyści „Dlaczego warto dołączyć” przeniesiono nad kolumnę kalkulatora.
+- **Filtr Widełek Raty Miesięcznej na Listingach**:
+  - Wdrożono komponent suwaka zakresu raty miesięcznej (`RateRangeFilter.tsx`) w katalogu samochodów nowych (`CatalogPage.tsx`) oraz na listingu najmu (`RentalCatalogPage.tsx`).
+- **Poprawna Odmiana Liczebników w Języku Polskim**:
+  - Wprowadzono uniwersalny helper `formatPolishPlural` (`src/utils/plural.ts`) zapewniający gramatycznie poprawną odmianę rzeczowników (np. 1 samochód, 2-4 samochody, 5 samochodów, ofert/oferty itp.).
+- **Dostępność Ofert Najmu z Oznaczeniem B2B**:
+  - Listing najmu prezentuje pełną gamę pojazdów, a oferty dostępne wyłącznie w procedurze firmowej posiadają elegancką plakietkę „Tylko dla firm (B2B)” bezpośrednio na zdjęciu pojazdu.
+- **Kolumna Kalkulatora i Akordeony Wyposażenia**:
+  - Prawa kolumna kalkulatora finansowego posiada klasę sticky (`sticky top-24`), pozostając w polu widzenia użytkownika podczas przewijania długiej specyfikacji auta.
+  - Długa lista elementów wyposażenia seryjnego i dodatkowego została pogrupowana w zwijane akordeony z nagłówkami kategorii.
+- **Spójność Brandingu w Nagłówku**:
+  - Wyeliminowano podwójne logo; nagłówek prezentuje wyłącznie tożsamość marki programu.
+- **Weryfikacja Handoffu i Usunięcie Twierdzenia „Door-to-door”**:
+  - Usunięto nieaktualne zapewnienia o dostawie door-to-door w komunikacji landing page i portalu.
+- **Usprawnienia Formularza B2B dla Pracodawców (`/dla-firm`)**:
+  - Formularz B2B zoptymalizowano pod kątem czytelności i responsywności.
+  - Wdrożono algorytm sprawdzania sumy kontrolnej polskiego NIP (`validatePolishNip` z wagami `[6, 5, 7, 2, 3, 4, 5, 6, 7] % 11` i odrzuceniem powtarzających się cyfr).
+  - Zabezpieczono kontener Cloudflare Turnstile przed skakaniem wysokości (`layout shift`) i dodano bezpośredni pasek kontaktu telefonicznego i mailowego (`__B2B_PHONE__`, `b2b@benefivo.pl`).
+  - Dodano wizualny tracker statusu zgłoszeń `InquiryStatusTracker` (4 etapy: Nowe -> Weryfikacja -> Oferta -> Umowa) oraz dedykowany alert w przypadku odrzucenia zgłoszenia.
+- **Menu Użytkownika i Dedykowana Strona Ustawień Konta (`/konto`)**:
+  - W `PortalHeader.tsx` wdrożono dostępne menu użytkownika (`aria-haspopup="menu"`, `aria-expanded`, obsługa klawisza Escape i kliknięcia poza menu) z odnośnikami: „Moje dane” (`/konto`), „Zmiana hasła” (`/konto#haslo`) oraz „Wyloguj”.
+  - Strona `/konto` (`AccountPage.tsx`):
+    - Sekcja „Moje dane”: edycja imienia, nazwiska, numeru telefonu (`PATCH /api/employee/auth/me` z ochroną CSRF), podgląd niemodyfikowalnego adresu e-mail oraz danych firmy i programu pracodawcy.
+    - Sekcja „Zmiana hasła”: bieżące hasło, nowe hasło z dynamicznym wskaźnikiem siły hasła (kolorystyka i wagi), potwierdzenie hasła, opcja podglądu hasła (Eye/EyeOff) oraz auto-scroll do sekcji przy wejściu z kotwicą `#haslo`.
+    - Backend (`POST /api/employee/auth/change-password`): weryfikacja bcrypt bieżącego hasła, walidacja długości (8 - 72 bajty z czytelnym komunikatem błędu), unieważnienie innych sesji w Redis (`del ep:session:${jti}`) oraz ustawienie `sessionsValidAfter` w bazie.
+    - Zgodność z Errata E8: wystawienie nowego tokena sesyjnego dla bieżącego urządzenia z czasem `iat: nowSec` i zsynchronizowanym `sessionsValidAfter = new Date(nowSec * 1000)`, co eliminuje wyścig podsekundowy i pozwala użytkownikowi kontynuować pracę bez konieczności ponownego logowania.
+    - Asynchroniczne powiadomienie e-mail o zmianie hasła (`sendEmployeePasswordChangedEmail`) informujące o zabezpieczeniu konta.
+- **Pełna Migracja Tokenów Kolorystycznych (Eliminacja `gray-*`)**:
+  - W 8 plikach portalu pracowniczego (`RentalCatalogPage`, `RentalOfferDetailPage`, `CatalogPage`, `NewCarOfferDetailPage`, `MyInquiriesPage`, `InquiryModal`, `ImageGallery`, `ImageSwiper`) zastąpiono wszystkie 55 wystąpień klas Tailwind `gray-*` semantycznymi tokenami marki Benefivo (`ink`, `paper`, `line`, `muted`), przywracając 100% spójność wizualną systemu designu.
+- **Rzetelna Wycena i Obsługa Stanu „Rata na zapytanie”**:
+  - Usunięto sztuczny, zaszyty w kodzie fallback stopy procentowej 7,5% rocznie w kalkulatorze finansowania i wyliczaniu domyślnej raty (`calculateDefaultOfferInstallment`).
+  - Oferty bez skonfigurowanej matrycy produktów finansowych w programie pracowniczym (`financing === null` lub puste `options`) są jawnie oznaczane jako „Rata na zapytanie” (plakietka na zdjęciu pojazdu oraz w sekcji ceny pracowniczej) i nie są wyceniane na bazie fikcyjnych założeń.
+  - Na stronie szczegółów pojazdu (`NewCarOfferDetailPage.tsx`) zamiast interaktywnego kalkulatora z fałszywymi suwakami wyświetlana jest czytelna karta informacyjna „Rata na zapytanie” z bezpośrednim przyciskiem akcji „Zapytaj doradcę o ratę”, który otwiera modal zapytania z predefiniowaną notatką informującą o prośbie o dedykowaną kalkulację doradcy.
+  - Filtr raty miesięcznej w katalogu (`minRate` / `maxRate`) nie wyklucza po cichu ofert nieposiadających matrycy finansowania - oferty bez wycenionej raty pozostają widoczne z etykietą „Rata na zapytanie”.
+  - Przy sortowaniu po racie (`rate_asc`, `rate_desc`) oferty z ratą na zapytanie są pozycjonowane na końcu listy.
+
+### 84. Usprawnienia UX i Prezentacji Ofert Portalu Pracowniczego (Benefivo)
+
+Wdrożono pakiet 7 kluczowych usprawnień interfejsu i logiki prezentacji ofert na platformie pracowniczej:
+
+- **1. Reorganizacja Nawigacji - Przeniesienie „Moje zapytania” do Menu Konta**:
+  - W `PortalHeader.tsx` usunięto odnośnik „Moje zapytania” z głównego paska nawigacji, zachowując czysty podział na katalogi („Samochody” i „Najem długoterminowy”).
+  - Odnośnik „Moje zapytania” (`/zapytania`) umieszczono w rozwijanym menu profilu użytkownika (`Menu użytkownika: ...`) z ikoną `FileText`, obok „Moje dane”, „Zmiana hasła” i „Wyloguj”.
+- **2. Eliminacja Nadmiarowego Odstępu na Karcie Oferty Pojazdu**:
+  - Rozwiązano problem pustej przestrzeni pomiędzy kafelkiem ceny a kalkulatorem finansowym (`NewCarOfferDetailPage.tsx`). Przyczyną było wymuszenie wysokości przez tracki CSS Grid (`row-start-1` i `row-start-2` spięte z wysokością lewej kolumny galerii).
+  - Prawą kolumnę ujednolicono w semantyczny, naturalny kontener `lg:col-span-5 space-y-6`, dzięki czemu elementy układają się bez luk.
+- **3. Prymat Raty Miesięcznej i Przekreślona Cena Katalogowa**:
+  - Zgodnie z modelem biznesowym sprzedaży ratalnej, głównym elementem karty podsumowania (`NewCarOfferDetailPage.tsx`) stała się „Szacowana rata miesięczna” (wyróżniona typografią 3xl/4xl font-black) z oznaczeniem brutto/netto i formy finansowania.
+  - Informacja o cenie całkowitej („Cena w programie”) została przeniesiona na pozycję drugorzędną.
+  - Dodano ekspozycję przekreślonej ceny katalogowej (`Cena katalogowa: ... zł brutto`) pobieranej z `listing.catalogPrice` i obliczanej w backendzie (`effectiveListPrice = Math.max(safeListPrice, safeCatalogPrice)`), z plakietką kwotowych oszczędności pracownika.
+- **4. Dostępność Kalkulatora Kredytu i Leasingu dla Ofert Samochodowych**:
+  - Przywrócono pełną interaktywność kalkulatora finansowego dla ofert niemających zdefiniowanych dedykowanych nadpisań w bazie danych, wykorzystując standardową konfigurację bazową `DEFAULT_FINANCING_OPTIONS` (Kredyt konsumencki i Leasing operacyjny B2B przy stopie 7,5% rocznie, z okresami 24, 36, 48, 60 msc).
+- **5. Zoptymalizowany Układ Modalu Zapytania na Desktopie**:
+  - W `InquiryModal.tsx` poszerzono okno dialogowe na desktopie do `max-w-3xl w-full`.
+  - Trzy opcje formy finansowania (Kredyt konsumencki, Leasing B2B, Zakup za gotówkę) rozplanowano horyzontalnie w 3 kolumnach obok siebie (`grid grid-cols-1 md:grid-cols-3 gap-3`).
+  - Powiększono pole tekstowe na uwagi i pytania do doradcy (`rows={4}`, `min-h-[110px]`).
+- **6. Pełna Spójność Wizualna Oferty Najmu Długoterminowego z Ofertą Samochodów**:
+  - Karta oferty najmu (`RentalOfferDetailPage.tsx`) została dostosowana do standardu oferty samochodowej:
+    - Przekreślona cena katalogowa pojazdu (`offer.vehicle.catalogPrice`) przekazywana z bazy danych (`RentalVehicle.catalogPrice`).
+    - Długa lista wyposażenia zastąpiona zwijanymi, natywnymi akordeonami `<details>` (`EquipmentAccordion`) z gramatyczną odmianą liczby pozycji (`formatCountPl`).
+    - Kompaktowy pasek korzyści („Dlaczego warto: Gwarancja wynegocjowanego rabatu flotowego...”) oraz dedykowany boks pakietu benefitów pracodawcy (`offer.benefit`) nad kalkulatorem.
+    - Zmniejszony font klauzuli informacyjnej kalkulatora (`text-[11px] leading-relaxed text-muted`).
+- **7. Deterministyczny Separator Tysięcy we Wszystkich Kalkulatorach i Kartach**:
+  - Zaimplementowano helper `formatPln()` w `src/features/catalog/financing.ts`, który zastąpił natywne `toLocaleString('pl-PL')` w całym portalu pracowniczym.
+  - Helper eliminuje problem znikających wąskich spacji (`\u202F`) w fontach webowych, formatując liczby ze stałą spacją ASCII jako separatorem tysięcy (np. `81 800 zł`), zarówno dla liczb całkowitych, jak i kwot z częścią dziesiętną.
+
+### 85. Ujednolicenie Karty Najmu z Ofertą Samochodową, Kredyt Samochodowy i Zakres Usług
+
+Wdrożono 3 kluczowe doprecyzowania interfejsu ofertowego w portalu pracowniczym:
+
+- **1. Ujednolicenie Układu Podstrony Najmu (`RentalOfferDetailPage.tsx`)**:
+  - Usunięto horyzontalny, pełnoszerokościowy nagłówek rozciągający się ponad całym gridem.
+  - Karta nagłówkowo-cenowa (plakietki B2B/B2C/stawka partnerska, rocznik, tytuł H1 marka i model, wersja, bohater raty miesięcznej oraz przekreślona cena katalogowa) została przeniesiona na szczyt prawej kolumny (`lg:col-span-5 space-y-6 order-1 lg:order-2`), dokładnie tak jak na podstronie oferty samochodowej (`NewCarOfferDetailPage.tsx`).
+  - Lewa kolumna (`lg:col-span-7 space-y-6 order-2 lg:order-1`) rozpoczyna się bezpośrednio pod breadcrumbs od galerii zdjęć, specyfikacji technicznej i akordeonów wyposażenia.
+- **2. Zmiana Nazwy: „Kredyt konsumencki” -> „Kredyt samochodowy”**:
+  - W konfiguracji finansowania (`apps/employee-portal/src/features/catalog/financing.ts`) oraz na karcie oferty samochodowej (`NewCarOfferDetailPage.tsx`) zastąpiono określenia „Kredyt konsumencki” oraz „Kredyt / Finansowanie konsumenckie” profesjonalnym terminem „Kredyt samochodowy”.
+- **3. Zakres Usług w Racie Najmu z Car-Scout (Usunięcie „Abonament All-inclusive”)**:
+  - Usunięto etykiety „Abonament all-inclusive” z karty bohatera cenowego oraz zieloną plakietkę z nagłówka kalkulatora abonamentu.
+  - Wewnątrz karty konfiguratora abonamentu (bezpośrednio przed blokiem wyniku kalkulacji i przyciskiem CTA) dodano sekcję „Zakres usług w racie najmu” („W cenie abonamentu”) z ikonami checkmark:
+    - Serwis i przeglądy okresowe (ASO)
+    - Pełne ubezpieczenie (OC, AC, NNW)
+    - Obsługa i wymiana opon
+    - Całodobowe Assistance 24/7 i auto zastępcze
+### 86. Dopracowanie Prezentacji Cen, Etykiet i Zawsze Wyliczonej Raty w Portalu Pracowniczym
+
+Wdrożono 7 kluczowych usprawnień interfejsu cenowego na listingu, widoku szczegółów oraz podstronie zapytań:
+
+- **1. Precyzyjne Przekreślanie Kwoty Katalogowej (Bez Przekreślania Etykiety)**:
+  - We wszystkich widokach (`CatalogPage.tsx`, `MyInquiriesPage.tsx`, `NewCarOfferDetailPage.tsx`, `RentalOfferDetailPage.tsx`) styl `line-through` został ograniczony wyłącznie do kwoty w PLN. Etykieta `Cena katalogowa:` pozostaje czytelnym tekstem w kolorze `text-muted`.
+- **2. Ujednolicenie Etykiety: „Katalogowa: ...” -> „Cena katalogowa: ...”**:
+  - Na stronie zapytań pracownika (`MyInquiriesPage.tsx`) zastąpiono skrótowe `Katalogowa:` pełną etykietą `Cena katalogowa:`.
+- **3. Prezentacja „Cena dla Ciebie” oraz Wyliczonej Raty w Zapytaniach**:
+  - Na liście zapytań (`MyInquiriesPage.tsx`) przy kwocie po rabacie dodano nagłówek `Cena dla Ciebie` oraz wyliczoną ratę: `Twoja rata: ... zł brutto (... zł netto) / mc` (odczytywaną z parametrów konfiguratora lub wyliczaną na bazie standardowych warunków finansowania).
+- **4. Ekspozycja Raty Brutto i Netto na Listingu Samochodów**:
+  - Na kafelkach katalogu samochodów (`CatalogPage.tsx`) wprowadzono dedykowaną sekcję raty: `Twoja rata: od ... zł brutto (... zł netto) / mies.`, gdzie wartość brutto wyeksponowano pogrubionym fontem, a kwotę netto przedstawiono w mniejszym rozmiarze w nawiasie.
+- **5. Zawsze Wyliczona Rata (Eliminacja „Rata na zapytanie”)**:
+  - W `financing.ts` funkcja `calculateDefaultOfferInstallment` zawsze zwraca wyliczoną ratę (w przypadku braku niestandardowych nadpisań w programie przyjmuje bezpieczny standard kredytu samochodowego: 7,5% rocznie, 36 miesięcy, 20% wpłaty własnej, 20% wykupu).
+- **6. Zmiana Nazwy: „Cena pracownicza” / „Cena w programie” -> „Cena dla Ciebie”**:
+  - W całym portalu pracowniczym (`CatalogPage.tsx`, `NewCarOfferDetailPage.tsx`, `MyInquiriesPage.tsx`) wprowadzono spójne, zorientowane na pracownika określenie `Cena dla Ciebie`.
+- **7. Usunięcie Plakietek „Rata na zapytanie” ze Zdjęć Pojazdów**:
+  - Z kafelków pojazdów na listingu (`CatalogPage.tsx`) usunięto plakietkę `Rata na zapytanie`. Wszystkie oferty prezentują natychmiastowo wyliczoną szacunkową ratę miesięczną.
+
+### 87. Dopracowanie Interfejsu Ofert Samochodowych i Najmu Długoterminowego (Styl Accordiona, Usługi i Wartość Alternatywna)
+
+Wdrożono 5 poprawek wizualnych i funkcjonalnych w widokach szczegółów ofert:
+
+- **1. Ujednolicenie Stylu Accordiona Wyposażenia („Samochody” i „Wynajem”)**:
+  - Komponent `EquipmentAccordion` w `NewCarOfferDetailPage.tsx` został zaktualizowany do identycznego stylu jak w `RentalOfferDetailPage.tsx`.
+  - Zastąpiono obracający się znak plusa `+` estetyczną ikoną `ChevronDown` z `lucide-react` obracającą się o 180 stopni (`group-open:rotate-180`) oraz wyrównano paddingi i interakcję w nagłówkach sekcji.
+- **2. Brak Przekreślenia Ceny Katalogowej w Ofertach Najmu Długoterminowego**:
+  - W `RentalOfferDetailPage.tsx` cena katalogowa pojazdu (`Cena katalogowa: ... zł brutto`) jest prezentowana bez stylu przekreślenia (`line-through`), ponieważ najem opiera się na racie abonamentowej, a cena katalogowa stanowi jedynie punkt odniesienia wartości auta.
+- **3. Usunięcie Nadmiarowego Boksu „Co zawiera abonament..” pod Wyposażeniem**:
+  - W `RentalOfferDetailPage.tsx` usunięto zduplikowany boks „Co zawiera abonament najmu długoterminowego?” znajdujący się pod sekcją wyposażenia, gdyż pełny zakres usług jest wyczerpująco prezentowany bezpośrednio w kalkulatorze raty najmu.
+- **4. Większy Font Nagłówka „Zakres usług w racie najmu” w Kalkulatorze**:
+  - Zwiększono rozmiar fontu etykiety w kalkulatorze najmu (`RentalOfferDetailPage.tsx`) z `text-xs` do wyrazistego `text-sm sm:text-base font-bold text-ink font-heading`.
+- **5. Zastąpienie Etykiety „Wartość alternatywna:” Przejrzystą Kwotą w Nawiasie**:
+  - Wyeliminowano nieintuicyjną etykietę `Wartość alternatywna:` z karty bohatera cenowego oraz kalkulatora.
+  - Alternatywna stawka (odpowiednio brutto dla firm lub netto dla konsumentów) jest podawana w nawiasie obok raty głównej: `({kwota} zł brutto)` / `({kwota} zł netto)` z zachowaniem mniejszego fontu (`text-xs text-muted`) jako wartości drugorzędnej.
+
+### 88. Dedykowany Pulpit Pracownika po Zalogowaniu oraz Ujednolicenie Paska Filtrów w Najmie
+
+Wdrożono dedykowany pulpit powitalny pracownika oraz ujednolicono układ filtrów pomiędzy katalogiem samochodów a najmem:
+
+- **1. Dedykowany Pulpit Pracownika (`/dashboard` - ProgramDashboardPage)**:
+  - Utworzono podstronę `/dashboard` stanowiącą główny punkt wejścia dla zalogowanego pracownika po rejestracji lub zalogowaniu.
+  - Sekcja statusu programu: zielona plakietka `✨ Program aktywny dla organizacji {Firma}`, nagłówek H1 `Dedykowana oferta samochodów dla pracowników` oraz 3 kafelki benefitów (`Specjalne warunki flotowe`, `Pakiet paliwowy Moya`, `Opieka doradcy Motolii`).
+  - Karty szybkiego dostępu: bezpośrednie kafelki nawigacyjne do `Samochody nowe` (`/katalog`), `Najem długoterminowy` (`/najem`) oraz `Moje zapytania` (`/zapytania`).
+  - Sposób działania programu („Jak działa program partnerski Benefivo?”): 4 filary (Rabaty flotowe, Wybór B2B lub prywatnie, 0 zł ukrytych opłat, Dedykowany doradca).
+  - Proces korzystania z oferty („Krok po kroku: Jak odebrać auto?”): 4 numerowane kroki (01: Wybór auta i kalkulacja, 02: Bezpłatne zapytanie online, 03: Rozmowa z doradcą w 24h, 04: Podpisanie umowy i odbiór).
+  - Sekcja pomocy i bezpośredni kontakt z doradcami floty Motolii.
+- **2. Nawigacja i Routing**:
+  - W `PortalHeader.tsx`: kliknięcie w logo kieruje zalogowanego użytkownika na `/dashboard`. W rozwijanym menu profilu dodano pozycję `Pulpit programu` (z ikoną `LayoutDashboard`) jako pierwszy element listy.
+  - W `LoginPage.tsx` oraz `RegisterCodePage.tsx`: domyślny fallback po pomyślnym zalogowaniu / rejestracji został zmieniony na `/dashboard` (przy zachowaniu `location.state.from` dla deep-linków).
+  - W `LandingHeader.tsx` i `HeroSection.tsx`: przyciski przejścia dla zalogowanego użytkownika kierują na `/dashboard`.
+- **3. Ujednolicenie Paska Filtrów w Najmie Długoterminowym (`RentalCatalogPage.tsx`)**:
+  - Usunięto zewnętrzne pole wyszukiwania z nagłówka strony najmu.
+  - Wyszukiwarkę przeniesiono do prawego górnego rogu karty filtrów (`data-testid="filters-card"`), obok licznika dostępnych ofert i przycisku czyszczenia filtrów (`w-full sm:w-64`, `aria-label="Szukaj po marce lub modelu"`), osiągając 100% spójności wizualnej i funkcjonalnej z katalogiem samochodów.
+- **4. Kompaktowy Nagłówek Katalogu Samochodów (`CatalogPage.tsx`)**:
+  - Przeniesiono baner korzyści na `/dashboard`, wprowadzając w katalogu czysty nagłówek H1 `Samochody` z podtytułem o kredycie i leasingu.
+  - Usunięto nieużywane ikony i zmienne, dodano `data-testid="filters-card"` oraz etykietę dostępności na wyszukiwarce.
+- **5. Bezpieczeństwo Crawlerów (SEO)**:
+  - W `docker-entrypoint.sh` dodano wpisy `Disallow: /dashboard` oraz `Disallow: /konto` do dynamicznego pliku `robots.txt`, zabezpieczając prywatne trasy pracownicze przed indeksacją.
+- **6. Spójność Wizualna i Responsywny Padding Sekcji Benefitów (`landing.css`)**:
+  - W sekcji `.benefits-section` na stronie głównej wyrównano padding wewnętrzny do standardu karty pracodawcy (`padding: 50px 48px;` na desktopie, `padding: 36px 30px;` poniżej 1100px oraz `padding: 30px 20px;` poniżej 720px), eliminując błąd przyklejenia treści do krawędzi zielonego tła (poprzednio brak `padding-inline`).
+- **7. Zalecenia Audytu Claude Code i Dynamiczny Brand Config**:
+  - W `ProgramDashboardPage.tsx` zintegrowano dynamiczne wartości marki (`config.brandName`, `config.b2bEmail`) z `BrandContext` zamiast zahardkodowanych ciągów tekstowych.
+  - Zastąpiono nieobsługiwaną klasę `hover:text-forest-dark` bezpiecznym wariantem `hover:text-forest/80`.
+  - W `PortalHeader.tsx` odnośnik logo został zabezpieczony warunkiem `to={isAuthenticated || isLoading ? '/dashboard' : '/'}`, gwarantując powrót na stronę główną dla sesji niezalogowanej.
+  - W `RentalCatalogPage.tsx` ujednolicono strukturę odstępów (`space-y-6` na znaczniku `<main>`) symetrycznie do `CatalogPage.tsx`.

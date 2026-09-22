@@ -30,6 +30,7 @@ const mockInquiriesList: inquiriesApi.EmployeeInquiryItem[] = [
     status: 'NEW',
     referenceNumber: 'PP-12345678',
     contractParty: 'CONSUMER',
+    accountManagerEmail: 'opiekun@motolia.pl',
     createdAt: '2026-09-16T08:00:00.000Z',
     contactName: 'Tomasz Kowalski',
     contactEmail: 'tomasz@action.pl',
@@ -142,6 +143,10 @@ describe('MyInquiriesPage Component', () => {
     expect(screen.getByText(/220\s?000/i)).toBeInTheDocument();
     expect(screen.getByText(/Działalność gospodarcza \(B2B\)/i)).toBeInTheDocument();
     expect(screen.getByText(/5213876543/i)).toBeInTheDocument();
+
+    // Verify SLA & Account Manager Email
+    expect(screen.getAllByText(/Doradca skontaktuje się w ciągu 24 godzin roboczych/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('opiekun@motolia.pl')).toBeInTheDocument();
   });
 
   it('renders empty state when employee has no inquiries', async () => {
@@ -153,8 +158,9 @@ describe('MyInquiriesPage Component', () => {
     renderMyInquiriesPage();
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Brak złożonych zapytań/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Przejdź do katalogu/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Nie masz jeszcze zapytań/i })).toBeInTheDocument();
+      expect(screen.getAllByRole('link', { name: /Przeglądaj katalog/i }).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByRole('link', { name: /Oferty najmu/i })).toBeInTheDocument();
     });
   });
 
@@ -261,11 +267,31 @@ describe('MyInquiriesPage Component', () => {
     expect(screen.getByText(/Audi A4/i)).toBeInTheDocument();
     expect(screen.getByText(/36\s*mies\.\s*·/i)).toBeInTheDocument();
     expect(screen.getByText(/20[\s\u00a0]?000\s*km\/rok/i)).toBeInTheDocument();
-    expect(screen.getByText(/2450\s*zł/i)).toBeInTheDocument();
+    expect(screen.getByText(/2[\s\u00a0]?450\s*zł/i)).toBeInTheDocument();
     expect(screen.getByText(/netto \/ mc/i)).toBeInTheDocument();
     expect(screen.getByText(/Wpłata wstępna: 10%/i)).toBeInTheDocument();
     expect(screen.getByText(/15[\s\u00a0]?000\s*zł/i)).toBeInTheDocument();
     expect(screen.getByText(/Dostawca: Arval Fleet Services/i)).toBeInTheDocument();
+  });
+
+  it('renders rejected status alert with advisory contact message', async () => {
+    const rejectedInquiry: inquiriesApi.EmployeeInquiryItem = {
+      ...mockInquiriesList[0],
+      id: 'inq_rejected',
+      status: 'REJECTED'
+    };
+
+    vi.spyOn(inquiriesApi, 'fetchEmployeeInquiries').mockResolvedValue({
+      inquiries: [rejectedInquiry],
+      nextCursor: null
+    });
+
+    renderMyInquiriesPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Odrzucone/i)).toBeInTheDocument();
+      expect(screen.getByText(/Skontaktuj się z doradcą, aby poznać szczegóły/i)).toBeInTheDocument();
+    });
   });
 });
 

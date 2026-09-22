@@ -68,6 +68,7 @@ export interface EmployeeOffer {
 
 export interface EmployeeCatalogResponse {
   offers: EmployeeOffer[];
+  financing?: EmployeeFinancingConfig | null;
   nextCursor: string | null;
 }
 

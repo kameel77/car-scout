@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { RentalCatalogPage } from './RentalCatalogPage';
@@ -113,9 +113,13 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       expect(screen.getByText('Finarena Sp. z o.o.')).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('link', { name: /Katalog ofert/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Samochody/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Najem długoterminowy/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Moje zapytania/i })).toBeInTheDocument();
+
+    // Open user menu to find Moje zapytania
+    const userBtn = screen.getByRole('button', { name: /Menu użytkownika/i });
+    fireEvent.click(userBtn);
+    expect(screen.getByRole('menuitem', { name: /Moje zapytania/i })).toBeInTheDocument();
   });
 
   it('shows loading skeleton while fetching offers', async () => {
@@ -159,9 +163,9 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Oferta B2B')).toBeInTheDocument();
+    expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
     expect(screen.getByText('Stawka partnerska')).toBeInTheDocument();
-    expect(screen.getByText('Stawka katalogowa')).toBeInTheDocument();
+    expect(screen.queryByText('Stawka katalogowa')).not.toBeInTheDocument();
     expect(screen.getByText(/od 1\s?450 zł/)).toBeInTheDocument();
     expect(screen.getByText(/od 1\s?620 zł/)).toBeInTheDocument();
     expect(screen.queryByText(/Dostawca:/i)).not.toBeInTheDocument();
@@ -220,7 +224,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
-  it('filters offers by B2B only and clears filters', async () => {
+  it('displays all rental offers with Tylko B2B badge on B2B offers without filter toggle', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
     vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
       offers: mockRentalOffersList,
@@ -242,21 +246,93 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
     });
 
-    // Click B2B filter button
-    const b2bBtn = screen.getByRole('button', { name: /Tylko B2B/i });
-    fireEvent.click(b2bBtn);
+    // Toyota Corolla has isB2b: true -> has "Tylko B2B" badge
+    expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
 
-    // Only Toyota (which is B2B) should be visible
+    // Click Więcej filtrów
+    const moreBtn = screen.getByRole('button', { name: /Więcej filtrów/i });
+    fireEvent.click(moreBtn);
+
+    // There should NOT be any "Tylko B2B" or "Opcja B2B" filter button in filters
+    expect(screen.queryByRole('button', { name: /Tylko B2B/i })).not.toBeInTheDocument();
+  });
+
+  it('filters rental offers by monthly rate preset', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: [
+        {
+          ...mockRentalOffersList[0],
+          minMonthlyRateGross: 1350,
+        },
+        {
+          ...mockRentalOffersList[1],
+          minMonthlyRateGross: 2200,
+        },
+      ],
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+    });
+
+    // Toyota Corolla minMonthlyRateGross = 1350 (< 1500)
+    // Skoda Octavia minMonthlyRateGross = 2200 (1500 - 2500)
+    fireEvent.click(screen.getByRole('button', { name: '< 1500' }));
+
     expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
     expect(screen.queryByText('Skoda Octavia')).not.toBeInTheDocument();
 
-    // Click clear filters
-    const clearBtn = screen.getByRole('button', { name: /Wyczyść filtry/i });
-    fireEvent.click(clearBtn);
-
-    // Both should be visible again
-    expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '1500 - 2500' }));
+    expect(screen.queryByText('Toyota Corolla')).not.toBeInTheDocument();
     expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+  });
+
+  it('renders search input inside filters card and filters offers by search term', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: mockRentalOffersList,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+    });
+
+    const filtersCard = screen.getByTestId('filters-card');
+    expect(filtersCard).toBeInTheDocument();
+
+    const searchInput = within(filtersCard).getByPlaceholderText(/Szukaj po marce lub modelu/i);
+    expect(searchInput).toBeInTheDocument();
+    expect(searchInput).toHaveAttribute('aria-label', 'Szukaj po marce lub modelu');
+
+    fireEvent.change(searchInput, { target: { value: 'Corolla' } });
+
+    expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+    expect(screen.queryByText('Skoda Octavia')).not.toBeInTheDocument();
   });
 });
 

@@ -478,15 +478,16 @@ export const pipelineApi = {
   },
 
   // Inbox
-  async getInbox(params?: { limit?: number; offset?: number }): Promise<{ items: InboxLeadSummary[]; total: number }> {
+  async getInbox(params?: { limit?: number; offset?: number; leadType?: string }): Promise<{ leads: InboxLeadSummary[]; total: number; cutoffDate?: string }> {
     const sp = new URLSearchParams();
     if (params?.limit) sp.append('limit', String(params.limit));
     if (params?.offset) sp.append('offset', String(params.offset));
+    if (params?.leadType) sp.append('leadType', params.leadType);
     const qs = sp.toString();
     const res = await fetch(`${API_BASE}/inbox${qs ? `?${qs}` : ''}`, {
       headers: getHeaders(),
     });
-    return handleResponse<{ items: InboxLeadSummary[]; total: number }>(res);
+    return handleResponse<{ leads: InboxLeadSummary[]; total: number; cutoffDate?: string }>(res);
   },
 
   async qualifyLead(

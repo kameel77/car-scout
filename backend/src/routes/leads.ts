@@ -1,9 +1,19 @@
 import { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { sendLeadEmail } from '../services/email.js';
 import { resolveScope } from '../utils/scope-resolver.js';
 import { requirePermission } from '../middleware/permissions.js';
 import { generateReference } from '../utils/reference-generator.js';
 import fetch from 'node-fetch';
+
+export const employerB2bMetadataSchema = z.object({
+    companyName: z.string().trim().min(1).max(200),
+    companyNip: z.string().trim().max(15).regex(/^[0-9-]*$/, 'NIP może zawierać tylko cyfry i myślniki'),
+    teamSize: z.string().trim().max(60),
+    benefitModel: z.string().trim().max(120),
+}).strict();
+
+export type EmployerB2bMetadata = z.infer<typeof employerB2bMetadataSchema>;
 
 async function verifyTurnstile(token: string | undefined, ip: string, log: any): Promise<boolean> {
     const secretKey = process.env.TURNSTILE_SECRET_KEY || '1x00000000000000000000000000000000';
@@ -67,6 +77,7 @@ interface LeadPayload {
     message?: string;
     consentMarketing?: boolean;
     consentPrivacy?: boolean;
+    metadata?: unknown;
     // Financing fields
     financingProductId?: string;
     financingAmount?: number;
@@ -125,13 +136,14 @@ const ALLOWED_LEAD_TYPES = new Set([
     'quick_contact',
     'foton_fleet',
     'foton_lifestyle',
-    'employee'
+    'employee',
+    'employer_b2b'
 ]);
 
 export async function leadRoutes(fastify: FastifyInstance) {
     // Create new lead from public form (sale)
     fastify.post('/api/leads', {
-        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+        config: { rateLimit: { max: 30, timeWindow: '1 minute' } }
     }, async (request, reply) => {
         const data = request.body as LeadPayload & { turnstileToken?: string };
 
@@ -159,10 +171,25 @@ export async function leadRoutes(fastify: FastifyInstance) {
 
         const validLeadType = data.leadType && ALLOWED_LEAD_TYPES.has(data.leadType) ? data.leadType : 'sale';
 
+        let validatedMetadata: EmployerB2bMetadata | null = null;
+        if (data.metadata !== undefined && data.metadata !== null) {
+            const parseResult = employerB2bMetadataSchema.safeParse(data.metadata);
+            if (!parseResult.success) {
+                return reply.code(400).send({
+                    error: 'Nieprawidłowe metadane zgłoszenia B2B',
+                    details: parseResult.error.flatten()
+                });
+            }
+            if (validLeadType === 'employer_b2b') {
+                validatedMetadata = parseResult.data;
+            }
+        }
+
         const lead = await fastify.prisma.lead.create({
             data: {
                 leadType: validLeadType,
                 trafficSource: data.trafficSource || null,
+                ...(validatedMetadata ? { metadata: validatedMetadata } : {}),
                 ...(data.listingId ? { listingId: data.listingId } : {}),
                 name: data.name,
                 email: data.email ? data.email.trim() : null,
@@ -170,7 +197,7 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 preferredContact: data.preferredContact || (data.phone ? 'phone' : 'email'),
                 message: data.message || 'Zapytanie o ofertę.',
                 status: 'new',
-                referenceNumber: generateReference(),
+                referenceNumber: generateReference(validLeadType === 'employer_b2b' ? 'BNF' : 'AF'),
                 consentMarketingAt: data.consentMarketing ? new Date() : null,
                 consentPrivacyAt: data.consentPrivacy ? new Date() : null,
                 // Financing data
@@ -188,6 +215,21 @@ export async function leadRoutes(fastify: FastifyInstance) {
                 financingProduct: true
             }
         });
+
+        // Record telemetry in Redis for B2B conversion tracking
+        if (fastify.redis) {
+            try {
+                const today = new Date().toISOString().slice(0, 10);
+                const dailyKey = `analytics:daily:${today}`;
+                const evName = validLeadType === 'employer_b2b' ? 'b2b_lead_submitted' : 'lead_submitted';
+                const cleanPath = validLeadType === 'employer_b2b' ? '/dla-firm' : '/';
+                await fastify.redis.hincrby(dailyKey, `event_path:${evName}:${cleanPath}`, 1);
+                await fastify.redis.hincrby(dailyKey, `event:${evName}`, 1);
+                await fastify.redis.expire(dailyKey, 86400 * 90);
+            } catch {
+                // Redis error should not fail lead creation
+            }
+        }
 
         // Wyślij powiadomienie email (nie blokując odpowiedzi API)
         sendLeadEmail(fastify, lead as any, getBaseUrl(request)).catch((err: any) => {

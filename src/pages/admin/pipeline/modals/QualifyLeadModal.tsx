@@ -31,7 +31,7 @@ import { format } from 'date-fns';
 
 function deriveClientType(lead: InboxLeadSummary | null): ClientType {
   if (!lead) return 'UNKNOWN';
-  if (lead.leadType?.toLowerCase() === 'b2b') {
+  if (lead.leadType?.toLowerCase() === 'b2b' || lead.leadType === 'employer_b2b') {
     return 'B2B';
   }
   return 'UNKNOWN';
@@ -58,8 +58,8 @@ export function QualifyLeadModal({
   const [customerName, setCustomerName] = useState<string>(lead?.name || '');
   const [customerPhone, setCustomerPhone] = useState<string>(lead?.phone || '');
   const [customerEmail, setCustomerEmail] = useState<string>(lead?.email || '');
-  const [companyName, setCompanyName] = useState<string>('');
-  const [companyNip, setCompanyNip] = useState<string>('');
+  const [companyName, setCompanyName] = useState<string>(lead?.metadata?.companyName || '');
+  const [companyNip, setCompanyNip] = useState<string>(lead?.metadata?.companyNip || '');
   const [clientType, setClientType] = useState<ClientType>(() => deriveClientType(lead));
   const [financingType, setFinancingType] = useState<FinancingType | ''>('');
   const [nextActionType, setNextActionType] = useState<string>('CALL_FIRST');
@@ -73,8 +73,8 @@ export function QualifyLeadModal({
       setCustomerName(lead.name || '');
       setCustomerPhone(lead.phone || '');
       setCustomerEmail(lead.email || '');
-      setCompanyName('');
-      setCompanyNip('');
+      setCompanyName(lead.metadata?.companyName || '');
+      setCompanyNip(lead.metadata?.companyNip || '');
       setClientType(deriveClientType(lead));
       setFinancingType('');
       setOwnerUserId(user?.id ?? '');
@@ -143,11 +143,25 @@ export function QualifyLeadModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="p-3 bg-muted/40 rounded-lg text-xs space-y-1 border">
             <div className="flex justify-between font-medium">
-              <span className="text-foreground">{lead.name}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-foreground font-bold">{lead.name}</span>
+                {lead.leadType === 'employer_b2b' && (
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#0f2d1e] text-[#F7F8F2]">
+                    Benefivo B2B
+                  </span>
+                )}
+              </div>
               <span className="text-muted-foreground">{lead.phone || lead.email}</span>
             </div>
+            {lead.leadType === 'employer_b2b' && lead.metadata?.companyName && (
+              <div className="text-stone-800 dark:text-stone-200 font-medium">
+                Firma: {lead.metadata.companyName} {lead.metadata.companyNip ? `(NIP: ${lead.metadata.companyNip})` : ''}
+              </div>
+            )}
             {vehicleName && (
-              <div className="text-primary font-medium">Auto: {vehicleName}</div>
+              <div className="text-primary font-medium">
+                {lead.leadType === 'employer_b2b' ? 'Program:' : 'Auto:'} {vehicleName}
+              </div>
             )}
             {lead.message && (
               <div className="text-muted-foreground italic line-clamp-2">

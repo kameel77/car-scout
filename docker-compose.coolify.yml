@@ -43,6 +43,8 @@ services:
       INTERNAL_FRONTEND_URL: ${INTERNAL_FRONTEND_URL:-http://${COMPOSE_PROJECT_NAME}-frontend:80}
       BRAND: ${BRAND:-carsalon}
       FEED_ENCRYPTION_KEY: ${FEED_ENCRYPTION_KEY}
+      EMPLOYEE_PORTAL_URL: ${EMPLOYEE_PORTAL_URL:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s

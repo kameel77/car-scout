@@ -122,8 +122,10 @@ describe('Employee Portal Rental API Client', () => {
           monthlyRateNet: 1620,
           monthlyRateGross: 1992.6,
           rateSource: 'PUBLIC_MATRIX',
+          servicesIncluded: [],
         },
       ],
+      servicesIncluded: [],
     };
 
     const fakeFetch = vi.fn().mockResolvedValue({
@@ -213,7 +215,7 @@ describe('Employee Portal Rental API Client', () => {
       pct: 0,
       amountNet: 20000,
       amountGross: 24600,
-      label: `${(20000).toLocaleString('pl-PL')} zł`,
+      label: '20 000 zł',
     });
 
     const optZero = result.rentalOptions.find((o) => o.downPaymentAmountPln === 0);

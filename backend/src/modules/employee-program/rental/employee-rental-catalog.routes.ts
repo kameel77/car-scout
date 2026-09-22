@@ -95,7 +95,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
       preHandler: [verifyEmployeeAuth],
       config: {
         rateLimit: {
-          max: 60,
+          max: 600,
           timeWindow: '1 minute'
         }
       }
@@ -252,6 +252,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
               model: v.model,
               version: v.version ?? null,
               productionYear: v.productionYear ?? 2026,
+              catalogPrice: v.catalogPrice ?? null,
               fuelType: v.fuelType ?? null,
               transmission: v.transmission ?? null,
               bodyType: v.bodyType ?? null,
@@ -283,7 +284,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
       preHandler: [verifyEmployeeAuth],
       config: {
         rateLimit: {
-          max: 60,
+          max: 600,
           timeWindow: '1 minute'
         }
       }
@@ -380,6 +381,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
           matrixVersionId: resolved.matrixVersionId,
           allowedContractParties: resolved.allowedContractParties,
           isB2b: isRentalAllowedB2BOnly(resolved.allowedContractParties),
+          servicesIncluded: resolved.rows[0]?.servicesIncluded || asg.includedServicesOverride || asg.rentalCompany?.includedServices || [],
           rows: sortedRows
         };
       });
@@ -409,6 +411,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
           model: vehicle.model,
           version: vehicle.version ?? null,
           productionYear: vehicle.productionYear ?? 2026,
+          catalogPrice: vehicle.catalogPrice ?? null,
           fuelType: vehicle.fuelType ?? null,
           transmission: vehicle.transmission ?? null,
           bodyType: vehicle.bodyType ?? null,
@@ -429,6 +432,15 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
           additionalInfoContent: vehicle.additionalInfoContent ?? null
         },
         isB2b: isOfferB2b,
+        servicesIncluded: Array.from(
+          new Set(
+            (vehicle.rentalAssignments || []).flatMap((asg) => {
+              return asg.includedServicesOverride && asg.includedServicesOverride.length > 0
+                ? asg.includedServicesOverride
+                : asg.rentalCompany?.includedServices || [];
+            }).filter(Boolean)
+          )
+        ),
         rentalOptions,
         benefit: null
       });

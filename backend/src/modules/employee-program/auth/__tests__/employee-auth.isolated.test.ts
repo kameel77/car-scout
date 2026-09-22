@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import bcrypt from 'bcrypt';
@@ -75,6 +75,23 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
       del: async (key: string) => {
         if (redisFailNext) throw new Error('Redis connection lost');
         return fakeRedisStore.delete(key) ? 1 : 0;
+      },
+      incr: async (key: string) => {
+        if (redisFailNext) throw new Error('Redis connection lost');
+        const current = parseInt(fakeRedisStore.get(key)?.val || '0', 10);
+        const next = current + 1;
+        const ttl = fakeRedisStore.get(key)?.ttl || 0;
+        fakeRedisStore.set(key, { val: String(next), ttl });
+        return next;
+      },
+      expire: async (key: string, seconds: number) => {
+        if (redisFailNext) throw new Error('Redis connection lost');
+        const entry = fakeRedisStore.get(key);
+        if (entry) {
+          entry.ttl = seconds;
+          return 1;
+        }
+        return 0;
       }
     };
 
@@ -99,7 +116,12 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
             createdAt: new Date()
           };
         },
-        update: async () => mockAccount
+        update: async ({ where, data }: any) => {
+          if (where?.id === mockAccount.id) {
+            Object.assign(mockAccount, data);
+          }
+          return mockAccount;
+        }
       },
       employeeRegistrationCode: {
         findUnique: async () => ({
@@ -402,6 +424,23 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
       expect(json.message).toBe('Wystąpił błąd podczas walidacji kodu');
       expect(JSON.stringify(json)).not.toContain('Database password hash leak');
     });
+
+    it('locks IP after 250 failed validate-code attempts with 429 Too Many Requests', async () => {
+      fakeRedisStore.set('ep:code:fail:127.0.0.1', { val: '250', ttl: 600 });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/validate-code',
+        payload: {
+          code: 'ACTION123'
+        }
+      });
+
+      expect(res.statusCode).toBe(429);
+      const json = res.json();
+      expect(json.error).toBe('Too Many Requests');
+      expect(json.message).toContain('Zbyt wiele nieudanych prób walidacji kodu');
+    });
   });
 
   describe('POST /api/employee/auth/login with cookie sessions', () => {
@@ -471,6 +510,142 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
       expect(parsedStored.accountId).toBe(mockAccount.id);
       expect(parsedStored.companyId).toBe('comp_action');
       expect(parsedStored.programId).toBe('prog_action_auto');
+    });
+
+    it('locks account after 10 failed login attempts with 429 Too Many Requests while allowing other accounts from same IP (NAT resilience)', async () => {
+      const csrf = generateSignedCsrfToken(app.jwt);
+      const targetEmail = 'target.user@action.pl';
+      const otherEmail = 'colleague@action.pl';
+
+      // Simulate 10 failed login attempts on targetEmail
+      for (let i = 1; i <= 10; i++) {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/employee/auth/login',
+          headers: {
+            host: 'localhost:3000',
+            origin: 'https://localhost:3000',
+            cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+            [CSRF_HEADER_NAME]: csrf
+          },
+          payload: {
+            email: targetEmail,
+            password: 'WrongPassword999!'
+          }
+        });
+
+        // First 9 attempts fail with 401 Unauthorized
+        // 10th attempt records the 10th failure and fails with 401
+        expect(res.statusCode).toBe(401);
+      }
+
+      // Verify Redis failure key was created with 15 min TTL (900s) keyed by email:IP
+      const lockKey = `ep:login:fail:${targetEmail}:127.0.0.1`;
+      const entry = fakeRedisStore.get(lockKey);
+      expect(entry).toBeDefined();
+      expect(parseInt(entry!.val, 10)).toBe(10);
+      expect(entry!.ttl).toBe(900);
+
+      // 11th attempt for targetEmail from SAME IP is blocked with 429 Too Many Requests
+      const blockedRes = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/login',
+        headers: {
+          host: 'localhost:3000',
+          origin: 'https://localhost:3000',
+          cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          email: targetEmail,
+          password: 'AnyPassword!'
+        }
+      });
+
+      expect(blockedRes.statusCode).toBe(429);
+      const blockedJson = blockedRes.json();
+      expect(blockedJson.error).toBe('Too Many Requests');
+      expect(blockedJson.message).toContain('Zbyt wiele nieudanych prób logowania');
+
+      // Colleague behind the SAME corporate NAT IP trying with different email is NOT blocked
+      const colleagueRes = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/login',
+        headers: {
+          host: 'localhost:3000',
+          origin: 'https://localhost:3000',
+          cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          email: otherEmail,
+          password: 'WrongPassword!'
+        }
+      });
+
+      // Returns 401 (processed normally, not blocked by 429)
+      expect(colleagueRes.statusCode).toBe(401);
+    });
+
+    it('does not increment login failure counter when service throws unexpected 500 error', async () => {
+      const csrf = generateSignedCsrfToken(app.jwt);
+      const errorEmail = 'db.fail.user@action.pl';
+      const lockKey = `ep:login:fail:${errorEmail}:127.0.0.1`;
+
+      // Mock prisma findUnique to throw unhandled DB error
+      const origFindUnique = (app as any).prisma.employeeAccount.findUnique;
+      (app as any).prisma.employeeAccount.findUnique = vi.fn().mockRejectedValueOnce(new Error('PostgreSQL connection lost'));
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/login',
+        headers: {
+          host: 'localhost:3000',
+          origin: 'https://localhost:3000',
+          cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          email: errorEmail,
+          password: 'AnyPassword!'
+        }
+      });
+
+      expect(res.statusCode).toBe(500);
+      // Redis failure key must NOT be created on server/DB error!
+      expect(fakeRedisStore.has(lockKey)).toBe(false);
+
+      // Restore
+      (app as any).prisma.employeeAccount.findUnique = origFindUnique;
+    });
+
+    it('clears login failure counter from Redis upon successful authentication', async () => {
+      const csrf = generateSignedCsrfToken(app.jwt);
+      const lockKey = `ep:login:fail:${mockAccount.email.toLowerCase().trim()}:127.0.0.1`;
+
+      // Pre-seed 3 failed attempts
+      fakeRedisStore.set(lockKey, { val: '3', ttl: 900 });
+      expect(fakeRedisStore.has(lockKey)).toBe(true);
+
+      // Successful login
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/login',
+        headers: {
+          host: 'localhost:3000',
+          origin: 'https://localhost:3000',
+          cookie: `${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          email: mockAccount.email,
+          password: 'Password123!'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      // Key should be deleted from Redis
+      expect(fakeRedisStore.has(lockKey)).toBe(false);
     });
   });
 
@@ -833,6 +1008,254 @@ describe('Employee Auth Isolated Routes & Middleware (P3a)', () => {
       expect(json.error).toBe('Internal Server Error');
       const setCookies = res.headers['set-cookie'];
       expect(setCookies).toBeUndefined();
+    });
+  });
+
+  describe('PATCH /api/employee/auth/me', () => {
+    it('updates employee profile (firstName, lastName, phone) successfully', async () => {
+      const jti = '11111111-1111-4111-a111-111111111111';
+      const validJwt = app.jwt.sign({
+        accountId: mockAccount.id,
+        email: mockAccount.email,
+        companyId: 'comp_action',
+        programId: 'prog_action_auto',
+        realm: 'employee',
+        aud: 'employee-portal',
+        jti
+      });
+
+      fakeRedisStore.set(`ep:session:${jti}`, {
+        val: JSON.stringify({
+          accountId: mockAccount.id,
+          companyId: 'comp_action',
+          programId: 'prog_action_auto'
+        }),
+        ttl: 3600
+      });
+      const csrf = generateSignedCsrfToken(app.jwt);
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/employee/auth/me',
+        headers: {
+          host: 'portal.test',
+          origin: 'https://portal.test',
+          cookie: `${SESSION_COOKIE_NAME}=${validJwt}; ${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          firstName: 'Adam',
+          lastName: 'Nowak',
+          phone: '+48987654321'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const json = res.json();
+      expect(json.employee.firstName).toBe('Adam');
+      expect(json.employee.lastName).toBe('Nowak');
+      expect(json.employee.phone).toBe('+48987654321');
+      expect(json.employee.email).toBe(mockAccount.email);
+    });
+
+    it('rejects update when CSRF header is missing', async () => {
+      const jti = '11111111-1111-4111-a111-111111111112';
+      const validJwt = app.jwt.sign({
+        accountId: mockAccount.id,
+        email: mockAccount.email,
+        companyId: 'comp_action',
+        programId: 'prog_action_auto',
+        realm: 'employee',
+        aud: 'employee-portal',
+        jti
+      });
+
+      fakeRedisStore.set(`ep:session:${jti}`, {
+        val: JSON.stringify({
+          accountId: mockAccount.id,
+          companyId: 'comp_action',
+          programId: 'prog_action_auto'
+        }),
+        ttl: 3600
+      });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/employee/auth/me',
+        headers: {
+          host: 'portal.test',
+          origin: 'https://portal.test',
+          cookie: `${SESSION_COOKIE_NAME}=${validJwt}`
+        },
+        payload: {
+          firstName: 'Adam'
+        }
+      });
+
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  describe('POST /api/employee/auth/change-password', () => {
+    it('rejects invalid current password with 400', async () => {
+      const jti = '22222222-2222-4222-a222-222222222222';
+      const validJwt = app.jwt.sign({
+        accountId: mockAccount.id,
+        email: mockAccount.email,
+        companyId: 'comp_action',
+        programId: 'prog_action_auto',
+        realm: 'employee',
+        aud: 'employee-portal',
+        jti
+      });
+
+      fakeRedisStore.set(`ep:session:${jti}`, {
+        val: JSON.stringify({
+          accountId: mockAccount.id,
+          companyId: 'comp_action',
+          programId: 'prog_action_auto'
+        }),
+        ttl: 3600
+      });
+      const csrf = generateSignedCsrfToken(app.jwt);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/change-password',
+        headers: {
+          host: 'portal.test',
+          origin: 'https://portal.test',
+          cookie: `${SESSION_COOKIE_NAME}=${validJwt}; ${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          currentPassword: 'WrongPassword999!',
+          newPassword: 'NewPassword123!'
+        }
+      });
+
+      expect(res.statusCode).toBe(400);
+      const json = res.json();
+      expect(json.message).toContain('Nieprawidłowe obecne hasło');
+    });
+
+    it('rejects password exceeding 72 bytes with 400 and user-facing message', async () => {
+      const jti = '22222222-2222-4222-a222-222222222223';
+      const validJwt = app.jwt.sign({
+        accountId: mockAccount.id,
+        email: mockAccount.email,
+        companyId: 'comp_action',
+        programId: 'prog_action_auto',
+        realm: 'employee',
+        aud: 'employee-portal',
+        jti
+      });
+
+      fakeRedisStore.set(`ep:session:${jti}`, {
+        val: JSON.stringify({
+          accountId: mockAccount.id,
+          companyId: 'comp_action',
+          programId: 'prog_action_auto'
+        }),
+        ttl: 3600
+      });
+      const csrf = generateSignedCsrfToken(app.jwt);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/change-password',
+        headers: {
+          host: 'portal.test',
+          origin: 'https://portal.test',
+          cookie: `${SESSION_COOKIE_NAME}=${validJwt}; ${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          currentPassword: 'Password123!',
+          newPassword: 'a'.repeat(73)
+        }
+      });
+
+      expect(res.statusCode).toBe(400);
+      const json = res.json();
+      expect(json.message).toBe('Hasło jest za długie (maks. 72 znaki)');
+    });
+
+    it('successfully changes password, invalidates old token, and allows immediate request with new token (E8)', async () => {
+      const oldJti = '33333333-3333-4333-a333-333333333333';
+      const oldJwt = app.jwt.sign({
+        accountId: mockAccount.id,
+        email: mockAccount.email,
+        companyId: 'comp_action',
+        programId: 'prog_action_auto',
+        realm: 'employee',
+        aud: 'employee-portal',
+        jti: oldJti
+      });
+
+      fakeRedisStore.set(`ep:session:${oldJti}`, {
+        val: JSON.stringify({
+          accountId: mockAccount.id,
+          companyId: 'comp_action',
+          programId: 'prog_action_auto'
+        }),
+        ttl: 3600
+      });
+      const csrf = generateSignedCsrfToken(app.jwt);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/employee/auth/change-password',
+        headers: {
+          host: 'portal.test',
+          origin: 'https://portal.test',
+          cookie: `${SESSION_COOKIE_NAME}=${oldJwt}; ${CSRF_COOKIE_NAME}=${csrf}`,
+          [CSRF_HEADER_NAME]: csrf
+        },
+        payload: {
+          currentPassword: 'Password123!',
+          newPassword: 'BrandNewPassword123!'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const json = res.json();
+      expect(json.message).toContain('Hasło zmienione');
+
+      // Old session removed from Redis
+      expect(fakeRedisStore.has(`ep:session:${oldJti}`)).toBe(false);
+
+      // Extract new session cookie
+      const setCookies = res.headers['set-cookie'];
+      expect(setCookies).toBeDefined();
+      const cookiesList = Array.isArray(setCookies) ? setCookies : [setCookies as string];
+      const newSessionCookie = cookiesList.find(c => c.startsWith(`${SESSION_COOKIE_NAME}=`));
+      expect(newSessionCookie).toBeDefined();
+
+      const newTokenMatch = newSessionCookie!.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
+      const newToken = newTokenMatch![1];
+
+      // Immediate request with new token returns 200 (verifying E8 resolution)
+      const meResNew = await app.inject({
+        method: 'GET',
+        url: '/api/employee/auth/me',
+        headers: {
+          host: 'portal.test',
+          cookie: `${SESSION_COOKIE_NAME}=${newToken}`
+        }
+      });
+      expect(meResNew.statusCode).toBe(200);
+
+      // Request with old token returns 401
+      const meResOld = await app.inject({
+        method: 'GET',
+        url: '/api/employee/auth/me',
+        headers: {
+          host: 'portal.test',
+          cookie: `${SESSION_COOKIE_NAME}=${oldJwt}`
+        }
+      });
+      expect(meResOld.statusCode).toBe(401);
     });
   });
 });
