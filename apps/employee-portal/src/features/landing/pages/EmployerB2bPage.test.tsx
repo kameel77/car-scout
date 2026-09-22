@@ -29,15 +29,15 @@ describe('EmployerB2bPage Component Suite', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /Nowoczesny benefit motoryzacyjny/i })
+        screen.getByRole('heading', { name: /Daj pracownikom więcej możliwości/i })
       ).toBeInTheDocument();
-      expect(screen.getByText(/Zero kosztów wdrożenia dla Twojej firmy/i)).toBeInTheDocument();
+      expect(screen.getByText(/Bez kosztów dla firmy/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Imię i nazwisko \*/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Nazwa firmy \*/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Służbowy adres e-mail \*/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Numer telefonu \*/i)).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: /Wyślij zapytanie o program/i })
+        screen.getByRole('button', { name: /Zapytaj o współpracę/i })
       ).toBeInTheDocument();
     });
   });
@@ -61,7 +61,7 @@ describe('EmployerB2bPage Component Suite', () => {
     const consentCheckbox = screen.getByRole('checkbox');
     expect(consentCheckbox).not.toBeChecked();
 
-    const submitButton = screen.getByRole('button', { name: /Wyślij zapytanie o program/i });
+    const submitButton = screen.getByRole('button', { name: /Zapytaj o współpracę/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -109,7 +109,7 @@ describe('EmployerB2bPage Component Suite', () => {
     fireEvent.click(consentCheckbox);
     expect(consentCheckbox).toBeChecked();
 
-    const submitButton = screen.getByRole('button', { name: /Wyślij zapytanie o program/i });
+    const submitButton = screen.getByRole('button', { name: /Zapytaj o współpracę/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -155,7 +155,7 @@ describe('EmployerB2bPage Component Suite', () => {
 
     expect(screen.getByText(/Nieprawidłowy NIP/i)).toBeInTheDocument();
 
-    const submitButton = screen.getByRole('button', { name: /Wyślij zapytanie o program/i });
+    const submitButton = screen.getByRole('button', { name: /Zapytaj o współpracę/i });
     fireEvent.click(submitButton);
 
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -194,7 +194,7 @@ describe('EmployerB2bPage Component Suite', () => {
     const consentCheckbox = screen.getByRole('checkbox');
     fireEvent.click(consentCheckbox);
 
-    const submitButton = screen.getByRole('button', { name: /Wyślij zapytanie o program/i });
+    const submitButton = screen.getByRole('button', { name: /Zapytaj o współpracę/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {

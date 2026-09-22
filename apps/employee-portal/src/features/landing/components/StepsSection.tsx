@@ -24,23 +24,23 @@ export const StepsSection: React.FC<StepsSectionProps> = ({ onOpenEmployeeDialog
       <ol className="steps">
         <li>
           <span className="step-number">01</span>
-          <h3>Zacznij w swojej firmie</h3>
+          <h3>Sprawdź dostęp w swojej firmie</h3>
           <p>
-            Zapytaj HR o dostęp do programu Benefivo lub poleć nam swojego pracodawcę.
+            Masz kod? Aktywuj konto. Jeśli Twoja firma nie korzysta jeszcze z Benefivo, wyślij gotową propozycję do HR.
           </p>
         </li>
         <li>
           <span className="step-number">02</span>
-          <h3>Znajdź swój samochód</h3>
+          <h3>Znajdź ofertę dla siebie</h3>
           <p>
-            Dobierz auto, finansowanie i usługi w katalogu. Poznaj wszystkie warunki przed podjęciem decyzji.
+            Porównaj samochody, formy finansowania i warunki dostępne w programie Twojej firmy.
           </p>
         </li>
         <li>
           <span className="step-number">03</span>
-          <h3>Odbierz kluczyki</h3>
+          <h3>Wybierz i ruszaj</h3>
           <p>
-            Po akceptacji wniosku i podpisaniu umowy czas na Twoją pierwszą podróż.
+            Poznaj pełne warunki, złóż wniosek i podpisz umowę, jeśli oferta Ci odpowiada.
           </p>
         </li>
       </ol>

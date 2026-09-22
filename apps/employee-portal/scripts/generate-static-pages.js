@@ -18,20 +18,20 @@ const pages = [
   {
     fileName: 'index.html',
     title: 'Benefivo - dobre rzeczy jadą z Tobą | Samochód jako benefit',
-    description: 'Najem i leasing aut na warunkach dla pracowników. Poznaj program motoryzacyjny dla Twojej firmy. Powered by Motolia.',
+    description: 'Samochód do pracy, na weekend i do codziennych spraw. Sprawdź oferty najmu i leasingu przygotowane dla pracowników Twojej firmy. Wybierz rozwiązanie, które pasuje do Twoich planów.',
     canonical: '__PORTAL_ORIGIN__/',
     ogTitle: 'Benefivo - Dobre rzeczy jadą z Tobą',
-    ogDescription: 'Najem i leasing aut na warunkach dla pracowników. Poznaj program motoryzacyjny dla Twojej firmy. Powered by Motolia.',
+    ogDescription: 'Samochód do pracy, na weekend i do codziennych spraw. Sprawdź oferty najmu i leasingu przygotowane dla pracowników Twojej firmy. Wybierz rozwiązanie, które pasuje do Twoich planów.',
     ogUrl: '__PORTAL_ORIGIN__/',
     ogImage: '__PORTAL_ORIGIN__/static/og-benefivo.png'
   },
   {
     fileName: 'dla-firm.html',
     title: 'Benefivo dla Firm - Program samochodowy dla pracowników | Powered by Motolia',
-    description: 'Dołącz najem i leasing aut do benefitów Twojej firmy. Zero kosztów wdrożenia, preferencyjne warunki i kompleksowa obsługa Motolii.',
+    description: 'Daj pracownikom więcej możliwości za kierownicą. Bez kosztów dla firmy. Poznaj program benefitów samochodowych Benefivo powered by Motolia.',
     canonical: '__PORTAL_ORIGIN__/dla-firm',
     ogTitle: 'Benefivo dla Firm - Samochód jako benefit pracowniczy',
-    ogDescription: 'Dołącz najem i leasing aut do benefitów Twojej firmy. Zero kosztów wdrożenia, preferencyjne warunki i kompleksowa obsługa Motolii.',
+    ogDescription: 'Daj pracownikom więcej możliwości za kierownicą. Bez kosztów dla firmy. Poznaj program benefitów samochodowych Benefivo powered by Motolia.',
     ogUrl: '__PORTAL_ORIGIN__/dla-firm',
     ogImage: '__PORTAL_ORIGIN__/static/og-benefivo.png'
   },

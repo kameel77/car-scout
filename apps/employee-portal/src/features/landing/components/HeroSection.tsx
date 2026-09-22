@@ -26,7 +26,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenEmployeeDialog }
           </span>
         </h1>
         <p className="hero-description">
-          Najem i leasing auta na warunkach dla pracowników. Do tego korzyści, które zostają z Tobą na każdej trasie.
+          Samochód do pracy, na weekend i do codziennych spraw? Sprawdź oferty najmu i leasingu przygotowane dla pracowników Twojej firmy. Wybierz rozwiązanie, które pasuje do Twoich planów.
         </p>
 
         <div className="hero-actions">
@@ -37,14 +37,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenEmployeeDialog }
           ) : (
             <>
               <Link className="button button-lime" to="/rejestracja">
-                Mam kod firmy - aktywuj dostęp <span aria-hidden="true">&rarr;</span>
+                Mam kod firmy. Aktywuję dostęp <span aria-hidden="true">&rarr;</span>
               </Link>
               <button
                 className="button button-outline"
                 type="button"
                 onClick={onOpenEmployeeDialog}
               >
-                Mojej firmy nie ma w programie <span aria-hidden="true">&rarr;</span>
+                Moja firma nie ma jeszcze Benefivo <span aria-hidden="true">&rarr;</span>
               </button>
             </>
           )}
