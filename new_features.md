@@ -10,6 +10,8 @@ Ten plik służy do zapisywania pomysłów i planowanych usprawnień, które poj
 - [x] Integracja VASH (Vehis Tools) do kalkulacji leasingu dla pojazdów zewnętrznych, działająca równolegle do produktów własnych i Inbank (pobieranie subjectId, zakresów wykupu/opłaty wstępnej i kalkulacji rat).
 - [ ] Integracja Thulium REST API (v2 Tickets / Callbacks): bezpośrednie tworzenie ticketów w Thulium i zasilanie kolejki dialera oddzwonień po numerze telefonu z pominięciem pośrednictwa poczty e-mail.
 - [ ] Integracja CRM/CMS: link z zaszyfrowanym UUID klienta (i parametrami kalkulatora) + cookie zbierające odwiedzane URL-e z timestampami + API do odczytu danych dla CMS.
+- [ ] Widoczność typu stawki (Stawka partnerska vs Stawka katalogowa) w kalkulatorze najmu dedykowana wyłącznie dla operatora platformy: Ukryta przed zwykłym pracownikiem i klientem w widoku publicznym/pracowniczym, a prezentowana wyłącznie po zalogowaniu do roli operatora / trybu inspekcji administratora platformy.
+
 
 ## 2. UI i UX
 - [ ] Panel administratora: wybór partnera finansowego przy dodawaniu nowego produktu kredytowego (np. Inbank, Produkt własny) wraz z konfiguracją widoczności na karcie oferty.

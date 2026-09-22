@@ -1395,3 +1395,14 @@ Wdrożono 6 ulepszeń UI/UX na kartach pojazdów (`NewCarOfferDetailPage.tsx`, `
     3. Przycisk akcji `Zapytaj o ofertę` otwierający modal zapytania z prekonfigurowaną ratą.
 - **6. Spójność Architektury Pomiędzy Samochodami a Najmem**:
   - W `RentalOfferDetailPage.tsx` wprowadzono analogiczny układ kolumn z `display: contents lg:block`, zoptymalizowaną sekwencję mobilną `order-1` do `order-7`, identyczne zachowanie belek pływających oraz dedykowany identyfikator `#kalkulator-najmu` dla płynnego scrollowania.
+- **7. Dopasowanie Wysokości Górnej Belki do Menu Głównego (`h-16`)**:
+  - Górna belka mobilna w obu widokach szczegółów (`NewCarOfferDetailPage.tsx` i `RentalOfferDetailPage.tsx`) otrzymała wysokość dokładnie odpowiadającą menu głównemu (`h-16`, 64px), dzięki czemu całkowicie pokrywa belkę nawigacji i zapobiega wystawaniu jej krawędzi od spodu.
+  - Zwiększono rozmiar typografii: marka i model do `text-base font-bold`, a rata miesięczna do wyrazistego `text-lg sm:text-xl font-black`.
+- **8. Bezpieczny Offset Przewijania do Kalkulatora**:
+  - Zaimplementowano programowy offset nagłówka (`headerOffset = 76px`) w funkcji `scrollToCalculator` oraz klasę `scroll-mt-20` na kartach kalkulatora w obu widokach, dzięki czemu po kliknięciu przycisku kalkulatora na dolnej belce początek formularza zatrzymuje się w optymalnym odstępie poniżej przyklejonego menu.
+- **9. Usunięcie Etykiety „W cenie abonamentu” i Brandowane Badge Usług**:
+  - Z nagłówka sekcji usług najmu usunięto zbędny napis `W cenie abonamentu`, a ikony pozycji wchodzących w skład raty zastąpiono limonkowymi badge'ami w kolorystyce Benefivo (`w-5 h-5 rounded-full bg-lime text-forest shadow-2xs`) z ikoną `Check`.
+- **10. Ukrycie Typu Stawki przed Pracownikiem**:
+  - Z widoku podsumowania kalkulatora najmu usunięto wiersz `Typ stawki: Stawka katalogowa / Stawka partnerska`. Informacja ta stanowi parametr operacyjny i została zarejestrowana na liście funkcjonalności jako widok dedykowany wyłącznie dla roli operatora platformy.
+- **11. Eliminacja Białego Pola na Dole Kalkulatora (WebKit/iOS Safari)**:
+  - Przebudowano strukturę kontenera kalkulatora na czysty podział dwusekcyjny wewnątrz karty z `overflow-hidden`. Wyeliminowano ujemne marginesy `-mx-6 -mb-6`, co definitywnie usunęło błąd silnika WebKit na urządzeniach mobilnych powodujący renderowanie białego marginesu na dole szarego boksu podsumowania raty.

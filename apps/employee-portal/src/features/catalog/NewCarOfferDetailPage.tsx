@@ -333,7 +333,13 @@ export const NewCarOfferDetailPage: React.FC = () => {
   const scrollToCalculator = () => {
     const el = document.getElementById('kalkulator-finansowania');
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const headerOffset = 76;
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
     }
   };
 
@@ -671,117 +677,86 @@ ${rateLine}`;
     }
 
     return (
-      <div id="kalkulator-finansowania" className="w-full bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20">
-        <div className="flex items-center justify-between border-b border-line pb-4">
-          <div className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-forest" />
-            <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
-          </div>
-        </div>
-
-        {/* Forma finansowania z dynamiczną etykietą po prawej */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-ink">Forma finansowania</span>
-            <span className="text-xs font-bold text-forest">
-              {contractType === 'CONSUMER' ? 'Kredyt samochodowy' : 'Leasing operacyjny'}
-            </span>
-          </div>
-          <div className={`grid gap-2 bg-paper p-1 rounded-xl border border-line ${financingOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-            {financingOptions.map((option, idx) => (
-              <button
-                key={option.productId}
-                type="button"
-                onClick={() => setSelectedOptionIndex(idx)}
-                className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  selectedOptionIndex === idx
-                    ? 'bg-white text-ink shadow-xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                {getFinancingButtonLabel(option.category)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Okres finansowania */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-ink">Okres finansowania</span>
-            <span className="text-xs font-bold text-forest">{months} miesięcy</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {selectedOption.periods.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMonths(m)}
-                className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
-                  months === m
-                    ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
-                    : 'border-line text-ink hover:bg-paper'
-                }`}
-              >
-                {m} msc
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Wpłata początkowa */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-ink">Wpłata początkowa</span>
-            <div className="text-right">
-              <span className="text-xs font-bold text-forest">{downPaymentPct}%</span>
-              {effectiveInstallment && (
-                <span className="text-2xs text-muted block">
-                  {formatPln(effectiveInstallment.initialPaymentAmount)} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
-                </span>
-              )}
+      <div id="kalkulator-finansowania" className="w-full bg-white rounded-2xl border border-line shadow-sm overflow-hidden lg:sticky lg:top-20 scroll-mt-20">
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-line pb-4">
+            <div className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-forest" />
+              <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {buildDownPaymentChipOptions(selectedOption.minDownPaymentPct, selectedOption.maxDownPaymentPct).map((pct) => (
-              <button
-                key={pct}
-                type="button"
-                onClick={() => setDownPaymentPct(pct)}
-                className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
-                  downPaymentPct === pct
-                    ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
-                    : 'border-line text-ink hover:bg-paper'
-                }`}
-              >
-                {pct}%
-              </button>
-            ))}
-          </div>
-        </div>
 
-        {/* Wykup końcowy - WIDOCZNY TYLKO W LEASINGU B2B, CHOWANY W KREDYCIE */}
-        {contractType === 'LEASING_B2B' && (
+          {/* Forma finansowania z dynamiczną etykietą po prawej */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-ink">Wykup końcowy</span>
+              <span className="text-xs font-semibold text-ink">Forma finansowania</span>
+              <span className="text-xs font-bold text-forest">
+                {contractType === 'CONSUMER' ? 'Kredyt samochodowy' : 'Leasing operacyjny'}
+              </span>
+            </div>
+            <div className={`grid gap-2 bg-paper p-1 rounded-xl border border-line ${financingOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {financingOptions.map((option, idx) => (
+                <button
+                  key={option.productId}
+                  type="button"
+                  onClick={() => setSelectedOptionIndex(idx)}
+                  className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    selectedOptionIndex === idx
+                      ? 'bg-white text-ink shadow-xs'
+                      : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  {getFinancingButtonLabel(option.category)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Okres finansowania */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-ink">Okres finansowania</span>
+              <span className="text-xs font-bold text-forest">{months} miesięcy</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {selectedOption.periods.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMonths(m)}
+                  className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                    months === m
+                      ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
+                      : 'border-line text-ink hover:bg-paper'
+                  }`}
+                >
+                  {m} msc
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Wpłata początkowa */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-ink">Wpłata początkowa</span>
               <div className="text-right">
-                <span className="text-xs font-bold text-forest">{residualPct}%</span>
+                <span className="text-xs font-bold text-forest">{downPaymentPct}%</span>
                 {effectiveInstallment && (
                   <span className="text-2xs text-muted block">
-                    {formatPln(effectiveInstallment.residualAmount)} zł netto
+                    {formatPln(effectiveInstallment.initialPaymentAmount)} zł {contractType === 'CONSUMER' ? 'brutto' : 'netto'}
                   </span>
                 )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {buildResidualChipOptions(selectedOption.maxResidualPct || 40).map((pct) => (
+              {buildDownPaymentChipOptions(selectedOption.minDownPaymentPct, selectedOption.maxDownPaymentPct).map((pct) => (
                 <button
                   key={pct}
                   type="button"
-                  onClick={() => setResidualPct(pct)}
+                  onClick={() => setDownPaymentPct(pct)}
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
-                    residualPct === pct
+                    downPaymentPct === pct
                       ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
                       : 'border-line text-ink hover:bg-paper'
                   }`}
@@ -791,10 +766,43 @@ ${rateLine}`;
               ))}
             </div>
           </div>
-        )}
+
+          {/* Wykup końcowy - WIDOCZNY TYLKO W LEASINGU B2B, CHOWANY W KREDYCIE */}
+          {contractType === 'LEASING_B2B' && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-ink">Wykup końcowy</span>
+                <div className="text-right">
+                  <span className="text-xs font-bold text-forest">{residualPct}%</span>
+                  {effectiveInstallment && (
+                    <span className="text-2xs text-muted block">
+                      {formatPln(effectiveInstallment.residualAmount)} zł netto
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {buildResidualChipOptions(selectedOption.maxResidualPct || 40).map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => setResidualPct(pct)}
+                    className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                      residualPct === pct
+                        ? 'border-forest bg-forest/5 text-forest ring-2 ring-forest/20'
+                        : 'border-line text-ink hover:bg-paper'
+                    }`}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Podsumowanie raty */}
-        <div className="pt-4 border-t border-line bg-paper -mx-6 -mb-6 p-6 rounded-b-2xl">
+        <div className="p-6 bg-paper border-t border-line space-y-4">
           <div className="flex items-baseline justify-between mb-2">
             {contractType === 'CONSUMER' ? (
               <>
@@ -843,7 +851,7 @@ ${rateLine}`;
           <button
             type="button"
             onClick={() => setIsInquiryModalOpen(true)}
-            className="w-full py-3 px-4 bg-ink hover:bg-forest text-paper font-bold text-sm rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 px-4 bg-ink hover:bg-forest text-paper font-bold text-sm rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer"
           >
             Zapytaj o tę ofertę i ratę
           </button>
@@ -861,26 +869,26 @@ ${rateLine}`;
 
     return (
       <div
-        className={`lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-line shadow-xs px-4 py-2.5 transition-all duration-300 transform ${
+        className={`lg:hidden fixed top-0 left-0 right-0 h-16 z-40 bg-white/95 backdrop-blur-md border-b border-line shadow-xs px-4 flex items-center transition-all duration-300 transform ${
           showStickyTopBar ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'
         }`}
       >
-        <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between gap-3 w-full max-w-7xl mx-auto">
           <div className="min-w-0 flex-1">
-            <div className="text-xs sm:text-sm font-bold text-ink truncate font-heading leading-tight">
+            <div className="text-base font-bold text-ink truncate font-heading leading-tight">
               {offer.vehicle.make} {offer.vehicle.model}
             </div>
-            <div className="text-[11px] text-muted truncate">
+            <div className="text-xs text-muted truncate mt-0.5">
               {offer.vehicle.productionYear ? `Rocznik ${offer.vehicle.productionYear}` : ''}
               {offer.vehicle.productionYear && offer.vehicle.version ? ' · ' : ''}
               {offer.vehicle.version || ''}
             </div>
           </div>
           <div className="text-right shrink-0">
-            <div className="text-sm sm:text-base font-extrabold text-forest font-heading leading-tight">
+            <div className="text-lg sm:text-xl font-black text-ink font-heading leading-tight">
               {rateNumber !== null ? `${formatPln(rateNumber)} zł` : 'od - zł'}
             </div>
-            <div className="text-[10px] font-semibold text-muted">
+            <div className="text-[11px] font-semibold text-muted">
               {rateSuffix}
             </div>
           </div>

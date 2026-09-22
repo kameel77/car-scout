@@ -292,6 +292,13 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     // 4. 'Wartość alternatywna:' label removed, alternative amount in parentheses
     expect(screen.queryByText(/Wartość alternatywna:/i)).not.toBeInTheDocument();
 
+    // 5. 'W cenie abonamentu' badge removed from services header
+    expect(screen.queryByText(/W cenie abonamentu/i)).not.toBeInTheDocument();
+
+    // 6. Operator rate type ('Typ stawki', 'Stawka katalogowa') hidden from customer calculator
+    expect(screen.queryByText(/Typ stawki/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Stawka katalogowa/i)).not.toBeInTheDocument();
+
     // 2. Equipment accordions
     expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();
     expect(screen.getByText('(2 pozycje)')).toBeInTheDocument();
