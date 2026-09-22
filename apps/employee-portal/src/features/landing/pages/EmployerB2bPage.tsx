@@ -148,23 +148,24 @@ export const EmployerB2bPage: React.FC = () => {
     <div className="benefivo-landing">
       <LandingHeader />
 
-      <main className="wrap py-12">
+      <main id="main">
         {/* Intro */}
-        <section className="mb-14">
-          <p className="eyebrow mb-3">DLA FIRM</p>
-          <h1 className="text-3xl sm:text-5xl !font-bold tracking-tight text-ink !mb-8 !leading-tight">
+        <section className="b2b-hero wrap">
+          <p className="eyebrow">
+            <span className="status-dot" aria-hidden="true" />
+            DLA FIRM
+          </p>
+          <h1>
             Daj pracownikom więcej możliwości za kierownicą.<br />
-            <span className="block text-muted !font-normal text-2xl sm:text-3xl mt-2 tracking-normal">
-              Bez kosztów dla firmy.
-            </span>
+            <span className="text-muted">Bez kosztów dla firmy.</span>
           </h1>
-          <p className="text-lg text-muted max-w-2xl leading-relaxed mb-8">
+          <p className="hero-description">
             Podpisz umowę o współpracy, a Twój zespół otrzyma dostęp do specjalnych ofert na samochody i usługi motoryzacyjne. Pracownicy sami zdecydują, czy chcą z nich skorzystać. Przygotowaniem ofert i obsługą programu zajmuje się Motolia.
           </p>
-          <div className="flex flex-wrap gap-4 items-center">
+          <div className="hero-actions">
             <a
               href="#kontakt-b2b"
-              className="button button-lime inline-flex items-center gap-2"
+              className="button button-lime"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('kontakt-b2b')?.scrollIntoView({ behavior: 'smooth' });
@@ -176,137 +177,136 @@ export const EmployerB2bPage: React.FC = () => {
         </section>
 
         {/* Benefits Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <div className="bg-white p-7 rounded-2xl border border-stone-200">
-            <div className="w-10 h-10 rounded-full bg-lime flex items-center justify-center font-bold text-ink mb-4">
-              01
+        <section className="section wrap pt-0" aria-labelledby="b2b-benefits-title">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-3xl border border-line flex flex-col justify-start">
+              <span className="step-number">01</span>
+              <h3 className="mb-3">Bez kosztów po stronie firmy</h3>
+              <p className="text-sm text-muted leading-relaxed">
+                Udostępniasz pracownikom program na podstawie umowy o współpracy. Sam dostęp do ofert nie wymaga finansowania samochodów przez pracodawcę.
+              </p>
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-ink">Bez kosztów po stronie firmy</h3>
-            <p className="text-sm text-muted leading-relaxed">
-              Udostępniasz pracownikom program na podstawie umowy o współpracy. Sam dostęp do ofert nie wymaga finansowania samochodów przez pracodawcę.
-            </p>
-          </div>
 
-          <div className="bg-white p-7 rounded-2xl border border-stone-200">
-            <div className="w-10 h-10 rounded-full bg-lime flex items-center justify-center font-bold text-ink mb-4">
-              02
+            <div className="bg-white p-8 rounded-3xl border border-line flex flex-col justify-start">
+              <span className="step-number">02</span>
+              <h3 className="mb-3">Oferty przygotowane dla Twojego zespołu</h3>
+              <p className="text-sm text-muted leading-relaxed">
+                Pracownicy otrzymują dostęp do warunków i propozycji motoryzacyjnych dostępnych w programie ich firmy.
+              </p>
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-ink">Oferty przygotowane dla Twojego zespołu</h3>
-            <p className="text-sm text-muted leading-relaxed">
-              Pracownicy otrzymują dostęp do warunków i propozycji motoryzacyjnych dostępnych w programie ich firmy.
-            </p>
-          </div>
 
-          <div className="bg-white p-7 rounded-2xl border border-stone-200">
-            <div className="w-10 h-10 rounded-full bg-lime flex items-center justify-center font-bold text-ink mb-4">
-              03
+            <div className="bg-white p-8 rounded-3xl border border-line flex flex-col justify-start">
+              <span className="step-number">03</span>
+              <h3 className="mb-3">Obsługa po naszej stronie</h3>
+              <p className="text-sm text-muted leading-relaxed">
+                Motolia przygotowuje ofertę, wspiera pracowników w wyborze rozwiązania i prowadzi dalszy proces związany z samochodem.
+              </p>
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-ink">Obsługa po naszej stronie</h3>
-            <p className="text-sm text-muted leading-relaxed">
-              Motolia przygotowuje ofertę, wspiera pracowników w wyborze rozwiązania i prowadzi dalszy proces związany z samochodem.
-            </p>
           </div>
         </section>
 
         {/* How We Start Section */}
-        <section className="mb-16">
-          <div className="mb-8">
-            <p className="eyebrow mb-2">PROSTY PROCES</p>
-            <h2 className="text-2xl sm:text-3xl font-bold text-ink">Jak zaczynamy?</h2>
+        <section className="section wrap pt-0" aria-labelledby="b2b-steps-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">PROSTY PROCES</p>
+              <h2 id="b2b-steps-title">Jak zaczynamy?</h2>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-stone-200">
-              <div className="w-8 h-8 rounded-full bg-lime/40 text-ink flex items-center justify-center font-bold text-xs mb-3">
-                01
-              </div>
-              <p className="text-base font-medium text-ink">Poznajemy potrzeby Twojej firmy i zespołu.</p>
+            <div className="bg-white p-7 rounded-3xl border border-line flex flex-col justify-start">
+              <span className="step-number">01</span>
+              <p className="text-[15px] font-medium text-ink leading-snug">
+                Poznajemy potrzeby Twojej firmy i zespołu.
+              </p>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-stone-200">
-              <div className="w-8 h-8 rounded-full bg-lime/40 text-ink flex items-center justify-center font-bold text-xs mb-3">
-                02
-              </div>
-              <p className="text-base font-medium text-ink">Ustalamy zakres programu i podpisujemy umowę.</p>
+            <div className="bg-white p-7 rounded-3xl border border-line flex flex-col justify-start">
+              <span className="step-number">02</span>
+              <p className="text-[15px] font-medium text-ink leading-snug">
+                Ustalamy zakres programu i podpisujemy umowę.
+              </p>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-stone-200">
-              <div className="w-8 h-8 rounded-full bg-lime/40 text-ink flex items-center justify-center font-bold text-xs mb-3">
-                03
-              </div>
-              <p className="text-base font-medium text-ink">Przygotowujemy dostęp oraz materiały do przekazania pracownikom.</p>
+            <div className="bg-white p-7 rounded-3xl border border-line flex flex-col justify-start">
+              <span className="step-number">03</span>
+              <p className="text-[15px] font-medium text-ink leading-snug">
+                Przygotowujemy dostęp oraz materiały do przekazania pracownikom.
+              </p>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-stone-200">
-              <div className="w-8 h-8 rounded-full bg-lime/40 text-ink flex items-center justify-center font-bold text-xs mb-3">
-                04
-              </div>
-              <p className="text-base font-medium text-ink">Pracownicy samodzielnie przeglądają oferty i kontaktują się z Motolią.</p>
+            <div className="bg-white p-7 rounded-3xl border border-line flex flex-col justify-start">
+              <span className="step-number">04</span>
+              <p className="text-[15px] font-medium text-ink leading-snug">
+                Pracownicy samodzielnie przeglądają oferty i kontaktują się z Motolią.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Direct Contact Bar */}
-        <div className="max-w-3xl mx-auto mb-8 bg-paper border border-line rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-lime text-ink flex items-center justify-center flex-shrink-0 font-bold">
-              <Phone className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-muted font-bold">Kontakt bezpośredni B2B</p>
-              <p className="text-sm text-ink font-medium">Masz pytania? Porozmawiaj bezpośrednio z doradcą.</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
-            <a
-              href={`tel:${config.b2bPhone || '__B2B_PHONE__'}`}
-              className="inline-flex items-center gap-1.5 text-ink hover:text-ink/80 transition-colors"
-            >
-              <Phone className="h-4 w-4 text-muted" />
-              <span>{config.b2bPhone || '__B2B_PHONE__'}</span>
-            </a>
-            <span className="text-line hidden sm:inline">|</span>
-            <a
-              href={`mailto:${config.b2bEmail || 'b2b@benefivo.pl'}`}
-              className="inline-flex items-center gap-1.5 text-ink hover:text-ink/80 transition-colors"
-            >
-              <Mail className="h-4 w-4 text-muted" />
-              <span>{config.b2bEmail || 'b2b@benefivo.pl'}</span>
-            </a>
-          </div>
-        </div>
-
-        {/* Lead Form Box */}
-        <section id="kontakt-b2b" className="bg-white rounded-3xl border border-stone-200 p-8 sm:p-12 shadow-xs max-w-3xl mx-auto scroll-mt-8">
-          {referenceNumber ? (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-lime text-ink rounded-full flex items-center justify-center mx-auto text-2xl mb-4 font-bold">
-                ✓
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-3">Dziękujemy za kontakt!</h2>
-              <div className="inline-block bg-paper border border-line rounded-xl px-4 py-3 text-xs text-ink font-mono mb-4">
-                Numer referencyjny: <strong>{referenceNumber}</strong>
-              </div>
-              <div className="max-w-md mx-auto text-sm text-muted space-y-2 mb-8 text-left bg-paper border border-line p-4 rounded-xl">
-                <p className="font-semibold text-ink">Co wydarzy się dalej?</p>
-                <ul className="space-y-1.5 list-disc list-inside">
-                  <li>Doradca flotowy Benefivo skontaktuje się z Państwem telefonicznie lub mailowo w ciągu 24 godzin roboczych.</li>
-                  <li>Przedstawimy symulację korzyści dla pracowników oraz dopasowany model wdrożenia.</li>
-                  <li>Przygotujemy dedykowany kod dostępu do portalu dla Państwa organizacji.</li>
-                </ul>
+        <section className="section wrap pt-0" aria-labelledby="kontakt-title">
+          {/* Direct Contact Bar */}
+          <div className="max-w-3xl mx-auto mb-10 bg-white border border-line rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-lime text-ink flex items-center justify-center flex-shrink-0 font-bold">
+                <Phone className="h-5 w-5" />
               </div>
               <div>
-                <a href="/" className="button button-dark text-sm">
-                  Wróć do strony głównej &rarr;
-                </a>
+                <p className="text-xs uppercase tracking-wider text-muted font-bold">Kontakt bezpośredni B2B</p>
+                <p className="text-sm text-ink font-medium mt-0.5">Masz pytania? Porozmawiaj bezpośrednio z doradcą.</p>
               </div>
             </div>
-          ) : (
-            <>
-              <div className="mb-8">
-                <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-2">
-                  Sprawdźmy, jak Benefivo może działać w Twojej firmie
-                </h2>
-                <p className="text-muted text-sm">
-                  Zostaw kontakt. Porozmawiamy o potrzebach zespołu i przygotujemy propozycję współpracy.
-                </p>
+            <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
+              <a
+                href={`tel:${config.b2bPhone || '__B2B_PHONE__'}`}
+                className="inline-flex items-center gap-2 text-ink hover:text-ink/80 transition-colors"
+              >
+                <Phone className="h-4 w-4 text-muted" />
+                <span>{config.b2bPhone || '__B2B_PHONE__'}</span>
+              </a>
+              <span className="text-line hidden sm:inline">|</span>
+              <a
+                href={`mailto:${config.b2bEmail || 'b2b@benefivo.pl'}`}
+                className="inline-flex items-center gap-2 text-ink hover:text-ink/80 transition-colors"
+              >
+                <Mail className="h-4 w-4 text-muted" />
+                <span>{config.b2bEmail || 'b2b@benefivo.pl'}</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Lead Form Box */}
+          <div id="kontakt-b2b" className="bg-white rounded-3xl border border-line p-8 sm:p-12 shadow-xs max-w-3xl mx-auto scroll-mt-8">
+            {referenceNumber ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-lime text-ink rounded-full flex items-center justify-center mx-auto text-2xl mb-4 font-bold">
+                  ✓
+                </div>
+                <h2 className="!text-2xl sm:!text-3xl font-semibold text-ink mb-3">Dziękujemy za kontakt!</h2>
+                <div className="inline-block bg-paper border border-line rounded-xl px-4 py-3 text-xs text-ink font-mono mb-4">
+                  Numer referencyjny: <strong>{referenceNumber}</strong>
+                </div>
+                <div className="max-w-md mx-auto text-sm text-muted space-y-2 mb-8 text-left bg-paper border border-line p-4 rounded-xl">
+                  <p className="font-semibold text-ink">Co wydarzy się dalej?</p>
+                  <ul className="space-y-1.5 list-disc list-inside">
+                    <li>Doradca flotowy Benefivo skontaktuje się z Państwem telefonicznie lub mailowo w ciągu 24 godzin roboczych.</li>
+                    <li>Przedstawimy symulację korzyści dla pracowników oraz dopasowany model wdrożenia.</li>
+                    <li>Przygotujemy dedykowany kod dostępu do portalu dla Państwa organizacji.</li>
+                  </ul>
+                </div>
+                <div>
+                  <a href="/" className="button button-dark text-sm">
+                    Wróć do strony głównej &rarr;
+                  </a>
+                </div>
               </div>
+            ) : (
+              <>
+                <div className="mb-8">
+                  <h2 id="kontakt-title" className="!text-2xl sm:!text-3xl font-semibold text-ink mb-2">
+                    Sprawdźmy, jak Benefivo może działać w Twojej firmie
+                  </h2>
+                  <p className="text-muted text-sm leading-relaxed">
+                    Zostaw kontakt. Porozmawiamy o potrzebach zespołu i przygotujemy propozycję współpracy.
+                  </p>
+                </div>
 
               {errorMessage && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
@@ -314,10 +314,10 @@ export const EmployerB2bPage: React.FC = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5" htmlFor="contactName">
+                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="contactName">
                       Imię i nazwisko *
                     </label>
                     <input
@@ -337,18 +337,18 @@ export const EmployerB2bPage: React.FC = () => {
                       aria-describedby={errors.contactName ? 'contactName-error' : undefined}
                       placeholder="np. Anna Kowalska"
                       className={`w-full bg-stone-50 border ${
-                        errors.contactName ? 'border-red-500 ring-1 ring-red-500' : 'border-stone-200'
-                      } rounded-xl px-3.5 py-2.5 text-stone-900 focus:bg-white transition-colors`}
+                        errors.contactName ? 'border-red-500 ring-1 ring-red-500' : 'border-line'
+                      } rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors`}
                     />
                     {errors.contactName && (
-                      <p id="contactName-error" className="text-xs text-red-600 mt-1">
+                      <p id="contactName-error" className="text-xs text-red-600 mt-1.5">
                         {errors.contactName}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5" htmlFor="companyName">
+                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="companyName">
                       Nazwa firmy *
                     </label>
                     <input
@@ -368,11 +368,11 @@ export const EmployerB2bPage: React.FC = () => {
                       aria-describedby={errors.companyName ? 'companyName-error' : undefined}
                       placeholder="np. Kowalski Sp. z o.o."
                       className={`w-full bg-stone-50 border ${
-                        errors.companyName ? 'border-red-500 ring-1 ring-red-500' : 'border-stone-200'
-                      } rounded-xl px-3.5 py-2.5 text-stone-900 focus:bg-white transition-colors`}
+                        errors.companyName ? 'border-red-500 ring-1 ring-red-500' : 'border-line'
+                      } rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors`}
                     />
                     {errors.companyName && (
-                      <p id="companyName-error" className="text-xs text-red-600 mt-1">
+                      <p id="companyName-error" className="text-xs text-red-600 mt-1.5">
                         {errors.companyName}
                       </p>
                     )}
@@ -381,7 +381,7 @@ export const EmployerB2bPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5" htmlFor="email">
+                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="email">
                       Służbowy adres e-mail *
                     </label>
                     <input
@@ -401,18 +401,18 @@ export const EmployerB2bPage: React.FC = () => {
                       aria-describedby={errors.email ? 'email-error' : undefined}
                       placeholder="anna.kowalska@firma.pl"
                       className={`w-full bg-stone-50 border ${
-                        errors.email ? 'border-red-500 ring-1 ring-red-500' : 'border-stone-200'
-                      } rounded-xl px-3.5 py-2.5 text-stone-900 focus:bg-white transition-colors`}
+                        errors.email ? 'border-red-500 ring-1 ring-red-500' : 'border-line'
+                      } rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors`}
                     />
                     {errors.email && (
-                      <p id="email-error" className="text-xs text-red-600 mt-1">
+                      <p id="email-error" className="text-xs text-red-600 mt-1.5">
                         {errors.email}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5" htmlFor="phone">
+                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="phone">
                       Numer telefonu *
                     </label>
                     <input
@@ -432,11 +432,11 @@ export const EmployerB2bPage: React.FC = () => {
                       aria-describedby={errors.phone ? 'phone-error' : undefined}
                       placeholder="+48 123 456 789"
                       className={`w-full bg-stone-50 border ${
-                        errors.phone ? 'border-red-500 ring-1 ring-red-500' : 'border-stone-200'
-                      } rounded-xl px-3.5 py-2.5 text-stone-900 focus:bg-white transition-colors`}
+                        errors.phone ? 'border-red-500 ring-1 ring-red-500' : 'border-line'
+                      } rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors`}
                     />
                     {errors.phone && (
-                      <p id="phone-error" className="text-xs text-red-600 mt-1">
+                      <p id="phone-error" className="text-xs text-red-600 mt-1.5">
                         {errors.phone}
                       </p>
                     )}
@@ -445,14 +445,14 @@ export const EmployerB2bPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5" htmlFor="teamSize">
+                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="teamSize">
                       Szacowana wielkość zespołu
                     </label>
                     <select
                       id="teamSize"
                       value={teamSize}
                       onChange={(e) => setTeamSize(e.target.value)}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-stone-900 focus:bg-white transition-colors"
+                      className="w-full bg-stone-50 border border-line rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors"
                     >
                       <option value="do 50 pracowników">do 50 pracowników</option>
                       <option value="50 - 200 pracowników">50 - 200 pracowników</option>
@@ -461,14 +461,14 @@ export const EmployerB2bPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5" htmlFor="programModel">
+                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="programModel">
                       Model programu
                     </label>
                     <select
                       id="programModel"
                       value={programModel}
                       onChange={(e) => setProgramModel(e.target.value)}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-stone-900 focus:bg-white transition-colors"
+                      className="w-full bg-stone-50 border border-line rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors"
                     >
                       <option value="Dostęp pracowniczy (bez kosztów firmy)">Dostęp pracowniczy (bez kosztów firmy)</option>
                       <option value="Program mieszany (z dopłatą firmy)">Program mieszany (z dopłatą firmy)</option>
@@ -478,7 +478,7 @@ export const EmployerB2bPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5" htmlFor="nip">
+                  <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="nip">
                     NIP firmy (opcjonalnie)
                   </label>
                   <input
@@ -497,18 +497,18 @@ export const EmployerB2bPage: React.FC = () => {
                     aria-describedby={errors.nip ? 'nip-error' : undefined}
                     placeholder="np. 5252344078"
                     className={`w-full bg-stone-50 border ${
-                      errors.nip ? 'border-red-500 ring-1 ring-red-500' : 'border-stone-200'
-                    } rounded-xl px-3.5 py-2.5 text-stone-900 focus:bg-white transition-colors`}
+                      errors.nip ? 'border-red-500 ring-1 ring-red-500' : 'border-line'
+                    } rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors`}
                   />
                   {errors.nip && (
-                    <p id="nip-error" className="text-xs text-red-600 mt-1">
+                    <p id="nip-error" className="text-xs text-red-600 mt-1.5">
                       {errors.nip}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5" htmlFor="notes">
+                  <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="notes">
                     Dodatkowe informacje lub pytania
                   </label>
                   <textarea
@@ -517,7 +517,7 @@ export const EmployerB2bPage: React.FC = () => {
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="W czym możemy pomóc? Jakie marki lub formy finansowania najbardziej interesują Państwa pracowników?"
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-stone-900 focus:bg-white transition-colors"
+                    className="w-full bg-stone-50 border border-line rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors"
                   />
                 </div>
 
@@ -571,7 +571,7 @@ export const EmployerB2bPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="button button-dark w-full text-center justify-center font-bold"
+                    className="button button-dark w-full text-center justify-center font-semibold"
                   >
                     {isSubmitting ? 'Wysyłanie...' : 'Zapytaj o współpracę'}
                   </button>
@@ -579,7 +579,8 @@ export const EmployerB2bPage: React.FC = () => {
               </form>
             </>
           )}
-        </section>
+        </div>
+      </section>
       </main>
 
       <LandingFooter onOpenAbout={() => setAboutOpen(true)} />
