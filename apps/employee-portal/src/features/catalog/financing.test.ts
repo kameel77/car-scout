@@ -68,7 +68,7 @@ describe('Financing calculations (financing.ts)', () => {
     expect(nearestPeriodTo36([48, 60])).toBe(48);
   });
 
-  it('calculateDefaultOfferInstallment returns null when no financing config or options provided (Rata na zapytanie)', () => {
+  it('calculateDefaultOfferInstallment falls back to standard financing when no custom financing config or options provided', () => {
     const mockOffer: EmployeeOffer = {
       id: 'off_1',
       sourceType: 'FINANCING',
@@ -92,8 +92,13 @@ describe('Financing calculations (financing.ts)', () => {
       benefit: null
     };
 
-    expect(calculateDefaultOfferInstallment(mockOffer, null)).toBeNull();
-    expect(calculateDefaultOfferInstallment(mockOffer, { options: [] })).toBeNull();
+    const resNull = calculateDefaultOfferInstallment(mockOffer, null);
+    expect(resNull).not.toBeNull();
+    expect(resNull.installmentGross).toBeGreaterThan(0);
+    expect(resNull.installmentNet).toBeGreaterThan(0);
+
+    const resEmpty = calculateDefaultOfferInstallment(mockOffer, { options: [] });
+    expect(resEmpty.installmentGross).toBe(resNull.installmentGross);
 
     const resLowRate = calculateDefaultOfferInstallment(mockOffer, {
       options: [

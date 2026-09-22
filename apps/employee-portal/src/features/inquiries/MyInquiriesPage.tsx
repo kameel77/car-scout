@@ -15,7 +15,7 @@ import { fetchEmployeeInquiries, EmployeeInquiryItem } from './inquiries-api';
 import { PortalHeader } from '../common/PortalHeader';
 import { PortalFooter } from '../common/PortalFooter';
 import { formatCountPl } from '../common/plural';
-import { formatPln } from '../catalog/financing';
+import { formatPln, calculateInstallment } from '../catalog/financing';
 
 const INQUIRY_STAGES = [
   { id: 1, label: 'Nowe' },
@@ -31,6 +31,38 @@ function getStageIndex(status: string): number | null {
   if (['OFFER', 'OFFER_SENT', 'OFFER_PREPARED'].includes(s)) return 3;
   if (['CONTRACT', 'COMPLETED', 'SIGNED', 'DELIVERED'].includes(s)) return 4;
   return null;
+}
+
+function getInquiryInstallment(inq: EmployeeInquiryItem): { gross: number; net: number } | null {
+  if (inq.rental) {
+    const gross = inq.rental.monthlyRateGrossPln ?? inq.rental.monthlyRateGross ?? Math.round((inq.rental.monthlyRateNet || 0) * 1.23);
+    const net = inq.rental.monthlyRateNetPln ?? inq.rental.monthlyRateNet ?? Math.round(gross / 1.23);
+    return { gross, net };
+  }
+  if (!inq.pricing) return null;
+
+  // Sprawdź czy rata jest zapisana w notatce konfiguratora (np. ze szczegółów oferty)
+  if (inq.notes) {
+    const match = inq.notes.match(/(?:Szacowana rata|Twoja rata):\s*([\d\s]+)\s*zł\s*brutto\s*\(([\d\s]+)\s*zł\s*netto\)/i);
+    if (match) {
+      const gross = parseInt(match[1].replace(/\s/g, ''), 10);
+      const net = parseInt(match[2].replace(/\s/g, ''), 10);
+      if (!isNaN(gross) && !isNaN(net)) {
+        return { gross, net };
+      }
+    }
+  }
+
+  // Fallback: standardowa kalkulacja raty dla ceny pojazdu
+  const res = calculateInstallment({
+    employeePriceGrossPln: inq.pricing.employeePricePln,
+    contractType: inq.contractParty === 'CONSUMER' ? 'CONSUMER' : 'LEASING_B2B',
+    months: 36,
+    downPaymentPct: 20,
+    residualPct: 20,
+    annualRatePct: 7.5
+  });
+  return { gross: res.installmentGross, net: res.installmentNet };
 }
 
 export const InquiryStatusTracker: React.FC<{ status: string }> = ({ status }) => {
@@ -409,14 +441,30 @@ export const MyInquiriesPage: React.FC = () => {
                   </div>
                 ) : inq.pricing ? (
                   <div className="pt-3 md:pt-0 border-t md:border-t-0 border-line w-full md:w-auto flex md:flex-col items-baseline md:items-end justify-between md:justify-center">
-                    <div className="text-xs text-muted line-through">
-                      Katalogowa: {formatPln(inq.pricing.listPricePln)} zł
+                    <div className="text-xs text-muted">
+                      Cena katalogowa: <span className="line-through">{formatPln(inq.pricing.listPricePln)} zł</span>
                     </div>
-                    <div className="text-lg font-black text-ink tracking-tight">
-                      {formatPln(inq.pricing.employeePricePln)} zł
+                    <div className="mt-1 md:text-right">
+                      <span className="text-2xs font-bold text-muted uppercase tracking-wider block">
+                        Cena dla Ciebie
+                      </span>
+                      <div className="text-lg font-black text-ink tracking-tight">
+                        {formatPln(inq.pricing.employeePricePln)} zł
+                      </div>
                     </div>
+                    {(() => {
+                      const rate = getInquiryInstallment(inq);
+                      if (!rate) return null;
+                      return (
+                        <div className="text-xs text-ink md:text-right mt-1">
+                          <span className="text-muted font-medium">Twoja rata: </span>
+                          <span className="font-bold">{formatPln(rate.gross)} zł brutto</span>
+                          <span className="text-[11px] text-muted ml-1">({formatPln(rate.net)} zł netto) / mc</span>
+                        </div>
+                      );
+                    })()}
                     {inq.pricing.savingsPln > 0 && (
-                      <div className="text-[11px] text-ink bg-lime px-2 py-0.5 rounded-full font-semibold">
+                      <div className="text-[11px] text-ink bg-lime px-2 py-0.5 rounded-full font-semibold mt-1">
                         Oszczędzasz {formatPln(inq.pricing.savingsPln)} zł
                       </div>
                     )}

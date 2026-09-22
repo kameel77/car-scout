@@ -421,7 +421,7 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
     expect(screen.getByText('Skrzynia')).toBeInTheDocument();
   });
 
-  it('renders "Rata na zapytanie" for offers without financing config and keeps them visible under rate filtering', async () => {
+  it('calculates rate using default financing for offers without custom financing config and removes Rata na zapytanie pills', async () => {
     const offerWithoutFinancing: catalogApi.EmployeeOffer = {
       id: 'offer_cupra',
       sourceType: 'FINANCING',
@@ -466,14 +466,11 @@ describe('CatalogPage Component (P3b Private Employee Catalog)', () => {
       expect(screen.getByText('Cupra Formentor')).toBeInTheDocument();
     });
 
-    // Badge and label for offer without financing
-    expect(screen.getAllByText('Rata na zapytanie').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Szczegóły oferty')).toBeInTheDocument();
-
-    // When rate filter (< 1500) is clicked, unconfigured offer does not silently drop
-    fireEvent.click(screen.getByRole('button', { name: '< 1500' }));
-    expect(screen.getByText('Toyota Yaris')).toBeInTheDocument();
-    expect(screen.getByText('Cupra Formentor')).toBeInTheDocument();
+    // Verify rate is calculated and "Rata na zapytanie" is removed
+    expect(screen.queryByText('Rata na zapytanie')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Twoja rata:').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Cena dla Ciebie').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Szczegóły oferty').length).toBeGreaterThanOrEqual(2);
   });
 });
 

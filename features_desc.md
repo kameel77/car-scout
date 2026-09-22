@@ -1283,5 +1283,22 @@ Wdrożono 3 kluczowe doprecyzowania interfejsu ofertowego w portalu pracowniczym
     - Pełne ubezpieczenie (OC, AC, NNW)
     - Obsługa i wymiana opon
     - Całodobowe Assistance 24/7 i auto zastępcze
-  - Backend (`employee-rental-catalog.routes.ts`) oraz klient API (`rental-api.ts`) przekazują pole `servicesIncluded` zdefiniowane w przypisaniach dostawców wynajmu (`rentalAssignments`), z pełnym mapowaniem etykiet z car-scout (`RentalDetailPage.tsx`).
+### 86. Dopracowanie Prezentacji Cen, Etykiet i Zawsze Wyliczonej Raty w Portalu Pracowniczym
+
+Wdrożono 7 kluczowych usprawnień interfejsu cenowego na listingu, widoku szczegółów oraz podstronie zapytań:
+
+- **1. Precyzyjne Przekreślanie Kwoty Katalogowej (Bez Przekreślania Etykiety)**:
+  - We wszystkich widokach (`CatalogPage.tsx`, `MyInquiriesPage.tsx`, `NewCarOfferDetailPage.tsx`, `RentalOfferDetailPage.tsx`) styl `line-through` został ograniczony wyłącznie do kwoty w PLN. Etykieta `Cena katalogowa:` pozostaje czytelnym tekstem w kolorze `text-muted`.
+- **2. Ujednolicenie Etykiety: „Katalogowa: ...” -> „Cena katalogowa: ...”**:
+  - Na stronie zapytań pracownika (`MyInquiriesPage.tsx`) zastąpiono skrótowe `Katalogowa:` pełną etykietą `Cena katalogowa:`.
+- **3. Prezentacja „Cena dla Ciebie” oraz Wyliczonej Raty w Zapytaniach**:
+  - Na liście zapytań (`MyInquiriesPage.tsx`) przy kwocie po rabacie dodano nagłówek `Cena dla Ciebie` oraz wyliczoną ratę: `Twoja rata: ... zł brutto (... zł netto) / mc` (odczytywaną z parametrów konfiguratora lub wyliczaną na bazie standardowych warunków finansowania).
+- **4. Ekspozycja Raty Brutto i Netto na Listingu Samochodów**:
+  - Na kafelkach katalogu samochodów (`CatalogPage.tsx`) wprowadzono dedykowaną sekcję raty: `Twoja rata: od ... zł brutto (... zł netto) / mies.`, gdzie wartość brutto wyeksponowano pogrubionym fontem, a kwotę netto przedstawiono w mniejszym rozmiarze w nawiasie.
+- **5. Zawsze Wyliczona Rata (Eliminacja „Rata na zapytanie”)**:
+  - W `financing.ts` funkcja `calculateDefaultOfferInstallment` zawsze zwraca wyliczoną ratę (w przypadku braku niestandardowych nadpisań w programie przyjmuje bezpieczny standard kredytu samochodowego: 7,5% rocznie, 36 miesięcy, 20% wpłaty własnej, 20% wykupu).
+- **6. Zmiana Nazwy: „Cena pracownicza” / „Cena w programie” -> „Cena dla Ciebie”**:
+  - W całym portalu pracowniczym (`CatalogPage.tsx`, `NewCarOfferDetailPage.tsx`, `MyInquiriesPage.tsx`) wprowadzono spójne, zorientowane na pracownika określenie `Cena dla Ciebie`.
+- **7. Usunięcie Plakietek „Rata na zapytanie” ze Zdjęć Pojazdów**:
+  - Z kafelków pojazdów na listingu (`CatalogPage.tsx`) usunięto plakietkę `Rata na zapytanie`. Wszystkie oferty prezentują natychmiastowo wyliczoną szacunkową ratę miesięczną.
 

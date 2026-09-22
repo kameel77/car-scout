@@ -276,7 +276,8 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     });
 
     // 1. Catalog price crossed out
-    expect(screen.getByText(/Cena katalogowa:\s*140\s?000 zł brutto/)).toBeInTheDocument();
+    expect(screen.getByText('Cena katalogowa:')).toBeInTheDocument();
+    expect(screen.getByText(/140\s?000 zł brutto/)).toBeInTheDocument();
 
     // 2. Equipment accordions
     expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();

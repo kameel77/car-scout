@@ -251,17 +251,11 @@ export const CatalogPage: React.FC = () => {
     }
 
     if (minRate !== '') {
-      result = result.filter(({ installment }) => {
-        if (!installment) return true;
-        return installment.installmentGross >= Number(minRate);
-      });
+      result = result.filter(({ installment }) => installment.installmentGross >= Number(minRate));
     }
 
     if (maxRate !== '') {
-      result = result.filter(({ installment }) => {
-        if (!installment) return true;
-        return installment.installmentGross <= Number(maxRate);
-      });
+      result = result.filter(({ installment }) => installment.installmentGross <= Number(maxRate));
     }
 
     if (sortBy === 'price_asc') {
@@ -271,19 +265,9 @@ export const CatalogPage: React.FC = () => {
     } else if (sortBy === 'discount_desc') {
       result.sort((a, b) => b.offer.pricing.discountPct - a.offer.pricing.discountPct);
     } else if (sortBy === 'rate_asc') {
-      result.sort((a, b) => {
-        if (!a.installment && !b.installment) return 0;
-        if (!a.installment) return 1;
-        if (!b.installment) return -1;
-        return a.installment.installmentGross - b.installment.installmentGross;
-      });
+      result.sort((a, b) => a.installment.installmentGross - b.installment.installmentGross);
     } else if (sortBy === 'rate_desc') {
-      result.sort((a, b) => {
-        if (!a.installment && !b.installment) return 0;
-        if (!a.installment) return 1;
-        if (!b.installment) return -1;
-        return b.installment.installmentGross - a.installment.installmentGross;
-      });
+      result.sort((a, b) => b.installment.installmentGross - a.installment.installmentGross);
     }
 
     return result;
@@ -733,13 +717,6 @@ export const CatalogPage: React.FC = () => {
                         <span>-{String(offer.pricing.discountPct).replace('.', ',')}%</span>
                       </div>
                     )}
-
-                    {/* Rata na zapytanie Badge */}
-                    {!installment && (
-                      <div className="absolute top-3 right-3 bg-paper/95 text-ink font-semibold text-xs px-2.5 py-1 rounded-full shadow-xs border border-line z-10 pointer-events-none">
-                        Rata na zapytanie
-                      </div>
-                    )}
                   </Link>
 
                 {/* Content Box */}
@@ -798,8 +775,8 @@ export const CatalogPage: React.FC = () => {
                   <div className="pt-4 border-t border-line flex flex-col justify-end">
                     {offer.pricing.savingsPln > 0 && (
                       <div className="flex items-center justify-between text-xs text-muted mb-1">
-                        <span className="line-through">
-                          Cena katalogowa: {formatPln(offer.pricing.listPricePln)} zł
+                        <span>
+                          Cena katalogowa: <span className="line-through">{formatPln(offer.pricing.listPricePln)} zł</span>
                         </span>
                         <span className="text-ink font-semibold bg-lime px-2 py-0.5 rounded-full text-[11px]">
                           Oszczędzasz {formatPln(offer.pricing.savingsPln)} zł
@@ -809,7 +786,7 @@ export const CatalogPage: React.FC = () => {
 
                     <div className="flex items-baseline justify-between">
                       <div>
-                        <span className="text-xs font-medium text-muted block">Cena pracownicza</span>
+                        <span className="text-xs font-medium text-muted block">Cena dla Ciebie</span>
                         <span className="text-2xl font-black text-ink tracking-tight">
                           {formatPln(offer.pricing.employeePricePln)} zł
                         </span>
@@ -817,28 +794,25 @@ export const CatalogPage: React.FC = () => {
                       <span className="text-xs text-muted font-medium">brutto</span>
                     </div>
 
-                    {installment ? (
-                      <div className="mt-2 flex items-baseline justify-between text-xs text-muted">
-                        <span>Szacowana rata:</span>
-                        <span className="font-bold text-ink">
-                          od {formatPln(installment.installmentGross)} zł brutto / mies.
+                    {/* Twoja rata: Brutto + mniejszym fontem netto */}
+                    <div className="mt-2.5 pt-2.5 border-t border-line/60 flex items-baseline justify-between">
+                      <span className="text-xs text-muted font-medium">Twoja rata:</span>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-ink font-heading">
+                          od {formatPln(installment.installmentGross)} zł brutto
+                        </span>
+                        <span className="text-[11px] text-muted ml-1.5">
+                          ({formatPln(installment.installmentNet)} zł netto) / mies.
                         </span>
                       </div>
-                    ) : (
-                      <div className="mt-2 flex items-center justify-between text-xs">
-                        <span className="text-muted">Finansowanie:</span>
-                        <span className="font-semibold text-ink bg-paper border border-line px-2 py-0.5 rounded-md">
-                          Rata na zapytanie
-                        </span>
-                      </div>
-                    )}
+                    </div>
 
                     <div className="mt-3.5 flex flex-col gap-2">
                       <Link
                         to={`/katalog/${offer.id}`}
                         className="w-full py-3 px-4 bg-ink hover:bg-ink/90 text-paper font-semibold text-sm rounded-full transition-colors shadow-xs flex items-center justify-center gap-1.5"
                       >
-                        <span>{installment ? 'Szczegóły i kalkulator raty' : 'Szczegóły oferty'}</span>
+                        <span>Szczegóły oferty</span>
                         <ChevronRight className="h-4 w-4" />
                       </Link>
                       <button

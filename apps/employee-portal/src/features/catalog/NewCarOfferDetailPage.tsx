@@ -229,7 +229,7 @@ export const NewCarOfferDetailPage: React.FC = () => {
     if (!hasFinancingConfig || !calculation) {
       return `[Zapytanie o ofertę]:
 - Pojazd: ${offer.vehicle.make} ${offer.vehicle.model} ${offer.vehicle.version || ''}
-- Cena pracownicza: ${formatPln(offer.pricing.employeePricePln)} zł brutto
+- Cena dla Ciebie: ${formatPln(offer.pricing.employeePricePln)} zł brutto
 - Finansowanie: Rata na zapytanie (prośba o indywidualną kalkulację doradcy)`;
     }
     const typeLabel = contractType === 'CONSUMER' ? 'Kredyt samochodowy' : 'Leasing operacyjny (B2B)';
@@ -481,8 +481,8 @@ ${rateLine}${productLabelLine}`;
                   {/* Linia 3: Przekreślona cena katalogowa + oszczędności */}
                   {offer.pricing.listPricePln > offer.pricing.employeePricePln && (
                     <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <span className="text-xs text-muted line-through">
-                        Cena katalogowa: {formatPln(offer.pricing.listPricePln)} zł brutto
+                      <span className="text-xs text-muted">
+                        Cena katalogowa: <span className="line-through">{formatPln(offer.pricing.listPricePln)} zł brutto</span>
                       </span>
                       <span className="inline-flex items-center bg-lime text-ink font-semibold text-[11px] px-2.5 py-0.5 rounded-full">
                         Oszczędzasz {formatPln(offer.pricing.savingsPln)} zł
@@ -494,7 +494,7 @@ ${rateLine}${productLabelLine}`;
                   <div className="pt-3 border-t border-line space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-2xs font-bold uppercase tracking-wider text-muted block">
-                        Szacowana rata miesięczna
+                        Twoja rata
                       </span>
                       <span className="text-xs font-semibold text-forest">
                         {contractType === 'CONSUMER' ? 'Kredyt samochodowy' : 'Leasing operacyjny'}
@@ -512,9 +512,9 @@ ${rateLine}${productLabelLine}`;
                     </div>
                   </div>
 
-                  {/* Linia 5: DRUGORZĘDNA - Cena pojazdu w programie */}
+                  {/* Linia 5: DRUGORZĘDNA - Cena pojazdu dla Ciebie */}
                   <div className="pt-2 border-t border-line/60 flex items-center justify-between text-xs">
-                    <span className="text-muted font-medium">Cena w programie</span>
+                    <span className="text-muted font-medium">Cena dla Ciebie</span>
                     <span className="font-bold text-ink">
                       {formatPln(offer.pricing.employeePricePln)} zł brutto
                     </span>
@@ -581,7 +581,7 @@ ${rateLine}${productLabelLine}`;
                         <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
                       </div>
                       <span className="text-xs font-semibold text-ink bg-lime px-2.5 py-1 rounded-full">
-                        Cena pracownicza
+                        Cena dla Ciebie
                       </span>
                     </div>
 

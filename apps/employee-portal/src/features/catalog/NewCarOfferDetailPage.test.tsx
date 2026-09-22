@@ -240,9 +240,10 @@ describe('NewCarOfferDetailPage', () => {
       expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(1);
     });
 
-    expect(screen.getByText('Cena w programie')).toBeInTheDocument();
+    expect(screen.getAllByText('Cena dla Ciebie').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/126\s?000 zł/)).toBeInTheDocument();
-    expect(screen.getByText(/Cena katalogowa:\s*140\s?000 zł brutto/)).toBeInTheDocument();
+    expect(screen.getByText('Cena katalogowa:')).toBeInTheDocument();
+    expect(screen.getByText(/140\s?000 zł brutto/)).toBeInTheDocument();
     expect(screen.getByText(/Oszczędzasz 14\s?000 zł/)).toBeInTheDocument();
     expect(screen.queryByText(/Rabat -/)).not.toBeInTheDocument();
   });
@@ -265,7 +266,7 @@ describe('NewCarOfferDetailPage', () => {
       expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(1);
     });
 
-    expect(screen.getByText('Cena w programie')).toBeInTheDocument();
+    expect(screen.getAllByText('Cena dla Ciebie').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/Cena katalogowa:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Oszczędzasz/)).not.toBeInTheDocument();
   });

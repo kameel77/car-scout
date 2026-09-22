@@ -600,9 +600,9 @@ export const RentalOfferDetailPage: React.FC = () => {
                   {/* Linia 4: Cena katalogowa */}
                   {Boolean(offer.vehicle.catalogPrice) && (
                     <div className="pt-3 border-t border-line flex items-center justify-between text-xs">
-                      <span className="text-muted">Cena katalogowa pojazdu:</span>
-                      <span className="text-muted line-through font-medium">
-                        Cena katalogowa: {formatPln(offer.vehicle.catalogPrice)} zł brutto
+                      <span className="text-muted">Cena katalogowa:</span>
+                      <span className="text-muted font-medium">
+                        <span className="line-through">{formatPln(offer.vehicle.catalogPrice)} zł brutto</span>
                       </span>
                     </div>
                   )}
