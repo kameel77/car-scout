@@ -139,11 +139,12 @@
   transition: color 0.15s;
 }
 
-.benefivo-landing .navigation > a:hover {
+.benefivo-landing .navigation > a:not(.nav-company):not(.nav-login):hover {
   text-decoration: underline;
   text-underline-offset: 6px;
 }
 
+.benefivo-landing .navigation > a.nav-company,
 .benefivo-landing .nav-company {
   display: inline-flex;
   align-items: center;
@@ -151,12 +152,16 @@
   border: 1px solid var(--line);
   border-radius: 40px;
   padding: 11px 20px;
+  text-decoration: none !important;
   transition: background 0.15s, border-color 0.15s;
 }
 
-.benefivo-landing .nav-company:hover {
+.benefivo-landing .navigation > a.nav-company:hover,
+.benefivo-landing .nav-company:hover,
+.benefivo-landing .nav-company:focus {
   background: var(--white);
   border-color: var(--ink);
+  text-decoration: none !important;
 }
 
 .benefivo-landing .nav-login {
@@ -245,6 +250,34 @@
   font-size: 18px;
   line-height: 1.65;
   max-width: 440px;
+  margin-top: 28px;
+}
+
+/* B2B Hero Section */
+.benefivo-landing .b2b-hero {
+  padding-top: 36px;
+  padding-bottom: 64px;
+}
+
+.benefivo-landing .b2b-hero .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.benefivo-landing .b2b-hero h1 {
+  font-size: clamp(46px, 5.2vw, 76px);
+  line-height: 1.06;
+  letter-spacing: -0.065em;
+  margin-top: 24px;
+  font-weight: 600;
+  max-width: 960px;
+}
+
+.benefivo-landing .b2b-hero .hero-description {
+  font-size: 18px;
+  line-height: 1.65;
+  max-width: 680px;
   margin-top: 28px;
 }
 

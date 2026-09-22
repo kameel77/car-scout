@@ -1444,3 +1444,22 @@ Wdrożono kompleksowe odświeżenie treści oraz hierarchii przycisków na publi
     - Nienaruszona logika walidacji (Zod/NIP/email/telefon), ochrona antyspamowa Cloudflare Turnstile oraz endpoint `POST /api/leads`.
   - **Synchronizacja SEO i Pre-rendering (`generate-static-pages.js`)**:
     - Zaktualizowano meta opisy OpenGraph i Twitter Cards dla stron `index.html` oraz `dla-firm.html`.
+
+### 92. Pełna Spójność Wizualna i Typograficzna Stron Benefivo (Homepage i Dla Firm)
+
+Wdrożono ujednolicenie systemów stylów, typografii, grubości fontów, marginesów i paddingów pomiędzy stroną główną (`/`) a podstroną B2B (`/dla-firm/`):
+
+- **1. Ujednolicenie Typografii i Grubości Fontów (`landing.css`, `EmployerB2bPage.tsx`)**:
+  - Wyeliminowano sztuczne nadpisywania Tailwindem (`!font-bold`, `!leading-tight`, `tracking-tight`), które nadawały nagłówkom na stronie B2B wagę 700 i zniekształcały rytm pionowy.
+  - Zastosowano natywne reguły `Plus Jakarta Sans` o stałej grubości 600 (`font-weight: 600`), ujemnym letter-spacing `-0.065em` oraz responsywnym rozmiarze `clamp(46px, 5.2vw, 76px)` zarówno dla strony głównej, jak i podstrony B2B.
+  - W podtytule H1 „Bez kosztów dla firmy.” zachowano spójny krój i grubość tekstu z dopasowaniem barwy `text-muted`.
+  - Wprowadzono zieloną kropkę statusową (`status-dot`) w sekcji `DLA FIRM`, identycznie jak w hero pracowniczym.
+- **2. Spójność Rytmu Pionowego i Marginesów**:
+  - Usunięto sztuczny kontener `<main className="wrap py-12">` na rzecz standardowego `<main id="main">` oraz wydzielonej sekcji `.b2b-hero.wrap` z identycznym paddingiem góra/dół (36px / 64px) jak w `.hero` strony głównej.
+  - Zastąpiono niespójne marginesy `mb-14`, `mb-16`, `mb-8` standardowymi odstępami sekcji `.section.wrap.pt-0` z `landing.css`.
+- **3. Ujednolicenie Kart Korzyści i Procesu Wdrożenia**:
+  - Karty korzyści i kafle kroków otrzymały stałe zaokrąglenie `rounded-3xl` (`var(--radius)` = 24px) oraz ramkę systemową `border-line` (`#dde1d5`) zamiast `border-stone-200`.
+  - Zintegrowano identyczny komponent numeracji `.step-number` (koło 40x40px, tło `var(--lime)`, font 13px o wadze 600) we wszystkich kafelkach.
+  - Tytuły kart `<h3>` korzystają ze spójnego rozmiaru 22px i wagi 600.
+- **4. Eliminacja Podkreślenia w Przyciskach Menu Nawigacyjnego**:
+  - Zabezpieczono selektor `.navigation > a:hover` regułą `:not(.nav-company):not(.nav-login)` oraz dodano `text-decoration: none !important;` na `.nav-company` we wszystkich stanach (`hover`, `focus`), definitywnie usuwając niepożądane podkreślenie wewnątrz pastylki „Dla pracownika →”.
