@@ -165,6 +165,11 @@ describe('NewCarOfferDetailPage', () => {
     expect(dp30Btns.length).toBeGreaterThanOrEqual(1);
     fireEvent.click(dp30Btns[0]);
 
+    // Residual is hidden in consumer mode; switch to B2B leasing where buyout is available
+    expect(screen.queryByText('Wykup końcowy')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Rozliczam B2B' }));
+    expect(screen.getByText('Wykup końcowy')).toBeInTheDocument();
+
     // Check residual 10% (second 10% button in DOM)
     const tenPctBtns = screen.getAllByRole('button', { name: '10%' });
     expect(tenPctBtns.length).toBeGreaterThanOrEqual(2);
@@ -270,9 +275,46 @@ describe('NewCarOfferDetailPage', () => {
     expect(screen.queryByText(/Cena katalogowa:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Oszczędzasz/)).not.toBeInTheDocument();
   });
+
+  it('removes "Cena dla Ciebie" badge from calculator header', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
+    });
+
+    const calcHeader = screen.getByText('Kalkulator finansowania').closest('div');
+    expect(calcHeader).toBeInTheDocument();
+    expect(calcHeader?.textContent).not.toContain('Cena dla Ciebie');
+  });
+
+  it('renders mobile sticky bars (top bar on scroll and bottom bar with home link and calculator button)', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Mobile bottom bar links & buttons
+    const homeLink = screen.getByRole('link', { name: /Strona główna katalogu/i });
+    expect(homeLink).toHaveAttribute('href', '/katalog');
+
+    const scrollToCalcBtn = screen.getByRole('button', { name: /Przejdź do kalkulatora/i });
+    expect(scrollToCalcBtn).toBeInTheDocument();
+
+    const askOfferBtn = screen.getByRole('button', { name: /Zapytaj o ofertę$/i });
+    expect(askOfferBtn).toBeInTheDocument();
+
+    // Trigger scroll to display top sticky bar
+    fireEvent.scroll(window, { target: { scrollY: 300 } });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(2);
+    });
+  });
 });
 
-describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overrides.md)', () => {
+describe('NewCarOfferDetailPage - E2 financing config (brief-e2-product-overrides.md)', () => {
   const mockOfferWithFinancing: catalogApi.EmployeeOffer = {
     ...mockOffer,
     financing: {

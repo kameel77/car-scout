@@ -84,7 +84,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   if (total === 0) {
     return (
-      <div className={`relative ${aspectClassName} bg-paper rounded-xl flex flex-col items-center justify-center text-muted gap-2 border border-line`}>
+      <div className={`relative w-full ${aspectClassName} max-h-[460px] bg-paper rounded-xl flex flex-col items-center justify-center text-muted gap-2 border border-line`}>
         <Car className="h-16 w-16 text-muted" />
         <span className="text-sm">Brak zdjęć dla tego pojazdu</span>
       </div>
@@ -95,14 +95,14 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     <div className="space-y-3">
       {/* Main Image Container */}
       <div
-        className={`relative ${aspectClassName} bg-paper rounded-xl overflow-hidden cursor-pointer group select-none touch-pan-y shadow-xs`}
+        className={`relative w-full ${aspectClassName} max-h-[460px] bg-paper rounded-xl overflow-hidden cursor-pointer group select-none touch-pan-y shadow-xs`}
         onClick={() => setLightboxOpen(true)}
         {...mainSwipe}
       >
         <img
           src={images[selectedIndex]}
           alt={`${title} - zdjęcie ${selectedIndex + 1}`}
-          className="w-full h-full object-cover transition-opacity duration-200"
+          className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-200"
           draggable={false}
         />
 

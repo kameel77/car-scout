@@ -152,3 +152,74 @@ export async function fetchEmployeeOfferDetails(
 
   return handleResponseJson<EmployeeOffer>(res);
 }
+
+export interface FinancingCalculateParams {
+  productId: string;
+  price: number;
+  downPaymentAmount: number;
+  period: number;
+  initialFeePercent?: number;
+  finalPaymentPercent?: number;
+  manufacturingYear?: number;
+  mileageKm?: number;
+}
+
+export interface FinancingCalculateResult {
+  monthlyInstallment: number;
+  isGross?: boolean;
+  provider?: string;
+  creditCostRateAnnual?: number;
+  interestRateAnnual?: number;
+  repaymentsAmountTotal?: number;
+  creditCostAmountTotal?: number;
+}
+
+/**
+ * Wywołuje publiczny endpoint kalkulatora finansowania /api/financing/calculate
+ * (obsługujący dostawców VEHIS dla leasingu oraz INBANK dla kredytu).
+ */
+export async function calculateFinancingApi(
+  apiUrl: string,
+  params: FinancingCalculateParams,
+  signal?: AbortSignal
+): Promise<FinancingCalculateResult> {
+  const base = normalizeBaseUrl(apiUrl);
+  const res = await fetch(`${base}/financing/calculate`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(params),
+  });
+
+  return handleResponseJson<FinancingCalculateResult>(res);
+}
+
+export interface PublicFinancingProduct {
+  id: string;
+  category: string;
+  provider: string;
+  name: string;
+  priority?: number;
+  isDefault?: boolean;
+}
+
+export async function fetchFinancingCalculatorProducts(
+  apiUrl: string,
+  signal?: AbortSignal
+): Promise<{ products: PublicFinancingProduct[] }> {
+  const base = normalizeBaseUrl(apiUrl);
+  const res = await fetch(`${base}/financing/calculator`, {
+    method: 'GET',
+    credentials: 'same-origin',
+    signal,
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  return handleResponseJson<{ products: PublicFinancingProduct[] }>(res);
+}
