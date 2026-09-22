@@ -5,13 +5,15 @@ import { useAuth } from '../auth/AuthContext';
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   ShieldCheck,
   CheckCircle,
   Sparkles,
   ChevronRight,
   ChevronDown,
   Calculator,
-  Layers
+  Layers,
+  Home
 } from 'lucide-react';
 import {
   fetchEmployeeRentalOfferDetails,
@@ -146,6 +148,26 @@ export const RentalOfferDetailPage: React.FC = () => {
   // Inquiry Modal State
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState<boolean>(false);
 
+  // Sticky Top Bar on scroll
+  const [showStickyTopBar, setShowStickyTopBar] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowStickyTopBar(window.scrollY > 220);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const scrollToCalculator = () => {
+    const el = document.getElementById('kalkulator-najmu');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const loadDetails = useCallback(async (signal?: AbortSignal) => {
     if (!id) return;
     setIsLoading(true);
@@ -279,6 +301,78 @@ export const RentalOfferDetailPage: React.FC = () => {
     });
   }, [activeOption, offer]);
 
+  const renderMobileStickyTopBar = () => {
+    if (!offer) return null;
+    const activeRate = clientType === 'CONSUMER'
+      ? (activeOption?.monthlyRateGross ?? (minRate.gross < Infinity ? minRate.gross : null))
+      : (activeOption?.monthlyRateNet ?? (minRate.net < Infinity ? minRate.net : null));
+    const rateSuffix = clientType === 'CONSUMER' ? 'brutto / msc' : 'netto / msc';
+
+    return (
+      <div
+        className={`lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-line shadow-xs px-4 py-2.5 transition-all duration-300 transform ${
+          showStickyTopBar ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs sm:text-sm font-bold text-ink truncate font-heading leading-tight">
+              {offer.vehicle.make} {offer.vehicle.model}
+            </div>
+            <div className="text-[11px] text-muted truncate">
+              {offer.vehicle.productionYear ? `Rocznik ${offer.vehicle.productionYear}` : ''}
+              {offer.vehicle.productionYear && offer.vehicle.version ? ' · ' : ''}
+              {offer.vehicle.version || ''}
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-sm sm:text-base font-extrabold text-forest font-heading leading-tight">
+              {activeRate !== null ? `${formatPln(activeRate)} zł` : 'od - zł'}
+            </div>
+            <div className="text-[10px] font-semibold text-muted">
+              {rateSuffix}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMobileStickyBottomBar = () => {
+    if (!offer) return null;
+
+    return (
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-line shadow-lg px-4 py-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom))] flex items-center gap-2.5">
+        <Link
+          to="/najem"
+          aria-label="Strona główna najmu"
+          title="Strona główna najmu"
+          className="p-2.5 bg-paper hover:bg-paper/80 border border-line rounded-xl text-ink transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+        >
+          <Home className="h-5 w-5 text-forest" />
+        </Link>
+        <button
+          type="button"
+          onClick={scrollToCalculator}
+          aria-label="Przejdź do konfiguratora abonamentu"
+          title="Przejdź do konfiguratora abonamentu"
+          className="p-2.5 bg-paper hover:bg-paper/80 border border-line rounded-xl text-ink transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+        >
+          <Calculator className="h-5 w-5 text-forest" />
+        </button>
+        <button
+          type="button"
+          disabled={!activeOption}
+          onClick={() => setIsInquiryModalOpen(true)}
+          className="flex-1 py-2.5 px-4 bg-forest hover:bg-forest/90 text-lime font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span>Zapytaj o ofertę</span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  };
+
   if (isBrandLoading || isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-paper">
@@ -370,20 +464,23 @@ export const RentalOfferDetailPage: React.FC = () => {
 
         {/* Offer Details Content */}
         {!isLoading && offer && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="flex flex-col w-full lg:grid lg:grid-cols-12 gap-6 lg:gap-8 lg:items-start pb-24 lg:pb-0">
             {/* 1. Left Column: Gallery + Specs + Equipment (Col 1-7 on desktop, 2nd on mobile) */}
-            <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
+            <div className="contents lg:block lg:col-span-7 space-y-6">
               {/* Image Gallery with Lightbox */}
-                <div className="bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
+              <div className="w-full order-1 lg:order-none">
+                <div className="w-full bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
                   <ImageGallery
                     images={allImages}
                     title={`${offer.vehicle.make} ${offer.vehicle.model}`}
                     aspectClassName="aspect-[16/10]"
                   />
                 </div>
+              </div>
 
-                {/* Vehicle Specifications Grid */}
-                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs">
+              {/* Vehicle Specifications Grid */}
+              <div className="w-full order-4 lg:order-none">
+                <div className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs">
                   <h3 className="text-base font-bold text-ink mb-4 flex items-center gap-2 font-heading">
                     <Layers className="h-5 w-5 text-forest" />
                     Dane techniczne
@@ -444,13 +541,15 @@ export const RentalOfferDetailPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+              </div>
 
-                {/* Wyposażenie pojazdu */}
-                {(offer.vehicle.equipmentSafety?.length ||
-                  offer.vehicle.equipmentComfortExtras?.length ||
-                  offer.vehicle.equipmentAudioMultimedia?.length ||
-                  offer.vehicle.equipmentOther?.length) ? (
-                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+              {/* Wyposażenie pojazdu */}
+              {(offer.vehicle.equipmentSafety?.length ||
+                offer.vehicle.equipmentComfortExtras?.length ||
+                offer.vehicle.equipmentAudioMultimedia?.length ||
+                offer.vehicle.equipmentOther?.length) ? (
+                <div className="w-full order-5 lg:order-none">
+                  <div className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
                     <h3 className="text-base font-bold text-ink flex items-center gap-2 font-heading pb-2 border-b border-line">
                       <ShieldCheck className="h-5 w-5 text-forest" />
                       Wyposażenie pojazdu
@@ -475,11 +574,13 @@ export const RentalOfferDetailPage: React.FC = () => {
                       />
                     </div>
                   </div>
-                ) : null}
+                </div>
+              ) : null}
 
-                {/* Dodatkowe informacje o pojeździe */}
-                {offer.vehicle.additionalInfoContent && (
-                  <div className="bg-white p-6 rounded-2xl border border-line shadow-xs">
+              {/* Dodatkowe informacje o pojeździe */}
+              {offer.vehicle.additionalInfoContent && (
+                <div className="w-full order-6 lg:order-none">
+                  <div className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs">
                     <h3 className="text-base font-bold text-ink mb-3 font-heading">
                       {offer.vehicle.additionalInfoHeader || 'Dodatkowe informacje o pojeździe'}
                     </h3>
@@ -487,14 +588,15 @@ export const RentalOfferDetailPage: React.FC = () => {
                       {offer.vehicle.additionalInfoContent}
                     </p>
                   </div>
-                )}
+                </div>
+              )}
+            </div>
 
-              </div>
-
-              {/* 2. Right Column: Pricing Hero + Benefits + Calculator (Col 8-12 on desktop, 1st on mobile) */}
-              <div className="lg:col-span-5 space-y-6 order-1 lg:order-2">
-                {/* Title & Pricing Hero Card */}
-                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+            {/* 2. Right Column: Pricing Hero + Benefits + Calculator (Col 8-12 on desktop, 1st on mobile) */}
+            <div className="contents lg:block lg:col-span-5 space-y-6">
+              {/* Title & Pricing Hero Card */}
+              <div className="w-full order-2 lg:order-none">
+                <div className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
                   {/* Linia 1: Plakietki */}
                   <div className="flex flex-wrap items-center gap-2">
                     {offer.isB2b ? (
@@ -576,9 +678,11 @@ export const RentalOfferDetailPage: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Dlaczego warto - Compact Benefits Bar */}
-                <div className="p-3.5 bg-paper border border-line rounded-2xl shadow-xs">
+              {/* Dlaczego warto - Compact Benefits Bar */}
+              <div className="w-full order-3 lg:order-none space-y-4">
+                <div className="w-full p-3.5 bg-paper border border-line rounded-2xl shadow-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-ink">
                     <div className="flex items-start gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5 text-forest flex-shrink-0 mt-0.5" />
@@ -597,7 +701,7 @@ export const RentalOfferDetailPage: React.FC = () => {
 
                 {/* Employee Benefit Package Box (jeśli występuje) */}
                 {offer.benefit && (
-                  <div className="p-5 bg-paper border border-line rounded-2xl shadow-xs">
+                  <div className="w-full p-5 bg-paper border border-line rounded-2xl shadow-xs">
                     <div className="flex items-center gap-2 mb-2 text-ink font-bold text-base font-heading">
                       <Sparkles className="h-5 w-5 text-forest" />
                       <span>{offer.benefit.name}</span>
@@ -627,8 +731,11 @@ export const RentalOfferDetailPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-6 lg:sticky lg:top-20 lg:z-10">
+              {/* Konfigurator abonamentu */}
+              <div className="w-full order-7 lg:order-none">
+                <div id="kalkulator-najmu" className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs space-y-6 lg:sticky lg:top-20 lg:z-10">
                   <div className="flex items-center justify-between border-b border-line pb-4">
                     <div className="flex items-center gap-2">
                       <Calculator className="h-5 w-5 text-forest" />
@@ -876,6 +983,11 @@ export const RentalOfferDetailPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Mobile Sticky Bars */}
+            {renderMobileStickyTopBar()}
+            {renderMobileStickyBottomBar()}
+          </div>
         )}
       </main>
 

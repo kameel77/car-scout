@@ -310,4 +310,32 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     const disclaimer = screen.getByText(/Przesłanie zapytania jest bezpłatne i niezobowiązujące/);
     expect(disclaimer.className).toContain('text-[11px]');
   });
+
+  it('renders mobile sticky bars (top bar on scroll and bottom bar with home link, calculator button, and inquiry button)', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue(mockRentalOfferDetails);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Mobile bottom bar links & buttons
+    const homeLink = screen.getByRole('link', { name: /Strona główna najmu/i });
+    expect(homeLink).toHaveAttribute('href', '/najem');
+
+    const scrollToCalcBtn = screen.getByRole('button', { name: /Przejdź do konfiguratora abonamentu/i });
+    expect(scrollToCalcBtn).toBeInTheDocument();
+
+    const askOfferBtn = screen.getByRole('button', { name: /Zapytaj o ofertę$/i });
+    expect(askOfferBtn).toBeInTheDocument();
+
+    // Trigger scroll to display top sticky bar
+    fireEvent.scroll(window, { target: { scrollY: 300 } });
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(2);
+    });
+  });
 });

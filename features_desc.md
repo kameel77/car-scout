@@ -1373,3 +1373,25 @@ Wdrożono rozdzielenie produktów finansowania w kalkulatorze samochodowym oraz 
   - Zaimplementowano nowoczesną architekturę CSS z wykorzystaniem `display: contents` na kolumnach desktopowych, co pozwoliło uzyskać idealną kolejność flex-order na mobile bez duplikacji drzewa DOM, bez powielania ID `#kalkulator-finansowania` i z zachowaniem dostępności (a11y).
 - **6. Pływająca Dolna Belka na Mobile (Sticky Bottom Bar)**:
   - Przyklejona do dolnej krawędzi ekranu belka mobilna z rozmyciem tła (`backdrop-blur-md`), zawierająca szacowaną ratę miesięczną (brutto dla prywatnie, netto dla B2B), przycisk szybkiego przewinięcia do kalkulatora `[ 🧮 ]` oraz główny przycisk `[ ZAPYTAJ O OFERTĘ ]` otwierający modal zapytania z gotową konfiguracją.
+
+### 90. Dopracowanie Mobilnych Belek i Układu Karty Pojazdu (Samochody Nowe i Najem Długoterminowy)
+
+Wdrożono 6 ulepszeń UI/UX na kartach pojazdów (`NewCarOfferDetailPage.tsx`, `RentalOfferDetailPage.tsx`, `ImageGallery.tsx`):
+
+- **1. Pełna Szerokość Elementów na Mobile (`w-full`)**:
+  - Wszystkie karty i sekcje na widokach szczegółów oferty (galeria, dane techniczne, wyposażenie, korzyści, informacje dodatkowe, kalkulator) zostały rozszerzone do pełnej szerokości ekranu na urządzeniach mobilnych (`w-full`), eliminując wąskie karty i puste marginesy boczne.
+- **2. Optymalizacja Featured Zdjęcia w Galerii (`ImageGallery.tsx`)**:
+  - Usunięto błąd silnika WebKit/Safari powodujący gigantyczne przeskalowanie zdjęcia głównego i rozpychanie siatki na urządzeniach mobilnych.
+  - Zastosowano pozycjonowanie absolutne obrazu `absolute inset-0 w-full h-full object-cover object-center` wewnątrz kontenera o zdefiniowanym współczynniku proporcji (`aspectClassName`) i maksymalnej wysokości `max-h-[460px]`.
+- **3. Usunięcie Plakietki „Cena dla Ciebie” z Nagłówka Kalkulatora**:
+  - Z nagłówka kalkulatora w `NewCarOfferDetailPage.tsx` usunięto plakietkę `Cena dla Ciebie`, upraszczając nagłówek do czystego tytułu `Kalkulator finansowania` i redukując szum wizualny.
+- **4. Pływająca Górna Belka na Mobile (Sticky Top Bar ze Scrollem)**:
+  - Zarówno w ofercie samochodów nowych, jak i w najmie długoterminowym zaimplementowano dyskretną górną belkę mobilną (`fixed top-0 inset-x-0 z-40`), która pojawia się płynnie po przewinięciu strony w dół (`scrollY > 220`).
+  - Belka prezentuje markę, model, rocznik/wersję oraz aktualną ratę miesięczną z wyróżnieniem netto/brutto na tle z rozmyciem (`bg-white/95 backdrop-blur-md border-b border-line`).
+- **5. Zoptymalizowana Dolna Belka na Mobile (Home, Kalkulator, CTA)**:
+  - Dolna belka mobilna (`fixed bottom-0 inset-x-0 z-40`) została uporządkowana do 3 kluczowych akcji:
+    1. Przycisk / odnośnik Home (`Home` z `lucide-react`) powracający do katalogu głównego (`/katalog` dla samochodów, `/najem` dla najmu),
+    2. Przycisk kalkulatora (`Calculator` z `lucide-react`) płynnie scrollujący stronę do kalkulatora finansowania / abonamentu,
+    3. Przycisk akcji `Zapytaj o ofertę` otwierający modal zapytania z prekonfigurowaną ratą.
+- **6. Spójność Architektury Pomiędzy Samochodami a Najmem**:
+  - W `RentalOfferDetailPage.tsx` wprowadzono analogiczny układ kolumn z `display: contents lg:block`, zoptymalizowaną sekwencję mobilną `order-1` do `order-7`, identyczne zachowanie belek pływających oraz dedykowany identyfikator `#kalkulator-najmu` dla płynnego scrollowania.

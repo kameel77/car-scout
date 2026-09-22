@@ -11,7 +11,8 @@ import {
   Layers,
   Calculator,
   Info,
-  ChevronDown
+  ChevronDown,
+  Home
 } from 'lucide-react';
 import {
   fetchEmployeeOfferDetails,
@@ -141,6 +142,19 @@ export const NewCarOfferDetailPage: React.FC = () => {
 
   // Inquiry Modal State
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState<boolean>(false);
+
+  // Sticky Top Bar on scroll
+  const [showStickyTopBar, setShowStickyTopBar] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowStickyTopBar(window.scrollY > 220);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const loadDetails = useCallback(async (signal?: AbortSignal) => {
     if (!id) return;
@@ -356,7 +370,7 @@ ${rateLine}`;
   const renderGallery = () => {
     if (!offer) return null;
     return (
-      <div className="bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
+      <div className="w-full bg-white p-4 rounded-2xl border border-line shadow-xs overflow-hidden">
         <ImageGallery
           images={Array.from(
             new Set([offer.vehicle.primaryImageUrl, ...(offer.vehicle.imageUrls || [])].filter(Boolean))
@@ -371,7 +385,7 @@ ${rateLine}`;
   const renderTitleAndPricing = () => {
     if (!offer) return null;
     return (
-      <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+      <div className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
         {/* Linia 1: Plakietki */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="bg-lime text-ink font-semibold text-xs px-3 py-1 rounded-full">
@@ -449,7 +463,7 @@ ${rateLine}`;
   const renderBenefits = () => {
     if (!offer) return null;
     return (
-      <div className="space-y-4">
+      <div className="w-full space-y-4">
         {/* Dlaczego warto - Compact Benefits Bar */}
         <div className="p-3.5 bg-paper border border-line rounded-2xl shadow-xs">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-ink">
@@ -507,7 +521,7 @@ ${rateLine}`;
   const renderSpecs = () => {
     if (!offer) return null;
     return (
-      <div className="bg-white p-6 rounded-2xl border border-line shadow-xs">
+      <div className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs">
         <h3 className="text-base font-bold text-ink mb-4 flex items-center gap-2 font-heading">
           <Layers className="h-5 w-5 text-forest" />
           Dane techniczne
@@ -581,7 +595,7 @@ ${rateLine}`;
     if (!hasEquipment) return null;
 
     return (
-      <div className="bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
+      <div className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs space-y-4">
         <h3 className="text-base font-bold text-ink flex items-center gap-2 font-heading pb-2 border-b border-line">
           <ShieldCheck className="h-5 w-5 text-forest" />
           Wyposażenie pojazdu
@@ -612,7 +626,7 @@ ${rateLine}`;
   const renderAdditionalInfo = () => {
     if (!offer?.vehicle.additionalInfoContent) return null;
     return (
-      <div className="bg-white p-6 rounded-2xl border border-line shadow-xs">
+      <div className="w-full bg-white p-6 rounded-2xl border border-line shadow-xs">
         <h3 className="text-base font-bold text-ink mb-3 font-heading">
           {offer.vehicle.additionalInfoHeader || 'Dodatkowe informacje o pojeździe'}
         </h3>
@@ -657,15 +671,12 @@ ${rateLine}`;
     }
 
     return (
-      <div id="kalkulator-finansowania" className="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20">
+      <div id="kalkulator-finansowania" className="w-full bg-white p-6 rounded-2xl border border-line shadow-sm space-y-6 lg:sticky lg:top-20">
         <div className="flex items-center justify-between border-b border-line pb-4">
           <div className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-forest" />
             <h3 className="font-bold text-ink text-base font-heading">Kalkulator finansowania</h3>
           </div>
-          <span className="text-xs font-semibold text-ink bg-lime px-2.5 py-1 rounded-full">
-            Cena dla Ciebie
-          </span>
         </div>
 
         {/* Forma finansowania z dynamiczną etykietą po prawej */}
@@ -841,46 +852,73 @@ ${rateLine}`;
     );
   };
 
-  const renderMobileStickyBottomBar = () => {
+  const renderMobileStickyTopBar = () => {
     if (!offer) return null;
     const rateNumber = effectiveInstallment
       ? (contractType === 'CONSUMER' ? effectiveInstallment.installmentGross : effectiveInstallment.installmentNet)
       : null;
-    const rateSuffix = contractType === 'CONSUMER' ? 'brutto / mies.' : 'netto / mies.';
+    const rateSuffix = contractType === 'CONSUMER' ? 'brutto / msc' : 'netto / msc';
 
     return (
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-line shadow-lg px-4 py-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-2xs uppercase tracking-wider text-muted font-bold">Rata miesięczna</div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-base sm:text-lg font-extrabold text-forest font-heading">
+      <div
+        className={`lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-line shadow-xs px-4 py-2.5 transition-all duration-300 transform ${
+          showStickyTopBar ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs sm:text-sm font-bold text-ink truncate font-heading leading-tight">
+              {offer.vehicle.make} {offer.vehicle.model}
+            </div>
+            <div className="text-[11px] text-muted truncate">
+              {offer.vehicle.productionYear ? `Rocznik ${offer.vehicle.productionYear}` : ''}
+              {offer.vehicle.productionYear && offer.vehicle.version ? ' · ' : ''}
+              {offer.vehicle.version || ''}
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-sm sm:text-base font-extrabold text-forest font-heading leading-tight">
               {rateNumber !== null ? `${formatPln(rateNumber)} zł` : 'od - zł'}
-            </span>
-            <span className="text-[10px] font-semibold text-muted">
+            </div>
+            <div className="text-[10px] font-semibold text-muted">
               {rateSuffix}
-            </span>
+            </div>
           </div>
         </div>
+      </div>
+    );
+  };
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={scrollToCalculator}
-            aria-label="Przejdź do kalkulatora"
-            title="Przejdź do kalkulatora"
-            className="p-2.5 bg-paper hover:bg-paper/80 border border-line rounded-xl text-ink transition-colors flex items-center justify-center shrink-0 cursor-pointer"
-          >
-            <Calculator className="h-5 w-5 text-forest" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsInquiryModalOpen(true)}
-            className="py-2.5 px-4 bg-forest hover:bg-forest/90 text-lime font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
-          >
-            <span>Zapytaj o ofertę</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+  const renderMobileStickyBottomBar = () => {
+    if (!offer) return null;
+
+    return (
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-line shadow-lg px-4 py-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom))] flex items-center gap-2.5">
+        <Link
+          to="/katalog"
+          aria-label="Strona główna katalogu"
+          title="Strona główna katalogu"
+          className="p-2.5 bg-paper hover:bg-paper/80 border border-line rounded-xl text-ink transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+        >
+          <Home className="h-5 w-5 text-forest" />
+        </Link>
+        <button
+          type="button"
+          onClick={scrollToCalculator}
+          aria-label="Przejdź do kalkulatora"
+          title="Przejdź do kalkulatora"
+          className="p-2.5 bg-paper hover:bg-paper/80 border border-line rounded-xl text-ink transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+        >
+          <Calculator className="h-5 w-5 text-forest" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsInquiryModalOpen(true)}
+          className="flex-1 py-2.5 px-4 bg-forest hover:bg-forest/90 text-lime font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+        >
+          <span>Zapytaj o ofertę</span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
     );
   };
@@ -953,37 +991,38 @@ ${rateLine}`;
 
         {/* Offer Detail Content */}
         {!isLoading && offer && (
-          <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 lg:gap-8 items-start pb-20 lg:pb-0">
+          <div className="flex flex-col w-full lg:grid lg:grid-cols-12 gap-6 lg:gap-8 lg:items-start pb-24 lg:pb-0">
             {/* Left Column on Desktop / Mobile items via contents */}
             <div className="contents lg:block lg:col-span-7 space-y-6">
-              <div className="order-1 lg:order-none">
+              <div className="w-full order-1 lg:order-none">
                 {renderGallery()}
               </div>
-              <div className="order-4 lg:order-none">
+              <div className="w-full order-4 lg:order-none">
                 {renderSpecs()}
               </div>
-              <div className="order-5 lg:order-none">
+              <div className="w-full order-5 lg:order-none">
                 {renderEquipment()}
               </div>
-              <div className="order-6 lg:order-none">
+              <div className="w-full order-6 lg:order-none">
                 {renderAdditionalInfo()}
               </div>
             </div>
 
             {/* Right Column on Desktop / Mobile items via contents */}
             <div className="contents lg:block lg:col-span-5 space-y-6">
-              <div className="order-2 lg:order-none">
+              <div className="w-full order-2 lg:order-none">
                 {renderTitleAndPricing()}
               </div>
-              <div className="order-3 lg:order-none">
+              <div className="w-full order-3 lg:order-none">
                 {renderBenefits()}
               </div>
-              <div className="order-7 lg:order-none">
+              <div className="w-full order-7 lg:order-none">
                 {renderCalculator()}
               </div>
             </div>
 
-            {/* Mobile Sticky Bottom Bar */}
+            {/* Mobile Sticky Bars */}
+            {renderMobileStickyTopBar()}
             {renderMobileStickyBottomBar()}
           </div>
         )}
