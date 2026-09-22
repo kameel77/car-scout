@@ -1349,3 +1349,27 @@ Wdrożono dedykowany pulpit powitalny pracownika oraz ujednolicono układ filtr�
   - Zastąpiono nieobsługiwaną klasę `hover:text-forest-dark` bezpiecznym wariantem `hover:text-forest/80`.
   - W `PortalHeader.tsx` odnośnik logo został zabezpieczony warunkiem `to={isAuthenticated || isLoading ? '/dashboard' : '/'}`, gwarantując powrót na stronę główną dla sesji niezalogowanej.
   - W `RentalCatalogPage.tsx` ujednolicono strukturę odstępów (`space-y-6` na znaczniku `<main>`) symetrycznie do `CatalogPage.tsx`.
+
+### 89. Rozdział Produktowy Leasingu B2B i Kredytu oraz Optymalizacja Mobile UI/UX (Standard Superauto.pl)
+
+Wdrożono rozdzielenie produktów finansowania w kalkulatorze samochodowym oraz pełne dostosowanie układu mobilnego do standardu Superauto.pl:
+
+- **1. Rozdział Produktowy Kredytu Konsumenckiego i Leasingu Operacyjnego B2B**:
+  - Wyeliminowano uproszczoną symulację zamieniającą wyłącznie netto i brutto.
+  - Zintegrowano rzeczywiste odpytywanie endpointu `/api/financing/calculate` z rozróżnieniem produktów: Kredyt konsumencki Inbank (`cmolkcx1i0002nqqx01mgk3cz`) dla trybu „Prywatnie” oraz Leasing operacyjny Vehis (`cmolkh9n60004nqqx2330k2sc`) dla trybu „Rozliczam B2B”.
+  - Zachowano mechanizm offline fallback do wzorcowego silnika `calculateInstallment` w przypadku braku łączności z API.
+- **2. Etykiety i Prezentacja Formy Finansowania**:
+  - Główne przyciski wyboru zachowują czytelne nazwy: `Prywatnie` oraz `Rozliczam B2B`.
+  - W nagłówku sekcji obok napisu `Forma finansowania` dodano dynamiczną etykietę: `Kredyt samochodowy` (gdy wybrana opcja Prywatnie) lub `Leasing operacyjny` (gdy wybrana opcja Rozliczam B2B).
+  - W podsumowaniu zapytania ofertowego (`inquiryInitialNotes`) precyzyjnie przekazywana jest nazwa produktu i forma prawna umowy.
+- **3. Ukrywanie Opcji Wykupu Końcowego dla Kredytu Konsumenckiego**:
+  - W trybie `Prywatnie` (Kredyt konsumencki) sekcja wykupu końcowego (`residualPct`) jest całkowicie ukrywana w interfejsie (`residualPct = 0%`, pełna spłata kapitału w ratach).
+  - W trybie `Rozliczam B2B` (Leasing operacyjny) opcja wykupu końcowego pozostaje w pełni dostępna (chipy 1%, 10%, 20%, 30%, 40% z wyliczeniem kwoty netto).
+- **4. Brandowane Hamburger Menu na Mobile (`PortalHeader.tsx`, `LandingHeader.tsx`, `landing.css`)**:
+  - Zastąpiono surowy tekst `Menu ☰` na stronie głównej oraz ściśnięty nagłówek po zalogowaniu minimalistycznym przyciskiem z 3 poziomymi kreskami w barwach Benefivo (zmienianym płynnie w `X` po otwarciu).
+  - W nagłówku zalogowanego pracownika (`PortalHeader.tsx`) dodano mobilny drawer zawierający wizytówkę pracownika i firmy, linki nawigacyjne (`Pulpit programu`, `Samochody`, `Najem długoterminowy`, `Moje zapytania`, `Moje dane i konto`) oraz przycisk wylogowania.
+- **5. Nowa Kolejność Wyświetlania Elementów na Mobile (Wzór Superauto.pl)**:
+  - Na ekranach mobilnych zastosowano sekwencję: 1. Galeria zdjęć -> 2. Tytuł i cena z ratą -> 3. Korzyści flotowe -> 4. Dane techniczne -> 5. Wyposażenie pojazdu -> 6. Informacje dodatkowe -> 7. Kalkulator finansowania.
+  - Zaimplementowano nowoczesną architekturę CSS z wykorzystaniem `display: contents` na kolumnach desktopowych, co pozwoliło uzyskać idealną kolejność flex-order na mobile bez duplikacji drzewa DOM, bez powielania ID `#kalkulator-finansowania` i z zachowaniem dostępności (a11y).
+- **6. Pływająca Dolna Belka na Mobile (Sticky Bottom Bar)**:
+  - Przyklejona do dolnej krawędzi ekranu belka mobilna z rozmyciem tła (`backdrop-blur-md`), zawierająca szacowaną ratę miesięczną (brutto dla prywatnie, netto dla B2B), przycisk szybkiego przewinięcia do kalkulatora `[ 🧮 ]` oraz główny przycisk `[ ZAPYTAJ O OFERTĘ ]` otwierający modal zapytania z gotową konfiguracją.

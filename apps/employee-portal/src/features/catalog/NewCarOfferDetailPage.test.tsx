@@ -165,6 +165,11 @@ describe('NewCarOfferDetailPage', () => {
     expect(dp30Btns.length).toBeGreaterThanOrEqual(1);
     fireEvent.click(dp30Btns[0]);
 
+    // Residual is hidden in consumer mode; switch to B2B leasing where buyout is available
+    expect(screen.queryByText('Wykup końcowy')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Rozliczam B2B' }));
+    expect(screen.getByText('Wykup końcowy')).toBeInTheDocument();
+
     // Check residual 10% (second 10% button in DOM)
     const tenPctBtns = screen.getAllByRole('button', { name: '10%' });
     expect(tenPctBtns.length).toBeGreaterThanOrEqual(2);
@@ -272,7 +277,7 @@ describe('NewCarOfferDetailPage', () => {
   });
 });
 
-describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overrides.md)', () => {
+describe('NewCarOfferDetailPage - E2 financing config (brief-e2-product-overrides.md)', () => {
   const mockOfferWithFinancing: catalogApi.EmployeeOffer = {
     ...mockOffer,
     financing: {
