@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { PortalHeader } from './PortalHeader';
@@ -26,7 +26,7 @@ const mockAuthenticatedEmployee: authApi.EmployeeUser = {
 };
 
 describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
-  it('renders brand logo without secondary brand text next to it', () => {
+  it('renders brand logo without secondary brand text next to it', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
 
     render(
@@ -48,9 +48,12 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/dashboard');
     expect(link?.textContent).toBe(''); // Only the img inside
+
+    // Wait for auth to settle to avoid act warning
+    await screen.findByRole('button', { name: /Menu użytkownika/i });
   });
 
-  it('renders lowercase benefivo fallback text when logo fails to load or is empty', () => {
+  it('renders lowercase benefivo fallback text when logo fails to load or is empty', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
 
     render(
@@ -68,9 +71,12 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
     expect(fallback).toBeInTheDocument();
     expect(fallback).toHaveClass('font-heading');
     expect(fallback).toHaveClass('font-extrabold');
+
+    // Wait for auth to settle to avoid act warning
+    await screen.findByRole('button', { name: /Menu użytkownika/i });
   });
 
-  it('triggers fallback on image error', () => {
+  it('triggers fallback on image error', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
 
     render(
@@ -88,6 +94,9 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
 
     const fallback = screen.getByText('benefivo');
     expect(fallback).toBeInTheDocument();
+
+    // Wait for auth to settle to avoid act warning
+    await screen.findByRole('button', { name: /Menu użytkownika/i });
   });
 
   it('renders user menu button and opens dropdown menu with Moje dane, Zmiana hasła and Wyloguj', async () => {
@@ -151,8 +160,10 @@ describe('PortalHeader Component (Zakres 10 Single Brand)', () => {
       </BrandProvider>
     );
 
-    const logo = await screen.findByRole('img', { name: 'Benefivo' });
-    const link = logo.closest('a');
-    expect(link).toHaveAttribute('href', '/');
+    await waitFor(() => {
+      const logo = screen.getByRole('img', { name: 'Benefivo' });
+      const link = logo.closest('a');
+      expect(link).toHaveAttribute('href', '/');
+    });
   });
 });
