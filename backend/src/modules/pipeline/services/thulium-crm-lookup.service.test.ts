@@ -136,4 +136,83 @@ describe('lookupCustomerByPhone', () => {
 
     expect(result?.custom_fields['Brakujące dokumenty']).toBe('komplet');
   });
+
+  it('attaches Benefivo B2B company context to custom_fields when employer_b2b lead exists', async () => {
+    const b2bLead = {
+      id: 'lead_b2b_1',
+      referenceNumber: 'BNF-2026-999',
+      name: 'Marta HR Lead',
+      email: 'marta.hr@korpo.pl',
+      phone: '+48523993855',
+      leadType: 'employer_b2b',
+      metadata: {
+        companyName: 'Nowoczesna Firma Sp. z o.o.',
+        companyNip: '5250001122',
+        teamSize: '50-100',
+        benefitModel: 'co_financing',
+      },
+    };
+
+    const prisma = createPrisma({
+      lead: { findFirst: vi.fn().mockResolvedValue(b2bLead) },
+    });
+
+    const result = await lookupCustomerByPhone(prisma, '523993855');
+
+    expect(result).not.toBeNull();
+    expect(result?.custom_fields['Marka']).toBe('Benefivo');
+    expect(result?.custom_fields['Typ klienta']).toBe('Pracodawca B2B (program pracowniczy)');
+    expect(result?.custom_fields['Firma']).toBe('Nowoczesna Firma Sp. z o.o.');
+    expect(result?.custom_fields['NIP']).toBe('5250001122');
+    expect(result?.custom_fields['Wielkosc zespolu']).toBe('50-100');
+  });
+
+  it('handles employer_b2b lead with null metadata without exception', async () => {
+    const b2bLead = {
+      id: 'lead_b2b_2',
+      referenceNumber: 'BNF-2026-888',
+      name: 'Tomasz Prezes',
+      email: 'tomasz@firma.pl',
+      phone: '+48523993855',
+      leadType: 'employer_b2b',
+      metadata: null,
+    };
+
+    const prisma = createPrisma({
+      lead: { findFirst: vi.fn().mockResolvedValue(b2bLead) },
+    });
+
+    const result = await lookupCustomerByPhone(prisma, '523993855');
+
+    expect(result).not.toBeNull();
+    expect(result?.custom_fields['Marka']).toBe('Benefivo');
+    expect(result?.custom_fields['Typ klienta']).toBe('Pracodawca B2B (program pracowniczy)');
+    expect(result?.custom_fields['Firma']).toBeUndefined();
+    expect(result?.custom_fields['NIP']).toBeUndefined();
+    expect(result?.custom_fields['Wielkosc zespolu']).toBeUndefined();
+  });
+
+  it('omits empty metadata keys and preserves retail customer lookup identity', async () => {
+    const b2bLead = {
+      id: 'lead_b2b_3',
+      name: 'Ewa Dyrektor',
+      phone: '+48523993855',
+      leadType: 'employer_b2b',
+      metadata: {
+        companyName: 'SoftHouse',
+        companyNip: '  ',
+        teamSize: null,
+      },
+    };
+
+    const prisma = createPrisma({
+      lead: { findFirst: vi.fn().mockResolvedValue(b2bLead) },
+    });
+
+    const result = await lookupCustomerByPhone(prisma, '523993855');
+
+    expect(result?.custom_fields['Firma']).toBe('SoftHouse');
+    expect(result?.custom_fields['NIP']).toBeUndefined();
+    expect(result?.custom_fields['Wielkosc zespolu']).toBeUndefined();
+  });
 });

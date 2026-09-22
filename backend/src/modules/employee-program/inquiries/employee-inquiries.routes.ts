@@ -135,7 +135,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     preHandler: [verifyEmployeeAuth, verifyEmployeeCsrf],
     config: {
       rateLimit: {
-        max: 10,
+        max: 120,
         timeWindow: '1 minute'
       }
     }
@@ -683,7 +683,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
     preHandler: [verifyEmployeeAuth],
     config: {
       rateLimit: {
-        max: 60,
+        max: 300,
         timeWindow: '1 minute'
       }
     }
@@ -706,6 +706,11 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
           select: {
             referenceNumber: true
           }
+        },
+        company: {
+          select: {
+            accountManagerEmail: true
+          }
         }
       }
     });
@@ -720,6 +725,7 @@ export async function employeeInquiriesRoutes(fastify: FastifyInstance) {
         id: inq.id,
         status: inq.status,
         referenceNumber: inq.lead?.referenceNumber || null,
+        accountManagerEmail: inq.company?.accountManagerEmail || null,
         contractParty: inq.contractParty,
         createdAt: inq.createdAt.toISOString(),
         contactName: inq.contactName,

@@ -66,6 +66,34 @@ const mockOffer: catalogApi.EmployeeOffer = {
     fuelDiscount: '15 gr/l',
     consultantCare: true,
     termsText: null
+  },
+  financing: {
+    options: [
+      {
+        productId: 'prod-credit-1',
+        category: 'CREDIT',
+        label: 'Kredyt promocyjny',
+        allowedContractParties: ['CONSUMER'],
+        b2cStatus: 'AVAILABLE',
+        minDownPaymentPct: 0,
+        maxDownPaymentPct: 45,
+        maxResidualPct: 30,
+        periods: [24, 36, 48, 60],
+        annualRatePct: 6.5
+      },
+      {
+        productId: 'prod-leasing-1',
+        category: 'LEASING',
+        label: 'Leasing operacyjny',
+        allowedContractParties: ['COMPANY'],
+        b2cStatus: 'AVAILABLE',
+        minDownPaymentPct: 0,
+        maxDownPaymentPct: 45,
+        maxResidualPct: 30,
+        periods: [24, 36, 48, 60],
+        annualRatePct: 7.0
+      }
+    ]
   }
 };
 
@@ -116,6 +144,8 @@ describe('NewCarOfferDetailPage', () => {
     // Benefit
     expect(screen.getByText('Pakiet Benefit Moya & Flota')).toBeInTheDocument();
     expect(screen.getByText(/Karta paliwowa Moya/)).toBeInTheDocument();
+    expect(screen.getByText('Dedykowany doradca flotowy')).toBeInTheDocument();
+    expect(screen.queryByText(/door-to-door/i)).not.toBeInTheDocument();
   });
 
   it('renders financing calculator and updates calculations on parameter selection', async () => {
@@ -141,8 +171,33 @@ describe('NewCarOfferDetailPage', () => {
     fireEvent.click(tenPctBtns[1]);
 
     // Rate heading is displayed
-    expect(screen.getByText('Szacowana rata miesięczna')).toBeInTheDocument();
-    expect(screen.getByText(/netto \/ msc/)).toBeInTheDocument();
+    expect(screen.getAllByText('Szacowana rata miesięczna').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/brutto \/ mies\./).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/netto \/ mies\./).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('defaults to consumer financing with gross rate as primary figure, and inverts on B2B toggle', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
+    });
+
+    const consumerBtn = screen.getByRole('button', { name: 'Prywatnie' });
+    const b2bBtn = screen.getByRole('button', { name: 'Rozliczam B2B' });
+    expect(consumerBtn).toBeInTheDocument();
+    expect(b2bBtn).toBeInTheDocument();
+
+    // In consumer mode, the large font heading is gross rate
+    const grossSuffix = screen.getAllByText(/brutto \/ mies\./);
+    expect(grossSuffix[0].previousElementSibling?.className).toContain('text-3xl');
+
+    // Toggle to B2B
+    fireEvent.click(b2bBtn);
+
+    // In B2B mode, the large font heading is net rate
+    const netSuffix = screen.getAllByText(/netto \/ mies\./);
+    expect(netSuffix[0].previousElementSibling?.className).toContain('text-3xl');
   });
 
   it('opens inquiry modal with calculated financing notes when clicking CTA', async () => {
@@ -176,6 +231,44 @@ describe('NewCarOfferDetailPage', () => {
       expect(screen.getByText('Nie udało się załadować oferty')).toBeInTheDocument();
       expect(screen.getByText('Nie znaleziono oferty')).toBeInTheDocument();
     });
+  });
+
+  it('renders price block with list price, employee price and monetary savings pill, omitting percentage discount tag', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getAllByText('Cena dla Ciebie').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/126\s?000 zł/)).toBeInTheDocument();
+    expect(screen.getByText('Cena katalogowa:')).toBeInTheDocument();
+    expect(screen.getByText(/140\s?000 zł brutto/)).toBeInTheDocument();
+    expect(screen.getByText(/Oszczędzasz 14\s?000 zł/)).toBeInTheDocument();
+    expect(screen.queryByText(/Rabat -/)).not.toBeInTheDocument();
+  });
+
+  it('hides list price and savings pill completely when savingsPln <= 0', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue({
+      ...mockOffer,
+      pricing: {
+        ...mockOffer.pricing,
+        listPricePln: 110000,
+        employeePricePln: 110000,
+        savingsPln: 0,
+        discountPct: 0,
+      },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Toyota Corolla').length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getAllByText('Cena dla Ciebie').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Cena katalogowa:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Oszczędzasz/)).not.toBeInTheDocument();
   });
 });
 
@@ -245,9 +338,9 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     expect(screen.queryByText('Wykup końcowy')).not.toBeInTheDocument();
 
     // Single CREDIT option renders with the category-derived label.
-    expect(screen.getByRole('button', { name: 'Kredyt / finansowanie konsumenckie' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Prywatnie' })).toBeInTheDocument();
 
-    expect(screen.getByText('Szacowana rata miesięczna')).toBeInTheDocument();
+    expect(screen.getAllByText('Szacowana rata miesięczna').length).toBeGreaterThanOrEqual(1);
   });
 
   it('includes the selected financing product label in the inquiry notes', async () => {
@@ -269,7 +362,7 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
     expect(notesTextarea.value).toContain('Wybrany produkt finansowania: Kredyt Elastyczny');
   });
 
-  it('behaves exactly as before E2 when financing is null (no overrides configured for the program)', async () => {
+  it('falls back to default financing options (kredyt & leasing) when financing is null so calculator remains functional', async () => {
     vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue({ ...mockOffer, financing: null });
 
     renderComponent();
@@ -278,11 +371,105 @@ describe('NewCarOfferDetailPage — E2 financing config (brief-e2-product-overri
       expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
     });
 
-    // Legacy fixed options are still present.
+    // Both consumer credit and B2B leasing options are available
+    expect(screen.getByRole('button', { name: 'Prywatnie' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rozliczam B2B' })).toBeInTheDocument();
+
+    // Standard period chips are available
     expect(screen.getByRole('button', { name: '24 msc' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '36 msc' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '48 msc' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '60 msc' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: '0%' }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Wykup końcowy')).toBeInTheDocument();
+
+    // Rates are calculated
+    expect(screen.getAllByText('Szacowana rata miesięczna').length).toBeGreaterThanOrEqual(1);
+
+    // Clicking inquiry CTA opens modal with pre-filled calculated financing notes
+    fireEvent.click(screen.getByRole('button', { name: /Zapytaj o tę ofertę i ratę/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    const notesTextarea = screen.getByLabelText(/Uwagi lub pytania/i) as HTMLTextAreaElement;
+    expect(notesTextarea.value).toContain('Konfiguracja kalkulatora finansowania');
+  });
+
+  it('applies sticky positioning only to the calculator card (Errata E3)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue(mockOffer);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Kalkulator finansowania')).toBeInTheDocument();
+    });
+
+    const calculatorHeading = screen.getByText('Kalkulator finansowania');
+    const calculatorCard = calculatorHeading.closest('.lg\\:sticky');
+    expect(calculatorCard).toBeInTheDocument();
+    expect(calculatorCard).toHaveClass('lg:top-20');
+
+    // Price block must be static (not inside sticky wrapper)
+    const h1Heading = screen.getByRole('heading', { level: 1 });
+    const priceCardSticky = h1Heading.closest('.lg\\:sticky');
+    expect(priceCardSticky).toBeNull();
+  });
+
+  it('renders equipment groups as collapsed native details accordions with plural counts (Zakres 8)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue(mockOffer);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Wyposażenie pojazdu')).toBeInTheDocument();
+    });
+
+    // Check titles and plural counts
+    expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();
+    expect(screen.getByText('(1 pozycja)')).toBeInTheDocument(); // equipmentOther has 1 item
+    expect(screen.getAllByText('(2 pozycje)').length).toBe(3); // safety, comfort, audio have 2 items each
+
+    // Check that accordions are collapsed by default
+    const detailsElements = document.querySelectorAll('details');
+    expect(detailsElements.length).toBe(4);
+    detailsElements.forEach((d) => {
+      expect(d).not.toHaveAttribute('open');
+    });
+  });
+
+  it('does not render equipment accordion if the group is empty (Zakres 8)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue({
+      ...mockOffer,
+      vehicle: {
+        ...mockOffer.vehicle,
+        equipmentSafety: ['System PCS'],
+        equipmentComfortExtras: [],
+        equipmentAudioMultimedia: undefined as any,
+        equipmentOther: [],
+      },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Wyposażenie pojazdu')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();
+    expect(screen.queryByText('Komfort i funkcjonalność')).not.toBeInTheDocument();
+    expect(screen.queryByText('Audio i multimedia')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pozostałe elementy')).not.toBeInTheDocument();
+  });
+
+  it('renders compact benefits bar with 3 items above calculator and drops szybka ścieżka (Zakres 9)', async () => {
+    vi.spyOn(catalogApi, 'fetchEmployeeOfferDetails').mockResolvedValue(mockOffer);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Gwarancja wynegocjowanego rabatu flotowego')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Brak ukrytych opłat i prowizji przygotowawczej')).toBeInTheDocument();
+    expect(screen.getByText('Opieka doradcy na każdym etapie odbioru auta')).toBeInTheDocument();
+    expect(screen.queryByText(/Szybka ścieżka weryfikacji wniosku/i)).not.toBeInTheDocument();
   });
 });

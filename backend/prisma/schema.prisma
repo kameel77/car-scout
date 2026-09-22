@@ -202,6 +202,7 @@ model Lead {
   rentalInitialPaymentAmountNet   Float?               @map("rental_initial_payment_amount_net")
   landingPageId                   String?              @map("landing_page_id")
   trafficSource                   String?              @map("traffic_source")
+  metadata                        Json?                @map("metadata")
   financingProduct                FinancingProduct?    @relation(fields: [financingProductId], references: [id])
   listing                         Listing?             @relation(fields: [listingId], references: [id], onDelete: Cascade)
   rentalVehicle                   RentalVehicle?       @relation(fields: [rentalVehicleId], references: [id])

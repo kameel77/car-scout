@@ -71,6 +71,7 @@ export interface EmployeeInquiryItem {
   sourceType?: 'FINANCING' | 'RENTAL';
   status: string;
   referenceNumber: string | null;
+  accountManagerEmail?: string | null;
   contractParty: ContractPartyOption;
   createdAt: string;
   contactName: string;

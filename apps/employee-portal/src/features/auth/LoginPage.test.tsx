@@ -37,7 +37,7 @@ describe('LoginPage Component', () => {
     expect(screen.getByRole('button', { name: /Zaloguj się/i })).toBeInTheDocument();
   });
 
-  it('submits form successfully and navigates to /katalog', async () => {
+  it('submits form successfully and navigates to /dashboard', async () => {
     vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
     const loginSpy = vi.spyOn(authApi, 'loginEmployee').mockResolvedValue({
       id: 'acc_1',
@@ -54,7 +54,7 @@ describe('LoginPage Component', () => {
           <MemoryRouter initialEntries={['/logowanie']}>
             <Routes>
               <Route path="/logowanie" element={<LoginPage />} />
-              <Route path="/katalog" element={<div>Widok Katalogu</div>} />
+              <Route path="/dashboard" element={<div>Pulpit Programu</div>} />
             </Routes>
           </MemoryRouter>
         </AuthProvider>
@@ -74,7 +74,7 @@ describe('LoginPage Component', () => {
         email: 'jan@action.pl',
         password: 'SuperSecret123!',
       });
-      expect(screen.getByText('Widok Katalogu')).toBeInTheDocument();
+      expect(screen.getByText('Pulpit Programu')).toBeInTheDocument();
     });
   });
 

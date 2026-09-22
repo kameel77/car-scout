@@ -83,6 +83,15 @@ describe('Employee Catalog Isolated & Pricing Unit Tests', () => {
       expect(tayron.savingsPln).toBe(13912);
       expect(tayron.discountPct).toBe(8.0);
     });
+
+    it('Uses catalogPricePln as listPricePln when catalogPrice is higher than listing price', () => {
+      // Listing price 81,800, catalogPrice 95,000, no program discount
+      const pricing = calculateOfferPricing(81800, null, null, null, null, 95000);
+      expect(pricing.listPricePln).toBe(95000);
+      expect(pricing.employeePricePln).toBe(81800);
+      expect(pricing.savingsPln).toBe(13200);
+      expect(pricing.discountPct).toBe(13.89);
+    });
   });
 
   describe('Isolated Routes (Fastify inject with session)', () => {

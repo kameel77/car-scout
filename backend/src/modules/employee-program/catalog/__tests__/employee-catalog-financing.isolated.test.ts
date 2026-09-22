@@ -119,7 +119,8 @@ describe('Employee Catalog — financing config wiring (E2 §Zakres 2)', () => {
         findUnique: async ({ where }: any) => {
           if (where.id === listingId) return { ...mockListing };
           return null;
-        }
+        },
+        findMany: async () => []
       },
       employeeProgramOffer: {
         findMany: async () => [],
@@ -345,5 +346,34 @@ describe('Employee Catalog — financing config wiring (E2 §Zakres 2)', () => {
     const body = JSON.parse(res.body);
     expect(body.financing.options[0].periods).toEqual([24]);
     expect(body.financing.options[0].maxDownPaymentPct).toBe(45);
+  });
+
+  it('returns financing config alongside offers in GET /api/employee/offers list', async () => {
+    productOverrides = [{
+      id: 'ov_list_test',
+      programId,
+      financingProductId: 'fp_credit_1',
+      isEnabled: true,
+      b2cStatus: 'AVAILABLE',
+      allowedContractParties: ['CONSUMER', 'EMPLOYEE_B2B'],
+      minDownPaymentPct: 10,
+      maxDownPaymentPct: 30,
+      allowedPeriods: [24, 36, 48],
+      financingProduct: makeCreditProduct({ referenceRate: 6.0, margin: 1.5 })
+    }];
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/employee/offers',
+      headers: { cookie: validSessionCookie }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.offers).toBeDefined();
+    expect(body.financing).toBeDefined();
+    expect(body.financing.options).toHaveLength(1);
+    expect(body.financing.options[0].annualRatePct).toBe(7.5);
+    expect(body.financing.options[0].periods).toEqual([24, 36, 48]);
   });
 });

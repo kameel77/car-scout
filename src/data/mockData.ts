@@ -108,6 +108,15 @@ export interface Lead {
   phone?: string;
   message: string;
   status: 'new' | 'contacted' | 'in_progress' | 'sold' | 'closed' | 'applied';
+  reference_number?: string;
+  lead_type?: string;
+  traffic_source?: string;
+  metadata?: {
+    companyName?: string;
+    companyNip?: string;
+    teamSize?: string;
+    benefitModel?: string;
+  } | null;
   listing_id: string;
   listing_make: string;
   listing_model: string;

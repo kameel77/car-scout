@@ -117,6 +117,7 @@ describe('InquiryModal Component', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Anna Nowak')).toBeInTheDocument();
     });
 
     // Select B2B radio
@@ -125,7 +126,7 @@ describe('InquiryModal Component', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText(/NIP Firmy/i)).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
 
     // Select EMPLOYER_COMPANY radio
     const companyRadio = screen.getByDisplayValue('EMPLOYER_COMPANY');

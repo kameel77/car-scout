@@ -18,7 +18,8 @@ export function calculateOfferPricing(
   customPricePln: number | null | undefined,
   discountPct: number | { toNumber(): number } | string | null | undefined,
   defaultDiscountPct: number | { toNumber(): number } | string | null | undefined,
-  scopeDiscountPct?: number | { toNumber(): number } | string | null | undefined
+  scopeDiscountPct?: number | { toNumber(): number } | string | null | undefined,
+  catalogPricePln?: number | null
 ): CalculatedPricing {
   const safeListPrice = Math.max(0, listPrice);
   let employeePrice = safeListPrice;
@@ -48,13 +49,18 @@ export function calculateOfferPricing(
 
   // Clamping: employeePrice never > listPrice and never < 0
   employeePrice = Math.min(safeListPrice, Math.max(0, employeePrice));
-  const savingsPln = Math.max(0, safeListPrice - employeePrice);
-  const actualDiscountPct = safeListPrice > 0
-    ? parseFloat((((safeListPrice - employeePrice) / safeListPrice) * 100).toFixed(2))
+
+  // Jeśli pojazd ma wyższą cenę katalogową (MSRP) w bazie danych, użyj jej jako ceny referencyjnej/przekreślonej
+  const safeCatalogPrice = typeof catalogPricePln === 'number' ? Math.max(0, catalogPricePln) : 0;
+  const effectiveListPrice = Math.max(safeListPrice, safeCatalogPrice);
+
+  const savingsPln = Math.max(0, effectiveListPrice - employeePrice);
+  const actualDiscountPct = effectiveListPrice > 0
+    ? parseFloat((((effectiveListPrice - employeePrice) / effectiveListPrice) * 100).toFixed(2))
     : 0;
 
   return {
-    listPricePln: safeListPrice,
+    listPricePln: effectiveListPrice,
     employeePricePln: employeePrice,
     savingsPln,
     discountPct: actualDiscountPct

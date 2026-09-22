@@ -1,9 +1,13 @@
+import { formatPln } from '../catalog/financing';
+import { EmployeeOfferBenefit } from '../catalog/catalog-api';
+
 export interface RentalVehicle {
   id: string;
   make: string;
   model: string;
   version: string | null;
   productionYear: number;
+  catalogPrice?: number | null;
   fuelType: string | null;
   transmission: string | null;
   bodyType: string | null;
@@ -40,6 +44,7 @@ export interface EmployeeRentalOfferSummary {
   minMonthlyRateGross: number;
   optionsCount: number;
   isB2b?: boolean;
+  benefit?: EmployeeOfferBenefit | null;
 }
 
 export interface RentalInitialPaymentOption {
@@ -58,6 +63,7 @@ export interface RentalOptionItem {
   monthlyRateNet: number;
   monthlyRateGross: number;
   rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX';
+  servicesIncluded?: string[];
 }
 
 export interface EmployeeRentalOfferDetails {
@@ -72,6 +78,8 @@ export interface EmployeeRentalOfferDetails {
   downPaymentOptions?: RentalInitialPaymentOption[];
   rentalOptions: RentalOptionItem[];
   isB2b?: boolean;
+  servicesIncluded?: string[];
+  benefit?: EmployeeOfferBenefit | null;
 }
 
 export interface EmployeeRentalCatalogResponse {
@@ -191,10 +199,12 @@ export async function fetchEmployeeRentalOfferDetails(
   if (raw.contractMonthsOptions && raw.rentalOptions && raw.rentalCompany) {
     const normalizedOptions = raw.rentalOptions.map((o: any) => ({
       ...o,
-      assignmentId: o.assignmentId || raw.rentalCompany?.id || 'default_assignment'
+      assignmentId: o.assignmentId || raw.rentalCompany?.id || 'default_assignment',
+      servicesIncluded: Array.isArray(o.servicesIncluded) ? o.servicesIncluded : (raw.servicesIncluded || []),
     }));
     return {
       ...raw,
+      servicesIncluded: Array.isArray(raw.servicesIncluded) ? raw.servicesIncluded : [],
       rentalOptions: normalizedOptions
     } as EmployeeRentalOfferDetails;
   }
@@ -240,7 +250,7 @@ export async function fetchEmployeeRentalOfferDetails(
 
     const downKey = `${downPct}-${downAmountNet}`;
     if (!downPaymentMap.has(downKey)) {
-      let label = `${downAmountNet.toLocaleString('pl-PL')} zł`;
+      let label = `${formatPln(downAmountNet)} zł`;
       if (downAmountNet === 0 && downPct > 0) {
         label = `${downPct}%`;
       } else if (downAmountNet === 0 && downPct === 0) {
@@ -263,6 +273,9 @@ export async function fetchEmployeeRentalOfferDetails(
       monthlyRateNet: Number(r.monthlyRateNet),
       monthlyRateGross: Number(r.monthlyRateGross),
       rateSource: r.rateSource as 'PARTNER_MATRIX' | 'PUBLIC_MATRIX',
+      servicesIncluded: Array.isArray(r.servicesIncluded)
+        ? r.servicesIncluded
+        : (Array.isArray(primaryGroup?.servicesIncluded) ? primaryGroup.servicesIncluded : []),
     };
   });
 
@@ -277,6 +290,9 @@ export async function fetchEmployeeRentalOfferDetails(
   const rateSource: 'PARTNER_MATRIX' | 'PUBLIC_MATRIX' =
     primaryGroup?.rateSource === 'EMPLOYEE_MATRIX' ? 'PARTNER_MATRIX' : 'PUBLIC_MATRIX';
   const isB2b = Boolean(raw.isB2b ?? false);
+  const servicesIncluded = Array.isArray(raw.servicesIncluded)
+    ? raw.servicesIncluded
+    : (Array.isArray(primaryGroup?.servicesIncluded) ? primaryGroup.servicesIncluded : []);
 
   return {
     id: raw.id,
@@ -294,5 +310,6 @@ export async function fetchEmployeeRentalOfferDetails(
     downPaymentOptions,
     rentalOptions: flattenedOptions,
     isB2b,
+    servicesIncluded,
   };
 }

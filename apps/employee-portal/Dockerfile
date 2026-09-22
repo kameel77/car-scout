@@ -19,7 +19,7 @@ RUN apk add --no-cache jq
 
 # Runtime backend proxy target & brand configuration
 ENV BACKEND_URL=http://carscout-api:3000
-ENV PORTAL_BRAND_NAME="Program Samochodowy by Motolia"
+ENV PORTAL_BRAND_NAME="Benefivo"
 ENV PORTAL_BRAND_LOGO_URL="/logo.svg"
 ENV PORTAL_URL=""
 ENV PORTAL_API_URL="/api"

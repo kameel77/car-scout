@@ -131,10 +131,10 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
       expect(screen.getAllByText('1.8 Hybrid Comfort').length).toBeGreaterThanOrEqual(1);
     });
 
-    // Verify default discrete option selected: 36M / 20k km / 0% -> 1450 zł netto
-    expect(screen.getByText(/1\s?450 zł/)).toBeInTheDocument();
-    expect(screen.getByText(/1\s?783,5 zł/)).toBeInTheDocument();
-    expect(screen.getByText('Stawka partnerska')).toBeInTheDocument();
+    // Verify default discrete option selected: 36M / 20k km / 0% -> 1450 zł netto / 1783,5 zł brutto
+    expect(screen.getAllByText(/1\s?450 zł/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/1\s?783,5 zł/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Stawka partnerska').length).toBeGreaterThanOrEqual(1);
   });
 
   it('updates monthly rate when user clicks on different contract parameters', async () => {
@@ -151,12 +151,34 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
     const downPayment10Btn = screen.getByRole('button', { name: '10%' });
     fireEvent.click(downPayment10Btn);
 
-    // Rate for 36M / 20k / 10% should be 1150 zł netto
+    // Rate for 36M / 20k / 10% should be 1150 zł netto / 1414,5 zł brutto
     await waitFor(() => {
-      expect(screen.getByText(/1\s?150 zł/)).toBeInTheDocument();
-      expect(screen.getByText(/1\s?414,5 zł/)).toBeInTheDocument();
-      expect(screen.getByText(/11\s?000 zł/)).toBeInTheDocument(); // 10% down payment amount
+      expect(screen.getAllByText(/1\s?150 zł/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/1\s?414,5 zł/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/13\s?530 zł/)).toBeInTheDocument(); // 10% down payment amount in brutto
     });
+  });
+
+  it('toggles between B2B and Consumer modes and displays appropriate rate priorities', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue(mockRentalOfferDetails);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    // By default for non-B2B offer, clientType is CONSUMER
+    expect(screen.getByText('Rata najmu brutto')).toBeInTheDocument();
+    expect(screen.getByText('Rata abonamentowa brutto')).toBeInTheDocument();
+
+    // Toggle to Rozliczam B2B
+    const b2bBtn = screen.getByRole('button', { name: /Rozliczam B2B/i });
+    fireEvent.click(b2bBtn);
+
+    expect(screen.getByText('Rata najmu netto')).toBeInTheDocument();
+    expect(screen.getByText('Rata abonamentowa netto')).toBeInTheDocument();
   });
 
   it('opens InquiryModal with rental selection when user clicks "Zapytaj o tę ofertę"', async () => {
@@ -209,5 +231,83 @@ describe('RentalOfferDetailPage Component (Discrete Calculator & Inquiry)', () =
         })
       );
     });
+  });
+
+  it('displays B2B exclusive notice banner when offer is B2B-only', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue({
+      ...mockRentalOfferDetails,
+      isB2b: true,
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getByText('Ta oferta jest dostępna wyłącznie dla firm (rozliczenie B2B).')).toBeInTheDocument();
+    expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
+  });
+
+  it('renders uncrossed catalog price, equipment accordions, and benefits bar analogously to car offers', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOfferDetails').mockResolvedValue({
+      ...mockRentalOfferDetails,
+      vehicle: {
+        ...mockRentalOfferDetails.vehicle,
+        catalogPrice: 140000,
+        equipmentSafety: ['System PCS', 'Tempomat adaptacyjny'],
+        equipmentComfortExtras: ['Klimatyzacja automatyczna'],
+      },
+      benefit: {
+        name: 'Pakiet Benefit Moya & Flota',
+        moyaCardAmount: 500,
+        fuelDiscount: '15 gr/l',
+        consultantCare: true,
+        termsText: null,
+      },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Toyota Corolla/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    // 1. Catalog price NOT crossed out in rental
+    expect(screen.getByText('Cena katalogowa:')).toBeInTheDocument();
+    const catalogPriceEl = screen.getByText(/140\s?000 zł brutto/);
+    expect(catalogPriceEl).toBeInTheDocument();
+    expect(catalogPriceEl.className).not.toContain('line-through');
+
+    // 2. Duplicate 'Co zawiera abonament..' removed under equipment
+    expect(screen.queryByText('Co zawiera abonament najmu długoterminowego?')).not.toBeInTheDocument();
+
+    // 3. 'Zakres usług w racie najmu' has larger font
+    const servicesHeader = screen.getByText('Zakres usług w racie najmu');
+    expect(servicesHeader).toBeInTheDocument();
+    expect(servicesHeader.className).toContain('font-bold');
+
+    // 4. 'Wartość alternatywna:' label removed, alternative amount in parentheses
+    expect(screen.queryByText(/Wartość alternatywna:/i)).not.toBeInTheDocument();
+
+    // 2. Equipment accordions
+    expect(screen.getByText('Bezpieczeństwo i asystenci')).toBeInTheDocument();
+    expect(screen.getByText('(2 pozycje)')).toBeInTheDocument();
+    expect(screen.getByText('Komfort i funkcjonalność')).toBeInTheDocument();
+    expect(screen.getByText('(1 pozycja)')).toBeInTheDocument();
+
+    // 3. Compact benefits bar
+    expect(screen.getByText('Gwarancja wynegocjowanego rabatu flotowego')).toBeInTheDocument();
+    expect(screen.getByText('Brak ukrytych opłat i prowizji przygotowawczej')).toBeInTheDocument();
+
+    // 4. Benefit package
+    expect(screen.getByText('Pakiet Benefit Moya & Flota')).toBeInTheDocument();
+    expect(screen.getByText(/Karta paliwowa Moya na kwotę/)).toBeInTheDocument();
+
+    // 5. Smaller disclaimer font text
+    const disclaimer = screen.getByText(/Przesłanie zapytania jest bezpłatne i niezobowiązujące/);
+    expect(disclaimer.className).toContain('text-[11px]');
   });
 });

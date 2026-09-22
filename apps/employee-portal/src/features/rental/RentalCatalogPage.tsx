@@ -14,10 +14,16 @@ import {
   Layers,
   X,
   SlidersHorizontal,
-  Briefcase
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
+import { RateRangeFilter } from '../catalog/RateRangeFilter';
+import { formatCountPl } from '../common/plural';
 import { PortalHeader } from '../common/PortalHeader';
+import { PortalFooter } from '../common/PortalFooter';
+import { ImageSwiper } from '../common/ImageSwiper';
+import { formatPln } from '../catalog/financing';
 
 function normalizeFuelType(val: string | null): { key: string; label: string } | null {
   if (!val) return null;
@@ -119,7 +125,9 @@ export const RentalCatalogPage: React.FC = () => {
   const [selectedFuel, setSelectedFuel] = useState<string>('');
   const [selectedTransmission, setSelectedTransmission] = useState<string>('');
   const [selectedBodyType, setSelectedBodyType] = useState<string>('');
-  const [selectedB2bOnly, setSelectedB2bOnly] = useState<boolean>(false);
+  const [minRate, setMinRate] = useState<number | ''>('');
+  const [maxRate, setMaxRate] = useState<number | ''>('');
+  const [showMoreFilters, setShowMoreFilters] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<'default' | 'rate_asc' | 'rate_desc'>('default');
 
   const loadOffers = useCallback(async (signal?: AbortSignal) => {
@@ -230,18 +238,27 @@ export const RentalCatalogPage: React.FC = () => {
       );
     }
 
-    if (selectedB2bOnly) {
-      result = result.filter((o) => Boolean(o.isB2b));
+    if (minRate !== '') {
+      result = result.filter((o) => o.minMonthlyRateGross >= Number(minRate));
+    }
+
+    if (maxRate !== '') {
+      result = result.filter((o) => o.minMonthlyRateGross <= Number(maxRate));
     }
 
     if (sortBy === 'rate_asc') {
-      result.sort((a, b) => a.minMonthlyRateNet - b.minMonthlyRateNet);
+      result.sort((a, b) => a.minMonthlyRateGross - b.minMonthlyRateGross);
     } else if (sortBy === 'rate_desc') {
-      result.sort((a, b) => b.minMonthlyRateNet - a.minMonthlyRateNet);
+      result.sort((a, b) => b.minMonthlyRateGross - a.minMonthlyRateGross);
     }
 
     return result;
-  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, selectedB2bOnly, sortBy]);
+  }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, minRate, maxRate, sortBy]);
+
+  const secondaryFiltersCount =
+    (selectedFuel ? 1 : 0) +
+    (selectedTransmission ? 1 : 0) +
+    (selectedBodyType ? 1 : 0);
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
@@ -249,7 +266,8 @@ export const RentalCatalogPage: React.FC = () => {
     selectedFuel ||
     selectedTransmission ||
     selectedBodyType ||
-    selectedB2bOnly ||
+    minRate !== '' ||
+    maxRate !== '' ||
     sortBy !== 'default'
   );
 
@@ -259,7 +277,8 @@ export const RentalCatalogPage: React.FC = () => {
     setSelectedFuel('');
     setSelectedTransmission('');
     setSelectedBodyType('');
-    setSelectedB2bOnly(false);
+    setMinRate('');
+    setMaxRate('');
     setSortBy('default');
   };
 
@@ -281,10 +300,10 @@ export const RentalCatalogPage: React.FC = () => {
 
   if (isBrandLoading || isAuthLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-          <div className="text-gray-500 text-sm">Ładowanie portalu...</div>
+          <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin" />
+          <div className="text-muted text-sm">Ładowanie portalu...</div>
         </div>
       </div>
     );
@@ -293,7 +312,7 @@ export const RentalCatalogPage: React.FC = () => {
   const activeError = logoutError || sessionError;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-paper flex flex-col">
       {/* Top Navbar */}
       <PortalHeader onLogout={handleLogout} isLoggingOut={isLoggingOut} />
 
@@ -323,66 +342,80 @@ export const RentalCatalogPage: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header & Search */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5">
-              <Layers className="h-6 w-6 text-indigo-600" />
-              Najem długoterminowy
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Nowe samochody w stałym abonamencie z pełnym pakietem serwisowym i ubezpieczeniem.
-            </p>
-          </div>
-
-          <div className="relative max-w-md w-full">
-            <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Szukaj po marce lub modelu..."
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-xs"
-            />
-          </div>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold font-heading text-ink tracking-tight flex items-center gap-2.5">
+            <Layers className="h-6 w-6 text-forest" />
+            Najem długoterminowy
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            Nowe samochody w stałym abonamencie z pełnym pakietem serwisowym i ubezpieczeniem.
+          </p>
         </div>
 
         {/* Filters Bar */}
         {!offersError && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-xs space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
+          <div data-testid="filters-card" className="bg-white border border-line rounded-2xl p-4 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <SlidersHorizontal className="h-4 w-4 text-ink" />
                 <span>Filtry</span>
-                <span className="text-xs font-normal text-gray-400">
-                  (Dostępne oferty: <strong>{filteredOffers.length}</strong>)
+                <span className="text-xs font-normal text-muted">
+                  ({formatCountPl(filteredOffers.length, ['dostępna oferta', 'dostępne oferty', 'dostępnych ofert'])})
                 </span>
               </div>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Wyczyść filtry
-                </button>
-              )}
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-full sm:w-64">
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    aria-label="Szukaj po marce lub modelu"
+                    placeholder="Szukaj po marce lub modelu..."
+                    className="w-full pl-9 pr-3 py-1.5 border border-line rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ink bg-white shadow-xs"
+                  />
+                </div>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink hover:underline transition-colors shrink-0"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Wyczyść filtry
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {/* Marka */}
-              <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            {/* Primary filters row: Rate (1st), Make (2nd), Sort, More filters button */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-start">
+              {/* 1. Rata miesięczna */}
+              <div className="lg:col-span-5">
+                <RateRangeFilter
+                  minRate={minRate}
+                  maxRate={maxRate}
+                  onChange={(min, max) => {
+                    setMinRate(min);
+                    setMaxRate(max);
+                  }}
+                />
+              </div>
+
+              {/* 2. Marka */}
+              <div className="lg:col-span-3">
+                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Marka
                 </label>
                 <select
                   value={selectedMake}
                   onChange={(e) => setSelectedMake(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
-                  <option value="">Wszystkie</option>
+                  <option value="">Wszystkie marki</option>
                   {availableMakes.map((m) => (
                     <option key={m} value={m}>
                       {m}
@@ -391,98 +424,111 @@ export const RentalCatalogPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Paliwo */}
-              <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Paliwo
-                </label>
-                <select
-                  value={selectedFuel}
-                  onChange={(e) => setSelectedFuel(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableFuels.map((f) => (
-                    <option key={f.key} value={f.key}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Skrzynia */}
-              <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Skrzynia
-                </label>
-                <select
-                  value={selectedTransmission}
-                  onChange={(e) => setSelectedTransmission(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableTransmissions.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Nadwozie */}
-              <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Nadwozie
-                </label>
-                <select
-                  value={selectedBodyType}
-                  onChange={(e) => setSelectedBodyType(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Wszystkie</option>
-                  {availableBodyTypes.map((b) => (
-                    <option key={b.key} value={b.key}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Oferta B2B toggle button */}
-              <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Opcja B2B
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setSelectedB2bOnly(!selectedB2bOnly)}
-                  className={`w-full text-xs py-2 px-2.5 rounded-xl border font-medium flex items-center justify-center gap-1.5 transition-colors ${
-                    selectedB2bOnly
-                      ? 'bg-amber-500 border-amber-600 text-white shadow-xs'
-                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <Briefcase className="h-3.5 w-3.5" />
-                  <span>Tylko B2B</span>
-                </button>
-              </div>
-
-              {/* Sortowanie */}
-              <div>
-                <label className="block text-2xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              {/* 3. Sortowanie */}
+              <div className="lg:col-span-2">
+                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Sortowanie
                 </label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'default' | 'rate_asc' | 'rate_desc')}
-                  className="w-full text-xs py-2 px-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="default">Domyślne</option>
                   <option value="rate_asc">Rata: od najniższej</option>
                   <option value="rate_desc">Rata: od najwyższej</option>
                 </select>
               </div>
+
+              {/* 4. Przycisk "Więcej filtrów" */}
+              <div className="lg:col-span-2 flex sm:justify-start lg:justify-end pt-5">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreFilters((prev) => !prev)}
+                  className={`w-full lg:w-auto inline-flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl border transition-colors ${
+                    showMoreFilters || secondaryFiltersCount > 0
+                      ? 'bg-ink text-white border-ink'
+                      : 'bg-paper text-ink border-line hover:bg-white'
+                  }`}
+                  aria-expanded={showMoreFilters}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>Więcej filtrów</span>
+                  {secondaryFiltersCount > 0 && (
+                    <span className="ml-1 bg-lime text-ink text-2xs font-bold px-1.5 py-0.5 rounded-full">
+                      {secondaryFiltersCount}
+                    </span>
+                  )}
+                  {showMoreFilters ? (
+                    <ChevronUp className="h-3.5 w-3.5 ml-0.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Secondary filters row (collapsible) */}
+            {showMoreFilters && (
+              <div className="pt-3 border-t border-line grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                {/* Paliwo */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Paliwo
+                  </label>
+                  <select
+                    value={selectedFuel}
+                    onChange={(e) => setSelectedFuel(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableFuels.map((f) => (
+                      <option key={f.key} value={f.key}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Skrzynia */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Skrzynia
+                  </label>
+                  <select
+                    value={selectedTransmission}
+                    onChange={(e) => setSelectedTransmission(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableTransmissions.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Nadwozie */}
+                <div>
+                  <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                    Nadwozie
+                  </label>
+                  <select
+                    value={selectedBodyType}
+                    onChange={(e) => setSelectedBodyType(e.target.value)}
+                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="">Wszystkie</option>
+                    {availableBodyTypes.map((b) => (
+                      <option key={b.key} value={b.key}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -492,13 +538,13 @@ export const RentalCatalogPage: React.FC = () => {
             {[1, 2, 3, 4, 5, 6].map((idx) => (
               <div
                 key={idx}
-                className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs animate-pulse flex flex-col justify-between"
+                className="bg-white border border-line rounded-2xl overflow-hidden shadow-xs animate-pulse flex flex-col justify-between"
               >
-                <div className="h-48 bg-gray-200" />
+                <div className="h-48 bg-line" />
                 <div className="p-5 space-y-3 flex-1">
-                  <div className="h-5 bg-gray-200 rounded-md w-3/4" />
-                  <div className="h-4 bg-gray-200 rounded-md w-1/2" />
-                  <div className="h-6 bg-gray-200 rounded-md w-1/3 pt-2" />
+                  <div className="h-5 bg-line rounded-md w-3/4" />
+                  <div className="h-4 bg-line rounded-md w-1/2" />
+                  <div className="h-6 bg-line rounded-md w-1/3 pt-2" />
                 </div>
               </div>
             ))}
@@ -512,12 +558,12 @@ export const RentalCatalogPage: React.FC = () => {
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Nie udało się pobrać ofert najmu</h3>
-            <p className="text-sm text-gray-600 mt-2 mb-6">{offersError}</p>
+            <h3 className="text-lg font-bold text-ink font-heading">Nie udało się pobrać ofert najmu</h3>
+            <p className="text-sm text-muted mt-2 mb-6">{offersError}</p>
             <button
               type="button"
               onClick={() => loadOffers()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-ink hover:bg-forest text-paper text-sm font-semibold rounded-xl transition-colors shadow-xs"
             >
               <RefreshCw className="h-4 w-4" />
               Spróbuj ponownie
@@ -525,12 +571,12 @@ export const RentalCatalogPage: React.FC = () => {
           </div>
         ) : filteredOffers.length === 0 ? (
           /* 3. Empty State */
-          <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center max-w-lg mx-auto shadow-xs my-10">
-            <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white border border-line rounded-2xl p-12 text-center max-w-lg mx-auto shadow-xs my-10">
+            <div className="w-14 h-14 bg-paper text-muted rounded-full flex items-center justify-center mx-auto mb-4 border border-line">
               <Car className="h-7 w-7" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Brak dostępnych ofert najmu</h3>
-            <p className="text-sm text-gray-500 mt-2 mb-6">
+            <h3 className="text-lg font-bold text-ink font-heading">Brak dostępnych ofert najmu</h3>
+            <p className="text-sm text-muted mt-2 mb-6">
               {hasActiveFilters
                 ? 'Żadna oferta nie pasuje do wybranych filtrów. Spróbuj zmienić lub zresetować kryteria.'
                 : 'W Twoim programie partnerskim nie skonfigurowano jeszcze ofert najmu długoterminowego.'}
@@ -539,7 +585,7 @@ export const RentalCatalogPage: React.FC = () => {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-line text-ink text-sm font-medium rounded-xl hover:bg-paper transition-colors"
               >
                 Wyczyść filtry
               </button>
@@ -549,107 +595,103 @@ export const RentalCatalogPage: React.FC = () => {
           /* 4. Offers Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredOffers.map((offer) => {
-              const primaryImg =
-                offer.vehicle.primaryImageUrl ||
-                (offer.vehicle.imageUrls && offer.vehicle.imageUrls[0]);
+              const rentalImages = Array.from(
+                new Set([offer.vehicle.primaryImageUrl, ...(offer.vehicle.imageUrls || [])].filter(Boolean))
+              ) as string[];
 
               return (
                 <div
                   key={offer.id}
-                  className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
+                  className="bg-white border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
                 >
                   <div>
-                    {/* Vehicle Photo Container */}
-                    <div className="relative h-48 bg-gray-100 overflow-hidden">
-                      {primaryImg ? (
-                        <img
-                          src={primaryImg}
-                          alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                          <Car className="h-16 w-16" />
-                        </div>
-                      )}
+                    {/* Vehicle Photo Container - Link to offer */}
+                    <Link
+                      to={`/najem/${offer.id}`}
+                      className="relative h-48 bg-paper overflow-hidden block group cursor-pointer"
+                      aria-label={`${offer.vehicle.make} ${offer.vehicle.model}`}
+                    >
+                      <ImageSwiper
+                        images={rentalImages}
+                        alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
+                        aspectClassName="h-48 w-full"
+                      />
 
-                      <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
                         {offer.isB2b && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-xs">
-                            Oferta B2B
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-ink text-white shadow-xs">
+                            Tylko B2B
                           </span>
                         )}
-                        {offer.rateSource === 'PARTNER_MATRIX' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white shadow-xs">
+                        {offer.rateSource === 'PARTNER_MATRIX' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-lime text-ink shadow-xs">
                             Stawka partnerska
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-800/80 text-white shadow-xs backdrop-blur-xs">
-                            Stawka katalogowa
                           </span>
                         )}
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Vehicle Specs and Pricing */}
                     <div className="p-5 space-y-3">
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                          {offer.vehicle.make} {offer.vehicle.model}
+                        <h3 className="text-lg font-bold text-ink leading-snug font-heading">
+                          <Link to={`/najem/${offer.id}`} className="hover:text-forest transition-colors">
+                            {offer.vehicle.make} {offer.vehicle.model}
+                          </Link>
                         </h3>
                         {offer.vehicle.version && (
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                          <p className="text-xs text-muted mt-0.5 line-clamp-1">
                             {offer.vehicle.version}
                           </p>
                         )}
                       </div>
 
                       {/* Specs Tags */}
-                      <div className="flex flex-wrap gap-2 text-xs text-gray-600 pt-1 border-t border-gray-100">
-                        <span className="inline-flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
-                          <Calendar className="h-3 w-3 text-gray-400" />
+                      <div className="flex flex-wrap gap-2 text-xs text-muted pt-1 border-t border-line">
+                        <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
+                          <Calendar className="h-3 w-3 text-muted" />
                           {offer.vehicle.productionYear}
                         </span>
                         {offer.vehicle.fuelType && (
-                          <span className="inline-flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
-                            <Fuel className="h-3 w-3 text-gray-400" />
+                          <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
+                            <Fuel className="h-3 w-3 text-muted" />
                             {formatFuelType(offer.vehicle.fuelType)}
                           </span>
                         )}
                         {offer.vehicle.transmission && (
-                          <span className="inline-flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
-                            <Gauge className="h-3 w-3 text-gray-400" />
+                          <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
+                            <Gauge className="h-3 w-3 text-muted" />
                             {formatTransmission(offer.vehicle.transmission)}
                           </span>
                         )}
                       </div>
 
                       {/* Monthly Rate Range */}
-                      <div className="pt-2 border-t border-gray-100 flex items-baseline justify-between">
+                      <div className="pt-2 border-t border-line flex items-baseline justify-between">
                         <div>
-                          <div className="text-2xs uppercase tracking-wider text-gray-400 font-semibold">
+                          <div className="text-2xs uppercase tracking-wider text-muted font-semibold">
                             Rata abonamentu
                           </div>
-                          <div className="text-lg font-bold text-indigo-700 tracking-tight">
-                            od {offer.minMonthlyRateNet.toLocaleString('pl-PL')} zł{' '}
-                            <span className="text-xs font-normal text-gray-500">netto / mc</span>
+                          <div className="text-lg font-bold text-ink tracking-tight font-heading">
+                            od {formatPln(offer.minMonthlyRateGross)} zł{' '}
+                            <span className="text-xs font-normal text-muted">brutto / mies.</span>
                           </div>
-                          <div className="text-[11px] text-gray-400">
-                            od {offer.minMonthlyRateGross.toLocaleString('pl-PL')} zł brutto
+                          <div className="text-[11px] text-muted">
+                            od {formatPln(offer.minMonthlyRateNet)} zł netto / mies.
                           </div>
                         </div>
-                        <div className="text-2xs text-gray-400">
-                          {offer.optionsCount} wariantów
+                        <div className="text-2xs text-muted">
+                          {formatCountPl(offer.optionsCount, ['wariant', 'warianty', 'wariantów'])}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="p-4 bg-gray-50/70 border-t border-gray-100">
+                  <div className="p-4 bg-paper border-t border-line">
                     <Link
                       to={`/najem/${offer.id}`}
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs"
+                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-ink hover:bg-forest text-paper font-semibold text-sm rounded-xl transition-colors shadow-xs"
                     >
                       Konfiguruj ratę i zapytaj
                       <ArrowRight className="h-4 w-4" />
@@ -661,6 +703,7 @@ export const RentalCatalogPage: React.FC = () => {
           </div>
         )}
       </main>
+      <PortalFooter />
     </div>
   );
 };

@@ -14,6 +14,7 @@ import {
   CreateInquiryPayload,
   RentalSelection
 } from './inquiries-api';
+import { formatPln } from '../catalog/financing';
 
 export interface RentalDisplayInfo {
   contractMonths: number;
@@ -21,6 +22,7 @@ export interface RentalDisplayInfo {
   downPaymentPct: number;
   monthlyRateNet: number;
   monthlyRateGross: number;
+  isConsumer?: boolean;
   rentalCompanyName?: string;
 }
 
@@ -43,6 +45,7 @@ interface InquiryModalProps {
   offer: InquiryOfferItem | EmployeeOffer | null;
   rentalSelection?: RentalSelection | null;
   rentalDisplay?: RentalDisplayInfo | null;
+  initialContractParty?: ContractPartyOption;
   initialNotes?: string;
   onViewMyInquiries?: () => void;
 }
@@ -53,6 +56,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   offer,
   rentalSelection,
   rentalDisplay,
+  initialContractParty,
   initialNotes,
   onViewMyInquiries
 }) => {
@@ -60,7 +64,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   const { user } = useAuth();
 
   const [idempotencyKey, setIdempotencyKey] = useState<string>('');
-  const [contractParty, setContractParty] = useState<ContractPartyOption>('CONSUMER');
+  const [contractParty, setContractParty] = useState<ContractPartyOption>(initialContractParty || 'CONSUMER');
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -76,7 +80,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   useEffect(() => {
     if (isOpen && offer) {
       setIdempotencyKey(crypto.randomUUID());
-      setContractParty('CONSUMER');
+      setContractParty(initialContractParty || 'CONSUMER');
       setContactName(user ? `${user.firstName} ${user.lastName}`.trim() : '');
       setContactEmail(user ? user.email : '');
       setContactPhone(user?.phone || '');
@@ -87,7 +91,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
       setErrorMessage(null);
       setCreatedReferenceNumber(null);
     }
-  }, [isOpen, offer, user, initialNotes]);
+  }, [isOpen, offer, user, initialContractParty, initialNotes]);
 
   if (!isOpen || !offer) return null;
 
@@ -150,19 +154,19 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
       aria-labelledby="modal-headline"
       className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
     >
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between bg-paper/70">
           <div>
-            <h2 id="modal-headline" className="text-lg font-bold text-gray-900 leading-tight">
+            <h2 id="modal-headline" className="text-lg font-bold text-ink leading-tight">
               {createdReferenceNumber ? 'Zgłoszenie wysłane' : 'Zapytaj o tę ofertę'}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {offer.vehicle.make} {offer.vehicle.model}
               {rentalDisplay
-                ? ` (${rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto / mies.)`
+                ? ` (${formatPln(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet)} zł ${rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.)`
                 : offer.pricing?.employeePricePln
-                ? ` (${offer.pricing.employeePricePln.toLocaleString('pl-PL')} zł)`
+                ? ` (${formatPln(offer.pricing.employeePricePln)} zł brutto)`
                 : ''}
             </p>
           </div>
@@ -170,7 +174,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Zamknij modal"
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 text-muted hover:text-ink rounded-lg hover:bg-paper transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -184,25 +188,25 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
               <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Dziękujemy za przesłanie zgłoszenia!</h3>
-              <p className="text-sm text-gray-600 mt-2 max-w-sm">
+              <h3 className="text-xl font-bold text-ink">Dziękujemy za przesłanie zgłoszenia!</h3>
+              <p className="text-sm text-muted mt-2 max-w-sm">
                 Twój dedykowany opiekun programu pracowniczego skontaktuje się z Tobą w ciągu 24 godzin w celu przedstawienia szczegółów.
               </p>
 
-              <div className="my-6 p-4 bg-gray-50 border border-gray-200 rounded-xl w-full text-left">
-                <div className="text-xs text-gray-500 font-medium">Numer referencyjny zapytania:</div>
-                <div className="text-xl font-mono font-bold text-primary-700 mt-1 select-all">
+              <div className="my-6 p-4 bg-paper border border-line rounded-2xl w-full text-left">
+                <div className="text-xs text-muted font-medium">Numer referencyjny zapytania:</div>
+                <div className="text-xl font-mono font-bold text-ink mt-1 select-all">
                   {createdReferenceNumber}
                 </div>
-                <div className="text-xs text-gray-500 mt-2 border-t border-gray-200 pt-2 flex justify-between">
+                <div className="text-xs text-muted mt-2 border-t border-line pt-2 flex justify-between">
                   <span>Wybrany pojazd:</span>
-                  <span className="font-medium text-gray-800">{offer.vehicle.make} {offer.vehicle.model}</span>
+                  <span className="font-medium text-ink">{offer.vehicle.make} {offer.vehicle.model}</span>
                 </div>
                 {rentalDisplay && (
-                  <div className="text-xs text-gray-500 mt-1 flex justify-between">
+                  <div className="text-xs text-muted mt-1 flex justify-between">
                     <span>Parametry najmu:</span>
-                    <span className="font-medium text-primary-700">
-                      {rentalDisplay.contractMonths} mies. · {rentalDisplay.annualMileage.toLocaleString('pl-PL')} km · {rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto/mc
+                    <span className="font-medium text-ink">
+                      {rentalDisplay.contractMonths} mies. · {formatPln(rentalDisplay.annualMileage)} km · {formatPln(rentalDisplay.isConsumer ? rentalDisplay.monthlyRateGross : rentalDisplay.monthlyRateNet)} zł {rentalDisplay.isConsumer ? 'brutto' : 'netto'} / mies.
                     </span>
                   </div>
                 )}
@@ -216,7 +220,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                       onClose();
                       onViewMyInquiries();
                     }}
-                    className="flex-1 py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-xs"
+                    className="flex-1 py-3 px-4 bg-ink hover:bg-ink/90 text-paper font-semibold text-sm rounded-full transition-colors shadow-xs"
                   >
                     Zobacz moje zapytania
                   </button>
@@ -224,7 +228,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-2.5 px-4 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium text-sm rounded-xl transition-colors"
+                  className="flex-1 py-3 px-4 border border-line text-ink hover:bg-paper font-medium text-sm rounded-full transition-colors"
                 >
                   Wróć do katalogu
                 </button>
@@ -242,67 +246,84 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
 
               {/* Parametry najmu (jeśli dotyczy) */}
               {rentalDisplay && (
-                <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs space-y-1.5 text-indigo-950">
-                  <div className="font-semibold text-indigo-900 border-b border-indigo-100/80 pb-1.5">
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-100 rounded-xl text-xs space-y-1.5 text-emerald-950">
+                  <div className="font-semibold text-emerald-900 border-b border-emerald-100/80 pb-1.5">
                     <span>Wybrane parametry najmu:</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-indigo-800 pt-1">
+                  <div className="grid grid-cols-2 gap-2 text-emerald-800 pt-1">
                     <div>Okres umowy: <strong>{rentalDisplay.contractMonths} mies.</strong></div>
-                    <div>Limit roczny: <strong>{rentalDisplay.annualMileage.toLocaleString('pl-PL')} km</strong></div>
+                    <div>Limit roczny: <strong>{formatPln(rentalDisplay.annualMileage)} km</strong></div>
                     <div>Wpłata wstępna: <strong>{rentalDisplay.downPaymentPct}%</strong></div>
-                    <div>Rata miesięczna: <strong>{rentalDisplay.monthlyRateNet.toLocaleString('pl-PL')} zł netto</strong></div>
+                    <div>
+                      Rata miesięczna:{' '}
+                      <strong>
+                        {rentalDisplay.isConsumer
+                          ? `${formatPln(rentalDisplay.monthlyRateGross)} zł brutto`
+                          : `${formatPln(rentalDisplay.monthlyRateNet)} zł netto`}
+                      </strong>
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Wybór strony umowy */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-ink uppercase tracking-wider mb-2">
                   Forma finansowania / Strona umowy *
                 </label>
-                <div className="space-y-2">
-                  <label className={`flex items-start p-3 border rounded-xl cursor-pointer transition-colors ${contractParty === 'CONSUMER' ? 'border-primary-500 bg-primary-50/40 ring-1 ring-primary-500' : 'border-gray-200 hover:bg-gray-50'}`}>
-                    <input
-                      type="radio"
-                      name="contractParty"
-                      value="CONSUMER"
-                      checked={contractParty === 'CONSUMER'}
-                      onChange={() => setContractParty('CONSUMER')}
-                      className="mt-0.5 text-primary-600 focus:ring-primary-500"
-                    />
-                    <div className="ml-3 text-xs">
-                      <div className="font-semibold text-gray-900">Osoba prywatna (Konsument)</div>
-                      <div className="text-gray-500 mt-0.5">Pożyczka konsumencka lub zakup prywatny</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label className={`flex flex-col justify-between p-3.5 border rounded-xl cursor-pointer transition-colors ${contractParty === 'CONSUMER' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="contractParty"
+                        value="CONSUMER"
+                        checked={contractParty === 'CONSUMER'}
+                        onChange={() => setContractParty('CONSUMER')}
+                        className="mt-0.5 accent-ink text-ink focus:ring-ink shrink-0"
+                      />
+                      <div>
+                        <div className="font-semibold text-xs text-ink leading-snug">Osoba prywatna (Konsument)</div>
+                        <div className="text-[11px] text-muted mt-1 leading-snug">
+                          {rentalDisplay ? 'Najem konsumencki na osobę fizyczną' : 'Pożyczka konsumencka lub zakup prywatny'}
+                        </div>
+                      </div>
                     </div>
                   </label>
 
-                  <label className={`flex items-start p-3 border rounded-xl cursor-pointer transition-colors ${contractParty === 'EMPLOYEE_B2B' ? 'border-primary-500 bg-primary-50/40 ring-1 ring-primary-500' : 'border-gray-200 hover:bg-gray-50'}`}>
-                    <input
-                      type="radio"
-                      name="contractParty"
-                      value="EMPLOYEE_B2B"
-                      checked={contractParty === 'EMPLOYEE_B2B'}
-                      onChange={() => setContractParty('EMPLOYEE_B2B')}
-                      className="mt-0.5 text-primary-600 focus:ring-primary-500"
-                    />
-                    <div className="ml-3 text-xs">
-                      <div className="font-semibold text-gray-900">Działalność gospodarcza (B2B pracownika)</div>
-                      <div className="text-gray-500 mt-0.5">Leasing operacyjny na jednoosobową działalność</div>
+                  <label className={`flex flex-col justify-between p-3.5 border rounded-xl cursor-pointer transition-colors ${contractParty === 'EMPLOYEE_B2B' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="contractParty"
+                        value="EMPLOYEE_B2B"
+                        checked={contractParty === 'EMPLOYEE_B2B'}
+                        onChange={() => setContractParty('EMPLOYEE_B2B')}
+                        className="mt-0.5 accent-ink text-ink focus:ring-ink shrink-0"
+                      />
+                      <div>
+                        <div className="font-semibold text-xs text-ink leading-snug">Działalność gospodarcza (B2B pracownika)</div>
+                        <div className="text-[11px] text-muted mt-1 leading-snug">
+                          {rentalDisplay ? 'Najem długoterminowy dla firm (faktura VAT)' : 'Leasing operacyjny na jednoosobową działalność'}
+                        </div>
+                      </div>
                     </div>
                   </label>
 
-                  <label className={`flex items-start p-3 border rounded-xl cursor-pointer transition-colors ${contractParty === 'EMPLOYER_COMPANY' ? 'border-primary-500 bg-primary-50/40 ring-1 ring-primary-500' : 'border-gray-200 hover:bg-gray-50'}`}>
-                    <input
-                      type="radio"
-                      name="contractParty"
-                      value="EMPLOYER_COMPANY"
-                      checked={contractParty === 'EMPLOYER_COMPANY'}
-                      onChange={() => setContractParty('EMPLOYER_COMPANY')}
-                      className="mt-0.5 text-primary-600 focus:ring-primary-500"
-                    />
-                    <div className="ml-3 text-xs">
-                      <div className="font-semibold text-gray-900">Firma pracodawcy (Finansowanie przez firmę)</div>
-                      <div className="text-gray-500 mt-0.5">Samochód służbowy finansowany bezpośrednio przez pracodawcę</div>
+                  <label className={`flex flex-col justify-between p-3.5 border rounded-xl cursor-pointer transition-colors ${contractParty === 'EMPLOYER_COMPANY' ? 'border-ink bg-lime/15 ring-2 ring-lime' : 'border-line hover:bg-paper'}`}>
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="contractParty"
+                        value="EMPLOYER_COMPANY"
+                        checked={contractParty === 'EMPLOYER_COMPANY'}
+                        onChange={() => setContractParty('EMPLOYER_COMPANY')}
+                        className="mt-0.5 accent-ink text-ink focus:ring-ink shrink-0"
+                      />
+                      <div>
+                        <div className="font-semibold text-xs text-ink leading-snug">Firma pracodawcy (Finansowanie przez firmę)</div>
+                        <div className="text-[11px] text-muted mt-1 leading-snug">Samochód służbowy finansowany bezpośrednio przez pracodawcę</div>
+                      </div>
                     </div>
                   </label>
                 </div>
@@ -311,7 +332,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
               {/* NIP (warunkowy) */}
               {contractParty !== 'CONSUMER' && (
                 <div>
-                  <label htmlFor="inquiry-nip" className="block text-xs font-medium text-gray-700 mb-1">
+                  <label htmlFor="inquiry-nip" className="block text-xs font-medium text-ink mb-1">
                     NIP Firmy *
                   </label>
                   <input
@@ -322,7 +343,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                     value={nip}
                     onChange={(e) => setNip(e.target.value)}
                     placeholder="np. 1234567890"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3.5 py-2.5 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                   />
                 </div>
               )}
@@ -330,7 +351,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
               {/* Dane kontaktowe */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
-                  <label htmlFor="inquiry-name" className="block text-xs font-medium text-gray-700 mb-1">
+                  <label htmlFor="inquiry-name" className="block text-xs font-medium text-ink mb-1">
                     Imię i nazwisko *
                   </label>
                   <input
@@ -339,12 +360,12 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                     required
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3.5 py-2.5 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="inquiry-email" className="block text-xs font-medium text-gray-700 mb-1">
+                  <label htmlFor="inquiry-email" className="block text-xs font-medium text-ink mb-1">
                     Adres e-mail *
                   </label>
                   <input
@@ -353,12 +374,12 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                     required
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3.5 py-2.5 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="inquiry-phone" className="block text-xs font-medium text-gray-700 mb-1">
+                  <label htmlFor="inquiry-phone" className="block text-xs font-medium text-ink mb-1">
                     Numer telefonu *
                   </label>
                   <input
@@ -367,36 +388,36 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                     required
                     value={contactPhone}
                     onChange={(e) => setContactPhone(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3.5 py-2.5 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                   />
                 </div>
               </div>
 
               {/* Uwagi */}
               <div>
-                <label htmlFor="inquiry-notes" className="block text-xs font-medium text-gray-700 mb-1">
+                <label htmlFor="inquiry-notes" className="block text-xs font-medium text-ink mb-1">
                   Uwagi lub pytania do opiekuna (opcjonalne)
                 </label>
                 <textarea
                   id="inquiry-notes"
-                  rows={2}
+                  rows={4}
                   maxLength={2000}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="np. preferowany okres leasingu, wysokość wpłaty wstępnej..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  className="w-full px-3.5 py-2.5 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink resize-y min-h-[110px]"
                 />
               </div>
 
               {/* Checkbox RODO (§3.1a) */}
-              <div className="pt-2 border-t border-gray-100">
-                <label className="flex items-start gap-2.5 cursor-pointer text-xs text-gray-600">
+              <div className="pt-2 border-t border-line">
+                <label className="flex items-start gap-2.5 cursor-pointer text-xs text-muted">
                   <input
                     type="checkbox"
                     required
                     checked={consentPrivacy}
                     onChange={(e) => setConsentPrivacy(e.target.checked)}
-                    className="mt-0.5 rounded-sm text-primary-600 focus:ring-primary-500"
+                    className="mt-0.5 accent-ink rounded-sm text-ink focus:ring-ink"
                   />
                   <span>
                     Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania o ofertę samochodową zgodnie z{' '}
@@ -404,7 +425,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                       href="/polityka-prywatnosci"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary-600 underline font-medium hover:text-primary-700"
+                      className="text-ink underline font-medium hover:text-muted"
                     >
                       Polityką Prywatności
                     </a>
@@ -419,14 +440,14 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
                   type="button"
                   onClick={onClose}
                   disabled={isSubmitting}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 border border-line text-muted text-sm font-medium rounded-full hover:text-ink hover:bg-paper transition-colors disabled:opacity-50"
                 >
                   Anuluj
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-xs disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-ink hover:bg-ink/90 text-paper text-sm font-semibold rounded-full transition-colors shadow-xs disabled:opacity-50"
                 >
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {isSubmitting ? 'Wysyłanie...' : 'Wyślij zapytanie'}

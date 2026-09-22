@@ -138,7 +138,8 @@ describe('Employee Portal - Frontend Integration Suite', () => {
   });
 
   describe('2. UI & Dynamic Branding Integration Tests', () => {
-    it('renders custom brand name and redirects unauthenticated user to login', async () => {
+    it('renders custom brand name on login page', async () => {
+      window.history.pushState({}, '', '/logowanie');
       vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
 
       const customConfig = {
@@ -156,7 +157,8 @@ describe('Employee Portal - Frontend Integration Suite', () => {
       });
     });
 
-    it('displays authenticated employee catalog and header when authenticated', async () => {
+    it('displays authenticated employee catalog and header when authenticated on /katalog', async () => {
+      window.history.pushState({}, '', '/katalog');
       vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
         id: 'acc_1',
         email: 'jan@firma.pl',
@@ -174,7 +176,34 @@ describe('Employee Portal - Frontend Integration Suite', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
-        expect(screen.getByText('Dedykowana oferta samochodów dla pracowników')).toBeInTheDocument();
+        expect(
+          screen.getByRole('heading', { name: 'Samochody', level: 1 })
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('displays authenticated employee dashboard when authenticated on /dashboard', async () => {
+      window.history.pushState({}, '', '/dashboard');
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue({
+        id: 'acc_1',
+        email: 'jan@firma.pl',
+        firstName: 'Jan',
+        lastName: 'Kowalski',
+        company: { id: 'c1', name: 'Firma S.A.', slug: 'firma' },
+        program: { id: 'p1', name: 'Program Flotowy', slug: 'flota' },
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
+        expect(
+          screen.getByRole('heading', {
+            name: 'Dedykowana oferta samochodów dla pracowników',
+            level: 1,
+          })
+        ).toBeInTheDocument();
+        expect(screen.getByText(/Program aktywny dla organizacji Firma S\.A\./i)).toBeInTheDocument();
       });
     });
   });
@@ -281,6 +310,85 @@ describe('Employee Portal - Frontend Integration Suite', () => {
       expect(
         screen.getByRole('link', { name: /Wróć na stronę główną/i })
       ).toBeInTheDocument();
+    });
+
+    it('renders / Benefivo LandingPage for public visitors', async () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+
+      render(
+        <BrandProvider initialConfig={defaultBrandConfig}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
+        </BrandProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Dobre rzeczy/i })).toBeInTheDocument();
+        expect(screen.getAllByRole('link', { name: /Zaloguj się/i }).length).toBeGreaterThan(0);
+      });
+    });
+
+    it('renders /dla-firm Employer B2B Lead Page', async () => {
+      vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(null);
+
+      render(
+        <BrandProvider initialConfig={defaultBrandConfig}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/dla-firm']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
+        </BrandProvider>
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', { name: /Nowoczesny benefit motoryzacyjny/i })
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText(/Imię i nazwisko/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Nazwa firmy/i)).toBeInTheDocument();
+      });
+    });
+
+    it('renders /regulamin Terms Page with Motolia operator details', async () => {
+      render(
+        <BrandProvider initialConfig={defaultBrandConfig}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/regulamin']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
+        </BrandProvider>
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', { name: /Regulamin Programu Samochodowego Benefivo/i })
+        ).toBeInTheDocument();
+        expect(screen.getAllByText(/Motolia Sp. z o.o./i).length).toBeGreaterThan(0);
+      });
+    });
+
+    it('renders /prywatnosc Privacy Policy Page with RODO details', async () => {
+      render(
+        <BrandProvider initialConfig={defaultBrandConfig}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/prywatnosc']}>
+              <AppRoutes />
+            </MemoryRouter>
+          </AuthProvider>
+        </BrandProvider>
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', { name: /Polityka Prywatności i Plików Cookies/i })
+        ).toBeInTheDocument();
+        expect(screen.getByText(/Podejście Privacy-First i Cookieless Telemetry/i)).toBeInTheDocument();
+      });
     });
   });
 });

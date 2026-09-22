@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   useAdvisorQueue,
   useOpportunities,
@@ -163,6 +163,20 @@ export default function PipelinePage() {
   };
 
   const counts = queueQuery.data?.counts;
+
+  const filteredInboxLeads = useMemo(() => {
+    const list = inboxQuery.data?.leads || [];
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase().trim();
+    return list.filter((l) =>
+      l.name.toLowerCase().includes(q) ||
+      (l.phone && l.phone.includes(q)) ||
+      (l.email && l.email.toLowerCase().includes(q)) ||
+      (l.referenceNumber && l.referenceNumber.toLowerCase().includes(q)) ||
+      (l.metadata?.companyName && l.metadata.companyName.toLowerCase().includes(q)) ||
+      (l.metadata?.companyNip && l.metadata.companyNip.includes(q))
+    );
+  }, [inboxQuery.data?.leads, searchQuery]);
 
   return (
     <div className="flex flex-col min-h-screen p-6 max-w-7xl mx-auto space-y-6">
@@ -358,7 +372,7 @@ export default function PipelinePage() {
       ) : (
         <BoardView
           opportunities={oppsQuery.data?.items}
-          inboxLeads={inboxQuery.data?.leads}
+          inboxLeads={filteredInboxLeads}
           isLoading={oppsQuery.isLoading}
           onCardClick={(opp) => setSelectedOppIdForDetails(opp.id)}
           onTransitionPhase={handleKanbanTransition}
