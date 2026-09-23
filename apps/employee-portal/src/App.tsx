@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { BrandProvider } from './config/BrandContext';
 import { AuthProvider } from './features/auth/AuthContext';
@@ -10,6 +10,7 @@ import { ProtectedRoute } from './features/auth/ProtectedRoute';
 import { LandingPage } from './features/landing/pages/LandingPage';
 import { NotFoundPage } from './features/common/NotFoundPage';
 import { PortalBrandConfig } from './config/brand';
+import { resetViewportScale } from './utils/viewport';
 
 // Lazy load non-homepage public pages
 const EmployerB2bPage = lazy(() =>
@@ -160,6 +161,25 @@ export const AppRoutes: React.FC = () => {
 };
 
 export const App: React.FC<{ initialConfig?: PortalBrandConfig }> = ({ initialConfig }) => {
+  useEffect(() => {
+    const handleBlurCapture = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'SELECT' ||
+          target.tagName === 'TEXTAREA')
+      ) {
+        resetViewportScale();
+      }
+    };
+
+    window.addEventListener('blur', handleBlurCapture, true);
+    return () => {
+      window.removeEventListener('blur', handleBlurCapture, true);
+    };
+  }, []);
+
   return (
     <BrandProvider initialConfig={initialConfig}>
       <AuthProvider>

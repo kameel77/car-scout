@@ -1479,3 +1479,15 @@ Wdrożono ujednolicenie systemów stylów, typografii, grubości fontów, margin
   - Wdrożono bibliotekę normalizacji marek (`apps/employee-portal/src/utils/brand.ts` oraz `backend/src/services/brand-normalization.service.ts`).
   - Wyeliminowano duplikaty wynikające z wielkości liter w bazie danych (np. `HYUNDAI` i `Hyundai` -> `Hyundai`, `MERCEDES-BENZ` i `mercedes benz` -> `Mercedes-Benz`, `SKODA` -> `Škoda`).
   - Nazwy marek są spójnie znormalizowane w selektorze filtrów, w nagłówkach kart pojazdów oraz w widokach szczegółowych `/najem/:id`.
+
+### 94. Optymalizacja Skalowania Viewportu i Zapobieganie Przybliżaniu na Mobile (iOS Safari)
+
+- **1. Zapobieganie Automatycznemu Zoomowi (`index.css`, `RateRangeFilter.tsx`, `RentalCatalogPage.tsx`, `CatalogPage.tsx`)**:
+  - W urządzeniach mobilnych (iOS Safari) pola formularzy o rozmiarze czcionki mniejszym niż 16px powodują wymuszone przybliżenie ekranu przez przeglądarkę.
+  - Wdrożono globalną regułę CSS na ekranach `< 768px` ustawiającą `font-size: 16px !important` dla kontrolek `input`, `select` i `textarea`.
+  - W komponentach filtrów (rata od - do w `RateRangeFilter`, wyszukiwarka oraz listy rozwijane filtrów) zaktualizowano klasy Tailwind na `text-base sm:text-xs`, zapewniając natywny rozmiar 16px na urządzeniach mobilnych przy zachowaniu kompaktowego rozmiaru 12px na desktopie.
+- **2. Automatyczne Przywracanie Skali 100% po Utracie Fokusu (`resetViewportScale`, `viewport.ts`)**:
+  - Zaimplementowano moduł `apps/employee-portal/src/utils/viewport.ts` z funkcją `resetViewportScale()`.
+  - Po opuszczeniu aktywnego pola (zdarzenie `blur` / przejście ze stanu aktywnego w nieaktywny), mechanizm natychmiastowo aplikuje `maximum-scale=1.0` do znacznika `<meta name="viewport">`, wymuszając na silniku przeglądarki wyzerowanie powiększenia i wyrównanie szerokości do 100%.
+  - Po 300ms przywracana jest standardowa konfiguracja skalowalnego viewportu, co zachowuje pełną dostępność i możliwość ręcznego gestu pinch-to-zoom dla użytkownika.
+  - Mechanizm zintegrowano bezpośrednio w filtrach kwotowych `onBlur` oraz globalnie w komponencie głównym `App.tsx` w fazie capture.
