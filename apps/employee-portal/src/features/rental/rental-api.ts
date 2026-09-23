@@ -85,6 +85,8 @@ export interface EmployeeRentalOfferDetails {
 export interface EmployeeRentalCatalogResponse {
   offers: EmployeeRentalOfferSummary[];
   nextCursor: string | null;
+  totalCount?: number;
+  availableMakes?: string[];
 }
 
 export interface FetchRentalOffersParams {
@@ -174,6 +176,8 @@ export async function fetchEmployeeRentalOffers(
   return {
     offers,
     nextCursor: raw.nextCursor ?? null,
+    totalCount: typeof raw.totalCount === 'number' ? raw.totalCount : offers.length,
+    availableMakes: Array.isArray(raw.availableMakes) ? raw.availableMakes : undefined,
   };
 }
 

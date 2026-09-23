@@ -10,9 +10,10 @@ import {
   ResolvedRentalRateSource,
   EmployeeRentalCalculatedRow
 } from './employee-rental-pricing.utils.js';
+import { normalizeBrand } from '../../../services/brand-normalization.service.js';
 
 const getRentalOffersQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(50).default(24),
+  limit: z.coerce.number().int().min(1).max(100).default(24),
   cursor: z.string().regex(/^[a-zA-Z0-9_-]+$/).max(100).optional(),
   search: z.string().trim().max(100).optional(),
   contractParty: z.enum(['CONSUMER', 'EMPLOYEE_B2B', 'EMPLOYER_COMPANY']).optional()
@@ -140,7 +141,9 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
       if (!program.scopeIncludeRental) {
         return reply.code(200).send({
           offers: [],
-          nextCursor: null
+          nextCursor: null,
+          totalCount: 0,
+          availableMakes: []
         });
       }
 
@@ -248,7 +251,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
             sourceType: 'RENTAL' as const,
             vehicle: {
               id: v.id,
-              make: v.make,
+              make: normalizeBrand(v.make),
               model: v.model,
               version: v.version ?? null,
               productionYear: v.productionYear ?? 2026,
@@ -270,8 +273,14 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
         })
         .filter((o): o is NonNullable<typeof o> => o !== null);
 
+      const availableMakes = [
+        ...new Set(offers.map((o) => o.vehicle.make).filter(Boolean))
+      ].sort((a, b) => a.localeCompare(b, 'pl'));
+
       return reply.code(200).send({
         offers,
+        totalCount: offers.length,
+        availableMakes,
         nextCursor
       });
     }
@@ -407,7 +416,7 @@ export async function employeeRentalCatalogRoutes(fastify: FastifyInstance) {
         sourceType: 'RENTAL' as const,
         vehicle: {
           id: vehicle.id,
-          make: vehicle.make,
+          make: normalizeBrand(vehicle.make),
           model: vehicle.model,
           version: vehicle.version ?? null,
           productionYear: vehicle.productionYear ?? 2026,
