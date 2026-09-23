@@ -15,9 +15,12 @@ import {
   X,
   SlidersHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
+import { normalizeBrand } from '../../utils/brand';
 import { RateRangeFilter } from '../catalog/RateRangeFilter';
 import { formatCountPl } from '../common/plural';
 import { PortalHeader } from '../common/PortalHeader';
@@ -116,9 +119,14 @@ export const RentalCatalogPage: React.FC = () => {
 
   // Rental State
   const [offers, setOffers] = useState<EmployeeRentalOfferSummary[]>([]);
+  const [backendMakes, setBackendMakes] = useState<string[]>([]);
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(true);
   const [offersError, setOffersError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Pagination State
+  const PAGE_SIZE = 12;
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Filters State
   const [selectedMake, setSelectedMake] = useState<string>('');
@@ -136,10 +144,13 @@ export const RentalCatalogPage: React.FC = () => {
     try {
       const res = await fetchEmployeeRentalOffers(
         config.apiUrl || '/api',
-        {},
+        { limit: 100 },
         signal
       );
       setOffers(res.offers || []);
+      if (res.availableMakes && res.availableMakes.length > 0) {
+        setBackendMakes(res.availableMakes);
+      }
     } catch (err: unknown) {
       if (signal?.aborted) return;
       const msg = err instanceof Error ? err.message : 'Nie udało się pobrać listy ofert najmu';
@@ -159,14 +170,19 @@ export const RentalCatalogPage: React.FC = () => {
     };
   }, [loadOffers]);
 
-  // Compute available facet options from loaded offers
+  // Compute available facet options from loaded offers + backend makes
   const availableMakes = useMemo(() => {
     const set = new Set<string>();
-    offers.forEach((o) => {
-      if (o.vehicle.make) set.add(o.vehicle.make);
+    backendMakes.forEach((m) => {
+      const norm = normalizeBrand(m);
+      if (norm && norm !== 'Inne') set.add(norm);
     });
-    return Array.from(set).sort();
-  }, [offers]);
+    offers.forEach((o) => {
+      const norm = normalizeBrand(o.vehicle.make);
+      if (norm && norm !== 'Inne') set.add(norm);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pl'));
+  }, [backendMakes, offers]);
 
   const availableFuels = useMemo(() => {
     const map = new Map<string, string>();
@@ -208,7 +224,7 @@ export const RentalCatalogPage: React.FC = () => {
       const q = searchTerm.toLowerCase().trim();
       result = result.filter(
         (o) =>
-          o.vehicle.make.toLowerCase().includes(q) ||
+          normalizeBrand(o.vehicle.make).toLowerCase().includes(q) ||
           o.vehicle.model.toLowerCase().includes(q) ||
           (o.vehicle.version && o.vehicle.version.toLowerCase().includes(q))
       );
@@ -216,7 +232,7 @@ export const RentalCatalogPage: React.FC = () => {
 
     if (selectedMake) {
       result = result.filter(
-        (o) => o.vehicle.make.toLowerCase() === selectedMake.toLowerCase()
+        (o) => normalizeBrand(o.vehicle.make).toLowerCase() === selectedMake.toLowerCase()
       );
     }
 
@@ -255,6 +271,23 @@ export const RentalCatalogPage: React.FC = () => {
     return result;
   }, [offers, searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, minRate, maxRate, sortBy]);
 
+  // Reset to first page whenever any filter criteria changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedMake, selectedFuel, selectedTransmission, selectedBodyType, minRate, maxRate, sortBy]);
+
+  const totalPages = Math.ceil(filteredOffers.length / PAGE_SIZE) || 1;
+  const pagedOffers = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredOffers.slice(start, start + PAGE_SIZE);
+  }, [filteredOffers, currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    window.scrollTo?.({ top: 0, behavior: 'smooth' });
+  };
+
   const secondaryFiltersCount =
     (selectedFuel ? 1 : 0) +
     (selectedTransmission ? 1 : 0) +
@@ -280,6 +313,7 @@ export const RentalCatalogPage: React.FC = () => {
     setMinRate('');
     setMaxRate('');
     setSortBy('default');
+    setCurrentPage(1);
   };
 
   const handleLogout = async () => {
@@ -407,10 +441,12 @@ export const RentalCatalogPage: React.FC = () => {
 
               {/* 2. Marka */}
               <div className="lg:col-span-3">
-                <label className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
+                <label htmlFor="make-select" className="block text-2xs font-semibold text-muted uppercase tracking-wider mb-1">
                   Marka
                 </label>
                 <select
+                  id="make-select"
+                  aria-label="Marka"
                   value={selectedMake}
                   onChange={(e) => setSelectedMake(e.target.value)}
                   className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
@@ -593,114 +629,166 @@ export const RentalCatalogPage: React.FC = () => {
           </div>
         ) : (
           /* 4. Offers Grid */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredOffers.map((offer) => {
-              const rentalImages = Array.from(
-                new Set([offer.vehicle.primaryImageUrl, ...(offer.vehicle.imageUrls || [])].filter(Boolean))
-              ) as string[];
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pagedOffers.map((offer) => {
+                const rentalImages = Array.from(
+                  new Set([offer.vehicle.primaryImageUrl, ...(offer.vehicle.imageUrls || [])].filter(Boolean))
+                ) as string[];
 
-              return (
-                <div
-                  key={offer.id}
-                  className="bg-white border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Vehicle Photo Container - Link to offer */}
-                    <Link
-                      to={`/najem/${offer.id}`}
-                      className="relative h-48 bg-paper overflow-hidden block group cursor-pointer"
-                      aria-label={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                    >
-                      <ImageSwiper
-                        images={rentalImages}
-                        alt={`${offer.vehicle.make} ${offer.vehicle.model}`}
-                        aspectClassName="h-48 w-full"
-                      />
+                return (
+                  <div
+                    key={offer.id}
+                    className="bg-white border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Vehicle Photo Container - Link to offer */}
+                      <Link
+                        to={`/najem/${offer.id}`}
+                        className="relative h-48 bg-paper overflow-hidden block group cursor-pointer"
+                        aria-label={`${normalizeBrand(offer.vehicle.make)} ${offer.vehicle.model}`}
+                      >
+                        <ImageSwiper
+                          images={rentalImages}
+                          alt={`${normalizeBrand(offer.vehicle.make)} ${offer.vehicle.model}`}
+                          aspectClassName="h-48 w-full"
+                        />
 
-                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-                        {offer.isB2b && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-ink text-white shadow-xs">
-                            Tylko B2B
-                          </span>
-                        )}
-                        {offer.rateSource === 'PARTNER_MATRIX' && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-lime text-ink shadow-xs">
-                            Stawka partnerska
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-
-                    {/* Vehicle Specs and Pricing */}
-                    <div className="p-5 space-y-3">
-                      <div>
-                        <h3 className="text-lg font-bold text-ink leading-snug font-heading">
-                          <Link to={`/najem/${offer.id}`} className="hover:text-forest transition-colors">
-                            {offer.vehicle.make} {offer.vehicle.model}
-                          </Link>
-                        </h3>
-                        {offer.vehicle.version && (
-                          <p className="text-xs text-muted mt-0.5 line-clamp-1">
-                            {offer.vehicle.version}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Specs Tags */}
-                      <div className="flex flex-wrap gap-2 text-xs text-muted pt-1 border-t border-line">
-                        <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
-                          <Calendar className="h-3 w-3 text-muted" />
-                          {offer.vehicle.productionYear}
-                        </span>
-                        {offer.vehicle.fuelType && (
-                          <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
-                            <Fuel className="h-3 w-3 text-muted" />
-                            {formatFuelType(offer.vehicle.fuelType)}
-                          </span>
-                        )}
-                        {offer.vehicle.transmission && (
-                          <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
-                            <Gauge className="h-3 w-3 text-muted" />
-                            {formatTransmission(offer.vehicle.transmission)}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Monthly Rate Range */}
-                      <div className="pt-2 border-t border-line flex items-baseline justify-between">
-                        <div>
-                          <div className="text-2xs uppercase tracking-wider text-muted font-semibold">
-                            Rata abonamentu
-                          </div>
-                          <div className="text-lg font-bold text-ink tracking-tight font-heading">
-                            od {formatPln(offer.minMonthlyRateGross)} zł{' '}
-                            <span className="text-xs font-normal text-muted">brutto / mies.</span>
-                          </div>
-                          <div className="text-[11px] text-muted">
-                            od {formatPln(offer.minMonthlyRateNet)} zł netto / mies.
-                          </div>
+                        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
+                          {offer.isB2b && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-ink text-white shadow-xs">
+                              Tylko B2B
+                            </span>
+                          )}
+                          {offer.rateSource === 'PARTNER_MATRIX' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-lime text-ink shadow-xs">
+                              Stawka partnerska
+                            </span>
+                          )}
                         </div>
-                        <div className="text-2xs text-muted">
-                          {formatCountPl(offer.optionsCount, ['wariant', 'warianty', 'wariantów'])}
+                      </Link>
+
+                      {/* Vehicle Specs and Pricing */}
+                      <div className="p-5 space-y-3">
+                        <div>
+                          <h3 className="text-lg font-bold text-ink leading-snug font-heading">
+                            <Link to={`/najem/${offer.id}`} className="hover:text-forest transition-colors">
+                              {normalizeBrand(offer.vehicle.make)} {offer.vehicle.model}
+                            </Link>
+                          </h3>
+                          {offer.vehicle.version && (
+                            <p className="text-xs text-muted mt-0.5 line-clamp-1">
+                              {offer.vehicle.version}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Specs Tags */}
+                        <div className="flex flex-wrap gap-2 text-xs text-muted pt-1 border-t border-line">
+                          <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
+                            <Calendar className="h-3 w-3 text-muted" />
+                            {offer.vehicle.productionYear}
+                          </span>
+                          {offer.vehicle.fuelType && (
+                            <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
+                              <Fuel className="h-3 w-3 text-muted" />
+                              {formatFuelType(offer.vehicle.fuelType)}
+                            </span>
+                          )}
+                          {offer.vehicle.transmission && (
+                            <span className="inline-flex items-center gap-1 bg-paper px-2 py-1 rounded-md border border-line text-ink">
+                              <Gauge className="h-3 w-3 text-muted" />
+                              {formatTransmission(offer.vehicle.transmission)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Monthly Rate Range */}
+                        <div className="pt-2 border-t border-line flex items-baseline justify-between">
+                          <div>
+                            <div className="text-2xs uppercase tracking-wider text-muted font-semibold">
+                              Rata abonamentu
+                            </div>
+                            <div className="text-lg font-bold text-ink tracking-tight font-heading">
+                              od {formatPln(offer.minMonthlyRateGross)} zł{' '}
+                              <span className="text-xs font-normal text-muted">brutto / mies.</span>
+                            </div>
+                            <div className="text-[11px] text-muted">
+                              od {formatPln(offer.minMonthlyRateNet)} zł netto / mies.
+                            </div>
+                          </div>
+                          <div className="text-2xs text-muted">
+                            {formatCountPl(offer.optionsCount, ['wariant', 'warianty', 'wariantów'])}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions Footer */}
-                  <div className="p-4 bg-paper border-t border-line">
-                    <Link
-                      to={`/najem/${offer.id}`}
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-ink hover:bg-forest text-paper font-semibold text-sm rounded-xl transition-colors shadow-xs"
-                    >
-                      Konfiguruj ratę i zapytaj
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
+                    {/* Actions Footer */}
+                    <div className="p-4 bg-paper border-t border-line">
+                      <Link
+                        to={`/najem/${offer.id}`}
+                        className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-ink hover:bg-forest text-paper font-semibold text-sm rounded-xl transition-colors shadow-xs"
+                      >
+                        Konfiguruj ratę i zapytaj
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <nav
+                data-testid="pagination-nav"
+                aria-label="Nawigacja po stronach katalogu"
+                className="flex items-center justify-center gap-2 pt-8 pb-4"
+              >
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  aria-label="Poprzednia strona"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-line bg-white text-ink hover:bg-paper disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-xs"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Poprzednia</span>
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => handlePageChange(pageNumber)}
+                      aria-label={`Strona ${pageNumber}`}
+                      aria-current={pageNumber === currentPage ? 'page' : undefined}
+                      className={`w-9 h-9 text-xs font-semibold rounded-xl transition-colors ${
+                        pageNumber === currentPage
+                          ? 'bg-ink text-paper shadow-xs font-bold'
+                          : 'bg-white border border-line text-ink hover:bg-paper'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  aria-label="Następna strona"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-line bg-white text-ink hover:bg-paper disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-xs"
+                >
+                  <span>Następna</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </nav>
+            )}
+          </>
         )}
       </main>
       <PortalFooter />

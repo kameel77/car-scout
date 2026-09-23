@@ -195,7 +195,54 @@ describe('Employee Rental Catalog Isolated Unit Tests', () => {
     expect(offer.rental.rateSource).toBe('PUBLIC_MATRIX');
     expect(offer.rental.rentalCompanies).toEqual([]);
     expect(offer.rental.isB2b).toBe(false);
+    expect(json.totalCount).toBe(1);
+    expect(json.availableMakes).toEqual(['Audi']);
     expect(json.nextCursor).toBeNull();
+  });
+
+  it('Normalizes vehicle make in list and returns deduplicated availableMakes', async () => {
+    fakePrisma.rentalVehicle.findMany = async () => [
+      {
+        id: 'rv-1',
+        make: 'hyundai',
+        model: 'Tucson',
+        productionYear: 2025,
+        rentalAssignments: [
+          {
+            id: 'asg-1',
+            rentalCompany: { name: 'Ayvens' },
+            matrixEntries: [{ monthlyRateNet: 1000, monthlyRateGross: 1230, offerType: 'all' }]
+          }
+        ]
+      },
+      {
+        id: 'rv-2',
+        make: 'HYUNDAI',
+        model: 'i30',
+        productionYear: 2025,
+        rentalAssignments: [
+          {
+            id: 'asg-2',
+            rentalCompany: { name: 'Ayvens' },
+            matrixEntries: [{ monthlyRateNet: 900, monthlyRateGross: 1107, offerType: 'all' }]
+          }
+        ]
+      }
+    ];
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/employee/rental-offers',
+      headers: { cookie: validSessionCookie }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const json = JSON.parse(res.body);
+    expect(json.offers).toHaveLength(2);
+    expect(json.offers[0].vehicle.make).toBe('Hyundai');
+    expect(json.offers[1].vehicle.make).toBe('Hyundai');
+    expect(json.totalCount).toBe(2);
+    expect(json.availableMakes).toEqual(['Hyundai']);
   });
 
   it('Returns nextCursor when vehicles count exceeds limit', async () => {
@@ -395,6 +442,42 @@ describe('Employee Rental Catalog Isolated Unit Tests', () => {
       expect(json.isB2b).toBe(true);
       expect(json.rentalOptions[0].isB2b).toBe(true);
       expect(json.rentalOptions[0].rentalCompanyName).toBeUndefined();
+    });
+
+    it('Normalizes vehicle make in GET offer by id', async () => {
+      fakePrisma.rentalVehicle.findFirst = async () => ({
+        id: 'rv-1',
+        make: 'hyundai',
+        model: 'Tucson',
+        productionYear: 2025,
+        rentalAssignments: [
+          {
+            id: 'asg-1',
+            rentalCompanyId: 'rc-1',
+            rentalCompany: { name: 'Ayvens' },
+            matrixEntries: [
+              {
+                contractMonths: 36,
+                annualMileageKm: 15000,
+                initialPaymentPct: 10,
+                monthlyRateNet: 1000,
+                monthlyRateGross: 1230,
+                offerType: 'all'
+              }
+            ]
+          }
+        ]
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/employee/rental-offers/rental-rv-1',
+        headers: { cookie: validSessionCookie }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const json = JSON.parse(res.body);
+      expect(json.vehicle.make).toBe('Hyundai');
     });
   });
 });

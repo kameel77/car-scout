@@ -44,7 +44,10 @@ const BRAND_CANONICAL_MAP: Record<string, string> = {
     'chery': 'Chery',
     'baic': 'Baic',
     'jac': 'JAC',
+    'byd': 'BYD',
+    'dacia': 'Dacia',
 };
+
 
 /**
  * Normalizes a brand name.

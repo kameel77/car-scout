@@ -89,6 +89,7 @@ const mockRentalOffersList: rentalApi.EmployeeRentalOfferSummary[] = [
 describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    window.scrollTo = vi.fn();
   });
 
   it('renders employee info and navigation tabs in header', async () => {
@@ -160,7 +161,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
-      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+      expect(screen.getByText('Škoda Octavia')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Tylko B2B')).toBeInTheDocument();
@@ -243,7 +244,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
-      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+      expect(screen.getByText('Škoda Octavia')).toBeInTheDocument();
     });
 
     // Toyota Corolla has isB2b: true -> has "Tylko B2B" badge
@@ -285,19 +286,19 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
-      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+      expect(screen.getByText('Škoda Octavia')).toBeInTheDocument();
     });
 
     // Toyota Corolla minMonthlyRateGross = 1350 (< 1500)
-    // Skoda Octavia minMonthlyRateGross = 2200 (1500 - 2500)
+    // Škoda Octavia minMonthlyRateGross = 2200 (1500 - 2500)
     fireEvent.click(screen.getByRole('button', { name: '< 1500' }));
 
     expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
-    expect(screen.queryByText('Skoda Octavia')).not.toBeInTheDocument();
+    expect(screen.queryByText('Škoda Octavia')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '1500 - 2500' }));
     expect(screen.queryByText('Toyota Corolla')).not.toBeInTheDocument();
-    expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+    expect(screen.getByText('Škoda Octavia')).toBeInTheDocument();
   });
 
   it('renders search input inside filters card and filters offers by search term', async () => {
@@ -319,7 +320,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
-      expect(screen.getByText('Skoda Octavia')).toBeInTheDocument();
+      expect(screen.getByText('Škoda Octavia')).toBeInTheDocument();
     });
 
     const filtersCard = screen.getByTestId('filters-card');
@@ -332,7 +333,210 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
     fireEvent.change(searchInput, { target: { value: 'Corolla' } });
 
     expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
-    expect(screen.queryByText('Skoda Octavia')).not.toBeInTheDocument();
+    expect(screen.queryByText('Škoda Octavia')).not.toBeInTheDocument();
+  });
+
+  it('normalizes brands and deduplicates casing variants in brand select filter', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: [
+        {
+          ...mockRentalOffersList[0],
+          id: 'rental-hyundai-1',
+          vehicle: { ...mockRentalOffersList[0].vehicle, id: 'v-h1', make: 'HYUNDAI', model: 'Tucson' },
+        },
+        {
+          ...mockRentalOffersList[0],
+          id: 'rental-hyundai-2',
+          vehicle: { ...mockRentalOffersList[0].vehicle, id: 'v-h2', make: 'Hyundai', model: 'i30' },
+        },
+        {
+          ...mockRentalOffersList[0],
+          id: 'rental-merc-1',
+          vehicle: { ...mockRentalOffersList[0].vehicle, id: 'v-m1', make: 'MERCEDES-BENZ', model: 'CLA' },
+        },
+        {
+          ...mockRentalOffersList[0],
+          id: 'rental-merc-2',
+          vehicle: { ...mockRentalOffersList[0].vehicle, id: 'v-m2', make: 'Mercedes-Benz', model: 'GLA' },
+        },
+      ],
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Hyundai Tucson')).toBeInTheDocument();
+    });
+
+    const makeSelect = screen.getByLabelText(/Marka/i) as HTMLSelectElement;
+    const options = Array.from(makeSelect.options).map((o) => o.text);
+
+    // Both HYUNDAI/Hyundai and MERCEDES-BENZ/Mercedes-Benz must be normalized to single canonical entries
+    const hyundaiOptions = options.filter((t) => t.toLowerCase() === 'hyundai');
+    expect(hyundaiOptions).toEqual(['Hyundai']);
+
+    const mercedesOptions = options.filter((t) => t.toLowerCase().includes('mercedes'));
+    expect(mercedesOptions).toEqual(['Mercedes-Benz']);
+  });
+
+  it('includes all brands from backend availableMakes in filter dropdown even if not on first page', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: [mockRentalOffersList[0]], // Only Toyota
+      availableMakes: ['BMW', 'Škoda', 'Toyota', 'Volkswagen'],
+      totalCount: 4,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Corolla')).toBeInTheDocument();
+    });
+
+    const makeSelect = screen.getByLabelText(/Marka/i) as HTMLSelectElement;
+    const options = Array.from(makeSelect.options).map((o) => o.text);
+
+    // Brands from availableMakes must appear in select dropdown
+    expect(options).toContain('BMW');
+    expect(options).toContain('Škoda');
+    expect(options).toContain('Volkswagen');
+    expect(options).toContain('Toyota');
+  });
+
+  it('paginates offers with 12 items per page and navigates between pages', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+
+    // Create 15 distinct offers (12 for page 1, 3 for page 2)
+    const fifteenOffers: rentalApi.EmployeeRentalOfferSummary[] = Array.from({ length: 15 }, (_, i) => ({
+      ...mockRentalOffersList[0],
+      id: `rental-page-test-${i + 1}`,
+      vehicle: {
+        ...mockRentalOffersList[0].vehicle,
+        id: `veh-p-${i + 1}`,
+        model: `Model ${i + 1}`,
+      },
+    }));
+
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: fifteenOffers,
+      totalCount: 15,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    // Page 1 should show Model 1 to Model 12, but NOT Model 13
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Model 1')).toBeInTheDocument();
+      expect(screen.getByText('Toyota Model 12')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Toyota Model 13')).not.toBeInTheDocument();
+
+    const paginationNav = screen.getByTestId('pagination-nav');
+    expect(paginationNav).toBeInTheDocument();
+
+    const prevBtn = screen.getByRole('button', { name: /Poprzednia strona/i });
+    const nextBtn = screen.getByRole('button', { name: /Następna strona/i });
+
+    // On page 1, prev is disabled, next is enabled
+    expect(prevBtn).toBeDisabled();
+    expect(nextBtn).toBeEnabled();
+
+    // Navigate to page 2
+    fireEvent.click(nextBtn);
+
+    // Page 2 should now show Model 13 to Model 15, but NOT Model 1
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Model 13')).toBeInTheDocument();
+      expect(screen.getByText('Toyota Model 15')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Toyota Model 1')).not.toBeInTheDocument();
+    expect(prevBtn).toBeEnabled();
+    expect(nextBtn).toBeDisabled();
+
+    // Verify window.scrollTo was called
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
+  it('resets pagination to page 1 when any filter is changed', async () => {
+    vi.spyOn(authApi, 'fetchCurrentEmployee').mockResolvedValue(mockAuthenticatedEmployee);
+
+    const fifteenOffers: rentalApi.EmployeeRentalOfferSummary[] = Array.from({ length: 15 }, (_, i) => ({
+      ...mockRentalOffersList[0],
+      id: `rental-reset-test-${i + 1}`,
+      vehicle: {
+        ...mockRentalOffersList[0].vehicle,
+        id: `veh-r-${i + 1}`,
+        model: `Model ${i + 1}`,
+      },
+    }));
+
+    vi.spyOn(rentalApi, 'fetchEmployeeRentalOffers').mockResolvedValue({
+      offers: fifteenOffers,
+      totalCount: 15,
+      nextCursor: null,
+    });
+
+    render(
+      <BrandProvider initialConfig={mockConfig}>
+        <AuthProvider>
+          <MemoryRouter>
+            <RentalCatalogPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </BrandProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Model 1')).toBeInTheDocument();
+    });
+
+    // Go to page 2
+    const nextBtn = screen.getByRole('button', { name: /Następna strona/i });
+    fireEvent.click(nextBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Model 13')).toBeInTheDocument();
+    });
+
+    // Change search term to 'Toyota' (matches all 15 offers)
+    const filtersCard = screen.getByTestId('filters-card');
+    const searchInput = within(filtersCard).getByPlaceholderText(/Szukaj po marce lub modelu/i);
+    fireEvent.change(searchInput, { target: { value: 'Toyota' } });
+
+    // Should reset to page 1, showing Model 1 and disabling previous page button
+    await waitFor(() => {
+      expect(screen.getByText('Toyota Model 1')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: /Poprzednia strona/i })).toBeDisabled();
+    expect(screen.queryByText('Toyota Model 13')).not.toBeInTheDocument();
   });
 });
 
