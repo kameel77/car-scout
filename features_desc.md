@@ -1463,3 +1463,19 @@ Wdrożono ujednolicenie systemów stylów, typografii, grubości fontów, margin
   - Tytuły kart `<h3>` korzystają ze spójnego rozmiaru 22px i wagi 600.
 - **4. Eliminacja Podkreślenia w Przyciskach Menu Nawigacyjnego**:
   - Zabezpieczono selektor `.navigation > a:hover` regułą `:not(.nav-company):not(.nav-login)` oraz dodano `text-decoration: none !important;` na `.nav-company` we wszystkich stanach (`hover`, `focus`), definitywnie usuwając niepożądane podkreślenie wewnątrz pastylki „Dla pracownika →”.
+
+### 93. Paginacja, Filtrowanie Pełnej Bazy i Normalizacja Marek w Katalogu Najmu Benefivo
+
+- **1. Paginacja Ofert Najmu (`RentalCatalogPage.tsx`)**:
+  - Wprowadzono estetyczną i responsywną paginację z rozmiarem strony `PAGE_SIZE = 12`.
+  - Pasek paginacji zawiera przyciski „Poprzednia”, numery stron z oznaczeniem `aria-current="page"` oraz „Następna”.
+  - Pasek jest ukrywany, gdy liczba pasujących ofert mieści się na jednej stronie (`totalPages <= 1`).
+  - Przejście do innej strony automatycznie przewija widok do góry katalogu (`window.scrollTo({ top: 0, behavior: 'smooth' })`).
+  - Zmiana dowolnego filtra (wyszukiwarka, marka, nadwozie, skrzynia, paliwo, raty) automatycznie resetuje kursor do pierwszej strony.
+- **2. Filtrowanie Pełnej Bazy i Dostępność Wszystkich Marek**:
+  - Endpoint `GET /api/employee/rental-offers` umożliwia pobranie do 100 ofert (`max(100)` w schemacie Zod) i zwraca metadane `availableMakes` oraz `totalCount`.
+  - Portal Benefivo pobiera pełną pulę aut (`limit: 100`), dzięki czemu w filtrze marek dostępne są wszystkie marki ze wszystkich stron katalogu, a nie tylko z pierwszych 24 pozycji.
+- **3. Normalizacja Nazw Marek (`normalizeBrand`)**:
+  - Wdrożono bibliotekę normalizacji marek (`apps/employee-portal/src/utils/brand.ts` oraz `backend/src/services/brand-normalization.service.ts`).
+  - Wyeliminowano duplikaty wynikające z wielkości liter w bazie danych (np. `HYUNDAI` i `Hyundai` -> `Hyundai`, `MERCEDES-BENZ` i `mercedes benz` -> `Mercedes-Benz`, `SKODA` -> `Škoda`).
+  - Nazwy marek są spójnie znormalizowane w selektorze filtrów, w nagłówkach kart pojazdów oraz w widokach szczegółowych `/najem/:id`.

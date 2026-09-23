@@ -36,6 +36,8 @@ describe('Employee Portal Rental API Client', () => {
         },
       ],
       nextCursor: 'next_cuid',
+      totalCount: 1,
+      availableMakes: ['Toyota'],
     };
 
     const fakeFetch = vi.fn().mockResolvedValue({
