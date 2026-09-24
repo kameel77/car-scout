@@ -14,6 +14,12 @@ Każda nowa funkcjonalność lub zmiana zachowania istniejącej powinna mieć tu
 - Frontend wykorzystuje tę samą odpowiedź jednokrotnie wyłącznie dla identycznego originu, endpointu i parametrów. Zapytania autoryzowane nie korzystają z publicznego prefetchu; błąd prefetchu uruchamia zwykłe pobieranie.
 - URL z parametrami pozostaje przy standardowym pobieraniu. Sprawdzenie w przeglądarce chroni również wejścia z filtrami obsługiwane przez cache HTML.
 
+## Spójność SSR i API katalogów oraz reguły robots.txt
+- **Reguły robots.txt**: W `robots.txt` dla wszystkich botów wyszukiwarek (Googlebot, Bingbot, YandexBot, domyślna sekcja) zastąpiono błędną ścieżkę `/api/rental-public` poprawną regułą `Allow: /api/rental/vehicles`. Zgodnie z RFC 9309 najdłuższy pasujący prefiks wygrywa nad `Disallow: /api/`, umożliwiając botom renderującym pobranie ofert najmu.
+- **Odporność detalu pojazdu najmu**: Komponent `RentalDetailPage` oraz klient `rentalPublicApi.getVehicle` rozróżniają błąd 404 (prawdziwy brak pojazdu) od błędów sieciowych lub statusów innych niż 404 (np. 403, 500, network error). W przypadku problemu z siecią lub zablokowania żądania użytkownik i bot widzą komunikat o błędzie połączenia zamiast fałszywego komunikatu "Pojazd nie został znaleziony" (zapobiega to problemom soft-404).
+- **Spójność katalogu aut z API**: Warunki widoczności ofert publicznych (`isArchived: false`, `pricePln > 0`, `displayMode` w wariantach publicznych) zostały wydzielone do wspólnej usługi `listing-visibility.service.ts`. Zarówno endpoint `/api/listings`, jak i moduł SSR (`render.ts`) stosują identyczne warunki oraz deterministyczny tie-breaker `{ id: 'asc' }` przy sortowaniu po cenie/roczniku, co eliminuje przeskakiwanie kart między SSR a montażem Reacta.
+- **Katalog wynajmu długoterminowego SSR i LCP**: Trasa `/wynajem-dlugoterminowy` w SSR generuje listę pierwszych 12 pojazdów korzystając z tej samej logiki co klient publiczny (`executeRentalVehiclesQuery` z kalkulacją rat i cache w Redis pod kluczem `rental:vehicles:list:...`). Pierwsza karta w SSR otrzymuje nagłówek preload obrazu LCP (`<link rel="preload" as="image" fetchpriority="high">` z wariantem `-lg.webp`), skracając czas renderowania elementu LCP na telefonach i desktopie.
+
 ## Etapowe wyświetlanie katalogu na telefonach
 - Na ekranach poniżej 640 px katalogi `/nowe`, `/uzywane`, `/samochody` i `/wynajem-dlugoterminowy` montują najpierw dwie karty. Następne pojawiają się w partiach po dwie, gdy użytkownik zbliża się do końca widocznej części listy.
 - Przycisk „Pokaż wszystkie oferty na tej stronie” udostępnia pełną stronę wyników bez przewijania i działa z klawiatury. Ma tłumaczenia PL/EN/DE.
@@ -1479,3 +1485,15 @@ Wdrożono ujednolicenie systemów stylów, typografii, grubości fontów, margin
   - Wdrożono bibliotekę normalizacji marek (`apps/employee-portal/src/utils/brand.ts` oraz `backend/src/services/brand-normalization.service.ts`).
   - Wyeliminowano duplikaty wynikające z wielkości liter w bazie danych (np. `HYUNDAI` i `Hyundai` -> `Hyundai`, `MERCEDES-BENZ` i `mercedes benz` -> `Mercedes-Benz`, `SKODA` -> `Škoda`).
   - Nazwy marek są spójnie znormalizowane w selektorze filtrów, w nagłówkach kart pojazdów oraz w widokach szczegółowych `/najem/:id`.
+
+### 94. Optymalizacja Skalowania Viewportu i Zapobieganie Przybliżaniu na Mobile (iOS Safari)
+
+- **1. Zapobieganie Automatycznemu Zoomowi (`index.css`, `RateRangeFilter.tsx`, `RentalCatalogPage.tsx`, `CatalogPage.tsx`)**:
+  - W urządzeniach mobilnych (iOS Safari) pola formularzy o rozmiarze czcionki mniejszym niż 16px powodują wymuszone przybliżenie ekranu przez przeglądarkę.
+  - Wdrożono globalną regułę CSS na ekranach `< 768px` ustawiającą `font-size: 16px !important` dla kontrolek `input`, `select` i `textarea`.
+  - W komponentach filtrów (rata od - do w `RateRangeFilter`, wyszukiwarka oraz listy rozwijane filtrów) zaktualizowano klasy Tailwind na `text-base sm:text-xs`, zapewniając natywny rozmiar 16px na urządzeniach mobilnych przy zachowaniu kompaktowego rozmiaru 12px na desktopie.
+- **2. Automatyczne Przywracanie Skali 100% po Utracie Fokusu (`resetViewportScale`, `viewport.ts`)**:
+  - Zaimplementowano moduł `apps/employee-portal/src/utils/viewport.ts` z funkcją `resetViewportScale()`.
+  - Po opuszczeniu aktywnego pola (zdarzenie `blur` / przejście ze stanu aktywnego w nieaktywny), mechanizm natychmiastowo aplikuje `maximum-scale=1.0` do znacznika `<meta name="viewport">`, wymuszając na silniku przeglądarki wyzerowanie powiększenia i wyrównanie szerokości do 100%.
+  - Po 300ms przywracana jest standardowa konfiguracja skalowalnego viewportu, co zachowuje pełną dostępność i możliwość ręcznego gestu pinch-to-zoom dla użytkownika.
+  - Mechanizm zintegrowano bezpośrednio w filtrach kwotowych `onBlur` oraz globalnie w komponencie głównym `App.tsx` w fazie capture.

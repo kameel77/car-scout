@@ -16,3 +16,12 @@
     outline-offset: 4px;
   }
 }
+
+/* Prevent iOS Safari from auto-zooming on focus by enforcing minimum 16px font-size on mobile */
+@media screen and (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

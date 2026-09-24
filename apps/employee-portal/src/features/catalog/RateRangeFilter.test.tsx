@@ -44,4 +44,16 @@ describe('RateRangeFilter Component', () => {
     fireEvent.change(screen.getByPlaceholderText('do'), { target: { value: '3000' } });
     expect(onChange).toHaveBeenCalledWith(1200, 3000);
   });
+
+  it('calls onBlur when inputs lose focus', () => {
+    const onChange = vi.fn();
+    const onBlur = vi.fn();
+    render(<RateRangeFilter minRate="" maxRate="" onChange={onChange} onBlur={onBlur} />);
+
+    fireEvent.blur(screen.getByPlaceholderText('od'));
+    expect(onBlur).toHaveBeenCalledTimes(1);
+
+    fireEvent.blur(screen.getByPlaceholderText('do'));
+    expect(onBlur).toHaveBeenCalledTimes(2);
+  });
 });

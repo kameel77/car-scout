@@ -158,3 +158,15 @@ export function extractListingIdFromSlug(slug: string): string | null {
 
     return null;
 }
+
+/**
+ * Normalizes a rental vehicle image URL.
+ * Handles legacy data where only the filename was stored (without path prefix).
+ */
+export function normalizeRentalImageUrl(url: string | null | undefined, vehicleId?: string): string | null {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('/')) return url;
+    if (vehicleId) return `/uploads/rental-images/${vehicleId}/${url}`;
+    return null;
+}

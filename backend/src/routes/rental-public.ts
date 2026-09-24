@@ -28,14 +28,22 @@ export function selectBestMatrixEntry<T extends { id?: string; offerType?: strin
     })[0];
 }
 
-export async function rentalPublicRoutes(fastify: FastifyInstance) {
-    // Public: List active rental vehicles with minimum rates
-    fastify.get('/api/rental/vehicles', async (request, reply) => {
-        const hasAuthHeader = Boolean(request.headers.authorization);
-        const isAuthenticated = hasAuthHeader && await tryAuthenticate(fastify, request);
-
-        const runQuery = async (auth: boolean) => {
-            const parsed = parseRentalVehiclesQuery(request.query as Record<string, any>);
+export async function executeRentalVehiclesQuery(
+    fastify: FastifyInstance,
+    rawQuery: Record<string, any>,
+    auth = false
+): Promise<{
+    vehicles: any[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+    filters: any;
+    facets: any;
+}> {
+    const parsed = parseRentalVehiclesQuery(rawQuery);
 
             // priceBasis controls whether priceFrom/priceTo are compared against monthlyRateNet or monthlyRateGross.
             // Default gross preserves prior behaviour for callers that omit it.
@@ -239,6 +247,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             // 1. Fetch minimal data for all matching vehicles
             const allVehiclesMinimal = await fastify.prisma.rentalVehicle.findMany({
                 where,
+                orderBy: [{ id: 'asc' }],
                 select: {
                     id: true,
                     condition: true,
@@ -320,11 +329,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             // 4. Sort
             if (isRateSort) {
                 mapped.sort((a, b) => {
-                    if (a.minRate === null && b.minRate === null) return 0;
+                    if (a.minRate === null && b.minRate === null) return a.id.localeCompare(b.id);
                     if (a.minRate === null) return 1;
                     if (b.minRate === null) return -1;
                     const diff = a.minRate - b.minRate;
-                    return parsed.sortOrder === 'asc' ? diff : -diff;
+                    if (diff !== 0) return parsed.sortOrder === 'asc' ? diff : -diff;
+                    return a.id.localeCompare(b.id);
                 });
             } else {
                 mapped.sort((a, b) => {
@@ -334,7 +344,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     if (valB === null || valB === undefined) return parsed.sortOrder === 'asc' ? -1 : 1;
                     if (valA < valB) return parsed.sortOrder === 'asc' ? -1 : 1;
                     if (valA > valB) return parsed.sortOrder === 'asc' ? 1 : -1;
-                    return 0;
+                    return a.id.localeCompare(b.id);
                 });
             }
 
@@ -357,7 +367,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                     where,
                     skip,
                     take: limitNum,
-                    orderBy,
+                    orderBy: [orderBy, { id: 'asc' }],
                     select: fullSelect
                 }),
                 fastify.prisma.rentalVehicle.count({ where })
@@ -433,17 +443,25 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             filters: filterOptions,
             facets
         };
-    };
+}
 
-    if (isAuthenticated) {
-        const data = await runQuery(true);
-        return reply.header('Cache-Control', 'private, no-store').send(data);
-    }
+export async function rentalPublicRoutes(fastify: FastifyInstance) {
+    // Public: List active rental vehicles with minimum rates
+    fastify.get('/api/rental/vehicles', async (request, reply) => {
+        const hasAuthHeader = Boolean(request.headers.authorization);
+        const isAuthenticated = hasAuthHeader && await tryAuthenticate(fastify, request);
 
-    const cacheKey = buildRentalVehiclesQueryCacheKey(request.query as Record<string, any>);
-    const data = await getOrSetJson(cacheKey, 180, () => runQuery(false));
+        if (isAuthenticated) {
+            const data = await executeRentalVehiclesQuery(fastify, request.query as Record<string, any>, true);
+            return reply.header('Cache-Control', 'private, no-store').send(data);
+        }
 
-    return reply
+        const cacheKey = buildRentalVehiclesQueryCacheKey(request.query as Record<string, any>);
+        const data = await getOrSetJson(cacheKey, 180, () =>
+            executeRentalVehiclesQuery(fastify, request.query as Record<string, any>, false)
+        );
+
+        return reply
             .header('Cache-Control', 'public, max-age=0, s-maxage=180')
             .header('Vary', 'Origin, Accept-Encoding')
             .send(data);
