@@ -1404,7 +1404,7 @@ ${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
 
     // Preload kart tylko na stronach z listą nad foldem — na /leasing i /kredyt najpierw
     // jest artykuł filarowy, więc zdjęcia kart nie są elementem LCP
-    const LIST_FIRST_PATHS = new Set(['/samochody', '/search', '/nowe', '/uzywane']);
+    const LIST_FIRST_PATHS = new Set(['/samochody', '/search', '/nowe', '/uzywane', '/wynajem-dlugoterminowy']);
 
     return {
         title,
