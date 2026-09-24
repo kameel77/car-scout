@@ -5,6 +5,7 @@ import {
     buildModelMeta,
     buildRentalMeta,
     buildStaticMeta,
+    catalogSkeletonHtml,
     defaultMeta,
     injectHead,
     resolveBrandCtx,
@@ -40,7 +41,7 @@ const LISTING = {
     equipmentOther: [],
 };
 
-const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"></div></body></html>`;
+const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" data-rh="true" /><meta property="og:title" content="OLD" data-rh="true" /><meta property="og:description" content="OLDD" data-rh="true" /><meta property="og:url" content="https://old.example" data-rh="true" /><meta name="twitter:title" content="OLD" data-rh="true" /><meta name="twitter:description" content="OLDD" data-rh="true" /></head><body><div id="root"></div></body></html>`;
 
 describe('resolveBrandCtx', () => {
     it('resolves motolia brand from env', () => {
@@ -258,7 +259,7 @@ describe('buildRentalMeta', () => {
         expect(m.bodyHtml).toContain('<h3>Czy Toyota Corolla 2024 jest dostępny od ręki?</h3>');
     });
 
-    it('full Vehicle + LeaseOut offer + BreadcrumbList + FAQPage JSON-LD, rate in body', () => {
+    it('full Vehicle + BreadcrumbList + FAQPage JSON-LD, rate in body, no offers block', () => {
         const faq = [{ questionPl: 'Co zawiera rata?', answerPl: 'Finansowanie i **ubezpieczenie**.' }];
         const m = buildRentalMeta(
             {
@@ -288,10 +289,10 @@ describe('buildRentalMeta', () => {
         expect(ld[0].image).toBe('https://dev.motolia.pl/uploads/rental/corolla.webp');
         expect(ld[0].itemCondition).toBe('https://schema.org/NewCondition');
         expect(ld[0].vehicleTransmission).toBe('automatyczna');
-        expect(ld[0].offers.businessFunction).toBe('http://purl.org/goodrelations/v1#LeaseOut');
-        expect(ld[0].offers.priceSpecification.price).toBe(1900);
-        expect(ld[0].offers.priceSpecification.minPrice).toBe(1900);
-        expect(ld[0].offers.seller.name).toBe('Motolia');
+        // Google Merchant/Rich Results nie obsługuje miesięcznej raty jako Offer.priceSpecification
+        // (referenceQuantity unitCode MON → krytyczny błąd) — blok offers jest celowo pominięty.
+        expect(ld[0].offers).toBeUndefined();
+        expect(ld[0].description).toBe(m.description);
         expect(ld[1]['@type']).toBe('BreadcrumbList');
         expect(ld[2]['@type']).toBe('FAQPage');
         // Wygenerowane pytania (z danych pojazdu) idą przed FAQ z CMS — ta sama kolejność co w widocznym HTML
@@ -304,7 +305,7 @@ describe('buildRentalMeta', () => {
         expect(m.ogImage).toBe('https://dev.motolia.pl/uploads/rental/corolla.webp');
     });
 
-    it('omits offers entirely when monthlyRateFrom is not set', () => {
+    it('never emits offers, with or without monthlyRateFrom', () => {
         const m = buildRentalMeta(
             { make: 'Toyota', model: 'Corolla', version: null, productionYear: 2024 },
             'toyota-corolla-x1',
@@ -313,6 +314,7 @@ describe('buildRentalMeta', () => {
         const ld = m.jsonLd as any[];
         expect(ld[0]['@type']).toBe('Vehicle');
         expect(ld[0].offers).toBeUndefined();
+        expect(ld[0].description).toBe(m.description);
     });
 
     it('two vehicles with different bodyType/fuelType produce substantially different bodyHtml (anti thin-content)', () => {
@@ -516,6 +518,32 @@ describe('buildStaticMeta', () => {
         expect(m.preloadImages).toEqual([
             { href: 'https://dev.motolia.pl/motolia-placeholder.webp' },
         ]);
+    });
+
+    it('skeletonFirstImage: carries the same preload variant as preloadImages[0] plus alt text', () => {
+        const listings = [
+            {
+                id: 'first', make: 'Ford', model: 'Puma', version: null,
+                productionYear: 2025, pricePln: 100000, slug: 'ford-puma-first',
+                primaryImageUrl: '/uploads/listings/first.webp',
+            },
+        ];
+        const m = buildStaticMeta('/nowe', ctx, listings)!;
+        expect(m.skeletonFirstImage).toBeDefined();
+        expect(m.skeletonFirstImage!.preload).toEqual(m.preloadImages![0]);
+        expect(m.skeletonFirstImage!.alt).toBe('Ford Puma');
+    });
+
+    it('skeletonFirstImage: undefined when the first card has no real image (placeholder)', () => {
+        const listings = [
+            {
+                id: 'first', make: 'Test', model: 'No image', version: null,
+                productionYear: 2025, pricePln: 100000, slug: 'test-no-image',
+                primaryImageUrl: null,
+            },
+        ];
+        const m = buildStaticMeta('/uzywane', ctx, listings)!;
+        expect(m.skeletonFirstImage).toBeUndefined();
     });
 
     it('without article: route.description stays the intro <p> right after <h1> (unchanged behavior)', () => {
@@ -926,10 +954,25 @@ describe('injectHead', () => {
         const html = injectHead(TEMPLATE, m);
         expect(html).not.toContain('<title>OLD</title>');
         expect(html).toContain('Ford Puma');
-        expect(html).toContain('<link rel="canonical" href="https://dev.motolia.pl/oferta/ford-puma-abc123" />');
+        expect(html).toContain('<link rel="canonical" href="https://dev.motolia.pl/oferta/ford-puma-abc123" data-rh="true" />');
         expect(html).toContain('application/ld+json');
         expect(html).toContain('og:url" content="https://dev.motolia.pl/oferta/ford-puma-abc123"');
         expect(html).not.toContain('noindex');
+    });
+
+    it('keeps data-rh on client-managed tags so react-helmet-async replaces them instead of duplicating', () => {
+        // react-helmet-async (updateTags w node_modules/react-helmet-async/lib/index.js ~L498)
+        // po hydracji podmienia wyłącznie <meta>/<link> oznaczone atrybutem data-rh="true" —
+        // bez niego SSR-owe tagi są dla niego niewidoczne i klient dokleja drugi komplet.
+        const m = buildListingMeta(LISTING, 'ford-puma-abc123', 'oferta', ctx);
+        const html = injectHead(TEMPLATE, m);
+        expect(html).toMatch(/<meta name="description" content="[^"]*" data-rh="true"/);
+        expect(html).toMatch(/<meta property="og:title" content="[^"]*" data-rh="true"/);
+        expect(html).toMatch(/<meta property="og:description" content="[^"]*" data-rh="true"/);
+        expect(html).toMatch(/<meta property="og:url" content="[^"]*" data-rh="true"/);
+        expect(html).toMatch(/<meta name="twitter:title" content="[^"]*" data-rh="true"/);
+        expect(html).toMatch(/<meta name="twitter:description" content="[^"]*" data-rh="true"/);
+        expect(html).toContain('<link rel="canonical" href="https://dev.motolia.pl/oferta/ford-puma-abc123" data-rh="true" />');
     });
 
     it('puts the LCP image preload before font and API preloads', () => {
@@ -990,5 +1033,35 @@ describe('injectHead', () => {
         const m = buildListingMeta({ ...LISTING, version: '</script><b>' }, 's-abc123', 'oferta', ctx);
         const html = injectHead(TEMPLATE, m);
         expect(html).toContain('\\u003c/script>');
+    });
+});
+
+describe('catalogSkeletonHtml', () => {
+    it('without firstImage: all 6 cards use the shimmer placeholder, only the header logo <img>', () => {
+        const html = catalogSkeletonHtml(3);
+        expect((html.match(/<img/g) || []).length).toBe(1); // tylko logo w headerze
+        expect((html.match(/listing-card flex flex-col/g) || []).length).toBe(6);
+    });
+
+    it('with firstImage: first card gets a real <img> with the preload srcset, same aspect box', () => {
+        const html = catalogSkeletonHtml(3, {
+            preload: {
+                href: 'https://dev.motolia.pl/uploads/listings/first-lg.webp',
+                imagesrcset: 'https://dev.motolia.pl/uploads/listings/first-thumb.webp 600w, https://dev.motolia.pl/uploads/listings/first-md.webp 900w, https://dev.motolia.pl/uploads/listings/first-lg.webp 1400w',
+                imagesizes: '(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw',
+                type: 'image/webp',
+            },
+            alt: 'Ford Puma',
+        });
+        expect(html).toContain('<div class="aspect-[16/10] relative overflow-hidden"><img src="https://dev.motolia.pl/uploads/listings/first-lg.webp"');
+        expect(html).toContain('srcset="https://dev.motolia.pl/uploads/listings/first-thumb.webp 600w, https://dev.motolia.pl/uploads/listings/first-md.webp 900w, https://dev.motolia.pl/uploads/listings/first-lg.webp 1400w"');
+        expect(html).toContain('sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"');
+        expect(html).toContain('fetchpriority="high"');
+        expect(html).toContain('decoding="async"');
+        expect(html).toContain('alt="Ford Puma"');
+        expect(html).toContain('class="h-full w-full object-cover"');
+        // Nadal 6 kart, tylko pierwsza dostaje realny obrazek zamiast shimmeru
+        expect((html.match(/listing-card flex flex-col/g) || []).length).toBe(6);
+        expect((html.match(/<img/g) || []).length).toBe(2); // logo w headerze + pierwsza karta
     });
 });
