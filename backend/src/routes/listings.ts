@@ -15,6 +15,7 @@ import { resolveOfferLifecycle } from '../services/offer-lifecycle.service.js';
 import { invalidateOfferCache, LISTING_AGGREGATE_URLS } from '../services/cache-invalidation.service.js';
 import { requirePermission } from '../middleware/permissions.js';
 import { getOrSetJson, getJsonFromCache, setJsonInCache, buildListingsQueryCacheKey, buildListingSlugCacheKey, parseListingsQuery } from '../services/api-cache.js';
+import { getPublicListingWhere, PUBLIC_LISTING_DISPLAY_MODE_OR } from '../services/listing-visibility.service.js';
 
 /**
  * Pola zwracane przez publiczny katalog (/api/listings) dla niezalogowanych.
@@ -426,20 +427,21 @@ export async function listingRoutes(fastify: FastifyInstance) {
             const page = parsed.page;
             const perPage = parsed.perPage;
 
-            const orderBy: any = {};
+            const orderBy: any[] = [];
             switch (parsed.sortBy) {
                 case 'cheapest':
-                case 'price_asc': orderBy[priceField] = 'asc'; break;
+                case 'price_asc': orderBy.push({ [priceField]: 'asc' }); break;
                 case 'expensive':
-                case 'price_desc': orderBy[priceField] = 'desc'; break;
-                case 'year_asc': orderBy.productionYear = 'asc'; break;
-                case 'year_desc': orderBy.productionYear = 'desc'; break;
+                case 'price_desc': orderBy.push({ [priceField]: 'desc' }); break;
+                case 'year_asc': orderBy.push({ productionYear: 'asc' }); break;
+                case 'year_desc': orderBy.push({ productionYear: 'desc' }); break;
                 case 'mileage':
-                case 'mileage_asc': orderBy.mileageKm = 'asc'; break;
-                case 'mileage_desc': orderBy.mileageKm = 'desc'; break;
-                case 'newest': orderBy.createdAt = 'desc'; break;
-                default: orderBy.productionYear = 'desc'; break; // Default to newest production year
+                case 'mileage_asc': orderBy.push({ mileageKm: 'asc' }); break;
+                case 'mileage_desc': orderBy.push({ mileageKm: 'desc' }); break;
+                case 'newest': orderBy.push({ createdAt: 'desc' }); break;
+                default: orderBy.push({ productionYear: 'desc' }); break; // Default to newest production year
             }
+            orderBy.push({ id: 'asc' });
 
             // Search logic (limit query length to 100 characters to prevent memory/CPU attacks)
             const searchTerms = parsed.q ? parsed.q.split(/\s+/).filter(Boolean) : [];
@@ -514,15 +516,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
                     : undefined,
                 dealer: cities ? { city: { in: cities, mode: 'insensitive' as const } } : undefined,
                 ...dealerFilter,
-                ...(parsed.includeArchived ? {} : { isArchived: false }),
-                ...(authenticated ? {} : { pricePln: { gt: 0 } }),
-                
-                // Display Mode logic
-                OR: [
-                    { specificationId: null },
-                    { specification: { displayMode: 'ALL' } },
-                    { AND: [{ specification: { displayMode: 'GROUPED' } }, { isRepresentative: true }] }
-                ]
+                ...(authenticated
+                    ? {
+                        ...(parsed.includeArchived ? {} : { isArchived: false }),
+                        OR: PUBLIC_LISTING_DISPLAY_MODE_OR
+                    }
+                    : getPublicListingWhere())
             };
 
             // For per-dimension facets, count vehicles grouped by that dimension IGNORING

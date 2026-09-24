@@ -1,10 +1,12 @@
 import React from 'react';
+import { resetViewportScale } from '../../utils/viewport';
 
 export interface RateRangeFilterProps {
   minRate: number | '';
   maxRate: number | '';
   onChange: (min: number | '', max: number | '') => void;
   label?: string;
+  onBlur?: () => void;
 }
 
 interface Preset {
@@ -24,7 +26,8 @@ export const RateRangeFilter: React.FC<RateRangeFilterProps> = ({
   minRate,
   maxRate,
   onChange,
-  label = 'Rata miesięczna (zł brutto)'
+  label = 'Rata miesięczna (zł brutto)',
+  onBlur
 }) => {
   const isPresetActive = (p: Preset) => {
     const pMin = p.min === '' ? '' : p.min;
@@ -32,6 +35,11 @@ export const RateRangeFilter: React.FC<RateRangeFilterProps> = ({
     const currentMin = minRate === '' ? '' : Number(minRate);
     const currentMax = maxRate === '' ? '' : Number(maxRate);
     return currentMin === pMin && currentMax === pMax;
+  };
+
+  const handleBlur = () => {
+    resetViewportScale();
+    onBlur?.();
   };
 
   const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,9 +79,10 @@ export const RateRangeFilter: React.FC<RateRangeFilterProps> = ({
             step={100}
             value={minRate}
             onChange={handleMinChange}
+            onBlur={handleBlur}
             placeholder="od"
             aria-label="Minimalna rata"
-            className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ink"
+            className="w-full text-base sm:text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ink"
           />
         </div>
         <span className="text-muted text-xs font-semibold">-</span>
@@ -84,9 +93,10 @@ export const RateRangeFilter: React.FC<RateRangeFilterProps> = ({
             step={100}
             value={maxRate}
             onChange={handleMaxChange}
+            onBlur={handleBlur}
             placeholder="do"
             aria-label="Maksymalna rata"
-            className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ink"
+            className="w-full text-base sm:text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ink"
           />
         </div>
       </div>

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { fetchEmployeeRentalOffers, EmployeeRentalOfferSummary } from './rental-api';
 import { normalizeBrand } from '../../utils/brand';
+import { resetViewportScale } from '../../utils/viewport';
 import { RateRangeFilter } from '../catalog/RateRangeFilter';
 import { formatCountPl } from '../common/plural';
 import { PortalHeader } from '../common/PortalHeader';
@@ -407,9 +408,10 @@ export const RentalCatalogPage: React.FC = () => {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onBlur={resetViewportScale}
                     aria-label="Szukaj po marce lub modelu"
                     placeholder="Szukaj po marce lub modelu..."
-                    className="w-full pl-9 pr-3 py-1.5 border border-line rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ink bg-white shadow-xs"
+                    className="w-full pl-9 pr-3 py-1.5 border border-line rounded-xl text-base sm:text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ink bg-white shadow-xs"
                   />
                 </div>
                 {hasActiveFilters && (
@@ -449,7 +451,7 @@ export const RentalCatalogPage: React.FC = () => {
                   aria-label="Marka"
                   value={selectedMake}
                   onChange={(e) => setSelectedMake(e.target.value)}
-                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  className="w-full text-base sm:text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="">Wszystkie marki</option>
                   {availableMakes.map((m) => (
@@ -468,7 +470,7 @@ export const RentalCatalogPage: React.FC = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'default' | 'rate_asc' | 'rate_desc')}
-                  className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                  className="w-full text-base sm:text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                 >
                   <option value="default">Domyślne</option>
                   <option value="rate_asc">Rata: od najniższej</option>
@@ -515,7 +517,7 @@ export const RentalCatalogPage: React.FC = () => {
                   <select
                     value={selectedFuel}
                     onChange={(e) => setSelectedFuel(e.target.value)}
-                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                    className="w-full text-base sm:text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                   >
                     <option value="">Wszystkie</option>
                     {availableFuels.map((f) => (
@@ -534,7 +536,7 @@ export const RentalCatalogPage: React.FC = () => {
                   <select
                     value={selectedTransmission}
                     onChange={(e) => setSelectedTransmission(e.target.value)}
-                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                    className="w-full text-base sm:text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                   >
                     <option value="">Wszystkie</option>
                     {availableTransmissions.map((t) => (
@@ -553,7 +555,7 @@ export const RentalCatalogPage: React.FC = () => {
                   <select
                     value={selectedBodyType}
                     onChange={(e) => setSelectedBodyType(e.target.value)}
-                    className="w-full text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+                    className="w-full text-base sm:text-xs py-2 px-2.5 bg-paper border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-ink"
                   >
                     <option value="">Wszystkie</option>
                     {availableBodyTypes.map((b) => (

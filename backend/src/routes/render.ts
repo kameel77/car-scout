@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { buildCatalogPrefetchScript } from '../utils/catalog-prefetch.js';
 import { buildRentalPrefetchScript } from '../utils/rental-prefetch.js';
-import { extractListingIdFromSlug, generateListingSlug } from '../utils/url-utils.js';
+import { extractListingIdFromSlug, generateListingSlug, normalizeRentalImageUrl } from '../utils/url-utils.js';
 import {
     buildBrandMeta,
     buildListingMeta,
@@ -46,6 +46,9 @@ import {
     resetSsrCache,
 } from '../services/ssr-cache.js';
 import { getPublicSettings } from './settings.js';
+import { getPublicListingWhere } from '../services/listing-visibility.service.js';
+import { executeRentalVehiclesQuery } from './rental-public.js';
+import { buildRentalVehiclesQueryCacheKey, getOrSetJson } from '../services/api-cache.js';
 
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
@@ -114,28 +117,28 @@ async function getGridColumns(fastify: FastifyInstance): Promise<3 | 4> {
 // Kolejność ofert jak w widocznym SPA: defaultSortCars z ustawień (SearchPage/ConditionPage
 // fallback 'price_asc'), mapowanie sortBy->orderBy identyczne z listings.ts (priceField PLN).
 // Dzięki temu preload LCP wskazuje te same zdjęcia, które SPA wyrenderuje nad foldem.
-const CARS_ORDER_BY: Record<string, object> = {
-    cheapest: { brokerPricePln: 'asc' },
-    price_asc: { brokerPricePln: 'asc' },
-    expensive: { brokerPricePln: 'desc' },
-    price_desc: { brokerPricePln: 'desc' },
-    year_asc: { productionYear: 'asc' },
-    year_desc: { productionYear: 'desc' },
-    mileage: { mileageKm: 'asc' },
-    mileage_asc: { mileageKm: 'asc' },
-    mileage_desc: { mileageKm: 'desc' },
-    newest: { createdAt: 'desc' },
+const CARS_ORDER_BY: Record<string, object[]> = {
+    cheapest: [{ brokerPricePln: 'asc' }, { id: 'asc' }],
+    price_asc: [{ brokerPricePln: 'asc' }, { id: 'asc' }],
+    expensive: [{ brokerPricePln: 'desc' }, { id: 'asc' }],
+    price_desc: [{ brokerPricePln: 'desc' }, { id: 'asc' }],
+    year_asc: [{ productionYear: 'asc' }, { id: 'asc' }],
+    year_desc: [{ productionYear: 'desc' }, { id: 'asc' }],
+    mileage: [{ mileageKm: 'asc' }, { id: 'asc' }],
+    mileage_asc: [{ mileageKm: 'asc' }, { id: 'asc' }],
+    mileage_desc: [{ mileageKm: 'desc' }, { id: 'asc' }],
+    newest: [{ createdAt: 'desc' }, { id: 'asc' }],
 };
 
 // /leasing i /kredyt: promocja aut nowych nad używanymi (dotychczas SSR pokazywał najpierw
 // najtańsze używane, np. Ford Focus 2008 za 9 900 zł) — najpierw condition NEW (kolejność
 // enuma w Postgresie odpowiada deklaracji w schema.prisma: NEW przed USED), w obu grupach
 // od najnowszego rocznika.
-const FINANCING_LISTINGS_ORDER_BY: object[] = [{ condition: 'asc' }, { productionYear: 'desc' }];
+const FINANCING_LISTINGS_ORDER_BY: object[] = [{ condition: 'asc' }, { productionYear: 'desc' }, { id: 'asc' }];
 
-let carsOrderByCache: { value: object; fetchedAt: number } | null = null;
+let carsOrderByCache: { value: object[]; fetchedAt: number } | null = null;
 
-async function getCarsOrderBy(fastify: FastifyInstance): Promise<object> {
+async function getCarsOrderBy(fastify: FastifyInstance): Promise<object[]> {
     if (carsOrderByCache && Date.now() - carsOrderByCache.fetchedAt < SSR_PER_PAGE_TTL_MS) {
         return carsOrderByCache.value;
     }
@@ -149,7 +152,7 @@ async function getCarsOrderBy(fastify: FastifyInstance): Promise<object> {
     } catch {
         // fallback price_asc
     }
-    const value = CARS_ORDER_BY[sortKey] ?? { brokerPricePln: 'asc' };
+    const value = CARS_ORDER_BY[sortKey] ?? [{ brokerPricePln: 'asc' }, { id: 'asc' }];
     carsOrderByCache = { value, fetchedAt: Date.now() };
     return value;
 }
@@ -806,34 +809,49 @@ async function resolveMeta(
     if (LISTINGLESS_STATIC_ROUTES.has(path)) {
         listings = [];
     } else if (path === '/wynajem-dlugoterminowy') {
-        const where = { isActive: true, slug: { not: null } };
+        let defaultSortRental = 'minMonthlyRateNet_asc';
+        try {
+            const settings = await fastify.prisma.appSettings.findUnique({
+                where: { id: 'default' },
+                select: { defaultSortRental: true },
+            });
+            if (settings?.defaultSortRental) defaultSortRental = settings.defaultSortRental;
+        } catch {
+            // fallback minMonthlyRateNet_asc
+        }
+        const [sortBy, sortOrder] = defaultSortRental.split('_');
+        const rentalQuery = {
+            page: String(page),
+            limit: '12',
+            sortBy: sortBy || 'minMonthlyRateNet',
+            sortOrder: (sortOrder === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc',
+            offerType: 'b2b',
+            priceBasis: 'net',
+        };
+        const cacheKey = buildRentalVehiclesQueryCacheKey(rentalQuery);
+        const rentalData = await getOrSetJson(cacheKey, 180, () =>
+            executeRentalVehiclesQuery(fastify, rentalQuery, false)
+        );
+        const totalPages = Math.max(1, rentalData.pagination.totalPages);
         if (paginated) {
-            const total = await fastify.prisma.rentalVehicle.count({ where });
-            const totalPages = Math.max(1, Math.ceil(total / ssrPerPage));
-            if (page > totalPages) return defaultMeta(ctx, { noindex: true, status: 404 });
+            if (page > totalPages && totalPages > 0) return defaultMeta(ctx, { noindex: true, status: 404 });
             pagination = { page, totalPages };
         }
-        const rentalsRaw = await fastify.prisma.rentalVehicle.findMany({
-            where,
-            skip,
-            take,
-            orderBy: { createdAt: 'desc' },
-            select: {
-                id: true,
-                make: true,
-                model: true,
-                version: true,
-                productionYear: true,
-                slug: true,
-            },
-        });
-        listings = rentalsRaw.map(r => ({ ...r, pricePln: null, slug: r.slug as string }));
+        listings = rentalData.vehicles.map((r: any) => ({
+            id: r.id,
+            make: r.make,
+            model: r.model,
+            version: r.version,
+            productionYear: r.productionYear,
+            slug: (r.slug || r.id) as string,
+            primaryImageUrl: normalizeRentalImageUrl(r.primaryImageUrl, r.id) || (r.imageUrls && r.imageUrls[0] ? normalizeRentalImageUrl(r.imageUrls[0], r.id) : null),
+            pricePln: null,
+        }));
         listingsBasePath = '/wynajem-dlugoterminowy';
     } else {
-        const where = {
-            isArchived: false,
-            ...(CONDITION_BY_PATH[path] ? { condition: CONDITION_BY_PATH[path] } : {}),
-        };
+        const where = getPublicListingWhere(
+            CONDITION_BY_PATH[path] ? { condition: CONDITION_BY_PATH[path] } : undefined
+        );
         if (paginated) {
             const total = await fastify.prisma.listing.count({ where });
             const totalPages = Math.max(1, Math.ceil(total / ssrPerPage));
