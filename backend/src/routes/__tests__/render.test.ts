@@ -267,6 +267,84 @@ describe('GET /api/render', () => {
         expect(resSamochodyPage2.body).not.toContain('window.__CATALOG_PREFETCH__=');
     });
 
+    it('injects window.__SSR_META__ with escaped values for a rental detail and a catalog route', async () => {
+        const rental = await app.prisma.rentalVehicle.create({
+            data: {
+                slug: `test-ssr-meta-rental-${Date.now()}`,
+                make: 'TEST_RENDER',
+                model: 'SsrMetaCar',
+                version: null,
+                productionYear: 2025,
+                isActive: true,
+                bodyType: 'suv',
+                fuelType: 'hybryda',
+            },
+        });
+
+        const resRental = await app.inject({ method: 'GET', url: `/api/render?path=/wynajem-dlugoterminowy/${rental.slug}` });
+        expect(resRental.statusCode).toBe(200);
+        expect(resRental.body).toContain('window.__SSR_META__=');
+        const rentalMatch = resRental.body.match(/window\.__SSR_META__=(\{.*?\});/);
+        expect(rentalMatch).not.toBeNull();
+        const rentalMeta = JSON.parse(rentalMatch![1]);
+        expect(rentalMeta.path).toBe(`/wynajem-dlugoterminowy/${rental.slug}`);
+        expect(rentalMeta.title).toContain('TEST_RENDER SsrMetaCar');
+        expect(rentalMeta.description).toContain('TEST_RENDER SsrMetaCar');
+        expect(rentalMeta.canonical).toBe(`https://motolia.pl/wynajem-dlugoterminowy/${rental.slug}`);
+
+        const resCatalog = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
+        expect(resCatalog.statusCode).toBe(200);
+        expect(resCatalog.body).toContain('window.__SSR_META__=');
+        const catalogMatch = resCatalog.body.match(/window\.__SSR_META__=(\{.*?\});/);
+        expect(catalogMatch).not.toBeNull();
+        const catalogMeta = JSON.parse(catalogMatch![1]);
+        expect(catalogMeta.path).toBe('/nowe');
+        expect(catalogMeta.canonical).toBe('https://motolia.pl/nowe');
+
+        // < w danych ucieka do <, żeby nie zamknąć <script> przedwcześnie — ta sama technika
+        // co window.__APP_SETTINGS__/__HERO_BANNERS__ (patrz render.ts).
+        expect(resRental.body).not.toMatch(/window\.__SSR_META__=\{[^}]*<[^u]/);
+
+        // 404/noindex nie dostają __SSR_META__ — brak "poprawnej" treści SSR do zachowania po hydracji
+        const resMissing = await app.inject({ method: 'GET', url: '/api/render?path=/oferta/nieistniejacy-slug' });
+        expect(resMissing.statusCode).toBe(404);
+        expect(resMissing.body).not.toContain('window.__SSR_META__=');
+    });
+
+    it('__SSR_META__.path is normalized like the SSR cache key: only ?page survives, other query params are dropped', async () => {
+        // SSR HTML jest cache'owane per path+page NIEZALEŻNIE od reszty query stringa (ten sam
+        // cacheKey co renderAndCache) — wpisanie pełnego ?utm_source=x do window.__SSR_META__
+        // wypaliłoby query string PIERWSZEGO odwiedzającego do HTML serwowanego WSZYSTKIM
+        // kolejnym gościom tego samego /nowe, u których by się już nie zgadzało.
+        const resUtm = await app.inject({ method: 'GET', url: '/api/render?path=/nowe%3Futm_source%3Dx' });
+        expect(resUtm.statusCode).toBe(200);
+        const utmMatch = resUtm.body.match(/window\.__SSR_META__=(\{.*?\});/);
+        expect(utmMatch).not.toBeNull();
+        expect(JSON.parse(utmMatch![1]).path).toBe('/nowe');
+
+        // Wystarczająco dużo ofert NEW, żeby /nowe&page=2 realnie istniało (SSR_PER_PAGE do 32/stronę)
+        await app.prisma.listing.createMany({
+            data: Array.from({ length: 34 }, (_, i) => ({
+                make: 'TEST_RENDER',
+                model: `SsrMetaPage2_${i}`,
+                version: '1.0',
+                pricePln: 100000 + i,
+                mileageKm: 5,
+                productionYear: 2024,
+                fuelType: 'benzyna',
+                bodyType: 'suv',
+                condition: 'NEW' as any,
+                isArchived: false,
+            })),
+        });
+
+        const resPage2 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe&page=2' });
+        expect(resPage2.statusCode).toBe(200);
+        const page2Match = resPage2.body.match(/window\.__SSR_META__=(\{.*?\});/);
+        expect(page2Match).not.toBeNull();
+        expect(JSON.parse(page2Match![1]).path).toBe('/nowe?page=2');
+    });
+
     it('injects browser-segment rental fetch-ahead only on the first rental page', async () => {
         const first = await app.inject({ method: 'GET', url: '/api/render?path=/wynajem-dlugoterminowy' });
         expect(first.statusCode).toBe(200);
