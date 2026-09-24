@@ -124,6 +124,35 @@ describe('SEO routes', () => {
         expect(res.body).toContain('Allow: /api/seo-content');
     });
 
+    it('robots.txt allows /api/rental/vehicles in all relevant sections and eliminates /api/rental-public', async () => {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/api/robots.txt',
+            headers: { host: 'motolia.pl' },
+        });
+        expect(res.body).not.toContain('/api/rental-public');
+        expect(res.body).toContain('Allow: /api/rental/vehicles');
+
+        // Check Googlebot section specifically
+        const googlebotSection = res.body.split('User-agent: Googlebot')[1]?.split('User-agent:')[0] || '';
+        expect(googlebotSection).toContain('Allow: /api/rental/vehicles');
+        expect(googlebotSection).toContain('Disallow: /api/');
+
+        // Verify longest prefix match rule (RFC 9309 / Googlebot spec):
+        // Path "/api/rental/vehicles/test-slug" matches:
+        // - "Disallow: /api/" (prefix len 5)
+        // - "Allow: /api/rental/vehicles" (prefix len 20)
+        // 20 > 5 -> Allow wins
+        const rules = [
+            { type: 'disallow', path: '/api/' },
+            { type: 'allow', path: '/api/rental/vehicles' }
+        ];
+        const targetPath = '/api/rental/vehicles/some-vehicle-slug';
+        const matchingRules = rules.filter(r => targetPath.startsWith(r.path));
+        matchingRules.sort((a, b) => b.path.length - a.path.length);
+        expect(matchingRules[0].type).toBe('allow');
+    });
+
     describe('sitemap: CMS content pages (F2)', () => {
         beforeEach(async () => {
             __resetBrandCatalogCache();

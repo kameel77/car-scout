@@ -281,7 +281,7 @@ Allow: /api/widgets/render
 Allow: /api/faq
 Allow: /api/feature-tiles
 Allow: /api/geo
-Allow: /api/rental-public
+Allow: /api/rental/vehicles
 Allow: /api/seo-content
 Allow: /api/sitemap.xml
 Disallow: /login
@@ -299,7 +299,7 @@ Allow: /api/widgets/render
 Allow: /api/faq
 Allow: /api/feature-tiles
 Allow: /api/geo
-Allow: /api/rental-public
+Allow: /api/rental/vehicles
 Allow: /api/seo-content
 Allow: /api/sitemap.xml
 Disallow: /login
@@ -327,7 +327,7 @@ Allow: /api/widgets/render
 Allow: /api/faq
 Allow: /api/feature-tiles
 Allow: /api/geo
-Allow: /api/rental-public
+Allow: /api/rental/vehicles
 Allow: /api/seo-content
 Allow: /api/sitemap.xml
 Disallow: /login
@@ -345,7 +345,7 @@ Allow: /api/widgets/render
 Allow: /api/faq
 Allow: /api/feature-tiles
 Allow: /api/geo
-Allow: /api/rental-public
+Allow: /api/rental/vehicles
 Allow: /api/seo-content
 Allow: /api/sitemap.xml
 Disallow: /login

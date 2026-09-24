@@ -25,7 +25,7 @@ import { PurchaseProcessStepper } from '@/components/PurchaseProcessStepper';
 import {
     Calendar, Gauge, Fuel, MapPin,
     Shield, ChevronDown, Building2, Car, FileText, Music, ShieldCheck, Sofa, Package,
-    User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone, Info
+    User, Hash, Palette, DoorOpen, Paintbrush, Armchair, Cog, Phone, Info, AlertCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { translateTechnicalValue } from '@/utils/i18n-utils';
@@ -56,7 +56,7 @@ export default function RentalDetailPage() {
     const canViewFinancials = can('rental:financials:read') && !!token;
     const { config } = useBrand();
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, error } = useQuery({
         queryKey: ['rental-vehicle-public', slug],
         queryFn: () => rentalPublicApi.getVehicle(slug!),
         enabled: !!slug
@@ -214,15 +214,41 @@ export default function RentalDetailPage() {
         );
     }
 
+    const isNotFound = (error as any)?.status === 404;
+    const isOtherError = !!error && !isNotFound;
+
+    if (isOtherError) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <Header onClearFilters={() => {}} hasActiveFilters={false} />
+                <div className="container py-20 text-center">
+                    <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold">{t('rental.detail.errorLoadingTitle', 'Wystąpił błąd podczas ładowania oferty')}</h2>
+                    <p className="text-sm text-gray-500 mt-2">{t('rental.detail.errorLoadingDesc', 'Przepraszamy, nie udało się pobrać szczegółów oferty. Spróbuj odświeżyć stronę.')}</p>
+                    <div className="mt-6 flex justify-center gap-4">
+                        <Button variant="outline" onClick={() => window.location.reload()}>
+                            {t('common.refresh', 'Odśwież stronę')}
+                        </Button>
+                        <Link to="/wynajem-dlugoterminowy">
+                            <Button variant="ghost">
+                                {t('common.backToList', 'Wróć do listy')}
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (!vehicle) {
         return (
             <div className="min-h-screen bg-gray-50">
                 <Header onClearFilters={() => {}} hasActiveFilters={false} />
                 <div className="container py-20 text-center">
                     <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold">Pojazd nie został znaleziony</h2>
+                    <h2 className="text-xl font-semibold">{t('rental.detail.notFound', 'Pojazd nie został znaleziony')}</h2>
                     <Link to="/wynajem-dlugoterminowy" className="text-primary underline underline-offset-4 decoration-2 hover:no-underline mt-4 inline-block">
-                        Wróć do listy
+                        {t('common.backToList', 'Wróć do listy')}
                     </Link>
                 </div>
             </div>

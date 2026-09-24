@@ -5,6 +5,15 @@ let API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 if (API_BASE_URL.endsWith('/api')) API_BASE_URL = API_BASE_URL.slice(0, -4);
 if (API_BASE_URL.endsWith('/api/')) API_BASE_URL = API_BASE_URL.slice(0, -5);
 
+export class RentalApiError extends Error {
+    status?: number;
+    constructor(message: string, status?: number) {
+        super(message);
+        this.name = 'RentalApiError';
+        this.status = status;
+    }
+}
+
 // ─── Types ───────────────────────────────────────────────────────
 
 export interface RentalVehicle {
@@ -439,7 +448,12 @@ export const rentalPublicApi = {
 
     getVehicle: async (slug: string) => {
         const response = await fetch(`${API_BASE_URL}/api/rental/vehicles/${slug}`);
-        if (!response.ok) throw new Error('Vehicle not found');
+        if (!response.ok) {
+            throw new RentalApiError(
+                response.status === 404 ? 'Vehicle not found' : `Failed to fetch vehicle (${response.status})`,
+                response.status
+            );
+        }
         return response.json();
     },
 
