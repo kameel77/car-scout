@@ -283,7 +283,15 @@ export default function RentalDetailPage() {
         .filter(Boolean)
         .join(' ');
     const metaTitle = `${rentalName} — wynajem długoterminowy | ${config.name}`;
-    const metaDescription = `Wynajmij ${vehicle.make} ${vehicle.model}${vehicle.version ? ` ${vehicle.version}` : ''} w najlepszej cenie. Porównaj oferty najmu długoterminowego, sprawdź ratę miesięczną i zamów online na Motolia.`;
+    // Format matches backend SSR description (buildRentalMeta in backend/src/services/seo-meta.ts)
+    // tak samo jak metaTitle powyżej. Bez klauzuli "rata od X zł/mies." — endpoint GET
+    // /api/rental/vehicles/:slug nie zwraca minimalnej raty pojazdu (tylko SSR ma do niej dostęp
+    // przez rentalMatrixEntry.aggregate), więc bez niej opis pozostaje spójny wzorcem zamiast zmyślać liczbę.
+    // Na pierwszym wejściu na URL to i tak bez znaczenia — MetaHead woli window.__SSR_META__
+    // (getSsrMeta w src/lib/ssrMeta.ts), które ma pełny opis z ratą prosto z SSR. Ten string
+    // liczy się dopiero po nawigacji w SPA (np. z listy najmu), kiedy SSR meta już nie pasuje do URL-a.
+    const metaDetails = [vehicle.bodyType, vehicle.fuelType].filter(Boolean).join(', ');
+    const metaDescription = `${rentalName}${metaDetails ? ` (${metaDetails})` : ''} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.`;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-24 md:pb-0">
