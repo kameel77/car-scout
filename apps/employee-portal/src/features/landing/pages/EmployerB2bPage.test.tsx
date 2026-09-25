@@ -207,4 +207,12 @@ describe('EmployerB2bPage Component Suite', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('keeps the employer cost at 0 zł while the team-size slider moves', async () => {
+    renderB2bPage();
+    const slider = screen.getByLabelText(/Przesuń i sprawdź/i);
+    fireEvent.change(slider, { target: { value: '1200' } });
+    expect(screen.getByText(/1\s?200 osób w zespole/i)).toBeInTheDocument();
+    expect(screen.getAllByText('0 zł').length).toBeGreaterThan(0);
+  });
 });

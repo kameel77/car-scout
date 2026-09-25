@@ -10,6 +10,7 @@ import { trackEvent } from '../../analytics/analytics';
 import { useTrack } from '../../analytics/useTrack';
 import { isValidNip } from '../../common/nip';
 import { StatsBand } from '../components/StatsBand';
+import { CostCounter } from '../components/CostCounter';
 import {
   B2B_BOOKING_URL,
   B2B_CONTACT,
@@ -282,6 +283,16 @@ export const EmployerB2bPage: React.FC = () => {
               <h2 id="b2b-benefits-title">Nowy benefit w pakiecie. Bez nowego kosztu.</h2>
             </div>
           </div>
+          <CostCounter
+            onCta={() => {
+              track('b2b_booking_click', { from: 'cost_counter' });
+              if (B2B_BOOKING_URL) {
+                window.open(B2B_BOOKING_URL, '_blank', 'noopener,noreferrer');
+              } else {
+                document.getElementById('kontakt-b2b')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+          />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { Icon: Users, title: 'Benefit dla wszystkich', text: 'Dostęp dostaje cały zespół, a nie tylko osoby z autem służbowym.' },

@@ -175,4 +175,28 @@ describe('Benefivo LandingPage Component Suite', () => {
       expect(screen.getByText(/Damy znać, gdy program ruszy/i)).toBeInTheDocument();
     });
   });
+
+  it('unblurs sample offer prices after a valid company code and offers registration with the code', async () => {
+    vi.spyOn(authApi, 'validateCompanyCode').mockResolvedValue({
+      valid: true,
+      companyId: 'c1',
+      companyName: 'Acme',
+      programId: 'p1',
+      programName: 'Program',
+    });
+
+    renderLandingPage();
+
+    expect(await screen.findByRole('heading', { name: /Twoje ceny czekają za kodem firmy/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Cena widoczna po podaniu kodu firmy/i).length).toBe(3);
+
+    fireEvent.change(screen.getByLabelText(/Kod dostępu firmy/i), { target: { value: 'acme-2026' } });
+    fireEvent.click(screen.getByRole('button', { name: /Odblokuj ceny/i }));
+
+    await waitFor(() => {
+      expect(authApi.validateCompanyCode).toHaveBeenCalledWith('/api', 'ACME-2026');
+      expect(screen.queryByText(/Cena widoczna po podaniu kodu firmy/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Załóż konto/i })).toBeInTheDocument();
+    });
+  });
 });

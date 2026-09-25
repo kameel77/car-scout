@@ -6,6 +6,7 @@ import { StatsBand } from '../components/StatsBand';
 import { OfferSection } from '../components/OfferSection';
 import { BenefitsSection } from '../components/BenefitsSection';
 import { StepsSection } from '../components/StepsSection';
+import { SampleOffers } from '../components/SampleOffers';
 import { EmployerTeaserSection } from '../components/EmployerTeaserSection';
 import { FaqSection } from '../components/FaqSection';
 import { LandingFooter } from '../components/LandingFooter';
@@ -39,6 +40,7 @@ export const LandingPage: React.FC = () => {
           onOpenRental={() => setRentalOpen(true)}
           onOpenLeasing={() => setLeasingOpen(true)}
         />
+        <SampleOffers onOpenEmployeeDialog={() => setEmployeeOpen(true)} />
         <StepsSection onOpenEmployeeDialog={() => setEmployeeOpen(true)} />
         <FaqSection />
         <EmployerTeaserSection />
