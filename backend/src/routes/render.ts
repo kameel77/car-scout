@@ -44,11 +44,14 @@ import {
     markRevalidating,
     clearRevalidating,
     resetSsrCache,
+    getSsrRedisClient,
+    getSsrNamespace,
 } from '../services/ssr-cache.js';
 import { getPublicSettings } from './settings.js';
 import { getPublicListingWhere } from '../services/listing-visibility.service.js';
 import { executeRentalVehiclesQuery } from './rental-public.js';
 import { buildRentalVehiclesQueryCacheKey, getOrSetJson } from '../services/api-cache.js';
+import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
 
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
@@ -311,6 +314,80 @@ function isCachedHtmlFromActiveBuild(cachedHtml: string, activeTemplate: string)
     return getModuleEntryAsset(cachedHtml) === activeEntry;
 }
 
+// HTML edge cache TTL to 24h (getCacheControlHeader) jest bezpieczne tylko o ile Cloudflare
+// zostaje wyczyszczony po deployu frontendu — inaczej dzień-stary cache HTML wskazywałby na
+// hashowane /assets/*.js, których nowy frontend już nie ma (stare buildy 404). Backend i frontend
+// są deployowane osobno (patrz frontendBase()), więc restart backendu nie jest wiarygodnym
+// sygnałem nowego builda frontendu — trzeba porównać aktywny entry asset z ostatnim zapamiętanym
+// w Redisie (namespace per brand/env jak reszta SSR cache) i purge'ować tylko przy realnej zmianie.
+const BUILD_PURGE_LOCK_TTL_SECONDS = 60;
+
+function getOwnProductionHost(): string | null {
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) return null;
+    try {
+        const hostname = new URL(frontendUrl.startsWith('http') ? frontendUrl : `https://${frontendUrl}`).hostname;
+        return hostname || null;
+    } catch {
+        return null;
+    }
+}
+
+export async function maybePurgeCloudflareOnFrontendBuildChange(fastify: FastifyInstance): Promise<void> {
+    const ownHost = getOwnProductionHost();
+    // Dev/staging współdzielą strefę Cloudflare motolia.pl z produkcją — purge stąd wyczyściłby
+    // cache prod. Tylko kanoniczny host produkcyjny tego builda może wywołać purgeEverything.
+    if (!ownHost || !isProductionHost(ownHost)) return;
+
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_TOKEN;
+    const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+    if (!apiToken || !zoneId) {
+        fastify.log.info('[BuildPurge] Skipping: missing Cloudflare credentials');
+        return;
+    }
+
+    const redis = getSsrRedisClient();
+    if (!redis) return;
+
+    const template = await getTemplate();
+    if (!template) return;
+    const activeEntry = getModuleEntryAsset(template);
+    if (!activeEntry) return;
+
+    const redisKey = `${getSsrNamespace()}:active-frontend-build`;
+    const lockKey = `${redisKey}:lock`;
+
+    try {
+        const previousEntry = await redis.get(redisKey);
+        if (previousEntry === activeEntry) return;
+
+        // SET NX: tylko jeden kontener/restart wygrywa wyścig o purge tego samego builda.
+        // TTL to wyłącznie zabezpieczenie przed zawieszonym lockiem po awarii procesu — po
+        // zakończeniu (sukces lub błąd) lock jest zwalniany od razu w finally, żeby kolejna,
+        // odrębna zmiana builda w krótkim odstępie nie czekała na wygaśnięcie TTL.
+        const lockAcquired = await redis.set(lockKey, '1', 'EX', BUILD_PURGE_LOCK_TTL_SECONDS, 'NX');
+        if (!lockAcquired) return;
+
+        try {
+            // Re-check po zdobyciu locka — inny proces mógł już zaktualizować wpis w międzyczasie.
+            const currentEntry = await redis.get(redisKey);
+            if (currentEntry === activeEntry) return;
+
+            const result = await invalidateOfferCache(fastify, { purgeEverything: true });
+            if (result.success) {
+                await redis.set(redisKey, activeEntry);
+                fastify.log.info({ activeEntry, previousEntry }, '[BuildPurge] Cloudflare cache purged: new frontend build detected');
+            } else {
+                fastify.log.warn({ activeEntry }, '[BuildPurge] Cloudflare purge failed for new frontend build');
+            }
+        } finally {
+            await redis.del(lockKey);
+        }
+    } catch (err) {
+        fastify.log.warn({ err }, '[BuildPurge] Failed to check/purge for frontend build change');
+    }
+}
+
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
 const PROMO_RE = /^\/promo\/([^/]+)$/;
@@ -545,7 +622,7 @@ async function resolveMeta(
     const rm = path.match(RENTAL_RE);
     if (rm) {
         const rental = await fastify.prisma.rentalVehicle.findFirst({
-            where: { slug: rm[1], isActive: true },
+            where: { slug: rm[1], isActive: true, isPublished: true },
             select: {
                 id: true,
                 make: true,
@@ -590,7 +667,7 @@ async function resolveMeta(
 
         // Podobne auta najmu do linkowania: najpierw ta sama marka, dobite tym samym nadwoziem — max 5
         let relatedRentalsRaw = await fastify.prisma.rentalVehicle.findMany({
-            where: { isActive: true, slug: { not: null }, NOT: { id: rental.id }, make: rental.make },
+            where: { isActive: true, isPublished: true, slug: { not: null }, NOT: { id: rental.id }, make: rental.make },
             take: 5,
             orderBy: { createdAt: 'desc' },
             select: { id: true, make: true, model: true, productionYear: true, slug: true },
@@ -598,7 +675,7 @@ async function resolveMeta(
         if (relatedRentalsRaw.length < 5 && rental.bodyType) {
             const excludeIds = [rental.id, ...relatedRentalsRaw.map(v => v.id)];
             const sameBodyRentals = await fastify.prisma.rentalVehicle.findMany({
-                where: { isActive: true, slug: { not: null }, NOT: { id: { in: excludeIds } }, bodyType: rental.bodyType },
+                where: { isActive: true, isPublished: true, slug: { not: null }, NOT: { id: { in: excludeIds } }, bodyType: rental.bodyType },
                 take: 5 - relatedRentalsRaw.length,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, make: true, model: true, productionYear: true, slug: true },
@@ -985,7 +1062,10 @@ function getCacheControlHeader(
         return 'private, no-store';
     }
     // s-maxage bez stale-while-revalidate (SWR i tak jest unieważniane przez s-maxage) - edge cache bez cache w przeglądarce, bo oferty się zmieniają.
-    return 'public, max-age=0, s-maxage=300';
+    // 86400 (1 dzień) zamiast dawnych 300s — bezpieczne tylko dzięki purge'owaniu Cloudflare przy
+    // każdej zmianie treści (patrz cache-invalidation.service.ts) i przy każdym deployu frontendu
+    // (patrz maybePurgeOnFrontendBuildChange w tym pliku).
+    return 'public, max-age=0, s-maxage=86400';
 }
 
 interface RenderResult {
@@ -1237,6 +1317,15 @@ export async function renderRoutes(fastify: FastifyInstance) {
 
         const activeTemplate = await getTemplate();
         const cached = await getSsrCache(cacheKey);
+
+        // Sygnał "nowy build frontendu" widziany właśnie na tym requeście (cache trafiony, ale
+        // z innym entry assetem) — fire-and-forget purge Cloudflare, nie blokuje odpowiedzi.
+        if (cached && activeTemplate && !isCachedHtmlFromActiveBuild(cached.html, activeTemplate)) {
+            maybePurgeCloudflareOnFrontendBuildChange(fastify).catch(err => {
+                fastify.log.warn({ err }, '[BuildPurge] Fire-and-forget purge check failed');
+            });
+        }
+
         if (cached && (!activeTemplate || isCachedHtmlFromActiveBuild(cached.html, activeTemplate))) {
             if (!isSsrFresh(cached)) {
                 if (markRevalidating(cacheKey)) {
