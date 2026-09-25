@@ -6,6 +6,7 @@ import { requirePermission } from '../middleware/permissions.js';
 import { optimizeAndSaveImage } from '../services/image-optimizer.js';
 import { sanitizeListing } from '../constants/dealer.js';
 import { calculateRatesWithInsurance } from './rental-public.js';
+import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 const LANDING_PAGES_DIR = path.join(UPLOADS_DIR, 'landing-pages');
@@ -473,6 +474,10 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
       },
     });
 
+    await invalidateOfferCache(fastify, { urls: [`/promo/${lp.slug}`], purgeSitemap: false }).catch(err => {
+      fastify.log.warn({ err }, 'Failed to invalidate cache after landing page create');
+    });
+
     return { landingPage: lp };
   });
 
@@ -531,6 +536,11 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
       },
     });
 
+    const landingPageUrls = [...new Set([`/promo/${existing.slug}`, `/promo/${updated.slug}`])];
+    await invalidateOfferCache(fastify, { urls: landingPageUrls, purgeSitemap: false }).catch(err => {
+      fastify.log.warn({ err }, 'Failed to invalidate cache after landing page update');
+    });
+
     return { landingPage: updated };
   });
 
@@ -544,6 +554,11 @@ export async function landingPageRoutes(fastify: FastifyInstance) {
     await unlinkLandingPageHeroImage(lp.heroImageUrl);
     await unlinkLandingPageTermsFile(lp.termsFileUrl);
     await fastify.prisma.landingPage.delete({ where: { id } });
+
+    await invalidateOfferCache(fastify, { urls: [`/promo/${lp.slug}`], purgeSitemap: false }).catch(err => {
+      fastify.log.warn({ err }, 'Failed to invalidate cache after landing page delete');
+    });
+
     return { success: true };
   });
 

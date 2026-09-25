@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { requirePermission, hasPermission } from '../middleware/permissions.js';
+import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
 
 const PAGE_OPTIONS = ['home', 'offers', 'contact', 'faq', 'rental', 'financing', 'business'] as const;
 const PAGE_CONTEXT_OPTIONS = ['offers', 'rental', 'all'] as const;
@@ -123,6 +124,13 @@ export async function faqRoutes(fastify: FastifyInstance) {
             } else {
                 entry = await fastify.prisma.faqEntry.create({ data });
             }
+
+            // FAQ z page='offers'/'rental' renderuje się na KAŻDEJ stronie oferty/najmu w SSR —
+            // zbiór dotkniętych URL-i jest nieograniczony, więc purgeAll-style jak przy bulk importach.
+            await invalidateOfferCache(fastify, { purgeAll: true, purgeEverything: true, purgeSitemap: false }).catch(err => {
+                fastify.log.warn({ err }, 'Failed to invalidate cache after FAQ save');
+            });
+
             return { entry };
         } catch (error) {
             fastify.log.error(error, 'FAQ: Save failed');
@@ -141,6 +149,11 @@ export async function faqRoutes(fastify: FastifyInstance) {
 
         try {
             await fastify.prisma.faqEntry.delete({ where: { id } });
+
+            await invalidateOfferCache(fastify, { purgeAll: true, purgeEverything: true, purgeSitemap: false }).catch(err => {
+                fastify.log.warn({ err }, 'Failed to invalidate cache after FAQ delete');
+            });
+
             return { success: true };
         } catch (error) {
             return reply.code(404).send({ error: 'FAQ entry not found' });
