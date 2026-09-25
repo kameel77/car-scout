@@ -40,6 +40,38 @@ function stripQueryString(url: string): string {
     return queryIndex === -1 ? url : url.slice(0, queryIndex);
 }
 
+const INTERACTIVE_SELECTOR = 'button,a,[role=button],[role=tab],[role=slider],[role=option],label,input,select,textarea,summary';
+
+function collapseWhitespace(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Used as web-vitals' `generateTarget` option: receives the real DOM node at
+ * interaction time and returns a human-readable label instead of the default
+ * CSS selector (which for Tailwind-heavy markup is unreadable class soup).
+ * Returns undefined to let web-vitals fall back to its own selector.
+ */
+export function generateInpTarget(node: Node | null): string | undefined {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return undefined;
+
+    const original = node as Element;
+    const el = original.closest(INTERACTIVE_SELECTOR) ?? original;
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+        const type = (el as HTMLInputElement).type || 'text';
+        const name = el.getAttribute('name') || el.getAttribute('placeholder') || el.getAttribute('aria-label') || '';
+        const label = `${tag}[${type}] ${name}`.trim();
+        return label ? truncate(label, 60) : undefined;
+    }
+
+    const text = el.getAttribute('aria-label') || collapseWhitespace(el.textContent || '');
+    if (!text) return undefined;
+
+    return truncate(`${tag} ${text}`, 60);
+}
+
 function pickLongestScript(metric: INPMetricWithAttribution): InpPayload['script'] {
     const longAnimationFrameEntries = metric.attribution.longAnimationFrameEntries || [];
     let longest: PerformanceScriptTiming | null = null;
@@ -103,7 +135,7 @@ export function startInpReporting(): void {
         const load = () => {
             import('web-vitals/attribution')
                 .then(({ onINP }) => {
-                    onINP(report);
+                    onINP(report, { generateTarget: generateInpTarget });
                 })
                 .catch(() => {
                     // Chunk failed to load — reporting is best-effort.

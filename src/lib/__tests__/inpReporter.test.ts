@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildInpPayload } from '@/lib/inpReporter';
+import { buildInpPayload, generateInpTarget } from '@/lib/inpReporter';
 import type { INPMetricWithAttribution } from 'web-vitals/attribution';
 
 function makeScript(overrides: Partial<PerformanceScriptTiming> = {}): PerformanceScriptTiming {
@@ -106,5 +106,49 @@ describe('buildInpPayload', () => {
         expect(payload.value).toBe(313);
         expect(payload.presentationDelay).toBe(72);
         expect(payload.interactionTime).toBe(1235);
+    });
+});
+
+describe('generateInpTarget', () => {
+    it('returns null for a missing element', () => {
+        expect(generateInpTarget(null)).toBeUndefined();
+    });
+
+    it('labels a button using its text content', () => {
+        const button = document.createElement('button');
+        button.textContent = '  Wszystkie   filtry  ';
+
+        expect(generateInpTarget(button)).toBe('button Wszystkie filtry');
+    });
+
+    it('prefers aria-label over text content', () => {
+        const button = document.createElement('button');
+        button.setAttribute('aria-label', 'Zamknij panel');
+        button.textContent = 'X';
+
+        expect(generateInpTarget(button)).toBe('button Zamknij panel');
+    });
+
+    it('never exposes an input value', () => {
+        const input = document.createElement('input');
+        input.type = 'tel';
+        input.name = 'phone';
+        input.value = '600123456';
+
+        const label = generateInpTarget(input);
+
+        expect(label).toBe('input[tel] phone');
+        expect(label).not.toContain('600123456');
+    });
+
+    it('uses the closest interactive ancestor when the target is an inner svg/span', () => {
+        const button = document.createElement('button');
+        button.setAttribute('aria-label', 'Leasing');
+        const span = document.createElement('span');
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        span.appendChild(svg);
+        button.appendChild(span);
+
+        expect(generateInpTarget(svg)).toBe('button Leasing');
     });
 });
