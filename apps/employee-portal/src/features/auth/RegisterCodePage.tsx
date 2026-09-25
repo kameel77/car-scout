@@ -133,6 +133,7 @@ export const RegisterCodePage: React.FC = () => {
         phone: trimmedPhone || undefined,
         password,
       });
+      trackEvent('registration_completed', {}, config.apiUrl, config.analyticsEnabled);
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {
