@@ -307,25 +307,6 @@ export default function MotoliaContactPage() {
                     </div>
                   </a>
 
-                  {/* Phone — legal/general */}
-                  {settings?.legalContactPhone && (
-                    <a
-                      href={`tel:${formatPhoneForTelLink(settings.legalContactPhone)}`}
-                      onClick={() => trackPhoneClick('contact_general_card')}
-                      className="flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-background hover:border-gray-300 transition-all group"
-                    >
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
-                        style={{ background: `hsl(var(--mt-yellow-500) / 0.13)` }}
-                      >
-                        <Phone size={22} style={{ color: ACCENT_INK }} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-subtle uppercase tracking-wider mb-0.5">Telefon</p>
-                        <p className="text-lg font-bold text-foreground">{settings.legalContactPhone}</p>
-                      </div>
-                    </a>
-                  )}
 
                   {/* Email */}
                   <a

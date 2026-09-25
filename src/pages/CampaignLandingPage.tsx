@@ -85,7 +85,7 @@ export default function CampaignLandingPage() {
             || settings?.salesContactPhone
             || settings?.legalContactPhone
             || config.contactInfo?.phone
-            || '+48 22 112 09 50';
+            || '+48 455 455 485';
     }, [lp?.contactPhone, settings, config]);
 
     // Programmatic discount injection in SpecialOfferContext + persist to cookie

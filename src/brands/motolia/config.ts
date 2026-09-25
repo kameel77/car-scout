@@ -23,7 +23,7 @@ export const motoliaConfig: BrandConfig = {
     body: "'Inter Variable', 'Inter', system-ui, sans-serif",
   },
   contactInfo: {
-    phone: '+48 22 112 09 50',
+    phone: '+48 455 455 485',
     email: 'kontakt@motolia.pl',
   },
   // Dane z KRS 0001061451 (stan na 14.04.2026). Używane w stopkach jako zapas,

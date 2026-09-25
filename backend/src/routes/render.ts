@@ -179,6 +179,7 @@ async function getOrgSettings(fastify: FastifyInstance): Promise<OrgSettings> {
                 legalVatId: true,
                 legalContactEmail: true,
                 legalContactPhone: true,
+                salesContactPhone: true,
             },
         });
         if (settings) value = settings;

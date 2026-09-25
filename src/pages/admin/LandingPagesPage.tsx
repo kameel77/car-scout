@@ -667,7 +667,7 @@ export default function LandingPagesPage() {
                                         <Input
                                             value={editingPage.contactPhone || ''}
                                             onChange={(e) => setEditingPage({ ...editingPage, contactPhone: e.target.value })}
-                                            placeholder="+48 22 112 09 50"
+                                            placeholder="+48 455 455 485"
                                         />
                                         <p className="text-[11px] text-gray-500">
                                             Puste pole = numer z ustawień serwisu. Osobny numer ułatwia rozliczenie kampanii.
