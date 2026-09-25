@@ -321,8 +321,12 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
             }
         }
 
+        // Import CSV zmienia stawki (monthlyRateGross) osadzone w SSR HTML stron detalu najmu
+        // dla nieznanej z góry liczby pojazdów (cała macierz firmy) — purgeAll-style jak przy
+        // masowym imporcie ofert sprzedażowych (listings.ts bulk-archive/bulk-delete).
         await invalidateOfferCache(fastify, {
-            urls: [...RENTAL_AGGREGATE_URLS],
+            purgeAll: true,
+            purgeEverything: true,
             apiPatterns: ['rental:vehicles:*'],
             purgeSitemap: false
         }).catch(err => {
@@ -394,12 +398,20 @@ export async function rentalMatrixRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { assignmentId } = request.params as { assignmentId: string };
 
+        const assignment = await fastify.prisma.vehicleRentalAssignment.findUnique({
+            where: { id: assignmentId },
+            select: { vehicle: { select: { slug: true } } }
+        });
+
         const deleted = await fastify.prisma.rentalMatrixEntry.deleteMany({
             where: { assignmentId }
         });
 
         await invalidateOfferCache(fastify, {
-            urls: [...RENTAL_AGGREGATE_URLS],
+            urls: [
+                ...RENTAL_AGGREGATE_URLS,
+                ...(assignment?.vehicle.slug ? [`/wynajem-dlugoterminowy/${assignment.vehicle.slug}`] : [])
+            ],
             apiPatterns: ['rental:vehicles:*'],
             purgeSitemap: false
         }).catch(err => {

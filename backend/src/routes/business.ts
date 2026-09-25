@@ -21,7 +21,7 @@ export async function businessRoutes(fastify: FastifyInstance) {
             }),
             // Miks form finansowania: pojazdy najmu oznaczone jako oferta dla firm
             fastify.prisma.rentalVehicle.findMany({
-                where: { isBusinessFeatured: true, isActive: true },
+                where: { isBusinessFeatured: true, isActive: true, isPublished: true },
                 take: OFFERS_LIMIT,
                 orderBy: { createdAt: 'desc' },
                 include: { rentalAssignments: { include: { matrixEntries: true } } },

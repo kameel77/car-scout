@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
+import * as cacheInvalidation from '../../services/cache-invalidation.service.js';
 
 describe('Landing page routes', () => {
   let app: FastifyInstance;
@@ -276,5 +277,53 @@ describe('Landing page routes', () => {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
     expect(deleteRes.statusCode).toBe(200);
+  });
+
+  it('create/update/delete purge the Cloudflare/SSR cache for the /promo/:slug URL (Task 1a gap fix)', async () => {
+    const purgeSpy = vi.spyOn(cacheInvalidation, 'invalidateOfferCache');
+    try {
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/landing-pages',
+        headers: { Authorization: `Bearer ${adminToken}` },
+        payload: {
+          slug: 'test-lp-purge',
+          name: 'Purge LP',
+          heroTitle: 'Oferta specjalna',
+          selectionMode: 'MANUAL',
+          listingIds: [listing1Id],
+        },
+      });
+      expect(createRes.statusCode).toBe(200);
+      const created = createRes.json().landingPage;
+      expect(purgeSpy).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        urls: ['/promo/test-lp-purge'],
+      }));
+
+      purgeSpy.mockClear();
+      const updateRes = await app.inject({
+        method: 'PUT',
+        url: `/api/landing-pages/${created.id}`,
+        headers: { Authorization: `Bearer ${adminToken}` },
+        payload: { heroTitle: 'Nowy tytuł' },
+      });
+      expect(updateRes.statusCode).toBe(200);
+      expect(purgeSpy).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        urls: ['/promo/test-lp-purge'],
+      }));
+
+      purgeSpy.mockClear();
+      const deleteRes = await app.inject({
+        method: 'DELETE',
+        url: `/api/landing-pages/${created.id}`,
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      expect(deleteRes.statusCode).toBe(200);
+      expect(purgeSpy).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        urls: ['/promo/test-lp-purge'],
+      }));
+    } finally {
+      purgeSpy.mockRestore();
+    }
   });
 });

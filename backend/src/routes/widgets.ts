@@ -133,7 +133,7 @@ export async function widgetRoutes(fastify: FastifyInstance) {
 
         if (queryRental) {
           const rentalVehicles = await fastify.prisma.rentalVehicle.findMany({
-             where: { isFeatured: true, isActive: true },
+             where: { isFeatured: true, isActive: true, isPublished: true },
              take: 12,
              include: {
                rentalAssignments: {
@@ -215,7 +215,7 @@ export async function widgetRoutes(fastify: FastifyInstance) {
         }
 
         if (queryRental) {
-          const rentalWhere: Prisma.RentalVehicleWhereInput = { isActive: true };
+          const rentalWhere: Prisma.RentalVehicleWhereInput = { isActive: true, isPublished: true };
           if (params.bodyType && params.bodyType.length > 0) rentalWhere.bodyType = { in: params.bodyType };
           if (params.brand && params.brand.length > 0) rentalWhere.make = { in: params.brand };
           if (params.minYear) rentalWhere.productionYear = { gte: Number(params.minYear) };

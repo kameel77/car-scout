@@ -311,6 +311,41 @@ describe('GET /api/render', () => {
         expect(resMissing.body).not.toContain('window.__SSR_META__=');
     });
 
+    it('active but unpublished rental returns 404 + noindex (soft-404 fix — SSR must match the public API visibility)', async () => {
+        const rental = await app.prisma.rentalVehicle.create({
+            data: {
+                slug: `test-unpublished-rental-${Date.now()}`,
+                make: 'TEST_RENDER',
+                model: 'UnpublishedCar',
+                version: null,
+                productionYear: 2025,
+                isActive: true,
+                isPublished: false,
+            },
+        });
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=/wynajem-dlugoterminowy/${rental.slug}` });
+        expect(res.statusCode).toBe(404);
+        expect(res.body).toContain('noindex');
+        expect(res.body).not.toContain('window.__SSR_META__=');
+    });
+
+    it('active and published rental returns 200 (public API visibility)', async () => {
+        const rental = await app.prisma.rentalVehicle.create({
+            data: {
+                slug: `test-published-rental-${Date.now()}`,
+                make: 'TEST_RENDER',
+                model: 'PublishedCar',
+                version: null,
+                productionYear: 2025,
+                isActive: true,
+                isPublished: true,
+            },
+        });
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=/wynajem-dlugoterminowy/${rental.slug}` });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('TEST_RENDER PublishedCar');
+    });
+
     it('__SSR_META__.path is normalized like the SSR cache key: only ?page survives, other query params are dropped', async () => {
         // SSR HTML jest cache'owane per path+page NIEZALEŻNIE od reszty query stringa (ten sam
         // cacheKey co renderAndCache) — wpisanie pełnego ?utm_source=x do window.__SSR_META__
@@ -943,19 +978,19 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         it('requires edge revalidation for anonymous 200 GET and HEAD requests (fresh & cached)', async () => {
             const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
             expect(res1.statusCode).toBe(200);
-            expect(res1.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
+            expect(res1.headers['cache-control']).toBe('public, max-age=0, s-maxage=86400');
             expect(res1.headers['vary']).toBe('Accept-Encoding');
 
             // Repeated request (cache hit)
             const res2 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
             expect(res2.statusCode).toBe(200);
-            expect(res2.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
+            expect(res2.headers['cache-control']).toBe('public, max-age=0, s-maxage=86400');
             expect(res2.headers['vary']).toBe('Accept-Encoding');
 
             // HEAD request
             const resHead = await app.inject({ method: 'HEAD', url: '/api/render?path=/' });
             expect(resHead.statusCode).toBe(200);
-            expect(resHead.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
+            expect(resHead.headers['cache-control']).toBe('public, max-age=0, s-maxage=86400');
         });
 
         it('emits private no-store for requests with Authorization header', async () => {
@@ -973,7 +1008,7 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
                 url: '/api/render?path=/',
                 headers: { cookie: '_ga=GA1.1.123.456; _clsk=abc123sid456' },
             });
-            expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
+            expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=86400');
         });
 
         it('emits private no-store for /admin routes', async () => {
