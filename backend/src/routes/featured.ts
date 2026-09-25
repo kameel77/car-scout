@@ -27,7 +27,7 @@ export async function featuredRoutes(fastify: FastifyInstance) {
                     include: { dealer: true }
                 }),
                 fastify.prisma.rentalVehicle.findMany({
-                    where: { isFeatured: true, isActive: true },
+                    where: { isFeatured: true, isActive: true, isPublished: true },
                     take: 12,
                     orderBy: { createdAt: 'desc' }
                 })

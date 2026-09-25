@@ -57,6 +57,7 @@ export async function marketingFeedsRoutes(fastify: FastifyInstance) {
         const rentalVehicles = await fastify.prisma.rentalVehicle.findMany({
             where: {
                 isActive: true,
+                isPublished: true,
                 condition: 'NEW',
             },
         });

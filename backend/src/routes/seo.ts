@@ -79,7 +79,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
         if (sitemapCache && Date.now() - sitemapCache.at < SITEMAP_TTL_MS) {
             return reply
                 .header('Content-Type', 'application/xml')
-                .header('Cache-Control', 'public, max-age=900, s-maxage=900')
+                .header('Cache-Control', 'public, max-age=900, s-maxage=86400')
                 .send(sitemapCache.xml);
         }
 
@@ -175,7 +175,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         // 3. Dynamic Pages: Rental Vehicles
         const rentals = await fastify.prisma.rentalVehicle.findMany({
-            where: { isActive: true },
+            where: { isActive: true, isPublished: true },
             select: { slug: true, updatedAt: true }
         });
 
@@ -255,7 +255,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
 
         return reply
             .header('Content-Type', 'application/xml')
-            .header('Cache-Control', 'public, max-age=900, s-maxage=900')
+            .header('Cache-Control', 'public, max-age=900, s-maxage=86400')
             .send(xml);
     });
 
