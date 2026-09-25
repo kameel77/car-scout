@@ -177,7 +177,7 @@ async function countVehiclesForTarget(fastify: FastifyInstance, targetUrl: strin
 
 export async function featureTileRoutes(fastify: FastifyInstance) {
     // Public: list active tiles with computed vehicle counts
-    fastify.get('/api/feature-tiles/public', async (_request, _reply) => {
+    fastify.get('/api/feature-tiles/public', async (_request, reply) => {
         const tiles = await fastify.prisma.featureTile.findMany({
             where: { isActive: true },
             orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -191,6 +191,7 @@ export async function featureTileRoutes(fastify: FastifyInstance) {
                 vehicleCount: await countVehiclesForTarget(fastify, t.targetUrl),
             }))
         );
+        reply.header('Cache-Control', 'public, max-age=0, s-maxage=300');
         return { tiles: withCounts };
     });
 

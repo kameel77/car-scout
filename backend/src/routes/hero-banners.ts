@@ -44,11 +44,12 @@ async function unlinkBannerImage(imageUrl: string | null) {
 
 export async function heroBannerRoutes(fastify: FastifyInstance) {
   // Public: active banners, ordered
-  fastify.get('/api/hero-banners/public', async () => {
+  fastify.get('/api/hero-banners/public', async (_request, reply) => {
     const banners = await fastify.prisma.heroBanner.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
+    reply.header('Cache-Control', 'public, max-age=0, s-maxage=300');
     return {
       banners: banners.map((b) => ({
         id: b.id,

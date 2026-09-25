@@ -233,7 +233,9 @@ export async function settingsRoutes(fastify: FastifyInstance) {
     // Get current settings (PUBLIC — only allowlisted, non-sensitive fields; see PUBLIC_SETTINGS_FIELDS)
     fastify.get('/api/settings', async (request, reply) => {
         try {
-            return await getPublicSettings(fastify);
+            const settings = await getPublicSettings(fastify);
+            reply.header('Cache-Control', 'public, max-age=0, s-maxage=300');
+            return settings;
         } catch (error) {
             fastify.log.error(error, 'Failed to get settings');
             return reply.code(500).send({

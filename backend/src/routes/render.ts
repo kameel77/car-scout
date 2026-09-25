@@ -547,6 +547,19 @@ async function resolveMeta(
             return defaultMeta(ctx, { noindex: true, status: 410 });
         }
 
+        // Zepsute linki ze slugiem "-undefined-" (rocznik brakujący w miejscu generowania linku,
+        // patrz generateListingSlug) — Googlebot je crawluje z linków/feedów wygenerowanych przed
+        // naprawą. Zamiast miękkiej kanonizacji (200 z innym <link rel=canonical>) realny 301 na
+        // poprawny slug, żeby Google przestał wracać do zepsutego URL-a.
+        const requestedSlug = lm[2];
+        if (lifecycle.canonicalSlug && requestedSlug.includes('-undefined-') && requestedSlug !== lifecycle.canonicalSlug) {
+            return {
+                ...defaultMeta(ctx, { noindex: true, status: 301 }),
+                redirectUrl: `/${lm[1]}/${lifecycle.canonicalSlug}`,
+                status: 301,
+            };
+        }
+
         const listing = lifecycle.listing;
         const variant = lm[1] as ListingVariant;
         const isRecentlySold = lifecycle.state === 'RECENTLY_SOLD';
@@ -1046,8 +1059,7 @@ async function resolveSamochodyQueryCanonical(fastify: FastifyInstance, queryPar
 function getCacheControlHeader(
     request: FastifyRequest,
     status: number,
-    path: string,
-    noindex?: boolean
+    path: string
 ): string {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
         return 'private, no-store';
@@ -1055,9 +1067,14 @@ function getCacheControlHeader(
     if (status !== 200) {
         return 'private, no-store';
     }
-    if (path.startsWith('/admin') || NOINDEX_RE.test(path) || noindex) {
+    if (path.startsWith('/admin') || NOINDEX_RE.test(path)) {
         return 'private, no-store';
     }
+    // UWAGA: meta.noindex (parametr `noindex` tej funkcji) NIE wyklucza już edge cache'a.
+    // To realne, publiczne strony z treścią (np. archiwalna oferta po sprzedaży, strona
+    // marki/modelu poniżej progu liczby ofert) — mają tylko <meta name="robots" content="noindex">
+    // w HTML, żeby Google ich nie indeksował. Structuralnie prywatne trasy (admin/login/embed/
+    // lead/negotiate/zapytanie) są już wyłapane wyżej przez NOINDEX_RE — ich nie dotyczy.
     if (request.headers.authorization) {
         return 'private, no-store';
     }
@@ -1348,7 +1365,7 @@ export async function renderRoutes(fastify: FastifyInstance) {
                     .header('Cache-Control', 'public, max-age=86400')
                     .send();
             }
-            const cacheControl = getCacheControlHeader(request, cached.status, path, cached.noindex);
+            const cacheControl = getCacheControlHeader(request, cached.status, path);
             return reply
                 .code(cached.status)
                 .header('Content-Type', 'text/html; charset=utf-8')
@@ -1375,7 +1392,7 @@ export async function renderRoutes(fastify: FastifyInstance) {
                 .send();
         }
 
-        const cacheControl = getCacheControlHeader(request, result.status, path, result.noindex);
+        const cacheControl = getCacheControlHeader(request, result.status, path);
 
         return reply
             .code(result.status)

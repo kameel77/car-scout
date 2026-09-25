@@ -86,6 +86,23 @@ describe('Settings — public vs admin allowlist', () => {
         expect(body).toHaveProperty('enabledLanguages');
     });
 
+    it('GET /api/settings is edge-cacheable (anonymous public response)', async () => {
+        // Cache-Control publiczny wymaga hosta produkcyjnego (isProductionHost) — inaczej globalny
+        // onSend guard w app.ts (de-indexing na dev/staging) nadpisuje wszystko na 'private, no-store'.
+        const prevBrand = process.env.BRAND;
+        const prevFrontendUrl = process.env.FRONTEND_URL;
+        process.env.BRAND = 'motolia';
+        process.env.FRONTEND_URL = 'https://motolia.pl';
+        try {
+            const res = await app.inject({ method: 'GET', url: '/api/settings', headers: { host: 'motolia.pl' } });
+            expect(res.statusCode).toBe(200);
+            expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
+        } finally {
+            if (prevBrand === undefined) delete process.env.BRAND; else process.env.BRAND = prevBrand;
+            if (prevFrontendUrl === undefined) delete process.env.FRONTEND_URL; else process.env.FRONTEND_URL = prevFrontendUrl;
+        }
+    });
+
     it('GET /api/admin/settings requires auth (401 without token)', async () => {
         const res = await app.inject({ method: 'GET', url: '/api/admin/settings' });
         expect(res.statusCode).toBe(401);

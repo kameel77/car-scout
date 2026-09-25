@@ -262,7 +262,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         });
 
         await invalidateOfferCache(fastify, {
-            urls: [...RENTAL_AGGREGATE_URLS, ...(slug ? [`/wynajem-dlugoterminowy/${slug}`] : [])],
+            urls: [...RENTAL_AGGREGATE_URLS, ...(slug ? [`/wynajem-dlugoterminowy/${slug}`, `/api/rental/vehicles/${slug}`] : [])],
             purgeSitemap: true
         }).catch(err => {
             fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle create');
@@ -379,7 +379,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
 
         const activeSlug = vehicle.slug || existing.slug;
         await invalidateOfferCache(fastify, {
-            urls: [...RENTAL_AGGREGATE_URLS, ...(activeSlug ? [`/wynajem-dlugoterminowy/${activeSlug}`] : [])],
+            urls: [...RENTAL_AGGREGATE_URLS, ...(activeSlug ? [`/wynajem-dlugoterminowy/${activeSlug}`, `/api/rental/vehicles/${activeSlug}`] : [])],
             purgeSitemap: false
         }).catch(err => {
             fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle update');
@@ -413,7 +413,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         });
 
         await invalidateOfferCache(fastify, {
-            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`] : [])],
+            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`, `/api/rental/vehicles/${vehicle.slug}`] : [])],
             purgeSitemap: true
         }).catch(err => {
             fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle archive');
@@ -447,7 +447,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         });
 
         await invalidateOfferCache(fastify, {
-            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`] : [])],
+            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`, `/api/rental/vehicles/${vehicle.slug}`] : [])],
             purgeSitemap: true
         }).catch(err => {
             fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle restore');
@@ -478,7 +478,7 @@ export async function rentalVehicleRoutes(fastify: FastifyInstance) {
         await fastify.prisma.rentalVehicle.delete({ where: { id } });
 
         await invalidateOfferCache(fastify, {
-            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`] : [])],
+            urls: [...RENTAL_AGGREGATE_URLS, ...(vehicle.slug ? [`/wynajem-dlugoterminowy/${vehicle.slug}`, `/api/rental/vehicles/${vehicle.slug}`] : [])],
             purgeSitemap: true
         }).catch(err => {
             fastify.log.warn({ err }, 'Failed to invalidate cache after rental vehicle delete');
