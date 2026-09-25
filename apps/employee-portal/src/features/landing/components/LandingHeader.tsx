@@ -78,7 +78,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = () => {
 
         {!isDlaFirmPage ? (
           <Link to="/dla-firm" className="nav-company" onClick={() => setMenuOpen(false)}>
-            Dla pracodawcy <span aria-hidden="true">↗</span>
+            Dla pracodawcy
           </Link>
         ) : (
           <Link to="/" className="nav-company" onClick={() => setMenuOpen(false)}>

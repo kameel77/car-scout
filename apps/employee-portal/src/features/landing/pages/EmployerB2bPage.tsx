@@ -255,11 +255,11 @@ export const EmployerB2bPage: React.FC = () => {
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
               <a
-                href={`tel:${config.b2bPhone || '__B2B_PHONE__'}`}
+                href={`tel:${(config.b2bPhone || '+48 22 112 09 50').replace(/\s/g, '')}`}
                 className="inline-flex items-center gap-2 text-ink hover:text-ink/80 transition-colors"
               >
                 <Phone className="h-4 w-4 text-muted" />
-                <span>{config.b2bPhone || '__B2B_PHONE__'}</span>
+                <span>{config.b2bPhone || '+48 22 112 09 50'}</span>
               </a>
               <span className="text-line hidden sm:inline">|</span>
               <a

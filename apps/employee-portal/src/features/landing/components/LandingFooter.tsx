@@ -32,9 +32,6 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onOpenAbout }) => 
           <Link to="/dla-firm">Dla firm</Link>
           <Link to="/regulamin">Regulamin</Link>
           <Link to="/prywatnosc">Polityka prywatności</Link>
-          <a href="/brand.html" target="_blank" rel="noopener noreferrer">
-            Branding
-          </a>
           <button
             className="plain-button"
             type="button"
