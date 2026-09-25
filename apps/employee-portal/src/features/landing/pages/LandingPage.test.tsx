@@ -28,16 +28,16 @@ describe('Benefivo LandingPage Component Suite', () => {
     renderLandingPage();
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Dobre rzeczy/i })).toBeInTheDocument();
-      expect(screen.getByText(/TWÓJ BENEFIT. TWOJE AUTO./i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Nowe auto na warunkach dla pracowników/i })).toBeInTheDocument();
+      expect(screen.getByText(/PROGRAM PRACOWNICZY/i)).toBeInTheDocument();
       expect(
-        screen.getByText(/Samochód do pracy, na weekend i do codziennych spraw/i)
+        screen.getByText(/Nowe auto w najmie lub w finansowaniu, z rabatem/i)
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('link', { name: /Mam kod firmy\. Aktywuję dostęp/i })
+        screen.getByRole('link', { name: /Mam kod firmy/i })
       ).toHaveAttribute('href', '/rejestracja');
       expect(
-        screen.getByRole('link', { name: /Jesteś pracodawcą\? Przejdź do oferty dla firm/i })
+        screen.getByRole('link', { name: /Odpowiadasz za benefity\? Oferta dla firm/i })
       ).toHaveAttribute('href', '/dla-firm');
     });
 
@@ -50,14 +50,14 @@ describe('Benefivo LandingPage Component Suite', () => {
     renderLandingPage();
 
     // Find the CTA "Moja firma nie ma jeszcze Benefivo"
-    const ctaButton = screen.getByRole('button', { name: /Moja firma nie ma jeszcze Benefivo/i });
+    const ctaButton = screen.getByRole('button', { name: /Moja firma nie ma Benefivo/i });
     fireEvent.click(ctaButton);
 
     await waitFor(() => {
       expect(
         screen.getByRole('heading', { name: /Dobre rzeczy zaczynają się w firmie/i })
       ).toBeInTheDocument();
-      expect(screen.getByText(/WIADOMOŚĆ DO HR/i)).toBeInTheDocument();
+      expect(screen.getByText('WIADOMOŚĆ DO HR')).toBeInTheDocument();
     });
 
     // Mock clipboard API
@@ -143,9 +143,36 @@ describe('Benefivo LandingPage Component Suite', () => {
     renderLandingPage();
 
     await waitFor(() => {
-      const dashboardLinks = screen.getAllByRole('link', { name: /Pulpit|Przejdź do pulpitu/i });
+      const dashboardLinks = screen.getAllByRole('link', { name: /Pulpit|Przejdź do ofert/i });
       expect(dashboardLinks.length).toBeGreaterThan(0);
       expect(dashboardLinks.some((l) => l.getAttribute('href') === '/dashboard')).toBe(true);
+    });
+  });
+
+  it('sends an employee interest lead from the "Moja firma nie ma Benefivo" dialog without exposing employee data to the company', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ lead: { id: 'l1', referenceNumber: 'BNF-1', status: 'new' } }),
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+
+    renderLandingPage();
+    fireEvent.click(screen.getByRole('button', { name: /Moja firma nie ma Benefivo/i }));
+
+    fireEvent.change(await screen.findByLabelText(/Nazwa firmy/i), { target: { value: 'Acme S.A.' } });
+    fireEvent.change(screen.getByLabelText(/Twój e-mail/i), { target: { value: 'jan@acme.pl' } });
+    fireEvent.click(screen.getByLabelText(/Zgadzam się na kontakt/i));
+    fireEvent.click(screen.getByRole('button', { name: /Powiadom mnie/i }));
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(([url]) => String(url).endsWith('/leads'));
+      expect(call).toBeDefined();
+      const body = JSON.parse(call![1].body);
+      expect(body.leadType).toBe('employer_b2b');
+      expect(body.trafficSource).toBe('benefivo_employee_interest');
+      expect(body.email).toBe('jan@acme.pl');
+      expect(body.metadata.companyName).toBe('Acme S.A.');
+      expect(screen.getByText(/Damy znać, gdy program ruszy/i)).toBeInTheDocument();
     });
   });
 });

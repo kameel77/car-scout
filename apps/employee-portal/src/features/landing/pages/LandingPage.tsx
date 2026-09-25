@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../landing.css';
 import { LandingHeader } from '../components/LandingHeader';
 import { HeroSection } from '../components/HeroSection';
-import { CategoryStrip } from '../components/CategoryStrip';
+import { StatsBand } from '../components/StatsBand';
 import { OfferSection } from '../components/OfferSection';
 import { BenefitsSection } from '../components/BenefitsSection';
 import { StepsSection } from '../components/StepsSection';
@@ -33,15 +33,15 @@ export const LandingPage: React.FC = () => {
 
       <main id="main">
         <HeroSection onOpenEmployeeDialog={() => setEmployeeOpen(true)} />
-        <CategoryStrip />
+        <StatsBand />
+        <BenefitsSection />
         <OfferSection
           onOpenRental={() => setRentalOpen(true)}
           onOpenLeasing={() => setLeasingOpen(true)}
         />
-        <BenefitsSection />
         <StepsSection onOpenEmployeeDialog={() => setEmployeeOpen(true)} />
-        <EmployerTeaserSection />
         <FaqSection />
+        <EmployerTeaserSection />
       </main>
 
       <LandingFooter onOpenAbout={() => setAboutOpen(true)} />

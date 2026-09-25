@@ -1,41 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+/** One-line pointer to /dla-firm for HR visitors of the employee homepage. */
 export const EmployerTeaserSection: React.FC = () => {
   return (
-    <section id="dla-firm" className="employer-section wrap" aria-labelledby="employer-title">
-      <div className="employer-copy">
-        <p className="eyebrow">DLA FIRM</p>
-        <h2 id="employer-title">
-          Dobry pracodawca<br />
-          daje więcej<br />
-          <span>możliwości.</span>
-        </h2>
-        <p>
-          Dołącz samochody i usługi motoryzacyjne do pakietu benefitów Twojego zespołu. Zero kosztów wdrożenia, kompleksowe wsparcie operacyjne i preferencyjne warunki.
-        </p>
-        <Link to="/dla-firm" className="button button-lime">
-          Poznaj ofertę dla firm <span aria-hidden="true">↗</span>
+    <section id="dla-firm" className="wrap" aria-label="Oferta dla firm">
+      <div className="bg-forest text-paper rounded-3xl px-6 py-6 sm:px-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <p className="font-heading text-xl font-semibold m-0">Odpowiadasz za benefity w firmie?</p>
+        <Link to="/dla-firm" className="button button-lime self-start sm:self-auto">
+          Zobacz ofertę dla firm <span aria-hidden="true">&rarr;</span>
         </Link>
-      </div>
-
-      <div className="employer-visual">
-        <img
-          src="/static/charging.webp"
-          srcSet="/static/charging-small.webp 570w, /static/charging.webp 1500w"
-          sizes="(max-width: 720px) 92vw, 40vw"
-          width="1500"
-          height="2000"
-          loading="lazy"
-          alt="Biały samochód elektryczny podłączony do stacji ładowania"
-        />
-        <div className="employer-caption">
-          <span>BENEFIT, KTÓRY WYCHODZI POZA BIURO</span>
-          <p>
-            Dla ludzi.<br />
-            Na co dzień.
-          </p>
-        </div>
       </div>
     </section>
   );

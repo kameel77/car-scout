@@ -10,14 +10,9 @@ export const OfferSection: React.FC<OfferSectionProps> = ({ onOpenRental, onOpen
     <section id="oferta" className="section wrap" aria-labelledby="offer-title">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">AUTO DO TWOJEGO ŻYCIA</p>
-          <h2 id="offer-title">Dokąd teraz?</h2>
+          <p className="eyebrow">DWIE DROGI DO AUTA</p>
+          <h2 id="offer-title">Najem czy finansowanie?</h2>
         </div>
-        <p>
-          Do pracy, po dzieci, przed siebie.
-          <br />
-          Wybierz sposób na swoje auto.
-        </p>
       </div>
 
       <div className="offer-grid">
@@ -36,12 +31,11 @@ export const OfferSection: React.FC<OfferSectionProps> = ({ onOpenRental, onOpen
           </div>
           <div className="offer-body">
             <div>
-              <h3>Nowe auto. Twój rytm.</h3>
+              <h3>Jedna rata, wszystko w cenie</h3>
               <p>
-                Użytkujesz samochód przez ustalony czas.
-                <br />
-                Dobierasz przebieg i zakres usług.
+                Nowe auto na ustalony okres ze stałą ratą. Ubezpieczenie, serwis i assistance masz w racie.
               </p>
+              <p className="font-heading text-xl font-bold mt-2">od 1 281 zł brutto/mies.</p>
             </div>
             <button
               className="circle-button"
@@ -65,16 +59,15 @@ export const OfferSection: React.FC<OfferSectionProps> = ({ onOpenRental, onOpen
               loading="lazy"
               alt="Uśmiechnięta para w samochodzie podczas weekendowej wycieczki"
             />
-            <span className="image-chip">LEASING SAMOCHODÓW</span>
+            <span className="image-chip">NOWE AUTO W FINANSOWANIU</span>
           </div>
           <div className="offer-body">
             <div>
-              <h3>Więcej własnych planów.</h3>
+              <h3>Rabat od ceny katalogowej</h3>
               <p>
-                Finansujesz wybrane auto z opcją wykupu.
-                <br />
-                Warunki dopasowujemy do Twojej sytuacji.
+                Kredyt lub leasing, prywatnie albo na działalność. Przy każdej ofercie widzisz cenę katalogową i swoją cenę. Auto zostaje u Ciebie.
               </p>
+              <p className="font-heading text-xl font-bold mt-2">np. Tucson N Line 62 062 zł taniej</p>
             </div>
             <button
               className="circle-button"

@@ -1,83 +1,25 @@
 import React from 'react';
+import { EMPLOYEE_BENEFITS } from '../content/marketing';
 
 export const BenefitsSection: React.FC = () => {
   return (
-    <section id="benefity" className="benefits-section wrap" aria-labelledby="benefits-title">
-      <div className="benefits-layout">
-        <div className="benefits-copy">
-          <p className="eyebrow">DOBRE RZECZY W PAKIECIE</p>
-          <h2 id="benefits-title">
-            Auto to dopiero<br />
-            początek.
-          </h2>
-          <p>
-            W zależności od programu Twojej firmy możesz zyskać dostęp także do ofert związanych z tankowaniem, serwisem, oponami i pielęgnacją auta.
-          </p>
-          <a className="text-link mt-4" href="#jak-to-dziala">
-            Zobacz, jak dołączyć <span aria-hidden="true">&rarr;</span>
-          </a>
+    <section id="benefity" className="section wrap" aria-labelledby="benefits-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">CO DOSTAJESZ</p>
+          <h2 id="benefits-title">Co dostajesz w programie</h2>
         </div>
-
-        <div className="member-card" aria-label="Wizualizacja karty benefitowej Benefivo">
-          <div className="card-top">
-            <span className="brand">
-              benefivo<span aria-hidden="true">↗</span>
-            </span>
-            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z" />
-            </svg>
-          </div>
-          <span className="member-label">WIĘCEJ Z KAŻDEJ DROGI.</span>
-          <div className="card-bottom">
-            <span>Twój pakiet korzyści</span>
-            <span>powered by motolia</span>
-          </div>
-          <div className="card-path" aria-hidden="true"></div>
-        </div>
-
-        <div className="benefit-list">
-          <div>
-            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 21V3h10v18M2 21h14M4 10h10m0 3h3v5a2 2 0 0 0 4 0V9l-4-4m2 2v4h2" />
-            </svg>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3>Karta paliwowa</h3>
-              <span className="text-[11px] font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
-                Zakres zależy od programu firmy
-              </span>
-            </div>
-            <p>Wygodne rozliczenia i korzyści przy tankowaniu.</p>
-          </div>
-          <div>
-            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m4 10 2-6h12l2 6M3 10h18v8H3zM6 18v2m12-2v2M6 14h2m8 0h2" />
-            </svg>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3>Serwis i opony</h3>
-              <span className="text-[11px] font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
-                Zakres zależy od programu firmy
-              </span>
-            </div>
-            <p>Kompleksowa opieka i zniżki na obsługę samochodu.</p>
-          </div>
-          <div>
-            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z" />
-            </svg>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3>Myjnie i pielęgnacja</h3>
-              <span className="text-[11px] font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
-                Zakres zależy od programu firmy
-              </span>
-            </div>
-            <p>Czystość i komfort na każdej trasie.</p>
-          </div>
-        </div>
-
-        <p className="fine-print col-span-full">
-          Prezentowana karta jest wizualizacją koncepcji. Zakres benefitów i partnerzy zostaną sprecyzowani w ofercie programu dla danej firmy.
-        </p>
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {EMPLOYEE_BENEFITS.map((b, i) => (
+          <div key={b.title} className="bg-white p-7 rounded-3xl border border-line flex flex-col gap-2">
+            <span className="step-number">{String(i + 1).padStart(2, '0')}</span>
+            <h3>{b.title}</h3>
+            <p className="text-sm text-muted leading-relaxed">{b.text}</p>
+          </div>
+        ))}
+      </div>
+      <p className="fine-print">Szczegóły pakietu zależą od programu Twojej firmy.</p>
     </section>
   );
 };
