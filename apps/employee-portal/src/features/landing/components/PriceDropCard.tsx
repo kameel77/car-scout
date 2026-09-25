@@ -30,7 +30,7 @@ export const PriceDropCard: React.FC = () => {
         </div>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="font-heading text-2xl font-bold tracking-tight">{HERO_PRICE_EXAMPLE.title}</p>
+            <p className="font-heading text-2xl font-bold tracking-tight !text-ink">{HERO_PRICE_EXAMPLE.title}</p>
             <p className="text-sm text-muted mt-1">{HERO_PRICE_EXAMPLE.subtitle}</p>
           </div>
           <span className="text-[11px] font-bold uppercase tracking-wider bg-[#E6E2F2] px-3 py-1.5 rounded-full whitespace-nowrap">
@@ -41,7 +41,7 @@ export const PriceDropCard: React.FC = () => {
           <span className="text-sm text-muted">Cena katalogowa</span>
           <span className="text-muted line-through">{fmt(catalogPrice)} zł</span>
         </div>
-        <div className="flex items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
           <span className="text-sm font-semibold">Twoja cena</span>
           <span
             className="font-heading text-4xl sm:text-5xl font-extrabold tracking-tight tabular-nums leading-none"
@@ -56,7 +56,7 @@ export const PriceDropCard: React.FC = () => {
         <div className="h-2.5 rounded-full bg-[#EEF1E8] overflow-hidden" aria-hidden="true">
           <div className="h-full rounded-full bg-ink" style={{ width: `${barPct.toFixed(1)}%` }} />
         </div>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <span
             aria-hidden="true"
             className={`text-sm font-bold bg-lime px-4 py-2 rounded-full tabular-nums transition-opacity ${progress === 1 ? 'bf-pop' : ''}`}

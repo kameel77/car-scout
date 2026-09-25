@@ -35,7 +35,7 @@ export const OfferSection: React.FC<OfferSectionProps> = ({ onOpenRental, onOpen
               <p>
                 Nowe auto na ustalony okres ze stałą ratą. Ubezpieczenie, serwis i assistance masz w racie.
               </p>
-              <p className="font-heading text-xl font-bold mt-2">od 1 281 zł brutto/mies.</p>
+              <p className="font-heading !text-xl font-bold mt-2 !text-ink">od 1 281 zł brutto/mies.</p>
             </div>
             <button
               className="circle-button"
@@ -67,7 +67,7 @@ export const OfferSection: React.FC<OfferSectionProps> = ({ onOpenRental, onOpen
               <p>
                 Kredyt lub leasing, prywatnie albo na działalność. Przy każdej ofercie widzisz cenę katalogową i swoją cenę. Auto zostaje u Ciebie.
               </p>
-              <p className="font-heading text-xl font-bold mt-2">np. Tucson N Line 62 062 zł taniej</p>
+              <p className="font-heading !text-xl font-bold mt-2 !text-ink">np. Tucson N Line 62 062 zł taniej</p>
             </div>
             <button
               className="circle-button"

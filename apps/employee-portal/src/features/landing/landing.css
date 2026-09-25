@@ -1055,6 +1055,10 @@
   font-size: clamp(40px, 4.4vw, 64px);
 }
 
+.benefivo-landing .hero > * {
+  min-width: 0;
+}
+
 .benefivo-landing .price-drop {
   position: relative;
   display: flex;

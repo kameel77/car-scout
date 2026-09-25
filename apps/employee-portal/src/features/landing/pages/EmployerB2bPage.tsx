@@ -257,7 +257,7 @@ export const EmployerB2bPage: React.FC = () => {
               </a>
             )}
           </div>
-          <p className="mt-4 text-sm text-muted">
+          <p className="!mt-4 text-sm text-muted">
             lub zadzwoń:{' '}
             <a
               href={telHref(b2bPhone)}
@@ -267,7 +267,7 @@ export const EmployerB2bPage: React.FC = () => {
               {b2bPhone}
             </a>
           </p>
-          <p className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-ink bg-white border border-line rounded-full px-4 py-2">
+          <p className="!mt-6 inline-flex items-center gap-2 text-sm font-medium text-ink bg-white border border-line rounded-full px-4 py-2">
             <Users className="h-4 w-4 text-forest" aria-hidden="true" />
             {PILOT_LINE}
           </p>
@@ -342,13 +342,13 @@ export const EmployerB2bPage: React.FC = () => {
             <div className="bg-lime p-8 sm:p-10 rounded-3xl flex flex-col gap-3">
               <p className="eyebrow">STANDARD</p>
               <h3>Dostęp pracowniczy</h3>
-              <p className="font-heading text-5xl font-extrabold tracking-tight">0 zł</p>
-              <p className="text-sm leading-relaxed">Pracownicy korzystają z warunków programu. Firma nie ponosi kosztów.</p>
+              <p className="font-heading text-5xl font-extrabold tracking-tight !text-ink">0 zł</p>
+              <p className="text-sm leading-relaxed !text-ink">Pracownicy korzystają z warunków programu. Firma nie ponosi kosztów.</p>
             </div>
             <div className="bg-white p-8 sm:p-10 rounded-3xl border border-line flex flex-col gap-3">
               <p className="eyebrow text-muted">OPCJA</p>
               <h3>Program z dopłatą firmy</h3>
-              <p className="font-heading text-5xl font-extrabold tracking-tight text-forest">Ty ustalasz</p>
+              <p className="font-heading text-5xl font-extrabold tracking-tight !text-forest">Ty ustalasz</p>
               <p className="text-sm text-muted leading-relaxed">Firma może dopłacać do raty wybranym grupom. Zasady i skutki podatkowe omawiamy indywidualnie.</p>
             </div>
           </div>
@@ -403,7 +403,7 @@ export const EmployerB2bPage: React.FC = () => {
             <div>
               <p className="eyebrow">KTO ZA TYM STOI</p>
               <h2 id="b2b-operator-title">Benefivo prowadzi Motolia.</h2>
-              <p className="text-muted leading-relaxed mt-4">
+              <p className="text-muted leading-relaxed !mt-4">
                 Motolia Sp. z o.o. to operator programu i pośrednik finansowy. Współpracuje z importerami, grupami dealerskimi, instytucjami finansującymi i firmami najmu, obsługuje pracowników i administruje ich danymi.
               </p>
             </div>

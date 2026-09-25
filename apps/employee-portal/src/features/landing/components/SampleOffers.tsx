@@ -62,7 +62,7 @@ export const SampleOffers: React.FC<SampleOffersProps> = ({ onOpenEmployeeDialog
               {unlocked ? 'Przykładowe auta w programie' : 'Twoje ceny czekają za kodem firmy.'}
             </h2>
             {!unlocked && (
-              <p className="text-[#C9D3C4]">
+              <p className="!text-[#C9D3C4]">
                 Wpisz kod z maila od HR, a zobaczysz raty i ceny przygotowane dla Twojego zespołu.
               </p>
             )}
@@ -97,7 +97,7 @@ export const SampleOffers: React.FC<SampleOffersProps> = ({ onOpenEmployeeDialog
                   {status === 'unlocked' ? 'Załóż konto' : status === 'checking' ? 'Sprawdzam...' : 'Odblokuj ceny'}
                 </button>
               </div>
-              <p id="unlock-code-hint" className={`text-sm min-h-[20px] ${error ? 'text-[#F5C2AE]' : 'text-[#C9D3C4]'}`} role={error ? 'alert' : undefined}>
+              <p id="unlock-code-hint" className={`text-sm min-h-[20px] ${error ? '!text-[#F5C2AE]' : '!text-[#C9D3C4]'}`} role={error ? 'alert' : undefined}>
                 {error ? (
                   error
                 ) : status === 'unlocked' ? (
@@ -156,7 +156,7 @@ export const SampleOffers: React.FC<SampleOffersProps> = ({ onOpenEmployeeDialog
                     {offer.tag}
                   </span>
                 </div>
-                <p className="text-sm text-muted">{offer.subtitle}</p>
+                <p className="text-sm">{offer.subtitle}</p>
                 {priceBlock}
               </div>
             );
@@ -179,7 +179,7 @@ export const SampleOffers: React.FC<SampleOffersProps> = ({ onOpenEmployeeDialog
             );
           })}
         </ul>
-        <p className="text-xs text-[#C9D3C4]">
+        <p className="text-xs !text-[#C9D3C4]">
           Przykłady z oferty programu, {PROGRAM_FIGURES_AS_OF}. Raty najmu brutto „od”, zależne od przebiegu i okresu. Rabat na nowe auta liczony od ceny katalogowej. Ceny mogą się zmieniać.
         </p>
       </div>
