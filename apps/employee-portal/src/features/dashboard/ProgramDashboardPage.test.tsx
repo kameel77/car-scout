@@ -64,9 +64,9 @@ describe('ProgramDashboardPage Component', () => {
     ).toBeInTheDocument();
 
     // Benefits
-    expect(screen.getByText(/Pakiet benefitów w programie Action Flota Plus/i)).toBeInTheDocument();
-    expect(screen.getByText('Specjalne warunki flotowe')).toBeInTheDocument();
-    expect(screen.getByText('Pakiet paliwowy Moya')).toBeInTheDocument();
+    expect(screen.getByText(/Pakiet benefitów w Twoim programie/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Rabat od ceny katalogowej')[0]).toBeInTheDocument();
+    expect(screen.getByText('Karta Moya')).toBeInTheDocument();
     expect(screen.getByText('Opieka doradcy Motolii')).toBeInTheDocument();
 
     // Quick access cards & links
@@ -85,7 +85,7 @@ describe('ProgramDashboardPage Component', () => {
         name: /Jak działa program partnerski Benefivo\?/i,
       })
     ).toBeInTheDocument();
-    expect(screen.getByText('Rabaty flotowe')).toBeInTheDocument();
+    expect(screen.getAllByText('Rabat od ceny katalogowej')).toHaveLength(2);
     expect(screen.getByText('Wybór B2B lub prywatnie')).toBeInTheDocument();
     expect(screen.getByText('0 zł ukrytych opłat')).toBeInTheDocument();
     expect(screen.getByText('Dedykowany doradca')).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe('ProgramDashboardPage Component', () => {
         screen.getByText(/Program aktywny dla organizacji Twojej firmy/i)
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Pakiet benefitów w programie partnerskim/i)
+        screen.getByText(/Pakiet benefitów w Twoim programie/i)
       ).toBeInTheDocument();
     });
   });

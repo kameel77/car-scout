@@ -91,22 +91,22 @@ export const ProgramDashboardPage: React.FC = () => {
 
           <div className="mt-8 pt-6 border-t border-line">
             <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-4">
-              Pakiet benefitów w programie {user?.program?.name || 'partnerskim'}
+              Pakiet benefitów w Twoim programie
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-3.5 p-4 bg-paper rounded-2xl border border-line shadow-xs">
                 <Shield className="h-6 w-6 text-forest flex-shrink-0" />
                 <div>
-                  <div className="font-semibold text-sm text-ink">Specjalne warunki flotowe</div>
-                  <div className="text-xs text-muted mt-0.5">Dedykowane matryce i rabaty cenowe</div>
+                  <div className="font-semibold text-sm text-ink">Rabat od ceny katalogowej</div>
+                  <div className="text-xs text-muted mt-0.5">Cena katalogowa i Twoja cena przy każdej ofercie</div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3.5 p-4 bg-paper rounded-2xl border border-line shadow-xs">
                 <Fuel className="h-6 w-6 text-forest flex-shrink-0" />
                 <div>
-                  <div className="font-semibold text-sm text-ink">Pakiet paliwowy Moya</div>
-                  <div className="text-xs text-muted mt-0.5">Karta z zasileniem i rabat na stacjach</div>
+                  <div className="font-semibold text-sm text-ink">Karta Moya</div>
+                  <div className="text-xs text-muted mt-0.5">Przy ofertach objętych pakietem, szczegóły w ofercie</div>
                 </div>
               </div>
 
@@ -145,7 +145,7 @@ export const ProgramDashboardPage: React.FC = () => {
                   Samochody nowe
                 </h3>
                 <p className="text-xs sm:text-sm text-muted mt-2 leading-relaxed">
-                  Kredyt samochodowy oraz leasing operacyjny. Wynegocjowane rabaty flotowe od cen katalogowych z gwarancją stałej raty.
+                  Kredyt samochodowy oraz leasing operacyjny z rabatem od ceny katalogowej.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-line">
@@ -216,7 +216,7 @@ export const ProgramDashboardPage: React.FC = () => {
               Jak działa program partnerski {config.brandName || 'Benefivo'}?
             </h2>
             <p className="text-xs sm:text-sm text-muted mt-1 max-w-2xl">
-              Dzięki partnerstwu Twojej organizacji z Motolią otrzymujesz bezpośredni dostęp do warunków zarezerwowanych dotychczas dla największych flot korporacyjnych.
+              Dzięki partnerstwu Twojej firmy z Motolią masz dostęp do rabatów od ceny katalogowej i opieki doradcy.
             </p>
           </div>
 
@@ -224,10 +224,10 @@ export const ProgramDashboardPage: React.FC = () => {
             <div className="p-4 bg-paper rounded-2xl border border-line space-y-2">
               <div className="flex items-center gap-2 text-forest font-semibold text-sm">
                 <Percent className="h-4 w-4 flex-shrink-0" />
-                <span>Rabaty flotowe</span>
+                <span>Rabat od ceny katalogowej</span>
               </div>
               <p className="text-xs text-muted leading-relaxed">
-                Wynegocjowane zniżki na zakup nowych aut i dedykowane matryce finansowania, nieosiągalne w standardowych ofertach salonowych.
+                Przy każdej ofercie widzisz cenę katalogową i swoją cenę po rabacie.
               </p>
             </div>
 
@@ -247,7 +247,7 @@ export const ProgramDashboardPage: React.FC = () => {
                 <span>0 zł ukrytych opłat</span>
               </div>
               <p className="text-xs text-muted leading-relaxed">
-                Przejrzyste warunki kalkulacji, brak marż pośredników i gwarancja stałej raty przez cały okres trwania umowy.
+                Przejrzyste warunki kalkulacji i brak opłat za przygotowanie oferty.
               </p>
             </div>
 
