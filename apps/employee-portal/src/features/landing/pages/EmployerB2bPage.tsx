@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Mail } from 'lucide-react';
+import { Phone, Mail, Clock, Users, ShieldCheck, Star, BadgeCheck, MessageCircle, Lock } from 'lucide-react';
 import '../landing.css';
 import { LandingHeader } from '../components/LandingHeader';
 import { LandingFooter } from '../components/LandingFooter';
@@ -7,10 +7,67 @@ import { AboutDialog } from '../dialogs/AboutDialog';
 import { TurnstileWidget } from '../../common/TurnstileWidget';
 import { useBrandConfig } from '../../../config/BrandContext';
 import { trackEvent } from '../../analytics/analytics';
+import { useTrack } from '../../analytics/useTrack';
 import { isValidNip } from '../../common/nip';
+import { StatsBand } from '../components/StatsBand';
+import {
+  B2B_BOOKING_URL,
+  B2B_CONTACT,
+  B2B_DECK_PDF,
+  DEFAULT_B2B_PHONE,
+  EMPLOYEE_BENEFITS,
+  PILOT_LINE,
+  telHref,
+  type FaqItem,
+} from '../content/marketing';
+
+const HR_FAQ: FaqItem[] = [
+  {
+    question: 'Ile to kosztuje firmę?',
+    answer: 'W modelu dostępu pracowniczego nic. Firma nie finansuje samochodów. Opcjonalnie może dopłacać do raty wybranym pracownikom.',
+    approved: true,
+  },
+  {
+    question: 'Kto jest stroną umowy na samochód?',
+    answer: 'Pracownik. Umowę najmu, kredytu lub leasingu zawiera z instytucją finansującą za pośrednictwem Motolii. Firma podpisuje wyłącznie umowę o współpracy.',
+    approved: true,
+  },
+  {
+    question: 'Co musi zrobić dział HR?',
+    answer: 'Przekazać pracownikom kod dostępu i przygotowaną przez nas informację. Pytania o auta i umowy obsługuje doradca Motolii.',
+    approved: true,
+  },
+  {
+    question: 'Kto przetwarza dane pracowników?',
+    answer: 'Administratorem danych osobowych pracowników korzystających z portalu jest Motolia Sp. z o.o.',
+    approved: true,
+  },
+  {
+    question: 'Czy program wymaga potrąceń z wynagrodzenia?',
+    answer: 'W modelu dostępu pracowniczego nie. Pracownik rozlicza się bezpośrednio z instytucją finansującą.',
+    approved: true,
+  },
+  {
+    question: 'Kto obsługuje sprawy związane z autem?',
+    answer: 'Doradca Motolii i firma najmu lub leasingu. Dział HR nie jest stroną tych spraw.',
+    approved: true,
+  },
+  { question: 'Co, jeśli pracownik odejdzie z firmy?', answer: 'TODO', approved: false },
+  { question: 'Jak zakończyć współpracę?', answer: 'TODO', approved: false },
+  { question: 'Ile trwa wdrożenie?', answer: 'TODO', approved: false },
+];
+
+const ROLLOUT_STEPS = [
+  { title: 'Rozmowa', text: 'Poznajemy firmę i potrzeby zespołu.' },
+  { title: 'Umowa', text: 'Ustalamy zakres programu i podpisujemy umowę o współpracy.' },
+  { title: 'Start', text: 'Dostajesz kod firmy i gotowe materiały dla pracowników.' },
+  { title: 'Obsługa', text: 'Pracownicy działają w portalu, Motolia prowadzi cały proces.' },
+];
 
 export const EmployerB2bPage: React.FC = () => {
   const { config } = useBrandConfig();
+  const track = useTrack();
+  const b2bPhone = config.b2bPhone || DEFAULT_B2B_PHONE;
   const [aboutOpen, setAboutOpen] = useState(false);
 
   // Form states
@@ -24,6 +81,7 @@ export const EmployerB2bPage: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [showDetails, setShowDetails] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [, setTouched] = useState<Record<string, boolean>>({});
@@ -34,7 +92,7 @@ export const EmployerB2bPage: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = 'Benefivo dla Firm - Program samochodowy dla pracowników | Powered by Motolia';
+    document.title = 'Benefivo dla firm: benefit samochodowy dla pracowników | Powered by Motolia';
     trackEvent('page_view', { page: 'employer_b2b' }, config.apiUrl, config.analyticsEnabled);
   }, [config.apiUrl, config.analyticsEnabled]);
 
@@ -88,6 +146,7 @@ export const EmployerB2bPage: React.FC = () => {
     const errConsent = validateField('consentPrivacy', consentPrivacy);
 
     if (errContactName || errCompanyName || errEmail || errPhone || errNip || errConsent) {
+      if (errNip) setShowDetails(true);
       return;
     }
 
@@ -149,99 +208,214 @@ export const EmployerB2bPage: React.FC = () => {
       <LandingHeader />
 
       <main id="main">
-        {/* Intro */}
-        <section className="b2b-hero wrap">
+        {/* Hero */}
+        <section className="b2b-hero wrap" aria-labelledby="b2b-hero-title">
           <p className="eyebrow">
             <span className="status-dot" aria-hidden="true" />
             DLA FIRM
           </p>
-          <h1>
-            Daj pracownikom więcej możliwości za kierownicą.<br />
-            <span className="text-muted">Bez kosztów dla firmy.</span>
+          <h1 id="b2b-hero-title">
+            Benefit samochodowy dla całego zespołu.<br />
+            <span className="text-muted">Bez budżetu i bez pracy po stronie HR.</span>
           </h1>
           <p className="hero-description">
-            Podpisz umowę o współpracy, a Twój zespół otrzyma dostęp do specjalnych ofert na samochody i usługi motoryzacyjne. Pracownicy sami zdecydują, czy chcą z nich skorzystać. Przygotowaniem ofert i obsługą programu zajmuje się Motolia.
+            Twoi pracownicy dostają nowe auta z rabatem od ceny katalogowej, najem z pełną obsługą, kartę Moya z 500 zł i osobistego doradcę. Firma podpisuje umowę o współpracy, a cały proces prowadzi Motolia.
           </p>
           <div className="hero-actions">
+            {B2B_BOOKING_URL ? (
+              <a
+                href={B2B_BOOKING_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button button-lime"
+                onClick={() => track('b2b_booking_click', { from: 'hero' })}
+              >
+                Umów 20-minutową rozmowę <span aria-hidden="true">&rarr;</span>
+              </a>
+            ) : (
+              <a
+                href="#kontakt-b2b"
+                className="button button-lime"
+                onClick={(e) => {
+                  e.preventDefault();
+                  track('b2b_booking_click', { from: 'hero' });
+                  document.getElementById('kontakt-b2b')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                Umów 20-minutową rozmowę <span aria-hidden="true">&rarr;</span>
+              </a>
+            )}
+            {B2B_DECK_PDF && (
+              <a
+                href={B2B_DECK_PDF}
+                className="button button-outline"
+                download
+                onClick={() => track('b2b_pdf_download')}
+              >
+                Pobierz prezentację (PDF)
+              </a>
+            )}
+          </div>
+          <p className="mt-4 text-sm text-muted">
+            lub zadzwoń:{' '}
             <a
-              href="#kontakt-b2b"
-              className="button button-lime"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('kontakt-b2b')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              href={telHref(b2bPhone)}
+              className="font-semibold text-ink underline underline-offset-4"
+              onClick={() => track('b2b_cta_call_click', { from: 'hero' })}
             >
-              Porozmawiajmy o współpracy <span aria-hidden="true">&rarr;</span>
+              {b2bPhone}
             </a>
-          </div>
+          </p>
+          <p className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-ink bg-white border border-line rounded-full px-4 py-2">
+            <Users className="h-4 w-4 text-forest" aria-hidden="true" />
+            {PILOT_LINE}
+          </p>
         </section>
 
-        {/* Benefits Grid */}
-        <section className="section wrap pt-0" aria-labelledby="b2b-benefits-title">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-3xl border border-line flex flex-col justify-start">
-              <span className="step-number">01</span>
-              <h3 className="mb-3">Bez kosztów po stronie firmy</h3>
-              <p className="text-sm text-muted leading-relaxed">
-                Udostępniasz pracownikom program na podstawie umowy o współpracy. Sam dostęp do ofert nie wymaga finansowania samochodów przez pracodawcę.
-              </p>
-            </div>
+        <StatsBand />
 
-            <div className="bg-white p-8 rounded-3xl border border-line flex flex-col justify-start">
-              <span className="step-number">02</span>
-              <h3 className="mb-3">Oferty przygotowane dla Twojego zespołu</h3>
-              <p className="text-sm text-muted leading-relaxed">
-                Pracownicy otrzymują dostęp do warunków i propozycji motoryzacyjnych dostępnych w programie ich firmy.
-              </p>
-            </div>
-
-            <div className="bg-white p-8 rounded-3xl border border-line flex flex-col justify-start">
-              <span className="step-number">03</span>
-              <h3 className="mb-3">Obsługa po naszej stronie</h3>
-              <p className="text-sm text-muted leading-relaxed">
-                Motolia przygotowuje ofertę, wspiera pracowników w wyborze rozwiązania i prowadzi dalszy proces związany z samochodem.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* How We Start Section */}
-        <section className="section wrap pt-0" aria-labelledby="b2b-steps-title">
+        {/* Korzyści */}
+        <section id="korzysci" className="section wrap scroll-mt-8" aria-labelledby="b2b-benefits-title">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">PROSTY PROCES</p>
-              <h2 id="b2b-steps-title">Jak zaczynamy?</h2>
+              <p className="eyebrow">KORZYŚCI DLA FIRMY</p>
+              <h2 id="b2b-benefits-title">Nowy benefit w pakiecie. Bez nowego kosztu.</h2>
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { Icon: Users, title: 'Benefit dla wszystkich', text: 'Dostęp dostaje cały zespół, a nie tylko osoby z autem służbowym.' },
+              { Icon: ShieldCheck, title: '0 zł, bez aut w bilansie', text: 'Firma podpisuje umowę o współpracy. Umowy na samochody zawiera pracownik.' },
+              { Icon: Star, title: 'Wyróżnik w rekrutacji', text: 'Konkretny, odczuwalny benefit, o którym łatwo powiedzieć kandydatom.' },
+            ].map(({ Icon, title, text }) => (
+              <div key={title} className="bg-white p-8 rounded-3xl border border-line flex flex-col gap-3">
+                <Icon className="h-7 w-7 text-forest" aria-hidden="true" />
+                <h3>{title}</h3>
+                <p className="text-sm text-muted leading-relaxed">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Co dostają pracownicy */}
+        <section className="section wrap pt-0" aria-labelledby="b2b-employees-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">DLA ZESPOŁU</p>
+              <h2 id="b2b-employees-title">Co dostają Twoi pracownicy</h2>
+            </div>
+            <a href="/" className="text-link">
+              Zobacz stronę dla pracowników <span aria-hidden="true">&rarr;</span>
+            </a>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-7 rounded-3xl border border-line flex flex-col justify-start">
-              <span className="step-number">01</span>
-              <p className="text-[15px] font-medium text-ink leading-snug">
-                Poznajemy potrzeby Twojej firmy i zespołu.
-              </p>
+            {EMPLOYEE_BENEFITS.map((b, i) => (
+              <div key={b.title} className="bg-white p-7 rounded-3xl border border-line flex flex-col gap-2">
+                <span className="step-number">{String(i + 1).padStart(2, '0')}</span>
+                <h3>{b.title}</h3>
+                <p className="text-sm text-muted leading-relaxed">{b.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Model współpracy */}
+        <section className="section wrap pt-0" aria-labelledby="b2b-model-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">MODEL WSPÓŁPRACY</p>
+              <h2 id="b2b-model-title">Zaczynasz od zera złotych. Resztę decydujesz Ty.</h2>
             </div>
-            <div className="bg-white p-7 rounded-3xl border border-line flex flex-col justify-start">
-              <span className="step-number">02</span>
-              <p className="text-[15px] font-medium text-ink leading-snug">
-                Ustalamy zakres programu i podpisujemy umowę.
-              </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-lime p-8 sm:p-10 rounded-3xl flex flex-col gap-3">
+              <p className="eyebrow">STANDARD</p>
+              <h3>Dostęp pracowniczy</h3>
+              <p className="font-heading text-5xl font-extrabold tracking-tight">0 zł</p>
+              <p className="text-sm leading-relaxed">Pracownicy korzystają z warunków programu. Firma nie ponosi kosztów.</p>
             </div>
-            <div className="bg-white p-7 rounded-3xl border border-line flex flex-col justify-start">
-              <span className="step-number">03</span>
-              <p className="text-[15px] font-medium text-ink leading-snug">
-                Przygotowujemy dostęp oraz materiały do przekazania pracownikom.
-              </p>
-            </div>
-            <div className="bg-white p-7 rounded-3xl border border-line flex flex-col justify-start">
-              <span className="step-number">04</span>
-              <p className="text-[15px] font-medium text-ink leading-snug">
-                Pracownicy samodzielnie przeglądają oferty i kontaktują się z Motolią.
-              </p>
+            <div className="bg-white p-8 sm:p-10 rounded-3xl border border-line flex flex-col gap-3">
+              <p className="eyebrow text-muted">OPCJA</p>
+              <h3>Program z dopłatą firmy</h3>
+              <p className="font-heading text-5xl font-extrabold tracking-tight text-forest">Ty ustalasz</p>
+              <p className="text-sm text-muted leading-relaxed">Firma może dopłacać do raty wybranym grupom. Zasady i skutki podatkowe omawiamy indywidualnie.</p>
             </div>
           </div>
         </section>
 
-        <section className="section wrap pt-0" aria-labelledby="kontakt-title">
+        {/* Wdrożenie */}
+        <section id="wdrozenie" className="section wrap pt-0 scroll-mt-8" aria-labelledby="b2b-steps-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">WDROŻENIE</p>
+              <h2 id="b2b-steps-title">Cztery kroki. Po stronie HR: jeden mail.</h2>
+            </div>
+          </div>
+          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {ROLLOUT_STEPS.map((step, i) => (
+              <li key={step.title} className="bg-white p-7 rounded-3xl border border-line flex flex-col gap-2">
+                <span className="step-number">{String(i + 1).padStart(2, '0')}</span>
+                <h3>{step.title}</h3>
+                <p className="text-sm text-muted leading-relaxed">{step.text}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* FAQ dla HR */}
+        <section id="faq" className="section wrap faq-section scroll-mt-8" aria-labelledby="b2b-faq-title">
+          <div>
+            <p className="eyebrow">FAQ DLA HR</p>
+            <h2 id="b2b-faq-title">Pytania, które zwykle padają.</h2>
+          </div>
+          <div className="faq-list">
+            {HR_FAQ.filter((item) => item.approved).map((item) => (
+              <details
+                key={item.question}
+                onToggle={(e) => {
+                  if (e.currentTarget.open) track('faq_toggle', { question: item.question, page: 'employer_b2b' });
+                }}
+              >
+                <summary>
+                  {item.question}
+                  <span aria-hidden="true">+</span>
+                </summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        {/* Operator */}
+        <section className="section wrap pt-0" aria-labelledby="b2b-operator-title">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <p className="eyebrow">KTO ZA TYM STOI</p>
+              <h2 id="b2b-operator-title">Benefivo prowadzi Motolia.</h2>
+              <p className="text-muted leading-relaxed mt-4">
+                Motolia Sp. z o.o. to operator programu i pośrednik finansowy. Współpracuje z importerami, grupami dealerskimi, instytucjami finansującymi i firmami najmu, obsługuje pracowników i administruje ich danymi.
+              </p>
+            </div>
+            <ul className="flex flex-col gap-3">
+              {[
+                { Icon: Users, text: PILOT_LINE, highlight: true },
+                { Icon: BadgeCheck, text: 'Jeden partner od oferty po odbiór auta', highlight: false },
+                { Icon: Lock, text: 'Dane pracowników przetwarza Motolia', highlight: false },
+                { Icon: MessageCircle, text: 'Dedykowany opiekun programu w firmie', highlight: false },
+              ].map(({ Icon, text, highlight }) => (
+                <li
+                  key={text}
+                  className={`${highlight ? 'bg-lime' : 'bg-white border border-line'} rounded-3xl px-6 py-5 flex items-center gap-4 font-medium`}
+                >
+                  <Icon className="h-6 w-6 text-forest flex-shrink-0" aria-hidden="true" />
+                  {text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section id="kontakt" className="section wrap pt-0 scroll-mt-8" aria-labelledby="kontakt-title">
           {/* Direct Contact Bar */}
           <div className="max-w-3xl mx-auto mb-10 bg-white border border-line rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs">
             <div className="flex items-center gap-4">
@@ -253,22 +427,26 @@ export const EmployerB2bPage: React.FC = () => {
                 <p className="text-sm text-ink font-medium mt-0.5">Masz pytania? Porozmawiaj bezpośrednio z doradcą.</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
+            <div className="flex flex-col items-start gap-2 text-sm font-semibold">
               <a
-                href={`tel:${(config.b2bPhone || '+48 22 112 09 50').replace(/\s/g, '')}`}
+                href={telHref(b2bPhone)}
                 className="inline-flex items-center gap-2 text-ink hover:text-ink/80 transition-colors"
+                onClick={() => track('b2b_cta_call_click', { from: 'contact' })}
               >
                 <Phone className="h-4 w-4 text-muted" />
-                <span>{config.b2bPhone || '+48 22 112 09 50'}</span>
+                <span>{b2bPhone}</span>
               </a>
-              <span className="text-line hidden sm:inline">|</span>
               <a
-                href={`mailto:${config.b2bEmail || 'b2b@benefivo.pl'}`}
+                href={`mailto:${config.b2bEmail || B2B_CONTACT.email}`}
                 className="inline-flex items-center gap-2 text-ink hover:text-ink/80 transition-colors"
               >
                 <Mail className="h-4 w-4 text-muted" />
-                <span>{config.b2bEmail || 'b2b@benefivo.pl'}</span>
+                <span>{config.b2bEmail || B2B_CONTACT.email}</span>
               </a>
+              <span className="inline-flex items-center gap-2 text-muted font-medium">
+                <Clock className="h-4 w-4" />
+                {B2B_CONTACT.hours}
+              </span>
             </div>
           </div>
 
@@ -301,10 +479,10 @@ export const EmployerB2bPage: React.FC = () => {
               <>
                 <div className="mb-8">
                   <h2 id="kontakt-title" className="!text-2xl sm:!text-3xl font-semibold text-ink mb-2">
-                    Sprawdźmy, jak Benefivo może działać w Twojej firmie
+                    Porozmawiajmy 20 minut.
                   </h2>
                   <p className="text-muted text-sm leading-relaxed">
-                    Zostaw kontakt. Porozmawiamy o potrzebach zespołu i przygotujemy propozycję współpracy.
+                    Zostaw kontakt. Pokażemy, jak program działałby w Twojej firmie.
                   </p>
                 </div>
 
@@ -443,8 +621,7 @@ export const EmployerB2bPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
+                <div>
                     <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="teamSize">
                       Szacowana wielkość zespołu
                     </label>
@@ -458,9 +635,23 @@ export const EmployerB2bPage: React.FC = () => {
                       <option value="50 - 200 pracowników">50 - 200 pracowników</option>
                       <option value="powyżej 200 pracowników">powyżej 200 pracowników</option>
                     </select>
-                  </div>
+                </div>
 
-                  <div>
+                <div>
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-forest underline underline-offset-4 min-h-[44px]"
+                    aria-expanded={showDetails}
+                    aria-controls="b2b-optional-details"
+                    onClick={() => setShowDetails((v) => !v)}
+                  >
+                    {showDetails ? 'Ukryj szczegóły' : 'Dodaj szczegóły (opcjonalnie)'}
+                  </button>
+                </div>
+
+                {showDetails && (
+                <div id="b2b-optional-details" className="space-y-6">
+                <div>
                     <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2" htmlFor="programModel">
                       Model programu
                     </label>
@@ -474,7 +665,6 @@ export const EmployerB2bPage: React.FC = () => {
                       <option value="Program mieszany (z dopłatą firmy)">Program mieszany (z dopłatą firmy)</option>
                       <option value="Do ustalenia podczas rozmowy">Do ustalenia podczas rozmowy</option>
                     </select>
-                  </div>
                 </div>
 
                 <div>
@@ -520,6 +710,9 @@ export const EmployerB2bPage: React.FC = () => {
                     className="w-full bg-stone-50 border border-line rounded-2xl px-4 py-3 text-ink focus:bg-white focus:border-ink transition-colors"
                   />
                 </div>
+
+                </div>
+                )}
 
                 <div className="pt-2">
                   <TurnstileWidget

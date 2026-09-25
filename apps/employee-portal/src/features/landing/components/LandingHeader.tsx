@@ -72,9 +72,19 @@ export const LandingHeader: React.FC<LandingHeaderProps> = () => {
         className={`navigation ${menuOpen ? 'is-open' : ''}`}
         aria-label="Główna nawigacja"
       >
-        <a href="/#oferta" onClick={() => setMenuOpen(false)}>Samochody</a>
-        <a href="/#benefity" onClick={() => setMenuOpen(false)}>Benefity</a>
-        <a href="/#jak-to-dziala" onClick={() => setMenuOpen(false)}>Jak to działa</a>
+        {isDlaFirmPage ? (
+          <>
+            <a href="#korzysci" onClick={() => setMenuOpen(false)}>Korzyści</a>
+            <a href="#wdrozenie" onClick={() => setMenuOpen(false)}>Jak wdrażamy</a>
+            <a href="#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
+          </>
+        ) : (
+          <>
+            <a href="/#oferta" onClick={() => setMenuOpen(false)}>Samochody</a>
+            <a href="/#benefity" onClick={() => setMenuOpen(false)}>Benefity</a>
+            <a href="/#jak-to-dziala" onClick={() => setMenuOpen(false)}>Jak to działa</a>
+          </>
+        )}
 
         {!isDlaFirmPage ? (
           <Link to="/dla-firm" className="nav-company" onClick={() => setMenuOpen(false)}>
@@ -84,6 +94,19 @@ export const LandingHeader: React.FC<LandingHeaderProps> = () => {
           <Link to="/" className="nav-company" onClick={() => setMenuOpen(false)}>
             Dla pracownika <span aria-hidden="true">&rarr;</span>
           </Link>
+        )}
+
+        {isDlaFirmPage && (
+          <a
+            href="#kontakt-b2b"
+            className="nav-login"
+            onClick={() => {
+              setMenuOpen(false);
+              trackEvent('b2b_nav_cta', {}, config.apiUrl, config.analyticsEnabled);
+            }}
+          >
+            Umów rozmowę
+          </a>
         )}
 
         {/* Opcja logowania do konta w menu */}

@@ -29,9 +29,11 @@ describe('EmployerB2bPage Component Suite', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /Daj pracownikom więcej możliwości/i })
+        screen.getByRole('heading', { name: /Benefit samochodowy dla całego zespołu/i })
       ).toBeInTheDocument();
-      expect(screen.getByText(/Bez kosztów dla firmy/i)).toBeInTheDocument();
+      expect(screen.getByText(/Bez budżetu i bez pracy po stronie HR/i)).toBeInTheDocument();
+      expect(screen.getAllByText('+48 22 112 09 50', { selector: 'a' })[0]).toHaveAttribute('href', 'tel:+48221120950');
+      expect(screen.queryByText(/__B2B_PHONE__/)).not.toBeInTheDocument();
       expect(screen.getByLabelText(/Imię i nazwisko \*/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Nazwa firmy \*/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Służbowy adres e-mail \*/i)).toBeInTheDocument();
@@ -89,6 +91,7 @@ describe('EmployerB2bPage Component Suite', () => {
     fireEvent.change(screen.getByLabelText(/Nazwa firmy \*/i), {
       target: { value: 'Tech Solutions Sp. z o.o.' },
     });
+    fireEvent.click(screen.getByRole('button', { name: /Dodaj szczegóły/i }));
     fireEvent.change(screen.getByLabelText(/NIP firmy/i), {
       target: { value: '5252344078' },
     });
@@ -149,6 +152,7 @@ describe('EmployerB2bPage Component Suite', () => {
 
     renderB2bPage();
 
+    fireEvent.click(screen.getByRole('button', { name: /Dodaj szczegóły/i }));
     const nipInput = screen.getByLabelText(/NIP firmy/i);
     fireEvent.change(nipInput, { target: { value: '1234567890' } });
     fireEvent.blur(nipInput);
