@@ -127,6 +127,7 @@ export const pl = {
   },
   "sort": {
     "title": "Sortuj",
+    "recommended": "Polecane",
     "cheapest": "Najtańsze",
     "mostExpensive": "Najdroższe",
     "lowestMileage": "Najmniejszy przebieg",
@@ -209,7 +210,7 @@ export const pl = {
   },
   "lead": {
     "title": "Zapytaj o ofertę",
-    "subtitle": "Wypełnij formularz, a dealer skontaktuje się z Tobą",
+    "subtitle": "Zostaw numer — doradca Motolii oddzwoni i dobierze finansowanie",
     "offerSummary": "Podsumowanie oferty",
     "name": "Imię i nazwisko",
     "namePlaceholder": "Jan Kowalski",
@@ -222,7 +223,7 @@ export const pl = {
     "contactPhone": "Telefon",
     "message": "Wiadomość",
     "messagePlaceholder": "O co chcesz zapytać?",
-    "messageDefault": "Dzień dobry, proszę o kontakt w sprawie oferty {{make}} {{model}} {{version}} ({{listingId}}).",
+    "messageDefault": "Dzień dobry, proszę o kontakt w sprawie oferty {{make}} {{model}} {{version}}.",
     "consentMarketing": "Wyrażam zgodę na otrzymywanie informacji handlowych drogą elektroniczną (marketing bezpośredni) dotyczących ofert finansowania i ubezpieczeń.",
     "consentPrivacy": "Oświadczam, że zapoznałem się z Regulaminem oraz Polityką Prywatności i akceptuję ich postanowienia. Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania. *",
     "submit": "Wyślij zapytanie",

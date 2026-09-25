@@ -509,6 +509,7 @@ Zwróć TYLKO czysty obiekt JSON, bez żadnych znaczników formatowania typu \`\
                                     <SelectValue placeholder="Wybierz sortowanie" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="recommended">Polecane (nowe i wyróżnione najpierw)</SelectItem>
                                     <SelectItem value="year_desc">Rocznik (od najnowszego)</SelectItem>
                                     <SelectItem value="price_asc">Cena (od najniższej)</SelectItem>
                                     <SelectItem value="price_desc">Cena (od najwyższej)</SelectItem>

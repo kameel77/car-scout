@@ -44,6 +44,18 @@ export const trackPhoneClick = (clickLocation: string, landingPageSlug?: string,
   }
 };
 
+/** Pierwsza interakcja z formularzem leada — etap lejka między view_item a generate_lead. */
+export const trackLeadFormStart = (formId: string, hasFinancingContext: boolean) => {
+  const dl = getWindowDataLayer();
+  if (dl) {
+    dl.push({
+      event: 'lead_form_start',
+      form_id: formId,
+      has_financing_context: hasFinancingContext,
+    });
+  }
+};
+
 export const trackLpView = (landingPageSlug: string, trafficSource?: string) => {
   const dl = getWindowDataLayer();
   if (dl) {

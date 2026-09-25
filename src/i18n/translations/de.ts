@@ -121,6 +121,7 @@ export const de = {
   },
   "sort": {
     "title": "Sortieren",
+    "recommended": "Empfohlen",
     "cheapest": "Günstigste",
     "mostExpensive": "Teuerste",
     "lowestMileage": "Niedrigster Km-Stand",

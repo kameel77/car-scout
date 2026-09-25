@@ -125,6 +125,7 @@ export const en = {
   },
   "sort": {
     "title": "Sort",
+    "recommended": "Recommended",
     "cheapest": "Cheapest",
     "mostExpensive": "Most expensive",
     "lowestMileage": "Lowest mileage",

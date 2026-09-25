@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { trackLeadFormStart } from '@/lib/analytics';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle, AlertCircle, Loader2, MessageCircle, ShieldCheck, Zap } from 'lucide-react';
@@ -129,6 +130,7 @@ export default function LeadFormPage() {
   const proposedPriceValue = watch('proposedPrice');
 
   const [lastDefaultMessage, setLastDefaultMessage] = React.useState('');
+  const formStartTracked = React.useRef(false);
 
   React.useEffect(() => {
     if (listing) {
@@ -434,7 +436,15 @@ export default function LeadFormPage() {
                 <p className="text-muted-foreground">{t(isNegotiationFlow ? 'lead.negotiation.subtitle' : 'lead.subtitle')}</p>
               </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                onFocusCapture={() => {
+                  if (formStartTracked.current) return;
+                  formStartTracked.current = true;
+                  trackLeadFormStart(isNegotiationFlow ? 'listing_negotiation' : 'listing_inquiry', Boolean(financingData));
+                }}
+                className="space-y-6"
+              >
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider">{t('lead.name', 'Imię i nazwisko')} *</Label>
@@ -469,6 +479,9 @@ export default function LeadFormPage() {
                     <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider">{t('lead.phone', 'Numer telefonu')} *</Label>
                     <Input
                       id="phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       {...register('phone')}
                       placeholder="+48 000 000 000"
                       className="bg-stone-50 border-stone-200 focus:bg-white transition-colors"

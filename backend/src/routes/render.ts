@@ -122,6 +122,7 @@ async function getGridColumns(fastify: FastifyInstance): Promise<3 | 4> {
 // fallback 'price_asc'), mapowanie sortBy->orderBy identyczne z listings.ts (priceField PLN).
 // Dzięki temu preload LCP wskazuje te same zdjęcia, które SPA wyrenderuje nad foldem.
 const CARS_ORDER_BY: Record<string, object[]> = {
+    recommended: [{ condition: 'asc' }, { isFeatured: 'desc' }, { productionYear: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
     cheapest: [{ brokerPricePln: 'asc' }, { id: 'asc' }],
     price_asc: [{ brokerPricePln: 'asc' }, { id: 'asc' }],
     expensive: [{ brokerPricePln: 'desc' }, { id: 'asc' }],

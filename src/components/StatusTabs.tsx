@@ -25,6 +25,7 @@ interface StatusTabsProps {
 }
 
 const sortOptions = [
+  { value: 'recommended', label: 'sort.recommended' },
   { value: 'price_asc', label: 'sort.cheapest' },
   { value: 'price_desc', label: 'sort.mostExpensive' },
   { value: 'mileage_asc', label: 'sort.lowestMileage' },

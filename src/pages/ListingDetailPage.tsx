@@ -33,7 +33,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
-import { FinancingCalculator } from '@/components/FinancingCalculator';
+import { FinancingCalculator, type CalculatorFinancingConfig } from '@/components/FinancingCalculator';
 import { getFinancingBasePrice, getDisplayPrice } from '@/utils/listingPrice';
 import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
@@ -136,6 +136,8 @@ export default function ListingDetailPage() {
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [showArchiveModal, setShowArchiveModal] = React.useState(false);
+  // Ostatnia konfiguracja kalkulatora — każde CTA „Zapytaj/Wyślij zapytanie” przenosi ją do formularza.
+  const [financingConfig, setFinancingConfig] = React.useState<CalculatorFinancingConfig | null>(null);
   const autoRefreshTriggered = React.useRef(false);
 
   // Reset auto-refresh flag when navigating between listings within the same route (SPA navigation doesn't remount)
@@ -804,6 +806,7 @@ export default function ListingDetailPage() {
                 </div>
               ) : showCalculator ? (
                 <FinancingCalculator
+                  onConfigChange={setFinancingConfig}
                   creditAvailable={listing.creditAvailable !== false}
                   leasingAvailable={isLeasingAvailableLocal}
                   forcedProductId={forcedProductId}
@@ -1110,6 +1113,7 @@ export default function ListingDetailPage() {
                         animate={{ opacity: 1, y: 0 }}
                       >
                         <FinancingCalculator
+                          onConfigChange={setFinancingConfig}
                           creditAvailable={listing.creditAvailable !== false}
                           leasingAvailable={isLeasingAvailableLocal}
                           forcedProductId={forcedProductId}
@@ -1232,7 +1236,7 @@ export default function ListingDetailPage() {
                         productionYear: listing.production_year,
                         bodyType: listing.body_type,
                         fuelType: listing.fuel_type
-                      }, financingType)}/lead`}>
+                      }, financingType)}/lead`} state={financingConfig ? { financing: financingConfig } : undefined}>
                         <MessageSquare className="h-5 w-5" />
                         {t('detail.askAbout')}
                       </Link>
@@ -1325,7 +1329,7 @@ export default function ListingDetailPage() {
                         productionYear: listing.production_year,
                         bodyType: listing.body_type,
                         fuelType: listing.fuel_type
-                      }, financingType)}/lead`}>
+                      }, financingType)}/lead`} state={financingConfig ? { financing: financingConfig } : undefined}>
                         <MessageSquare className="h-5 w-5" />
                         {t('detail.askAbout')}
                       </Link>
@@ -1377,6 +1381,7 @@ export default function ListingDetailPage() {
                     </div>
                   ) : showCalculator ? (
                     <FinancingCalculator
+                      onConfigChange={setFinancingConfig}
                       creditAvailable={listing.creditAvailable !== false}
                       leasingAvailable={isLeasingAvailableLocal}
                       forcedProductId={forcedProductId}
@@ -1578,7 +1583,7 @@ export default function ListingDetailPage() {
                 productionYear: listing.production_year,
                 bodyType: listing.body_type,
                 fuelType: listing.fuel_type
-              }, financingType)}/lead`}>
+              }, financingType)}/lead`} state={financingConfig ? { financing: financingConfig } : undefined}>
                 {t('detail.sendInquiry')}
               </Link>
             </Button>
