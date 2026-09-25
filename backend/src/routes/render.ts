@@ -46,6 +46,7 @@ import {
     resetSsrCache,
     getSsrRedisClient,
     getSsrNamespace,
+    getBackendRevision,
 } from '../services/ssr-cache.js';
 import { getPublicSettings } from './settings.js';
 import { getPublicListingWhere } from '../services/listing-visibility.service.js';
@@ -250,6 +251,7 @@ export async function __resetRenderCache() {
     templateCache = null;
     carsOrderByCache = null;
     manifestCache = null;
+    lastCheckedBackendRevision = null;
     __resetComponentCaches();
     await resetSsrCache().catch(() => {});
 }
@@ -315,12 +317,26 @@ function isCachedHtmlFromActiveBuild(cachedHtml: string, activeTemplate: string)
 }
 
 // HTML edge cache TTL to 24h (getCacheControlHeader) jest bezpieczne tylko o ile Cloudflare
-// zostaje wyczyszczony po deployu frontendu — inaczej dzień-stary cache HTML wskazywałby na
-// hashowane /assets/*.js, których nowy frontend już nie ma (stare buildy 404). Backend i frontend
-// są deployowane osobno (patrz frontendBase()), więc restart backendu nie jest wiarygodnym
-// sygnałem nowego builda frontendu — trzeba porównać aktywny entry asset z ostatnim zapamiętanym
-// w Redisie (namespace per brand/env jak reszta SSR cache) i purge'ować tylko przy realnej zmianie.
+// zostaje wyczyszczony po KAŻDYM deployu, który zmienia renderowany HTML — zarówno frontendu,
+// jak i backendu (SSR). Inaczej dzień-stary cache HTML wskazywałby na hashowane /assets/*.js,
+// których nowy frontend już nie ma (stare buildy 404), albo po prostu pokazywałby starą treść
+// backendu. Backend i frontend są deployowane osobno (patrz frontendBase()), więc tożsamość
+// builda to para (aktywny entry asset frontendu, rewizja backendu z SOURCE_COMMIT) — porównujemy
+// ją z ostatnią zapamiętaną w Redisie (namespace per brand/env jak reszta SSR cache) i purge'ujemy
+// tylko przy realnej zmianie którejkolwiek części.
 const BUILD_PURGE_LOCK_TTL_SECONDS = 60;
+
+// Identyfikator builda przechowywany w Redisie: entry asset frontendu + rewizja backendu.
+// Brak SOURCE_COMMIT (np. lokalnie) = sam entry asset, czyli zachowanie sprzed zmiany.
+function getBuildId(activeEntry: string): string {
+    const backendRevision = getBackendRevision();
+    return backendRevision ? `${activeEntry}|${backendRevision}` : activeEntry;
+}
+
+// Ustawiane po każdym udanym sprawdzeniu w maybePurgeCloudflareOnBuildChange — pozwala requestowej
+// ścieżce wykryć zmianę rewizji backendu bez dodatkowego roundtripu do Redisa na każdy request
+// (SOURCE_COMMIT jest stały przez cały czas życia procesu, więc porównanie jest tanie).
+let lastCheckedBackendRevision: string | null = null;
 
 function getOwnProductionHost(): string | null {
     const frontendUrl = process.env.FRONTEND_URL;
@@ -333,7 +349,7 @@ function getOwnProductionHost(): string | null {
     }
 }
 
-export async function maybePurgeCloudflareOnFrontendBuildChange(fastify: FastifyInstance): Promise<void> {
+export async function maybePurgeCloudflareOnBuildChange(fastify: FastifyInstance): Promise<void> {
     const ownHost = getOwnProductionHost();
     // Dev/staging współdzielą strefę Cloudflare motolia.pl z produkcją — purge stąd wyczyściłby
     // cache prod. Tylko kanoniczny host produkcyjny tego builda może wywołać purgeEverything.
@@ -354,12 +370,16 @@ export async function maybePurgeCloudflareOnFrontendBuildChange(fastify: Fastify
     const activeEntry = getModuleEntryAsset(template);
     if (!activeEntry) return;
 
-    const redisKey = `${getSsrNamespace()}:active-frontend-build`;
+    const buildId = getBuildId(activeEntry);
+    const redisKey = `${getSsrNamespace()}:active-build`;
     const lockKey = `${redisKey}:lock`;
 
     try {
-        const previousEntry = await redis.get(redisKey);
-        if (previousEntry === activeEntry) return;
+        const previousBuildId = await redis.get(redisKey);
+        if (previousBuildId === buildId) {
+            lastCheckedBackendRevision = getBackendRevision();
+            return;
+        }
 
         // SET NX: tylko jeden kontener/restart wygrywa wyścig o purge tego samego builda.
         // TTL to wyłącznie zabezpieczenie przed zawieszonym lockiem po awarii procesu — po
@@ -370,21 +390,25 @@ export async function maybePurgeCloudflareOnFrontendBuildChange(fastify: Fastify
 
         try {
             // Re-check po zdobyciu locka — inny proces mógł już zaktualizować wpis w międzyczasie.
-            const currentEntry = await redis.get(redisKey);
-            if (currentEntry === activeEntry) return;
+            const currentBuildId = await redis.get(redisKey);
+            if (currentBuildId === buildId) {
+                lastCheckedBackendRevision = getBackendRevision();
+                return;
+            }
 
             const result = await invalidateOfferCache(fastify, { purgeEverything: true });
             if (result.success) {
-                await redis.set(redisKey, activeEntry);
-                fastify.log.info({ activeEntry, previousEntry }, '[BuildPurge] Cloudflare cache purged: new frontend build detected');
+                await redis.set(redisKey, buildId);
+                lastCheckedBackendRevision = getBackendRevision();
+                fastify.log.info({ buildId, previousBuildId }, '[BuildPurge] Cloudflare cache purged: build changed (frontend and/or backend)');
             } else {
-                fastify.log.warn({ activeEntry }, '[BuildPurge] Cloudflare purge failed for new frontend build');
+                fastify.log.warn({ buildId }, '[BuildPurge] Cloudflare purge failed for new build');
             }
         } finally {
             await redis.del(lockKey);
         }
     } catch (err) {
-        fastify.log.warn({ err }, '[BuildPurge] Failed to check/purge for frontend build change');
+        fastify.log.warn({ err }, '[BuildPurge] Failed to check/purge for build change');
     }
 }
 
@@ -545,6 +569,19 @@ async function resolveMeta(
                 };
             }
             return defaultMeta(ctx, { noindex: true, status: 410 });
+        }
+
+        // Zepsute linki ze slugiem "-undefined-" (rocznik brakujący w miejscu generowania linku,
+        // patrz generateListingSlug) — Googlebot je crawluje z linków/feedów wygenerowanych przed
+        // naprawą. Zamiast miękkiej kanonizacji (200 z innym <link rel=canonical>) realny 301 na
+        // poprawny slug, żeby Google przestał wracać do zepsutego URL-a.
+        const requestedSlug = lm[2];
+        if (lifecycle.canonicalSlug && requestedSlug.includes('-undefined-') && requestedSlug !== lifecycle.canonicalSlug) {
+            return {
+                ...defaultMeta(ctx, { noindex: true, status: 301 }),
+                redirectUrl: `/${lm[1]}/${lifecycle.canonicalSlug}`,
+                status: 301,
+            };
         }
 
         const listing = lifecycle.listing;
@@ -1046,8 +1083,7 @@ async function resolveSamochodyQueryCanonical(fastify: FastifyInstance, queryPar
 function getCacheControlHeader(
     request: FastifyRequest,
     status: number,
-    path: string,
-    noindex?: boolean
+    path: string
 ): string {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
         return 'private, no-store';
@@ -1055,9 +1091,14 @@ function getCacheControlHeader(
     if (status !== 200) {
         return 'private, no-store';
     }
-    if (path.startsWith('/admin') || NOINDEX_RE.test(path) || noindex) {
+    if (path.startsWith('/admin') || NOINDEX_RE.test(path)) {
         return 'private, no-store';
     }
+    // UWAGA: meta.noindex (parametr `noindex` tej funkcji) NIE wyklucza już edge cache'a.
+    // To realne, publiczne strony z treścią (np. archiwalna oferta po sprzedaży, strona
+    // marki/modelu poniżej progu liczby ofert) — mają tylko <meta name="robots" content="noindex">
+    // w HTML, żeby Google ich nie indeksował. Structuralnie prywatne trasy (admin/login/embed/
+    // lead/negotiate/zapytanie) są już wyłapane wyżej przez NOINDEX_RE — ich nie dotyczy.
     if (request.headers.authorization) {
         return 'private, no-store';
     }
@@ -1320,8 +1361,13 @@ export async function renderRoutes(fastify: FastifyInstance) {
 
         // Sygnał "nowy build frontendu" widziany właśnie na tym requeście (cache trafiony, ale
         // z innym entry assetem) — fire-and-forget purge Cloudflare, nie blokuje odpowiedzi.
-        if (cached && activeTemplate && !isCachedHtmlFromActiveBuild(cached.html, activeTemplate)) {
-            maybePurgeCloudflareOnFrontendBuildChange(fastify).catch(err => {
+        // Drugi, niezależny sygnał: rewizja backendu (SOURCE_COMMIT) inna niż ostatnio potwierdzona
+        // w Redisie — łapie przypadek restartu backendu, zanim jego startowe sprawdzenie w server.ts
+        // zdąży się wykonać/zapisać. Porównanie jest tanie (zmienna w procesie, bez Redisa na request).
+        const backendRevisionChanged = lastCheckedBackendRevision === null
+            || getBackendRevision() !== lastCheckedBackendRevision;
+        if ((cached && activeTemplate && !isCachedHtmlFromActiveBuild(cached.html, activeTemplate)) || backendRevisionChanged) {
+            maybePurgeCloudflareOnBuildChange(fastify).catch(err => {
                 fastify.log.warn({ err }, '[BuildPurge] Fire-and-forget purge check failed');
             });
         }
@@ -1348,7 +1394,7 @@ export async function renderRoutes(fastify: FastifyInstance) {
                     .header('Cache-Control', 'public, max-age=86400')
                     .send();
             }
-            const cacheControl = getCacheControlHeader(request, cached.status, path, cached.noindex);
+            const cacheControl = getCacheControlHeader(request, cached.status, path);
             return reply
                 .code(cached.status)
                 .header('Content-Type', 'text/html; charset=utf-8')
@@ -1375,7 +1421,7 @@ export async function renderRoutes(fastify: FastifyInstance) {
                 .send();
         }
 
-        const cacheControl = getCacheControlHeader(request, result.status, path, result.noindex);
+        const cacheControl = getCacheControlHeader(request, result.status, path);
 
         return reply
             .code(result.status)

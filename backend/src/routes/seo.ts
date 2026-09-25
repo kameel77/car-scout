@@ -28,10 +28,11 @@ export async function seoRoutes(fastify: FastifyInstance) {
     });
 
     // Get SEO Config
-    fastify.get('/api/seo', async () => {
+    fastify.get('/api/seo', async (request, reply) => {
         const config = await fastify.prisma.seoConfig.findUnique({
             where: { id: 'default' }
         });
+        reply.header('Cache-Control', 'public, max-age=0, s-maxage=300');
         // Return empty object if not found, or default structure
         return config || { id: 'default' };
     });

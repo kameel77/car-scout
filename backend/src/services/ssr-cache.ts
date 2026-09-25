@@ -78,8 +78,23 @@ export function clearRevalidating(cacheKey: string): void {
     revalidatingKeys.delete(cacheKey);
 }
 
+// SOURCE_COMMIT (ustawiany przez Coolify w kontenerze backendu) trafia do namespace'u klucza,
+// żeby po backendowym deployu, który zmienia renderowanie (np. SSR zaczyna 404-ować coś, co
+// wcześniej renderowało 200), stare wpisy z poprzedniej rewizji były po prostu innym kluczem —
+// nigdy nie zostaną odczytane i wygasną naturalnie po swoim TTL. Brak SOURCE_COMMIT (np. lokalnie)
+// = zachowanie sprzed zmiany (brak segmentu rewizji w kluczu).
+export function getBackendRevision(): string {
+    const commit = process.env.SOURCE_COMMIT;
+    return commit ? commit.slice(0, 8) : '';
+}
+
+export function getSsrCacheKeyPrefix(): string {
+    const revision = getBackendRevision();
+    return `${getSsrNamespace()}:ssr:v1:${revision ? `${revision}:` : ''}`;
+}
+
 export function getSsrCacheKey(rawKey: string): string {
-    return `${getSsrNamespace()}:ssr:v1:${rawKey}`;
+    return `${getSsrCacheKeyPrefix()}${rawKey}`;
 }
 
 export async function getSsrCache(cacheKey: string): Promise<SsrCacheEntry | null> {
@@ -120,7 +135,7 @@ export async function evictSsrCacheKeys(urls: string[]): Promise<void> {
     if (!redisClient || urls.length === 0) return;
     try {
         let cursor = '0';
-        const prefix = `${getSsrNamespace()}:ssr:v1:`;
+        const prefix = getSsrCacheKeyPrefix();
         const matchPattern = `${prefix}*`;
         const keysToDelete: string[] = [];
         do {
@@ -154,7 +169,7 @@ export async function resetSsrCache(): Promise<void> {
     if (!redisClient) return;
     try {
         let cursor = '0';
-        const matchPattern = `${getSsrNamespace()}:ssr:v1:*`;
+        const matchPattern = `${getSsrCacheKeyPrefix()}*`;
         do {
             const [nextCursor, keys] = await redisClient.scan(cursor, 'MATCH', matchPattern, 'COUNT', 200);
             cursor = nextCursor;

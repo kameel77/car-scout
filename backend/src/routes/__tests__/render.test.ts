@@ -974,6 +974,22 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
         expect(res.headers['cache-control']).toBe('public, max-age=86400');
     });
 
+    async function createListing() {
+        return app.prisma.listing.create({
+            data: {
+                make: 'TEST_RENDER_SKELETON',
+                model: 'Modelo',
+                version: '1.0',
+                pricePln: 123456,
+                mileageKm: 5,
+                productionYear: 2024,
+                fuelType: 'benzyna',
+                bodyType: 'suv',
+                isArchived: false,
+            },
+        });
+    }
+
     describe('Cache-Control headers for Edge Caching', () => {
         it('requires edge revalidation for anonymous 200 GET and HEAD requests (fresh & cached)', async () => {
             const res1 = await app.inject({ method: 'GET', url: '/api/render?path=/' });
@@ -1026,6 +1042,59 @@ describe('GET /api/render — catalog skeleton (SSR-lite)', () => {
             });
             expect(res.statusCode).toBe(404);
             expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+
+        // Task D: publiczna strona z <meta name="robots" content="noindex"> (np. archiwalna
+        // oferta po sprzedaży) to wciąż realna treść — cache'ujemy ją tak samo jak indeksowalne
+        // strony. NOINDEX_RE (admin/login/embed/lead/negotiate/zapytanie) zostaje bez zmian.
+        it('recently archived (noindex, status 200) listing is still edge-cacheable like an indexable page', async () => {
+            const l = await createListing();
+            await app.prisma.listing.update({ where: { id: l.id }, data: { isArchived: true, archivedAt: new Date() } });
+            const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=/oferta/${slug}` });
+            expect(res.statusCode).toBe(200);
+            expect(res.body).toContain('noindex');
+            expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=86400');
+        });
+
+        it('/admin still gets private no-store (structural NOINDEX_RE unaffected)', async () => {
+            const res = await app.inject({ method: 'GET', url: '/api/render?path=/admin' });
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+
+        it('/embed subpage still gets private no-store (structural NOINDEX_RE unaffected)', async () => {
+            const res = await app.inject({ method: 'GET', url: '/api/render?path=/embed/oferta/foo' });
+            expect(res.headers['cache-control']).toBe('private, no-store');
+        });
+    });
+
+    // Task E: linki z brakującym rocznikiem (generateListingSlug) produkowały slug w kształcie
+    // "marka-model-undefined-id" — Google je zaindeksował i wciąż crawluje. Zamiast miękkiej
+    // kanonizacji (200 z innym canonical) taki URL musi dać realny 301 na poprawny slug.
+    describe('"-undefined-" slug canonicalization (301, not soft-canonical 200)', () => {
+        it('/oferta/<make>-<model>-undefined-<id> 301s to the canonical slug', async () => {
+            const l = await createListing();
+            const canonicalSlug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+            const brokenSlug = `${l.make.toLowerCase()}-${l.model.toLowerCase()}-undefined-${l.id}`;
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=/oferta/${brokenSlug}` });
+            expect(res.statusCode).toBe(301);
+            expect(res.headers.location).toBe(`/oferta/${canonicalSlug}`);
+        });
+
+        it('/leasing/<make>-<model>-undefined-<id> 301s to the canonical /leasing slug (prefix preserved)', async () => {
+            const l = await createListing();
+            const canonicalSlug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+            const brokenSlug = `${l.make.toLowerCase()}-${l.model.toLowerCase()}-undefined-${l.id}`;
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=/leasing/${brokenSlug}` });
+            expect(res.statusCode).toBe(301);
+            expect(res.headers.location).toBe(`/leasing/${canonicalSlug}`);
+        });
+
+        it('a slug that is already canonical (no "-undefined-") still soft-canonicalizes to 200, not 301', async () => {
+            const l = await createListing();
+            const canonicalSlug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=/oferta/${canonicalSlug}` });
+            expect(res.statusCode).toBe(200);
         });
     });
 });

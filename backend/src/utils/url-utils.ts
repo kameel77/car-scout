@@ -122,7 +122,7 @@ export function generateListingSlug(
     make: string,
     model: string,
     version: string | null | undefined,
-    year: number,
+    year: number | null | undefined,
     bodyType: string | null | undefined,
     fuelType: string | null | undefined,
     listingId: string
@@ -131,7 +131,9 @@ export function generateListingSlug(
         sanitizeForSlug(make),
         sanitizeForSlug(model),
         version ? sanitizeForSlug(version) : null,
-        String(year),
+        // Brakujący rocznik (np. dane jeszcze niepełne w miejscu wywołania) nie może wyemitować
+        // literalnego "undefined" w slugu — Google indeksuje taki URL i wraca do niego w kółko.
+        Number.isFinite(year) ? String(year) : null,
         bodyType ? sanitizeForSlug(bodyType) : null,
         fuelType ? sanitizeForSlug(fuelType) : null,
         listingId
