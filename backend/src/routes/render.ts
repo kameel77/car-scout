@@ -1029,6 +1029,15 @@ async function renderPage(
     const ctx = resolveBrandCtx();
     const heroBanners = path === '/' ? await getHomeHeroBanners(fastify) : [];
 
+    // Meta liczona przed skeletonem (a nie po, jak dawniej) — catalogSkeletonHtml potrzebuje
+    // meta.skeletonFirstImage (zdjęcie pierwszej oferty) do wstrzyknięcia realnego <img> w
+    // miejsce shimmeru pierwszej karty. Cache SSR całego HTML (kluczowany osobno w wyższej
+    // warstwie, patrz renderAndCache/getSsrCache) nie zależy od tej kolejności.
+    const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
+    if (!isProd) {
+        meta.noindex = true;
+    }
+
     // Statyczny shell hero (vite.config, znaczniki home-shell) jest tylko dla
     // strony głównej — na innych trasach usuwamy go, żeby hero nie migało
     // przed zamontowaniem SPA. Strony katalogowe (isPaginatedPath) dostają w zamian
@@ -1040,10 +1049,11 @@ async function renderPage(
         // Home-only preloady API (hero-banners/feature-tiles/faq-home/widgets-HOME) są
         // nieużywane poza / i na dławionym mobile kradną pasmo entry JS + obrazkowi LCP.
         template = template.replace(/<!--home-preload-->[\s\S]*?<!--\/home-preload-->/, () => '');
-        // Strony katalogowe → skeleton siatki kart; strony detalu (oferta/najem) → skeleton
+        // Strony katalogowe → skeleton siatki kart (pierwsza karta z realnym zdjęciem, gdy je
+        // znamy — patrz meta.skeletonFirstImage); strony detalu (oferta/najem) → skeleton
         // galerii + sidebara; reszta (formularze, noindex) → pusto do montażu React.
         const skeleton = isPaginatedPath(path)
-            ? catalogSkeletonHtml(await getGridColumns(fastify))
+            ? catalogSkeletonHtml(await getGridColumns(fastify), meta.skeletonFirstImage)
             : (LISTING_RE.test(path) || RENTAL_RE.test(path))
                 ? detailSkeletonHtml()
                 : '';
@@ -1057,11 +1067,6 @@ async function renderPage(
         template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => heroShell);
     }
 
-    const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
-    if (!isProd) {
-        meta.noindex = true;
-    }
-
     if (meta.status === 301 && meta.redirectUrl) {
         return {
             html: '',
@@ -1072,6 +1077,43 @@ async function renderPage(
     }
 
     let html = injectHead(template, meta);
+
+    // window.__SSR_META__ — SSR meta (title/description/canonical/ogImage) do odczytu przez
+    // MetaHead/SeoManager na pierwszym renderze, zanim React zamontuje SPA. Bez tego, po
+    // wprowadzeniu data-rh (dedupe head tagów przez react-helmet-async), strony bez własnego
+    // page-level opisu (np. /dla-firm — MetaHead tam ustawia tylko schema) albo z opisem, który
+    // potrafi wyjść pusty (np. /oferta/:slug w wariancie gotówka bez CMS-owego szablonu),
+    // dostawałyby po hydracji domyślny opis strony głównej z SeoManager zamiast poprawnego
+    // SSR-owego — Google indeksuje wyrenderowany DOM, więc to on musi mieć rację. Pomijamy dla
+    // noindex/nie-200 (przekierowania i 404 nie mają "poprawnej" treści do zachowania).
+    // Tylko ?page — ten sam wzorzec normalizacji co cacheKey w renderAndCache/getSsrCache
+    // (`page > 1 ? \`${path}?page=${page}\` : path`), bo SSR HTML jest cache'owane per
+    // path+page NIEZALEŻNIE od reszty query stringa (utm/gclid/filtry). Wpisanie tu pełnego
+    // searchParams.toString() wpisałoby do window.__SSR_META__ (a więc do cache'owanego HTML)
+    // query string pierwszego odwiedzającego (np. ?utm_source=x) i serwowało go WSZYSTKIM
+    // kolejnym gościom tego samego path+page — u nich location.search by się nie zgadzał i
+    // dopasowanie nigdy by nie trafiło (cichy powrót regresji, którą ta cała funkcja miała
+    // naprawić). getSsrMeta() na kliencie (src/lib/ssrMeta.ts) stosuje identyczną normalizację.
+    //
+    // Dodatkowo: tylko gdy requestowana ścieżka JEST swoim własnym canonicalem (np. bogus slug
+    // w /oferta/:slug soft-canonicalizuje się na 200 z canonical wskazującym na prawdziwy slug,
+    // bez przekierowania) — inaczej wyciekałby nieużywany/niezaufany fragment URL-a wpisany przez
+    // usera do window.__SSR_META__.path, mimo że treść strony i tak go dotyczy pod innym adresem.
+    const canonicalPathname = meta.canonical ? new URL(meta.canonical).pathname : path;
+    if (meta.status === 200 && !meta.noindex && canonicalPathname === path) {
+        const ssrMeta = {
+            path: page > 1 ? `${path}?page=${page}` : path,
+            title: meta.title,
+            description: meta.description,
+            canonical: meta.canonical,
+            ogImage: meta.ogImage,
+        };
+        // escapujemy < w wartościach (jak window.__APP_SETTINGS__/__HERO_BANNERS__), żeby dane
+        // nie zamknęły przedwcześnie tagu <script>
+        // (ten sam sposób co window.__APP_SETTINGS__/__HERO_BANNERS__ poniżej).
+        const ssrMetaJson = JSON.stringify(ssrMeta).replace(/</g, '\\u003c');
+        html = html.replace('</head>', () => `<script>window.__SSR_META__=${ssrMetaJson};</script>\n</head>`);
+    }
 
     // Modulepreload chunka trasy — domyślnie wyłączony po eksperymencie (docs/BRIEF_AG_MODULEPRELOAD_EXPERIMENT.md),
     // w którym wykazano, że emisja tagów modulepreload na trasach katalogowych opóźniała FCP o ponad 1 s.
