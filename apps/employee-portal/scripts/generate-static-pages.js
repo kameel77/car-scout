@@ -18,20 +18,20 @@ const pages = [
   {
     fileName: 'index.html',
     title: 'Benefivo - dobre rzeczy jadą z Tobą | Samochód jako benefit',
-    description: 'Samochód do pracy, na weekend i do codziennych spraw. Sprawdź oferty najmu i leasingu przygotowane dla pracowników Twojej firmy. Wybierz rozwiązanie, które pasuje do Twoich planów.',
+    description: 'Nowe auto na warunkach dla pracowników Twojej firmy: rabat od ceny katalogowej, najem z pełną obsługą, karta Moya z 500 zł i osobisty doradca.',
     canonical: '__PORTAL_ORIGIN__/',
     ogTitle: 'Benefivo - Dobre rzeczy jadą z Tobą',
-    ogDescription: 'Samochód do pracy, na weekend i do codziennych spraw. Sprawdź oferty najmu i leasingu przygotowane dla pracowników Twojej firmy. Wybierz rozwiązanie, które pasuje do Twoich planów.',
+    ogDescription: 'Nowe auto na warunkach dla pracowników Twojej firmy: rabat od ceny katalogowej, najem z pełną obsługą, karta Moya z 500 zł i osobisty doradca.',
     ogUrl: '__PORTAL_ORIGIN__/',
     ogImage: '__PORTAL_ORIGIN__/static/og-benefivo.png'
   },
   {
     fileName: 'dla-firm.html',
-    title: 'Benefivo dla Firm - Program samochodowy dla pracowników | Powered by Motolia',
-    description: 'Daj pracownikom więcej możliwości za kierownicą. Bez kosztów dla firmy. Poznaj program benefitów samochodowych Benefivo powered by Motolia.',
+    title: 'Benefivo dla firm: benefit samochodowy dla pracowników | Powered by Motolia',
+    description: 'Benefit samochodowy dla pracowników: rabat na nowe auta, najem z pełną obsługą i karta Moya. Bez kosztów i bez pracy po stronie HR. Program prowadzi Motolia.',
     canonical: '__PORTAL_ORIGIN__/dla-firm',
     ogTitle: 'Benefivo dla Firm - Samochód jako benefit pracowniczy',
-    ogDescription: 'Daj pracownikom więcej możliwości za kierownicą. Bez kosztów dla firmy. Poznaj program benefitów samochodowych Benefivo powered by Motolia.',
+    ogDescription: 'Benefit samochodowy dla pracowników: rabat na nowe auta, najem z pełną obsługą i karta Moya. Bez kosztów i bez pracy po stronie HR. Program prowadzi Motolia.',
     ogUrl: '__PORTAL_ORIGIN__/dla-firm',
     ogImage: '__PORTAL_ORIGIN__/static/og-benefivo.png'
   },
