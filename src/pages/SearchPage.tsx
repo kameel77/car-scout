@@ -5,13 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom';
 
 import { Header } from '@/components/Header';
-import { FilterPanel, FilterState } from '@/components/FilterPanel';
+import { FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { StatusTabs } from '@/components/StatusTabs';
 import { TopFilterBar } from '@/components/TopFilterBar';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { AllFiltersSheet, AllFiltersSheetHandle } from '@/components/AllFiltersSheet';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
 import { useSeoContent } from '@/hooks/useSeoContent';
@@ -244,28 +244,10 @@ export default function SearchPage() {
   const [page, setPage] = React.useState(initialPage);
   const perPage = Number(settings?.searchGridColumns) === 3 ? 30 : 32;
 
-  // "Wszystkie filtry" sheet (full FilterPanel) trigger
-  const [allFiltersOpen, setAllFiltersOpen] = React.useState(() => {
-    return searchParams.get('openFilters') === 'true';
-  });
-  // When the sheet opens because we just landed here from a Stan-switch redirect,
-  // skip the entry animation to mask the brief unmount/mount flicker.
-  const [skipSheetAnimation, setSkipSheetAnimation] = React.useState(
-    () => searchParams.get('openFilters') === 'true',
-  );
-
-  // Clean up openFilters param after reading it; re-enable animations on next tick.
-  React.useEffect(() => {
-    if (searchParams.get('openFilters')) {
-      const next = new URLSearchParams(searchParams);
-      next.delete('openFilters');
-      setSearchParams(next, { replace: true });
-    }
-    if (skipSheetAnimation) {
-      const timer = setTimeout(() => setSkipSheetAnimation(false), 100);
-      return () => clearTimeout(timer);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // "Wszystkie filtry" sheet (full FilterPanel) trigger — the sheet owns its own open
+  // state (see AllFiltersSheet) so opening it doesn't re-render this whole page.
+  const allFiltersSheetRef = React.useRef<AllFiltersSheetHandle>(null);
+  const openAllFilters = React.useCallback(() => allFiltersSheetRef.current?.open(), []);
 
   // Desktop search state (debounced, synced to filters.query)
   const [desktopSearch, setDesktopSearch] = React.useState(filters.query || '');
@@ -631,25 +613,17 @@ export default function SearchPage() {
 
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
-      <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0" instant={skipSheetAnimation}>
-          <SheetHeader className="sr-only">
-            <SheetTitle>{t('filters.title')}</SheetTitle>
-          </SheetHeader>
-          <div className="px-6 pt-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
-            <FilterPanel
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onClear={handleClearFilters}
-              resultCount={totalCount}
-              availableMakes={mergedMakes}
-              availableModels={mergedModels}
-              facets={mergedFacets}
-              onApply={() => setAllFiltersOpen(false)}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <AllFiltersSheet
+        ref={allFiltersSheetRef}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClear={handleClearFilters}
+        resultCount={totalCount}
+        availableMakes={mergedMakes}
+        availableModels={mergedModels}
+        facets={mergedFacets}
+        skipAnimationOnDeepLink
+      />
 
       <main className="container pt-4 pb-6">
         <div className="min-w-0">
@@ -685,7 +659,7 @@ export default function SearchPage() {
             onFilterChange={handleFilterChange}
             availableMakes={mergedMakes}
             availableModels={mergedModels}
-            onOpenAllFilters={() => setAllFiltersOpen(true)}
+            onOpenAllFilters={openAllFilters}
             query={desktopSearch}
             onQueryChange={(v) => {
               setIsDesktopTyping(true);
