@@ -54,6 +54,7 @@ import { heroBannerRoutes } from './routes/hero-banners.js';
 import { landingPageRoutes } from './routes/landing-pages.js';
 import { consentRoutes } from './routes/consent.js';
 import { cspReportRoutes } from './routes/csp-report.js';
+import { rumRoutes } from './routes/rum.js';
 import { externalListingsRoutes } from './routes/external/listings.js';
 import { marketingFeedsRoutes } from './routes/external/feeds.js';
 import { specificationRoutes } from './routes/specifications.js';
@@ -464,6 +465,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await fastify.register(landingPageRoutes);
     await fastify.register(consentRoutes);
     await fastify.register(cspReportRoutes);
+    await fastify.register(rumRoutes);
     await fastify.register(externalListingsRoutes);
     await fastify.register(marketingFeedsRoutes);
     await fastify.register(specificationRoutes);
