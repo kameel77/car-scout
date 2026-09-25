@@ -11,6 +11,9 @@ export interface PageMeta {
     ogImage?: string;
     /** Obrazy LCP do <link rel="preload" as="image" fetchpriority="high"> w <head> */
     preloadImages?: PreloadImage[];
+    /** Realne zdjęcie pierwszej karty katalogu do wstrzyknięcia w SSR skeleton (catalogSkeletonHtml) —
+     *  ten sam wariant co preloadImages[0], więc przeglądarka nie pobiera obrazka dwa razy. */
+    skeletonFirstImage?: SkeletonFirstImage;
     status: number;
     redirectUrl?: string; // for 301/302 redirects
 }
@@ -21,6 +24,11 @@ export interface PreloadImage {
     imagesizes?: string;
     media?: string;
     type?: string;
+}
+
+export interface SkeletonFirstImage {
+    preload: PreloadImage;
+    alt: string;
 }
 
 export interface BrandCtx {
@@ -131,6 +139,22 @@ function cardPreloads(listings: { primaryImageUrl?: string | null }[], baseUrl: 
     const firstCard = listings[0];
     if (!firstCard) return undefined;
     return [buildImagePreload(firstCard.primaryImageUrl || '/motolia-placeholder.webp', CARD_IMAGE_SIZES, baseUrl, 'card')];
+}
+
+// Dane pierwszej karty do wstrzyknięcia jako realny <img> w SSR skeletonie (catalogSkeletonHtml),
+// żeby LCP malował się przed montażem Reacta — tylko gdy oferta ma realne zdjęcie (nie placeholder),
+// inaczej skeleton pokazałby placeholder motolii zamiast shimmeru. Ten sam wariant co cardPreloads(),
+// więc przeglądarka trafia w już zapreloadowany zasób zamiast pobierać drugi raz.
+function skeletonFirstImage(
+    listings: { make?: string; model?: string; primaryImageUrl?: string | null }[],
+    baseUrl: string
+): SkeletonFirstImage | undefined {
+    const firstCard = listings[0];
+    if (!firstCard || !firstCard.primaryImageUrl) return undefined;
+    return {
+        preload: buildImagePreload(firstCard.primaryImageUrl, CARD_IMAGE_SIZES, baseUrl, 'card'),
+        alt: [firstCard.make, firstCard.model].filter(Boolean).join(' '),
+    };
 }
 
 // Preload zdjęcia LCP pierwszego banera hero na / — media query zgodny z md:hidden/hidden md:block
@@ -700,11 +724,17 @@ export function buildRentalMeta(
   </section>` : ''}
 </article>`.trim();
 
+    const metaDetails = [r.bodyType, r.fuelType, rateFrom ? `rata od ${rateFrom} zł/mies.` : null]
+        .filter(Boolean)
+        .join(', ');
+    const description = `${name}${metaDetails ? ` (${metaDetails})` : ''} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.`;
+
     const jsonLd: any[] = [];
     jsonLd.push({
         '@context': 'https://schema.org',
         '@type': 'Vehicle',
         name,
+        description,
         brand: { '@type': 'Brand', name: r.make },
         model: r.model,
         ...(r.productionYear ? { vehicleModelDate: String(r.productionYear) } : {}),
@@ -734,27 +764,11 @@ export function buildRentalMeta(
                           : 'https://schema.org/UsedCondition',
               }
             : {}),
-        ...(monthlyRateFrom
-            ? {
-                  offers: {
-                      '@type': 'Offer',
-                      // Najem, nie sprzedaż — GoodRelations LeaseOut
-                      businessFunction: 'http://purl.org/goodrelations/v1#LeaseOut',
-                      availability: 'https://schema.org/InStock',
-                      url: canonical,
-                      seller: { '@type': 'Organization', name: ctx.brandName, url: `${ctx.baseUrl}/` },
-                      priceSpecification: {
-                          '@type': 'UnitPriceSpecification',
-                          price: Math.round(monthlyRateFrom),
-                          minPrice: Math.round(monthlyRateFrom),
-                          priceCurrency: 'PLN',
-                          valueAddedTaxIncluded: true,
-                          unitText: 'miesiąc',
-                          referenceQuantity: { '@type': 'QuantitativeValue', value: 1, unitCode: 'MON' },
-                      },
-                  },
-              }
-            : {}),
+        // Bez offers: Google Merchant/Rich Results nie obsługuje miesięcznej raty najmu jako
+        // Offer.priceSpecification (referenceQuantity {unitCode:'MON'} → krytyczny błąd "Nieprawidłowa
+        // lub nieobsługiwana miara ceny jednostkowej"). referenceQuantity to dla cen jednostkowych
+        // (waga/objętość), nie dla rat leasingowych — samo usunięcie referenceQuantity kazałoby
+        // Google odczytać ratę jako cenę auta, więc cały blok offers zostaje pominięty.
         url: canonical,
     });
 
@@ -782,13 +796,9 @@ export function buildRentalMeta(
         });
     }
 
-    const metaDetails = [r.bodyType, r.fuelType, rateFrom ? `rata od ${rateFrom} zł/mies.` : null]
-        .filter(Boolean)
-        .join(', ');
-
     return {
         title: `${name} — wynajem długoterminowy | ${ctx.brandName}`,
-        description: `${name}${metaDetails ? ` (${metaDetails})` : ''} w najmie długoterminowym — stała rata miesięczna, bez wkładu własnego. Sprawdź dostępność u dealera.`,
+        description,
         canonical,
         ogImage: imageUrl || undefined,
         preloadImages: r.primaryImageUrl ? [buildImagePreload(r.primaryImageUrl, HERO_IMAGE_SIZES, ctx.baseUrl)] : undefined,
@@ -1113,6 +1123,7 @@ export function buildBrandMeta(
         description,
         canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination!.page}` : ''}`,
         preloadImages: cardPreloads(listings, ctx.baseUrl),
+        skeletonFirstImage: skeletonFirstImage(listings, ctx.baseUrl),
         bodyHtml,
         jsonLd,
         status: 200,
@@ -1213,6 +1224,7 @@ export function buildModelMeta(
         // Model z opublikowaną treścią CMS jest indeksowalny nawet poniżej progu 2 ofert (spec §1/F2).
         noindex: cms ? false : count < 2,
         preloadImages: cardPreloads(listings, ctx.baseUrl),
+        skeletonFirstImage: skeletonFirstImage(listings, ctx.baseUrl),
         bodyHtml,
         jsonLd,
         status: 200,
@@ -1411,6 +1423,7 @@ ${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
         description: route.description,
         canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination.page}` : ''}`,
         preloadImages: LIST_FIRST_PATHS.has(path) ? cardPreloads(listings, ctx.baseUrl) : undefined,
+        skeletonFirstImage: LIST_FIRST_PATHS.has(path) ? skeletonFirstImage(listings, ctx.baseUrl) : undefined,
         bodyHtml,
         jsonLd: jsonLd.length === 1 ? jsonLd[0] : jsonLd.length > 1 ? jsonLd : undefined,
         status: 200,
@@ -1429,17 +1442,30 @@ export function defaultMeta(ctx: BrandCtx, opts: { noindex?: boolean; status?: n
 // Skeleton stron katalogowych (SSR-lite, patrz render.ts/isPaginatedPath) — maluje się od razu
 // po HTML zamiast białego ekranu do montażu SPA. Layout lustrzany wobec stanu ładowania
 // SearchPage/ConditionPage, więc montaż Reacta nie powoduje CLS (te same klasy co realny render).
-export function catalogSkeletonHtml(gridColumns: 3 | 4): string {
+export function catalogSkeletonHtml(gridColumns: 3 | 4, firstImage?: SkeletonFirstImage): string {
     // Nagłówek 1:1 ze statycznym hero motoliaHeroShell (vite.config.ts) — ten sam markup co
     // Header.tsx; zmiana loga/nawigacji tam wymaga aktualizacji też tutaj i w vite.config.ts.
     const header = `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>`;
 
+    // Box zdjęcia pierwszej karty: normalnie shimmer, ale gdy znamy realne zdjęcie pierwszej
+    // oferty (firstImage — ten sam wariant co preload z cardPreloads()), wstawiamy prawdziwy
+    // <img> zamiast shimmeru, żeby LCP wymalował się przed montażem Reacta. Ten sam rozmiar
+    // pudełka (aspect-[16/10]) co shimmer, więc React nie zmienia layoutu przy zamontowaniu.
+    const firstImageBox = firstImage
+        ? `<div class="aspect-[16/10] relative overflow-hidden"><img src="${escapeAttr(firstImage.preload.href)}"` +
+          (firstImage.preload.imagesrcset ? ` srcset="${escapeAttr(firstImage.preload.imagesrcset)}"` : '') +
+          (firstImage.preload.imagesizes ? ` sizes="${escapeAttr(firstImage.preload.imagesizes)}"` : '') +
+          ` width="1200" height="675" fetchpriority="high" decoding="async" alt="${escapeAttr(firstImage.alt)}" class="h-full w-full object-cover" /></div>`
+        : `<div class="aspect-[16/10] skeleton-shimmer"></div>`;
+
     // Karta 1:1 z ListingCardSkeleton (src/components/ListingCard.tsx) — zmiana tamtego JSX
     // wymaga przepisania też tutaj (backend nie renderuje komponentów Reacta).
-    const card = `<div class="listing-card flex flex-col"><div class="aspect-[16/10] skeleton-shimmer"></div><div class="p-4 space-y-3 flex-1 flex flex-col"><div class="space-y-2"><div class="h-6 w-3/4 skeleton-shimmer"></div><div class="h-4 w-1/2 skeleton-shimmer"></div></div><div class="flex flex-wrap gap-1.5"><div class="h-6 w-12 skeleton-shimmer rounded-full"></div><div class="h-6 w-20 skeleton-shimmer rounded-full"></div><div class="h-6 w-10 skeleton-shimmer rounded-full"></div><div class="h-6 w-8 skeleton-shimmer rounded-full"></div><div class="h-6 w-14 skeleton-shimmer rounded-full"></div></div><div class="h-4 w-20 skeleton-shimmer"></div><div class="flex-1"></div><div class="flex gap-3 pt-3"><div class="h-9 w-1/2 skeleton-shimmer rounded-lg"></div><div class="h-9 w-1/2 skeleton-shimmer rounded-lg"></div></div></div><div class="px-4 pb-4 pt-2"><div class="h-11 skeleton-shimmer rounded-lg"></div></div></div>`;
+    const cardTail = `<div class="p-4 space-y-3 flex-1 flex flex-col"><div class="space-y-2"><div class="h-6 w-3/4 skeleton-shimmer"></div><div class="h-4 w-1/2 skeleton-shimmer"></div></div><div class="flex flex-wrap gap-1.5"><div class="h-6 w-12 skeleton-shimmer rounded-full"></div><div class="h-6 w-20 skeleton-shimmer rounded-full"></div><div class="h-6 w-10 skeleton-shimmer rounded-full"></div><div class="h-6 w-8 skeleton-shimmer rounded-full"></div><div class="h-6 w-14 skeleton-shimmer rounded-full"></div></div><div class="h-4 w-20 skeleton-shimmer"></div><div class="flex-1"></div><div class="flex gap-3 pt-3"><div class="h-9 w-1/2 skeleton-shimmer rounded-lg"></div><div class="h-9 w-1/2 skeleton-shimmer rounded-lg"></div></div></div><div class="px-4 pb-4 pt-2"><div class="h-11 skeleton-shimmer rounded-lg"></div></div></div>`;
+    const card = `<div class="listing-card flex flex-col"><div class="aspect-[16/10] skeleton-shimmer"></div>${cardTail}`;
+    const firstCard = `<div class="listing-card flex flex-col">${firstImageBox}${cardTail}`;
 
     // Grid 1:1 z SearchPage.tsx (kolumny z appSettings.searchGridColumns, patrz getGridColumns)
-    const grid = `<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${gridColumns} gap-4">${Array(6).fill(card).join('')}</div>`;
+    const grid = `<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${gridColumns} gap-4">${firstCard}${Array(5).fill(card).join('')}</div>`;
 
     return `<!--catalog-shell--><div class="min-h-screen bg-background">${header}<main class="container pt-4 pb-6">` +
         // Placeholder H1/opisu — żaden realny tekst, żeby nie dublować h1 z seo-prerender
@@ -1581,7 +1607,7 @@ export function injectHead(template: string, meta: PageMeta): string {
     }
 
     const extra: string[] = [];
-    if (meta.canonical) extra.push(`<link rel="canonical" href="${escapeAttr(meta.canonical)}" />`);
+    if (meta.canonical) extra.push(`<link rel="canonical" href="${escapeAttr(meta.canonical)}" data-rh="true" />`);
     if (meta.noindex) extra.push(`<meta name="robots" content="noindex" />`);
     if (meta.jsonLd) {
         // < prevents </script> breakout from data-derived strings

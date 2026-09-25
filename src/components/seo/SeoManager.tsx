@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useBrand } from '@/contexts/BrandContext';
 import { loadConsent, pushConsentDefault } from '@/lib/consent';
+import { getSsrMeta } from '@/lib/ssrMeta';
 import { scheduleTrackingAfterCatalogPaint } from './trackingScheduler';
 import React from 'react';
 
@@ -115,9 +116,17 @@ export function SeoManager() {
         return scheduleTrackingAfterCatalogPaint({ document, window, onInject: injectGTM });
     }, [seoConfig?.gtmId]);
 
-    const finalOgTitle = seoConfig?.homeTitle || (settings as any)?.defaultOgTitle || homeTitle || siteName || config.name;
-    const finalOgDescription = seoConfig?.homeDescription || (settings as any)?.defaultOgDescription || homeDescription || '';
-    const finalOgImage = seoConfig?.homeOgImage || (settings as any)?.defaultOgImage || '';
+    // SeoManager to globalny fallback (montowany na każdej trasie) — na pierwszym renderze URL-a,
+    // który faktycznie przyszedł z SSR, te wartości muszą wygrać z defaultami strony głównej.
+    // Inaczej strony bez własnego MetaHead-opisu (np. /dla-firm — MetaHead ustawia tam tylko
+    // schema) po hydracji (data-rh dedupe w seo-meta.ts injectHead) dostałyby opis strony głównej
+    // zamiast poprawnego, wyrenderowanego przez backend dla tej konkretnej trasy.
+    const ssrMeta = getSsrMeta();
+    const effectiveTitle = ssrMeta?.title ?? (homeTitle || siteName);
+    const effectiveDescription = ssrMeta?.description ?? (homeDescription || '');
+    const finalOgTitle = ssrMeta?.title ?? (seoConfig?.homeTitle || (settings as any)?.defaultOgTitle || homeTitle || siteName || config.name);
+    const finalOgDescription = ssrMeta?.description ?? (seoConfig?.homeDescription || (settings as any)?.defaultOgDescription || homeDescription || '');
+    const finalOgImage = ssrMeta?.ogImage ?? (seoConfig?.homeOgImage || (settings as any)?.defaultOgImage || '');
 
     return (
         <Helmet>
@@ -125,8 +134,9 @@ export function SeoManager() {
             <meta charSet="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             {/* Fallback title if individual pages don't set it */}
-            <title>{homeTitle || siteName}</title>
-            <meta name="description" content={homeDescription || ''} />
+            <title>{effectiveTitle}</title>
+            <meta name="description" content={effectiveDescription} />
+            {ssrMeta?.canonical && <link rel="canonical" href={ssrMeta.canonical} />}
 
             {/* OG Tags */}
             <meta property="og:type" content="website" />

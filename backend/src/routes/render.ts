@@ -44,11 +44,14 @@ import {
     markRevalidating,
     clearRevalidating,
     resetSsrCache,
+    getSsrRedisClient,
+    getSsrNamespace,
 } from '../services/ssr-cache.js';
 import { getPublicSettings } from './settings.js';
 import { getPublicListingWhere } from '../services/listing-visibility.service.js';
 import { executeRentalVehiclesQuery } from './rental-public.js';
 import { buildRentalVehiclesQueryCacheKey, getOrSetJson } from '../services/api-cache.js';
+import { invalidateOfferCache } from '../services/cache-invalidation.service.js';
 
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
@@ -311,6 +314,80 @@ function isCachedHtmlFromActiveBuild(cachedHtml: string, activeTemplate: string)
     return getModuleEntryAsset(cachedHtml) === activeEntry;
 }
 
+// HTML edge cache TTL to 24h (getCacheControlHeader) jest bezpieczne tylko o ile Cloudflare
+// zostaje wyczyszczony po deployu frontendu — inaczej dzień-stary cache HTML wskazywałby na
+// hashowane /assets/*.js, których nowy frontend już nie ma (stare buildy 404). Backend i frontend
+// są deployowane osobno (patrz frontendBase()), więc restart backendu nie jest wiarygodnym
+// sygnałem nowego builda frontendu — trzeba porównać aktywny entry asset z ostatnim zapamiętanym
+// w Redisie (namespace per brand/env jak reszta SSR cache) i purge'ować tylko przy realnej zmianie.
+const BUILD_PURGE_LOCK_TTL_SECONDS = 60;
+
+function getOwnProductionHost(): string | null {
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) return null;
+    try {
+        const hostname = new URL(frontendUrl.startsWith('http') ? frontendUrl : `https://${frontendUrl}`).hostname;
+        return hostname || null;
+    } catch {
+        return null;
+    }
+}
+
+export async function maybePurgeCloudflareOnFrontendBuildChange(fastify: FastifyInstance): Promise<void> {
+    const ownHost = getOwnProductionHost();
+    // Dev/staging współdzielą strefę Cloudflare motolia.pl z produkcją — purge stąd wyczyściłby
+    // cache prod. Tylko kanoniczny host produkcyjny tego builda może wywołać purgeEverything.
+    if (!ownHost || !isProductionHost(ownHost)) return;
+
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_TOKEN;
+    const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+    if (!apiToken || !zoneId) {
+        fastify.log.info('[BuildPurge] Skipping: missing Cloudflare credentials');
+        return;
+    }
+
+    const redis = getSsrRedisClient();
+    if (!redis) return;
+
+    const template = await getTemplate();
+    if (!template) return;
+    const activeEntry = getModuleEntryAsset(template);
+    if (!activeEntry) return;
+
+    const redisKey = `${getSsrNamespace()}:active-frontend-build`;
+    const lockKey = `${redisKey}:lock`;
+
+    try {
+        const previousEntry = await redis.get(redisKey);
+        if (previousEntry === activeEntry) return;
+
+        // SET NX: tylko jeden kontener/restart wygrywa wyścig o purge tego samego builda.
+        // TTL to wyłącznie zabezpieczenie przed zawieszonym lockiem po awarii procesu — po
+        // zakończeniu (sukces lub błąd) lock jest zwalniany od razu w finally, żeby kolejna,
+        // odrębna zmiana builda w krótkim odstępie nie czekała na wygaśnięcie TTL.
+        const lockAcquired = await redis.set(lockKey, '1', 'EX', BUILD_PURGE_LOCK_TTL_SECONDS, 'NX');
+        if (!lockAcquired) return;
+
+        try {
+            // Re-check po zdobyciu locka — inny proces mógł już zaktualizować wpis w międzyczasie.
+            const currentEntry = await redis.get(redisKey);
+            if (currentEntry === activeEntry) return;
+
+            const result = await invalidateOfferCache(fastify, { purgeEverything: true });
+            if (result.success) {
+                await redis.set(redisKey, activeEntry);
+                fastify.log.info({ activeEntry, previousEntry }, '[BuildPurge] Cloudflare cache purged: new frontend build detected');
+            } else {
+                fastify.log.warn({ activeEntry }, '[BuildPurge] Cloudflare purge failed for new frontend build');
+            }
+        } finally {
+            await redis.del(lockKey);
+        }
+    } catch (err) {
+        fastify.log.warn({ err }, '[BuildPurge] Failed to check/purge for frontend build change');
+    }
+}
+
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
 const PROMO_RE = /^\/promo\/([^/]+)$/;
@@ -545,7 +622,7 @@ async function resolveMeta(
     const rm = path.match(RENTAL_RE);
     if (rm) {
         const rental = await fastify.prisma.rentalVehicle.findFirst({
-            where: { slug: rm[1], isActive: true },
+            where: { slug: rm[1], isActive: true, isPublished: true },
             select: {
                 id: true,
                 make: true,
@@ -590,7 +667,7 @@ async function resolveMeta(
 
         // Podobne auta najmu do linkowania: najpierw ta sama marka, dobite tym samym nadwoziem — max 5
         let relatedRentalsRaw = await fastify.prisma.rentalVehicle.findMany({
-            where: { isActive: true, slug: { not: null }, NOT: { id: rental.id }, make: rental.make },
+            where: { isActive: true, isPublished: true, slug: { not: null }, NOT: { id: rental.id }, make: rental.make },
             take: 5,
             orderBy: { createdAt: 'desc' },
             select: { id: true, make: true, model: true, productionYear: true, slug: true },
@@ -598,7 +675,7 @@ async function resolveMeta(
         if (relatedRentalsRaw.length < 5 && rental.bodyType) {
             const excludeIds = [rental.id, ...relatedRentalsRaw.map(v => v.id)];
             const sameBodyRentals = await fastify.prisma.rentalVehicle.findMany({
-                where: { isActive: true, slug: { not: null }, NOT: { id: { in: excludeIds } }, bodyType: rental.bodyType },
+                where: { isActive: true, isPublished: true, slug: { not: null }, NOT: { id: { in: excludeIds } }, bodyType: rental.bodyType },
                 take: 5 - relatedRentalsRaw.length,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, make: true, model: true, productionYear: true, slug: true },
@@ -985,7 +1062,10 @@ function getCacheControlHeader(
         return 'private, no-store';
     }
     // s-maxage bez stale-while-revalidate (SWR i tak jest unieważniane przez s-maxage) - edge cache bez cache w przeglądarce, bo oferty się zmieniają.
-    return 'public, max-age=0, s-maxage=300';
+    // 86400 (1 dzień) zamiast dawnych 300s — bezpieczne tylko dzięki purge'owaniu Cloudflare przy
+    // każdej zmianie treści (patrz cache-invalidation.service.ts) i przy każdym deployu frontendu
+    // (patrz maybePurgeOnFrontendBuildChange w tym pliku).
+    return 'public, max-age=0, s-maxage=86400';
 }
 
 interface RenderResult {
@@ -1029,6 +1109,15 @@ async function renderPage(
     const ctx = resolveBrandCtx();
     const heroBanners = path === '/' ? await getHomeHeroBanners(fastify) : [];
 
+    // Meta liczona przed skeletonem (a nie po, jak dawniej) — catalogSkeletonHtml potrzebuje
+    // meta.skeletonFirstImage (zdjęcie pierwszej oferty) do wstrzyknięcia realnego <img> w
+    // miejsce shimmeru pierwszej karty. Cache SSR całego HTML (kluczowany osobno w wyższej
+    // warstwie, patrz renderAndCache/getSsrCache) nie zależy od tej kolejności.
+    const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
+    if (!isProd) {
+        meta.noindex = true;
+    }
+
     // Statyczny shell hero (vite.config, znaczniki home-shell) jest tylko dla
     // strony głównej — na innych trasach usuwamy go, żeby hero nie migało
     // przed zamontowaniem SPA. Strony katalogowe (isPaginatedPath) dostają w zamian
@@ -1040,10 +1129,11 @@ async function renderPage(
         // Home-only preloady API (hero-banners/feature-tiles/faq-home/widgets-HOME) są
         // nieużywane poza / i na dławionym mobile kradną pasmo entry JS + obrazkowi LCP.
         template = template.replace(/<!--home-preload-->[\s\S]*?<!--\/home-preload-->/, () => '');
-        // Strony katalogowe → skeleton siatki kart; strony detalu (oferta/najem) → skeleton
+        // Strony katalogowe → skeleton siatki kart (pierwsza karta z realnym zdjęciem, gdy je
+        // znamy — patrz meta.skeletonFirstImage); strony detalu (oferta/najem) → skeleton
         // galerii + sidebara; reszta (formularze, noindex) → pusto do montażu React.
         const skeleton = isPaginatedPath(path)
-            ? catalogSkeletonHtml(await getGridColumns(fastify))
+            ? catalogSkeletonHtml(await getGridColumns(fastify), meta.skeletonFirstImage)
             : (LISTING_RE.test(path) || RENTAL_RE.test(path))
                 ? detailSkeletonHtml()
                 : '';
@@ -1057,11 +1147,6 @@ async function renderPage(
         template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => heroShell);
     }
 
-    const meta = await resolveMeta(fastify, path, ctx, page, searchParams);
-    if (!isProd) {
-        meta.noindex = true;
-    }
-
     if (meta.status === 301 && meta.redirectUrl) {
         return {
             html: '',
@@ -1072,6 +1157,43 @@ async function renderPage(
     }
 
     let html = injectHead(template, meta);
+
+    // window.__SSR_META__ — SSR meta (title/description/canonical/ogImage) do odczytu przez
+    // MetaHead/SeoManager na pierwszym renderze, zanim React zamontuje SPA. Bez tego, po
+    // wprowadzeniu data-rh (dedupe head tagów przez react-helmet-async), strony bez własnego
+    // page-level opisu (np. /dla-firm — MetaHead tam ustawia tylko schema) albo z opisem, który
+    // potrafi wyjść pusty (np. /oferta/:slug w wariancie gotówka bez CMS-owego szablonu),
+    // dostawałyby po hydracji domyślny opis strony głównej z SeoManager zamiast poprawnego
+    // SSR-owego — Google indeksuje wyrenderowany DOM, więc to on musi mieć rację. Pomijamy dla
+    // noindex/nie-200 (przekierowania i 404 nie mają "poprawnej" treści do zachowania).
+    // Tylko ?page — ten sam wzorzec normalizacji co cacheKey w renderAndCache/getSsrCache
+    // (`page > 1 ? \`${path}?page=${page}\` : path`), bo SSR HTML jest cache'owane per
+    // path+page NIEZALEŻNIE od reszty query stringa (utm/gclid/filtry). Wpisanie tu pełnego
+    // searchParams.toString() wpisałoby do window.__SSR_META__ (a więc do cache'owanego HTML)
+    // query string pierwszego odwiedzającego (np. ?utm_source=x) i serwowało go WSZYSTKIM
+    // kolejnym gościom tego samego path+page — u nich location.search by się nie zgadzał i
+    // dopasowanie nigdy by nie trafiło (cichy powrót regresji, którą ta cała funkcja miała
+    // naprawić). getSsrMeta() na kliencie (src/lib/ssrMeta.ts) stosuje identyczną normalizację.
+    //
+    // Dodatkowo: tylko gdy requestowana ścieżka JEST swoim własnym canonicalem (np. bogus slug
+    // w /oferta/:slug soft-canonicalizuje się na 200 z canonical wskazującym na prawdziwy slug,
+    // bez przekierowania) — inaczej wyciekałby nieużywany/niezaufany fragment URL-a wpisany przez
+    // usera do window.__SSR_META__.path, mimo że treść strony i tak go dotyczy pod innym adresem.
+    const canonicalPathname = meta.canonical ? new URL(meta.canonical).pathname : path;
+    if (meta.status === 200 && !meta.noindex && canonicalPathname === path) {
+        const ssrMeta = {
+            path: page > 1 ? `${path}?page=${page}` : path,
+            title: meta.title,
+            description: meta.description,
+            canonical: meta.canonical,
+            ogImage: meta.ogImage,
+        };
+        // escapujemy < w wartościach (jak window.__APP_SETTINGS__/__HERO_BANNERS__), żeby dane
+        // nie zamknęły przedwcześnie tagu <script>
+        // (ten sam sposób co window.__APP_SETTINGS__/__HERO_BANNERS__ poniżej).
+        const ssrMetaJson = JSON.stringify(ssrMeta).replace(/</g, '\\u003c');
+        html = html.replace('</head>', () => `<script>window.__SSR_META__=${ssrMetaJson};</script>\n</head>`);
+    }
 
     // Modulepreload chunka trasy — domyślnie wyłączony po eksperymencie (docs/BRIEF_AG_MODULEPRELOAD_EXPERIMENT.md),
     // w którym wykazano, że emisja tagów modulepreload na trasach katalogowych opóźniała FCP o ponad 1 s.
@@ -1195,6 +1317,15 @@ export async function renderRoutes(fastify: FastifyInstance) {
 
         const activeTemplate = await getTemplate();
         const cached = await getSsrCache(cacheKey);
+
+        // Sygnał "nowy build frontendu" widziany właśnie na tym requeście (cache trafiony, ale
+        // z innym entry assetem) — fire-and-forget purge Cloudflare, nie blokuje odpowiedzi.
+        if (cached && activeTemplate && !isCachedHtmlFromActiveBuild(cached.html, activeTemplate)) {
+            maybePurgeCloudflareOnFrontendBuildChange(fastify).catch(err => {
+                fastify.log.warn({ err }, '[BuildPurge] Fire-and-forget purge check failed');
+            });
+        }
+
         if (cached && (!activeTemplate || isCachedHtmlFromActiveBuild(cached.html, activeTemplate))) {
             if (!isSsrFresh(cached)) {
                 if (markRevalidating(cacheKey)) {
