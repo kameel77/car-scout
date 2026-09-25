@@ -3,7 +3,7 @@ import { requirePermission } from '../middleware/permissions.js';
 
 export async function translationRoutes(fastify: FastifyInstance) {
     // List translations with optional filtering
-    fastify.get('/api/translations', async (request) => {
+    fastify.get('/api/translations', async (request, reply) => {
         const { category, search } = request.query as { category?: string; search?: string };
 
         const where: any = {};
@@ -26,6 +26,7 @@ export async function translationRoutes(fastify: FastifyInstance) {
             orderBy: { updatedAt: 'desc' }
         });
 
+        reply.header('Cache-Control', 'public, max-age=0, s-maxage=300');
         return { translations };
     });
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
 
@@ -50,6 +50,21 @@ describe('SEO content (CMS) routes', () => {
     });
 
     describe('GET /api/seo-content (public)', () => {
+        // Cache-Control publiczny wymaga hosta produkcyjnego (isProductionHost) — inaczej globalny
+        // onSend guard w app.ts (de-indexing na dev/staging) nadpisuje wszystko na 'private, no-store'.
+        let prevBrand: string | undefined;
+        let prevFrontendUrl: string | undefined;
+        beforeEach(() => {
+            prevBrand = process.env.BRAND;
+            prevFrontendUrl = process.env.FRONTEND_URL;
+            process.env.BRAND = 'motolia';
+            process.env.FRONTEND_URL = 'https://motolia.pl';
+        });
+        afterEach(() => {
+            if (prevBrand === undefined) delete process.env.BRAND; else process.env.BRAND = prevBrand;
+            if (prevFrontendUrl === undefined) delete process.env.FRONTEND_URL; else process.env.FRONTEND_URL = prevFrontendUrl;
+        });
+
         it('returns html/metaTitle/metaDescription for a published page', async () => {
             await app.prisma.seoContentPage.create({
                 data: {
@@ -64,6 +79,7 @@ describe('SEO content (CMS) routes', () => {
             const res = await app.inject({
                 method: 'GET',
                 url: '/api/seo-content?path=/samochody/test-seo-content-published',
+                headers: { host: 'motolia.pl' },
             });
 
             expect(res.statusCode).toBe(200);
@@ -72,6 +88,7 @@ describe('SEO content (CMS) routes', () => {
             expect(json.html).toContain('<p>Treść.</p>');
             expect(json.metaTitle).toBe('Tytuł CMS');
             expect(json.metaDescription).toBe('Opis CMS');
+            expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
         });
 
         it('returns 404 for an unpublished (draft) page', async () => {
@@ -95,9 +112,11 @@ describe('SEO content (CMS) routes', () => {
             const res = await app.inject({
                 method: 'GET',
                 url: '/api/seo-content?path=/samochody/non-existent-xyz',
+                headers: { host: 'motolia.pl' },
             });
 
             expect(res.statusCode).toBe(404);
+            expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=60');
         });
 
         it('returns 400 when path query is missing', async () => {

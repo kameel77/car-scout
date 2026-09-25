@@ -4,7 +4,7 @@ import { initCSFlowCron } from './services/csflow.service.js';
 import { initPewneAutoCron } from './services/pewneauto.service.js';
 import { bootstrapCsflowSources } from './services/csflow-bootstrap.js';
 import { initReferenceInstallmentsCron } from './services/financing-calc.service.js';
-import { maybePurgeCloudflareOnFrontendBuildChange } from './routes/render.js';
+import { maybePurgeCloudflareOnBuildChange } from './routes/render.js';
 
 dotenv.config();
 
@@ -58,13 +58,15 @@ const start = async () => {
         await app.listen({ port, host: process.env.HOST || '::' });
         console.log(`🚀 Server listening on port ${port}`);
 
-        // Cloudflare CDN purge after a fresh deploy, but only when the frontend build actually
-        // changed (compares the active entry asset against the last one seen, stored in Redis —
-        // see maybePurgeCloudflareOnFrontendBuildChange in render.ts). Backend and frontend
-        // containers are replaced separately, so a backend-only restart must NOT purge_everything
-        // every time; the render.ts request-path check also catches a frontend-only deploy that
-        // never restarts the backend. Never blocks/fails startup - errors are logged and swallowed.
-        maybePurgeCloudflareOnFrontendBuildChange(app).catch((err) => {
+        // Cloudflare CDN purge after a fresh deploy, but only when the build actually changed
+        // (compares the active frontend entry asset + backend revision (SOURCE_COMMIT) against
+        // the last pair seen, stored in Redis — see maybePurgeCloudflareOnBuildChange in render.ts).
+        // Backend and frontend containers are replaced separately, so a backend-only restart must
+        // NOT purge_everything every time unless its revision actually changed; the render.ts
+        // request-path check also catches a frontend-only deploy that never restarts the backend,
+        // and a backend revision change seen before this startup check completes. Never
+        // blocks/fails startup - errors are logged and swallowed.
+        maybePurgeCloudflareOnBuildChange(app).catch((err) => {
             app.log.warn({ err }, '[BuildPurge] Failed to evaluate startup purge');
         });
 

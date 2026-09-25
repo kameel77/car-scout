@@ -101,7 +101,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const slugOrId = listing.slug || listing.id;
         return [
             `/oferta/${slugOrId}`,
-            ...(listing.slug ? [`/oferta/${listing.id}`] : []),
+            `/leasing/${slugOrId}`,
+            `/kredyt/${slugOrId}`,
+            ...(listing.slug ? [`/oferta/${listing.id}`, `/leasing/${listing.id}`, `/kredyt/${listing.id}`] : []),
+            `/api/listings/by-slug/${slugOrId}`,
+            ...(listing.slug ? [`/api/listings/by-slug/${listing.id}`] : []),
             ...(listing.make && listing.model ? [
                 `/samochody/${sanitizeForSlug(listing.make)}/${sanitizeForSlug(listing.model)}/${slugOrId}`,
                 `/samochody/${sanitizeForSlug(listing.make)}`,
@@ -123,7 +127,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const cacheKey = `api:listings:options${condition ? `:${condition}` : ''}`;
         const cached = await fastify.redis.get(cacheKey);
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+            reply
+                .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                .header('Vary', 'Origin, Accept-Encoding');
+            return JSON.parse(cached);
+        }
 
         // fetch distinct makes from non-archived listings
         const makesRaw = await fastify.prisma.listing.findMany({
@@ -164,6 +173,9 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
         const result = { makes, models, bodyTypes, cities };
         await fastify.redis.set(cacheKey, JSON.stringify(result), 'EX', 600);
+        reply
+            .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+            .header('Vary', 'Origin, Accept-Encoding');
         return result;
     });
 
@@ -705,10 +717,12 @@ export async function listingRoutes(fastify: FastifyInstance) {
         }
 
         const cacheKey = buildListingsQueryCacheKey(request.query as Record<string, any>);
-        const data = await getOrSetJson(cacheKey, 180, () => runQuery(false, {}));
+        // 300s dla spójności z pozostałymi publicznymi endpointami (patrz Cloudflare cache rule) —
+        // świeżość i tak gwarantuje purge przy każdej zmianie oferty (invalidateOfferCache).
+        const data = await getOrSetJson(cacheKey, 300, () => runQuery(false, {}));
 
         return reply
-            .header('Cache-Control', 'public, max-age=0, s-maxage=180')
+            .header('Cache-Control', 'public, max-age=0, s-maxage=300')
             .header('Vary', 'Origin, Accept-Encoding')
             .send(data);
     });
@@ -902,6 +916,14 @@ export async function listingRoutes(fastify: FastifyInstance) {
             return reply
                 .code(200)
                 .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                .header('Vary', 'Origin, Accept-Encoding')
+                .send(fresh.data);
+        }
+
+        if (fresh.status === 404) {
+            return reply
+                .code(404)
+                .header('Cache-Control', 'public, max-age=0, s-maxage=60')
                 .header('Vary', 'Origin, Accept-Encoding')
                 .send(fresh.data);
         }

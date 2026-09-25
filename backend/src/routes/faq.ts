@@ -24,6 +24,7 @@ export async function faqRoutes(fastify: FastifyInstance) {
     // List FAQ entries
     fastify.get('/api/faq', async (request, reply) => {
         const { page } = request.query as { page?: string };
+        const hasAuthHeader = Boolean(request.headers.authorization);
 
         // Try to authenticate; if missing/invalid token, proceed as public
         let canReadUnpublished = false;
@@ -71,6 +72,9 @@ export async function faqRoutes(fastify: FastifyInstance) {
                 ]
             });
 
+            // Odpowiedź zależy od Authorization (widoczność nieopublikowanych wpisów), więc
+            // przy edge-cache'owaniu żądania z tokenem nie mogą trafić do publicznego cache'a.
+            reply.header('Cache-Control', hasAuthHeader ? 'private, no-store' : 'public, max-age=0, s-maxage=300');
             return { entries };
         } catch (error) {
             fastify.log.error(error, 'FAQ: List failed');

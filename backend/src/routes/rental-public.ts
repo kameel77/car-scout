@@ -457,12 +457,14 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         }
 
         const cacheKey = buildRentalVehiclesQueryCacheKey(request.query as Record<string, any>);
-        const data = await getOrSetJson(cacheKey, 180, () =>
+        // 300s dla spójności z pozostałymi publicznymi endpointami (patrz Cloudflare cache rule) —
+        // świeżość i tak gwarantuje purge przy każdej zmianie pojazdu (invalidateOfferCache).
+        const data = await getOrSetJson(cacheKey, 300, () =>
             executeRentalVehiclesQuery(fastify, request.query as Record<string, any>, false)
         );
 
         return reply
-            .header('Cache-Control', 'public, max-age=0, s-maxage=180')
+            .header('Cache-Control', 'public, max-age=0, s-maxage=300')
             .header('Vary', 'Origin, Accept-Encoding')
             .send(data);
     });
@@ -574,7 +576,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
 
         const fresh = await fetchDetail(false);
         if (!fresh) {
-            return reply.code(404).header('Cache-Control', 'private, no-store').send({ error: 'Rental vehicle not found' });
+            return reply
+                .code(404)
+                .header('Cache-Control', 'public, max-age=0, s-maxage=60')
+                .header('Vary', 'Origin, Accept-Encoding')
+                .send({ error: 'Rental vehicle not found' });
         }
 
         await setJsonInCache(cacheKey, fresh, 300);

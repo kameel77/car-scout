@@ -28,12 +28,18 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
     // Ten sam HTML co w SSR (/api/render), więc treść jest identyczna dla każdego User-Agenta.
     fastify.get('/api/seo-content', async (request, reply) => {
         const { path: urlPath } = request.query as { path?: string };
-        if (!urlPath) return reply.code(400).send({ error: 'path is required' });
+        if (!urlPath) {
+            reply.header('Cache-Control', 'private, no-store');
+            return reply.code(400).send({ error: 'path is required' });
+        }
 
         const content = await getSeoContentPage(fastify, urlPath);
-        if (!content) return reply.code(404).send({ error: 'Not found' });
+        if (!content) {
+            reply.header('Cache-Control', 'public, max-age=0, s-maxage=60');
+            return reply.code(404).send({ error: 'Not found' });
+        }
 
-        reply.header('Cache-Control', 'public, max-age=60');
+        reply.header('Cache-Control', 'public, max-age=0, s-maxage=300');
         return { html: content.html, metaTitle: content.metaTitle, metaDescription: content.metaDescription };
     });
 
@@ -74,7 +80,10 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
                     isPublished: body.isPublished ?? false,
                 },
             });
-            await invalidateOfferCache(fastify, { urls: [normalizedUrlPath], purgeSitemap: false }).catch(err => {
+            await invalidateOfferCache(fastify, {
+                urls: [normalizedUrlPath, `/api/seo-content?path=${encodeURIComponent(normalizedUrlPath)}`],
+                purgeSitemap: false
+            }).catch(err => {
                 fastify.log.warn({ err }, 'Failed to invalidate cache after seo content create');
             });
             return { page };
@@ -120,7 +129,10 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
                     ...(body.isPublished !== undefined ? { isPublished: body.isPublished } : {}),
                 },
             });
-            await invalidateOfferCache(fastify, { urls: [page.urlPath], purgeSitemap: false }).catch(err => {
+            await invalidateOfferCache(fastify, {
+                urls: [page.urlPath, `/api/seo-content?path=${encodeURIComponent(page.urlPath)}`],
+                purgeSitemap: false
+            }).catch(err => {
                 fastify.log.warn({ err }, 'Failed to invalidate cache after seo content update');
             });
             return { page };
@@ -141,7 +153,10 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
             const existing = await fastify.prisma.seoContentPage.findUnique({ where: { id } });
             await fastify.prisma.seoContentPage.delete({ where: { id } });
             if (existing) {
-                await invalidateOfferCache(fastify, { urls: [existing.urlPath], purgeSitemap: false }).catch(err => {
+                await invalidateOfferCache(fastify, {
+                    urls: [existing.urlPath, `/api/seo-content?path=${encodeURIComponent(existing.urlPath)}`],
+                    purgeSitemap: false
+                }).catch(err => {
                     fastify.log.warn({ err }, 'Failed to invalidate cache after seo content delete');
                 });
             }
