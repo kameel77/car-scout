@@ -19,6 +19,7 @@ import { getDisplayPrice, getFinancingBasePrice } from '@/utils/listingPrice';
 import { trackSelectItem } from '@/lib/analytics';
 import { translateTechnicalValue, getTransmissionShortLabel } from '@/utils/i18n-utils';
 import { getListingUrlPath, getPreferredFinancingType, type FinancingType } from '@/utils/url-utils';
+import { isLeasingEligibleByAge } from '@/utils/financingEligibility';
 import { useBrand } from '@/contexts/BrandContext';
 import { VAT } from '@/utils/financingRates';
 
@@ -170,10 +171,7 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
     const kredytGross = listing.referenceCreditInstallment ?? null;
     const rawLeasingNet = listing.referenceLeasingInstallment ?? null;
 
-    // Leasing dostępny tylko dla pojazdów nie starszych niż 9 lat
-    const currentYear = new Date().getFullYear();
-    const isLeasingAvailable = listing.production_year ? (currentYear - listing.production_year <= 9) : true;
-    const leasingNet = isLeasingAvailable ? rawLeasingNet : null;
+    const leasingNet = isLeasingEligibleByAge(listing.production_year) ? rawLeasingNet : null;
 
     if (kredytGross == null && leasingNet == null) return null;
 
@@ -220,7 +218,9 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
     productionYear: listing.production_year,
     bodyType: listing.body_type,
     fuelType: listing.fuel_type,
-  }, effectiveFinancingType);
+  }, effectiveFinancingType === 'leasing' && !isLeasingEligibleByAge(listing.production_year)
+    ? 'kredyt'
+    : effectiveFinancingType);
 
   return (
     <div

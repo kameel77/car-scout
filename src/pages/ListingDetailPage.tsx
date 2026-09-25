@@ -34,6 +34,7 @@ import { listingsApi, faqApi } from '@/services/api';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import { FinancingCalculator, type CalculatorFinancingConfig } from '@/components/FinancingCalculator';
+import { isLeasingEligibleByAge } from '@/utils/financingEligibility';
 import { getFinancingBasePrice, getDisplayPrice } from '@/utils/listingPrice';
 import { DynamicFinancingContent } from '@/components/DynamicFinancingContent';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
@@ -298,6 +299,20 @@ export default function ListingDetailPage() {
     }
   };
 
+  // Leasing tylko dla aut ≤ 5 lat: wariant /leasing/ starszego auta przekierowujemy na /kredyt/ (canonical i tak /oferta/).
+  React.useEffect(() => {
+    if (!listing || financingType !== 'leasing' || isLeasingEligibleByAge(listing.production_year)) return;
+    navigate(getListingUrlPath({
+      id: listing.listing_id,
+      make: listing.make,
+      model: listing.model,
+      version: listing.version,
+      productionYear: listing.production_year,
+      bodyType: listing.body_type,
+      fuelType: listing.fuel_type,
+    }, 'kredyt') + location.search, { replace: true });
+  }, [listing, financingType, navigate, location.search]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -376,7 +391,7 @@ export default function ListingDetailPage() {
     ? listing.leasingProductId || listing.dealerSettings?.defaultLeasingProductId || undefined
     : undefined;
 
-  const isLeasingAvailableLocal = listing.leasingAvailable !== false && (listing.production_year ? (new Date().getFullYear() - listing.production_year <= 9) : true);
+  const isLeasingAvailableLocal = listing.leasingAvailable !== false && isLeasingEligibleByAge(listing.production_year);
 
   const isFinancingAvailable = financingType === 'kredyt'
     ? listing.creditAvailable !== false
