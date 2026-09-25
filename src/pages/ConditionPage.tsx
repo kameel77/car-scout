@@ -11,7 +11,7 @@ import { Car, Building2, User, ArrowUpDown, Check } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
-import { FilterPanel, FilterState } from '@/components/FilterPanel';
+import { FilterState } from '@/components/FilterPanel';
 import { ActiveFilters } from '@/components/ActiveFilters';
 import { TopFilterBar } from '@/components/TopFilterBar';
 import {
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { ListingPagination } from '@/components/ListingPagination';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { AllFiltersSheet, AllFiltersSheetHandle } from '@/components/AllFiltersSheet';
 import { useListings } from '@/hooks/useListings';
 import { useListingOptions } from '@/hooks/useListingOptions';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -219,15 +219,13 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   const [page, setPage] = React.useState(initialPage);
   const perPage = Number(settings?.searchGridColumns) === 3 ? 30 : 32;
 
-  const [allFiltersOpen, setAllFiltersOpen] = React.useState(() => searchParams.get('openFilters') === 'true');
-
-  React.useEffect(() => {
-    if (searchParams.get('openFilters')) {
-      const next = new URLSearchParams(searchParams);
-      next.delete('openFilters');
-      setSearchParams(next, { replace: true });
-    }
-  }, []);
+  // "Wszystkie filtry" sheet owns its own open state (see AllFiltersSheet) so opening it
+  // doesn't re-render this whole page. handleFilterChange below still needs to know
+  // whether it's currently open (to preserve it across a Stan-switch redirect), so we
+  // track that in a ref updated by the sheet's onOpenChange instead of lifted state.
+  const allFiltersSheetRef = React.useRef<AllFiltersSheetHandle>(null);
+  const isAllFiltersOpenRef = React.useRef(searchParams.get('openFilters') === 'true');
+  const openAllFilters = React.useCallback(() => allFiltersSheetRef.current?.open(), []);
 
   // Desktop search (debounced)
   const [desktopSearch, setDesktopSearch] = React.useState(filters.query || '');
@@ -358,7 +356,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       if (updatedFilters.cities.length) params.set('city', updatedFilters.cities.join(','));
       // Preserve the "Wszystkie filtry" sheet across the redirect when the user
       // changed Stan while the sheet was open — SearchPage re-opens it from this URL param.
-      if (allFiltersOpen) params.set('openFilters', 'true');
+      if (isAllFiltersOpenRef.current) params.set('openFilters', 'true');
       const qs = params.toString();
       navigate(`/samochody${qs ? `?${qs}` : ''}`);
       return;
@@ -366,7 +364,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
 
     setFilters(updatedFilters);
     setPage(1);
-  }, [condition, navigate, priceType, allFiltersOpen]);
+  }, [condition, navigate, priceType]);
 
   const handleClearFilters = React.useCallback(() => {
     setFilters({ ...emptyFilters, statuses: [condition] });
@@ -461,25 +459,17 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
       <Header onClearFilters={handleClearFilters} hasActiveFilters={hasActiveFilters} />
 
       {/* Full-page filter sheet */}
-      <Sheet open={allFiltersOpen} onOpenChange={setAllFiltersOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0">
-          <SheetHeader className="sr-only">
-            <SheetTitle>{t('filters.title')}</SheetTitle>
-          </SheetHeader>
-          <div className="px-6 pt-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
-            <FilterPanel
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onClear={handleClearFilters}
-              resultCount={totalCombined}
-              availableMakes={availableMakes}
-              availableModels={availableModels}
-              facets={facets}
-              onApply={() => setAllFiltersOpen(false)}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <AllFiltersSheet
+        ref={allFiltersSheetRef}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClear={handleClearFilters}
+        resultCount={totalCombined}
+        availableMakes={availableMakes}
+        availableModels={availableModels}
+        facets={facets}
+        onOpenChange={(isOpen) => { isAllFiltersOpenRef.current = isOpen; }}
+      />
 
       <main className="container pt-4 pb-6">
         <div className="min-w-0">
@@ -495,7 +485,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
             onFilterChange={handleFilterChange}
             availableMakes={availableMakes}
             availableModels={availableModels}
-            onOpenAllFilters={() => setAllFiltersOpen(true)}
+            onOpenAllFilters={openAllFilters}
             query={desktopSearch}
             onQueryChange={(v) => {
               setIsDesktopTyping(true);
