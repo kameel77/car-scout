@@ -152,6 +152,27 @@ describe('ssr-cache service', () => {
         expect(await getSsrCache('/page-2')).toBeNull();
     });
 
+    it('includes SOURCE_COMMIT (backend revision) in the cache key namespace, so old-revision keys are never read', async () => {
+        const prevSourceCommit = process.env.SOURCE_COMMIT;
+        try {
+            delete process.env.SOURCE_COMMIT;
+            expect(getSsrCacheKey('/page')).not.toMatch(/:ssr:v1:[0-9a-f]{8}:/);
+
+            process.env.SOURCE_COMMIT = 'abcdef1234567890';
+            expect(getSsrCacheKey('/page')).toContain(':ssr:v1:abcdef12:/page');
+
+            // Wpis zapisany pod jedną rewizją nie jest widoczny pod inną — klucze się rozjeżdżają,
+            // więc stary HTML po backendowym deployu nigdy nie zostanie odczytany (wygaśnie po TTL).
+            await setSsrCache('/rev-page', { html: 'rev A', status: 200, at: Date.now() });
+            expect(await getSsrCache('/rev-page')).not.toBeNull();
+
+            process.env.SOURCE_COMMIT = 'fedcba0987654321';
+            expect(await getSsrCache('/rev-page')).toBeNull();
+        } finally {
+            if (prevSourceCommit === undefined) delete process.env.SOURCE_COMMIT; else process.env.SOURCE_COMMIT = prevSourceCommit;
+        }
+    });
+
     it('gracefully degrades when Redis is null or throws', async () => {
         initSsrCache(null as any);
         expect(await getSsrCache('/any')).toBeNull();
