@@ -161,7 +161,8 @@ export default function HeroVehicleFilter() {
 
   const [filters, setFilters] = useState<FilterState>({
     clientType: 'private',
-    status: 'new',
+    // Najem jako domyślna ścieżka — najwyższa marża (decyzja 2026-09-25).
+    status: 'rental',
     bodyType: '',
     make: '',
     model: '',
@@ -267,6 +268,13 @@ export default function HeroVehicleFilter() {
       <div className="hvf__toggle-group">
         <button
           type="button"
+          className={`hvf__toggle-btn ${filters.status === 'rental' ? 'hvf__toggle-btn--active' : ''}`}
+          onClick={() => handleStatusChange('rental')}
+        >
+          Wynajem
+        </button>
+        <button
+          type="button"
           className={`hvf__toggle-btn ${filters.status === 'new' ? 'hvf__toggle-btn--active' : ''}`}
           onClick={() => handleStatusChange('new')}
         >
@@ -278,13 +286,6 @@ export default function HeroVehicleFilter() {
           onClick={() => handleStatusChange('used')}
         >
           Używany
-        </button>
-        <button
-          type="button"
-          className={`hvf__toggle-btn ${filters.status === 'rental' ? 'hvf__toggle-btn--active' : ''}`}
-          onClick={() => handleStatusChange('rental')}
-        >
-          Wynajem
         </button>
       </div>
 
