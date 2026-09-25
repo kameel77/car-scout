@@ -438,7 +438,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
                   item: {
                     '@type': 'Car',
                     name: `${l.make} ${l.model}`,
-                    url: `${window.location.origin}/samochody/${l.slug || l.listing_id}`,
+                    url: `${window.location.origin}/oferta/${l.slug || l.listing_id}`,
                     vehicleModelDate: l.year?.toString(),
                     fuelType: l.fuel_type,
                     vehicleTransmission: l.transmission,
