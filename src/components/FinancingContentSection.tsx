@@ -70,7 +70,7 @@ export function FinancingContentSection({ type, hideTitle }: { type: FinancingCo
             {faqEntries.map((entry) => (
               <AccordionItem key={entry.id} value={entry.id}>
                 <AccordionTrigger className="text-left">{entry.questionPl}</AccordionTrigger>
-                <AccordionContent>
+                <AccordionContent forceMount>
                   <MarkdownText text={entry.answerPl} />
                 </AccordionContent>
               </AccordionItem>

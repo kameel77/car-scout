@@ -471,7 +471,7 @@ export default function RentalDetailPage() {
                                          <AccordionTrigger className="text-base font-semibold text-foreground hover:no-underline text-left py-4">
                                              {entry.questionPl}
                                          </AccordionTrigger>
-                                         <AccordionContent className="pb-4 text-muted-foreground text-sm leading-relaxed">
+                                         <AccordionContent forceMount className="pb-4 text-muted-foreground text-sm leading-relaxed">
                                              {entry.answerPl}
                                          </AccordionContent>
                                      </AccordionItem>
