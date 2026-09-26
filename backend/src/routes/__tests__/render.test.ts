@@ -627,6 +627,16 @@ describe('GET /api/render — brand/model pages', () => {
         const res = await app.inject({ method: 'GET', url });
         expect(res.statusCode).toBe(200);
         expect(res.body).not.toContain('content="noindex"');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody?page=2"');
+    });
+
+    it('facet params passed unencoded by nginx (top-level query) are still detected (KAM-17)', async () => {
+        await createListing();
+        // nginx: /api/render?path=$request_uri -> everything after the first & is a top-level param
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody?page=2&make=Test%20Brand%20Page,BMW' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('<meta name="robots" content="noindex" />');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody"');
     });
 
     it('/samochody shows a "Popularne marki" internal-linking block linking to brand pages', async () => {

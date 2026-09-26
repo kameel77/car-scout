@@ -1361,7 +1361,16 @@ export async function renderRoutes(fastify: FastifyInstance) {
         let path = rawPathname;
         if (path.length > 1 && path.endsWith('/')) path = path.replace(/\/+$/, '') || '/';
 
-        const searchParams = rawQuery ? new URLSearchParams(rawQuery) : undefined;
+        // Nginx przekazuje surowe $request_uri w ?path=, więc przy /samochody?page=2&make=X
+        // wszystko po pierwszym `&` ląduje w query najwyższego poziomu. Scalamy je z query
+        // ścieżki, żeby filtry (canonical marki, noindex facetów - KAM-17) widziały komplet.
+        const mergedQuery = new URLSearchParams(rawQuery ?? '');
+        for (const [key, value] of Object.entries(request.query as Record<string, unknown>)) {
+            if (key === 'path' || mergedQuery.has(key)) continue;
+            if (typeof value === 'string') mergedQuery.append(key, value);
+            else if (Array.isArray(value)) value.forEach(v => typeof v === 'string' && mergedQuery.append(key, v));
+        }
+        const searchParams = mergedQuery.toString() ? mergedQuery : undefined;
 
         // ?page=N tylko dla stron katalogowych (w tym dynamicznych /samochody/:marka[/:model]);
         // clamp chroni cache przed spamem parametrów. Nginx przekazuje pełne $request_uri
