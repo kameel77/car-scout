@@ -8,6 +8,9 @@ import {
     buildModelMeta,
     buildRentalMeta,
     buildStaticMeta,
+    buildFotonHubMeta,
+    buildFotonModelMeta,
+    FOTON_MODEL_RE,
     catalogSkeletonHtml,
     defaultMeta,
     detailSkeletonHtml,
@@ -26,6 +29,7 @@ import {
     StaticPagination,
 } from '../services/seo-meta.js';
 import { getFinancingArticle } from '../content/financing-content.js';
+import { getFotonSeoModel } from '../content/foton-content.js';
 import {
     BrandCatalogEntry,
     getBrandCatalog,
@@ -902,6 +906,16 @@ async function resolveMeta(
             pagination,
             cms
         );
+    }
+
+    // FOTON: treść statyczna z content/foton-content.ts, bez zapytań do bazy (KAM-5)
+    if (path === '/foton') {
+        return buildFotonHubMeta(ctx);
+    }
+    const fotonMatch = path.match(FOTON_MODEL_RE);
+    if (fotonMatch) {
+        const fotonModel = getFotonSeoModel(fotonMatch[1]);
+        return fotonModel ? buildFotonModelMeta(fotonModel, ctx) : defaultMeta(ctx, { noindex: true, status: 404 });
     }
 
     // Nieznane ścieżki (m.in. probe'y skanerów) odrzucamy przed zapytaniami do bazy

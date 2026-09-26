@@ -1,5 +1,6 @@
 import { normalizeBrand, normalizeModel } from './brand-normalization.service.js';
 import { slugifyBrandName } from './brand-pages.service.js';
+import { FOTON_SEO_HUB_FAQ, FOTON_SEO_MODELS, type FotonSeoFaq, type FotonSeoModel } from '../content/foton-content.js';
 
 export interface PageMeta {
     title: string;
@@ -1225,6 +1226,149 @@ export function buildModelMeta(
         noindex: cms ? false : count < 2,
         preloadImages: cardPreloads(listings, ctx.baseUrl),
         skeletonFirstImage: skeletonFirstImage(listings, ctx.baseUrl),
+        bodyHtml,
+        jsonLd,
+        status: 200,
+    };
+}
+
+// ─── FOTON (/foton, /foton/:slug) ───────────────────────────────────────────
+// Strony FOTON są w sitemapie i w nawigacji, ale do KAM-5 SSR nie znał tych ścieżek i
+// zwracał 404 + noindex (Googlebot dostawał 404, choć SPA renderowało treść). Tytuły i
+// opisy 1:1 z MetaHead w FotonLandingPage/FotonModelPage (marka Motolia na sztywno, jak w SPA —
+// FOTON to umowa agencyjna Motolia Sp. z o.o.).
+// JSON-LD (BreadcrumbList, ItemList, FAQPage) jest wyłącznie tutaj — strony React go nie dublują.
+
+export const FOTON_MODEL_RE = /^\/foton\/([a-z0-9-]+)$/;
+
+function fotonFaqToItems(faq: FotonSeoFaq[]): FaqItem[] {
+    return faq.map(f => ({ questionPl: f.q, answerPl: f.a }));
+}
+
+function fotonFaqJsonLd(faq: FotonSeoFaq[]): object {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faq.map(f => ({
+            '@type': 'Question',
+            name: f.q,
+            acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+    };
+}
+
+export function buildFotonHubMeta(ctx: BrandCtx): PageMeta {
+    const bodyHtml = `
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Strona główna</a></li>
+    <li>FOTON</li>
+  </ol>
+</nav>
+<article>
+  <h1>Pojazdy użytkowe FOTON z pewnym finansowaniem</h1>
+  <p>FOTON to nowa marka pojazdów w Polsce. Motolia jako broker finansowy dobiera leasing i najem z oferty partnerów takich jak Inbank, PKO, Erste, Vehis, Masterlease czy BNP Paribas.</p>
+  <section>
+    <h2>Modele FOTON</h2>
+    <ul>
+      ${FOTON_SEO_MODELS.map(m => `<li><a href="/foton/${m.id}">${escapeHtml(m.name)}</a> - ${escapeHtml(m.categoryLabel)}. ${escapeHtml(m.tagline)}</li>`).join('\n      ')}
+    </ul>
+  </section>
+  ${faqSectionHtml(fotonFaqToItems(FOTON_SEO_HUB_FAQ), 'Najczęstsze pytania')}
+</article>`.trim();
+
+    return {
+        title: 'FOTON – Pojazdy Użytkowe i Pickupy 4x4 | Motolia',
+        description: 'Zamów pojazd użytkowy FOTON przez Motolię – Agenta Importera. Pickupy Tunland G7, vany eToano i ciężarówki eAumark z doradztwem i elastycznym finansowaniem B2B.',
+        canonical: `${ctx.baseUrl}/foton`,
+        bodyHtml,
+        jsonLd: [
+            {
+                '@context': 'https://schema.org',
+                '@type': 'BreadcrumbList',
+                itemListElement: [
+                    { '@type': 'ListItem', position: 1, name: 'Strona główna', item: `${ctx.baseUrl}/` },
+                    { '@type': 'ListItem', position: 2, name: 'FOTON', item: `${ctx.baseUrl}/foton` },
+                ],
+            },
+            {
+                '@context': 'https://schema.org',
+                '@type': 'ItemList',
+                itemListElement: FOTON_SEO_MODELS.map((m, i) => ({
+                    '@type': 'ListItem',
+                    position: i + 1,
+                    url: `${ctx.baseUrl}/foton/${m.id}`,
+                    name: m.name,
+                })),
+            },
+            fotonFaqJsonLd(FOTON_SEO_HUB_FAQ),
+        ],
+        status: 200,
+    };
+}
+
+export function buildFotonModelMeta(model: FotonSeoModel, ctx: BrandCtx): PageMeta {
+    const safeName = escapeHtml(model.name);
+    const siblings = FOTON_SEO_MODELS.filter(m => m.category === model.category && m.id !== model.id).slice(0, 2);
+    // Ten sam link do filaru finansowania co FotonModelPage (docs/SEO_LINKING_STRATEGY_MOTOLIA.md)
+    const shortName = model.name.replace('FOTON ', '');
+    const financingLink = model.category === 'lifestyle'
+        ? { href: '/leasing', label: `leasing FOTON ${shortName} dla firm i JDG` }
+        : { href: '/wynajem-dlugoterminowy', label: `wynajem długoterminowy FOTON ${shortName} dla floty` };
+    const bodyHtml = `
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Strona główna</a></li>
+    <li><a href="/foton">FOTON</a></li>
+    <li>${safeName}</li>
+  </ol>
+</nav>
+<article>
+  <h1>${safeName}</h1>
+  <p>${escapeHtml(model.categoryLabel)}. ${escapeHtml(model.tagline)}.</p>
+  <ul>
+    ${model.highlights.map(h => `<li>${escapeHtml(h)}</li>`).join('\n    ')}
+  </ul>
+  <section>
+    <h2>Specyfikacja ${safeName}</h2>
+    <table>
+      <tbody>
+        ${model.specs.map(r => `<tr><th scope="row">${escapeHtml(r.label)}</th><td>${escapeHtml(r.value)}</td></tr>`).join('\n        ')}
+      </tbody>
+    </table>
+  </section>
+  <section>
+    <h2>Finansowanie ${safeName}</h2>
+    <p>Motolia jako Agent Importera marki FOTON dobiera leasing operacyjny, najem długoterminowy lub kredyt firmowy dla ${safeName}. Sprawdź <a href="${financingLink.href}">${escapeHtml(financingLink.label)}</a> albo <a href="/foton">wszystkie modele FOTON</a>.</p>
+  </section>
+  ${siblings.length > 0 ? `
+  <section>
+    <h2>Inne modele FOTON</h2>
+    <ul>
+      ${siblings.map(m => `<li><a href="/foton/${m.id}">${escapeHtml(m.name)}</a> - ${escapeHtml(m.tagline)}</li>`).join('\n      ')}
+    </ul>
+  </section>` : ''}
+  ${faqSectionHtml(fotonFaqToItems(model.faq), `${model.name} - najczęstsze pytania`)}
+</article>`.trim();
+
+    const jsonLd: object[] = [
+        {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Strona główna', item: `${ctx.baseUrl}/` },
+                { '@type': 'ListItem', position: 2, name: 'FOTON', item: `${ctx.baseUrl}/foton` },
+                { '@type': 'ListItem', position: 3, name: model.name, item: `${ctx.baseUrl}/foton/${model.id}` },
+            ],
+        },
+    ];
+    if (model.faq.length > 0) jsonLd.push(fotonFaqJsonLd(model.faq));
+
+    return {
+        title: `${model.name} – Specyfikacja, Zdjęcia i Finansowanie | Motolia`,
+        description: `${model.name}: ${model.tagline}. Sprawdź specyfikację techniczną, galerię zdjęć i zapytaj o finansowanie przez Motolię – Agenta Importera marki FOTON.`,
+        canonical: `${ctx.baseUrl}/foton/${model.id}`,
+        ogImage: model.image?.src,
         bodyHtml,
         jsonLd,
         status: 200,

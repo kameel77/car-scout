@@ -418,3 +418,27 @@ export function getFotonSiblingModels(current: FotonModel, count = 2): FotonMode
   const sameCategory = FOTON_MODELS.filter((m) => m.category === current.category && m.id !== current.id);
   return sameCategory.slice(0, count);
 }
+
+/** Hub (/foton) FAQ — rendered by FotonLandingPage and mirrored in backend SSR (backend/src/content/foton-content.ts). */
+export const FOTON_HUB_FAQ: FotonFaqItem[] = [
+  {
+    q: 'Czy Motolia jest dealerem lub importerem marki FOTON?',
+    a: 'Nie. Motolia Sp. z o.o. działa jako Agent Importera marki FOTON – firmy Power Truck Poland Sp. z o.o. Umowa sprzedaży pojazdu zawierana jest bezpośrednio z Power Truck Poland Sp. z o.o. Rola Motolii polega na profesjonalnym doborze pojazdu, przeprowadzeniu konfiguracji oraz wynegocjowaniu optymalnego finansowania w bankach i firmach leasingowych.',
+  },
+  {
+    q: 'Dlaczego warto zamówić pojazd FOTON przez brokera finansowego Motolia?',
+    a: 'FOTON to nowa marka na polskim rynku, przez co tradycyjne instytucje finansowe bywają ostrożne przy wycenie wartości rezydualnej. Motolia współpracuje z Inbank, PKO, Erste, Vehis, Masterlease, BNP Paribas i wieloma instytucjami w Polsce, dzięki czemu dobieramy finansowanie tam, gdzie warunki są najkorzystniejsze.',
+  },
+  {
+    q: 'Jak przebiega serwis oraz realizacja gwarancji na pojazdy FOTON?',
+    a: 'Gwarancji na pojazdy udziela importer Power Truck Poland Sp. z o.o. Obowiązuje gwarancja fabryczna 5 lat lub 200 000 km na cały pojazd oraz 8 lat lub 400 000 km na baterie trakcyjne w modelach elektrycznych. Obsługę serwisową i przeglądy wykonuje sieć autoryzowanych partnerów serwisowych Power Truck Poland w Polsce.',
+  },
+  {
+    q: 'Jakie są zalety podatkowe zakupu pickupa Tunland G7 na firmę?',
+    a: 'Pickup z otwartą lub zamykaną roletą skrzynią ładunkową pozwala na korzystne zaliczanie wydatków eksploatacyjnych w koszty uzyskania przychodu. Doradcy Motolii pomogą ustrukturyzować umowę leasingu operacyjnego tak, aby optymalnie wykorzystać korzyści podatkowe w Twojej działalności.',
+  },
+  {
+    q: 'Jakie formy finansowania oferuje Motolia na pojazdy FOTON?',
+    a: 'Dla klientów B2B oraz flot oferujemy elastyczny leasing operacyjny, najem długoterminowy z pełną obsługą (FSL), kredyt firmowy oraz pożyczkę leasingową. Płatność raty ubezpieczeniowej można dogodnie połączyć w jedną ratę miesięczną.',
+  },
+];
