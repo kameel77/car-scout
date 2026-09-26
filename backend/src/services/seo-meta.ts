@@ -1422,9 +1422,13 @@ ${listings.length > 0 ? `
         if (orgSettings?.legalCompanyName) orgJsonLd.legalName = orgSettings.legalCompanyName;
         if (orgSettings?.legalVatId) orgJsonLd.vatID = orgSettings.legalVatId;
         if (orgSettings?.legalAddress) orgJsonLd.address = orgSettings.legalAddress;
+        // Jeden główny numer w całym serwisie (NAP, KAM-8): linia sprzedażowa jak w nagłówku,
+        // numer z danych prawnych tylko jako zapas.
+        const primaryPhone = orgSettings?.salesContactPhone || orgSettings?.legalContactPhone;
+        if (primaryPhone) orgJsonLd.telephone = primaryPhone;
+        if (orgSettings?.legalContactEmail) orgJsonLd.email = orgSettings.legalContactEmail;
         const contactPoint: Record<string, unknown> = {};
-        const orgPhone = orgSettings?.salesContactPhone || orgSettings?.legalContactPhone;
-        if (orgPhone) contactPoint.telephone = orgPhone;
+        if (primaryPhone) contactPoint.telephone = primaryPhone;
         if (orgSettings?.legalContactEmail) contactPoint.email = orgSettings.legalContactEmail;
         if (Object.keys(contactPoint).length > 0) {
             orgJsonLd.contactPoint = {
