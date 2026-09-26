@@ -618,6 +618,15 @@ describe('GET /api/render — brand/model pages', () => {
         const res = await app.inject({ method: 'GET', url });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody"');
+        expect(res.body).toContain('<meta name="robots" content="noindex" />');
+    });
+
+    it('/samochody?page=N with only tracking params stays indexable with page canonical (KAM-17)', async () => {
+        await createListing();
+        const url = '/api/render?path=/samochody' + encodeURIComponent('?page=2&utm_source=google&gclid=abc');
+        const res = await app.inject({ method: 'GET', url });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('content="noindex"');
     });
 
     it('/samochody shows a "Popularne marki" internal-linking block linking to brand pages', async () => {

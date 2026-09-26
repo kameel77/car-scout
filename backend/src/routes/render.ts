@@ -1054,13 +1054,33 @@ async function resolveMeta(
     ) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 
     // Canonical filtrów: /samochody?make=X (pojedyncza marka, opcjonalnie +model) → strona marki/modelu.
-    // Wiele marek lub brak dopasowania: canonical zostaje na /samochody (bez zmian).
+    // Pozostałe kombinacje filtrów (kilka marek, paliwo, cena...) nie mają czystego odpowiednika:
+    // noindex (linki nadal są śledzone) + canonical na /samochody. Wcześniej dostawały canonical
+    // /samochody?page=N, a GSC pokazywało wyświetlenia np. /samochody?make=MG%2CJAC&page=11 (KAM-17).
     if (path === '/samochody' && queryParams) {
         const canonicalOverride = await resolveSamochodyQueryCanonical(fastify, queryParams);
-        if (canonicalOverride) meta.canonical = `${ctx.baseUrl}${canonicalOverride}`;
+        if (canonicalOverride) {
+            meta.canonical = `${ctx.baseUrl}${canonicalOverride}`;
+        } else if (hasSamochodyFacetParams(queryParams)) {
+            meta.noindex = true;
+            meta.canonical = `${ctx.baseUrl}/samochody`;
+        }
     }
 
     return meta;
+}
+
+// Parametry, które nie zmieniają zawartości listy: paginacja i znaczniki kampanii/kliknięć.
+const NON_FACET_QUERY_PARAMS = new Set(['page', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'dclid', '_gl', 'ref', 'gtm_debug']);
+
+export function hasSamochodyFacetParams(queryParams: URLSearchParams): boolean {
+    for (const [key, value] of queryParams) {
+        if (!value) continue;
+        const k = key.toLowerCase();
+        if (NON_FACET_QUERY_PARAMS.has(k) || k.startsWith('utm_')) continue;
+        return true;
+    }
+    return false;
 }
 
 async function resolveSamochodyQueryCanonical(fastify: FastifyInstance, queryParams: URLSearchParams): Promise<string | null> {
@@ -1369,6 +1389,9 @@ export async function renderRoutes(fastify: FastifyInstance) {
             const canonicalResolved = await resolveSamochodyQueryCanonical(fastify, searchParams);
             if (canonicalResolved) {
                 cacheKey += `${cacheKey.includes('?') ? '&' : '?'}canonical=${canonicalResolved}`;
+            } else if (hasSamochodyFacetParams(searchParams)) {
+                // Jeden wariant cache na stronę dla wszystkich nierozwiązanych filtrów (noindex)
+                cacheKey += `${cacheKey.includes('?') ? '&' : '?'}facet=noindex`;
             }
         }
 
