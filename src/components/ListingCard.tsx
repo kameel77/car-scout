@@ -313,9 +313,9 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
               )}
             </div>
             {/* Make + Model — larger font */}
-            <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+            <p className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
               {listing.make} {listing.model}
-            </h3>
+            </p>
             {/* Trim — always reserves space to keep card heights aligned */}
             <p className="text-sm font-medium text-muted-foreground line-clamp-1 min-h-[1.25rem]">
               {listing.version || '\u00A0'}

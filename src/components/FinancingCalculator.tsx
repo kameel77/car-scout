@@ -484,7 +484,7 @@ export function FinancingCalculator({
                                 ? "Przepraszamy, nie jesteśmy w stanie w tym momencie zaprezentować oferty leasingu na ten pojazd. Skontaktuj się z nami bezpośrednio, abyśmy mogli przygotować ci dedykowane rozwiązanie."
                                 : "Przepraszamy, nie jesteśmy w stanie w tym momencie zaprezentować oferty finansowania na ten pojazd. Skontaktuj się z nami bezpośrednio, abyśmy mogli przygotować ci dedykowane rozwiązanie."}
                         </p>
-                        {listingId && (
+                        {listingId ? (
                             <Button
                                 variant="hero"
                                 className="mt-2"
@@ -492,6 +492,17 @@ export function FinancingCalculator({
                             >
                                 <MessageSquare className="w-4 h-4 mr-2" />
                                 Zapytaj o ofertę
+                            </Button>
+                        ) : (
+                            // Bez konkretnej oferty (kalkulator na stronach filarowych) — zamiast
+                            // ślepego zaułka prowadzimy do kontaktu z doradcą (KAM-6).
+                            <Button
+                                variant="hero"
+                                className="mt-2"
+                                onClick={() => navigate('/kontakt')}
+                            >
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Skontaktuj się z doradcą
                             </Button>
                         )}
                     </div>

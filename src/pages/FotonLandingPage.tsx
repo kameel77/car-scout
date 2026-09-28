@@ -11,7 +11,7 @@ import {
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { MetaHead } from '@/components/seo/MetaHead';
-import { FOTON_MODELS, type FotonSegment } from '@/data/foton-models';
+import { FOTON_HUB_FAQ, FOTON_MODELS, type FotonSegment } from '@/data/foton-models';
 import { FotonContextBar } from '@/components/foton/FotonContextBar';
 import { FotonResponsibilityBlock } from '@/components/foton/FotonResponsibilityBlock';
 import { FotonLeadForm } from '@/components/foton/FotonLeadForm';
@@ -60,29 +60,6 @@ const FadeIn = ({
   );
 };
 
-const FAQ_ITEMS = [
-  {
-    q: 'Czy Motolia jest dealerem lub importerem marki FOTON?',
-    a: 'Nie. Motolia Sp. z o.o. działa jako Agent Importera marki FOTON – firmy Power Truck Poland Sp. z o.o. Umowa sprzedaży pojazdu zawierana jest bezpośrednio z Power Truck Poland Sp. z o.o. Rola Motolii polega na profesjonalnym doborze pojazdu, przeprowadzeniu konfiguracji oraz wynegocjowaniu optymalnego finansowania w bankach i firmach leasingowych.',
-  },
-  {
-    q: 'Dlaczego warto zamówić pojazd FOTON przez brokera finansowego Motolia?',
-    a: 'FOTON to nowa marka na polskim rynku, przez co tradycyjne instytucje finansowe bywają ostrożne przy wycenie wartości rezydualnej. Motolia współpracuje z Inbank, PKO, Erste, Vehis, Masterlease, BNP Paribas i wieloma instytucjami w Polsce, dzięki czemu dobieramy finansowanie tam, gdzie warunki są najkorzystniejsze.',
-  },
-  {
-    q: 'Jak przebiega serwis oraz realizacja gwarancji na pojazdy FOTON?',
-    a: 'Gwarancji na pojazdy udziela importer Power Truck Poland Sp. z o.o. Obowiązuje gwarancja fabryczna 5 lat lub 200 000 km na cały pojazd oraz 8 lat lub 400 000 km na baterie trakcyjne w modelach elektrycznych. Obsługę serwisową i przeglądy wykonuje sieć autoryzowanych partnerów serwisowych Power Truck Poland w Polsce.',
-  },
-  {
-    q: 'Jakie są zalety podatkowe zakupu pickupa Tunland G7 na firmę?',
-    a: 'Pickup z otwartą lub zamykaną roletą skrzynią ładunkową pozwala na korzystne zaliczanie wydatków eksploatacyjnych w koszty uzyskania przychodu. Doradcy Motolii pomogą ustrukturyzować umowę leasingu operacyjnego tak, aby optymalnie wykorzystać korzyści podatkowe w Twojej działalności.',
-  },
-  {
-    q: 'Jakie formy finansowania oferuje Motolia na pojazdy FOTON?',
-    a: 'Dla klientów B2B oraz flot oferujemy elastyczny leasing operacyjny, najem długoterminowy z pełną obsługą (FSL), kredyt firmowy oraz pożyczkę leasingową. Płatność raty ubezpieczeniowej można dogodnie połączyć w jedną ratę miesięczną.',
-  },
-];
-
 export default function FotonLandingPage() {
   // Seed values for the shared lead form. Changing this remounts the form
   // (via `key`) with the requested segment/model preselected.
@@ -97,39 +74,6 @@ export default function FotonLandingPage() {
     document.getElementById('foton-lead-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Structured Data JSON-LD
-  const breadcrumbSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Strona główna',
-        item: 'https://motolia.pl/',
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'FOTON',
-        item: 'https://motolia.pl/foton',
-      },
-    ],
-  };
-
-  const faqSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: FAQ_ITEMS.map((item) => ({
-      '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.a,
-      },
-    })),
-  };
-
   return (
     <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
       <MetaHead
@@ -138,14 +82,7 @@ export default function FotonLandingPage() {
         canonical="/foton"
       />
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
+      {/* JSON-LD (BreadcrumbList, ItemList, FAQPage) renders server-side: backend buildFotonHubMeta. */}
 
       {/* Global Header */}
       <Header />
@@ -476,7 +413,7 @@ export default function FotonLandingPage() {
             </FadeIn>
 
             <div className="space-y-4">
-              {FAQ_ITEMS.map((item, index) => (
+              {FOTON_HUB_FAQ.map((item, index) => (
                 <FadeIn key={index} delay={0.05 * index}>
                   <div className="rounded-xl bg-slate-900 border border-slate-800 p-6 space-y-2">
                     <h3 className="text-base sm:text-lg font-bold text-white flex items-start gap-3">

@@ -48,8 +48,9 @@ export function Footer() {
     url: pickUrl(doc.key),
   })).filter((item) => item.url);
 
-  // Jeden numer w całym serwisie: sprzedażowy, a prawny tylko jako fallback.
-  const contactPhone = settings?.salesContactPhone || settings?.legalContactPhone;
+  // One primary phone across header, footer and Organization JSON-LD (NAP, KAM-8):
+  // the sales line wins, the legal/company line is the fallback — same order as Header.
+  const footerPhone = settings?.salesContactPhone || settings?.legalContactPhone || '';
 
   const hasCompanyInfo =
     settings?.legalCompanyName ||
@@ -193,7 +194,7 @@ export function Footer() {
             <p className="text-sm text-slate-400">{t('footer.missing')}</p>
           )}
 
-          {(settings?.legalContactEmail || contactPhone) && (
+          {(settings?.legalContactEmail || footerPhone) && (
             <div className="pt-2 space-y-2 text-sm text-slate-200">
               <p className="text-xs uppercase tracking-wide text-slate-400">{t('footer.contact')}</p>
               {settings?.legalContactEmail && (
@@ -206,15 +207,15 @@ export function Footer() {
                   <span>{settings.legalContactEmail}</span>
                 </a>
               )}
-              {contactPhone && (
+              {footerPhone && (
                 <a
-                  href={`tel:${formatPhoneForTelLink(contactPhone)}`}
+                  href={`tel:${formatPhoneForTelLink(footerPhone)}`}
                   onClick={() => trackPhoneClick('footer')}
                   className="flex items-center gap-2 transition-colors hover:text-white"
                   style={isMotolia ? { color: 'hsl(var(--mt-yellow-500))' } : {}}
                 >
                   <Phone className="h-4 w-4 text-slate-400" />
-                  <span>{contactPhone}</span>
+                  <span>{footerPhone}</span>
                 </a>
               )}
             </div>

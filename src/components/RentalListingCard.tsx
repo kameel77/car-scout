@@ -55,7 +55,7 @@ export function RentalListingCard({ v, priority = false }: { v: any; priority?: 
       <div className="p-4 space-y-3 flex-1 flex flex-col">
         <div>
           <span className={`text-xs font-bold tracking-wider ${isNew ? 'text-primary' : 'text-muted-foreground'}`}>{isNew ? t('listing.statusNew') : t('listing.statusUsed')}</span>
-          <h3 className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{v.make} {v.model}</h3>
+          <p className="font-heading text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{v.make} {v.model}</p>
           <p className="text-sm font-medium text-muted-foreground line-clamp-1 min-h-[1.25rem]">{v.version || ' '}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">

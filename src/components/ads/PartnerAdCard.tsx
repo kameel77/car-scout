@@ -77,9 +77,9 @@ export function PartnerAdCard({
                     <div className="p-4 space-y-3 flex-1">
                         {title && (
                             <div>
-                                <h3 className="font-heading text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors min-h-[3rem] leading-tight">
+                                <p className="font-heading text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors min-h-[3rem] leading-tight">
                                     {title}
-                                </h3>
+                                </p>
                             </div>
                         )}
 

@@ -1091,7 +1091,7 @@ export default function ListingDetailPage() {
                           <AccordionTrigger className="text-lg font-semibold text-foreground hover:no-underline text-left py-4">
                             {question}
                           </AccordionTrigger>
-                          <AccordionContent className="pb-4 text-muted-foreground whitespace-pre-line">
+                          <AccordionContent forceMount className="pb-4 text-muted-foreground whitespace-pre-line">
                             <MarkdownText text={answer} />
                           </AccordionContent>
                         </AccordionItem>
