@@ -30,13 +30,14 @@ interface HeaderProps {
   hasActiveFilters?: boolean;
 }
 
+// Najem na pierwszym miejscu — najwyższa marża (decyzja 2026-09-25).
 const ALL_NAV_LINKS = [
+  { key: 'wynajem', label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
   { key: 'samochody', label: 'Samochody', to: '/samochody' },
   { key: 'nowe', label: 'Nowe', to: '/nowe' },
   { key: 'uzywane', label: 'Używane', to: '/uzywane' },
   { key: 'leasing', label: 'Leasing', to: '/leasing' },
   { key: 'kredyt', label: 'Kredyt', to: '/kredyt' },
-  { key: 'wynajem', label: 'Wynajem', to: '/wynajem-dlugoterminowy' },
   { key: 'dlafirm', label: 'Dla firm', to: '/dla-firm' },
   { key: 'foton', label: 'FOTON', to: '/foton' },
   { key: 'faq', label: 'FAQ', to: '/faq' },

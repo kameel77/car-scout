@@ -441,6 +441,11 @@ export async function listingRoutes(fastify: FastifyInstance) {
 
             const orderBy: any[] = [];
             switch (parsed.sortBy) {
+                // CRO: nowe i wyróżnione auta (z realnym finansowaniem) przed najtańszymi używanymi.
+                // Enum ListingCondition: NEW przed USED, więc 'asc' daje najpierw nowe.
+                case 'recommended':
+                    orderBy.push({ condition: 'asc' }, { isFeatured: 'desc' }, { productionYear: 'desc' }, { createdAt: 'desc' });
+                    break;
                 case 'cheapest':
                 case 'price_asc': orderBy.push({ [priceField]: 'asc' }); break;
                 case 'expensive':

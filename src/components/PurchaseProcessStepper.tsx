@@ -7,7 +7,7 @@ import {
   FileText,
   PenLine,
   Car,
-  Fuel,
+  KeyRound,
   ArrowRight,
   ChevronRight,
 } from 'lucide-react';
@@ -49,12 +49,12 @@ const STEPS = [
   },
   {
     icon: Car,
-    secondaryIcon: Fuel,
-    title: 'Odbierz auto i kartę paliwową',
+    secondaryIcon: KeyRound,
+    title: 'Odbierz auto',
     compactTitle: 'Odbierz auto',
     description:
       'Gotowe! Odbierasz kluczyki i ruszasz w drogę.',
-    compactDescription: 'Kluczyki + karta paliwowa',
+    compactDescription: 'Kluczyki i dokumenty',
   },
 ];
 
@@ -106,7 +106,7 @@ export function PurchaseProcessStepper({
           <div className={`purchase-process__header ${isVisible ? 'is-visible' : ''}`}>
             <span className="purchase-process__tag">Krok po kroku</span>
             <h2>
-              Jak wygląda <span>proces zakupu</span>?
+              Jak <span>to działa</span>?
             </h2>
             <p>Od wyboru auta do odbioru kluczyków - 5 prostych kroków.</p>
           </div>
@@ -115,7 +115,7 @@ export function PurchaseProcessStepper({
         {isCompact && (
           <div className={`purchase-process__header purchase-process__header--compact ${isVisible ? 'is-visible' : ''}`}>
             <h3>
-              Jak wygląda <span>proces zakupu</span>?
+              Jak <span>to działa</span>?
             </h3>
           </div>
         )}

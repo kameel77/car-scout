@@ -48,6 +48,9 @@ export function Footer() {
     url: pickUrl(doc.key),
   })).filter((item) => item.url);
 
+  // Jeden numer w całym serwisie: sprzedażowy, a prawny tylko jako fallback.
+  const contactPhone = settings?.salesContactPhone || settings?.legalContactPhone;
+
   const hasCompanyInfo =
     settings?.legalCompanyName ||
     settings?.legalAddress ||
@@ -190,7 +193,7 @@ export function Footer() {
             <p className="text-sm text-slate-400">{t('footer.missing')}</p>
           )}
 
-          {(settings?.legalContactEmail || settings?.legalContactPhone) && (
+          {(settings?.legalContactEmail || contactPhone) && (
             <div className="pt-2 space-y-2 text-sm text-slate-200">
               <p className="text-xs uppercase tracking-wide text-slate-400">{t('footer.contact')}</p>
               {settings?.legalContactEmail && (
@@ -203,15 +206,15 @@ export function Footer() {
                   <span>{settings.legalContactEmail}</span>
                 </a>
               )}
-              {settings?.legalContactPhone && (
+              {contactPhone && (
                 <a
-                  href={`tel:${formatPhoneForTelLink(settings.legalContactPhone)}`}
+                  href={`tel:${formatPhoneForTelLink(contactPhone)}`}
                   onClick={() => trackPhoneClick('footer')}
                   className="flex items-center gap-2 transition-colors hover:text-white"
                   style={isMotolia ? { color: 'hsl(var(--mt-yellow-500))' } : {}}
                 >
                   <Phone className="h-4 w-4 text-slate-400" />
-                  <span>{settings.legalContactPhone}</span>
+                  <span>{contactPhone}</span>
                 </a>
               )}
             </div>
