@@ -149,6 +149,12 @@ export default function RentalDetailPage() {
     });
 
     const offers = calcQuery.data?.offers || [];
+    // Najniższa rata (bez ofert z brakującą składką) w wybranym wariancie — ta sama podstawa co w kalkulatorze.
+    const headerRateCandidates = offers
+        .filter((o: any) => !o.insuranceMissing)
+        .map((o: any) => (selectedOfferType === 'business' ? o.monthlyRateNet : o.monthlyRateGross))
+        .filter((v: any) => typeof v === 'number' && Number.isFinite(v) && v > 0);
+    const headerRate = headerRateCandidates.length > 0 ? Math.ceil(Math.min(...headerRateCandidates)) : null;
 
     // Operator financials query (for logged-in authorized operators)
     const operatorFinancialsQuery = useQuery({
@@ -347,7 +353,22 @@ export default function RentalDetailPage() {
                                         </p>
                                     )}
                                 </div>
-                                {vehicle.catalogPrice && (
+                                {headerRate !== null ? (
+                                    // Najem sprzedajemy ratą — rata jest nagłówkiem, cena katalogowa informacją pomocniczą.
+                                    <div className="text-right flex-shrink-0">
+                                        <div className="text-2xl font-bold text-foreground tabular-nums whitespace-nowrap">
+                                            {formatNumber(headerRate)} zł
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {selectedOfferType === 'business' ? 'netto' : 'brutto'} / mies. w wybranym wariancie
+                                        </div>
+                                        {vehicle.catalogPrice && (
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                cena katalogowa {formatNumber(vehicle.catalogPrice)} zł
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : vehicle.catalogPrice && (
                                     <div className="text-right flex-shrink-0">
                                         <div className="text-xl font-bold text-foreground">
                                             {formatNumber(vehicle.catalogPrice)} zł

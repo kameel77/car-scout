@@ -17,6 +17,16 @@ import type { FinancingType } from '@/utils/url-utils';
 import { setPreferredFinancingType } from '@/utils/url-utils';
 
 
+/** Konfiguracja finansowania przekazywana do formularza leada (location.state.financing). */
+export interface CalculatorFinancingConfig {
+    productId: string;
+    amount: number;
+    period: number;
+    downPayment: number;
+    finalPayment: number;
+    installment: number;
+}
+
 interface FinancingCalculatorProps {
     listingId?: string;
     price: number;
@@ -39,6 +49,8 @@ interface FinancingCalculatorProps {
     creditAvailable?: boolean;
     leasingAvailable?: boolean;
     vatMargin?: boolean;
+    /** Wywoływane przy każdej zmianie konfiguracji — pozwala CTA poza kalkulatorem przenieść ratę do formularza. */
+    onConfigChange?: (config: CalculatorFinancingConfig | null) => void;
 }
 
 /** Maps URL financing type to product category */
@@ -66,6 +78,7 @@ export function FinancingCalculator({
     creditAvailable = true,
     leasingAvailable = true,
     vatMargin = false,
+    onConfigChange,
 }: FinancingCalculatorProps) {
     const navigate = useNavigate();
     const vatMultiplier = vatMargin ? 1 : 1.23;
@@ -321,6 +334,20 @@ export function FinancingCalculator({
         );
     }, [offerInitialPaymentPct, selectedProduct]);
 
+    // Raportowanie konfiguracji do rodzica (CTA poza kalkulatorem). Hook musi stać przed early returnami,
+    // więc wartość liczona niżej w renderze trafia przez ref; wysyłamy tylko przy realnej zmianie.
+    const latestConfigRef = React.useRef<CalculatorFinancingConfig | null>(null);
+    const lastSentConfigKeyRef = React.useRef<string | undefined>(undefined);
+    latestConfigRef.current = null;
+    React.useEffect(() => {
+        if (!onConfigChange) return;
+        const config = latestConfigRef.current;
+        const key = config ? JSON.stringify(config) : 'null';
+        if (key === lastSentConfigKeyRef.current) return;
+        lastSentConfigKeyRef.current = key;
+        onConfigChange(config);
+    });
+
     if (isLoading) {
         return (
             <Card className="border-slate-200 shadow-none min-h-[500px] flex items-center justify-center bg-card/40">
@@ -387,6 +414,15 @@ export function FinancingCalculator({
 
     const commissionAmount = selectedProduct ? amountToFinance * selectedProduct.commission / 100 : 0;
     const displayInstallment = selectedProduct?.provider === 'OWN' ? monthlyInstallment : externalInstallment;
+    const reportedInstallment = displayInstallment ?? monthlyInstallment;
+    latestConfigRef.current = selectedProduct ? {
+        productId: selectedProduct.id,
+        amount: amountToFinance,
+        period: months,
+        downPayment: initialPaymentAmount,
+        finalPayment: finalPaymentAmount,
+        installment: Math.round(reportedInstallment),
+    } : null;
 
 
     return (

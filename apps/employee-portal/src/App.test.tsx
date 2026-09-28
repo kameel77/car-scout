@@ -326,7 +326,7 @@ describe('Employee Portal - Frontend Integration Suite', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /Dobre rzeczy/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Nowe auto na warunkach dla pracowników/i })).toBeInTheDocument();
         expect(screen.getAllByRole('link', { name: /Zaloguj się/i }).length).toBeGreaterThan(0);
       });
     });
@@ -346,7 +346,7 @@ describe('Employee Portal - Frontend Integration Suite', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('heading', { name: /Daj pracownikom więcej możliwości/i })
+          screen.getByRole('heading', { name: /Benefit samochodowy dla całego zespołu/i })
         ).toBeInTheDocument();
         expect(screen.getByLabelText(/Imię i nazwisko/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Nazwa firmy/i)).toBeInTheDocument();

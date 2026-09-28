@@ -16,7 +16,7 @@ export const defaultBrandConfig: PortalBrandConfig = {
   apiUrl: '/api',
   turnstileSiteKey: '1x00000000000000000000AA',
   analyticsEnabled: false,
-  b2bPhone: '__B2B_PHONE__',
+  b2bPhone: '+48 22 112 09 50',
   b2bEmail: 'b2b@benefivo.pl',
 };
 

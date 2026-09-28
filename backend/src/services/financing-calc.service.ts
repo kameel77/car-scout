@@ -393,6 +393,9 @@ const VAT = 1.23;
 
 type Category = 'CREDIT' | 'LEASING';
 
+/** Maksymalny wiek pojazdu (od rocznika) dla leasingu. Kredyt: bez limitu. */
+export const LEASING_MAX_VEHICLE_AGE_YEARS = 5;
+
 interface ListingForCalc {
     id: string;
     pricePln: number;
@@ -418,6 +421,8 @@ function selectProductCandidates(
 ): FinancingProduct[] {
     const available = category === 'CREDIT' ? listing.creditAvailable : listing.leasingAvailable;
     if (!available) return [];
+    // Leasing tylko dla aut ≤ LEASING_MAX_VEHICLE_AGE_YEARS lat (kredyt bez limitu) — spójne z src/utils/financingEligibility.ts.
+    if (category === 'LEASING' && listing.productionYear && new Date().getFullYear() - listing.productionYear > LEASING_MAX_VEHICLE_AGE_YEARS) return [];
 
     const forcedProductId = category === 'CREDIT' ? listing.creditProductId : listing.leasingProductId;
 

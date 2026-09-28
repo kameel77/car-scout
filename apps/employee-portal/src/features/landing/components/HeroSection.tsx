@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { useTrack } from '../../analytics/useTrack';
+import { PriceDropCard } from './PriceDropCard';
 
 export interface HeroSectionProps {
   onOpenEmployeeDialog: () => void;
@@ -8,43 +10,42 @@ export interface HeroSectionProps {
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenEmployeeDialog }) => {
   const { isAuthenticated } = useAuth();
+  const track = useTrack();
 
   return (
     <section className="hero wrap" aria-labelledby="hero-title">
       <div className="hero-copy">
         <p className="eyebrow">
-          <span className="status-dot"></span> TWÓJ BENEFIT. TWOJE AUTO.
+          <span className="status-dot"></span> PROGRAM PRACOWNICZY · DOBRE RZECZY JADĄ Z TOBĄ.
         </p>
-        <h1 id="hero-title">
-          Dobre rzeczy<br />
-          jadą{' '}
-          <span className="accent-word">
-            z Tobą.
-            <svg viewBox="0 0 340 20" aria-hidden="true">
-              <path d="M5 13C96 0 210 4 334 10" />
-            </svg>
-          </span>
-        </h1>
+        <h1 id="hero-title">Nowe auto na warunkach dla pracowników Twojej firmy.</h1>
         <p className="hero-description">
-          Samochód do pracy, na weekend i do codziennych spraw? Sprawdź oferty najmu i leasingu przygotowane dla pracowników Twojej firmy. Wybierz rozwiązanie, które pasuje do Twoich planów.
+          Nowe auto w najmie lub w finansowaniu, z rabatem od ceny katalogowej. W najmie ubezpieczenie i serwis są w racie. Do każdego auta karta Moya z 500 zł na paliwo i zakupy oraz osobisty doradca.
         </p>
 
         <div className="hero-actions">
           {isAuthenticated ? (
             <Link className="button button-lime" to="/dashboard">
-              Przejdź do pulpitu <span aria-hidden="true">&rarr;</span>
+              Przejdź do ofert <span aria-hidden="true">&rarr;</span>
             </Link>
           ) : (
             <>
-              <Link className="button button-lime" to="/rejestracja">
-                Mam kod firmy. Aktywuję dostęp <span aria-hidden="true">&rarr;</span>
+              <Link
+                className="button button-lime"
+                to="/rejestracja"
+                onClick={() => track('cta_activate_code', { from: 'hero' })}
+              >
+                Mam kod firmy <span aria-hidden="true">&rarr;</span>
               </Link>
               <button
                 className="button button-outline"
                 type="button"
-                onClick={onOpenEmployeeDialog}
+                onClick={() => {
+                  track('cta_no_benefivo_hr', { from: 'hero' });
+                  onOpenEmployeeDialog();
+                }}
               >
-                Moja firma nie ma jeszcze Benefivo <span aria-hidden="true">&rarr;</span>
+                Moja firma nie ma Benefivo
               </button>
             </>
           )}
@@ -55,7 +56,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenEmployeeDialog }
             to="/dla-firm"
             className="hover:text-stone-900 inline-flex items-center gap-1 transition-colors"
           >
-            Jesteś pracodawcą? Przejdź do oferty dla firm <span aria-hidden="true">&rarr;</span>
+            Odpowiadasz za benefity? Oferta dla firm <span aria-hidden="true">&rarr;</span>
           </Link>
           {!isAuthenticated && (
             <Link
@@ -66,68 +67,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenEmployeeDialog }
             </Link>
           )}
         </div>
-
-        <div className="endorsement">
-          <span className="endorsement-line"></span>
-          <div>
-            Twój kierunek. Nasze doświadczenie.
-            <br />
-            <span className="powered">
-              Powered by{' '}
-              <a href="https://motolia.pl/" target="_blank" rel="noopener noreferrer">
-                motolia<span aria-hidden="true">.</span>
-              </a>
-            </span>
-          </div>
-        </div>
       </div>
 
-      <div className="hero-collage">
-        <figure className="hero-photo photo-tile">
-          <img
-            src="/static/friends.webp"
-            srcSet="/static/friends-small.webp 760w, /static/friends.webp 1500w"
-            sizes="(max-width: 720px) 92vw, 48vw"
-            width="1500"
-            height="989"
-            {...({ fetchpriority: 'high' } as any)}
-            alt="Uśmiechnięte przyjaciółki podczas wspólnej podróży samochodem"
-          />
-          <span className="photo-label">Mniej rutyny. Więcej drogi.</span>
-          <span className="round-arrow" aria-hidden="true">
-            ↗
-          </span>
-        </figure>
-
-        <div className="collage-bottom">
-          <a className="benefit-tile" href="#benefity">
-            <span className="eyebrow">NIE TYLKO SAMOCHÓD</span>
-            <h2>
-              Dobry pakiet<br />na drogę.
-            </h2>
-            <div className="tile-foot">
-              <span>Paliwo. Serwis. I więcej.</span>
-              <span aria-hidden="true">↗</span>
-            </div>
-            <svg className="tile-flower" viewBox="0 0 120 120" aria-hidden="true">
-              <path d="M60 5v110M5 60h110M21 21l78 78M21 99l78-78" />
-            </svg>
-          </a>
-
-          <figure className="driver-tile photo-tile">
-            <img
-              src="/static/driver-small.webp"
-              width="760"
-              height="507"
-              loading="lazy"
-              alt="Uśmiechnięta kobieta za kierownicą nowoczesnego samochodu"
-            />
-            <figcaption>
-              Po swojemu.<br />Także po pracy.
-            </figcaption>
-          </figure>
-        </div>
-      </div>
+      <PriceDropCard />
     </section>
   );
 };
