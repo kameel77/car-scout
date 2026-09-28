@@ -1237,6 +1237,7 @@ export interface OrgSettings {
     legalVatId?: string | null;
     legalContactEmail?: string | null;
     legalContactPhone?: string | null;
+    salesContactPhone?: string | null;
 }
 
 export function buildStaticMeta(
@@ -1278,7 +1279,8 @@ ${listings.length > 0 ? `
         if (orgSettings?.legalVatId) orgJsonLd.vatID = orgSettings.legalVatId;
         if (orgSettings?.legalAddress) orgJsonLd.address = orgSettings.legalAddress;
         const contactPoint: Record<string, unknown> = {};
-        if (orgSettings?.legalContactPhone) contactPoint.telephone = orgSettings.legalContactPhone;
+        const orgPhone = orgSettings?.salesContactPhone || orgSettings?.legalContactPhone;
+        if (orgPhone) contactPoint.telephone = orgPhone;
         if (orgSettings?.legalContactEmail) contactPoint.email = orgSettings.legalContactEmail;
         if (Object.keys(contactPoint).length > 0) {
             orgJsonLd.contactPoint = {

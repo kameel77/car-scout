@@ -51,6 +51,7 @@ const parseNumberParam = (v: string | null, fallback: number) => {
 /* ── ConditionNavTabs ── */
 
 const sortOpts = [
+  { value: 'recommended', label: 'Polecane' },
   { value: 'year_desc', label: 'Najmłodszy rocznik' },
   { value: 'year_asc', label: 'Najstarszy rocznik' },
   { value: 'price_asc', label: 'Cena rosnąco' },
