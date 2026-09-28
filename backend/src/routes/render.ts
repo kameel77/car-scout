@@ -143,7 +143,7 @@ const CARS_ORDER_BY: Record<string, object[]> = {
 // najtańsze używane, np. Ford Focus 2008 za 9 900 zł) — najpierw condition NEW (kolejność
 // enuma w Postgresie odpowiada deklaracji w schema.prisma: NEW przed USED), w obu grupach
 // od najnowszego rocznika.
-const FINANCING_LISTINGS_ORDER_BY: object[] = [{ condition: 'asc' }, { productionYear: 'desc' }, { id: 'asc' }];
+const FINANCING_LISTINGS_ORDER_BY: object[] = [{ condition: 'asc' }, { isFeatured: 'desc' }, { productionYear: 'desc' }, { id: 'asc' }];
 
 let carsOrderByCache: { value: object[]; fetchedAt: number } | null = null;
 
@@ -241,8 +241,11 @@ async function getHomeHeroBanners(fastify: FastifyInstance): Promise<HomeHeroBan
 const CONDITION_BY_PATH: Record<string, 'NEW' | 'USED'> = {
     '/nowe': 'NEW',
     '/uzywane': 'USED',
+    // Strony poradnikowe /leasing i /kredyt pokazują tylko „oferty specjalne” na nowe auta.
+    '/leasing': 'NEW',
+    '/kredyt': 'NEW',
 };
-const FINANCING_LIST_TAKE = 12; // krótka lista na /leasing i /kredyt
+const FINANCING_LIST_TAKE = 4; // oferty specjalne na /leasing i /kredyt (jak w SPA)
 
 // Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
