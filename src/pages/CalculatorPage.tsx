@@ -193,7 +193,7 @@ export default function CalculatorPage() {
                                     <AccordionTrigger className="text-left font-semibold text-slate-900">
                                         Czy wyliczona w kalkulatorze rata jest ostateczna?
                                     </AccordionTrigger>
-                                    <AccordionContent className="text-sm text-slate-600 leading-relaxed">
+                                    <AccordionContent forceMount className="text-sm text-slate-600 leading-relaxed">
                                         Rata wyliczona w kalkulatorze ma charakter orientacyjny. Ostateczna wysokość raty zależy od dokładnej weryfikacji rocznika i stanu pojazdu oraz oceny zdolności kredytowej przez instytucję finansującą. Po wysłaniu zapytania nasz doradca przedstawia wiążącą ofertę.
                                     </AccordionContent>
                                 </AccordionItem>
@@ -201,7 +201,7 @@ export default function CalculatorPage() {
                                     <AccordionTrigger className="text-left font-semibold text-slate-900">
                                         Czy mogę sfinansować samochód kupowany od osoby prywatnej?
                                     </AccordionTrigger>
-                                    <AccordionContent className="text-sm text-slate-600 leading-relaxed">
+                                    <AccordionContent forceMount className="text-sm text-slate-600 leading-relaxed">
                                         Tak. Za pomocą kredytu samochodowego lub wyselekcjonowanych procedur leasingowych możesz sfinansować zakup pojazdu od osoby prywatnej na podstawie umowy kupna-sprzedaży.
                                     </AccordionContent>
                                 </AccordionItem>
@@ -209,7 +209,7 @@ export default function CalculatorPage() {
                                     <AccordionTrigger className="text-left font-semibold text-slate-900">
                                         Czym różni się leasing od kredytu samochodowego?
                                     </AccordionTrigger>
-                                    <AccordionContent className="text-sm text-slate-600 leading-relaxed">
+                                    <AccordionContent forceMount className="text-sm text-slate-600 leading-relaxed">
                                         W leasingu właścicielem pojazdu w trakcie trwania umowy pozostaje firma leasingowa, a Ty zaliczasz raty bezpośrednio w koszty firmy. W kredycie stajesz się właścicielem auta od dnia zakupu (z ewentualnym zastawem rejestrowym banku). Więcej dowiesz się na naszych stronach <Link to="/leasing" className="text-primary underline">Leasing</Link> oraz <Link to="/kredyt" className="text-primary underline">Kredyt</Link>.
                                     </AccordionContent>
                                 </AccordionItem>

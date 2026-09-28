@@ -1497,3 +1497,11 @@ Wdrożono ujednolicenie systemów stylów, typografii, grubości fontów, margin
   - Po opuszczeniu aktywnego pola (zdarzenie `blur` / przejście ze stanu aktywnego w nieaktywny), mechanizm natychmiastowo aplikuje `maximum-scale=1.0` do znacznika `<meta name="viewport">`, wymuszając na silniku przeglądarki wyzerowanie powiększenia i wyrównanie szerokości do 100%.
   - Po 300ms przywracana jest standardowa konfiguracja skalowalnego viewportu, co zachowuje pełną dostępność i możliwość ręcznego gestu pinch-to-zoom dla użytkownika.
   - Mechanizm zintegrowano bezpośrednio w filtrach kwotowych `onBlur` oraz globalnie w komponencie głównym `App.tsx` w fazie capture.
+
+### 95. Poprawki SEO po audycie 2026-09 (M1: KAM-5, KAM-6, KAM-7, KAM-8, KAM-9, KAM-17)
+- **FOTON w SSR**: `/foton` i siedem stron modeli (`/foton/:slug`) zwracają z serwera 200 z H1, listą modeli, tabelą specyfikacji, odpowiedziami FAQ i JSON-LD (BreadcrumbList, ItemList, FAQPage). Wcześniej Googlebot dostawał 404 + noindex. Treść dla SSR jest lustrem `src/data/foton-models.ts` w `backend/src/content/foton-content.ts`; zgodność pilnuje test parytetu, więc zmianę danych FOTON wprowadza się w obu plikach w jednym commicie.
+- **Filtry katalogu**: `/samochody` z filtrami, których nie da się sprowadzić do strony marki lub modelu (kilka marek, paliwo, cena...), dostaje `noindex` i canonical `/samochody`. Pojedyncza marka (i model) nadal kanonikalizuje się do strony marki/modelu, a sama paginacja i parametry kampanii (utm, gclid) pozostają indeksowalne.
+- **Nagłówki i FAQ**: tytuły kart ofert nie są już nagłówkami `<h3>`. Odpowiedzi FAQ (strony finansowania, kalkulator, oferta, najem, `/faq`) są w DOM także po zwinięciu, więc treść zgadza się z danymi FAQPage.
+- **Jeden numer telefonu**: stopka i dane Organization na stronie głównej używają tego samego numeru co nagłówek (linia sprzedażowa, zapasowo numer z danych prawnych). Organization występuje tylko na stronie głównej.
+- **Kalkulator na /leasing**: kalkulator filarowy liczy ratę dla nowego auta z bieżącym rocznikiem (Vehis wymaga rocznika). Gdy żaden produkt nie policzy raty, a strona nie dotyczy konkretnej oferty, kalkulator prowadzi do kontaktu z doradcą.
+- **/kredyt**: poradnik nie podaje już widełek RRSO ani domyślnych parametrów kalkulatora; RRSO z przykładem reprezentatywnym pokazuje kalkulator.

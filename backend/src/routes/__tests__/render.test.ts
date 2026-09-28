@@ -124,6 +124,28 @@ describe('GET /api/render', () => {
         expect(res.body).toContain('rel="canonical" href="https://motolia.pl/uzywane"');
     });
 
+    it('FOTON hub renders 200 with H1, model links and JSON-LD (KAM-5)', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/foton' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('noindex');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/foton"');
+        expect(res.body).toContain('<h1>Pojazdy użytkowe FOTON z pewnym finansowaniem</h1>');
+        expect(res.body).toContain('href="/foton/tunland-g7"');
+        expect(res.body).toContain('"@type":"FAQPage"');
+    });
+
+    it('every FOTON model page renders 200; unknown model is 404 (KAM-5)', async () => {
+        for (const id of ['tunland-g7', 'tunland-v9', 'etoano-pro', 'cavan', 'emiler', 'eaumark', 'aumark-s']) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=/foton/${id}` });
+            expect(res.statusCode, id).toBe(200);
+            expect(res.body, id).not.toContain('noindex');
+            expect(res.body, id).toContain(`rel="canonical" href="https://motolia.pl/foton/${id}"`);
+        }
+        const missing = await app.inject({ method: 'GET', url: '/api/render?path=/foton/nie-ma-takiego' });
+        expect(missing.statusCode).toBe(404);
+        expect(missing.body).toContain('noindex');
+    });
+
     it('home page SEO (no active hero banner): title, description, exactly 1 h1, and JSON-LD (Organization, WebSite)', async () => {
         const res = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(res.statusCode).toBe(200);
@@ -595,6 +617,25 @@ describe('GET /api/render — brand/model pages', () => {
         const url = '/api/render?path=/samochody' + encodeURIComponent('?make=Test Brand Page,BMW');
         const res = await app.inject({ method: 'GET', url });
         expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody"');
+        expect(res.body).toContain('<meta name="robots" content="noindex" />');
+    });
+
+    it('/samochody?page=N with only tracking params stays indexable with page canonical (KAM-17)', async () => {
+        await createListing();
+        const url = '/api/render?path=/samochody' + encodeURIComponent('?page=2&utm_source=google&gclid=abc');
+        const res = await app.inject({ method: 'GET', url });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toContain('content="noindex"');
+        expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody?page=2"');
+    });
+
+    it('facet params passed unencoded by nginx (top-level query) are still detected (KAM-17)', async () => {
+        await createListing();
+        // nginx: /api/render?path=$request_uri -> everything after the first & is a top-level param
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody?page=2&make=Test%20Brand%20Page,BMW' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('<meta name="robots" content="noindex" />');
         expect(res.body).toContain('rel="canonical" href="https://motolia.pl/samochody"');
     });
 

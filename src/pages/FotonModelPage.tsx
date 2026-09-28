@@ -27,26 +27,6 @@ export default function FotonModelPage() {
       ? { to: '/leasing', label: `leasing FOTON ${model.name.replace('FOTON ', '')} dla firm i JDG` }
       : { to: '/wynajem-dlugoterminowy', label: `wynajem długoterminowy FOTON ${model.name.replace('FOTON ', '')} dla floty` };
 
-  const breadcrumbSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Strona główna', item: 'https://motolia.pl/' },
-      { '@type': 'ListItem', position: 2, name: 'FOTON', item: 'https://motolia.pl/foton' },
-      { '@type': 'ListItem', position: 3, name: model.name, item: `https://motolia.pl/foton/${model.id}` },
-    ],
-  };
-
-  const faqSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: model.faq.map((item) => ({
-      '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: { '@type': 'Answer', text: item.a },
-    })),
-  };
-
   return (
     <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
       <MetaHead
@@ -55,16 +35,7 @@ export default function FotonModelPage() {
         canonical={`/foton/${model.id}`}
       />
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
-      {model.faq.length > 0 && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        />
-      )}
+      {/* JSON-LD (BreadcrumbList, FAQPage) renders server-side: backend buildFotonModelMeta. */}
 
       <Header />
       <FotonContextBar />

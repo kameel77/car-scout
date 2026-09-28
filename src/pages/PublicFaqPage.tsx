@@ -84,11 +84,14 @@ function FaqItem({ question, answer, isOpen, onClick, accent, accentOn, isMotoli
           <ChevronDown size={16} />
         </div>
       </div>
-      {isOpen && (
-        <div className="px-5 pb-5 text-muted-foreground leading-relaxed text-sm border-t border-gray-100 pt-4 whitespace-pre-line">
-          {answer}
-        </div>
-      )}
+      {/* Answer stays in the DOM when collapsed (hidden attribute) so the rendered page
+          matches the FAQPage schema and crawlers see every answer (KAM-9). */}
+      <div
+        hidden={!isOpen}
+        className="px-5 pb-5 text-muted-foreground leading-relaxed text-sm border-t border-gray-100 pt-4 whitespace-pre-line"
+      >
+        {answer}
+      </div>
     </div>
   );
 }

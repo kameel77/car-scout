@@ -590,12 +590,7 @@ export default function SearchPage() {
         schema={{
           "@context": "https://schema.org",
           "@graph": [
-            {
-              "@type": "Organization",
-              "name": siteName,
-              "url": window.location.origin,
-              "logo": seoConfig?.homeOgImage,
-            },
+            // Organization is emitted once, on the home page (SSR) — not on every hub (KAM-8).
             {
               "@type": "CollectionPage",
               "name": metaTitle,
