@@ -34,7 +34,7 @@ export function PillarSpecialOffers({ type }: { type: PillarType }) {
   if (!isLoading && listings.length === 0) return null;
 
   return (
-    <section aria-labelledby="oferty-specjalne-title" className="mt-12">
+    <section aria-labelledby="oferty-specjalne-title">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
         <div>
           <h2 id="oferty-specjalne-title" className="text-2xl font-bold">{copy.title}</h2>
@@ -44,7 +44,7 @@ export function PillarSpecialOffers({ type }: { type: PillarType }) {
           Sprawdź więcej <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         {isLoading
           ? Array.from({ length: OFFERS_COUNT }).map((_, i) => <ListingCardSkeleton key={i} />)
           : listings.map((listing: any, index: number) => (
