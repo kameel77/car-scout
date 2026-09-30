@@ -1,3 +1,4 @@
+import '@/styles/admin.css';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { AdminSidebar } from './AdminSidebar';
 import { ContextSwitcher } from './ContextSwitcher';
