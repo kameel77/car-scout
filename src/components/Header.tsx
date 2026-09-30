@@ -3,12 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Globe, Menu, Gift, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +39,51 @@ const ALL_NAV_LINKS = [
 ];
 
 type NavItem = (typeof ALL_NAV_LINKS)[number];
+
+const loadLanguageMenu = () => import('./LanguageMenu');
+const LanguageMenu = React.lazy(loadLanguageMenu);
+
+interface LanguageSwitcherProps {
+  languages: (typeof ALL_LANGUAGES)[number][];
+  current: (typeof ALL_LANGUAGES)[number];
+  currentCode: string;
+  onLanguageChange: (code: string) => void;
+}
+
+// Zwykły przycisk bez Radix; menu (DropdownMenu + floating-ui) ładuje się dopiero
+// przy pierwszej interakcji i od razu jest otwarte.
+function LanguageSwitcher({ languages, current, currentCode, onLanguageChange }: LanguageSwitcherProps) {
+  const [activated, setActivated] = React.useState(false);
+
+  const button = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="gap-2 text-muted-foreground hover:bg-slate-100"
+      aria-haspopup="menu"
+      onPointerEnter={() => { void loadLanguageMenu(); }}
+      onFocus={() => { void loadLanguageMenu(); }}
+      onClick={() => setActivated(true)}
+    >
+      <Globe className="h-4 w-4" />
+      <span>{current.flag}</span>
+      <span className="hidden xl:inline">{current.label}</span>
+    </Button>
+  );
+
+  if (!activated) return button;
+
+  return (
+    <React.Suspense fallback={button}>
+      <LanguageMenu
+        languages={languages}
+        current={current}
+        currentCode={currentCode}
+        onLanguageChange={onLanguageChange}
+      />
+    </React.Suspense>
+  );
+}
 
 interface MobileMenuProps {
   navItems: NavItem[];
@@ -327,30 +366,12 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
           <div className="flex items-center gap-4">
             {/* Language Switcher */}
             {enabledLanguages.length > 1 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:bg-slate-100">
-                    <Globe className="h-4 w-4" />
-                    <span>{currentLanguage.flag}</span>
-                    <span className="hidden xl:inline">{currentLanguage.label}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {enabledLanguages.map((lang) => (
-                    <DropdownMenuItem
-                      key={lang.code}
-                      onClick={() => handleLanguageChange(lang.code)}
-                      className={cn(
-                        'gap-2',
-                        i18n.language === lang.code && 'bg-orange-50 text-orange-600'
-                      )}
-                    >
-                      <span>{lang.flag}</span>
-                      <span>{lang.label}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <LanguageSwitcher
+                languages={enabledLanguages}
+                current={currentLanguage}
+                currentCode={i18n.language}
+                onLanguageChange={handleLanguageChange}
+              />
             )}
 
             {/* Phone Button */}
