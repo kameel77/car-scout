@@ -3,7 +3,10 @@ import { useConsent } from '@/hooks/useConsent';
 import { OPEN_CONSENT_SETTINGS_EVENT } from '@/lib/consent';
 
 const ConsentBanner = lazy(() =>
-    import('./ConsentBanner').then((m) => ({ default: m.ConsentBanner })),
+    import('./ConsentBanner')
+        .then((m) => ({ default: m.ConsentBanner }))
+        // Nieudane pobranie chunka (np. po deployu) nie może wywalić całego drzewa Reacta.
+        .catch(() => ({ default: () => null })),
 );
 
 // Baner i dialog ustawień ładują się tylko gdy brak zapisanej zgody albo gdy ktoś
