@@ -2,6 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { HelmetProvider } from 'react-helmet-async';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SsrMeta } from '@/lib/ssrMeta';
+import { setSsrJson, removeSsrJson } from '@/test-utils/ssrJson';
 
 const useQuery = vi.fn();
 
@@ -33,7 +34,7 @@ describe('SeoManager', () => {
 
     afterEach(() => {
         cleanup();
-        delete window.__SSR_META__;
+        removeSsrJson('ssr-meta');
         history.replaceState({}, '', '/');
         document.title = '';
         document.head.querySelectorAll('[data-rh]').forEach((el) => el.remove());
@@ -57,8 +58,8 @@ describe('SeoManager', () => {
     // Regresja: /dla-firm (MotoliaB2BPage) używa MetaHead tylko dla schema, nie dla
     // title/description — bez tego SeoManager pokazywałby opis strony głównej zamiast
     // poprawnego, wyrenderowanego przez SSR opisu dla /dla-firm.
-    it('prefers window.__SSR_META__ over the home SEO config when it matches the current URL', async () => {
-        window.__SSR_META__ = SSR_META;
+    it('prefers ssr-meta over the home SEO config when it matches the current URL', async () => {
+        setSsrJson('ssr-meta', SSR_META);
         history.replaceState({}, '', SSR_META.path);
         render(
             <HelmetProvider>

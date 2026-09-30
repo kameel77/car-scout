@@ -260,15 +260,15 @@ describe('GET /api/render', () => {
         expect(res.body).not.toContain('<link rel="modulepreload"');
     });
 
-    it('injects window.__APP_SETTINGS__ and window.__CATALOG_PREFETCH__ correctly', async () => {
+    it('injects app-settings JSON block and window.__CATALOG_PREFETCH__ correctly', async () => {
         const resHome = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(resHome.statusCode).toBe(200);
-        expect(resHome.body).toContain('window.__APP_SETTINGS__=');
+        expect(resHome.body).toContain('id="app-settings"');
         expect(resHome.body).not.toContain('window.__CATALOG_PREFETCH__=');
 
         const resNowe = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
         expect(resNowe.statusCode).toBe(200);
-        expect(resNowe.body).toContain('window.__APP_SETTINGS__=');
+        expect(resNowe.body).toContain('id="app-settings"');
         expect(resNowe.body).toContain('window.__CATALOG_PREFETCH__=');
         expect(resNowe.body).toContain('status=NEW&rateType=credit&rateBasis=gross');
 
@@ -289,7 +289,7 @@ describe('GET /api/render', () => {
         expect(resSamochodyPage2.body).not.toContain('window.__CATALOG_PREFETCH__=');
     });
 
-    it('injects window.__SSR_META__ with escaped values for a rental detail and a catalog route', async () => {
+    it('injects ssr-meta JSON block with escaped values for a rental detail and a catalog route', async () => {
         const rental = await app.prisma.rentalVehicle.create({
             data: {
                 slug: `test-ssr-meta-rental-${Date.now()}`,
@@ -305,8 +305,8 @@ describe('GET /api/render', () => {
 
         const resRental = await app.inject({ method: 'GET', url: `/api/render?path=/wynajem-dlugoterminowy/${rental.slug}` });
         expect(resRental.statusCode).toBe(200);
-        expect(resRental.body).toContain('window.__SSR_META__=');
-        const rentalMatch = resRental.body.match(/window\.__SSR_META__=(\{.*?\});/);
+        expect(resRental.body).toContain('id="ssr-meta"');
+        const rentalMatch = resRental.body.match(/<script type="application\/json" id="ssr-meta">(\{.*?\})<\/script>/);
         expect(rentalMatch).not.toBeNull();
         const rentalMeta = JSON.parse(rentalMatch![1]);
         expect(rentalMeta.path).toBe(`/wynajem-dlugoterminowy/${rental.slug}`);
@@ -316,21 +316,21 @@ describe('GET /api/render', () => {
 
         const resCatalog = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
         expect(resCatalog.statusCode).toBe(200);
-        expect(resCatalog.body).toContain('window.__SSR_META__=');
-        const catalogMatch = resCatalog.body.match(/window\.__SSR_META__=(\{.*?\});/);
+        expect(resCatalog.body).toContain('id="ssr-meta"');
+        const catalogMatch = resCatalog.body.match(/<script type="application\/json" id="ssr-meta">(\{.*?\})<\/script>/);
         expect(catalogMatch).not.toBeNull();
         const catalogMeta = JSON.parse(catalogMatch![1]);
         expect(catalogMeta.path).toBe('/nowe');
         expect(catalogMeta.canonical).toBe('https://motolia.pl/nowe');
 
         // < w danych ucieka do <, żeby nie zamknąć <script> przedwcześnie — ta sama technika
-        // co window.__APP_SETTINGS__/__HERO_BANNERS__ (patrz render.ts).
-        expect(resRental.body).not.toMatch(/window\.__SSR_META__=\{[^}]*<[^u]/);
+        // co app-settings/hero-banners (patrz render.ts).
+        expect(resRental.body).not.toMatch(/id="ssr-meta">\{[^}]*<[^u]/);
 
         // 404/noindex nie dostają __SSR_META__ — brak "poprawnej" treści SSR do zachowania po hydracji
         const resMissing = await app.inject({ method: 'GET', url: '/api/render?path=/oferta/nieistniejacy-slug' });
         expect(resMissing.statusCode).toBe(404);
-        expect(resMissing.body).not.toContain('window.__SSR_META__=');
+        expect(resMissing.body).not.toContain('id="ssr-meta"');
     });
 
     it('active but unpublished rental returns 404 + noindex (soft-404 fix — SSR must match the public API visibility)', async () => {
@@ -348,7 +348,7 @@ describe('GET /api/render', () => {
         const res = await app.inject({ method: 'GET', url: `/api/render?path=/wynajem-dlugoterminowy/${rental.slug}` });
         expect(res.statusCode).toBe(404);
         expect(res.body).toContain('noindex');
-        expect(res.body).not.toContain('window.__SSR_META__=');
+        expect(res.body).not.toContain('id="ssr-meta"');
     });
 
     it('active and published rental returns 200 (public API visibility)', async () => {
@@ -368,14 +368,14 @@ describe('GET /api/render', () => {
         expect(res.body).toContain('TEST_RENDER PublishedCar');
     });
 
-    it('__SSR_META__.path is normalized like the SSR cache key: only ?page survives, other query params are dropped', async () => {
+    it('ssr-meta path is normalized like the SSR cache key: only ?page survives, other query params are dropped', async () => {
         // SSR HTML jest cache'owane per path+page NIEZALEŻNIE od reszty query stringa (ten sam
-        // cacheKey co renderAndCache) — wpisanie pełnego ?utm_source=x do window.__SSR_META__
+        // cacheKey co renderAndCache) — wpisanie pełnego ?utm_source=x do ssr-meta
         // wypaliłoby query string PIERWSZEGO odwiedzającego do HTML serwowanego WSZYSTKIM
         // kolejnym gościom tego samego /nowe, u których by się już nie zgadzało.
         const resUtm = await app.inject({ method: 'GET', url: '/api/render?path=/nowe%3Futm_source%3Dx' });
         expect(resUtm.statusCode).toBe(200);
-        const utmMatch = resUtm.body.match(/window\.__SSR_META__=(\{.*?\});/);
+        const utmMatch = resUtm.body.match(/<script type="application\/json" id="ssr-meta">(\{.*?\})<\/script>/);
         expect(utmMatch).not.toBeNull();
         expect(JSON.parse(utmMatch![1]).path).toBe('/nowe');
 
@@ -397,7 +397,7 @@ describe('GET /api/render', () => {
 
         const resPage2 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe&page=2' });
         expect(resPage2.statusCode).toBe(200);
-        const page2Match = resPage2.body.match(/window\.__SSR_META__=(\{.*?\});/);
+        const page2Match = resPage2.body.match(/<script type="application\/json" id="ssr-meta">(\{.*?\})<\/script>/);
         expect(page2Match).not.toBeNull();
         expect(JSON.parse(page2Match![1]).path).toBe('/nowe?page=2');
     });

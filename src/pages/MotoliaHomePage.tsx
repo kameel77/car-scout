@@ -25,6 +25,7 @@ import HeroVehicleFilter from '@/components/HeroVehicleFilter';
 import { CallbackForm } from '@/components/CallbackForm';
 // Import statyczny, NIE React.lazy: baner hero jest elementem LCP strony głównej.
 import { HeroBannerCarousel } from '@/components/HeroBannerCarousel';
+import { readSsrJson } from '@/lib/ssrData';
 import { DeferUntilVisible } from '@/components/DeferUntilVisible';
 
 // Sekcje poniżej folda: lazy load, żeby odciążyć główny bundle
@@ -172,9 +173,8 @@ const CAR_BRANDS_CN = ['BYD', 'Chery', 'MG', 'Geely', 'Omoda', 'Jaecoo', 'Leapmo
 
 export default function MotoliaHomePage() {
   const { config } = useBrand();
-  const initialHeroBanners = typeof window !== 'undefined' && (window as any).__HERO_BANNERS__
-    ? { banners: (window as any).__HERO_BANNERS__ }
-    : undefined;
+  const ssrHeroBanners = readSsrJson<any>('hero-banners');
+  const initialHeroBanners = ssrHeroBanners ? { banners: ssrHeroBanners } : undefined;
   const { data: heroBannerData } = useQuery({
     queryKey: ['hero-banners', 'public'],
     queryFn: () => heroBannersApi.listPublic(),

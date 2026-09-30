@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { getSsrMeta, type SsrMeta } from '@/lib/ssrMeta';
+import { setSsrJson, removeSsrJson } from '@/test-utils/ssrJson';
 
 const SAMPLE: SsrMeta = {
     path: '/wynajem-dlugoterminowy/toyota-corolla-x1',
@@ -11,23 +12,23 @@ const SAMPLE: SsrMeta = {
 
 describe('getSsrMeta', () => {
     afterEach(() => {
-        delete window.__SSR_META__;
+        removeSsrJson('ssr-meta');
         history.replaceState({}, '', '/');
     });
 
-    it('returns null when window.__SSR_META__ is not set', () => {
+    it('returns null when ssr-meta is not set', () => {
         history.replaceState({}, '', SAMPLE.path);
         expect(getSsrMeta()).toBeNull();
     });
 
     it('returns the SSR meta when location matches its path exactly', () => {
-        window.__SSR_META__ = SAMPLE;
+        setSsrJson('ssr-meta', SAMPLE);
         history.replaceState({}, '', SAMPLE.path);
         expect(getSsrMeta()).toEqual(SAMPLE);
     });
 
-    it('returns null once the SPA has navigated away, without deleting window.__SSR_META__', () => {
-        window.__SSR_META__ = SAMPLE;
+    it('returns null once the SPA has navigated away, without deleting ssr-meta', () => {
+        setSsrJson('ssr-meta', SAMPLE);
         history.replaceState({}, '', SAMPLE.path);
         expect(getSsrMeta()).toEqual(SAMPLE);
 
@@ -35,27 +36,27 @@ describe('getSsrMeta', () => {
         // render był bezpieczny), ale przestaje pasować, więc kolejne wywołanie zwraca null.
         history.pushState({}, '', '/wynajem-dlugoterminowy/inny-samochod');
         expect(getSsrMeta()).toBeNull();
-        expect(window.__SSR_META__).toEqual(SAMPLE);
+        expect(document.getElementById('ssr-meta')).not.toBeNull();
     });
 
     // Ten sam SSR HTML jest cache'owany per path+page (backend cacheKey, render.ts), więc
-    // window.__SSR_META__.path pomija każdy inny query param (utm/gclid/filtry) — inaczej meta
+    // ssr-meta.path pomija każdy inny query param (utm/gclid/filtry) — inaczej meta
     // wygenerowana dla pierwszego odwiedzającego z ?utm_source=x nigdy nie pasowałaby kolejnym
     // gościom tego samego path+page, którym backend serwuje ten sam cache'owany HTML.
     it('matches "/nowe?utm_source=x&page=1" against SSR path "/nowe" — non-page params and page=1 are ignored', () => {
-        window.__SSR_META__ = { ...SAMPLE, path: '/nowe' };
+        setSsrJson('ssr-meta', { ...SAMPLE, path: '/nowe' });
         history.replaceState({}, '', '/nowe?utm_source=x&page=1');
         expect(getSsrMeta()).not.toBeNull();
     });
 
     it('matches "/nowe?page=2&gclid=1" against SSR path "/nowe?page=2" — only ?page counts', () => {
-        window.__SSR_META__ = { ...SAMPLE, path: '/nowe?page=2' };
+        setSsrJson('ssr-meta', { ...SAMPLE, path: '/nowe?page=2' });
         history.replaceState({}, '', '/nowe?page=2&gclid=1');
         expect(getSsrMeta()).not.toBeNull();
     });
 
     it('does not match "/nowe?page=3" against SSR path "/nowe?page=2" — a different page is different content', () => {
-        window.__SSR_META__ = { ...SAMPLE, path: '/nowe?page=2' };
+        setSsrJson('ssr-meta', { ...SAMPLE, path: '/nowe?page=2' });
         history.replaceState({}, '', '/nowe?page=3');
         expect(getSsrMeta()).toBeNull();
     });
