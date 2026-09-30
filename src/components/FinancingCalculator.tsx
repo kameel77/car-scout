@@ -242,6 +242,17 @@ export function FinancingCalculator({
     const failedCountRef = React.useRef(0);
     const MAX_EXTERNAL_FAILURES = 3;
 
+    const resetFailedProducts = React.useCallback(() => {
+        failedCountRef.current = 0;
+        setFailedProducts(prev => (prev.size === 0 ? prev : new Set()));
+    }, []);
+
+    // Zmiana ceny (np. suwak ceny na stronach poradnikowych) to nowe zapytanie — dajemy produktom,
+    // które wcześniej zwróciły błąd, kolejną szansę zamiast trzymać komunikat do przeładowania strony.
+    React.useEffect(() => {
+        resetFailedProducts();
+    }, [price, resetFailedProducts]);
+
     React.useEffect(() => {
         let isCancelled = false;
 
@@ -268,7 +279,7 @@ export function FinancingCalculator({
                 // Ensure we always send netto price regardless of priceType.
                 const nettoPrice = priceIsNet ? price : Math.round(price / vatMultiplier);
 
-                const response = await financingApi.calculate({
+                const payload = {
                     productId: selectedProduct.id,
                     price: nettoPrice,
                     downPaymentAmount: Math.round(nettoPrice * initialPaymentPct / 100),
@@ -277,7 +288,18 @@ export function FinancingCalculator({
                     finalPaymentPercent: finalPaymentPct,
                     manufacturingYear,
                     mileageKm
-                });
+                };
+                // Jedna ponowna próba: pojedynczy błąd sieci / restart backendu / timeout partnera
+                // nie może trwale wyłączać produktu (wcześniej wymagało to przeładowania strony).
+                let response;
+                try {
+                    response = await financingApi.calculate(payload);
+                } catch (firstError) {
+                    if (isCancelled) return;
+                    await new Promise(resolve => setTimeout(resolve, 1200));
+                    if (isCancelled) return;
+                    response = await financingApi.calculate(payload);
+                }
                 if (!isCancelled) {
                     // Vehis returns netto installment.
                     // For consumer (priceIsNet=false): display brutto = netto * vatMultiplier
@@ -489,6 +511,11 @@ export function FinancingCalculator({
                                 ? "Przepraszamy, nie jesteśmy w stanie w tym momencie zaprezentować oferty leasingu na ten pojazd. Skontaktuj się z nami bezpośrednio, abyśmy mogli przygotować ci dedykowane rozwiązanie."
                                 : "Przepraszamy, nie jesteśmy w stanie w tym momencie zaprezentować oferty finansowania na ten pojazd. Skontaktuj się z nami bezpośrednio, abyśmy mogli przygotować ci dedykowane rozwiązanie."}
                         </p>
+                        {failedProducts.size > 0 && (
+                            <Button variant="outline" size="sm" onClick={resetFailedProducts}>
+                                Spróbuj ponownie
+                            </Button>
+                        )}
                         {listingId ? (
                             <Button
                                 variant="hero"
