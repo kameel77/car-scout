@@ -6,6 +6,8 @@ import { generateListingSlug } from '../../utils/url-utils.js';
 import { __resetBrandCatalogCache } from '../../services/brand-pages.service.js';
 import { __resetSeoContentCache } from '../../services/seo-content.js';
 import { setSsrCache } from '../../services/ssr-cache.js';
+import { CATALOG_PREFETCH_JS } from '../../utils/catalog-prefetch';
+import { RENTAL_PREFETCH_JS } from '../../utils/rental-prefetch';
 
 const TEMPLATE = `<!doctype html><html><head><title>OLD</title><meta name="description" content="OLDD" /><meta property="og:title" content="OLD" /><meta property="og:description" content="OLDD" /><meta property="og:url" content="https://old.example" /><meta name="twitter:title" content="OLD" /><meta name="twitter:description" content="OLDD" /></head><body><div id="root"><!--home-shell--><h1>Szeroki wybór aut.<br><span>Proste finansowanie.</span></h1><!--/home-shell--></div></body></html>`;
 
@@ -412,6 +414,20 @@ describe('GET /api/render', () => {
         expect(next.body).not.toContain('rental-prefetch-params');
         const home = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(home.body).not.toContain('rental-prefetch-params');
+    });
+
+    it('CSP guard: rendered HTML has no inline executable script other than the whitelisted prefetch constants', async () => {
+        const allowedBodies = new Set([CATALOG_PREFETCH_JS, RENTAL_PREFETCH_JS]);
+        for (const path of ['/', '/samochody', '/wynajem-dlugoterminowy']) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
+            expect(res.statusCode).toBe(200);
+            const scripts = [...res.body.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)];
+            for (const [, attrs, body] of scripts) {
+                if (/\bsrc=/.test(attrs)) continue;
+                if (/\btype="(application\/json|application\/ld\+json)"/.test(attrs)) continue;
+                expect(allowedBodies.has(body), `${path}: unexpected inline script: ${body.slice(0, 80)}`).toBe(true);
+            }
+        }
     });
 
     it('listing detail gets LCP image preload with srcset variants', async () => {
