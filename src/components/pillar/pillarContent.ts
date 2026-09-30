@@ -56,7 +56,7 @@ export const PILLAR_BENEFITS: Record<PillarType, string[]> = {
  * ładowanie lazy chunka i danych /api/financing/calculator nie przesuwało treści (CLS). Wartości =
  * zmierzona wysokość załadowanej karty (section#kalkulator, dev.motolia.pl): mobile 375-414 px,
  * md 768 px, lg 1024 px (kolumna 400 px), xl >=1280 px (kolumna 440 px). Leasing ma dodatkowy wiersz
- * wykupu (+71 px względem kredytu). Backend ma kopię w seo-meta.ts (PILLAR_CALC_MIN_H) — test pilnuje równości.
+ * wykupu (+71 px względem kredytu). Backend ma kopię w backend/src/services/pillar-shell.ts (PILLAR_CALC_MIN_H) — test pilnuje równości.
  * Pełne nazwy klas są potrzebne Tailwindowi do ich wygenerowania.
  */
 export const PILLAR_CALC_MIN_H: Record<PillarType, string> = {
