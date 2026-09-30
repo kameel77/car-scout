@@ -25,6 +25,7 @@ import HeroVehicleFilter from '@/components/HeroVehicleFilter';
 import { CallbackForm } from '@/components/CallbackForm';
 // Import statyczny, NIE React.lazy: baner hero jest elementem LCP strony głównej.
 import { HeroBannerCarousel } from '@/components/HeroBannerCarousel';
+import { DeferUntilVisible } from '@/components/DeferUntilVisible';
 
 // Sekcje poniżej folda: lazy load, żeby odciążyć główny bundle
 const FeatureTilesSection = lazy(() => import('@/components/FeatureTilesSection').then(m => ({ default: m.FeatureTilesSection })));
@@ -368,13 +369,15 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── WYBRANE OFERTY (WIDGETY) ─────────────────────────────────────── */}
-      <Suspense fallback={<div className="h-96" />}>
-        <DynamicWidget 
-          placement="HOME" 
-          className="bg-white hover:bg-gray-50/50 transition-colors py-12 md:py-16"
-          innerClassName="max-w-7xl mx-auto px-6 w-full"
-        />
-      </Suspense>
+      <DeferUntilVisible placeholderClassName="min-h-[24rem]">
+        <Suspense fallback={<div className="h-96" />}>
+          <DynamicWidget 
+            placement="HOME" 
+            className="bg-white hover:bg-gray-50/50 transition-colors py-12 md:py-16"
+            innerClassName="max-w-7xl mx-auto px-6 w-full"
+          />
+        </Suspense>
+      </DeferUntilVisible>
 
       {/* ── PRODUKTY ─────────────────────────────────────────────────────── */}
       <section className="py-28 bg-background" id="produkty">
