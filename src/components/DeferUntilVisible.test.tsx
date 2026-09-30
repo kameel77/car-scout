@@ -30,6 +30,24 @@ describe('DeferUntilVisible', () => {
     expect(disconnect).toHaveBeenCalled();
   });
 
+  it('does not start observing before the window load event', () => {
+    const observe = vi.fn();
+    class MockIO {
+      constructor(_cb: IntersectionObserverCallback) {}
+      observe = observe;
+      disconnect() {}
+    }
+    vi.stubGlobal('IntersectionObserver', MockIO);
+    const rs = vi.spyOn(document, 'readyState', 'get').mockReturnValue('interactive');
+
+    render(<DeferUntilVisible><span>content</span></DeferUntilVisible>);
+    expect(observe).not.toHaveBeenCalled();
+
+    act(() => { window.dispatchEvent(new Event('load')); });
+    expect(observe).toHaveBeenCalledTimes(1);
+    rs.mockRestore();
+  });
+
   it('renders children immediately without IntersectionObserver', () => {
     vi.stubGlobal('IntersectionObserver', undefined);
     render(<DeferUntilVisible><span>content</span></DeferUntilVisible>);
