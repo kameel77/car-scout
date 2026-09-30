@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { settingsApi } from '@/services/api';
+import { readSsrJson } from '@/lib/ssrData';
 
 export function useAppSettings() {
     return useQuery({
@@ -7,7 +8,7 @@ export function useAppSettings() {
         queryFn: async () => {
             return await settingsApi.getSettings();
         },
-        initialData: typeof window !== 'undefined' ? (window as any).__APP_SETTINGS__ ?? undefined : undefined,
+        initialData: readSsrJson<any>('app-settings') ?? undefined,
         initialDataUpdatedAt: 0,
         staleTime: 5 * 60 * 1000, // 5 minutes
         refetchOnWindowFocus: false,

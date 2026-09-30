@@ -3,6 +3,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MetaHead } from './MetaHead';
 import type { SsrMeta } from '@/lib/ssrMeta';
+import { setSsrJson, removeSsrJson } from '@/test-utils/ssrJson';
 
 const SSR_META: SsrMeta = {
     path: '/wynajem-dlugoterminowy/toyota-corolla-x1',
@@ -27,7 +28,7 @@ function renderMetaHead(props: Parameters<typeof MetaHead>[0]) {
 describe('MetaHead', () => {
     afterEach(() => {
         cleanup();
-        delete window.__SSR_META__;
+        removeSsrJson('ssr-meta');
         history.replaceState({}, '', '/');
         document.title = '';
         document.head.querySelectorAll('[data-rh]').forEach((el) => el.remove());
@@ -45,8 +46,8 @@ describe('MetaHead', () => {
         expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('Client description');
     });
 
-    it('prefers window.__SSR_META__ over props when it matches the current URL (initial load)', async () => {
-        window.__SSR_META__ = SSR_META;
+    it('prefers ssr-meta over props when it matches the current URL (initial load)', async () => {
+        setSsrJson('ssr-meta', SSR_META);
         history.replaceState({}, '', SSR_META.path);
         renderMetaHead({
             title: 'Client Title (wrong wording)',
@@ -63,7 +64,7 @@ describe('MetaHead', () => {
     });
 
     it('falls back to props again after the SSR meta path no longer matches (SPA nav away)', async () => {
-        window.__SSR_META__ = SSR_META;
+        setSsrJson('ssr-meta', SSR_META);
         history.replaceState({}, '', '/wynajem-dlugoterminowy/other-slug');
         renderMetaHead({
             title: 'Client Title',
