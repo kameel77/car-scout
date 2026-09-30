@@ -197,7 +197,7 @@ async function getOrgSettings(fastify: FastifyInstance): Promise<OrgSettings> {
 
 // Bannery hero strony głównej — ten sam kształt/where/orderBy co /api/hero-banners/public.
 // Jedna lista posłuży do preloadu LCP (#1), SSR pierwszego banera do home-shell (#2)
-// i window.__HERO_BANNERS__ dla frontu (#3).
+// i hero-banners JSON block dla frontu (#3).
 interface HomeHeroBanner {
     id: string;
     imageUrlDesktop: string | null;
@@ -1243,7 +1243,7 @@ async function renderPage(
 
     let html = injectHead(template, meta);
 
-    // window.__SSR_META__ — SSR meta (title/description/canonical/ogImage) do odczytu przez
+    // ssr-meta JSON block — SSR meta (title/description/canonical/ogImage) do odczytu przez
     // MetaHead/SeoManager na pierwszym renderze, zanim React zamontuje SPA. Bez tego, po
     // wprowadzeniu data-rh (dedupe head tagów przez react-helmet-async), strony bez własnego
     // page-level opisu (np. /dla-firm — MetaHead tam ustawia tylko schema) albo z opisem, który
@@ -1254,7 +1254,7 @@ async function renderPage(
     // Tylko ?page — ten sam wzorzec normalizacji co cacheKey w renderAndCache/getSsrCache
     // (`page > 1 ? \`${path}?page=${page}\` : path`), bo SSR HTML jest cache'owane per
     // path+page NIEZALEŻNIE od reszty query stringa (utm/gclid/filtry). Wpisanie tu pełnego
-    // searchParams.toString() wpisałoby do window.__SSR_META__ (a więc do cache'owanego HTML)
+    // searchParams.toString() wpisałoby do ssr-meta JSON block (a więc do cache'owanego HTML)
     // query string pierwszego odwiedzającego (np. ?utm_source=x) i serwowało go WSZYSTKIM
     // kolejnym gościom tego samego path+page — u nich location.search by się nie zgadzał i
     // dopasowanie nigdy by nie trafiło (cichy powrót regresji, którą ta cała funkcja miała
@@ -1263,7 +1263,7 @@ async function renderPage(
     // Dodatkowo: tylko gdy requestowana ścieżka JEST swoim własnym canonicalem (np. bogus slug
     // w /oferta/:slug soft-canonicalizuje się na 200 z canonical wskazującym na prawdziwy slug,
     // bez przekierowania) — inaczej wyciekałby nieużywany/niezaufany fragment URL-a wpisany przez
-    // usera do window.__SSR_META__.path, mimo że treść strony i tak go dotyczy pod innym adresem.
+    // usera do ssr-meta JSON block.path, mimo że treść strony i tak go dotyczy pod innym adresem.
     const canonicalPathname = meta.canonical ? new URL(meta.canonical).pathname : path;
     if (meta.status === 200 && !meta.noindex && canonicalPathname === path) {
         const ssrMeta = {
@@ -1273,11 +1273,11 @@ async function renderPage(
             canonical: meta.canonical,
             ogImage: meta.ogImage,
         };
-        // escapujemy < w wartościach (jak window.__APP_SETTINGS__/__HERO_BANNERS__), żeby dane
+        // escapujemy < w wartościach (jak app-settings/hero-banners), żeby dane
         // nie zamknęły przedwcześnie tagu <script>
-        // (ten sam sposób co window.__APP_SETTINGS__/__HERO_BANNERS__ poniżej).
+        // (ten sam sposób co app-settings/hero-banners poniżej).
         const ssrMetaJson = JSON.stringify(ssrMeta).replace(/</g, '\\u003c');
-        html = html.replace('</head>', () => `<script>window.__SSR_META__=${ssrMetaJson};</script>\n</head>`);
+        html = html.replace('</head>', () => `<script type="application/json" id="ssr-meta">${ssrMetaJson}</script>\n</head>`);
     }
 
     // Modulepreload chunka trasy — domyślnie wyłączony po eksperymencie (docs/BRIEF_AG_MODULEPRELOAD_EXPERIMENT.md),
@@ -1305,13 +1305,13 @@ async function renderPage(
         }
     }
 
-    // window.__APP_SETTINGS__ — SSR-inject settings for all routes, exactly like __HERO_BANNERS__,
+    // app-settings JSON block — SSR-inject settings for all routes, exactly like __HERO_BANNERS__,
     // to eliminate the client-side /api/settings request hop before /api/listings.
     let publicSettings: Record<string, unknown> | null = null;
     try {
         publicSettings = await getPublicSettings(fastify);
         const appSettingsJson = JSON.stringify(publicSettings).replace(/</g, '\\u003c');
-        html = html.replace('</head>', () => `<script>window.__APP_SETTINGS__=${appSettingsJson};</script>\n</head>`);
+        html = html.replace('</head>', () => `<script type="application/json" id="app-settings">${appSettingsJson}</script>\n</head>`);
     } catch (err) {
         fastify.log.error(err, 'Failed to inject __APP_SETTINGS__');
     }
@@ -1331,11 +1331,11 @@ async function renderPage(
         html = html.replace('</head>', () => `${prefetchScript}</head>`);
     }
 
-    // window.__HERO_BANNERS__ — initialData React Query dla frontu (#3), tylko na /,
+    // hero-banners JSON block — initialData React Query dla frontu (#3), tylko na /,
     // żeby hasHeroBanners/carousel nie czekały na rundę do API na krytycznej ścieżce.
     if (path === '/' && heroBanners.length > 0) {
         const heroBannersJson = JSON.stringify(heroBanners).replace(/</g, '\\u003c');
-        html = html.replace('</head>', () => `<script>window.__HERO_BANNERS__=${heroBannersJson};</script>\n</head>`);
+        html = html.replace('</head>', () => `<script type="application/json" id="hero-banners">${heroBannersJson}</script>\n</head>`);
     }
 
     return {

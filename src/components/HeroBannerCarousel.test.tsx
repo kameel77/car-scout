@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HeroBannerCarousel } from './HeroBannerCarousel';
+import { setSsrJson, removeSsrJson } from '@/test-utils/ssrJson';
 
 const loaded = vi.hoisted(() => ({ count: 0 }));
 vi.mock('./HeroBannerEmbla', () => {
@@ -22,7 +23,7 @@ const banner = (id: string) => ({
 });
 
 function renderWith(banners: ReturnType<typeof banner>[]) {
-  (window as any).__HERO_BANNERS__ = banners;
+  setSsrJson('hero-banners', banners);
   const qc = new QueryClient();
   return render(
     <QueryClientProvider client={qc}>
@@ -32,7 +33,7 @@ function renderWith(banners: ReturnType<typeof banner>[]) {
 }
 
 beforeEach(() => { loaded.count = 0; });
-afterEach(() => { cleanup(); delete (window as any).__HERO_BANNERS__; vi.useRealTimers(); });
+afterEach(() => { cleanup(); removeSsrJson('hero-banners'); vi.useRealTimers(); });
 
 describe('HeroBannerCarousel', () => {
   it('renders the static first banner and never loads the carousel for a single banner', async () => {

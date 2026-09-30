@@ -1,12 +1,12 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { heroBannersApi } from '@/services/api';
+import { readSsrJson } from '@/lib/ssrData';
 import { HeroBannerSlide, YELLOW } from '@/components/HeroBannerSlide';
 
 export function useHeroBanners() {
-    const initialHeroBanners = typeof window !== 'undefined' && (window as any).__HERO_BANNERS__
-        ? { banners: (window as any).__HERO_BANNERS__ }
-        : undefined;
+    const ssrHeroBanners = readSsrJson<any>('hero-banners');
+    const initialHeroBanners = ssrHeroBanners ? { banners: ssrHeroBanners } : undefined;
     return useQuery({
         queryKey: ['hero-banners', 'public'],
         queryFn: () => heroBannersApi.listPublic(),
