@@ -78,7 +78,7 @@ describe('Public API Cache-Control headers', () => {
     it('GET /api/listings/options is public and edge-cacheable', async () => {
         const res = await app.inject({ method: 'GET', url: '/api/listings/options' });
         expect(res.statusCode).toBe(200);
-        expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
+        expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=3600');
     });
 
     it('GET /api/feature-tiles/public is public and edge-cacheable', async () => {
@@ -107,7 +107,7 @@ describe('Public API Cache-Control headers', () => {
     it('GET /api/listings/by-slug/:slug is public/edge-cacheable for a real listing', async () => {
         const res = await app.inject({ method: 'GET', url: `/api/listings/by-slug/${listingSlug}` });
         expect(res.statusCode).toBe(200);
-        expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
+        expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=3600');
     });
 
     it('GET /api/listings/by-slug/:slug returns a short-lived public 404 for an unknown slug (anti crawl-storm)', async () => {

@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { __resetRenderCache, __resetComponentCaches } from '../routes/render.js';
 import { __resetSitemapCache } from '../routes/seo.js';
 import { evictSsrCacheKeys } from './ssr-cache.js';
-import { clearApiCache, evictApiCacheKeys } from './api-cache.js';
+import { clearApiCache, evictApiCacheKeys, evictListingOptionsCache } from './api-cache.js';
 
 export const LISTING_AGGREGATE_URLS = [
     '/', '/nowe', '/uzywane', '/samochody',
@@ -23,6 +23,30 @@ export interface PurgeOptions {
 
 const CLOUDFLARE_MAX_BATCH_SIZE = 30;
 const CLOUDFLARE_MAX_URLS_BEFORE_AGGREGATE_PURGE = 200;
+
+const LISTING_PREFIX_EXACT_URLS = ['/samochody', '/nowe', '/uzywane', '/leasing', '/kredyt'];
+const LISTING_PREFIX_URL_STARTS = ['/oferta/', '/leasing/', '/kredyt/', '/listing/'];
+
+/**
+ * Prefiksy Cloudflare (host + ścieżka, bez schematu i query) do purge'u odpowiedzi API,
+ * których URL-e mają dowolne query stringi i nie da się ich wyczyścić po dokładnym URL-u.
+ */
+export function getApiPurgePrefixes(opts: PurgeOptions, host: string): string[] {
+    const urls = opts.urls || [];
+    const prefixes: string[] = [];
+
+    const touchesListings = !!opts.purgeAll || urls.some(u =>
+        LISTING_PREFIX_EXACT_URLS.includes(u) || LISTING_PREFIX_URL_STARTS.some(s => u.startsWith(s))
+    );
+    if (touchesListings) prefixes.push(`${host}/api/listings`);
+
+    const touchesRental = !!opts.purgeAll
+        || urls.some(u => u === '/wynajem-dlugoterminowy' || u.startsWith('/wynajem-dlugoterminowy/'))
+        || (opts.apiPatterns || []).some(p => p.startsWith('rental:'));
+    if (touchesRental) prefixes.push(`${host}/api/rental`);
+
+    return prefixes;
+}
 
 /**
  * Purges Cloudflare edge cache and local in-memory/Redis SSR, API and sitemap caches.
@@ -54,6 +78,9 @@ export async function invalidateOfferCache(
             __resetSitemapCache();
         }
     }
+    if (getApiPurgePrefixes(opts, '').includes('/api/listings')) {
+        await evictListingOptionsCache();
+    }
 
     const baseUrl = (process.env.FRONTEND_URL || 'https://motolia.pl').replace(/\/$/, '');
     const urlsToPurge: string[] = [];
@@ -81,8 +108,9 @@ export async function invalidateOfferCache(
     }
 
     const uniqueUrls = [...new Set(urlsToPurge)];
+    const apiPrefixes = getApiPurgePrefixes(opts, baseUrl.replace(/^https?:\/\//, ''));
 
-    if (uniqueUrls.length === 0 && !opts.purgeAll && !opts.purgeEverything) {
+    if (uniqueUrls.length === 0 && apiPrefixes.length === 0 && !opts.purgeAll && !opts.purgeEverything) {
         return { success: true, purgedUrls: [] };
     }
 
@@ -132,6 +160,27 @@ export async function invalidateOfferCache(
                     fastify.log.warn({ err: data.errors, chunk }, 'Cloudflare cache purge batch failed');
                 } else {
                     console.warn('Cloudflare cache purge batch failed', data.errors);
+                }
+            }
+        }
+
+        // Purge po prefiksie dla /api/listings* i /api/rental* (dowolne query stringi) — jedno żądanie
+        if (apiPrefixes.length > 0) {
+            const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prefixes: apiPrefixes }),
+            });
+            const data: any = await res.json();
+            if (!res.ok || !data.success) {
+                allSuccess = false;
+                if (fastify) {
+                    fastify.log.warn({ err: data.errors, prefixes: apiPrefixes }, 'Cloudflare cache prefix purge failed');
+                } else {
+                    console.warn('Cloudflare cache prefix purge failed', data.errors);
                 }
             }
         }
