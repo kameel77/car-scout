@@ -156,6 +156,23 @@ export async function evictApiCacheKeys(patternsOrUrls: string[]): Promise<void>
     }
 }
 
+// /api/listings/options trzyma cache pod surowym kluczem `api:listings:options[:condition]`
+// (poza namespace api:v1), więc evictApiCacheKeys go nie widzi. Bez tego purge Cloudflare
+// po prefiksie /api/listings dociągnąłby z origin nieaktualne liczniki filtrów na s-maxage.
+export async function evictListingOptionsCache(): Promise<void> {
+    if (!redisClient) return;
+    try {
+        let cursor = '0';
+        do {
+            const [nextCursor, keys] = await redisClient.scan(cursor, 'MATCH', 'api:listings:options*', 'COUNT', 200);
+            cursor = nextCursor;
+            if (keys.length > 0) await redisClient.del(...keys);
+        } while (cursor !== '0');
+    } catch (err: any) {
+        console.warn('[ApiCache] Error evicting listing options cache:', err?.message);
+    }
+}
+
 export async function clearApiCache(): Promise<void> {
     if (!redisClient) return;
     try {

@@ -129,7 +129,8 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const cached = await fastify.redis.get(cacheKey);
         if (cached) {
             reply
-                .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                // s-maxage=3600 jest bezpieczne, bo cache-invalidation.service.ts purguje /api/listings* i /api/rental* po prefiksie.
+                .header('Cache-Control', 'public, max-age=0, s-maxage=3600')
                 .header('Vary', 'Origin, Accept-Encoding');
             return JSON.parse(cached);
         }
@@ -174,7 +175,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const result = { makes, models, bodyTypes, cities };
         await fastify.redis.set(cacheKey, JSON.stringify(result), 'EX', 600);
         reply
-            .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+            .header('Cache-Control', 'public, max-age=0, s-maxage=3600')
             .header('Vary', 'Origin, Accept-Encoding');
         return result;
     });
@@ -727,7 +728,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
         const data = await getOrSetJson(cacheKey, 300, () => runQuery(false, {}));
 
         return reply
-            .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+            .header('Cache-Control', 'public, max-age=0, s-maxage=3600')
             .header('Vary', 'Origin, Accept-Encoding')
             .send(data);
     });
@@ -910,7 +911,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
         if (cached && cached.status === 200) {
             return reply
                 .code(200)
-                .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                .header('Cache-Control', 'public, max-age=0, s-maxage=3600')
                 .header('Vary', 'Origin, Accept-Encoding')
                 .send(cached.data);
         }
@@ -920,7 +921,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
             await setJsonInCache(cacheKey, fresh, 300);
             return reply
                 .code(200)
-                .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                .header('Cache-Control', 'public, max-age=0, s-maxage=3600')
                 .header('Vary', 'Origin, Accept-Encoding')
                 .send(fresh.data);
         }

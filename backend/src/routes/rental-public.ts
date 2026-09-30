@@ -464,7 +464,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         );
 
         return reply
-            .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+            // s-maxage=3600 jest bezpieczne, bo cache-invalidation.service.ts purguje /api/listings* i /api/rental* po prefiksie.
+            .header('Cache-Control', 'public, max-age=0, s-maxage=3600')
             .header('Vary', 'Origin, Accept-Encoding')
             .send(data);
     });
@@ -569,7 +570,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         if (cached) {
             return reply
                 .code(200)
-                .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+                .header('Cache-Control', 'public, max-age=0, s-maxage=3600')
                 .header('Vary', 'Origin, Accept-Encoding')
                 .send(cached);
         }
@@ -586,7 +587,7 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         await setJsonInCache(cacheKey, fresh, 300);
         return reply
             .code(200)
-            .header('Cache-Control', 'public, max-age=0, s-maxage=300')
+            .header('Cache-Control', 'public, max-age=0, s-maxage=3600')
             .header('Vary', 'Origin, Accept-Encoding')
             .send(fresh);
     });
