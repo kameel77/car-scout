@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { readSsrJson } from '@/lib/ssrData';
 
 let apiBaseUrl = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '');
 apiBaseUrl = apiBaseUrl.replace(/\/api\/?$/, '');
 
-export type FinancingContentType = 'leasing' | 'kredyt' | 'wynajem';
+export type FinancingContentType = 'leasing' | 'leasing-konsumencki' | 'kredyt' | 'wynajem';
 
 export interface FinancingArticle {
   h1: string;
@@ -16,6 +17,10 @@ export interface FinancingArticle {
  * accordion, markdown, and CMS FAQ dependencies.
  */
 export function useFinancingArticle(type: FinancingContentType | null) {
+  // SSR (render.ts) embeds the article of the requested pillar path; use it only when it is the same
+  // type, so SPA navigation between pillar pages still fetches the other article.
+  const ssr = readSsrJson<FinancingArticle & { type?: string }>('financing-article');
+  const initialData = ssr && ssr.type === type ? { h1: ssr.h1, html: ssr.html } : undefined;
   return useQuery<FinancingArticle | null>({
     queryKey: ['financing-content', type],
     queryFn: async () => {
@@ -25,6 +30,7 @@ export function useFinancingArticle(type: FinancingContentType | null) {
       return res.json();
     },
     enabled: type !== null,
+    initialData,
     staleTime: 60 * 60 * 1000,
   });
 }

@@ -18,7 +18,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
     // Treść filarowa stron finansowania dla frontendu (sekcja pod listingiem), per brand
     fastify.get('/api/content/financing/:type', async (request, reply) => {
         const { type } = request.params as { type: string };
-        const path = { leasing: '/leasing', kredyt: '/kredyt', wynajem: '/wynajem-dlugoterminowy' }[type];
+        const path = ({ leasing: '/leasing', 'leasing-konsumencki': '/leasing-konsumencki', kredyt: '/kredyt', wynajem: '/wynajem-dlugoterminowy' } as Record<string, string>)[type];
         const article = path ? getFinancingArticle(resolveBrandCtx().brand, path) : undefined;
         if (!article) {
             return reply.status(404).send({ error: 'Unknown financing content type' });
@@ -94,7 +94,7 @@ export async function seoRoutes(fastify: FastifyInstance) {
         // 1. Static Pages — bez lastmod (brak realnej daty modyfikacji jest lepszy niż fałszywy sygnał 'now')
         const staticPages = [
             '/', '/samochody', '/nowe', '/uzywane', '/wynajem-dlugoterminowy',
-            '/leasing', '/kredyt', '/kalkulator-rat', '/dla-ciebie', '/dla-firm', '/foton', '/faq', '/kontakt',
+            '/leasing', '/leasing-konsumencki', '/kredyt', '/kalkulator-rat', '/dla-ciebie', '/dla-firm', '/foton', '/faq', '/kontakt',
             '/foton/tunland-g7', '/foton/tunland-v9', '/foton/etoano-pro', '/foton/cavan',
             '/foton/emiler', '/foton/eaumark', '/foton/aumark-s'
         ];

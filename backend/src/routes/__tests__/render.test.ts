@@ -262,6 +262,28 @@ describe('GET /api/render', () => {
         expect(res.body).not.toContain('<link rel="modulepreload"');
     });
 
+    it('preloads the pillar route chunk entry on the three pillar paths', async () => {
+        const MANIFEST = {
+            'src/pages/FinancingPillarPage.tsx': { file: 'assets/FinancingPillarPage-pillar.js', imports: ['_shared-pillar.js'] },
+            '_shared-pillar.js': { file: 'assets/shared-pillar.js' },
+            'index.html': { file: 'assets/index-main.js', isEntry: true },
+        };
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: unknown) =>
+                String(url).includes('manifest.json')
+                    ? new Response(JSON.stringify(MANIFEST), { status: 200 })
+                    : new Response(TEMPLATE, { status: 200 })
+            )
+        );
+        for (const path of ['/leasing', '/leasing-konsumencki', '/kredyt']) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
+            expect(res.statusCode).toBe(200);
+            expect(res.body, path).toContain('<link rel="preload" as="script" href="/assets/FinancingPillarPage-pillar.js" crossorigin />');
+            expect(res.body).not.toContain('shared-pillar.js');
+        }
+    });
+
     it('injects app-settings JSON block and window.__CATALOG_PREFETCH__ correctly', async () => {
         const resHome = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(resHome.statusCode).toBe(200);
@@ -416,9 +438,43 @@ describe('GET /api/render', () => {
         expect(home.body).not.toContain('rental-prefetch-params');
     });
 
+    it('pillar pages embed the financing article as a JSON block identical to the API payload', async () => {
+        for (const [path, type] of [['/leasing', 'leasing'], ['/leasing-konsumencki', 'leasing-konsumencki'], ['/kredyt', 'kredyt']]) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
+            expect(res.statusCode).toBe(200);
+            const m = res.body.match(/<script type="application\/json" id="financing-article">(.*?)<\/script>/s);
+            expect(m, path).not.toBeNull();
+            const embedded = JSON.parse(m![1]);
+            const api = await app.inject({ method: 'GET', url: `/api/content/financing/${type}` });
+            expect(embedded).toEqual({ type, ...api.json() });
+        }
+        const other = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
+        expect(other.body).not.toContain('id="financing-article"');
+    });
+
+    it('pillar pages render a visible SSR shell with H1 and lead outside the hidden prerender block', async () => {
+        for (const [path, type] of [['/leasing', 'leasing'], ['/leasing-konsumencki', 'leasing-konsumencki'], ['/kredyt', 'kredyt']]) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
+            const article = (await app.inject({ method: 'GET', url: `/api/content/financing/${type}` })).json();
+            const shell = res.body.match(/<!--pillar-shell-->([\s\S]*?)<!--\/pillar-shell-->/);
+            expect(shell, path).not.toBeNull();
+            expect(shell![1]).toContain(`leading-tight">${article.h1.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}</h1>`);
+            expect(shell![1]).toContain('leading-relaxed">');
+            expect(shell![1]).not.toContain('display:none');
+            expect(shell![1]).toContain('rounded-2xl border bg-muted/40');
+            // shell żyje poza ukrytym blokiem seo-prerender i zastępuje statyczny home-shell
+            expect(res.body.indexOf('<!--pillar-shell-->')).toBeGreaterThan(res.body.indexOf('</div>', res.body.indexOf('seo-prerender')));
+            expect(res.body).not.toContain('Szeroki wybór aut');
+            // dokładnie jedno <h1> w dokumencie — ukryty prerender go nie dubluje
+            expect(res.body.match(/<h1[\s>]/g), path).toHaveLength(1);
+        }
+        const other = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
+        expect(other.body).not.toContain('<!--pillar-shell-->');
+    });
+
     it('CSP guard: rendered HTML has no inline executable script other than the whitelisted prefetch constants', async () => {
         const allowedBodies = new Set([CATALOG_PREFETCH_JS, RENTAL_PREFETCH_JS]);
-        for (const path of ['/', '/samochody', '/wynajem-dlugoterminowy']) {
+        for (const path of ['/', '/samochody', '/wynajem-dlugoterminowy', '/leasing', '/leasing-konsumencki', '/kredyt']) {
             const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
             expect(res.statusCode).toBe(200);
             const scripts = [...res.body.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)];

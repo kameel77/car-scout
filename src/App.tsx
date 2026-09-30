@@ -28,6 +28,7 @@ const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 const Sonner = lazy(() => import("@/components/ui/sonner").then((m) => ({ default: m.Toaster })));
 const Toaster = lazy(() => import("@/components/ui/toaster").then((m) => ({ default: m.Toaster })));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
+const FinancingPillarPage = lazy(() => import("./pages/FinancingPillarPage"));
 const ListingDetailPage = lazy(() => import("./pages/ListingDetailPage"));
 const RentalSearchPage = lazy(() => import("./pages/RentalSearchPage"));
 const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
@@ -114,8 +115,9 @@ const App = () => (
                           <Route path="/kontakt" element={<ContactPage />} />
                           <Route path="/faq" element={<PublicFaqPage />} />
                           <Route path="/kalkulator-rat" element={<CalculatorPage />} />
-                          <Route path="/leasing" element={<SearchPage key="leasing" />} />
-                          <Route path="/kredyt" element={<SearchPage key="kredyt" />} />
+                          <Route path="/leasing" element={<FinancingPillarPage key="leasing" type="leasing" />} />
+                          <Route path="/kredyt" element={<FinancingPillarPage key="kredyt" type="kredyt" />} />
+                          <Route path="/leasing-konsumencki" element={<FinancingPillarPage key="leasing-konsumencki" type="leasing-konsumencki" />} />
                           <Route path="/leasing/:slug" element={<ListingDetailPage />} />
                           <Route path="/leasing/:slug/lead" element={<LeadFormPage />} />
                           <Route path="/leasing/:slug/negotiate" element={<LeadFormPage />} />

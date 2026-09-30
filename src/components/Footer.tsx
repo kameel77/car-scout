@@ -126,7 +126,8 @@ export function Footer() {
           </div>
           <div className="space-y-2">
             {[
-              { to: '/leasing', label: 'Leasing samochodu' },
+              { to: '/leasing', label: 'Leasing dla firm' },
+              { to: '/leasing-konsumencki', label: 'Leasing konsumencki' },
               { to: '/kredyt', label: 'Kredyt samochodowy' },
               { to: '/wynajem-dlugoterminowy', label: 'Wynajem długoterminowy' },
               { to: '/foton', label: 'Pojazdy użytkowe FOTON' },

@@ -66,7 +66,7 @@ describe('resolveBrandCtx', () => {
 
 describe('getFinancingArticle', () => {
     it('serves pillar articles for motolia only', () => {
-        for (const path of ['/leasing', '/kredyt', '/wynajem-dlugoterminowy']) {
+        for (const path of ['/leasing', '/leasing-konsumencki', '/kredyt', '/wynajem-dlugoterminowy']) {
             expect(getFinancingArticle('motolia', path)?.h1).toBeTruthy();
             expect(getFinancingArticle('carsalon', path)).toBeUndefined();
         }
@@ -657,7 +657,8 @@ describe('buildStaticMeta', () => {
         const article = { h1: 'Leasing samochodu osobowego — operacyjny i konsumencki', html: '<p>Treść filaru z <a href="/kredyt">linkiem</a>.</p>' };
         const faq = [{ questionPl: 'Czy leasing wymaga BIK?', answerPl: 'Tak, **weryfikacja** obejmuje BIK.' }];
         const m = buildStaticMeta('/leasing', ctx, [], faq, '/oferta', article)!;
-        expect(m.bodyHtml).toContain('<h1>Leasing samochodu osobowego — operacyjny i konsumencki</h1>');
+        // <h1> jest w widocznym shellu SSR (pillar-shell.ts), nie w ukrytym prerenderze
+        expect(m.bodyHtml).not.toContain('<h1>');
         expect(m.bodyHtml).toContain('<article>');
         expect(m.bodyHtml).toContain('href="/kredyt"');
         expect(m.bodyHtml).toContain('<h3>Czy leasing wymaga BIK?</h3>');
@@ -675,14 +676,12 @@ describe('buildStaticMeta', () => {
         ];
         const m = buildStaticMeta('/leasing', ctx, listings, [], '/oferta', article)!;
 
-        const h1Idx = m.bodyHtml!.indexOf('<h1>');
         const introIdx = m.bodyHtml!.indexOf('<p>Leasing to forma finansowania');
         const offersIdx = m.bodyHtml!.indexOf('<h2>Oferty</h2>');
         const articleIdx = m.bodyHtml!.indexOf('<article>');
 
-        // Definicja pojawia się dokładnie raz — zaraz po <h1>, przed sekcją "Oferty"
-        expect(h1Idx).toBeGreaterThanOrEqual(0);
-        expect(introIdx).toBeGreaterThan(h1Idx);
+        // Definicja pojawia się dokładnie raz — na początku (<h1> jest w shellu SSR), przed sekcją "Oferty"
+        expect(introIdx).toBe(0);
         expect(introIdx).toBeLessThan(offersIdx);
         expect(offersIdx).toBeLessThan(articleIdx);
         expect(m.bodyHtml!.match(/Leasing to forma finansowania/g)).toHaveLength(1);
