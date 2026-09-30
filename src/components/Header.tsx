@@ -61,6 +61,7 @@ function LanguageSwitcher({ languages, current, currentCode, onLanguageChange }:
       size="sm"
       className="gap-2 text-muted-foreground hover:bg-slate-100"
       aria-haspopup="menu"
+      aria-expanded={false}
       onPointerEnter={() => { void loadLanguageMenu(); }}
       onFocus={() => { void loadLanguageMenu(); }}
       onClick={() => setActivated(true)}

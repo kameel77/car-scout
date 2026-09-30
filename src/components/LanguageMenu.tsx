@@ -1,3 +1,4 @@
+import React from 'react';
 import { Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +25,17 @@ interface LanguageMenuProps {
 // Ładowany leniwie z Header (pierwsza interakcja z przełącznikiem języka), żeby Radix
 // DropdownMenu + floating-ui nie trafiały do głównego chunka.
 export default function LanguageMenu({ languages, current, currentCode, onLanguageChange }: LanguageMenuProps) {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  // Menu otwiera się od razu po kliknięciu (lazy) — fokus na pierwszą pozycję.
+  // Radix przekazuje onOpenAutoFocus do FocusScope, ale typy DropdownMenuContent go nie eksponują.
+  const focusFirstItemProps = {
+    onOpenAutoFocus: (e: Event) => {
+      e.preventDefault();
+      contentRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    },
+  } as React.ComponentPropsWithoutRef<typeof DropdownMenuContent>;
+
   return (
     <DropdownMenu defaultOpen>
       <DropdownMenuTrigger asChild>
@@ -33,7 +45,11 @@ export default function LanguageMenu({ languages, current, currentCode, onLangua
           <span className="hidden xl:inline">{current.label}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent
+        ref={contentRef}
+        align="end"
+        {...focusFirstItemProps}
+      >
         {languages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
