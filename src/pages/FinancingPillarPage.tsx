@@ -12,7 +12,7 @@ import { FinancingContentSection } from '@/components/FinancingContentSection';
 import type { PillarCalculatorState } from '@/components/PillarFinancingCalculator';
 import { PillarSpecialOffers } from '@/components/pillar/PillarSpecialOffers';
 import { PillarPriceBreakdown, PillarSteps } from '@/components/pillar/PillarHowItWorks';
-import { PILLAR_BENEFITS, PILLAR_CALC, PILLAR_META, type PillarType } from '@/components/pillar/pillarContent';
+import { PILLAR_BENEFITS, PILLAR_CALC, PILLAR_CALC_MIN_H, PILLAR_META, type PillarType } from '@/components/pillar/pillarContent';
 
 const PillarFinancingCalculator = React.lazy(() =>
   import('@/components/PillarFinancingCalculator').then((m) => ({ default: m.PillarFinancingCalculator })),
@@ -87,13 +87,16 @@ export default function FinancingPillarPage({ type }: { type: PillarType }) {
           <aside className="lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
               <React.Suspense
-                fallback={<div className="h-[560px] rounded-2xl border bg-muted/40" role="status" aria-busy="true" />}
+                fallback={
+                  <div className={`${PILLAR_CALC_MIN_H[type]} rounded-2xl border bg-muted/40`} role="status" aria-busy="true" />
+                }
               >
                 <PillarFinancingCalculator
                   type={PILLAR_CALC[type].financingType}
                   priceIsNet={PILLAR_CALC[type].priceIsNet}
                   sourceSlug={type}
                   variant="card"
+                  minHeightClassName={PILLAR_CALC_MIN_H[type]}
                   onStateChange={setCalcState}
                 />
               </React.Suspense>

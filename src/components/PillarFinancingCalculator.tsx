@@ -5,6 +5,7 @@ import { Calculator } from 'lucide-react';
 import { FinancingCalculator, type CalculatorFinancingConfig } from '@/components/FinancingCalculator';
 import { CallbackForm } from '@/components/CallbackForm';
 import { formatPrice } from '@/utils/formatters';
+import { cn } from '@/lib/utils';
 
 const MIN_PRICE = 30000;
 const MAX_PRICE = 500000;
@@ -32,10 +33,12 @@ interface PillarFinancingCalculatorProps {
   sourceSlug?: string;
   /** Wariant karty dla strony poradnikowej: bez H2, z przyciskiem kontaktu pod ratą. */
   variant?: 'section' | 'card';
+  /** Klasy min-height karty (wariant card) — rezerwacja wysokości na czas ładowania danych kalkulatora. */
+  minHeightClassName?: string;
   onStateChange?: (state: PillarCalculatorState) => void;
 }
 
-export function PillarFinancingCalculator({ type, variant = 'section', onStateChange, priceIsNet = false, sourceSlug }: PillarFinancingCalculatorProps) {
+export function PillarFinancingCalculator({ type, variant = 'section', onStateChange, priceIsNet = false, sourceSlug, minHeightClassName }: PillarFinancingCalculatorProps) {
   const slug = sourceSlug ?? type;
   const [price, setPrice] = React.useState(DEFAULT_PRICE);
   const [config, setConfig] = React.useState<CalculatorFinancingConfig | null>(null);
@@ -80,7 +83,7 @@ export function PillarFinancingCalculator({ type, variant = 'section', onStateCh
       ? `Rata ${Math.round(config.installment)} zł/mies., ${config.period} mies., wpłata ${Math.round(config.downPayment)} zł${config.finalPayment ? `, wykup ${Math.round(config.finalPayment)} zł` : ''}`
       : '';
     return (
-      <section id="kalkulator" aria-label="Kalkulator finansowania" className="rounded-2xl border bg-card p-4 shadow-sm">
+      <section id="kalkulator" aria-label="Kalkulator finansowania" className={cn('rounded-2xl border bg-card p-4 shadow-sm', minHeightClassName)}>
         <p className="mb-3 flex items-center gap-2 font-heading text-base font-semibold text-foreground">
           <Calculator className="h-5 w-5 text-primary" aria-hidden="true" />
           Policz ratę

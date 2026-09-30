@@ -51,6 +51,20 @@ export const PILLAR_BENEFITS: Record<PillarType, string[]> = {
   ],
 };
 
+/**
+ * Rezerwacja wysokości karty kalkulatora (Suspense fallback, SSR shell i załadowana karta), żeby
+ * ładowanie lazy chunka i danych /api/financing/calculator nie przesuwało treści (CLS). Wartości =
+ * zmierzona wysokość załadowanej karty (section#kalkulator, dev.motolia.pl): mobile 375-414 px,
+ * md 768 px, lg 1024 px (kolumna 400 px), xl >=1280 px (kolumna 440 px). Leasing ma dodatkowy wiersz
+ * wykupu (+71 px względem kredytu). Backend ma kopię w seo-meta.ts (PILLAR_CALC_MIN_H) — test pilnuje równości.
+ * Pełne nazwy klas są potrzebne Tailwindowi do ich wygenerowania.
+ */
+export const PILLAR_CALC_MIN_H: Record<PillarType, string> = {
+  leasing: 'min-h-[805px] md:min-h-[697px] lg:min-h-[732px] xl:min-h-[713px]',
+  'leasing-konsumencki': 'min-h-[805px] md:min-h-[697px] lg:min-h-[732px] xl:min-h-[713px]',
+  kredyt: 'min-h-[730px] md:min-h-[625px] lg:min-h-[661px] xl:min-h-[642px]',
+};
+
 export const PILLAR_HEADINGS: Record<PillarType, { breakdown: string; steps: string }> = {
   leasing: { breakdown: 'Jak rozkłada się cena auta w leasingu', steps: 'Jak działa leasing samochodu dla firmy' },
   'leasing-konsumencki': {
