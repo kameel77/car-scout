@@ -1524,8 +1524,11 @@ ${listings.length > 0 ? `
             articleBodyHtml = rest;
         }
     }
+    // Filary z artykułem mają widoczny shell SSR z <h1> (pillar-shell.ts, render.ts) — tu bez <h1>,
+    // żeby w dokumencie było dokładnie jedno <h1> (jak na stronie głównej).
+    const h1InShell = browseAllLink && !!article;
     const bodyHtml = `
-<h1>${h1}</h1>
+${h1InShell ? '' : `<h1>${h1}</h1>`}
 ${introParagraphHtml}
 ${listings.length > 0 ? `
 <section>

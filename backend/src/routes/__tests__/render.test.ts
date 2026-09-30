@@ -465,6 +465,8 @@ describe('GET /api/render', () => {
             // shell żyje poza ukrytym blokiem seo-prerender i zastępuje statyczny home-shell
             expect(res.body.indexOf('<!--pillar-shell-->')).toBeGreaterThan(res.body.indexOf('</div>', res.body.indexOf('seo-prerender')));
             expect(res.body).not.toContain('Szeroki wybór aut');
+            // dokładnie jedno <h1> w dokumencie — ukryty prerender go nie dubluje
+            expect(res.body.match(/<h1[\s>]/g), path).toHaveLength(1);
         }
         const other = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
         expect(other.body).not.toContain('<!--pillar-shell-->');
