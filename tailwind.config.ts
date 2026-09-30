@@ -2,7 +2,15 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  // Publiczny CSS nie zawiera klas użytych wyłącznie w panelu admina ani w testach —
+  // admin ma własny pełny arkusz (tailwind.admin.config.ts + src/styles/admin.css).
+  content: [
+    "./src/**/*.{ts,tsx}",
+    "!./src/pages/admin/**",
+    "!./src/components/admin/**",
+    "!./src/**/*.test.{ts,tsx}",
+    "!./src/**/__tests__/**",
+  ],
   prefix: "",
   theme: {
     container: {

@@ -1,3 +1,4 @@
+import '@/styles/admin.css';
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
