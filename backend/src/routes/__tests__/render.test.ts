@@ -262,6 +262,28 @@ describe('GET /api/render', () => {
         expect(res.body).not.toContain('<link rel="modulepreload"');
     });
 
+    it('preloads the pillar route chunk entry on the three pillar paths', async () => {
+        const MANIFEST = {
+            'src/pages/FinancingPillarPage.tsx': { file: 'assets/FinancingPillarPage-pillar.js', imports: ['_shared-pillar.js'] },
+            '_shared-pillar.js': { file: 'assets/shared-pillar.js' },
+            'index.html': { file: 'assets/index-main.js', isEntry: true },
+        };
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: unknown) =>
+                String(url).includes('manifest.json')
+                    ? new Response(JSON.stringify(MANIFEST), { status: 200 })
+                    : new Response(TEMPLATE, { status: 200 })
+            )
+        );
+        for (const path of ['/leasing', '/leasing-konsumencki', '/kredyt']) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
+            expect(res.statusCode).toBe(200);
+            expect(res.body, path).toContain('<link rel="preload" as="script" href="/assets/FinancingPillarPage-pillar.js" crossorigin />');
+            expect(res.body).not.toContain('shared-pillar.js');
+        }
+    });
+
     it('injects app-settings JSON block and window.__CATALOG_PREFETCH__ correctly', async () => {
         const resHome = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(resHome.statusCode).toBe(200);

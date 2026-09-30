@@ -506,7 +506,7 @@ function routeChunkLinks(path: string, manifest: ViteManifest): string[] {
     return links;
 }
 
-// The catalog routes are lazy routes, but their first card can become mobile LCP.
+// The catalog routes are lazy routes, but their first card can become mobile LCP (pillar pages: lead paragraph).
 // Preload only the route entry instead of enabling the recursive
 // modulepreload fan-out, which competed with the HTML and LCP image.
 function routeEntryPreload(path: string, manifest: ViteManifest): string[] {
@@ -515,7 +515,8 @@ function routeEntryPreload(path: string, manifest: ViteManifest): string[] {
     const allowedModules = [
         'src/pages/RentalSearchPage.tsx',
         'src/pages/ConditionPage.tsx',
-        'src/pages/SearchPage.tsx'
+        'src/pages/SearchPage.tsx',
+        'src/pages/FinancingPillarPage.tsx'
     ];
     if (!allowedModules.includes(route.module)) return [];
     const entry = manifest[route.module];
@@ -1304,7 +1305,7 @@ async function renderPage(
 
     // Keep the catalog routes' single lazy entry on the critical path without
     // preloading all of their transitive dependencies.
-    if (['/wynajem-dlugoterminowy', '/nowe', '/uzywane', '/samochody'].includes(path) && page === 1) {
+    if (['/wynajem-dlugoterminowy', '/nowe', '/uzywane', '/samochody', '/leasing', '/leasing-konsumencki', '/kredyt'].includes(path) && page === 1) {
         const manifest = await getViteManifest();
         if (manifest) {
             const preload = routeEntryPreload(path, manifest);
