@@ -22,6 +22,7 @@ export function DeferUntilVisible({
 
   useEffect(() => {
     if (visible || !ref.current) return;
+    const el = ref.current;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
@@ -31,8 +32,15 @@ export function DeferUntilVisible({
       },
       { rootMargin },
     );
-    observer.observe(ref.current);
-    return () => observer.disconnect();
+    // Obserwacja dopiero po `load`: przy pierwszym renderze sekcje powyżej nie mają jeszcze
+    // docelowej wysokości, więc placeholder „mieści się” w rootMargin i montowałby się od razu.
+    const start = () => observer.observe(el);
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+    return () => {
+      window.removeEventListener('load', start);
+      observer.disconnect();
+    };
   }, [visible, rootMargin]);
 
   if (visible) return <>{children}</>;

@@ -369,7 +369,7 @@ export default function MotoliaHomePage() {
       </section>
 
       {/* ── WYBRANE OFERTY (WIDGETY) ─────────────────────────────────────── */}
-      <DeferUntilVisible placeholderClassName="min-h-[24rem]">
+      <DeferUntilVisible placeholderClassName="min-h-[24rem]" rootMargin="200px 0px">
         <Suspense fallback={<div className="h-96" />}>
           <DynamicWidget 
             placement="HOME" 
