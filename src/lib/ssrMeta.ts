@@ -1,4 +1,6 @@
-// SSR→client meta handoff. Backend (render.ts) injects window.__SSR_META__ with the exact
+import { readSsrJson } from './ssrData';
+
+// SSR→client meta handoff. Backend (render.ts) injects <script type="application/json" id="ssr-meta"> with the exact
 // title/description/canonical/ogImage it rendered for the requested URL. react-helmet-async's
 // data-rh dedupe (patrz seo-meta.ts injectHead) replaces SSR head tags with whatever the client
 // computes on first render — for routes without their own page-level description (np. /dla-firm)
@@ -13,14 +15,8 @@ export interface SsrMeta {
     ogImage?: string;
 }
 
-declare global {
-    interface Window {
-        __SSR_META__?: SsrMeta;
-    }
-}
-
 // Ta sama normalizacja co backendowy cacheKey (renderAndCache w render.ts: `page > 1 ?
-// \`${path}?page=${page}\` : path`) i window.__SSR_META__.path — bo SSR HTML jest cache'owane
+// \`${path}?page=${page}\` : path`) i ssr-meta.path — bo SSR HTML jest cache'owane
 // per path+page NIEZALEŻNIE od reszty query stringa. Ignorujemy więc utm/gclid/filtry i
 // porównujemy tylko pathname + ewentualne ?page=N (ten sam clamp 1..10000 co backend), inaczej
 // SSR meta wygenerowane dla pierwszego odwiedzającego z np. ?utm_source=x nigdy by nie pasowało
@@ -32,13 +28,13 @@ function normalizedCurrentPath(): string {
     return page > 1 ? `${window.location.pathname}?page=${page}` : window.location.pathname;
 }
 
-// Nie usuwamy window.__SSR_META__ po pierwszym użyciu — porównujemy path przy każdym wywołaniu,
+// Nie usuwamy ssr-meta po pierwszym użyciu — porównujemy path przy każdym wywołaniu,
 // więc podwójny render Reacta (StrictMode) jest bezpieczny. Gdy user nawiguje w SPA na inną
 // trasę, znormalizowana ścieżka przestaje pasować i funkcja zwraca null — SSR meta dotyczy
 // wyłącznie URL-a, z którym przyszedł initial load.
 export function getSsrMeta(): SsrMeta | null {
     if (typeof window === 'undefined') return null;
-    const meta = window.__SSR_META__;
+    const meta = readSsrJson<SsrMeta>('ssr-meta');
     if (!meta) return null;
     return meta.path === normalizedCurrentPath() ? meta : null;
 }

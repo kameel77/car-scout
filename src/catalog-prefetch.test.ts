@@ -8,7 +8,10 @@ function execute(path: string, search = '', configuredPath = path) {
   const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ listings: [] }) });
   const window: Record<string, any> = {};
   const script = buildCatalogPrefetchScript(configuredPath, 30, 'price_asc', 'PLN');
-  runInNewContext(script.replace(/^<script>|<\/script>\n$/g, ''), { window, location: { pathname: path, search }, fetch });
+  const params = script.match(/<script type="application\/json" id="catalog-prefetch-params">(.*?)<\/script>/)![1];
+  const body = script.match(/\n<script>(.*)<\/script>\n$/)![1];
+  const document = { getElementById: (id: string) => (id === 'catalog-prefetch-params' ? { textContent: params } : null) };
+  runInNewContext(body, { window, document, location: { pathname: path, search }, fetch });
   return { window, fetch };
 }
 
