@@ -1,24 +1,7 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { heroBannersApi } from '@/services/api';
-import { OptimizedImage } from '@/components/OptimizedImage';
-import {
-    Carousel, CarouselContent, CarouselItem, type CarouselApi,
-} from '@/components/ui/carousel';
-
-const YELLOW = 'hsl(var(--mt-yellow-500))';
-const YELLOW_HOVER = 'hsl(var(--mt-yellow-600))';
-// Brandbook rozdz. 01: żółć jest kolorem powierzchni, nie liter.
-// Litery i ikony na jasnym tle idą w granacie (12,75:1 zamiast 1,66:1).
-const ACCENT_INK = 'hsl(var(--mt-navy-700))';
-const BLACK = 'hsl(var(--mt-navy-900))';
-
-const ALIGN_CLASS: Record<string, string> = {
-    left: 'justify-start',
-    center: 'justify-center',
-    right: 'justify-end',
-};
+import { HeroBannerSlide, YELLOW } from '@/components/HeroBannerSlide';
 
 export function useHeroBanners() {
     const initialHeroBanners = typeof window !== 'undefined' && (window as any).__HERO_BANNERS__
@@ -32,103 +15,60 @@ export function useHeroBanners() {
     });
 }
 
+const loadCarousel = () => import('./HeroBannerEmbla');
+
+// Pierwszy render to statyczny pierwszy baner (ten sam markup co slajd 0 w karuzeli —
+// to element LCP strony głównej). Karuzela (embla) ładuje się po idle, tylko gdy banerów > 1.
 export function HeroBannerCarousel() {
     const { data } = useHeroBanners();
     const banners = data?.banners ?? [];
-    const [api, setApi] = React.useState<CarouselApi>();
-    const [selected, setSelected] = React.useState(0);
+    const hasMany = banners.length > 1;
+    const [Embla, setEmbla] = React.useState<React.ComponentType<{ banners: typeof banners }> | null>(null);
+
+    const startLoading = React.useCallback(() => {
+        loadCarousel().then((m) => setEmbla(() => m.default)).catch(() => { /* zostaje statyczny baner */ });
+    }, []);
 
     React.useEffect(() => {
-        if (!api) return;
-        const onSelect = () => setSelected(api.selectedScrollSnap());
-        api.on('select', onSelect);
-        onSelect();
-        return () => { api.off('select', onSelect); };
-    }, [api]);
-
-    React.useEffect(() => {
-        if (!api || banners.length <= 1) return;
-        const id = setInterval(() => api.scrollNext(), 6000);
-        return () => clearInterval(id);
-    }, [api, banners.length]);
+        if (!hasMany) return;
+        if (typeof window.requestIdleCallback === 'function') {
+            const id = window.requestIdleCallback(startLoading);
+            return () => window.cancelIdleCallback(id);
+        }
+        const id = window.setTimeout(startLoading, 1500);
+        return () => window.clearTimeout(id);
+    }, [hasMany, startLoading]);
 
     if (banners.length === 0) return null;
 
+    if (Embla && hasMany) return <Embla banners={banners} />;
+
     return (
         <div className="relative">
-            <Carousel setApi={setApi} opts={{ loop: true }} className="overflow-hidden rounded-3xl">
-                <CarouselContent>
-                    {banners.map((b, idx) => (
-                        <CarouselItem key={b.id} className="basis-full">
-                            <div className="relative w-full h-[360px] md:h-[460px] lg:h-[520px]">
-                                {(b.imageUrlDesktop || b.imageUrlMobile) && (
-                                    <OptimizedImage
-                                        src={b.imageUrlDesktop ?? b.imageUrlMobile ?? undefined}
-                                        mobileSrc={b.imageUrlDesktop ? b.imageUrlMobile : null}
-                                        alt={b.altText}
-                                        width="1600"
-                                        height="700"
-                                        sizes="100vw"
-                                        priority={idx === 0}
-                                        allowPlaceholder={false}
-                                        className="absolute inset-0 w-full h-full object-cover"
-                                    />
-                                )}
+            <div className="relative overflow-hidden rounded-3xl" role="region" aria-roledescription="carousel">
+                <div className="overflow-hidden">
+                    <div className="flex -ml-4">
+                        <div role="group" aria-roledescription="slide" className="min-w-0 shrink-0 grow-0 pl-4 basis-full">
+                            <HeroBannerSlide banner={banners[0]} priority />
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                                {b.buttonLabel && b.buttonUrl && (
-                                    <>
-                                        {/* Desktop: button along a vertical track inset 24px from top/bottom;
-                                            translateY(-pct%) keeps it fully inside (0% = flush to top padding, 100% = bottom). */}
-                                        <div className="hidden md:block absolute inset-x-0" style={{ top: '24px', bottom: '24px' }}>
-                                            <div
-                                                className={`absolute inset-x-0 px-10 lg:px-16 flex ${ALIGN_CLASS[b.buttonAlign] ?? 'justify-start'}`}
-                                                style={{ top: `${b.buttonPositionYPct}%`, transform: `translateY(-${b.buttonPositionYPct}%)` }}
-                                            >
-                                                <Link
-                                                    to={b.buttonUrl}
-                                                    className="inline-flex items-center justify-center px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
-                                                    style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px hsl(var(--mt-yellow-500) / 0.38)` }}
-                                                    onMouseEnter={(e) => (e.currentTarget.style.background = YELLOW_HOVER)}
-                                                    onMouseLeave={(e) => (e.currentTarget.style.background = YELLOW)}
-                                                >
-                                                    {b.buttonLabel}
-                                                </Link>
-                                            </div>
-                                        </div>
-                                        {/* Mobile: button anchored near bottom */}
-                                        <div className="flex md:hidden absolute bottom-6 left-0 right-0 px-6 justify-center">
-                                            <Link
-                                                to={b.buttonUrl}
-                                                className="inline-flex items-center justify-center px-7 py-3.5 rounded-2xl font-bold text-base"
-                                                style={{ background: YELLOW, color: BLACK }}
-                                            >
-                                                {b.buttonLabel}
-                                            </Link>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-            </Carousel>
-
-            {banners.length > 1 && (
+            {hasMany && (
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex z-10">
-                    {/* Brandbook rozdz. 03: kropka pozostaje mała, ale pole dotyku ma 44 x 44 px.
-                        Powiększamy obszar klikalny przyciskiem, nie samą grafiką. */}
                     {banners.map((b, i) => (
                         <button
                             key={b.id}
                             type="button"
                             aria-label={`Slajd ${i + 1}`}
-                            aria-current={selected === i}
-                            onClick={() => api?.scrollTo(i)}
+                            aria-current={i === 0}
+                            onClick={startLoading}
                             className="flex min-h-touch min-w-touch items-center justify-center"
                         >
                             <span
                                 className="block h-2.5 rounded-full transition-all"
-                                style={{ width: selected === i ? 26 : 10, background: selected === i ? YELLOW : 'rgba(255,255,255,0.75)' }}
+                                style={{ width: i === 0 ? 26 : 10, background: i === 0 ? YELLOW : 'rgba(255,255,255,0.75)' }}
                             />
                         </button>
                     ))}
