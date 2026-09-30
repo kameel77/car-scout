@@ -291,10 +291,14 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   /* ── Data: sale listings ── */
   // Ustawienie liczby kolumn determinuje 30/32 rekordy. Czekamy na settings, aby nie
   // wysyłać dwóch kolejnych requestów (najpierw fallback 32, potem właściwe 30).
-  const { data: saleData, isLoading: saleQueryLoading } = useListings(
-    filters,
-    sortBy,
-    page,
+  // Urgent filters/page/sortBy drive the filter UI; the list query follows a deferred copy.
+  const deferredFilters = React.useDeferredValue(filters);
+  const deferredPage = React.useDeferredValue(page);
+  const deferredSortBy = React.useDeferredValue(sortBy);
+  const { data: saleData, isLoading: saleQueryLoading, isPlaceholderData } = useListings(
+    deferredFilters,
+    deferredSortBy,
+    deferredPage,
     perPage,
     undefined,
     false,
@@ -303,6 +307,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
   // Wyłączone zapytanie ma w TanStack Query v5 isLoading=false. Traktujemy oczekiwanie
   // na settings jako loading, aby SSR skeleton nie mignął pustym stanem przed requestem.
   const saleLoading = !settings || saleQueryLoading;
+  const isListPending = isPlaceholderData || filters !== deferredFilters || page !== deferredPage || sortBy !== deferredSortBy;
   const { data: options } = useListingOptions();
   const saleListings = saleData?.listings || [];
   const saleTotalCount = saleData?.count ?? saleListings.length;
@@ -522,6 +527,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
               availableModels={availableModels}
             />
 
+            <div aria-busy={isListPending ? 'true' : undefined} className={isListPending ? 'opacity-60 transition-opacity' : undefined}>
             <ProgressiveListingGrid className={`mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
               {saleLoading
                 ? Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={i} />)
@@ -529,6 +535,7 @@ export default function ConditionPage({ condition }: ConditionPageProps) {
                     <ListingCard key={listing.listing_id} listing={listing} index={index} />
                   ))}
             </ProgressiveListingGrid>
+            </div>
             {/* Empty state */}
             {!saleLoading && saleListings.length === 0 && (
               <div className="col-span-full py-16 text-center">

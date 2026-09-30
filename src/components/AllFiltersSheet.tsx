@@ -48,6 +48,9 @@ export const AllFiltersSheet = React.forwardRef<AllFiltersSheetHandle, AllFilter
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [open, setOpen] = React.useState(() => searchParams.get('openFilters') === 'true');
+    // Paint the sheet frame first; mount the heavy FilterPanel in a non-urgent render.
+    // `|| !open` keeps the panel mounted while the sheet animates out on close.
+    const deferredOpen = React.useDeferredValue(open);
     // When the sheet opens because we just landed here from a Stan-switch redirect,
     // skip the entry animation to mask the brief unmount/mount flicker.
     const [skipSheetAnimation, setSkipSheetAnimation] = React.useState(
@@ -84,16 +87,24 @@ export const AllFiltersSheet = React.forwardRef<AllFiltersSheetHandle, AllFilter
             <SheetTitle>{t('filters.title')}</SheetTitle>
           </SheetHeader>
           <div className="px-6 pt-6 pb-6 h-[calc(100vh-5rem)] overflow-hidden">
-            <FilterPanel
-              filters={filters}
-              onFilterChange={onFilterChange}
-              onClear={onClear}
-              resultCount={resultCount}
-              availableMakes={availableMakes}
-              availableModels={availableModels}
-              facets={facets}
-              onApply={() => setOpen(false)}
-            />
+            {deferredOpen || !open ? (
+              <FilterPanel
+                filters={filters}
+                onFilterChange={onFilterChange}
+                onClear={onClear}
+                resultCount={resultCount}
+                availableMakes={availableMakes}
+                availableModels={availableModels}
+                facets={facets}
+                onApply={() => setOpen(false)}
+              />
+            ) : (
+              <div aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-10 skeleton-shimmer rounded-md mb-3" />
+                ))}
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>

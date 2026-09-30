@@ -333,7 +333,13 @@ export default function SearchPage() {
     }
   }, [searchParams]);
 
-  const { data, isLoading } = useListings(filters, sortBy, page, perPage);
+  // Urgent state (filters/page/sortBy) drives the filter UI; the list query follows a deferred
+  // copy so a filter click paints checkboxes/chips first and the heavy list render comes after.
+  const deferredFilters = React.useDeferredValue(filters);
+  const deferredPage = React.useDeferredValue(page);
+  const deferredSortBy = React.useDeferredValue(sortBy);
+  const { data, isLoading, isPlaceholderData } = useListings(deferredFilters, deferredSortBy, deferredPage, perPage);
+  const isListPending = isPlaceholderData || filters !== deferredFilters || page !== deferredPage || sortBy !== deferredSortBy;
   const { data: adsData } = usePartnerAds();
   const partnersAds = adsData?.ads || [];
   const listings = data?.listings || [];
@@ -759,6 +765,7 @@ export default function SearchPage() {
               );
 
               return (
+                <div aria-busy={isListPending ? 'true' : undefined} className={isListPending ? 'opacity-60 transition-opacity' : undefined}>
                 <ProgressiveListingGrid className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Number(settings?.searchGridColumns) === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4`}>
                   {saleCards}
                   {!isLoading && listings.length === 0 && (
@@ -785,6 +792,7 @@ export default function SearchPage() {
                     </div>
                   )}
                 </ProgressiveListingGrid>
+                </div>
               );
             })()}
 

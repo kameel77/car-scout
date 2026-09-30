@@ -44,13 +44,148 @@ const ALL_NAV_LINKS = [
   { key: 'kontakt', label: 'Kontakt', to: '/kontakt' },
 ];
 
+type NavItem = (typeof ALL_NAV_LINKS)[number];
+
+interface MobileMenuProps {
+  navItems: NavItem[];
+  headerLogoSrc?: string | null;
+  siteName: string;
+  part1: string;
+  part2: string;
+  hasPersonalOffer: boolean;
+  enabledLanguages: (typeof ALL_LANGUAGES)[number][];
+  onLanguageChange: (code: string) => void;
+}
+
+// Owns its own `isOpen` state so opening the menu re-renders only this component, not the
+// whole Header. The nav body mounts one (non-urgent) render after the frame so the sheet
+// paints immediately.
+function MobileMenu({
+  navItems,
+  headerLogoSrc,
+  siteName,
+  part1,
+  part2,
+  hasPersonalOffer,
+  enabledLanguages,
+  onLanguageChange,
+}: MobileMenuProps) {
+  const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const deferredOpen = React.useDeferredValue(isOpen);
+
+  return (
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="text-foreground" aria-label="Menu główne">
+          <Menu className="h-6 w-6" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-[300px] p-0">
+        {deferredOpen || !isOpen ? (
+          <div className="flex flex-col h-full bg-white">
+            <div className="p-6 border-b">
+              {headerLogoSrc ? (
+                <img
+                  src={buildAssetUrl(headerLogoSrc)}
+                  alt={siteName}
+                  className="h-12 w-auto object-contain"
+                  width={240}
+                  height={47}
+                  decoding="async"
+                />
+              ) : (
+                <h1 className="text-xl font-bold tracking-tight">
+                  <span className="text-foreground">{part1}</span>
+                  {part2 && <span className="text-primary">{part2}</span>}
+                </h1>
+              )}
+            </div>
+
+            <nav className="flex-1 p-6 space-y-4">
+              {navItems.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    "flex items-center min-h-touch text-lg font-medium transition-colors p-2 rounded-lg",
+                    location.pathname === link.to
+                      ? "bg-accent/15 text-primary font-semibold"
+                      : "text-muted-foreground hover:bg-slate-50"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              {hasPersonalOffer && (
+                <Link
+                  to="/dla-ciebie"
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2 text-lg font-semibold p-2 rounded-lg transition-colors",
+                    location.pathname === '/dla-ciebie'
+                      ? "bg-gradient-to-r from-orange-500 to-amber-400 text-white"
+                      : "bg-gradient-to-r from-orange-50 to-amber-50 text-orange-600 border border-orange-200"
+                  )}
+                >
+                  <Gift className="h-4 w-4" />
+                  Oferta dla Ciebie
+                </Link>
+              )}
+              <Link
+                to="/samochody"
+                onClick={() => setIsOpen(false)}
+                className="block w-full text-center mt-6 h-12 flex items-center justify-center rounded-xl bg-accent text-accent-foreground font-semibold"
+              >
+                Znajdź auto
+              </Link>
+            </nav>
+
+            <div className="p-6 border-t bg-slate-50">
+
+              {enabledLanguages.length > 1 && (
+                <div className="space-y-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {t('header.language')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {enabledLanguages.map((lang) => (
+                      <Button
+                        key={lang.code}
+                        variant={i18n.language === lang.code ? 'chip-active' : 'chip'}
+                        size="chip"
+                        onClick={() => {
+                          onLanguageChange(lang.code);
+                          setIsOpen(false);
+                        }}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col h-full bg-white">
+            <div className="p-6 border-b" />
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const { data: settings, isLoading: isSettingsLoading } = useAppSettings();
   const phoneForSales = settings?.salesContactPhone || settings?.legalContactPhone || '';
   const location = useLocation();
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = React.useState(false);
   const { hasPersonalOffer } = usePersonalOffer();
   const { config } = useBrand();
 
@@ -253,101 +388,16 @@ export function Header({ onClearFilters, hasActiveFilters }: HeaderProps) {
               <Phone className="h-4 w-4" />
             </a>
           )}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-foreground" aria-label="Menu główne">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] p-0">
-              <div className="flex flex-col h-full bg-white">
-                <div className="p-6 border-b">
-                  {headerLogoSrc ? (
-                    <img
-                      src={buildAssetUrl(headerLogoSrc)}
-                      alt={siteName}
-                      className="h-12 w-auto object-contain"
-                      width={240}
-                      height={47}
-                      decoding="async"
-                    />
-                  ) : (
-                    <h1 className="text-xl font-bold tracking-tight">
-                      <span className="text-foreground">{part1}</span>
-                      {part2 && <span className="text-primary">{part2}</span>}
-                    </h1>
-                  )}
-                </div>
-
-                <nav className="flex-1 p-6 space-y-4">
-                  {navItems.map((link) => (
-                    <Link
-                      key={link.to}
-                      to={link.to}
-                      onClick={() => setIsOpen(false)}
-                      className={cn(
-                        "flex items-center min-h-touch text-lg font-medium transition-colors p-2 rounded-lg",
-                        location.pathname === link.to
-                          ? "bg-accent/15 text-primary font-semibold"
-                          : "text-muted-foreground hover:bg-slate-50"
-                      )}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                  {hasPersonalOffer && (
-                    <Link
-                      to="/dla-ciebie"
-                      onClick={() => setIsOpen(false)}
-                      className={cn(
-                        "flex items-center gap-2 text-lg font-semibold p-2 rounded-lg transition-colors",
-                        location.pathname === '/dla-ciebie'
-                          ? "bg-gradient-to-r from-orange-500 to-amber-400 text-white"
-                          : "bg-gradient-to-r from-orange-50 to-amber-50 text-orange-600 border border-orange-200"
-                      )}
-                    >
-                      <Gift className="h-4 w-4" />
-                      Oferta dla Ciebie
-                    </Link>
-                  )}
-                  <Link
-                    to="/samochody"
-                    onClick={() => setIsOpen(false)}
-                    className="block w-full text-center mt-6 h-12 flex items-center justify-center rounded-xl bg-accent text-accent-foreground font-semibold"
-                  >
-                    Znajdź auto
-                  </Link>
-                </nav>
-
-                <div className="p-6 border-t bg-slate-50">
-
-                  {enabledLanguages.length > 1 && (
-                    <div className="space-y-4">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {t('header.language')}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {enabledLanguages.map((lang) => (
-                          <Button
-                            key={lang.code}
-                            variant={i18n.language === lang.code ? 'chip-active' : 'chip'}
-                            size="chip"
-                            onClick={() => {
-                              handleLanguageChange(lang.code);
-                              setIsOpen(false);
-                            }}
-                          >
-                            <span>{lang.flag}</span>
-                            <span>{lang.label}</span>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <MobileMenu
+            navItems={navItems}
+            headerLogoSrc={headerLogoSrc}
+            siteName={siteName}
+            part1={part1}
+            part2={part2}
+            hasPersonalOffer={hasPersonalOffer}
+            enabledLanguages={enabledLanguages}
+            onLanguageChange={handleLanguageChange}
+          />
         </div>
       </div>
     </header>
