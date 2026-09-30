@@ -61,7 +61,7 @@ export function HeroBannerCarousel() {
 
     return (
         <div className="relative">
-            <div className="relative overflow-hidden rounded-3xl" role="region" aria-roledescription="carousel">
+            <div className="relative overflow-hidden rounded-3xl [contain:layout_paint]" role="region" aria-roledescription="carousel">
                 <div className="overflow-hidden">
                     <div className="flex -ml-4">
                         <div role="group" aria-roledescription="slide" className="min-w-0 shrink-0 grow-0 pl-4 basis-full">
