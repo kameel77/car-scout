@@ -1,6 +1,7 @@
 import { normalizeBrand, normalizeModel } from './brand-normalization.service.js';
 import { slugifyBrandName } from './brand-pages.service.js';
 import { FOTON_SEO_HUB_FAQ, FOTON_SEO_MODELS, type FotonSeoFaq, type FotonSeoModel } from '../content/foton-content.js';
+import { SHELL_HEADER_HTML } from './pillar-shell.js';
 
 export interface PageMeta {
     title: string;
@@ -1599,9 +1600,7 @@ export function defaultMeta(ctx: BrandCtx, opts: { noindex?: boolean; status?: n
 // po HTML zamiast białego ekranu do montażu SPA. Layout lustrzany wobec stanu ładowania
 // SearchPage/ConditionPage, więc montaż Reacta nie powoduje CLS (te same klasy co realny render).
 export function catalogSkeletonHtml(gridColumns: 3 | 4, firstImage?: SkeletonFirstImage): string {
-    // Nagłówek 1:1 ze statycznym hero motoliaHeroShell (vite.config.ts) — ten sam markup co
-    // Header.tsx; zmiana loga/nawigacji tam wymaga aktualizacji też tutaj i w vite.config.ts.
-    const header = `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>`;
+    const header = SHELL_HEADER_HTML;
 
     // Box zdjęcia pierwszej karty: normalnie shimmer, ale gdy znamy realne zdjęcie pierwszej
     // oferty (firstImage — ten sam wariant co preload z cardPreloads()), wstawiamy prawdziwy

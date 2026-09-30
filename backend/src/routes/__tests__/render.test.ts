@@ -430,6 +430,24 @@ describe('GET /api/render', () => {
         expect(other.body).not.toContain('id="financing-article"');
     });
 
+    it('pillar pages render a visible SSR shell with H1 and lead outside the hidden prerender block', async () => {
+        for (const [path, type] of [['/leasing', 'leasing'], ['/leasing-konsumencki', 'leasing-konsumencki'], ['/kredyt', 'kredyt']]) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
+            const article = (await app.inject({ method: 'GET', url: `/api/content/financing/${type}` })).json();
+            const shell = res.body.match(/<!--pillar-shell-->([\s\S]*?)<!--\/pillar-shell-->/);
+            expect(shell, path).not.toBeNull();
+            expect(shell![1]).toContain(`leading-tight">${article.h1.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}</h1>`);
+            expect(shell![1]).toContain('leading-relaxed">');
+            expect(shell![1]).not.toContain('display:none');
+            expect(shell![1]).toContain('rounded-2xl border bg-muted/40');
+            // shell żyje poza ukrytym blokiem seo-prerender i zastępuje statyczny home-shell
+            expect(res.body.indexOf('<!--pillar-shell-->')).toBeGreaterThan(res.body.indexOf('</div>', res.body.indexOf('seo-prerender')));
+            expect(res.body).not.toContain('Szeroki wybór aut');
+        }
+        const other = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
+        expect(other.body).not.toContain('<!--pillar-shell-->');
+    });
+
     it('CSP guard: rendered HTML has no inline executable script other than the whitelisted prefetch constants', async () => {
         const allowedBodies = new Set([CATALOG_PREFETCH_JS, RENTAL_PREFETCH_JS]);
         for (const path of ['/', '/samochody', '/wynajem-dlugoterminowy', '/leasing', '/leasing-konsumencki', '/kredyt']) {

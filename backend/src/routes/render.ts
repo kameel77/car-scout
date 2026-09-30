@@ -29,6 +29,7 @@ import {
     StaticPagination,
 } from '../services/seo-meta.js';
 import { getFinancingArticle } from '../content/financing-content.js';
+import { pillarShellHtml } from '../services/pillar-shell.js';
 import { getFotonSeoModel } from '../content/foton-content.js';
 import {
     BrandCatalogEntry,
@@ -1227,7 +1228,9 @@ async function renderPage(
             ? catalogSkeletonHtml(await getGridColumns(fastify), meta.skeletonFirstImage)
             : (LISTING_RE.test(path) || RENTAL_RE.test(path))
                 ? detailSkeletonHtml()
-                : '';
+                : PILLAR_PATH_TYPES[path]
+                    ? pillarShellHtml(PILLAR_PATH_TYPES[path], getFinancingArticle(ctx.brand, path) ?? null)
+                    : '';
         template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
     } else if (heroBanners.length > 0) {
         const heroShell = homeHeroShellHtml(
