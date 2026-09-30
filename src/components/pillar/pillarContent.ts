@@ -42,7 +42,7 @@ export const PILLAR_BENEFITS: Record<PillarType, string[]> = {
   'leasing-konsumencki': [
     'Dla osoby prywatnej, bez działalności gospodarczej',
     'Rata brutto, wpłatę, okres i wykup ustawiasz w kalkulatorze',
-    'Na koniec wykupujesz auto albo wybierasz kolejne',
+    'Wykup lub zwrot auta, zależnie od firmy leasingowej',
   ],
   kredyt: [
     'Kredyt na auto nowe i używane',
@@ -71,7 +71,7 @@ export const PILLAR_STEPS: Record<PillarType, { title: string; text: string }[]>
     { title: 'Wybierasz auto i ratę', text: 'Ustawiasz wpłatę, okres i wykup w kalkulatorze albo wybierasz ofertę.' },
     { title: 'Firma leasingowa ocenia wniosek', text: 'Sprawdza dochody i zobowiązania, a doradca Motolii kompletuje dokumenty.' },
     { title: 'Jeździsz i płacisz stałe raty', text: 'Firma leasingowa jest właścicielem auta, a Ty z niego korzystasz.' },
-    { title: 'Wykup albo kolejne auto', text: 'Na koniec płacisz kwotę wykupu albo, jeśli umowa na to pozwala, oddajesz auto.' },
+    { title: 'Wykup albo zwrot auta', text: 'Na koniec płacisz kwotę wykupu. Część firm leasingowych pozwala też oddać auto, doradca dobierze taką ofertę.' },
   ],
   kredyt: [
     { title: 'Wybierasz auto i ratę', text: 'Ustawiasz wpłatę i okres w kalkulatorze albo wybierasz ofertę.' },
