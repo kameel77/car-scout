@@ -1,6 +1,7 @@
 import { normalizeBrand, normalizeModel } from './brand-normalization.service.js';
 import { slugifyBrandName } from './brand-pages.service.js';
 import { FOTON_SEO_HUB_FAQ, FOTON_SEO_MODELS, type FotonSeoFaq, type FotonSeoModel } from '../content/foton-content.js';
+import { SHELL_HEADER_HTML } from './pillar-shell.js';
 
 export interface PageMeta {
     title: string;
@@ -378,7 +379,7 @@ export function buildListingMeta(
       <li>Zostaw kontakt — doradca przygotuje ofertę leasingową dopasowaną do Twojej firmy.</li>
       <li>Podpisz umowę i odbierz samochód u dealera.</li>
     </ol>
-    <p>Zobacz, jak działa <a href="/leasing">leasing samochodu</a> — operacyjny i konsumencki, rata i wniosek.</p>
+    <p>Zobacz, jak działa <a href="/leasing">leasing samochodu dla firm</a> i <a href="/leasing-konsumencki">leasing konsumencki dla osób prywatnych</a> — rata, wykup i wniosek.</p>
   </section>` : ''}
   ${faqSectionHtml(faq, variant === 'kredyt' ? 'Najczęstsze pytania o kredyt' : variant === 'leasing' ? 'Najczęstsze pytania o leasing' : 'Najczęstsze pytania')}
   ${!isRecentlySold && related.length > 0 ? `
@@ -843,10 +844,16 @@ const STATIC_ROUTES: Record<string, StaticRoute> = {
             'Samochody używane od dealerów — sprawdzone auta z finansowaniem: leasing, kredyt lub najem.',
     },
     '/leasing': {
-        title: b => `Leasing samochodu — auta dostępne od ręki | ${b}`,
-        h1: 'Leasing samochodu — auta dostępne od ręki',
+        title: b => `Leasing samochodu dla firm — osobowe i dostawcze od ręki | ${b}`,
+        h1: 'Leasing samochodu dla firm',
         description:
-            'Samochody dostępne od ręki w leasingu. Złóż wniosek o finansowanie i odbierz auto bez czekania.',
+            'Leasing operacyjny samochodów osobowych i dostawczych dla JDG i spółek. Policz ratę netto i złóż wniosek na auto dostępne od ręki.',
+    },
+    '/leasing-konsumencki': {
+        title: b => `Leasing konsumencki — leasing samochodu dla osoby prywatnej | ${b}`,
+        h1: 'Leasing konsumencki',
+        description:
+            'Leasing samochodu dla osoby prywatnej bez firmy. Policz ratę brutto z wpłatą i wykupem i złóż wniosek na auto dostępne od ręki.',
     },
     '/kredyt': {
         title: b => `Kredyt samochodowy — auta dostępne od ręki | ${b}`,
@@ -1505,7 +1512,7 @@ ${listings.length > 0 ? `
         ? `${route.h1} — strona ${pagination.page}`
         : route.h1;
     // Strony finansowania pokazują skróconą listę (pełny katalog jest na /samochody)
-    const browseAllLink = path === '/leasing' || path === '/kredyt';
+    const browseAllLink = path === '/leasing' || path === '/leasing-konsumencki' || path === '/kredyt';
     // route.description zostaje meta description (niżej), ale w bodyHtml akapit definicyjny
     // artykułu (jeśli jest) wygrywa jako centerpiece pod h1 — bez artykułu bez zmian.
     let introParagraphHtml = `<p>${route.description}</p>`;
@@ -1517,8 +1524,11 @@ ${listings.length > 0 ? `
             articleBodyHtml = rest;
         }
     }
+    // Filary z artykułem mają widoczny shell SSR z <h1> (pillar-shell.ts, render.ts) — tu bez <h1>,
+    // żeby w dokumencie było dokładnie jedno <h1> (jak na stronie głównej).
+    const h1InShell = browseAllLink && !!article;
     const bodyHtml = `
-<h1>${h1}</h1>
+${h1InShell ? '' : `<h1>${h1}</h1>`}
 ${introParagraphHtml}
 ${listings.length > 0 ? `
 <section>
@@ -1593,9 +1603,7 @@ export function defaultMeta(ctx: BrandCtx, opts: { noindex?: boolean; status?: n
 // po HTML zamiast białego ekranu do montażu SPA. Layout lustrzany wobec stanu ładowania
 // SearchPage/ConditionPage, więc montaż Reacta nie powoduje CLS (te same klasy co realny render).
 export function catalogSkeletonHtml(gridColumns: 3 | 4, firstImage?: SkeletonFirstImage): string {
-    // Nagłówek 1:1 ze statycznym hero motoliaHeroShell (vite.config.ts) — ten sam markup co
-    // Header.tsx; zmiana loga/nawigacji tam wymaga aktualizacji też tutaj i w vite.config.ts.
-    const header = `<header class="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60"><div class="container flex min-h-[72px] py-2 lg:h-[80px] items-center justify-between gap-2"><a class="flex items-center gap-3 flex-shrink-0" href="/"><img src="/brands/motolia/logo-header.svg" alt="Motolia" width="240" height="47" class="h-14 md:h-16 w-auto max-w-[240px] object-contain" fetchpriority="high"></a></div></header>`;
+    const header = SHELL_HEADER_HTML;
 
     // Box zdjęcia pierwszej karty: normalnie shimmer, ale gdy znamy realne zdjęcie pierwszej
     // oferty (firstImage — ten sam wariant co preload z cardPreloads()), wstawiamy prawdziwy

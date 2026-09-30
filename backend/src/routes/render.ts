@@ -29,6 +29,7 @@ import {
     StaticPagination,
 } from '../services/seo-meta.js';
 import { getFinancingArticle } from '../content/financing-content.js';
+import { pillarShellHtml } from '../services/pillar-shell.js';
 import { getFotonSeoModel } from '../content/foton-content.js';
 import {
     BrandCatalogEntry,
@@ -61,6 +62,7 @@ import { invalidateOfferCache } from '../services/cache-invalidation.service.js'
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
     '/leasing': 'leasing',
+    '/leasing-konsumencki': 'leasing-konsumencki',
     '/kredyt': 'kredyt',
     '/wynajem-dlugoterminowy': 'wynajem',
 };
@@ -143,7 +145,7 @@ const CARS_ORDER_BY: Record<string, object[]> = {
 // najtańsze używane, np. Ford Focus 2008 za 9 900 zł) — najpierw condition NEW (kolejność
 // enuma w Postgresie odpowiada deklaracji w schema.prisma: NEW przed USED), w obu grupach
 // od najnowszego rocznika.
-const FINANCING_LISTINGS_ORDER_BY: object[] = [{ condition: 'asc' }, { productionYear: 'desc' }, { id: 'asc' }];
+const FINANCING_LISTINGS_ORDER_BY: object[] = [{ condition: 'asc' }, { isFeatured: 'desc' }, { productionYear: 'desc' }, { id: 'asc' }];
 
 let carsOrderByCache: { value: object[]; fetchedAt: number } | null = null;
 
@@ -241,8 +243,12 @@ async function getHomeHeroBanners(fastify: FastifyInstance): Promise<HomeHeroBan
 const CONDITION_BY_PATH: Record<string, 'NEW' | 'USED'> = {
     '/nowe': 'NEW',
     '/uzywane': 'USED',
+    // Strony poradnikowe /leasing i /kredyt pokazują tylko „oferty specjalne” na nowe auta.
+    '/leasing': 'NEW',
+    '/leasing-konsumencki': 'NEW',
+    '/kredyt': 'NEW',
 };
-const FINANCING_LIST_TAKE = 12; // krótka lista na /leasing i /kredyt
+const FINANCING_LIST_TAKE = 4; // oferty specjalne na /leasing i /kredyt (jak w SPA)
 
 // Klucze cache nie zawierają brandu — każdy proces backendu obsługuje jeden brand (env BRAND).
 let templateCache: { html: string; fetchedAt: number } | null = null;
@@ -420,6 +426,12 @@ export async function maybePurgeCloudflareOnBuildChange(fastify: FastifyInstance
 
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
+// Ścieżki stron filarowych finansowania → typ (klucz useFinancingArticle / /api/content/financing/:type)
+const PILLAR_PATH_TYPES: Record<string, 'leasing' | 'leasing-konsumencki' | 'kredyt'> = {
+    '/leasing': 'leasing',
+    '/leasing-konsumencki': 'leasing-konsumencki',
+    '/kredyt': 'kredyt',
+};
 const PROMO_RE = /^\/promo\/([^/]+)$/;
 const NOINDEX_RE = /^\/(admin|login|embed|listing|dla-firmy)(\/|$)|\/(lead|negotiate|zapytanie)$/;
 const BRAND_RE = /^\/samochody\/([^/]+)$/;
@@ -436,9 +448,12 @@ const ROUTE_MODULES: Array<{ match: (p: string) => boolean; module: string }> = 
     { match: p => p === '/nowe' || p === '/uzywane', module: 'src/pages/ConditionPage.tsx' },
     {
         match: p =>
-            p === '/samochody' || p === '/search' || p === '/leasing' || p === '/kredyt' ||
-            BRAND_RE.test(p) || BRAND_MODEL_RE.test(p),
+            p === '/samochody' || p === '/search' || BRAND_RE.test(p) || BRAND_MODEL_RE.test(p),
         module: 'src/pages/SearchPage.tsx',
+    },
+    {
+        match: p => p === '/leasing' || p === '/leasing-konsumencki' || p === '/kredyt',
+        module: 'src/pages/FinancingPillarPage.tsx',
     },
     { match: p => p === '/wynajem-dlugoterminowy', module: 'src/pages/RentalSearchPage.tsx' },
     { match: p => p === '/faq', module: 'src/pages/PublicFaqPage.tsx' },
@@ -491,7 +506,7 @@ function routeChunkLinks(path: string, manifest: ViteManifest): string[] {
     return links;
 }
 
-// The catalog routes are lazy routes, but their first card can become mobile LCP.
+// The catalog routes are lazy routes, but their first card can become mobile LCP (pillar pages: lead paragraph).
 // Preload only the route entry instead of enabling the recursive
 // modulepreload fan-out, which competed with the HTML and LCP image.
 function routeEntryPreload(path: string, manifest: ViteManifest): string[] {
@@ -500,7 +515,8 @@ function routeEntryPreload(path: string, manifest: ViteManifest): string[] {
     const allowedModules = [
         'src/pages/RentalSearchPage.tsx',
         'src/pages/ConditionPage.tsx',
-        'src/pages/SearchPage.tsx'
+        'src/pages/SearchPage.tsx',
+        'src/pages/FinancingPillarPage.tsx'
     ];
     if (!allowedModules.includes(route.module)) return [];
     const entry = manifest[route.module];
@@ -928,7 +944,7 @@ async function resolveMeta(
     let listingsBasePath = '/oferta';
     let pagination: StaticPagination | undefined;
     const paginated = PAGINATED_ROUTES.has(path);
-    const isFinancingList = path === '/leasing' || path === '/kredyt';
+    const isFinancingList = path === '/leasing' || path === '/leasing-konsumencki' || path === '/kredyt';
     const ssrPerPage = paginated ? await getSsrPerPage(fastify) : 0;
     const take = paginated ? ssrPerPage : isFinancingList ? FINANCING_LIST_TAKE : 20;
     const skip = paginated ? (page - 1) * ssrPerPage : 0;
@@ -1213,7 +1229,9 @@ async function renderPage(
             ? catalogSkeletonHtml(await getGridColumns(fastify), meta.skeletonFirstImage)
             : (LISTING_RE.test(path) || RENTAL_RE.test(path))
                 ? detailSkeletonHtml()
-                : '';
+                : PILLAR_PATH_TYPES[path]
+                    ? pillarShellHtml(PILLAR_PATH_TYPES[path], getFinancingArticle(ctx.brand, path) ?? null)
+                    : '';
         template = template.replace(/<!--home-shell-->[\s\S]*?<!--\/home-shell-->/, () => skeleton);
     } else if (heroBanners.length > 0) {
         const heroShell = homeHeroShellHtml(
@@ -1287,7 +1305,7 @@ async function renderPage(
 
     // Keep the catalog routes' single lazy entry on the critical path without
     // preloading all of their transitive dependencies.
-    if (['/wynajem-dlugoterminowy', '/nowe', '/uzywane', '/samochody'].includes(path) && page === 1) {
+    if (['/wynajem-dlugoterminowy', '/nowe', '/uzywane', '/samochody', '/leasing', '/leasing-konsumencki', '/kredyt'].includes(path) && page === 1) {
         const manifest = await getViteManifest();
         if (manifest) {
             const preload = routeEntryPreload(path, manifest);
@@ -1321,6 +1339,16 @@ async function renderPage(
 
         const prefetchScript = buildCatalogPrefetchScript(path, ssrPerPage, sortKey, currency);
         html = html.replace('</head>', () => `${prefetchScript}</head>`);
+    }
+
+    // financing-article JSON block — initialData dla useFinancingArticle na stronach filarowych; ten sam
+    // payload co GET /api/content/financing/:type (getFinancingArticle), więc H1 i lead są w pierwszym
+    // renderze Reacta bez rundy do API po załadowaniu bundla i chunka trasy.
+    const pillarType = PILLAR_PATH_TYPES[path];
+    const pillarArticle = pillarType ? getFinancingArticle(ctx.brand, path) : undefined;
+    if (pillarType && pillarArticle) {
+        const articleJson = JSON.stringify({ type: pillarType, ...pillarArticle }).replace(/</g, '\\u003c');
+        html = html.replace('</head>', () => `<script type="application/json" id="financing-article">${articleJson}</script>\n</head>`);
     }
 
     // hero-banners JSON block — initialData React Query dla frontu (#3), tylko na /,

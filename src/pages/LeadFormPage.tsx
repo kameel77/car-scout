@@ -145,7 +145,7 @@ export default function LeadFormPage() {
         model: listing.model,
         version: listing.version,
         listingId: listing.listing_id,
-      });
+      }).replace(/\s+([.,])/g, '$1').replace(/\s{2,}/g, ' ');
 
       if (!messageValue || messageValue === lastDefaultMessage) {
         setValue('message', defaultMessage);
