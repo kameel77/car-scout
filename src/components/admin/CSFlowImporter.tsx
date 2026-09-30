@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { importApi, settingsApi } from '@/services/api';
+import { settingsApi } from '@/services/api';
+import { importApi } from '@/services/api-admin';
 import { useAuth } from '@/contexts/AuthContext';
 import { RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 

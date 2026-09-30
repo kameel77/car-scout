@@ -51,7 +51,8 @@ import {
     SelectValue
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { leadsApi, usersApi, settingsApi } from '@/services/api';
+import { leadsApi, settingsApi } from '@/services/api';
+import { usersApi } from '@/services/api-admin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
