@@ -18,7 +18,7 @@ export function useHeroBanners() {
 const loadCarousel = () => import('./HeroBannerEmbla');
 
 // Pierwszy render to statyczny pierwszy baner (ten sam markup co slajd 0 w karuzeli —
-// to element LCP strony głównej). Karuzela (embla) ładuje się po idle, tylko gdy banerów > 1.
+// to element LCP strony głównej). Karuzela (embla) ładuje się po zdarzeniu load + idle, tylko gdy banerów > 1.
 export function HeroBannerCarousel() {
     const { data } = useHeroBanners();
     const banners = data?.banners ?? [];
@@ -31,12 +31,26 @@ export function HeroBannerCarousel() {
 
     React.useEffect(() => {
         if (!hasMany) return;
-        if (typeof window.requestIdleCallback === 'function') {
-            const id = window.requestIdleCallback(startLoading);
-            return () => window.cancelIdleCallback(id);
+        let idleId: number | undefined;
+        let timerId: number | undefined;
+        const schedule = () => {
+            if (typeof window.requestIdleCallback === 'function') {
+                idleId = window.requestIdleCallback(startLoading);
+            } else {
+                timerId = window.setTimeout(startLoading, 1500);
+            }
+        };
+        // Start dopiero po zdarzeniu load, żeby chunk karuzeli nie konkurował z obrazem LCP.
+        if (document.readyState === 'complete') {
+            schedule();
+        } else {
+            window.addEventListener('load', schedule, { once: true });
         }
-        const id = window.setTimeout(startLoading, 1500);
-        return () => window.clearTimeout(id);
+        return () => {
+            window.removeEventListener('load', schedule);
+            if (idleId !== undefined) window.cancelIdleCallback(idleId);
+            if (timerId !== undefined) window.clearTimeout(timerId);
+        };
     }, [hasMany, startLoading]);
 
     if (banners.length === 0) return null;

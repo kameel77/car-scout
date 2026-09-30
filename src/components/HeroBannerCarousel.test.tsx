@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -49,5 +49,26 @@ describe('HeroBannerCarousel', () => {
     expect(screen.getByAltText('alt-a')).toBeTruthy();
     expect(screen.queryByAltText('alt-b')).toBeNull();
     await waitFor(() => expect(screen.getByTestId('embla')).toBeTruthy(), { timeout: 3000 });
+  });
+
+  it('waits for the window load event before loading the carousel', async () => {
+    const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
+    renderWith([banner('a'), banner('b')]);
+    await new Promise((r) => setTimeout(r, 1700));
+    expect(loaded.count).toBe(0);
+    expect(screen.queryByTestId('embla')).toBeNull();
+    act(() => { window.dispatchEvent(new Event('load')); });
+    await waitFor(() => expect(screen.getByTestId('embla')).toBeTruthy(), { timeout: 3000 });
+    readyState.mockRestore();
+  });
+
+  it('removes the load listener on unmount', () => {
+    const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
+    const remove = vi.spyOn(window, 'removeEventListener');
+    const { unmount } = renderWith([banner('a'), banner('b')]);
+    unmount();
+    expect(remove).toHaveBeenCalledWith('load', expect.any(Function));
+    remove.mockRestore();
+    readyState.mockRestore();
   });
 });
