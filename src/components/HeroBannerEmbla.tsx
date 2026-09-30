@@ -27,7 +27,7 @@ export default function HeroBannerEmbla({ banners, startIndex = 0 }: { banners: 
 
     return (
         <div className="relative">
-            <Carousel setApi={setApi} opts={{ loop: true, startIndex }} className="overflow-hidden rounded-3xl">
+            <Carousel setApi={setApi} opts={{ loop: true, startIndex }} className="overflow-hidden rounded-3xl [contain:layout_paint]">
                 <CarouselContent>
                     {banners.map((b, idx) => (
                         <CarouselItem key={b.id} className="basis-full">
