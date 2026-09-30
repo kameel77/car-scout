@@ -90,8 +90,16 @@ describe('De-indexing non-production environments guard', () => {
         });
     });
 
+    // Pierwotnie było tu celowo "Allow: /", bo żeby Google USUNĄŁ z indeksu już zaindeksowane
+    // strony, musi móc je pobrać i zobaczyć nagłówek noindex; "Disallow" by to zablokował i
+    // adresy zostałyby w indeksie jako puste wpisy. Ta de-indeksacja się zakończyła: stan Search
+    // Console na 2026-09-03 pokazuje, że z dev.motolia.pl nie jest zaindeksowana ani jedna strona
+    // (albo pojedyncze sztuki). Wobec tego priorytet się zmienił: liczy się już nie
+    // de-indeksacja, tylko budżet indeksowania — dev.motolia.pl zebrał 49 730 z 208 000 żądań
+    // Googlebota, czyli blisko 24%. X-Robots-Tag: noindex z hooka w app.ts zostaje jako druga
+    // warstwa zabezpieczenia.
     describe('Criterion 4: robots.txt on non-production hosts', () => {
-        it('serves Allow: / with NO Disallow: / and NO Sitemap: line on non-prod', async () => {
+        it('serves Disallow: / with NO Sitemap: line on non-prod', async () => {
             const res = await app.inject({
                 method: 'GET',
                 url: '/api/robots.txt',
@@ -102,8 +110,7 @@ describe('De-indexing non-production environments guard', () => {
             expect(res.headers['x-robots-tag']).toBe('noindex, nofollow, noarchive');
             expect(res.headers['cache-control']).toBe('private, no-store');
             expect(res.body).toContain('User-agent: *');
-            expect(res.body).toContain('Allow: /');
-            expect(res.body).not.toContain('Disallow: /');
+            expect(res.body).toContain('Disallow: /');
             expect(res.body).not.toContain('Sitemap:');
         });
     });
@@ -164,6 +171,16 @@ describe('De-indexing non-production environments guard', () => {
             expect(res.body).toContain('User-agent: Googlebot');
             expect(res.body).toContain('Disallow: /api/');
             expect(res.body).toContain('Sitemap: https://motolia.pl/sitemap.xml');
+        });
+
+        it('blocks crawling of form pages (/lead) to protect crawl budget', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/robots.txt',
+                headers: { host: 'motolia.pl' },
+            });
+            expect(res.statusCode).toBe(200);
+            expect(res.body).toContain('Disallow: /*/lead$');
         });
     });
 
