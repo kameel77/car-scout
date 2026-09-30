@@ -416,9 +416,23 @@ describe('GET /api/render', () => {
         expect(home.body).not.toContain('rental-prefetch-params');
     });
 
+    it('pillar pages embed the financing article as a JSON block identical to the API payload', async () => {
+        for (const [path, type] of [['/leasing', 'leasing'], ['/leasing-konsumencki', 'leasing-konsumencki'], ['/kredyt', 'kredyt']]) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
+            expect(res.statusCode).toBe(200);
+            const m = res.body.match(/<script type="application\/json" id="financing-article">(.*?)<\/script>/s);
+            expect(m, path).not.toBeNull();
+            const embedded = JSON.parse(m![1]);
+            const api = await app.inject({ method: 'GET', url: `/api/content/financing/${type}` });
+            expect(embedded).toEqual({ type, ...api.json() });
+        }
+        const other = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
+        expect(other.body).not.toContain('id="financing-article"');
+    });
+
     it('CSP guard: rendered HTML has no inline executable script other than the whitelisted prefetch constants', async () => {
         const allowedBodies = new Set([CATALOG_PREFETCH_JS, RENTAL_PREFETCH_JS]);
-        for (const path of ['/', '/samochody', '/wynajem-dlugoterminowy']) {
+        for (const path of ['/', '/samochody', '/wynajem-dlugoterminowy', '/leasing', '/leasing-konsumencki', '/kredyt']) {
             const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
             expect(res.statusCode).toBe(200);
             const scripts = [...res.body.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)];

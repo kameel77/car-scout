@@ -425,6 +425,12 @@ export async function maybePurgeCloudflareOnBuildChange(fastify: FastifyInstance
 
 const LISTING_RE = /^\/(oferta|leasing|kredyt)\/([^/]+)$/;
 const RENTAL_RE = /^\/wynajem-dlugoterminowy\/([^/]+)$/;
+// Ścieżki stron filarowych finansowania → typ (klucz useFinancingArticle / /api/content/financing/:type)
+const PILLAR_PATH_TYPES: Record<string, 'leasing' | 'leasing-konsumencki' | 'kredyt'> = {
+    '/leasing': 'leasing',
+    '/leasing-konsumencki': 'leasing-konsumencki',
+    '/kredyt': 'kredyt',
+};
 const PROMO_RE = /^\/promo\/([^/]+)$/;
 const NOINDEX_RE = /^\/(admin|login|embed|listing|dla-firmy)(\/|$)|\/(lead|negotiate|zapytanie)$/;
 const BRAND_RE = /^\/samochody\/([^/]+)$/;
@@ -1329,6 +1335,16 @@ async function renderPage(
 
         const prefetchScript = buildCatalogPrefetchScript(path, ssrPerPage, sortKey, currency);
         html = html.replace('</head>', () => `${prefetchScript}</head>`);
+    }
+
+    // financing-article JSON block — initialData dla useFinancingArticle na stronach filarowych; ten sam
+    // payload co GET /api/content/financing/:type (getFinancingArticle), więc H1 i lead są w pierwszym
+    // renderze Reacta bez rundy do API po załadowaniu bundla i chunka trasy.
+    const pillarType = PILLAR_PATH_TYPES[path];
+    const pillarArticle = pillarType ? getFinancingArticle(ctx.brand, path) : undefined;
+    if (pillarType && pillarArticle) {
+        const articleJson = JSON.stringify({ type: pillarType, ...pillarArticle }).replace(/</g, '\\u003c');
+        html = html.replace('</head>', () => `<script type="application/json" id="financing-article">${articleJson}</script>\n</head>`);
     }
 
     // hero-banners JSON block — initialData React Query dla frontu (#3), tylko na /,
