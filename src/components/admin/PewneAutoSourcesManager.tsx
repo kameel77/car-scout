@@ -14,7 +14,7 @@ import {
     DialogFooter
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { pewneautoApi } from '@/services/api';
+import { pewneautoApi } from '@/services/api-admin';
 import { useAuth } from '@/contexts/AuthContext';
 import { RefreshCw, Plus, Loader2, Play, Eye, Trash2, ShieldAlert, CheckCircle2, AlertTriangle, Key } from 'lucide-react';
 import { toast } from 'sonner';

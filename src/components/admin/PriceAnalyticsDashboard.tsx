@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingDown, TrendingUp, Activity } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { analyticsApi } from '@/services/api';
+import { analyticsApi } from '@/services/api-admin';
 import { formatNumber } from '@/utils/formatters';
 
 export function PriceAnalyticsDashboard() {

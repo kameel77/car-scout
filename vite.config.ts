@@ -67,6 +67,17 @@ export default defineConfig(({ mode }) => {
       // Manifest chunków dla backendu (render.ts): SSR wstrzykuje <link rel="modulepreload">
       // chunka trasy, żeby przeglądarka nie czekała z jego pobraniem na wykonanie index.js
       manifest: true,
+      rollupOptions: {
+        output: {
+          // Vendory zmieniają się rzadziej niż kod aplikacji — osobne chunki zostają
+          // w cache przeglądarki po deployach. Entry importuje je statycznie, więc Vite
+          // wstawia im <link rel="modulepreload"> w index.html.
+          manualChunks(id: string) {
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run[\\/]router)[\\/]/.test(id)) return 'react';
+            if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) return 'query';
+          },
+        },
+      },
     },
     server: {
       host: "::",

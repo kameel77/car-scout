@@ -51,7 +51,8 @@ import {
     SelectValue
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { leadsApi, usersApi, settingsApi } from '@/services/api';
+import { leadsApi, settingsApi } from '@/services/api';
+import { usersApi } from '@/services/api-admin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -442,7 +443,7 @@ export function LeadList() {
                                 <TableCell className="text-right align-top">
                                     <div className="flex items-center justify-end gap-1">
                                         <TooltipProvider>
-                                            <Tooltip>
+                                            <Tooltip delayDuration={700}>
                                                 <TooltipTrigger asChild>
                                                     <Button
                                                         variant="ghost"
@@ -459,7 +460,7 @@ export function LeadList() {
                                             </Tooltip>
 
                                             {lead.provider === 'INBANK' && lead.status !== 'applied' && (
-                                                <Tooltip>
+                                                <Tooltip delayDuration={700}>
                                                     <TooltipTrigger asChild>
                                                         <Button
                                                             variant="ghost"
@@ -486,7 +487,7 @@ export function LeadList() {
                                                 </Tooltip>
                                             )}
 
-                                            <Tooltip>
+                                            <Tooltip delayDuration={700}>
                                                 <TooltipTrigger asChild>
                                                     <Button
                                                         variant="ghost"

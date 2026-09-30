@@ -5,10 +5,10 @@ import { useConsent } from '@/hooks/useConsent';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { ConsentSettingsDialog } from './ConsentSettingsDialog';
 
-export function ConsentBanner() {
+export function ConsentBanner({ initialSettingsOpen = false }: { initialSettingsOpen?: boolean }) {
     const { t, i18n } = useTranslation();
     const { hasDecided, acceptAll, rejectOptional } = useConsent();
-    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(initialSettingsOpen);
     const { data: settings } = useAppSettings();
 
     useEffect(() => {
@@ -82,8 +82,4 @@ export function ConsentBanner() {
             <ConsentSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
         </>
     );
-}
-
-export function openConsentSettings() {
-    window.dispatchEvent(new Event('open-consent-settings'));
 }
