@@ -7,7 +7,7 @@ import { HeroBannerSlide, YELLOW } from '@/components/HeroBannerSlide';
 
 // Ładowany leniwie z HeroBannerCarousel (gdy banerów > 1), żeby embla-carousel
 // nie trafiała do głównego chunka.
-export default function HeroBannerEmbla({ banners }: { banners: PublicHeroBanner[] }) {
+export default function HeroBannerEmbla({ banners, startIndex = 0 }: { banners: PublicHeroBanner[]; startIndex?: number }) {
     const [api, setApi] = React.useState<CarouselApi>();
     const [selected, setSelected] = React.useState(0);
 
@@ -27,7 +27,7 @@ export default function HeroBannerEmbla({ banners }: { banners: PublicHeroBanner
 
     return (
         <div className="relative">
-            <Carousel setApi={setApi} opts={{ loop: true }} className="overflow-hidden rounded-3xl">
+            <Carousel setApi={setApi} opts={{ loop: true, startIndex }} className="overflow-hidden rounded-3xl">
                 <CarouselContent>
                     {banners.map((b, idx) => (
                         <CarouselItem key={b.id} className="basis-full">

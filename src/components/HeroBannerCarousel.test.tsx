@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, cleanup, waitFor, act } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, act, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +8,7 @@ import { HeroBannerCarousel } from './HeroBannerCarousel';
 const loaded = vi.hoisted(() => ({ count: 0 }));
 vi.mock('./HeroBannerEmbla', () => {
   loaded.count += 1;
-  return { default: () => <div data-testid="embla" /> };
+  return { default: ({ startIndex }: { startIndex?: number }) => <div data-testid="embla" data-start={String(startIndex)} /> };
 });
 vi.mock('@/components/OptimizedImage', () => ({
   OptimizedImage: (p: { alt: string; priority?: boolean }) => (
@@ -69,6 +69,15 @@ describe('HeroBannerCarousel', () => {
     unmount();
     expect(remove).toHaveBeenCalledWith('load', expect.any(Function));
     remove.mockRestore();
+    readyState.mockRestore();
+  });
+
+  it('passes the dot clicked before the carousel loaded as the initial slide', async () => {
+    const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
+    renderWith([banner('a'), banner('b'), banner('c')]);
+    fireEvent.click(screen.getByLabelText('Slajd 2'));
+    const el = await waitFor(() => screen.getByTestId('embla'), { timeout: 3000 });
+    expect(el.getAttribute('data-start')).toBe('1');
     readyState.mockRestore();
   });
 });

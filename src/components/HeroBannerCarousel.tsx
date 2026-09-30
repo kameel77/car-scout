@@ -23,7 +23,9 @@ export function HeroBannerCarousel() {
     const { data } = useHeroBanners();
     const banners = data?.banners ?? [];
     const hasMany = banners.length > 1;
-    const [Embla, setEmbla] = React.useState<React.ComponentType<{ banners: typeof banners }> | null>(null);
+    const [Embla, setEmbla] = React.useState<React.ComponentType<{ banners: typeof banners; startIndex?: number }> | null>(null);
+
+    const [startIndex, setStartIndex] = React.useState(0);
 
     const startLoading = React.useCallback(() => {
         loadCarousel().then((m) => setEmbla(() => m.default)).catch(() => { /* zostaje statyczny baner */ });
@@ -55,7 +57,7 @@ export function HeroBannerCarousel() {
 
     if (banners.length === 0) return null;
 
-    if (Embla && hasMany) return <Embla banners={banners} />;
+    if (Embla && hasMany) return <Embla banners={banners} startIndex={startIndex} />;
 
     return (
         <div className="relative">
@@ -77,7 +79,7 @@ export function HeroBannerCarousel() {
                             type="button"
                             aria-label={`Slajd ${i + 1}`}
                             aria-current={i === 0}
-                            onClick={startLoading}
+                            onClick={() => { setStartIndex(i); startLoading(); }}
                             className="flex min-h-touch min-w-touch items-center justify-center"
                         >
                             <span
