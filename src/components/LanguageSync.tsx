@@ -14,7 +14,7 @@ export function LanguageSync() {
 
         const enabled = settings.enabledLanguages;
 
-        // i18next-browser-languagedetector already populated i18n.language from localStorage/navigator
+        // detectLanguage() (src/i18n) already populated i18n.language from localStorage/navigator
         // We just need to ensure the choice is valid (enabled)
         const current = i18n.language?.split('-')[0]; // Handle cases like 'pl-PL' -> 'pl'
 
