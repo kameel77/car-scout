@@ -26,12 +26,17 @@ export interface PillarCalculatorState {
 
 interface PillarFinancingCalculatorProps {
   type: 'leasing' | 'kredyt';
+  /** Cena i rata netto (strona dla firm). Domyślnie brutto. */
+  priceIsNet?: boolean;
+  /** Ścieżka strony do identyfikacji leada (np. 'leasing-konsumencki'); domyślnie = type. */
+  sourceSlug?: string;
   /** Wariant karty dla strony poradnikowej: bez H2, z przyciskiem kontaktu pod ratą. */
   variant?: 'section' | 'card';
   onStateChange?: (state: PillarCalculatorState) => void;
 }
 
-export function PillarFinancingCalculator({ type, variant = 'section', onStateChange }: PillarFinancingCalculatorProps) {
+export function PillarFinancingCalculator({ type, variant = 'section', onStateChange, priceIsNet = false, sourceSlug }: PillarFinancingCalculatorProps) {
+  const slug = sourceSlug ?? type;
   const [price, setPrice] = React.useState(DEFAULT_PRICE);
   const [config, setConfig] = React.useState<CalculatorFinancingConfig | null>(null);
 
@@ -42,7 +47,7 @@ export function PillarFinancingCalculator({ type, variant = 'section', onStateCh
   const priceSlider = (
     <div className={variant === 'card' ? 'mb-3 space-y-2' : 'mb-4 space-y-2'}>
       <div className="flex justify-between items-baseline">
-        <Label className="text-sm">Cena pojazdu</Label>
+        <Label className="text-sm">{priceIsNet ? 'Cena pojazdu netto' : 'Cena pojazdu'}</Label>
         <span className="font-semibold text-sm">{formatPrice(price, 'PLN')}</span>
       </div>
       <Slider
@@ -61,6 +66,7 @@ export function PillarFinancingCalculator({ type, variant = 'section', onStateCh
     <FinancingCalculator
       price={price}
       financingType={type}
+      priceIsNet={priceIsNet}
       manufacturingYear={PILLAR_VEHICLE_YEAR}
       mileageKm={0}
       isDuplicateHeading
@@ -89,9 +95,9 @@ export function PillarFinancingCalculator({ type, variant = 'section', onStateCh
           titleHighlight="Oddzwonimy"
           description=""
           submitLabel="Zapytaj o tę ratę"
-          formId={`pillar_${type}_calculator`}
+          formId={`pillar_${slug.replace(/-/g, '_')}_calculator`}
           financingType={type}
-          message={`Zapytanie z kalkulatora /${type}: cena auta ${Math.round(price)} zł. ${rateLine}`.trim()}
+          message={`Zapytanie z kalkulatora /${slug}: cena auta ${Math.round(price)} zł${priceIsNet ? ' netto' : ''}. ${rateLine}`.trim()}
           financingParams={config ?? undefined}
         />
       </section>

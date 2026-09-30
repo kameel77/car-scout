@@ -12,14 +12,14 @@ import { FinancingContentSection } from '@/components/FinancingContentSection';
 import type { PillarCalculatorState } from '@/components/PillarFinancingCalculator';
 import { PillarSpecialOffers } from '@/components/pillar/PillarSpecialOffers';
 import { PillarPriceBreakdown, PillarSteps } from '@/components/pillar/PillarHowItWorks';
-import { PILLAR_BENEFITS, PILLAR_META, type PillarType } from '@/components/pillar/pillarContent';
+import { PILLAR_BENEFITS, PILLAR_CALC, PILLAR_META, type PillarType } from '@/components/pillar/pillarContent';
 
 const PillarFinancingCalculator = React.lazy(() =>
   import('@/components/PillarFinancingCalculator').then((m) => ({ default: m.PillarFinancingCalculator })),
 );
 
 /**
- * Strony poradnikowe /leasing i /kredyt: H1 + lead + korzyści obok kalkulatora (z kontaktem pod ratą),
+ * Strony poradnikowe /leasing (firmy), /leasing-konsumencki i /kredyt: H1 + lead + korzyści obok kalkulatora (z kontaktem pod ratą),
  * 4 oferty specjalne na nowe auta, „jak to działa” i treść poradnika z FAQ. Pełny katalog z filtrami
  * jest na /nowe i /samochody — tu nie dublujemy listingu.
  */
@@ -89,7 +89,13 @@ export default function FinancingPillarPage({ type }: { type: PillarType }) {
               <React.Suspense
                 fallback={<div className="h-[560px] rounded-2xl border bg-muted/40" role="status" aria-busy="true" />}
               >
-                <PillarFinancingCalculator type={type} variant="card" onStateChange={setCalcState} />
+                <PillarFinancingCalculator
+                  type={PILLAR_CALC[type].financingType}
+                  priceIsNet={PILLAR_CALC[type].priceIsNet}
+                  sourceSlug={type}
+                  variant="card"
+                  onStateChange={setCalcState}
+                />
               </React.Suspense>
             </div>
           </aside>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatPrice } from '@/utils/formatters';
 import type { PillarCalculatorState } from '@/components/PillarFinancingCalculator';
-import { PILLAR_STEPS, type PillarType } from './pillarContent';
+import { PILLAR_CALC, PILLAR_HEADINGS, PILLAR_STEPS, type PillarType } from './pillarContent';
 
 interface Segment {
   key: string;
@@ -24,7 +24,7 @@ export function PillarPriceBreakdown({ type, state }: { type: PillarType; state:
   const segments: Segment[] = React.useMemo(() => {
     if (!cfg || price <= 0) return [];
     const down = Math.max(0, Math.round(cfg.downPayment));
-    const final = type === 'leasing' ? Math.max(0, Math.round(cfg.finalPayment)) : 0;
+    const final = PILLAR_CALC[type].hasBuyout ? Math.max(0, Math.round(cfg.finalPayment)) : 0;
     const financed = Math.max(0, price - down - final);
     const list: Segment[] = [
       { key: 'down', label: 'Wpłata własna', detail: 'płacisz na start', amount: down, barClass: 'bg-accent', dotClass: 'bg-accent' },
@@ -46,14 +46,14 @@ export function PillarPriceBreakdown({ type, state }: { type: PillarType; state:
   return (
     <section aria-labelledby="podzial-ceny-title" className="rounded-2xl border bg-card p-4 sm:p-5">
       <h2 id="podzial-ceny-title" className="text-lg font-bold text-foreground">
-        {type === 'leasing' ? 'Jak rozkłada się cena auta w leasingu' : 'Jak rozkłada się cena auta w kredycie'}
+        {PILLAR_HEADINGS[type].breakdown}
       </h2>
       {segments.length === 0 ? (
         <div className="mt-4 h-24 animate-pulse rounded-xl bg-muted/60" aria-hidden="true" />
       ) : (
         <>
           <p className="mt-1 text-sm text-muted-foreground">
-            Auto za <strong className="text-foreground">{formatPrice(price, 'PLN')}</strong> przy parametrach z kalkulatora — przesuń suwak, a podział zmieni się od razu.
+            Auto za <strong className="text-foreground">{formatPrice(price, 'PLN')}{PILLAR_CALC[type].priceIsNet ? ' netto' : ''}</strong> przy parametrach z kalkulatora — przesuń suwak, a podział zmieni się od razu.
           </p>
           <div
             className="mt-4 flex h-10 w-full overflow-hidden rounded-xl"
@@ -100,7 +100,7 @@ export function PillarSteps({ type }: { type: PillarType }) {
   return (
     <section aria-labelledby="jak-dziala-title">
       <h2 id="jak-dziala-title" className="text-2xl font-bold text-foreground">
-        {type === 'leasing' ? 'Jak działa leasing samochodu' : 'Jak działa kredyt samochodowy'}
+        {PILLAR_HEADINGS[type].steps}
       </h2>
       <ol className="mt-5 space-y-0">
         {steps.map((step, i) => (

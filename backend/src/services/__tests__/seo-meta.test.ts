@@ -66,7 +66,7 @@ describe('resolveBrandCtx', () => {
 
 describe('getFinancingArticle', () => {
     it('serves pillar articles for motolia only', () => {
-        for (const path of ['/leasing', '/kredyt', '/wynajem-dlugoterminowy']) {
+        for (const path of ['/leasing', '/leasing-konsumencki', '/kredyt', '/wynajem-dlugoterminowy']) {
             expect(getFinancingArticle('motolia', path)?.h1).toBeTruthy();
             expect(getFinancingArticle('carsalon', path)).toBeUndefined();
         }
