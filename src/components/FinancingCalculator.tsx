@@ -51,6 +51,8 @@ interface FinancingCalculatorProps {
     vatMargin?: boolean;
     /** Wywoływane przy każdej zmianie konfiguracji — pozwala CTA poza kalkulatorem przenieść ratę do formularza. */
     onConfigChange?: (config: CalculatorFinancingConfig | null) => void;
+    /** Wersja osadzona w innej karcie (strony poradnikowe): bez własnej ramki i nagłówka, ciaśniejsze odstępy. */
+    compact?: boolean;
 }
 
 /** Maps URL financing type to product category */
@@ -72,6 +74,7 @@ export function FinancingCalculator({
     financingType,
     onFinancingTypeChange,
     isDuplicateHeading,
+    compact = false,
     priceSlot,
     motoliaMode,
     forcedProductId,
@@ -350,7 +353,7 @@ export function FinancingCalculator({
 
     if (isLoading) {
         return (
-            <Card className="border-slate-200 shadow-none min-h-[500px] flex items-center justify-center bg-card/40">
+            <Card className={cn("border-slate-200 shadow-none flex items-center justify-center bg-card/40", compact ? "min-h-[360px] border-0" : "min-h-[500px]")}>
                 <div className="animate-pulse flex flex-col items-center gap-4">
                     <Calculator className="w-8 h-8 text-muted-foreground/30" />
                     <div className="h-4 w-40 bg-muted rounded"></div>
@@ -367,7 +370,7 @@ export function FinancingCalculator({
     if (!selectedProduct && candidateProduct !== null) {
         // Show skeleton during the render cycle where selectedProduct is catching up to candidateProduct
         return (
-            <Card className="border-slate-200 shadow-none min-h-[500px] flex items-center justify-center bg-card/40">
+            <Card className={cn("border-slate-200 shadow-none flex items-center justify-center bg-card/40", compact ? "min-h-[360px] border-0" : "min-h-[500px]")}>
                 <div className="animate-pulse flex flex-col items-center gap-4">
                     <Calculator className="w-8 h-8 text-muted-foreground/30" />
                     <div className="h-4 w-40 bg-muted rounded"></div>
@@ -426,7 +429,8 @@ export function FinancingCalculator({
 
 
     return (
-        <Card className="border-slate-200 shadow-none">
+        <Card className={cn("shadow-none", compact ? "border-0 bg-transparent" : "border-slate-200")}>
+            {!compact && (
             <CardHeader className="pb-3 pt-4">
                 {isDuplicateHeading ? (
                     <div className="flex items-center gap-2 text-lg font-heading font-semibold leading-none tracking-tight text-foreground">
@@ -440,7 +444,8 @@ export function FinancingCalculator({
                     </h2>
                 )}
             </CardHeader>
-            <CardContent className="space-y-4 pt-0">
+            )}
+            <CardContent className={cn(compact ? "space-y-3 p-0" : "space-y-4 pt-0")}>
                 <Tabs value={activeCategory} onValueChange={(v) => {
                     const cat = v as FinancingProduct['category'];
                     setActiveCategory(cat);
@@ -582,7 +587,7 @@ export function FinancingCalculator({
                             )}
                         </div>
 
-                        <div className="bg-slate-50 rounded-lg p-4 mt-2 border border-slate-100">
+                        <div className={cn("bg-slate-50 rounded-lg mt-2 border border-slate-100", compact ? "p-3" : "p-4")}>
                             <div className="flex flex-col items-center justify-center text-center space-y-1">
                                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Miesięczna rata</span>
                                 <div className="relative flex items-center justify-center gap-2 min-h-[40px]">

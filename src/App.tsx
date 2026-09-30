@@ -119,6 +119,7 @@ const App = () => (
                           <Route path="/kalkulator-rat" element={<CalculatorPage />} />
                           <Route path="/leasing" element={<FinancingPillarPage key="leasing" type="leasing" />} />
                           <Route path="/kredyt" element={<FinancingPillarPage key="kredyt" type="kredyt" />} />
+                          <Route path="/leasing-konsumencki" element={<FinancingPillarPage key="leasing-konsumencki" type="leasing-konsumencki" />} />
                           <Route path="/leasing/:slug" element={<ListingDetailPage />} />
                           <Route path="/leasing/:slug/lead" element={<LeadFormPage />} />
                           <Route path="/leasing/:slug/negotiate" element={<LeadFormPage />} />

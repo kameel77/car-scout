@@ -61,6 +61,7 @@ import { invalidateOfferCache } from '../services/cache-invalidation.service.js'
 // Strony kategorii finansowania → filtr financingType dla FAQ z CMS
 const FINANCING_FAQ_TYPE: Record<string, string> = {
     '/leasing': 'leasing',
+    '/leasing-konsumencki': 'leasing-konsumencki',
     '/kredyt': 'kredyt',
     '/wynajem-dlugoterminowy': 'wynajem',
 };
@@ -243,6 +244,7 @@ const CONDITION_BY_PATH: Record<string, 'NEW' | 'USED'> = {
     '/uzywane': 'USED',
     // Strony poradnikowe /leasing i /kredyt pokazują tylko „oferty specjalne” na nowe auta.
     '/leasing': 'NEW',
+    '/leasing-konsumencki': 'NEW',
     '/kredyt': 'NEW',
 };
 const FINANCING_LIST_TAKE = 4; // oferty specjalne na /leasing i /kredyt (jak w SPA)
@@ -439,9 +441,12 @@ const ROUTE_MODULES: Array<{ match: (p: string) => boolean; module: string }> = 
     { match: p => p === '/nowe' || p === '/uzywane', module: 'src/pages/ConditionPage.tsx' },
     {
         match: p =>
-            p === '/samochody' || p === '/search' || p === '/leasing' || p === '/kredyt' ||
-            BRAND_RE.test(p) || BRAND_MODEL_RE.test(p),
+            p === '/samochody' || p === '/search' || BRAND_RE.test(p) || BRAND_MODEL_RE.test(p),
         module: 'src/pages/SearchPage.tsx',
+    },
+    {
+        match: p => p === '/leasing' || p === '/leasing-konsumencki' || p === '/kredyt',
+        module: 'src/pages/FinancingPillarPage.tsx',
     },
     { match: p => p === '/wynajem-dlugoterminowy', module: 'src/pages/RentalSearchPage.tsx' },
     { match: p => p === '/faq', module: 'src/pages/PublicFaqPage.tsx' },
@@ -931,7 +936,7 @@ async function resolveMeta(
     let listingsBasePath = '/oferta';
     let pagination: StaticPagination | undefined;
     const paginated = PAGINATED_ROUTES.has(path);
-    const isFinancingList = path === '/leasing' || path === '/kredyt';
+    const isFinancingList = path === '/leasing' || path === '/leasing-konsumencki' || path === '/kredyt';
     const ssrPerPage = paginated ? await getSsrPerPage(fastify) : 0;
     const take = paginated ? ssrPerPage : isFinancingList ? FINANCING_LIST_TAKE : 20;
     const skip = paginated ? (page - 1) * ssrPerPage : 0;

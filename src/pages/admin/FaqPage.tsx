@@ -36,7 +36,8 @@ const PAGE_CONTEXT_OPTIONS: { value: FaqPageContext; label: string }[] = [
 const FINANCING_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: 'Wszystkie' },
   { value: 'kredyt', label: 'Kredyt' },
-  { value: 'leasing', label: 'Leasing' },
+  { value: 'leasing', label: 'Leasing (firmy)' },
+  { value: 'leasing-konsumencki', label: 'Leasing konsumencki' },
   { value: 'wynajem', label: 'Wynajem' },
   { value: 'gotowka', label: 'Gotówka' }
 ];
@@ -490,7 +491,7 @@ export default function FaqPage() {
                         <TableCell>
                           <Badge variant="outline" className={cn(
                             entry.financingType === 'kredyt' && 'bg-purple-50 text-purple-700 border-purple-200',
-                            entry.financingType === 'leasing' && 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                            (entry.financingType === 'leasing' || entry.financingType === 'leasing-konsumencki') && 'bg-indigo-50 text-indigo-700 border-indigo-200',
                             entry.financingType === 'wynajem' && 'bg-pink-50 text-pink-700 border-pink-200',
                             entry.financingType === 'gotowka' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
                             (!entry.financingType || entry.financingType === 'all') && 'bg-gray-50 text-gray-600'

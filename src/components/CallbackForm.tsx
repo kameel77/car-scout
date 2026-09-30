@@ -24,6 +24,8 @@ interface CallbackFormProps {
     src?: string;
     /** Etykieta przycisku wysyłki (wariant compact) */
     submitLabel?: string;
+    /** Wariant compact: telefon i przycisk w jednym wierszu (od sm) */
+    inline?: boolean;
     /** Opcjonalne parametry kalkulacji finansowania */
     financingParams?: {
         productId?: string;
@@ -50,6 +52,7 @@ export function CallbackForm({
     landingPageSlug,
     src,
     submitLabel = 'Zadzwoń do mnie',
+    inline = false,
     financingParams,
 }: CallbackFormProps) {
     const [phone, setPhone] = useState('');
@@ -128,8 +131,8 @@ export function CallbackForm({
                                 <span>{title} <span className="text-primary">{titleHighlight}</span></span>
                             </p>
                         )}
-                        <p className="text-sm text-muted-foreground mb-3">{description}</p>
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+                        {description && <p className="text-sm text-muted-foreground mb-3">{description}</p>}
+                        <form onSubmit={handleSubmit} className={inline ? 'flex flex-col sm:flex-row gap-2' : 'flex flex-col gap-2'}>
                             {honeypotField}
                             <input
                                 type="tel"
@@ -138,12 +141,12 @@ export function CallbackForm({
                                 onChange={(e) => setPhone(e.target.value)}
                                 placeholder="Twój numer telefonu"
                                 required
-                                className="h-10 px-3 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                                className={`h-10 px-3 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent ${inline ? 'sm:flex-1 min-w-0' : ''}`}
                             />
                             <button
                                 type="submit"
                                 disabled={status === 'loading'}
-                                className="h-10 px-4 rounded-lg bg-accent text-accent-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+                                className="h-10 px-4 whitespace-nowrap rounded-lg bg-accent text-accent-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
                             >
                                 {status === 'loading' ? 'Wysyłam...' : submitLabel}
                             </button>

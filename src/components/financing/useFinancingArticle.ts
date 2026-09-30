@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 let apiBaseUrl = import.meta.env.VITE_API_URL ?? (import.meta.env.MODE === 'development' ? '' : '');
 apiBaseUrl = apiBaseUrl.replace(/\/api\/?$/, '');
 
-export type FinancingContentType = 'leasing' | 'kredyt' | 'wynajem';
+export type FinancingContentType = 'leasing' | 'leasing-konsumencki' | 'kredyt' | 'wynajem';
 
 export interface FinancingArticle {
   h1: string;

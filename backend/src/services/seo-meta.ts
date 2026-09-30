@@ -378,7 +378,7 @@ export function buildListingMeta(
       <li>Zostaw kontakt — doradca przygotuje ofertę leasingową dopasowaną do Twojej firmy.</li>
       <li>Podpisz umowę i odbierz samochód u dealera.</li>
     </ol>
-    <p>Zobacz, jak działa <a href="/leasing">leasing samochodu</a> — operacyjny i konsumencki, rata i wniosek.</p>
+    <p>Zobacz, jak działa <a href="/leasing">leasing samochodu dla firm</a> i <a href="/leasing-konsumencki">leasing konsumencki dla osób prywatnych</a> — rata, wykup i wniosek.</p>
   </section>` : ''}
   ${faqSectionHtml(faq, variant === 'kredyt' ? 'Najczęstsze pytania o kredyt' : variant === 'leasing' ? 'Najczęstsze pytania o leasing' : 'Najczęstsze pytania')}
   ${!isRecentlySold && related.length > 0 ? `
@@ -843,10 +843,16 @@ const STATIC_ROUTES: Record<string, StaticRoute> = {
             'Samochody używane od dealerów — sprawdzone auta z finansowaniem: leasing, kredyt lub najem.',
     },
     '/leasing': {
-        title: b => `Leasing samochodu — auta dostępne od ręki | ${b}`,
-        h1: 'Leasing samochodu — auta dostępne od ręki',
+        title: b => `Leasing samochodu dla firm — osobowe i dostawcze od ręki | ${b}`,
+        h1: 'Leasing samochodu dla firm',
         description:
-            'Samochody dostępne od ręki w leasingu. Złóż wniosek o finansowanie i odbierz auto bez czekania.',
+            'Leasing operacyjny samochodów osobowych i dostawczych dla JDG i spółek. Policz ratę netto i złóż wniosek na auto dostępne od ręki.',
+    },
+    '/leasing-konsumencki': {
+        title: b => `Leasing konsumencki — leasing samochodu dla osoby prywatnej | ${b}`,
+        h1: 'Leasing konsumencki',
+        description:
+            'Leasing samochodu dla osoby prywatnej bez firmy. Policz ratę brutto z wpłatą i wykupem i złóż wniosek na auto dostępne od ręki.',
     },
     '/kredyt': {
         title: b => `Kredyt samochodowy — auta dostępne od ręki | ${b}`,
@@ -1505,7 +1511,7 @@ ${listings.length > 0 ? `
         ? `${route.h1} — strona ${pagination.page}`
         : route.h1;
     // Strony finansowania pokazują skróconą listę (pełny katalog jest na /samochody)
-    const browseAllLink = path === '/leasing' || path === '/kredyt';
+    const browseAllLink = path === '/leasing' || path === '/leasing-konsumencki' || path === '/kredyt';
     // route.description zostaje meta description (niżej), ale w bodyHtml akapit definicyjny
     // artykułu (jeśli jest) wygrywa jako centerpiece pod h1 — bez artykułu bez zmian.
     let introParagraphHtml = `<p>${route.description}</p>`;

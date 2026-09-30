@@ -1,6 +1,7 @@
 import React from 'react';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { Calculator } from 'lucide-react';
 import { FinancingCalculator, type CalculatorFinancingConfig } from '@/components/FinancingCalculator';
 import { CallbackForm } from '@/components/CallbackForm';
 import { formatPrice } from '@/utils/formatters';
@@ -25,12 +26,17 @@ export interface PillarCalculatorState {
 
 interface PillarFinancingCalculatorProps {
   type: 'leasing' | 'kredyt';
+  /** Cena i rata netto (strona dla firm). Domyślnie brutto. */
+  priceIsNet?: boolean;
+  /** Ścieżka strony do identyfikacji leada (np. 'leasing-konsumencki'); domyślnie = type. */
+  sourceSlug?: string;
   /** Wariant karty dla strony poradnikowej: bez H2, z przyciskiem kontaktu pod ratą. */
   variant?: 'section' | 'card';
   onStateChange?: (state: PillarCalculatorState) => void;
 }
 
-export function PillarFinancingCalculator({ type, variant = 'section', onStateChange }: PillarFinancingCalculatorProps) {
+export function PillarFinancingCalculator({ type, variant = 'section', onStateChange, priceIsNet = false, sourceSlug }: PillarFinancingCalculatorProps) {
+  const slug = sourceSlug ?? type;
   const [price, setPrice] = React.useState(DEFAULT_PRICE);
   const [config, setConfig] = React.useState<CalculatorFinancingConfig | null>(null);
 
@@ -39,9 +45,9 @@ export function PillarFinancingCalculator({ type, variant = 'section', onStateCh
   }, [onStateChange, price, config]);
 
   const priceSlider = (
-    <div className="mb-4 space-y-2">
+    <div className={variant === 'card' ? 'mb-3 space-y-2' : 'mb-4 space-y-2'}>
       <div className="flex justify-between items-baseline">
-        <Label className="text-sm">Cena pojazdu</Label>
+        <Label className="text-sm">{priceIsNet ? 'Cena pojazdu netto' : 'Cena pojazdu'}</Label>
         <span className="font-semibold text-sm">{formatPrice(price, 'PLN')}</span>
       </div>
       <Slider
@@ -56,13 +62,15 @@ export function PillarFinancingCalculator({ type, variant = 'section', onStateCh
     </div>
   );
 
-  const calculator = (
+  const renderCalculator = (compact: boolean) => (
     <FinancingCalculator
       price={price}
       financingType={type}
+      priceIsNet={priceIsNet}
       manufacturingYear={PILLAR_VEHICLE_YEAR}
       mileageKm={0}
       isDuplicateHeading
+      compact={compact}
       onConfigChange={setConfig}
     />
   );
@@ -72,19 +80,24 @@ export function PillarFinancingCalculator({ type, variant = 'section', onStateCh
       ? `Rata ${Math.round(config.installment)} zł/mies., ${config.period} mies., wpłata ${Math.round(config.downPayment)} zł${config.finalPayment ? `, wykup ${Math.round(config.finalPayment)} zł` : ''}`
       : '';
     return (
-      <section id="kalkulator" aria-label="Kalkulator finansowania" className="rounded-2xl border bg-card p-4 sm:p-5 shadow-sm">
+      <section id="kalkulator" aria-label="Kalkulator finansowania" className="rounded-2xl border bg-card p-4 shadow-sm">
+        <p className="mb-3 flex items-center gap-2 font-heading text-base font-semibold text-foreground">
+          <Calculator className="h-5 w-5 text-primary" aria-hidden="true" />
+          Policz ratę
+        </p>
         {priceSlider}
-        {calculator}
+        {renderCalculator(true)}
         <CallbackForm
           compact
-          className="mt-4"
+          inline
+          className="mt-3 !p-3"
           title="Ta rata Ci pasuje?"
           titleHighlight="Oddzwonimy"
-          description="Zostaw numer — doradca Motolii sprawdzi ofertę dla tych parametrów."
+          description=""
           submitLabel="Zapytaj o tę ratę"
-          formId={`pillar_${type}_calculator`}
+          formId={`pillar_${slug.replace(/-/g, '_')}_calculator`}
           financingType={type}
-          message={`Zapytanie z kalkulatora /${type}: cena auta ${Math.round(price)} zł. ${rateLine}`.trim()}
+          message={`Zapytanie z kalkulatora /${slug}: cena auta ${Math.round(price)} zł${priceIsNet ? ' netto' : ''}. ${rateLine}`.trim()}
           financingParams={config ?? undefined}
         />
       </section>
@@ -95,7 +108,7 @@ export function PillarFinancingCalculator({ type, variant = 'section', onStateCh
     <section id="kalkulator" className="mt-8 mb-2">
       <h2 className="text-2xl font-bold mb-4">Kalkulator finansowania</h2>
       {priceSlider}
-      {calculator}
+      {renderCalculator(false)}
     </section>
   );
 }
