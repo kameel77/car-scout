@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useListingOptions } from '@/hooks/useListingOptions';
-import { rentalPublicApi } from '@/services/rental-api';
 import './HeroVehicleFilter.css';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -139,6 +138,7 @@ function useRentalFilterOptions() {
   return useQuery<OptionsData>({
     queryKey: ['rentalFilterOptions'],
     queryFn: async () => {
+      const { rentalPublicApi } = await import('@/services/rental-api');
       const data = await rentalPublicApi.listVehicles({ limit: '1' });
       const filters = data.filters || {};
       return {

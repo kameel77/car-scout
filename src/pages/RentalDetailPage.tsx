@@ -614,7 +614,7 @@ export default function RentalDetailPage() {
                                                         <span className="font-medium text-sm">{offer.company?.name}</span>
                                                         {canViewFinancials && (
                                                             <TooltipProvider delayDuration={150}>
-                                                                <Tooltip>
+                                                                <Tooltip delayDuration={150}>
                                                                     <TooltipTrigger asChild>
                                                                         <button
                                                                             type="button"

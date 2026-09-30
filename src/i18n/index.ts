@@ -1,20 +1,33 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
 import { pl } from './translations/pl';
 
+// Zastępuje i18next-browser-languagedetector: localStorage (ten sam klucz co dotąd) → navigator → 'pl'.
+const LANGUAGE_STORAGE_KEY = 'i18nextLng';
+
+export function detectLanguage(): string {
+  try {
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored) return stored;
+  } catch {
+    // localStorage niedostępny (np. Safari w trybie prywatnym)
+  }
+  try {
+    if (typeof navigator !== 'undefined' && navigator.language) return navigator.language;
+  } catch {
+    // ignore
+  }
+  return 'pl';
+}
+
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
+    lng: detectLanguage(),
     resources: {
       pl: { translation: pl },
     },
     fallbackLng: 'pl',
-    detection: {
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'],
-    },
     interpolation: {
       escapeValue: false,
     },
@@ -35,6 +48,11 @@ export async function loadLanguageResources(lng: string): Promise<void> {
 }
 
 i18n.on('languageChanged', (lng) => {
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
+  } catch {
+    // ignore
+  }
   loadLanguageResources(lng);
 });
 

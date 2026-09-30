@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { History, FileText, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { importApi } from '@/services/api';
+import { importApi } from '@/services/api-admin';
 import { formatNumber } from '@/utils/formatters';
 
 interface ImportLog {

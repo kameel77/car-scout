@@ -1,0 +1,69 @@
+import { Link } from 'react-router-dom';
+import type { PublicHeroBanner } from '@/services/api';
+import { OptimizedImage } from '@/components/OptimizedImage';
+
+export const YELLOW = 'hsl(var(--mt-yellow-500))';
+const YELLOW_HOVER = 'hsl(var(--mt-yellow-600))';
+// Brandbook rozdz. 01: żółć jest kolorem powierzchni, nie liter.
+// Litery i ikony na jasnym tle idą w granacie (12,75:1 zamiast 1,66:1).
+const ACCENT_INK = 'hsl(var(--mt-navy-700))';
+const BLACK = 'hsl(var(--mt-navy-900))';
+
+const ALIGN_CLASS: Record<string, string> = {
+    left: 'justify-start',
+    center: 'justify-center',
+    right: 'justify-end',
+};
+
+export function HeroBannerSlide({ banner: b, priority }: { banner: PublicHeroBanner; priority: boolean }) {
+    return (
+        <div className="relative w-full h-[360px] md:h-[460px] lg:h-[520px]">
+            {(b.imageUrlDesktop || b.imageUrlMobile) && (
+                <OptimizedImage
+                    src={b.imageUrlDesktop ?? b.imageUrlMobile ?? undefined}
+                    mobileSrc={b.imageUrlDesktop ? b.imageUrlMobile : null}
+                    alt={b.altText}
+                    width="1600"
+                    height="700"
+                    sizes="100vw"
+                    priority={priority}
+                    allowPlaceholder={false}
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+            )}
+
+            {b.buttonLabel && b.buttonUrl && (
+                <>
+                    {/* Desktop: button along a vertical track inset 24px from top/bottom;
+                        translateY(-pct%) keeps it fully inside (0% = flush to top padding, 100% = bottom). */}
+                    <div className="hidden md:block absolute inset-x-0" style={{ top: '24px', bottom: '24px' }}>
+                        <div
+                            className={`absolute inset-x-0 px-10 lg:px-16 flex ${ALIGN_CLASS[b.buttonAlign] ?? 'justify-start'}`}
+                            style={{ top: `${b.buttonPositionYPct}%`, transform: `translateY(-${b.buttonPositionYPct}%)` }}
+                        >
+                            <Link
+                                to={b.buttonUrl}
+                                className="inline-flex items-center justify-center px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 hover:-translate-y-0.5"
+                                style={{ background: YELLOW, color: BLACK, boxShadow: `0 4px 24px hsl(var(--mt-yellow-500) / 0.38)` }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = YELLOW_HOVER)}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = YELLOW)}
+                            >
+                                {b.buttonLabel}
+                            </Link>
+                        </div>
+                    </div>
+                    {/* Mobile: button anchored near bottom */}
+                    <div className="flex md:hidden absolute bottom-6 left-0 right-0 px-6 justify-center">
+                        <Link
+                            to={b.buttonUrl}
+                            className="inline-flex items-center justify-center px-7 py-3.5 rounded-2xl font-bold text-base"
+                            style={{ background: YELLOW, color: BLACK }}
+                        >
+                            {b.buttonLabel}
+                        </Link>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}

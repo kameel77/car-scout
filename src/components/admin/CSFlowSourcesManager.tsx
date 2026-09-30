@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { csflowApi } from '@/services/api';
+import { csflowApi } from '@/services/api-admin';
 import { useAuth } from '@/contexts/AuthContext';
 import { RefreshCw, Plus, Loader2 } from 'lucide-react';
 

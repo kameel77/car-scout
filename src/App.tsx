@@ -9,7 +9,7 @@ import { PersonalOfferProvider } from "@/contexts/PersonalOfferContext";
 import { BrandProvider } from "@/contexts/BrandContext";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
-import { ConsentBanner } from "./components/consent/ConsentBanner";
+import { ConsentGate } from "./components/consent/ConsentGate";
 import { HelmetProvider } from 'react-helmet-async';
 import { SeoManager } from '@/components/seo/SeoManager';
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
@@ -17,7 +17,6 @@ import { ClarityPageTracker } from './components/seo/ClarityPageTracker';
 import { PageViewTracker } from './components/seo/PageViewTracker';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import './i18n';
 
 // Homepage stays synchronous: createRoot does not hydrate or preserve the SSR shell
@@ -102,7 +101,6 @@ const App = () => (
               <SpecialOfferProvider>
                 <CrmTrackingProvider>
                   <PersonalOfferProvider>
-                    <TooltipProvider delayDuration={0}>
                     <ChunkErrorBoundary>
                       <Suspense fallback={null}>
                         <Routes>
@@ -177,11 +175,10 @@ const App = () => (
                         </Routes>
                       </Suspense>
                     </ChunkErrorBoundary>
-                    </TooltipProvider>
                   </PersonalOfferProvider>
                 </CrmTrackingProvider>
               </SpecialOfferProvider>
-              <ConsentBanner />
+              <ConsentGate />
             </BrowserRouter>
           </BrandProvider>
         </PriceSettingsProvider>

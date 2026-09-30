@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, Eye, Target, Percent, Globe, Calendar, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { analyticsApi } from '@/services/api';
+import { analyticsApi } from '@/services/api-admin';
 import { Button } from '@/components/ui/button';
 
 interface TelemetryData {
