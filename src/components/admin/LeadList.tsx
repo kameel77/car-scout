@@ -443,7 +443,7 @@ export function LeadList() {
                                 <TableCell className="text-right align-top">
                                     <div className="flex items-center justify-end gap-1">
                                         <TooltipProvider>
-                                            <Tooltip>
+                                            <Tooltip delayDuration={700}>
                                                 <TooltipTrigger asChild>
                                                     <Button
                                                         variant="ghost"
@@ -460,7 +460,7 @@ export function LeadList() {
                                             </Tooltip>
 
                                             {lead.provider === 'INBANK' && lead.status !== 'applied' && (
-                                                <Tooltip>
+                                                <Tooltip delayDuration={700}>
                                                     <TooltipTrigger asChild>
                                                         <Button
                                                             variant="ghost"
@@ -487,7 +487,7 @@ export function LeadList() {
                                                 </Tooltip>
                                             )}
 
-                                            <Tooltip>
+                                            <Tooltip delayDuration={700}>
                                                 <TooltipTrigger asChild>
                                                     <Button
                                                         variant="ghost"
