@@ -7,6 +7,9 @@ import { formatPrice } from '@/utils/formatters';
 const MIN_PRICE = 30000;
 const MAX_PRICE = 500000;
 const DEFAULT_PRICE = 150000;
+// Vehis wymaga rocznika pojazdu (bez niego /api/financing/calculate zwraca 422 "Missing vehicle
+// year" i kalkulator pokazywał komunikat o braku oferty — KAM-6). Filar liczy ratę dla nowego auta.
+const PILLAR_VEHICLE_YEAR = new Date().getFullYear();
 
 /**
  * Sekcja kalkulatora finansowania na stronach filarowych (/leasing, /kredyt) — nad listingiem,
@@ -33,7 +36,14 @@ export function PillarFinancingCalculator({ type }: { type: 'leasing' | 'kredyt'
           onValueChange={(v) => setPrice(v[0])}
         />
       </div>
-      <FinancingCalculator price={price} financingType={type} isDuplicateHeading />
+      <p className="text-xs text-muted-foreground mb-3">Wyliczenie orientacyjne dla nowego samochodu (rocznik {PILLAR_VEHICLE_YEAR}).</p>
+      <FinancingCalculator
+        price={price}
+        financingType={type}
+        manufacturingYear={PILLAR_VEHICLE_YEAR}
+        mileageKm={0}
+        isDuplicateHeading
+      />
     </section>
   );
 }

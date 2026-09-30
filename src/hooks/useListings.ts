@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { listingsApi } from '@/services/api';
 import { FilterState, ListingFacets } from '@/components/FilterPanel';
 import { Listing } from '@/data/mockData';
@@ -84,6 +84,7 @@ export function useListings(
             }
         },
         enabled: !waitForSettings || (settings !== undefined),
+        placeholderData: keepPreviousData,
     });
 }
 

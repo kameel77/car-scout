@@ -8,6 +8,9 @@ import {
     buildModelMeta,
     buildRentalMeta,
     buildStaticMeta,
+    buildFotonHubMeta,
+    buildFotonModelMeta,
+    FOTON_MODEL_RE,
     catalogSkeletonHtml,
     defaultMeta,
     detailSkeletonHtml,
@@ -26,6 +29,7 @@ import {
     StaticPagination,
 } from '../services/seo-meta.js';
 import { getFinancingArticle } from '../content/financing-content.js';
+import { getFotonSeoModel } from '../content/foton-content.js';
 import {
     BrandCatalogEntry,
     getBrandCatalog,
@@ -904,6 +908,16 @@ async function resolveMeta(
         );
     }
 
+    // FOTON: treść statyczna z content/foton-content.ts, bez zapytań do bazy (KAM-5)
+    if (path === '/foton') {
+        return buildFotonHubMeta(ctx);
+    }
+    const fotonMatch = path.match(FOTON_MODEL_RE);
+    if (fotonMatch) {
+        const fotonModel = getFotonSeoModel(fotonMatch[1]);
+        return fotonModel ? buildFotonModelMeta(fotonModel, ctx) : defaultMeta(ctx, { noindex: true, status: 404 });
+    }
+
     // Nieznane ścieżki (m.in. probe'y skanerów) odrzucamy przed zapytaniami do bazy
     if (!hasStaticRoute(path)) {
         return defaultMeta(ctx, { noindex: true, status: 404 });
@@ -1040,13 +1054,33 @@ async function resolveMeta(
     ) ?? defaultMeta(ctx, { noindex: true, status: 404 });
 
     // Canonical filtrów: /samochody?make=X (pojedyncza marka, opcjonalnie +model) → strona marki/modelu.
-    // Wiele marek lub brak dopasowania: canonical zostaje na /samochody (bez zmian).
+    // Pozostałe kombinacje filtrów (kilka marek, paliwo, cena...) nie mają czystego odpowiednika:
+    // noindex (linki nadal są śledzone) + canonical na /samochody. Wcześniej dostawały canonical
+    // /samochody?page=N, a GSC pokazywało wyświetlenia np. /samochody?make=MG%2CJAC&page=11 (KAM-17).
     if (path === '/samochody' && queryParams) {
         const canonicalOverride = await resolveSamochodyQueryCanonical(fastify, queryParams);
-        if (canonicalOverride) meta.canonical = `${ctx.baseUrl}${canonicalOverride}`;
+        if (canonicalOverride) {
+            meta.canonical = `${ctx.baseUrl}${canonicalOverride}`;
+        } else if (hasSamochodyFacetParams(queryParams)) {
+            meta.noindex = true;
+            meta.canonical = `${ctx.baseUrl}/samochody`;
+        }
     }
 
     return meta;
+}
+
+// Parametry, które nie zmieniają zawartości listy: paginacja i znaczniki kampanii/kliknięć.
+const NON_FACET_QUERY_PARAMS = new Set(['page', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'dclid', '_gl', 'ref', 'gtm_debug']);
+
+export function hasSamochodyFacetParams(queryParams: URLSearchParams): boolean {
+    for (const [key, value] of queryParams) {
+        if (!value) continue;
+        const k = key.toLowerCase();
+        if (NON_FACET_QUERY_PARAMS.has(k) || k.startsWith('utm_')) continue;
+        return true;
+    }
+    return false;
 }
 
 async function resolveSamochodyQueryCanonical(fastify: FastifyInstance, queryParams: URLSearchParams): Promise<string | null> {
@@ -1327,7 +1361,16 @@ export async function renderRoutes(fastify: FastifyInstance) {
         let path = rawPathname;
         if (path.length > 1 && path.endsWith('/')) path = path.replace(/\/+$/, '') || '/';
 
-        const searchParams = rawQuery ? new URLSearchParams(rawQuery) : undefined;
+        // Nginx przekazuje surowe $request_uri w ?path=, więc przy /samochody?page=2&make=X
+        // wszystko po pierwszym `&` ląduje w query najwyższego poziomu. Scalamy je z query
+        // ścieżki, żeby filtry (canonical marki, noindex facetów - KAM-17) widziały komplet.
+        const mergedQuery = new URLSearchParams(rawQuery ?? '');
+        for (const [key, value] of Object.entries(request.query as Record<string, unknown>)) {
+            if (key === 'path' || mergedQuery.has(key)) continue;
+            if (typeof value === 'string') mergedQuery.append(key, value);
+            else if (Array.isArray(value)) value.forEach(v => typeof v === 'string' && mergedQuery.append(key, v));
+        }
+        const searchParams = mergedQuery.toString() ? mergedQuery : undefined;
 
         // ?page=N tylko dla stron katalogowych (w tym dynamicznych /samochody/:marka[/:model]);
         // clamp chroni cache przed spamem parametrów. Nginx przekazuje pełne $request_uri
@@ -1355,6 +1398,9 @@ export async function renderRoutes(fastify: FastifyInstance) {
             const canonicalResolved = await resolveSamochodyQueryCanonical(fastify, searchParams);
             if (canonicalResolved) {
                 cacheKey += `${cacheKey.includes('?') ? '&' : '?'}canonical=${canonicalResolved}`;
+            } else if (hasSamochodyFacetParams(searchParams)) {
+                // Jeden wariant cache na stronę dla wszystkich nierozwiązanych filtrów (noindex)
+                cacheKey += `${cacheKey.includes('?') ? '&' : '?'}facet=noindex`;
             }
         }
 

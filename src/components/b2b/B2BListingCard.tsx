@@ -37,9 +37,9 @@ export function B2BListingCard({ offer }: { offer: B2BOffer }) {
       </div>
       <div className="p-4 flex flex-col gap-2 flex-1 print:p-2 print:gap-1">
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="font-semibold text-base leading-tight print:text-sm">
+          <p className="font-semibold text-base leading-tight print:text-sm">
             {offer.make} {offer.model}
-          </h3>
+          </p>
           <span className="text-xs text-muted-foreground shrink-0 print:text-[10px]">{offer.productionYear}</span>
         </div>
         <div className="text-lg font-bold print:text-base">{PLN.format(offer.pricePln)} zł</div>
