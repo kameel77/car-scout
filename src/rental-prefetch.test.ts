@@ -8,9 +8,14 @@ function execute(segment: string | null, search = '', blockedStorage = false, ve
   const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ vehicles }) });
   const appendChild = vi.fn();
   const window: Record<string, any> = {};
-  runInNewContext(buildRentalPrefetchScript().replace(/^<script>|<\/script>\n$/g, ''), {
+  const script = buildRentalPrefetchScript();
+  const paramsJson = script.match(/<script type="application\/json" id="rental-prefetch-params">(.*?)<\/script>/)![1];
+  runInNewContext(script.match(/\n<script>(.*)<\/script>\n$/)![1], {
     window, fetch, location: { pathname: '/wynajem-dlugoterminowy', search },
-    document: { head: { appendChild }, createElement: () => ({ setAttribute: vi.fn() }) },
+    document: {
+      head: { appendChild }, createElement: () => ({ setAttribute: vi.fn() }),
+      getElementById: (id: string) => (id === 'rental-prefetch-params' ? { textContent: paramsJson } : null),
+    },
     localStorage: { getItem: () => { if (blockedStorage) throw new Error('blocked'); return segment; } },
   });
   return { fetch, window, appendChild };

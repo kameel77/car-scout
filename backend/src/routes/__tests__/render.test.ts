@@ -264,29 +264,29 @@ describe('GET /api/render', () => {
         const resHome = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(resHome.statusCode).toBe(200);
         expect(resHome.body).toContain('id="app-settings"');
-        expect(resHome.body).not.toContain('window.__CATALOG_PREFETCH__=');
+        expect(resHome.body).not.toContain('catalog-prefetch-params');
 
         const resNowe = await app.inject({ method: 'GET', url: '/api/render?path=/nowe' });
         expect(resNowe.statusCode).toBe(200);
         expect(resNowe.body).toContain('id="app-settings"');
-        expect(resNowe.body).toContain('window.__CATALOG_PREFETCH__=');
+        expect(resNowe.body).toContain('catalog-prefetch-params');
         expect(resNowe.body).toContain('status=NEW&rateType=credit&rateBasis=gross');
 
         const resUzywane = await app.inject({ method: 'GET', url: '/api/render?path=/uzywane' });
         expect(resUzywane.statusCode).toBe(200);
-        expect(resUzywane.body).toContain('window.__CATALOG_PREFETCH__=');
+        expect(resUzywane.body).toContain('catalog-prefetch-params');
         expect(resUzywane.body).toContain('status=USED&rateType=credit&rateBasis=gross');
 
         const resNowePage2 = await app.inject({ method: 'GET', url: '/api/render?path=/nowe&page=2' });
-        expect(resNowePage2.body).not.toContain('window.__CATALOG_PREFETCH__=');
+        expect(resNowePage2.body).not.toContain('catalog-prefetch-params');
 
         const resSamochody = await app.inject({ method: 'GET', url: '/api/render?path=/samochody' });
         expect(resSamochody.statusCode).toBe(200);
-        expect(resSamochody.body).toContain('window.__CATALOG_PREFETCH__=');
+        expect(resSamochody.body).toContain('catalog-prefetch-params');
         expect(resSamochody.body).toContain('/api/listings?rateType=credit&rateBasis=gross');
         expect(resSamochody.body).toContain('||location.search)return;');
         const resSamochodyPage2 = await app.inject({ method: 'GET', url: '/api/render?path=/samochody&page=2' });
-        expect(resSamochodyPage2.body).not.toContain('window.__CATALOG_PREFETCH__=');
+        expect(resSamochodyPage2.body).not.toContain('catalog-prefetch-params');
     });
 
     it('injects ssr-meta JSON block with escaped values for a rental detail and a catalog route', async () => {
@@ -405,13 +405,13 @@ describe('GET /api/render', () => {
     it('injects browser-segment rental fetch-ahead only on the first rental page', async () => {
         const first = await app.inject({ method: 'GET', url: '/api/render?path=/wynajem-dlugoterminowy' });
         expect(first.statusCode).toBe(200);
-        expect(first.body).toContain('window.__RENTAL_PREFETCH__=');
+        expect(first.body).toContain('rental-prefetch-params');
         expect(first.body).not.toContain('href="/api/rental/vehicles?limit=1"');
         expect(first.body).toContain('localStorage.getItem("rentalClientType")');
         const next = await app.inject({ method: 'GET', url: '/api/render?path=/wynajem-dlugoterminowy&page=2' });
-        expect(next.body).not.toContain('window.__RENTAL_PREFETCH__=');
+        expect(next.body).not.toContain('rental-prefetch-params');
         const home = await app.inject({ method: 'GET', url: '/api/render?path=/' });
-        expect(home.body).not.toContain('window.__RENTAL_PREFETCH__=');
+        expect(home.body).not.toContain('rental-prefetch-params');
     });
 
     it('listing detail gets LCP image preload with srcset variants', async () => {
