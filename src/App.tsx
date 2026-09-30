@@ -9,7 +9,7 @@ import { PersonalOfferProvider } from "@/contexts/PersonalOfferContext";
 import { BrandProvider } from "@/contexts/BrandContext";
 import { LanguageSync } from "./components/LanguageSync";
 import { DynamicTranslationsLoader } from "./components/DynamicTranslationsLoader";
-import { ConsentBanner } from "./components/consent/ConsentBanner";
+import { ConsentGate } from "./components/consent/ConsentGate";
 import { HelmetProvider } from 'react-helmet-async';
 import { SeoManager } from '@/components/seo/SeoManager';
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
@@ -178,7 +178,7 @@ const App = () => (
                   </PersonalOfferProvider>
                 </CrmTrackingProvider>
               </SpecialOfferProvider>
-              <ConsentBanner />
+              <ConsentGate />
             </BrowserRouter>
           </BrandProvider>
         </PriceSettingsProvider>

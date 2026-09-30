@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Phone, Shield, FileText, ExternalLink, Cookie } from 'lucide-react';
-import { openConsentSettings } from '@/components/consent/ConsentBanner';
+import { openConsentSettings } from '@/lib/consent';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildAssetUrl } from '@/utils/assets';
 import { useBrand } from '@/contexts/BrandContext';
