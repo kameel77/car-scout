@@ -154,3 +154,9 @@ export function commitConsent(
     emit(saved);
     return saved;
 }
+
+export const OPEN_CONSENT_SETTINGS_EVENT = 'open-consent-settings';
+
+export function openConsentSettings() {
+    window.dispatchEvent(new Event(OPEN_CONSENT_SETTINGS_EVENT));
+}
