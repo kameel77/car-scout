@@ -71,10 +71,13 @@ export const getVehisToken = async (connection: { apiBaseUrl: string; apiKey: st
 export class FinancingCalcError extends Error {
     statusCode: number;
     body: Record<string, any>;
-    constructor(statusCode: number, body: Record<string, any>) {
+    /** HTTP status zwrócony przez partnera (gdy błąd pochodzi z odpowiedzi partnera) — route go ignoruje, przeliczenie referencyjne używa do ponawiania przy 429. */
+    providerStatus?: number;
+    constructor(statusCode: number, body: Record<string, any>, providerStatus?: number) {
         super(typeof body?.error === 'string' ? body.error : 'FinancingCalcError');
         this.statusCode = statusCode;
         this.body = body;
+        this.providerStatus = providerStatus;
     }
 }
 
@@ -137,7 +140,7 @@ export async function calcInbankInstallment(
             body: responseText?.slice(0, 800),
             request: { product_code: payload.product_code, amount: payload.amount, period: payload.period, payment_day: payload.payment_day, response_level: payload.response_level }
         }, 'INBANK provider error');
-        throw new FinancingCalcError(502, { error: 'Provider request failed' });
+        throw new FinancingCalcError(502, { error: 'Provider request failed' }, response.status);
     }
 
     let result: any = {};
@@ -308,7 +311,7 @@ export async function calcVehisInstallment(
 
         if (!response.ok) {
             log.error({ provider: 'VEHIS', status: response.status, body: responseText?.slice(0, 800), request: vehisPayload }, 'VEHIS provider error');
-            throw new FinancingCalcError(502, { error: 'Provider request failed' });
+            throw new FinancingCalcError(502, { error: 'Provider request failed' }, response.status);
         }
 
         let result: any = {};
@@ -467,7 +470,17 @@ function selectProductCandidates(
     return sorted;
 }
 
-/** Tries candidates in priority order until one yields an installment — mirrors the calculator's failed-product fallback (a broken partner product is skipped, not fatal). */
+/** Znacznik błędu partnera (po wyczerpaniu ponowień) — odróżnia go od legalnego `null` („brak kwalifikującego się produktu”). */
+const PARTNER_ERROR = Symbol('partnerError');
+type InstallmentResult = number | null | typeof PARTNER_ERROR;
+
+/** Odstępy między ponowieniami przy HTTP 429 od partnera (3 ponowienia). Eksportowane, żeby testy mogły je skrócić. */
+export const PARTNER_429_RETRY_DELAYS_MS: number[] = [2000, 5000, 10000];
+
+/**
+ * Tries candidates in priority order until one yields an installment — mirrors the calculator's failed-product fallback (a broken partner product is skipped, not fatal).
+ * `partnerError` = żaden kandydat nie dał liczby, a przynajmniej jeden zakończył się błędem partnera (wtedy nie nadpisujemy poprzedniej raty).
+ */
 async function firstSuccessfulInstallment(
     ctx: CalcContext,
     candidates: FinancingProduct[],
@@ -477,13 +490,18 @@ async function firstSuccessfulInstallment(
     manufacturingYear: number,
     mileageKm: number,
     vatMargin: boolean,
-    cache?: Map<string, Promise<number | null>>
-): Promise<number | null> {
+    cache?: Map<string, Promise<InstallmentResult>>
+): Promise<{ value: number | null; partnerError: boolean }> {
+    let partnerError = false;
     for (const product of candidates) {
         const installment = await calcInstallmentForProduct(ctx, product, connectionByProvider, category, grossPricePln, manufacturingYear, mileageKm, vatMargin, cache);
-        if (installment != null) return installment;
+        if (installment === PARTNER_ERROR) {
+            partnerError = true;
+        } else if (installment != null) {
+            return { value: installment, partnerError: false };
+        }
     }
-    return null;
+    return { value: null, partnerError };
 }
 
 /**
@@ -502,8 +520,8 @@ async function calcInstallmentForProduct(
     manufacturingYear: number,
     mileageKm: number,
     vatMargin: boolean,
-    cache?: Map<string, Promise<number | null>>
-): Promise<number | null> {
+    cache?: Map<string, Promise<InstallmentResult>>
+): Promise<InstallmentResult> {
     if (!product) return null;
 
     const months = Math.min(Math.max(REFERENCE_MONTHS, product.minInstallments), product.maxInstallments);
@@ -531,7 +549,7 @@ async function calcInstallmentForProduct(
         return cache.get(cacheKey)!;
     }
 
-    const promise = (async (): Promise<number | null> => {
+    const promise = (async (): Promise<InstallmentResult> => {
         try {
             const downPaymentAmount = Math.round(nettoPrice * downPct / 100);
             const params: CalcParams = {
@@ -544,9 +562,25 @@ async function calcInstallmentForProduct(
                 mileageKm,
             };
 
-            const result = product.provider === 'INBANK'
-                ? await calcInbankInstallment(product, connection, params, ctx.log)
-                : await calcVehisInstallment(product, connection, params, ctx.log);
+            const callPartner = () => product.provider === 'INBANK'
+                ? calcInbankInstallment(product, connection, params, ctx.log)
+                : calcVehisInstallment(product, connection, params, ctx.log);
+
+            // HTTP 429 od partnera: ponawiamy z rosnącym odstępem; inne błędy — bez ponawiania.
+            let result: Awaited<ReturnType<typeof callPartner>>;
+            for (let attempt = 0; ; attempt++) {
+                try {
+                    result = await callPartner();
+                    break;
+                } catch (err) {
+                    const retryDelay = PARTNER_429_RETRY_DELAYS_MS[attempt];
+                    if (err instanceof FinancingCalcError && err.providerStatus === 429 && retryDelay !== undefined) {
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                        continue;
+                    }
+                    throw err;
+                }
+            }
 
             // Pełna odpowiedź partnera do magazynu — kalkulator na ofercie trafi w ten sam klucz.
             await saveFinancingQuote(ctx.prisma, buildFinancingQuoteKey(product, connection, params), product.id, result);
@@ -556,7 +590,7 @@ async function calcInstallmentForProduct(
             return Math.round(category === 'CREDIT' ? netto * (vatMargin ? 1 : VAT) : netto);
         } catch (err) {
             ctx.log.error({ err, productId: product.id, provider: product.provider, category }, 'Reference installment: partner calculation failed');
-            return null;
+            return PARTNER_ERROR;
         }
     })();
 
@@ -566,14 +600,15 @@ async function calcInstallmentForProduct(
 
 /**
  * Computes and persists referenceCreditInstallment/referenceLeasingInstallment
- * for a single listing. Never throws for partner/product issues — those
- * degrade to `null` for that leg so a single failure doesn't block the rest.
+ * for a single listing. Never throws for partner/product issues. No qualifying
+ * product degrades to `null` for that leg; a partner error (all candidates failed)
+ * keeps the previously stored value so a partner outage doesn't wipe quotes.
  * `cache` (optional) lets bulk callers dedupe identical partner calls within a run.
  */
 export async function computeReferenceInstallments(
     ctx: CalcContext,
     listingId: string,
-    cache?: Map<string, Promise<number | null>>
+    cache?: Map<string, Promise<InstallmentResult>>
 ): Promise<{ creditInstallment: number | null; leasingInstallment: number | null } | null> {
     const listing = await ctx.prisma.listing.findUnique({
         where: { id: listingId },
@@ -587,12 +622,16 @@ export async function computeReferenceInstallments(
             productionYear: true,
             mileageKm: true,
             vatMargin: true,
+            referenceCreditInstallment: true,
+            referenceLeasingInstallment: true,
         }
     });
     if (!listing) return null;
 
     let creditInstallment: number | null = null;
     let leasingInstallment: number | null = null;
+    let creditPartnerError = false;
+    let leasingPartnerError = false;
 
     if (listing.pricePln > 0) {
         const [products, connections] = await Promise.all([
@@ -610,17 +649,25 @@ export async function computeReferenceInstallments(
         const leasingAmountToFinance = netPrice - Math.round(netPrice * REFERENCE_INITIAL_PCT / 100);
         const leasingCandidates = selectProductCandidates(products, 'LEASING', listing, leasingAmountToFinance);
 
-        [creditInstallment, leasingInstallment] = await Promise.all([
+        const [credit, leasing] = await Promise.all([
             firstSuccessfulInstallment(ctx, creditCandidates, connectionByProvider, 'CREDIT', price, listing.productionYear, listing.mileageKm, listing.vatMargin, cache),
             firstSuccessfulInstallment(ctx, leasingCandidates, connectionByProvider, 'LEASING', price, listing.productionYear, listing.mileageKm, listing.vatMargin, cache),
         ]);
+        creditInstallment = credit.value;
+        creditPartnerError = credit.partnerError;
+        leasingInstallment = leasing.value;
+        leasingPartnerError = leasing.partnerError;
     }
+
+    // Błąd partnera (np. 429) nie kasuje poprzedniej raty — pole pomijamy w update i zwracamy wartość z bazy.
+    if (creditPartnerError) creditInstallment = listing.referenceCreditInstallment;
+    if (leasingPartnerError) leasingInstallment = listing.referenceLeasingInstallment;
 
     await ctx.prisma.listing.update({
         where: { id: listingId },
         data: {
-            referenceCreditInstallment: creditInstallment,
-            referenceLeasingInstallment: leasingInstallment,
+            ...(creditPartnerError ? {} : { referenceCreditInstallment: creditInstallment }),
+            ...(leasingPartnerError ? {} : { referenceLeasingInstallment: leasingInstallment }),
             referenceCalcAt: new Date(),
         }
     });
@@ -628,8 +675,8 @@ export async function computeReferenceInstallments(
     return { creditInstallment, leasingInstallment };
 }
 
-const RECOMPUTE_CONCURRENCY = 4;
-const RECOMPUTE_DELAY_MS = 150;
+const RECOMPUTE_CONCURRENCY = 2;
+const RECOMPUTE_DELAY_MS = 400;
 
 /** Recomputes reference installments for all active, non-archived listings with limited concurrency (partner API rate limits). */
 export async function recomputeAll(ctx: CalcContext, opts?: { onlyMissing?: boolean }): Promise<number> {
@@ -639,7 +686,7 @@ export async function recomputeAll(ctx: CalcContext, opts?: { onlyMissing?: bool
     }
 
     const listings = await ctx.prisma.listing.findMany({ where, select: { id: true } });
-    const cache = new Map<string, Promise<number | null>>();
+    const cache = new Map<string, Promise<InstallmentResult>>();
 
     let cursor = 0;
     let processed = 0;
