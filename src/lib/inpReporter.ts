@@ -231,7 +231,9 @@ function report(metric: INPMetricWithAttribution): void {
 
 export function startInpReporting(): void {
     landingPath = location.pathname;
-    if (navigator.webdriver || !navigator.sendBeacon || isLocalHostname(location.hostname)) return;
+    // Lighthouse/PSI runs don't set navigator.webdriver but would skew RUM — skip them by UA.
+    if (navigator.webdriver || !navigator.sendBeacon || isLocalHostname(location.hostname)
+        || /Chrome-Lighthouse|HeadlessChrome/.test(navigator.userAgent)) return;
 
     const startWhenIdle = () => {
         const load = () => {
