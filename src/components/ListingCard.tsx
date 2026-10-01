@@ -354,7 +354,7 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
             )}
 
             {/* Power — neutral (no accent color, no bold) */}
-            {listing.engine_power_hp && (
+            {listing.engine_power_hp > 0 && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium tabular-nums whitespace-nowrap">
                 <CardIcon name="power" className="h-3.5 w-3.5 shrink-0" />
                 {listing.engine_power_hp} {t('listing.hp')}
