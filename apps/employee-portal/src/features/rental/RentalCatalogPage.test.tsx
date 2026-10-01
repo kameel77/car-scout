@@ -99,7 +99,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
       nextCursor: null,
     });
 
-    render(
+    const ui = (
       <BrandProvider initialConfig={mockConfig}>
         <AuthProvider>
           <MemoryRouter>
@@ -108,6 +108,7 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
         </AuthProvider>
       </BrandProvider>
     );
+    const { rerender } = render(ui);
 
     await waitFor(() => {
       expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
@@ -116,6 +117,11 @@ describe('RentalCatalogPage Component (E3 Long-term Rental)', () => {
 
     expect(screen.getByRole('link', { name: /Samochody/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Najem długoterminowy/i })).toBeInTheDocument();
+
+    // PortalHeader mounts only after auth resolves (outside act), so its mount-time
+    // "close menu on route change" effect may still be pending. If it runs after the
+    // click it closes the menu again. A synchronous rerender flushes pending effects first.
+    rerender(ui);
 
     // Open user menu to find Moje zapytania
     const userBtn = screen.getByRole('button', { name: /Menu użytkownika/i });
