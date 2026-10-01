@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { FinancingType } from '@/utils/url-utils';
 import { setPreferredFinancingType } from '@/utils/url-utils';
+import { getInstallmentVatMultiplier } from '@/utils/financingVat';
 
 
 /** Konfiguracja finansowania przekazywana do formularza leada (location.state.financing). */
@@ -112,6 +113,8 @@ export function FinancingCalculator({
         : ((categories[0] as FinancingProduct['category']) || 'CREDIT');
         
     const [activeCategory, setActiveCategory] = React.useState<FinancingProduct['category']>(initialCat);
+    // Przeliczenie RATY netto↔brutto (podstawa kalkulacji nadal używa vatMultiplier): VAT-marża + kredyt → 1, leasing → 1,23.
+    const installmentVatMultiplier = getInstallmentVatMultiplier(vatMargin, activeCategory);
     const [selectedProduct, setSelectedProduct] = React.useState<FinancingProduct | null>(null);
     const [failedProducts, setFailedProducts] = React.useState<Set<string>>(new Set());
     const [externalInstallment, setExternalInstallment] = React.useState<number | null>(null);
@@ -137,8 +140,8 @@ export function FinancingCalculator({
 
         // If consumer client (priceIsNet is false), Inbank calculations must be shown in gross (brutto).
         // Since the price was passed as net internally, Inbank returns net values.
-        // We multiply net values by vatMultiplier for consumers, or display net as-is for entrepreneurs.
-        const multiplier = priceIsNet ? 1 : vatMultiplier;
+        // We multiply net values by installmentVatMultiplier for consumers, or display net as-is for entrepreneurs.
+        const multiplier = priceIsNet ? 1 : installmentVatMultiplier;
 
         const rrso = formatRate(inbankDetails.creditCostRateAnnual);
         const downPayment = formatPrice(Math.round(price * initialPaymentPct / 100), currency);
@@ -153,7 +156,7 @@ export function FinancingCalculator({
         const installmentsCount = months;
 
         return `Dla wybranej raty kredytu Rzeczywista Roczna Stopa Oprocentowania (RRSO) wynosi ${rrso}% przy założeniach: wpłata własna ${downPayment}, całkowita kwota kredytu (bez kredytowanych kosztów kredytu) ${netCredit}, całkowita kwota do zapłaty przez konsumenta ${totalRepayments}, oprocentowanie stałe ${nominalRate}% w skali roku, całkowity koszt kredytu ${totalCost} (w tym: prowizja ${commission}, odsetki ${interest}), ${installmentsCount - 1} miesięcznych rat równych w wysokości ${installmentAmount} oraz ostatnia rata wyrównująca w wysokości ${lastInstallment}. Motolia Sp. z o.o. jest pośrednikiem Banku umocowanym w zakresie czynności faktycznych i prawnych związanych z zawieraniem umów kredytu.`;
-    }, [inbankDetails, price, priceIsNet, initialPaymentPct, externalInstallment, months, currency, formatRate]);
+    }, [inbankDetails, price, priceIsNet, installmentVatMultiplier, initialPaymentPct, externalInstallment, months, currency, formatRate]);
     const offerInitialPaymentPct = React.useMemo(() => {
         if (!offerInitialPayment || !Number.isFinite(price) || price <= 0) return null;
         return Math.round((offerInitialPayment / price) * 100);
@@ -302,12 +305,12 @@ export function FinancingCalculator({
                 }
                 if (!isCancelled) {
                     // Vehis returns netto installment.
-                    // For consumer (priceIsNet=false): display brutto = netto * vatMultiplier
+                    // For consumer (priceIsNet=false): display brutto = netto * installmentVatMultiplier
                     // For entrepreneur (priceIsNet=true): display netto as-is
                     const nettoInstallment = response.monthlyInstallment;
                     const displayValue = priceIsNet
                         ? nettoInstallment
-                        : Math.round(nettoInstallment * vatMultiplier);
+                        : Math.round(nettoInstallment * installmentVatMultiplier);
                     setExternalInstallment(displayValue);
                     
                     if (selectedProduct.provider === 'INBANK') {
@@ -638,8 +641,8 @@ export function FinancingCalculator({
                                         </span>
                                         <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                                             {priceIsNet
-                                                ? `(${formatPrice(Math.round((displayInstallment ?? 0) * vatMultiplier), currency)} brutto)`
-                                                : `(${formatPrice(Math.round((displayInstallment ?? 0) / vatMultiplier), currency)} netto)`}
+                                                ? `(${formatPrice(Math.round((displayInstallment ?? 0) * installmentVatMultiplier), currency)} brutto)`
+                                                : `(${formatPrice(Math.round((displayInstallment ?? 0) / installmentVatMultiplier), currency)} netto)`}
                                         </span>
                                     </div>
                                 ) : selectedProduct.category === 'LEASING' ? (
