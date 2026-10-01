@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
+import { getApiCacheKey, getApiRedisClient } from '../../services/api-cache';
+import { buildFinancingQuoteKey } from '../../services/financing-quote-cache';
 
-describe('POST /api/financing/calculate — Redis result cache', () => {
+describe('POST /api/financing/calculate — result cache (Redis + financing_quotes)', () => {
     let app: FastifyInstance;
     let connectionId: string;
     let productId: string;
@@ -63,6 +65,7 @@ describe('POST /api/financing/calculate — Redis result cache', () => {
     });
 
     afterAll(async () => {
+        await app.prisma.financingQuote.deleteMany({ where: { productId } });
         await app.prisma.financingProduct.delete({ where: { id: productId } });
         await app.prisma.financingProviderConnection.delete({ where: { id: connectionId } });
         await app.close();
@@ -115,5 +118,113 @@ describe('POST /api/financing/calculate — Redis result cache', () => {
         expect(first.statusCode).toBe(502);
         expect(second.statusCode).toBe(502);
         expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    describe('persistent store (financing_quotes)', () => {
+        // Klucz dokładnie takiego zapytania, jakie wysyła helper calculate().
+        const keyFor = async (period: number) => {
+            const product = await app.prisma.financingProduct.findUniqueOrThrow({ where: { id: productId } });
+            // Route bierze pierwsze aktywne połączenie danego dostawcy (lokalna baza może mieć inne niż testowe).
+            const connection = await app.prisma.financingProviderConnection.findFirstOrThrow({ where: { provider: 'INBANK', isActive: true } });
+            return buildFinancingQuoteKey(product, connection, {
+                price: 100000, downPaymentAmount: 10000, period, manufacturingYear: 2020,
+            });
+        };
+        const evictRedis = async (cacheKey: string) => {
+            const redis = getApiRedisClient();
+            expect(redis).not.toBeNull();
+            await redis!.del(getApiCacheKey(cacheKey));
+        };
+
+        it('stores the partner result in financing_quotes', async () => {
+            const res = await calculate(20);
+            expect(res.statusCode).toBe(200);
+
+            const row = await app.prisma.financingQuote.findUnique({ where: { cacheKey: await keyFor(20) } });
+            expect(row).not.toBeNull();
+            expect(row!.productId).toBe(productId);
+            expect(row!.response).toEqual(res.json());
+        });
+
+        it('serves from the database after Redis eviction without calling the partner, and re-warms Redis', async () => {
+            const first = await calculate(22);
+            expect(first.statusCode).toBe(200);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+
+            const cacheKey = await keyFor(22);
+            await evictRedis(cacheKey);
+            expect(await getApiRedisClient()!.exists(getApiCacheKey(cacheKey))).toBe(0);
+
+            const second = await calculate(22);
+            expect(second.statusCode).toBe(200);
+            expect(second.json()).toEqual(first.json());
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect(await getApiRedisClient()!.exists(getApiCacheKey(cacheKey))).toBe(1);
+        });
+
+        it('calls the partner again when the stored quote is older than 36 h', async () => {
+            await calculate(26);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+
+            const cacheKey = await keyFor(26);
+            await evictRedis(cacheKey);
+            await app.prisma.financingQuote.update({
+                where: { cacheKey },
+                data: { computedAt: new Date(Date.now() - 37 * 3600 * 1000) },
+            });
+
+            const res = await calculate(26);
+            expect(res.statusCode).toBe(200);
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+
+            const refreshed = await app.prisma.financingQuote.findUnique({ where: { cacheKey } });
+            expect(Date.now() - refreshed!.computedAt.getTime()).toBeLessThan(60 * 1000);
+        });
+    });
+
+    describe('coalescing concurrent identical requests', () => {
+        it('calls the partner once for two parallel identical requests', async () => {
+            let release!: () => void;
+            const gate = new Promise<void>(resolve => { release = resolve; });
+            fetchMock.mockImplementation(async () => {
+                await gate;
+                return okProviderResponse();
+            });
+
+            const both = Promise.all([calculate(42), calculate(42)]);
+            // Daj obu żądaniom dojść do wywołania partnera, zanim go „odblokujemy”.
+            await new Promise(resolve => setTimeout(resolve, 50));
+            release();
+            const [a, b] = await both;
+
+            expect(a.statusCode).toBe(200);
+            expect(b.statusCode).toBe(200);
+            expect(b.json()).toEqual(a.json());
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('hands the same error code to every waiter when the partner fails', async () => {
+            let release!: () => void;
+            const gate = new Promise<void>(resolve => { release = resolve; });
+            fetchMock.mockImplementation(async () => {
+                await gate;
+                return failProviderResponse();
+            });
+
+            const both = Promise.all([calculate(44), calculate(44)]);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            release();
+            const [a, b] = await both;
+
+            expect(a.statusCode).toBe(502);
+            expect(b.statusCode).toBe(502);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+
+            // Po błędzie wpis in-flight znika — kolejne zapytanie znów woła partnera.
+            fetchMock.mockImplementation(async () => okProviderResponse());
+            const retry = await calculate(44);
+            expect(retry.statusCode).toBe(200);
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+        });
     });
 });
