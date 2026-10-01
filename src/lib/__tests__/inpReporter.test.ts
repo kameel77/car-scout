@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { buildInpPayload, generateInpTarget } from '@/lib/inpReporter';
-import type { INPMetricWithAttribution } from 'web-vitals/attribution';
+import { describe, it, expect, afterEach } from 'vitest';
+import { buildInpPayload, buildVitalsPayload, generateInpTarget, isLocalHostname, readBuildId } from '@/lib/inpReporter';
+import type { CLSMetricWithAttribution, INPMetricWithAttribution, LCPMetricWithAttribution } from 'web-vitals/attribution';
 
 function makeScript(overrides: Partial<PerformanceScriptTiming> = {}): PerformanceScriptTiming {
     return {
@@ -150,5 +150,104 @@ describe('generateInpTarget', () => {
         button.appendChild(span);
 
         expect(generateInpTarget(svg)).toBe('button Leasing');
+    });
+});
+
+describe('readBuildId', () => {
+    afterEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    it('extracts the hash from the main entry script filename', () => {
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = '/assets/index-Ab3_x-9Z.js';
+        document.head.appendChild(script);
+
+        expect(readBuildId()).toBe('Ab3_x-9Z');
+    });
+
+    it('returns null when the entry script is absent', () => {
+        expect(readBuildId()).toBeNull();
+    });
+});
+
+describe('isLocalHostname', () => {
+    it('detects local hosts', () => {
+        for (const host of ['localhost', '127.0.0.1', '[::1]', 'app.localhost']) {
+            expect(isLocalHostname(host)).toBe(true);
+        }
+    });
+
+    it('lets real hosts through', () => {
+        expect(isLocalHostname('motolia.pl')).toBe(false);
+        expect(isLocalHostname('dev.motolia.pl')).toBe(false);
+    });
+});
+
+describe('buildVitalsPayload', () => {
+    it('builds an LCP payload with rounded timings and the url query stripped', () => {
+        const metric = {
+            name: 'LCP',
+            value: 2412.6,
+            rating: 'needs-improvement',
+            navigationType: 'navigate',
+            attribution: {
+                target: 'img.hero',
+                url: 'https://motolia.pl/img/hero.webp?w=800&q=80',
+                timeToFirstByte: 410.4,
+                resourceLoadDelay: 120.5,
+                resourceLoadDuration: 900.2,
+                elementRenderDelay: 33.7,
+            },
+        } as unknown as LCPMetricWithAttribution;
+
+        const payload = buildVitalsPayload(metric);
+
+        expect(payload.metric).toBe('LCP');
+        expect(payload.value).toBe(2413);
+        expect(payload.target).toBe('img.hero');
+        expect(payload.url).toBe('https://motolia.pl/img/hero.webp');
+        expect(payload.ttfb).toBe(410);
+        expect(payload.loadDelay).toBe(121);
+        expect(payload.loadDuration).toBe(900);
+        expect(payload.renderDelay).toBe(34);
+    });
+
+    it('reports url: null for a text LCP', () => {
+        const metric = {
+            name: 'LCP',
+            value: 1000,
+            rating: 'good',
+            navigationType: 'navigate',
+            attribution: { target: 'h1', timeToFirstByte: 1, resourceLoadDelay: 0, resourceLoadDuration: 0, elementRenderDelay: 5 },
+        } as unknown as LCPMetricWithAttribution;
+
+        expect(buildVitalsPayload(metric).url).toBeNull();
+    });
+
+    it('builds a CLS payload converting scores to integer milli-CLS', () => {
+        const metric = {
+            name: 'CLS',
+            value: 0.1234,
+            rating: 'needs-improvement',
+            navigationType: 'reload',
+            attribution: {
+                largestShiftTarget: 'div.banner',
+                largestShiftValue: 0.0876,
+                largestShiftTime: 1500.4,
+                loadState: 'loading',
+            },
+        } as unknown as CLSMetricWithAttribution;
+
+        const payload = buildVitalsPayload(metric);
+
+        expect(payload.metric).toBe('CLS');
+        expect(payload.value).toBe(123);
+        expect(payload.shiftValue).toBe(88);
+        expect(payload.shiftTime).toBe(1500);
+        expect(payload.target).toBe('div.banner');
+        expect(payload.loadState).toBe('loading');
+        expect(payload.navigationType).toBe('reload');
     });
 });

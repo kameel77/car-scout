@@ -3,7 +3,7 @@
  * interaction shape (type/target/timings/longest script) so we can see which
  * interactions make p75 INP bad. Sent to backend/src/routes/rum.ts.
  */
-import type { INPMetricWithAttribution } from 'web-vitals/attribution';
+import type { CLSMetricWithAttribution, INPMetricWithAttribution, LCPMetricWithAttribution } from 'web-vitals/attribution';
 
 export interface InpPayload {
     path: string;
@@ -29,6 +29,36 @@ export interface InpPayload {
     mem: number | null;
     net: string | null;
     vw: number;
+    build: string | null;
+}
+
+/**
+ * LCP/CLS beacon, sent to /api/rum/vitals. `value` is in ms for LCP and in
+ * milli-CLS for CLS (raw score * 1000, rounded) because the backend sanitizer
+ * rounds every number to an integer. The same goes for `shiftValue`.
+ */
+export interface VitalsPayload {
+    metric: 'LCP' | 'CLS';
+    path: string;
+    value: number;
+    rating: string;
+    navigationType: string;
+    build: string | null;
+    net: string | null;
+    vw: number;
+    cpu: number | null;
+    mem: number | null;
+    target: string;
+    // LCP only
+    url?: string | null;
+    ttfb?: number;
+    loadDelay?: number;
+    loadDuration?: number;
+    renderDelay?: number;
+    // CLS only
+    shiftValue?: number;
+    shiftTime?: number;
+    loadState?: string | null;
 }
 
 function truncate(value: string, maxLength: number): string {
@@ -70,6 +100,24 @@ export function generateInpTarget(node: Node | null): string | undefined {
     if (!text) return undefined;
 
     return truncate(`${tag} ${text}`, 60);
+}
+
+/** `index-<HASH>.js` of the main entry script -> `<HASH>`; null when not found. */
+export function readBuildId(): string | null {
+    const src = document.querySelector('script[type="module"][src*="/assets/index-"]')?.getAttribute('src');
+    const match = src?.match(/\/index-([^/.]+)\.js/);
+    return match ? match[1] : null;
+}
+
+let cachedBuild: string | null | undefined;
+
+function getBuildId(): string | null {
+    if (cachedBuild === undefined) cachedBuild = readBuildId();
+    return cachedBuild;
+}
+
+export function isLocalHostname(hostname: string): boolean {
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname.endsWith('.localhost');
 }
 
 function pickLongestScript(metric: INPMetricWithAttribution): InpPayload['script'] {
@@ -116,7 +164,56 @@ export function buildInpPayload(metric: INPMetricWithAttribution): InpPayload {
         mem: (navigator as any).deviceMemory ?? null,
         net: (navigator as any).connection?.effectiveType ?? null,
         vw: window.innerWidth,
+        build: getBuildId(),
     };
+}
+
+export function buildVitalsPayload(metric: LCPMetricWithAttribution | CLSMetricWithAttribution): VitalsPayload {
+    const common = {
+        path: location.pathname,
+        rating: metric.rating,
+        navigationType: metric.navigationType,
+        build: getBuildId(),
+        net: (navigator as any).connection?.effectiveType ?? null,
+        vw: window.innerWidth,
+        cpu: navigator.hardwareConcurrency ?? null,
+        mem: (navigator as any).deviceMemory ?? null,
+    };
+
+    if (metric.name === 'LCP') {
+        const { attribution } = metric;
+        return {
+            ...common,
+            metric: 'LCP',
+            value: Math.round(metric.value),
+            target: truncate(attribution.target || '', 200),
+            url: attribution.url ? truncate(stripQueryString(attribution.url), 200) : null,
+            ttfb: Math.round(attribution.timeToFirstByte),
+            loadDelay: Math.round(attribution.resourceLoadDelay),
+            loadDuration: Math.round(attribution.resourceLoadDuration),
+            renderDelay: Math.round(attribution.elementRenderDelay),
+        };
+    }
+
+    const { attribution } = metric;
+    return {
+        ...common,
+        metric: 'CLS',
+        value: Math.round(metric.value * 1000),
+        target: truncate(attribution.largestShiftTarget || '', 200),
+        shiftValue: Math.round((attribution.largestShiftValue ?? 0) * 1000),
+        shiftTime: Math.round(attribution.largestShiftTime ?? 0),
+        loadState: attribution.loadState ?? null,
+    };
+}
+
+function reportVitals(metric: LCPMetricWithAttribution | CLSMetricWithAttribution): void {
+    try {
+        const payload = buildVitalsPayload(metric);
+        navigator.sendBeacon('/api/rum/vitals', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+    } catch {
+        // Never let RUM reporting break the page.
+    }
 }
 
 function report(metric: INPMetricWithAttribution): void {
@@ -129,13 +226,16 @@ function report(metric: INPMetricWithAttribution): void {
 }
 
 export function startInpReporting(): void {
-    if (navigator.webdriver || !navigator.sendBeacon) return;
+    if (navigator.webdriver || !navigator.sendBeacon || isLocalHostname(location.hostname)) return;
 
     const startWhenIdle = () => {
         const load = () => {
             import('web-vitals/attribution')
-                .then(({ onINP }) => {
+                .then(({ onINP, onLCP, onCLS }) => {
                     onINP(report, { generateTarget: generateInpTarget });
+                    // Buffered observers: registering after load still captures LCP/CLS; they report on page hide.
+                    onLCP(reportVitals, { generateTarget: generateInpTarget });
+                    onCLS(reportVitals, { generateTarget: generateInpTarget });
                 })
                 .catch(() => {
                     // Chunk failed to load — reporting is best-effort.

@@ -9,6 +9,7 @@
  */
 import Redis from 'ioredis';
 import { getSsrNamespace } from '../services/ssr-cache.js';
+import { percentile, median, normalizePathTemplate, formatMs, p75PerBuild } from './rum-shared.js';
 
 interface RumInpReport {
     path: string;
@@ -34,32 +35,9 @@ interface RumInpReport {
     mem: number | null;
     net: string | null;
     vw: number | null;
+    build?: string | null;
     ts: number;
     host: string;
-}
-
-function percentile(sorted: number[], p: number): number | null {
-    if (sorted.length === 0) return null;
-    const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
-    return sorted[idx];
-}
-
-function median(values: (number | null)[]): number | null {
-    const nums = values.filter((v): v is number => typeof v === 'number').sort((a, b) => a - b);
-    return percentile(nums, 50);
-}
-
-function normalizePathTemplate(path: string): string {
-    if (/^\/oferta\/[^/]+$/.test(path)) return '/oferta/:slug';
-    if (/^\/leasing\/[^/]+$/.test(path)) return '/leasing/:slug';
-    if (/^\/kredyt\/[^/]+$/.test(path)) return '/kredyt/:slug';
-    if (/^\/wynajem-dlugoterminowy\/[^/]+$/.test(path)) return '/wynajem-dlugoterminowy/:slug';
-    if (/^\/samochody\/[^/]+(\/[^/]+)?$/.test(path)) return '/samochody/:make[/:model]';
-    return path;
-}
-
-function formatMs(value: number | null): string {
-    return value === null ? 'n/a' : `${value}ms`;
 }
 
 async function main() {
@@ -122,6 +100,12 @@ async function main() {
             .sort((a, b) => b.count - a.count);
         for (const row of templateRows) {
             console.log(`${row.template.padEnd(35)} count=${String(row.count).padStart(5)} p50=${formatMs(row.p50).padEnd(8)} p75=${formatMs(row.p75).padEnd(8)} p95=${formatMs(row.p95)}`);
+        }
+        console.log('');
+
+        console.log('--- INP p75 per build (top 8 by count) ---');
+        for (const row of p75PerBuild(reports)) {
+            console.log(`${row.build.padEnd(20)} count=${String(row.count).padStart(5)} p75=${formatMs(row.p75)}`);
         }
         console.log('');
 
