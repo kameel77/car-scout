@@ -711,7 +711,22 @@ async function resolveMeta(
                 equipmentOther: true,
             },
         });
-        if (!rental) return defaultMeta(ctx, { noindex: true, status: 404 });
+        if (!rental) {
+            // Auto istnieje, ale jest wycofane (isActive=false lub isPublished=false) → 301 na hub
+            // najmu zamiast 404 (jak LONG_GONE ofert). Nieistniejący slug zostaje 404.
+            const withdrawn = await fastify.prisma.rentalVehicle.findFirst({
+                where: { slug: rm[1] },
+                select: { id: true },
+            });
+            if (withdrawn) {
+                return {
+                    ...defaultMeta(ctx, { noindex: true, status: 301 }),
+                    redirectUrl: '/wynajem-dlugoterminowy',
+                    status: 301,
+                };
+            }
+            return defaultMeta(ctx, { noindex: true, status: 404 });
+        }
 
         // FAQ najmu — ten sam filtr co frontend (page=rental, pageContext=rental)
         const rentalFaq = await fastify.prisma.faqEntry.findMany({
