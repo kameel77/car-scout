@@ -285,10 +285,11 @@ export async function seoRoutes(fastify: FastifyInstance) {
         // stron w koszu "wykluczona tagiem noindex" przy 2 789 ofertach w sitemapie — czyli
         // praktycznie cały ten kosz to te formularze. Same strony pozostają noindex; Disallow
         // odcina jedynie marnowanie budżetu indeksowania.
-        const body = `User-agent: *
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-User-agent: Googlebot
+        // Blokujemy też wyszukiwanie wewnętrzne (?q=): Bingbot crawlował /uzywane?q=<spam> —
+        // canonical wskazuje /uzywane, ale każde wejście to ~9 ciężkich zapytań do bazy.
+        // Reguła jest w każdej grupie z Disallow (grupa bota zastępuje grupę *, nie dziedziczy);
+        // Allow: /api/listings jest dłuższe niż /*?q=, więc wywołania API z q pozostają dozwolone.
+        const body = `User-agent: Googlebot
 Allow: /
 Allow: /api/settings
 Allow: /api/seo
@@ -308,6 +309,8 @@ Disallow: /storage/
 Disallow: /*/lead$
 Disallow: /*/negotiate$
 Disallow: /*/zapytanie$
+Disallow: /*?q=
+Disallow: /*&q=
 
 User-agent: Bingbot
 Allow: /
@@ -329,6 +332,8 @@ Disallow: /storage/
 Disallow: /*/lead$
 Disallow: /*/negotiate$
 Disallow: /*/zapytanie$
+Disallow: /*?q=
+Disallow: /*&q=
 
 User-agent: Twitterbot
 Allow: /
@@ -360,8 +365,11 @@ Disallow: /storage/
 Disallow: /*/lead$
 Disallow: /*/negotiate$
 Disallow: /*/zapytanie$
+Disallow: /*?q=
+Disallow: /*&q=
 
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
 Allow: /
 Allow: /api/settings
 Allow: /api/seo
@@ -386,6 +394,8 @@ Disallow: /new/
 Disallow: /*/lead$
 Disallow: /*/negotiate$
 Disallow: /*/zapytanie$
+Disallow: /*?q=
+Disallow: /*&q=
 
 Sitemap: ${baseUrl}/sitemap.xml
 `;

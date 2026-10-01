@@ -32,8 +32,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy Nginx config template
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Copy rate limiting config (http-level directives, not templated)
-COPY nginx-rate-limit.conf /etc/nginx/conf.d/rate-limit.conf
+# Copy rate limiting config (http-level directives, not templated).
+# Prefiks 00- : conf.d jest includowany alfabetycznie, a log_format "timed" z tego pliku
+# musi być zdefiniowany przed default.conf, który go używa w access_log.
+COPY nginx-rate-limit.conf /etc/nginx/conf.d/00-rate-limit.conf
 
 EXPOSE 80
 
