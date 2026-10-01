@@ -524,7 +524,9 @@ async function calcInstallmentForProduct(
     // (price - downPayment); ułamkowa cena netto dawała 422 od partnera.
     // VAT-marża: kwota do kalkulacji = cena oferty (bez dzielenia przez VAT), jak w kalkulatorze (vatMultiplier = 1).
     const nettoPrice = Math.round(vatMargin ? grossPricePln : grossPricePln / VAT);
-    const cacheKey = `${product.id}:${category}:${nettoPrice}:${downPct}:${finalPct}:${months}:${vatMargin ? 'm' : 'v'}`;
+    // Rocznik i przebieg w kluczu: są w kluczu financing_quotes (kalkulator je wysyła), a Vehis liczy od nich ratę
+    // (vehicleState) — bez nich oferty o tej samej cenie dzieliły jeden wynik i nie dostawały własnego wpisu.
+    const cacheKey = `${product.id}:${category}:${nettoPrice}:${downPct}:${finalPct}:${months}:${vatMargin ? 'm' : 'v'}:${manufacturingYear ?? ''}:${mileageKm ?? ''}`;
     if (cache?.has(cacheKey)) {
         return cache.get(cacheKey)!;
     }
