@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Calendar, Gauge, Fuel, ArrowRight, Info } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { LazyTooltip } from '@/components/ui/lazy-tooltip';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
 import { cn } from '@/lib/utils';
@@ -13,7 +12,7 @@ import { formatPrice, formatNumber } from '@/utils/formatters';
 import { useSpecialOffer } from '@/contexts/SpecialOfferContext';
 import { SpecialOfferTag } from '@/components/SpecialOfferTag';
 import { ImageSwiper } from '@/components/ImageSwiper';
-import { GearboxIcon } from '@/components/icons/GearboxIcon';
+import { CardIcon, ensureCardIconSprite } from '@/components/icons/cardIconSprite';
 import { applySpecialOfferDiscount } from '@/utils/specialOffer';
 import { getDisplayPrice, getFinancingBasePrice } from '@/utils/listingPrice';
 import { trackSelectItem } from '@/lib/analytics';
@@ -28,6 +27,8 @@ interface ListingCardProps {
   index?: number;
   financingType?: FinancingType;
 }
+
+ensureCardIconSprite();
 
 const PLN = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 });
 
@@ -243,7 +244,7 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
                 <p className="text-xs text-muted-foreground mt-1">{t('listing.perMonth')}</p>
                 <div className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
                   <span>Zobacz ofertę</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <CardIcon name="arrow-right" className="h-4 w-4" />
                 </div>
               </div>
             ) : undefined}
@@ -326,20 +327,20 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
           <div className="flex flex-wrap gap-1.5">
             {/* Year */}
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium tabular-nums whitespace-nowrap">
-              <Calendar className="h-3.5 w-3.5 shrink-0" />
+              <CardIcon name="calendar" className="h-3.5 w-3.5 shrink-0" />
               {listing.production_year}
             </span>
 
             {/* Mileage */}
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium tabular-nums whitespace-nowrap">
-              <Gauge className="h-3.5 w-3.5 shrink-0" />
+              <CardIcon name="gauge" className="h-3.5 w-3.5 shrink-0" />
               {listing.mileage_km.toLocaleString('pl-PL')} {t('listing.km')}
             </span>
 
             {/* Fuel */}
             {listing.fuel_type && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium whitespace-nowrap">
-                <Fuel className="h-3.5 w-3.5 shrink-0" />
+                <CardIcon name="fuel" className="h-3.5 w-3.5 shrink-0" />
                 {translateTechnicalValue('fuel', listing.fuel_type, t)}
               </span>
             )}
@@ -347,7 +348,7 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
             {/* Transmission */}
             {listing.transmission && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium whitespace-nowrap">
-                <GearboxIcon className="h-3.5 w-3.5 shrink-0" />
+                <CardIcon name="gearbox" className="h-3.5 w-3.5 shrink-0" />
                 {getTransmissionShortLabel(listing.transmission, t)}
               </span>
             )}
@@ -355,9 +356,7 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
             {/* Power — neutral (no accent color, no bold) */}
             {listing.engine_power_hp && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full font-medium tabular-nums whitespace-nowrap">
-                <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                </svg>
+                <CardIcon name="power" className="h-3.5 w-3.5 shrink-0" />
                 {listing.engine_power_hp} {t('listing.hp')}
               </span>
             )}
@@ -373,7 +372,7 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
           {/* Location — only shown when not null */}
           {listing.dealer_city && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <CardIcon name="map-pin" className="h-3.5 w-3.5 shrink-0" />
               <span>{listing.dealer_city}</span>
             </div>
           )}
@@ -405,14 +404,11 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
                           ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
                           : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
                       </span>
-                      <Tooltip>
-                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
-                          Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania.
-                        </TooltipContent>
-                      </Tooltip>
+                      <LazyTooltip
+                        trigger={<CardIcon name="info" className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />}
+                        contentProps={{ side: 'top', collisionPadding: 16, className: 'z-[9999] max-w-[220px] text-xs' }}
+                        content="Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania."
+                      />
                     </div>
                   </div>
                 )}
@@ -437,14 +433,11 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
                       <span className="text-sm font-semibold text-muted-foreground tabular-nums whitespace-nowrap">
                         {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
                       </span>
-                      <Tooltip>
-                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
-                          Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania.
-                        </TooltipContent>
-                      </Tooltip>
+                      <LazyTooltip
+                        trigger={<CardIcon name="info" className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />}
+                        contentProps={{ side: 'top', collisionPadding: 16, className: 'z-[9999] max-w-[220px] text-xs' }}
+                        content="Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania."
+                      />
                     </div>
                   </div>
                 )}
