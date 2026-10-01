@@ -8,14 +8,20 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { useBrand } from '@/contexts/BrandContext';
 import { useFinancingArticle } from '@/components/financing/useFinancingArticle';
 import { splitLeadParagraph } from '@/components/financing/splitLeadParagraph';
-import { FinancingContentSection } from '@/components/FinancingContentSection';
 import type { PillarCalculatorState } from '@/components/PillarFinancingCalculator';
-import { PillarSpecialOffers } from '@/components/pillar/PillarSpecialOffers';
 import { PillarPriceBreakdown, PillarSteps } from '@/components/pillar/PillarHowItWorks';
 import { PILLAR_BENEFITS, PILLAR_CALC, PILLAR_CALC_MIN_H, PILLAR_META, type PillarType } from '@/components/pillar/pillarContent';
 
 const PillarFinancingCalculator = React.lazy(() =>
   import('@/components/PillarFinancingCalculator').then((m) => ({ default: m.PillarFinancingCalculator })),
+);
+
+// Sekcje poniżej folda: osobne chunki, żeby nie opóźniały mountu Reacta (LCP = lead <p>).
+const PillarSpecialOffers = React.lazy(() =>
+  import('@/components/pillar/PillarSpecialOffers').then((m) => ({ default: m.PillarSpecialOffers })),
+);
+const FinancingContentSection = React.lazy(() =>
+  import('@/components/FinancingContentSection').then((m) => ({ default: m.FinancingContentSection })),
 );
 
 /**
@@ -106,11 +112,16 @@ export default function FinancingPillarPage({ type }: { type: PillarType }) {
           <div className="min-w-0 space-y-12 lg:col-start-1 lg:row-start-2">
             <PillarPriceBreakdown type={type} state={calcState} />
             <PillarSteps type={type} />
-            <PillarSpecialOffers type={type} />
+            {/* Rezerwa ≈ nagłówek + 4 skeletony kart (1 kolumna na mobile, 2×2 od sm) */}
+            <React.Suspense fallback={<div className="min-h-[130rem] sm:min-h-[63rem]" aria-hidden="true" />}>
+              <PillarSpecialOffers type={type} />
+            </React.Suspense>
           </div>
         </div>
 
-        <FinancingContentSection type={type} hideTitle />
+        <React.Suspense fallback={null}>
+          <FinancingContentSection type={type} hideTitle />
+        </React.Suspense>
       </main>
 
       <Footer />
