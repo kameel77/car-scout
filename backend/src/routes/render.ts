@@ -464,6 +464,8 @@ interface ViteManifestEntry {
     css?: string[];
     imports?: string[];
     isEntry?: boolean;
+    isDynamicEntry?: boolean;
+    name?: string;
 }
 type ViteManifest = Record<string, ViteManifestEntry>;
 
@@ -519,7 +521,11 @@ function routeEntryPreload(path: string, manifest: ViteManifest): string[] {
         'src/pages/FinancingPillarPage.tsx'
     ];
     if (!allowedModules.includes(route.module)) return [];
-    const entry = manifest[route.module];
+    // Gdy moduł trasy dzieli kod z własnymi lazy-chunkami, Rollup robi z niego chunk współdzielony
+    // i manifest zapisuje go pod kluczem `_Nazwa-hash.js` zamiast ścieżki źródła — szukamy wtedy po nazwie.
+    const name = route.module.replace(/^.*\//, '').replace(/\.tsx?$/, '');
+    const entry = manifest[route.module]
+        ?? Object.values(manifest).find(e => e.isDynamicEntry && e.name === name);
     if (!entry || entry.isEntry) return [];
     return [`<link rel="preload" as="script" href="/${entry.file}" crossorigin />`];
 }

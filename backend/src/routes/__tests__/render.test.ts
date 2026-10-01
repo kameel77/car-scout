@@ -284,6 +284,23 @@ describe('GET /api/render', () => {
         }
     });
 
+    it('preloads the pillar route chunk when the manifest keys it as a shared chunk (_Name-hash.js)', async () => {
+        const MANIFEST = {
+            '_FinancingPillarPage-abc.js': { file: 'assets/FinancingPillarPage-abc.js', name: 'FinancingPillarPage', isDynamicEntry: true, imports: ['index.html'] },
+            'index.html': { file: 'assets/index-main.js', isEntry: true },
+        };
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: unknown) =>
+                String(url).includes('manifest.json')
+                    ? new Response(JSON.stringify(MANIFEST), { status: 200 })
+                    : new Response(TEMPLATE, { status: 200 })
+            )
+        );
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/kredyt' });
+        expect(res.body).toContain('<link rel="preload" as="script" href="/assets/FinancingPillarPage-abc.js" crossorigin />');
+    });
+
     it('injects app-settings JSON block and window.__CATALOG_PREFETCH__ correctly', async () => {
         const resHome = await app.inject({ method: 'GET', url: '/api/render?path=/' });
         expect(resHome.statusCode).toBe(200);
