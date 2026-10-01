@@ -115,6 +115,30 @@ describe('SEO routes', () => {
         expect(res.body).not.toContain('carsalon.pl');
     });
 
+    it('robots.txt blocks internal search (?q=) in every group with Disallow rules', async () => {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/api/robots.txt',
+            headers: { host: 'motolia.pl' },
+        });
+        expect(res.body.split('Disallow: /*?q=').length - 1).toBeGreaterThanOrEqual(4);
+        expect(res.body.split('Disallow: /*&q=').length - 1).toBeGreaterThanOrEqual(4);
+        const googlebotSection = res.body.split('User-agent: Googlebot')[1]?.split('User-agent:')[0] || '';
+        expect(googlebotSection).toContain('Disallow: /*?q=');
+        const wildcardSection = res.body.split('User-agent: *')[1]?.split('Sitemap:')[0] || '';
+        expect(wildcardSection).toContain('Disallow: /*?q=');
+    });
+
+    it('robots.txt has a single User-agent: * group carrying the Content-Signal', async () => {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/api/robots.txt',
+            headers: { host: 'motolia.pl' },
+        });
+        expect(res.body.split('User-agent: *').length - 1).toBe(1);
+        expect(res.body.split('Content-Signal:').length - 1).toBe(1);
+    });
+
     it('robots.txt allows /api/seo-content for bots (SPA fetches CMS content client-side)', async () => {
         const res = await app.inject({
             method: 'GET',

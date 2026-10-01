@@ -35,8 +35,12 @@ export async function seoContentRoutes(fastify: FastifyInstance) {
 
         const content = await getSeoContentPage(fastify, urlPath);
         if (!content) {
+            // Brak treści CMS to stan normalny (większość marek/modeli jej nie ma), nie błąd —
+            // 404 zalewał statystyki indeksowania (także renderer Googlebota). 200 z `null`, a nie
+            // 204: SPA robi response.json(), które na 204 rzuca (stary bundle może być jeszcze w
+            // cache przeglądarek), a `null` obsługuje obecny frontend bez zmian.
             reply.header('Cache-Control', 'public, max-age=0, s-maxage=60');
-            return reply.code(404).send({ error: 'Not found' });
+            return reply.type('application/json; charset=utf-8').send('null');
         }
 
         reply.header('Cache-Control', 'public, max-age=0, s-maxage=300');

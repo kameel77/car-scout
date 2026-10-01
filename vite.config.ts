@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 import yaml from "@rollup/plugin-yaml";
 
@@ -114,6 +115,15 @@ export default defineConfig(({ mode }) => {
             .replace(/(<meta name="twitter:description"[^>]*content=").*?(")/,  `$1${meta.ogDescription}$2`)
             .replace(/(<meta name="twitter:image"[^>]*content=").*?(")/,        `$1${meta.ogImage}$2`)
             .replace('<div id="root"></div>', brand === 'motolia' ? motoliaHeroShell : '<div id="root"></div>');
+        },
+        // Przeglądarki i boty pytają o /apple-touch-icon.png (i /favicon.ico przez nginx)
+        // niezależnie od <link rel="icon"> — emitujemy favicon marki w katalogu głównym dist/.
+        generateBundle() {
+          this.emitFile({
+            type: 'asset',
+            fileName: 'apple-touch-icon.png',
+            source: fs.readFileSync(path.resolve(__dirname, `public${meta.favicon}`)),
+          });
         },
       },
       {
