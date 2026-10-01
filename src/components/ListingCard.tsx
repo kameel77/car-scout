@@ -178,7 +178,8 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
 
     const kredyt = kredytGross == null
       ? null
-      : (priceType === 'net' ? Math.round(kredytGross / VAT) : kredytGross);
+      // VAT-marża: kredyt netto = brutto (ta sama kwota) — spójnie z kalkulatorem (getInstallmentVatMultiplier).
+      : (priceType === 'net' && !listing.vatMargin ? Math.round(kredytGross / VAT) : kredytGross);
 
     return {
       kredyt,
