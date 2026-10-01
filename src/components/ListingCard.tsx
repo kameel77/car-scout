@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { LazyTooltip } from '@/components/ui/lazy-tooltip';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/data/mockData';
 import { cn } from '@/lib/utils';
@@ -404,14 +404,11 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
                           ? `${formatNumber(Math.round(monthlyRates.kredyt * 1.23))} zł brutto`
                           : `${formatNumber(Math.round(monthlyRates.kredyt / 1.23))} zł netto`}
                       </span>
-                      <Tooltip>
-                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                          <CardIcon name="info" className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
-                          Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania.
-                        </TooltipContent>
-                      </Tooltip>
+                      <LazyTooltip
+                        trigger={<CardIcon name="info" className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />}
+                        contentProps={{ side: 'top', collisionPadding: 16, className: 'z-[9999] max-w-[220px] text-xs' }}
+                        content="Miesięczna rata kredytu zależy od wybrania przez Ciebie parametrów finansowania."
+                      />
                     </div>
                   </div>
                 )}
@@ -436,14 +433,11 @@ function ListingCardComponent({ listing, index = 0, financingType }: ListingCard
                       <span className="text-sm font-semibold text-muted-foreground tabular-nums whitespace-nowrap">
                         {`${formatNumber(Math.round(monthlyRates.leasing * 1.23))} zł brutto`}
                       </span>
-                      <Tooltip>
-                        <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                          <CardIcon name="info" className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" collisionPadding={16} className="z-[9999] max-w-[220px] text-xs">
-                          Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania.
-                        </TooltipContent>
-                      </Tooltip>
+                      <LazyTooltip
+                        trigger={<CardIcon name="info" className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />}
+                        contentProps={{ side: 'top', collisionPadding: 16, className: 'z-[9999] max-w-[220px] text-xs' }}
+                        content="Miesięczna rata leasingu zależy od wybrania przez Ciebie parametrów finansowania."
+                      />
                     </div>
                   </div>
                 )}
