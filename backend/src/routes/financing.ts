@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { requirePermission } from '../middleware/permissions.js';
 import { z } from 'zod';
+import { createHash } from 'node:crypto';
+import { getJsonFromCache, setJsonInCache } from '../services/api-cache.js';
 import { calcInbankInstallment, calcVehisInstallment, FinancingCalcError } from '../services/financing-calc.service.js';
 
 const FinancingProductSchema = z.object({
@@ -110,11 +112,27 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(409).send({ error: 'Connection not configured' });
             }
 
+            // Cache wyniku kalkulacji (6 h). updatedAt produktu/połączenia w kluczu — edycja w panelu
+            // omija stare wpisy bez osobnej inwalidacji. Błędy nie są cache'owane (zapis po sukcesie).
+            const paramsHash = createHash('sha1').update(JSON.stringify({
+                price: data.price,
+                downPaymentAmount: data.downPaymentAmount,
+                period: data.period,
+                initialFeePercent: data.initialFeePercent ?? null,
+                finalPaymentPercent: data.finalPaymentPercent ?? null,
+                manufacturingYear: data.manufacturingYear ?? null,
+                mileageKm: data.mileageKm ?? null,
+            })).digest('hex');
+            const cacheKey = `financing:calc:v1:${product.id}:${product.updatedAt.getTime()}:${connection.updatedAt.getTime()}:${paramsHash}`;
+            const cachedResult = await getJsonFromCache<unknown>(cacheKey);
+            if (cachedResult) return cachedResult;
+
             try {
-                if (product.provider === 'INBANK') {
-                    return await calcInbankInstallment(product, connection, data, fastify.log);
-                }
-                return await calcVehisInstallment(product, connection, data, fastify.log);
+                const result = product.provider === 'INBANK'
+                    ? await calcInbankInstallment(product, connection, data, fastify.log)
+                    : await calcVehisInstallment(product, connection, data, fastify.log);
+                await setJsonInCache(cacheKey, result, 21600);
+                return result;
             } catch (error) {
                 if (error instanceof FinancingCalcError) {
                     return reply.code(error.statusCode).send(error.body);
