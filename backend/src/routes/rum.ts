@@ -38,6 +38,69 @@ interface SanitizedRumInpReport {
     mem: number | null;
     net: string | null;
     vw: number | null;
+    build: string | null;
+}
+
+// CLS `value` and `shiftValue` arrive as integer milli-CLS (raw score * 1000), since sanitizeNumber rounds.
+interface SanitizedRumVitalsReport {
+    metric: 'LCP' | 'CLS';
+    path: string;
+    value: number | null;
+    rating: string | null;
+    navigationType: string | null;
+    build: string | null;
+    net: string | null;
+    vw: number | null;
+    cpu: number | null;
+    mem: number | null;
+    target: string | null;
+    // LCP only
+    url: string | null;
+    ttfb: number | null;
+    loadDelay: number | null;
+    loadDuration: number | null;
+    renderDelay: number | null;
+    // CLS only
+    shiftValue: number | null;
+    shiftTime: number | null;
+    loadState: string | null;
+}
+
+function sanitizeBuild(value: unknown): string | null {
+    if (typeof value !== 'string' || value.length > 16 || !/^[A-Za-z0-9_-]+$/.test(value)) return null;
+    return value;
+}
+
+function sanitizeVitalsReport(body: unknown): SanitizedRumVitalsReport | null {
+    if (!body || typeof body !== 'object') return null;
+    const raw = body as Record<string, unknown>;
+
+    if (raw.metric !== 'LCP' && raw.metric !== 'CLS') return null;
+
+    const path = sanitizeString(raw.path, 200);
+    if (!path || !path.startsWith('/')) return null;
+
+    return {
+        metric: raw.metric,
+        path,
+        value: sanitizeNumber(raw.value),
+        rating: sanitizeString(raw.rating, 32),
+        navigationType: sanitizeString(raw.navigationType, 32),
+        build: sanitizeBuild(raw.build),
+        net: sanitizeString(raw.net, 16),
+        vw: sanitizeNumber(raw.vw),
+        cpu: sanitizeNumber(raw.cpu),
+        mem: sanitizeNumber(raw.mem),
+        target: sanitizeString(raw.target, 200),
+        url: sanitizeString(raw.url, 200),
+        ttfb: sanitizeNumber(raw.ttfb),
+        loadDelay: sanitizeNumber(raw.loadDelay),
+        loadDuration: sanitizeNumber(raw.loadDuration),
+        renderDelay: sanitizeNumber(raw.renderDelay),
+        shiftValue: sanitizeNumber(raw.shiftValue),
+        shiftTime: sanitizeNumber(raw.shiftTime),
+        loadState: sanitizeString(raw.loadState, 32),
+    };
 }
 
 function sanitizeReport(body: unknown): SanitizedRumInpReport | null {
@@ -77,6 +140,7 @@ function sanitizeReport(body: unknown): SanitizedRumInpReport | null {
         mem: sanitizeNumber(raw.mem),
         net: sanitizeString(raw.net, 16),
         vw: sanitizeNumber(raw.vw),
+        build: sanitizeBuild(raw.build),
     };
 }
 
@@ -107,6 +171,30 @@ export async function rumRoutes(fastify: FastifyInstance) {
             }
         } catch (err) {
             fastify.log.error({ err }, 'Failed to process RUM INP report');
+        }
+        return reply.code(204).send();
+    });
+
+    fastify.post('/api/rum/vitals', {
+        bodyLimit: 8 * 1024,
+        config: { rateLimit: { max: 300, timeWindow: '1 minute' } }
+    }, async (request, reply) => {
+        try {
+            const sanitized = sanitizeVitalsReport(request.body);
+            if (sanitized) {
+                fastify.log.info({ rum: 'vitals', host: request.hostname, ...sanitized }, 'RUM vitals');
+
+                const redis = getSsrRedisClient();
+                if (redis) {
+                    const key = `${getSsrNamespace()}:rum:vitals`;
+                    const entry = JSON.stringify({ ...sanitized, ts: Date.now(), host: request.hostname });
+                    await redis.lpush(key, entry);
+                    await redis.ltrim(key, 0, RUM_LIST_MAX_ENTRIES);
+                    await redis.expire(key, RUM_LIST_TTL_SECONDS);
+                }
+            }
+        } catch (err) {
+            fastify.log.error({ err }, 'Failed to process RUM vitals report');
         }
         return reply.code(204).send();
     });

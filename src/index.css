@@ -239,6 +239,13 @@
     @apply -translate-y-1;
   }
 
+  /* Skip layout/paint of off-screen cards. 520px ~ typical mobile card (16:10 image ~225px + body/rates/CTA ~295px);
+     `auto` makes the browser remember the real height once rendered. */
+  .listing-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 520px;
+  }
+
   .chip {
     @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-secondary text-secondary-foreground;
   }
