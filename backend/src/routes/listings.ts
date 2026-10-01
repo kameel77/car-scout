@@ -488,8 +488,26 @@ export async function listingRoutes(fastify: FastifyInstance) {
                 })
             } : {};
 
+            // Widoczność liczona raz — używana i w zapytaniu o ID dla `q`, i w głównym `where`.
+            const visibilityWhere = authenticated
+                ? {
+                    ...dealerFilter,
+                    ...(parsed.includeArchived ? {} : { isArchived: false }),
+                    OR: PUBLIC_LISTING_DISPLAY_MODE_OR
+                }
+                : getPublicListingWhere();
+
+            // Warunek q (ILIKE × 6 + tablice wyposażenia w TOAST) jest drogi — ~50 ms na zapytanie na prod.
+            // Liczymy go raz, a facety/count/lista filtrują już po liście ID (PK) — ta sama semantyka.
+            const searchIds = searchTerms.length > 0
+                ? (await fastify.prisma.listing.findMany({
+                    where: { ...searchFilter, ...visibilityWhere },
+                    select: { id: true },
+                })).map(r => r.id)
+                : null;
+
             const where = {
-                ...searchFilter,
+                ...(searchIds ? { id: { in: searchIds } } : {}),
                 make: makes ? { in: makes, mode: 'insensitive' as const } : undefined,
                 model: models ? { in: models, mode: 'insensitive' as const } : undefined,
 
@@ -533,13 +551,7 @@ export async function listingRoutes(fastify: FastifyInstance) {
                     ? { lt: new Date(parsed.lastManualEditBefore) }
                     : undefined,
                 dealer: cities ? { city: { in: cities, mode: 'insensitive' as const } } : undefined,
-                ...dealerFilter,
-                ...(authenticated
-                    ? {
-                        ...(parsed.includeArchived ? {} : { isArchived: false }),
-                        OR: PUBLIC_LISTING_DISPLAY_MODE_OR
-                    }
-                    : getPublicListingWhere())
+                ...visibilityWhere
             };
 
             // For per-dimension facets, count vehicles grouped by that dimension IGNORING
