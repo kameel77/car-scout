@@ -691,7 +691,7 @@ describe('buildStaticMeta', () => {
         expect(m.bodyHtml).toContain('<p>Druga sekcja artykułu.</p>');
 
         // route.description zostaje meta description, mimo że w bodyHtml go nie ma
-        expect(m.description).toBe('Samochody dostępne od ręki w leasingu. Złóż wniosek o finansowanie i odbierz auto bez czekania.');
+        expect(m.description).toBe('Leasing operacyjny samochodów osobowych i dostawczych dla JDG i spółek. Policz ratę netto i złóż wniosek na auto dostępne od ręki.');
     });
 
     it('rental category links to rental pages via listingsBasePath', () => {
