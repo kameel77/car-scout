@@ -34,9 +34,9 @@ describe('Public POST routes rate limits', () => {
             phone: '123456789'
         };
 
-        // max is 10, so 11 requests should trigger 429
+        // max is 30 (raised in 874f152 for corporate NAT), so 31 requests should trigger 429
         let lastStatusCode = 200;
-        for (let i = 0; i < 11; i++) {
+        for (let i = 0; i < 31; i++) {
             const res = await app.inject({
                 method: 'POST',
                 url: '/api/leads',
