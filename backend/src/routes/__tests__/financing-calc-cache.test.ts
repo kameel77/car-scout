@@ -181,4 +181,50 @@ describe('POST /api/financing/calculate — result cache (Redis + financing_quot
             expect(Date.now() - refreshed!.computedAt.getTime()).toBeLessThan(60 * 1000);
         });
     });
+
+    describe('coalescing concurrent identical requests', () => {
+        it('calls the partner once for two parallel identical requests', async () => {
+            let release!: () => void;
+            const gate = new Promise<void>(resolve => { release = resolve; });
+            fetchMock.mockImplementation(async () => {
+                await gate;
+                return okProviderResponse();
+            });
+
+            const both = Promise.all([calculate(42), calculate(42)]);
+            // Daj obu żądaniom dojść do wywołania partnera, zanim go „odblokujemy”.
+            await new Promise(resolve => setTimeout(resolve, 50));
+            release();
+            const [a, b] = await both;
+
+            expect(a.statusCode).toBe(200);
+            expect(b.statusCode).toBe(200);
+            expect(b.json()).toEqual(a.json());
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('hands the same error code to every waiter when the partner fails', async () => {
+            let release!: () => void;
+            const gate = new Promise<void>(resolve => { release = resolve; });
+            fetchMock.mockImplementation(async () => {
+                await gate;
+                return failProviderResponse();
+            });
+
+            const both = Promise.all([calculate(44), calculate(44)]);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            release();
+            const [a, b] = await both;
+
+            expect(a.statusCode).toBe(502);
+            expect(b.statusCode).toBe(502);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+
+            // Po błędzie wpis in-flight znika — kolejne zapytanie znów woła partnera.
+            fetchMock.mockImplementation(async () => okProviderResponse());
+            const retry = await calculate(44);
+            expect(retry.statusCode).toBe(200);
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+        });
+    });
 });

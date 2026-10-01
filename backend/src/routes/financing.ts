@@ -64,6 +64,9 @@ function maskConnection(connection: any) {
     };
 }
 
+// Trwające wywołania partnera po kluczu wyniku (łączenie jednoczesnych identycznych zapytań).
+const inFlightCalcs = new Map<string, Promise<unknown>>();
+
 export async function financingRoutes(fastify: FastifyInstance) {
     // Public: Get active products for calculator
     fastify.get('/api/financing/calculator', async (request, reply) => {
@@ -118,11 +121,23 @@ export async function financingRoutes(fastify: FastifyInstance) {
             if (cachedResult) return cachedResult;
 
             try {
-                const result = product.provider === 'INBANK'
-                    ? await calcInbankInstallment(product, connection, data, fastify.log)
-                    : await calcVehisInstallment(product, connection, data, fastify.log);
-                await saveFinancingQuote(fastify.prisma, cacheKey, product.id, result);
-                return result;
+                // Jednoczesne identyczne zapytania (np. dwa kalkulatory na karcie oferty) dzielą jedno wywołanie partnera.
+                let pending = inFlightCalcs.get(cacheKey);
+                if (!pending) {
+                    pending = (async () => {
+                        try {
+                            const result = product.provider === 'INBANK'
+                                ? await calcInbankInstallment(product, connection, data, fastify.log)
+                                : await calcVehisInstallment(product, connection, data, fastify.log);
+                            await saveFinancingQuote(fastify.prisma, cacheKey, product.id, result);
+                            return result;
+                        } finally {
+                            inFlightCalcs.delete(cacheKey);
+                        }
+                    })();
+                    inFlightCalcs.set(cacheKey, pending);
+                }
+                return await pending;
             } catch (error) {
                 if (error instanceof FinancingCalcError) {
                     return reply.code(error.statusCode).send(error.body);
