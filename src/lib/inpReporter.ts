@@ -168,9 +168,13 @@ export function buildInpPayload(metric: INPMetricWithAttribution): InpPayload {
     };
 }
 
+// LCP/CLS are reported on page hide and describe the page the visit landed on (web-vitals does not
+// reset them on SPA navigations), so the path is captured at startup, not at send time.
+let landingPath: string | null = null;
+
 export function buildVitalsPayload(metric: LCPMetricWithAttribution | CLSMetricWithAttribution): VitalsPayload {
     const common = {
-        path: location.pathname,
+        path: landingPath ?? location.pathname,
         rating: metric.rating,
         navigationType: metric.navigationType,
         build: getBuildId(),
@@ -226,6 +230,7 @@ function report(metric: INPMetricWithAttribution): void {
 }
 
 export function startInpReporting(): void {
+    landingPath = location.pathname;
     if (navigator.webdriver || !navigator.sendBeacon || isLocalHostname(location.hostname)) return;
 
     const startWhenIdle = () => {
@@ -234,8 +239,10 @@ export function startInpReporting(): void {
                 .then(({ onINP, onLCP, onCLS }) => {
                     onINP(report, { generateTarget: generateInpTarget });
                     // Buffered observers: registering after load still captures LCP/CLS; they report on page hide.
-                    onLCP(reportVitals, { generateTarget: generateInpTarget });
-                    onCLS(reportVitals, { generateTarget: generateInpTarget });
+                    // Default CSS selectors: the INP label climbs to the closest link/button, which
+                    // would attribute every card image or shifted card to its link text.
+                    onLCP(reportVitals);
+                    onCLS(reportVitals);
                 })
                 .catch(() => {
                     // Chunk failed to load — reporting is best-effort.
