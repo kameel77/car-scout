@@ -103,6 +103,8 @@ describe('reference installments — shared partner quote store', () => {
         const result = await computeReferenceInstallments({ prisma: ctxPrisma, log: console }, listingId);
         expect(result?.creditInstallment).toBe(Math.round(1500.5 * 1.23));
         expect(fetchMock).toHaveBeenCalledTimes(1);
+        // Bez VAT-marży partner dostaje kwotę netto (123000 / 1,23 = 100000) minus 25% wkładu.
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body).amount).toBe(75000);
 
         // Dokładnie to, co wysłałby kalkulator dla tej oferty.
         const res = await app.inject({
@@ -128,6 +130,33 @@ describe('reference installments — shared partner quote store', () => {
         const stored = await app.prisma.financingQuote.findMany({ where: { productId } });
         expect(stored).toHaveLength(1);
         expect(stored[0].response).toEqual(res.json());
+    });
+
+    it('VAT-margin listing: partner gets the offer price (not /1.23) and the credit installment is not multiplied by 1.23', async () => {
+        const marginListing = await app.prisma.listing.create({
+            data: {
+                make: 'TEST_REFQUOTES',
+                model: 'Margin',
+                pricePln: 123000,
+                mileageKm: 50000,
+                productionYear: 2020,
+                isArchived: false,
+                creditAvailable: true,
+                creditProductId: productId,
+                leasingAvailable: false,
+                vatMargin: true,
+            },
+        });
+        try {
+            const result = await computeReferenceInstallments({ prisma: ctxPrisma, log: console }, marginListing.id);
+
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            // 123000 − 25% wkładu (30750) = 92250 — cena oferty, bez dzielenia przez 1,23.
+            expect(JSON.parse(fetchMock.mock.calls[0][1].body).amount).toBe(92250);
+            expect(result?.creditInstallment).toBe(Math.round(1500.5));
+        } finally {
+            await app.prisma.listing.delete({ where: { id: marginListing.id } });
+        }
     });
 
     it('recomputeAll({ onlyMissing }) computes only listings with referenceCalcAt = null', async () => {

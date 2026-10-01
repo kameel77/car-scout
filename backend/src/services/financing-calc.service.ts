@@ -406,6 +406,7 @@ interface ListingForCalc {
     leasingProductId: string | null;
     productionYear: number;
     mileageKm: number;
+    vatMargin: boolean;
 }
 
 export interface CalcContext {
@@ -475,10 +476,11 @@ async function firstSuccessfulInstallment(
     grossPricePln: number,
     manufacturingYear: number,
     mileageKm: number,
+    vatMargin: boolean,
     cache?: Map<string, Promise<number | null>>
 ): Promise<number | null> {
     for (const product of candidates) {
-        const installment = await calcInstallmentForProduct(ctx, product, connectionByProvider, category, grossPricePln, manufacturingYear, mileageKm, cache);
+        const installment = await calcInstallmentForProduct(ctx, product, connectionByProvider, category, grossPricePln, manufacturingYear, mileageKm, vatMargin, cache);
         if (installment != null) return installment;
     }
     return null;
@@ -499,6 +501,7 @@ async function calcInstallmentForProduct(
     grossPricePln: number,
     manufacturingYear: number,
     mileageKm: number,
+    vatMargin: boolean,
     cache?: Map<string, Promise<number | null>>
 ): Promise<number | null> {
     if (!product) return null;
@@ -519,8 +522,9 @@ async function calcInstallmentForProduct(
 
     // Zaokrąglamy jak kalkulator (Math.round(price/1.23)) — INBANK wymaga całkowitego `amount`
     // (price - downPayment); ułamkowa cena netto dawała 422 od partnera.
-    const nettoPrice = Math.round(grossPricePln / VAT);
-    const cacheKey = `${product.id}:${category}:${nettoPrice}:${downPct}:${finalPct}:${months}`;
+    // VAT-marża: kwota do kalkulacji = cena oferty (bez dzielenia przez VAT), jak w kalkulatorze (vatMultiplier = 1).
+    const nettoPrice = Math.round(vatMargin ? grossPricePln : grossPricePln / VAT);
+    const cacheKey = `${product.id}:${category}:${nettoPrice}:${downPct}:${finalPct}:${months}:${vatMargin ? 'm' : 'v'}`;
     if (cache?.has(cacheKey)) {
         return cache.get(cacheKey)!;
     }
@@ -546,7 +550,8 @@ async function calcInstallmentForProduct(
             await saveFinancingQuote(ctx.prisma, buildFinancingQuoteKey(product, connection, params), product.id, result);
 
             const netto = result.monthlyInstallment;
-            return Math.round(category === 'CREDIT' ? netto * VAT : netto);
+            // Kredyt: netto → brutto (VAT-marża: netto = brutto, mnożnik 1). Leasing zostaje netto.
+            return Math.round(category === 'CREDIT' ? netto * (vatMargin ? 1 : VAT) : netto);
         } catch (err) {
             ctx.log.error({ err, productId: product.id, provider: product.provider, category }, 'Reference installment: partner calculation failed');
             return null;
@@ -579,6 +584,7 @@ export async function computeReferenceInstallments(
             leasingProductId: true,
             productionYear: true,
             mileageKm: true,
+            vatMargin: true,
         }
     });
     if (!listing) return null;
@@ -597,13 +603,14 @@ export async function computeReferenceInstallments(
         const creditAmountToFinance = price - Math.round(price * REFERENCE_INITIAL_PCT / 100);
         const creditCandidates = selectProductCandidates(products, 'CREDIT', listing, creditAmountToFinance);
 
-        const netPrice = price / VAT;
+        // VAT-marża: bez dzielenia przez VAT (spójnie z amountToFinance kalkulatora).
+        const netPrice = listing.vatMargin ? price : price / VAT;
         const leasingAmountToFinance = netPrice - Math.round(netPrice * REFERENCE_INITIAL_PCT / 100);
         const leasingCandidates = selectProductCandidates(products, 'LEASING', listing, leasingAmountToFinance);
 
         [creditInstallment, leasingInstallment] = await Promise.all([
-            firstSuccessfulInstallment(ctx, creditCandidates, connectionByProvider, 'CREDIT', price, listing.productionYear, listing.mileageKm, cache),
-            firstSuccessfulInstallment(ctx, leasingCandidates, connectionByProvider, 'LEASING', price, listing.productionYear, listing.mileageKm, cache),
+            firstSuccessfulInstallment(ctx, creditCandidates, connectionByProvider, 'CREDIT', price, listing.productionYear, listing.mileageKm, listing.vatMargin, cache),
+            firstSuccessfulInstallment(ctx, leasingCandidates, connectionByProvider, 'LEASING', price, listing.productionYear, listing.mileageKm, listing.vatMargin, cache),
         ]);
     }
 

@@ -136,6 +136,36 @@ Po deployu na prod (osobny krok, robi koordynator):
 3. Po godzinie: `select count(*) from listings where not is_archived and reference_calc_at is null` ≈ 0.
 4. `curl -sI -A Mozilla/5.0 https://motolia.pl/samochody/cmtbtxx3300fo9s4hkt23hpht` → 301 na `/oferta/...`.
 
-Poza zakresem (odnotowane): frontend montujący dwa kalkulatory (D niweluje koszt po stronie partnera);
-oferty z VAT-marżą (inna podstawa netto we froncie i w cronie — do decyzji biznesowej); 117 błędów
+## F — VAT-marża: podstawa jak w kalkulatorze (decyzja usera 2026-10-01)
+
+Reguła biznesowa dla ofert z `vatMargin = true`:
+- **kwota do kalkulacji raty (wysyłana do partnera) = cena oferty** — dla kredytu i leasingu (bez dzielenia przez 1,23;
+  tak już liczy kalkulator: `price / vatMultiplier`, gdzie `vatMultiplier = 1` dla VAT-marży);
+- **kredyt:** netto i brutto to ta sama kwota → rata brutto = rata od partnera (mnożnik 1);
+- **leasing:** wartość brutto = kwota VAT-marży + 23% VAT → rata brutto leasingu = rata netto × 1,23.
+
+1. **Cron** (`financing-calc.service.ts`): `calcInstallmentForProduct` i `computeReferenceInstallments` muszą znać
+   `vatMargin` oferty (dodać do `select` i `ListingForCalc`/parametrów). Dla VAT-marży:
+   `nettoPrice = Math.round(grossPricePln)` (zamiast `/ VAT`), a konwersja wyniku kredytu do brutto z mnożnikiem 1
+   (zamiast `* VAT`). Leasing: zapisywana kwota referencyjna pozostaje netto (bez zmian semantyki).
+   Kwoty do wyboru produktu (`creditAmountToFinance`/`leasingAmountToFinance` w `computeReferenceInstallments`,
+   `netPrice = price / VAT`) — dla VAT-marży także bez dzielenia przez VAT (spójnie z `amountToFinance` kalkulatora).
+   Dla ofert bez VAT-marży — zero zmian. Dzięki temu klucz z crona (B) spotka się z kluczem kalkulatora także dla
+   182 ofert z VAT-marżą.
+2. **Frontend** (`src/components/FinancingCalculator.tsx`): dziś `vatMultiplier = vatMargin ? 1 : 1.23` jest używany
+   zarówno do podstawy, jak i do przeliczenia raty netto→brutto (L141, L310, L641–642). Zostawić podstawę bez zmian,
+   a do przeliczenia RATY netto↔brutto użyć mnożnika zależnego od kategorii:
+   `installmentVatMultiplier = (vatMargin && activeCategory !== 'LEASING') ? 1 : 1.23`
+   (kredyt z VAT-marżą: 1; leasing zawsze 1,23; oferty bez VAT-marży: 1,23 jak dziś). Zastosować w tych trzech
+   miejscach przeliczenia raty; `price / vatMultiplier` (L280) i podstawy (`price` w `ListingDetailPage`) — bez zmian.
+   Sprawdzić `ListingCard.tsx` / inne miejsca pokazujące `referenceLeasingInstallment` jako brutto dla klienta
+   prywatnego — jeśli przeliczają z `vatMargin`, zastosować tę samą regułę; jeśli nie dotykają VAT-marży, nie ruszać.
+
+**Testy:** backend — `computeReferenceInstallments` dla oferty z `vatMargin: true` (mock fetch): partner dostaje
+`amount`/`price` równe cenie oferty (nie /1,23), kredyt referencyjny = rata partnera (bez ×1,23); oferta bez VAT-marży
+— jak dotąd. Frontend — jeśli istnieją testy `FinancingCalculator` (vitest/RTL), dodać przypadek: VAT-marża + leasing
++ klient prywatny → wyświetlana rata = netto × 1,23; VAT-marża + kredyt → bez ×1,23. Jeśli testów komponentu brak —
+wydzielić mnożnik do małej czystej funkcji i przetestować ją jednostkowo.
+
+Poza zakresem (odnotowane): frontend montujący dwa kalkulatory (D niweluje koszt po stronie partnera); 117 błędów
 „Provider request failed” w nocnym przeliczeniu (osobna diagnoza).
