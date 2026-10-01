@@ -1,5 +1,6 @@
 import { PrismaClient, FinancingProduct, FinancingProviderConnection } from '@prisma/client';
 import cron from 'node-cron';
+import { buildFinancingQuoteKey, saveFinancingQuote } from './financing-quote-cache.js';
 
 // ---------------------------------------------------------------------------
 // Shared partner-API plumbing (moved from routes/financing.ts so it can be
@@ -405,6 +406,7 @@ interface ListingForCalc {
     leasingProductId: string | null;
     productionYear: number;
     mileageKm: number;
+    vatMargin: boolean;
 }
 
 export interface CalcContext {
@@ -474,10 +476,11 @@ async function firstSuccessfulInstallment(
     grossPricePln: number,
     manufacturingYear: number,
     mileageKm: number,
+    vatMargin: boolean,
     cache?: Map<string, Promise<number | null>>
 ): Promise<number | null> {
     for (const product of candidates) {
-        const installment = await calcInstallmentForProduct(ctx, product, connectionByProvider, category, grossPricePln, manufacturingYear, mileageKm, cache);
+        const installment = await calcInstallmentForProduct(ctx, product, connectionByProvider, category, grossPricePln, manufacturingYear, mileageKm, vatMargin, cache);
         if (installment != null) return installment;
     }
     return null;
@@ -498,6 +501,7 @@ async function calcInstallmentForProduct(
     grossPricePln: number,
     manufacturingYear: number,
     mileageKm: number,
+    vatMargin: boolean,
     cache?: Map<string, Promise<number | null>>
 ): Promise<number | null> {
     if (!product) return null;
@@ -518,8 +522,9 @@ async function calcInstallmentForProduct(
 
     // Zaokrąglamy jak kalkulator (Math.round(price/1.23)) — INBANK wymaga całkowitego `amount`
     // (price - downPayment); ułamkowa cena netto dawała 422 od partnera.
-    const nettoPrice = Math.round(grossPricePln / VAT);
-    const cacheKey = `${product.id}:${category}:${nettoPrice}:${downPct}:${finalPct}:${months}`;
+    // VAT-marża: kwota do kalkulacji = cena oferty (bez dzielenia przez VAT), jak w kalkulatorze (vatMultiplier = 1).
+    const nettoPrice = Math.round(vatMargin ? grossPricePln : grossPricePln / VAT);
+    const cacheKey = `${product.id}:${category}:${nettoPrice}:${downPct}:${finalPct}:${months}:${vatMargin ? 'm' : 'v'}`;
     if (cache?.has(cacheKey)) {
         return cache.get(cacheKey)!;
     }
@@ -541,8 +546,12 @@ async function calcInstallmentForProduct(
                 ? await calcInbankInstallment(product, connection, params, ctx.log)
                 : await calcVehisInstallment(product, connection, params, ctx.log);
 
+            // Pełna odpowiedź partnera do magazynu — kalkulator na ofercie trafi w ten sam klucz.
+            await saveFinancingQuote(ctx.prisma, buildFinancingQuoteKey(product, connection, params), product.id, result);
+
             const netto = result.monthlyInstallment;
-            return Math.round(category === 'CREDIT' ? netto * VAT : netto);
+            // Kredyt: netto → brutto (VAT-marża: netto = brutto, mnożnik 1). Leasing zostaje netto.
+            return Math.round(category === 'CREDIT' ? netto * (vatMargin ? 1 : VAT) : netto);
         } catch (err) {
             ctx.log.error({ err, productId: product.id, provider: product.provider, category }, 'Reference installment: partner calculation failed');
             return null;
@@ -575,6 +584,7 @@ export async function computeReferenceInstallments(
             leasingProductId: true,
             productionYear: true,
             mileageKm: true,
+            vatMargin: true,
         }
     });
     if (!listing) return null;
@@ -593,13 +603,14 @@ export async function computeReferenceInstallments(
         const creditAmountToFinance = price - Math.round(price * REFERENCE_INITIAL_PCT / 100);
         const creditCandidates = selectProductCandidates(products, 'CREDIT', listing, creditAmountToFinance);
 
-        const netPrice = price / VAT;
+        // VAT-marża: bez dzielenia przez VAT (spójnie z amountToFinance kalkulatora).
+        const netPrice = listing.vatMargin ? price : price / VAT;
         const leasingAmountToFinance = netPrice - Math.round(netPrice * REFERENCE_INITIAL_PCT / 100);
         const leasingCandidates = selectProductCandidates(products, 'LEASING', listing, leasingAmountToFinance);
 
         [creditInstallment, leasingInstallment] = await Promise.all([
-            firstSuccessfulInstallment(ctx, creditCandidates, connectionByProvider, 'CREDIT', price, listing.productionYear, listing.mileageKm, cache),
-            firstSuccessfulInstallment(ctx, leasingCandidates, connectionByProvider, 'LEASING', price, listing.productionYear, listing.mileageKm, cache),
+            firstSuccessfulInstallment(ctx, creditCandidates, connectionByProvider, 'CREDIT', price, listing.productionYear, listing.mileageKm, listing.vatMargin, cache),
+            firstSuccessfulInstallment(ctx, leasingCandidates, connectionByProvider, 'LEASING', price, listing.productionYear, listing.mileageKm, listing.vatMargin, cache),
         ]);
     }
 
@@ -649,19 +660,51 @@ export async function recomputeAll(ctx: CalcContext, opts?: { onlyMissing?: bool
     const workers = Array.from({ length: Math.min(RECOMPUTE_CONCURRENCY, listings.length) }, () => worker());
     await Promise.all(workers);
 
+    // Sprzątanie magazynu wyników partnera — wpisy starsze niż 7 dni (ważność to 36 h).
+    try {
+        await ctx.prisma.financingQuote.deleteMany({
+            where: { computedAt: { lt: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
+        });
+    } catch (err) {
+        ctx.log.error({ err }, 'Reference installments: financing_quotes cleanup failed');
+    }
+
     return processed;
 }
 
-/** Nightly cron (03:00) — refreshes reference installments for all listings (partner rates drift). */
+/** Cron: nocne pełne przeliczenie (03:00) + co godzinę uzupełnienie ofert bez raty referencyjnej (świeże importy). */
 export function initReferenceInstallmentsCron(prisma: PrismaClient) {
-    console.log('[FinancingCalc] Rejestracja zadania cron przeliczenia rat referencyjnych (03:00)');
+    console.log('[FinancingCalc] Rejestracja zadań cron przeliczenia rat referencyjnych (03:00, co godzinę :15 dla nowych ofert)');
+    // Wspólna flaga — nie startujemy przebiegu, gdy poprzedni jeszcze trwa.
+    let isRunning = false;
+
     cron.schedule('0 3 * * *', async () => {
+        if (isRunning) {
+            console.log('[CRON] Pominięto nocne przeliczenie rat referencyjnych — poprzedni przebieg trwa');
+            return;
+        }
+        isRunning = true;
         console.log('[CRON] Wykonanie nocnego przeliczenia rat referencyjnych');
         try {
             const count = await recomputeAll({ prisma, log: console });
             console.log(`[CRON] Przeliczono raty referencyjne dla ${count} ofert`);
         } catch (e) {
             console.error('[CRON] Nie udało się przeliczyć rat referencyjnych:', e);
+        } finally {
+            isRunning = false;
+        }
+    });
+
+    cron.schedule('15 * * * *', async () => {
+        if (isRunning) return;
+        isRunning = true;
+        try {
+            const count = await recomputeAll({ prisma, log: console }, { onlyMissing: true });
+            console.log(`[CRON] Uzupełniono raty referencyjne dla ${count} nowych ofert`);
+        } catch (e) {
+            console.error('[CRON] Nie udało się uzupełnić rat referencyjnych dla nowych ofert:', e);
+        } finally {
+            isRunning = false;
         }
     });
 }

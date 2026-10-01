@@ -435,6 +435,7 @@ const PILLAR_PATH_TYPES: Record<string, 'leasing' | 'leasing-konsumencki' | 'kre
 const PROMO_RE = /^\/promo\/([^/]+)$/;
 const NOINDEX_RE = /^\/(admin|login|embed|listing|dla-firmy)(\/|$)|\/(lead|negotiate|zapytanie)$/;
 const BRAND_RE = /^\/samochody\/([^/]+)$/;
+const LEGACY_LISTING_SEGMENT_RE = /^(?:[a-z0-9-]+-)?c[a-z0-9]{24}$/;
 const BRAND_MODEL_RE = /^\/samochody\/([^/]+)\/([^/]+)$/;
 
 // --- Modulepreload chunków tras (manifest Vite) ---
@@ -874,6 +875,24 @@ async function resolveMeta(
     // Strona marki (/samochody/:marka)
     const bOnly = path.match(BRAND_RE);
     if (bOnly) {
+        // Stare adresy /samochody/<id-oferty> (JSON-LD ConditionPage sprzed 6e9135e) — po nieznalezieniu marki
+        // 301 na ofertę zamiast 404; w pozostałych przypadkach dotychczasowe 404.
+        const legacyOfferRedirectOr404 = async (segment: string) => {
+            if (LEGACY_LISTING_SEGMENT_RE.test(segment)) {
+                const lifecycle = await resolveOfferLifecycle(fastify, segment);
+                const redirectUrl = lifecycle.state === 'ACTIVE' || lifecycle.state === 'RECENTLY_SOLD'
+                    ? (lifecycle.canonicalSlug ? `/oferta/${lifecycle.canonicalSlug}` : null)
+                    : lifecycle.state === 'LONG_GONE' ? lifecycle.redirectUrl : null;
+                if (redirectUrl) {
+                    return {
+                        ...defaultMeta(ctx, { noindex: true, status: 301 }),
+                        redirectUrl,
+                        status: 301,
+                    };
+                }
+            }
+            return defaultMeta(ctx, { noindex: true, status: 404 });
+        };
         const cmsUrlPath = `/samochody/${bOnly[1]}`;
         const [brandCatalog, cmsContentRow] = await Promise.all([
             getBrandCatalog(fastify),
@@ -883,9 +902,9 @@ async function resolveMeta(
         if (!brandEntry) {
             // Marka bez aktywnych ofert — trwałość strony (spec §1/F2 pkt 4e) tylko przy
             // opublikowanej treści CMS; bez CMS zostaje 404 ze znanego ograniczenia F1.
-            if (!cmsContentRow) return defaultMeta(ctx, { noindex: true, status: 404 });
+            if (!cmsContentRow) return legacyOfferRedirectOr404(bOnly[1]);
             brandEntry = (await getBrandCatalogAllTime(fastify)).find(b => b.slug === bOnly[1]);
-            if (!brandEntry) return defaultMeta(ctx, { noindex: true, status: 404 });
+            if (!brandEntry) return legacyOfferRedirectOr404(bOnly[1]);
             brandEntry = { ...brandEntry, count: 0 };
         }
         const cms: CmsPageContent | undefined = cmsContentRow

@@ -107,6 +107,20 @@ describe('GET /api/render', () => {
         expect(res.body).toContain('noindex');
     });
 
+    it('legacy /samochody/<listing-id> of an active offer 301s to /oferta/<slug>', async () => {
+        const l = await createListing();
+        const slug = generateListingSlug(l.make, l.model, l.version, l.productionYear, l.bodyType, l.fuelType, l.id);
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=/samochody/${l.id}` });
+        expect(res.statusCode).toBe(301);
+        expect(res.headers['location']).toBe(`/oferta/${slug}`);
+    });
+
+    it('legacy /samochody/<nonexistent-cuid> is still 404 + noindex', async () => {
+        const res = await app.inject({ method: 'GET', url: '/api/render?path=/samochody/cmtbtxx3300fo9s4hkt23hpha' });
+        expect(res.statusCode).toBe(404);
+        expect(res.body).toContain('noindex');
+    });
+
     it('recently archived listing returns 200 with noindex and banner', async () => {
         const l = await createListing();
         await app.prisma.listing.update({ where: { id: l.id }, data: { isArchived: true, archivedAt: new Date() } });

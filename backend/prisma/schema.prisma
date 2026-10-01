@@ -453,6 +453,16 @@ model FinancingProviderConnection {
   @@map("financing_provider_connections")
 }
 
+model FinancingQuote {
+  cacheKey   String   @id @map("cache_key")
+  productId  String   @map("product_id")
+  response   Json
+  computedAt DateTime @default(now()) @map("computed_at")
+
+  @@index([computedAt])
+  @@map("financing_quotes")
+}
+
 model CrmTrackingSession {
   id         String             @id
   uuid       String
