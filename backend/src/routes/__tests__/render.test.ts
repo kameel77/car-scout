@@ -59,6 +59,7 @@ describe('GET /api/render', () => {
         else process.env.FRONTEND_URL = prevFrontendUrl;
         if (prevInternalFrontendUrl === undefined) delete process.env.INTERNAL_FRONTEND_URL;
         else process.env.INTERNAL_FRONTEND_URL = prevInternalFrontendUrl;
+        await app.prisma.rentalVehicle.deleteMany({ where: { make: 'TEST_RENDER' } });
     });
 
     async function createListing() {
@@ -374,7 +375,7 @@ describe('GET /api/render', () => {
         expect(resMissing.body).not.toContain('id="ssr-meta"');
     });
 
-    it('active but unpublished rental returns 404 + noindex (soft-404 fix — SSR must match the public API visibility)', async () => {
+    it('active but unpublished rental 301s to /wynajem-dlugoterminowy (withdrawn vehicle, not 404)', async () => {
         const rental = await app.prisma.rentalVehicle.create({
             data: {
                 slug: `test-unpublished-rental-${Date.now()}`,
@@ -387,6 +388,30 @@ describe('GET /api/render', () => {
             },
         });
         const res = await app.inject({ method: 'GET', url: `/api/render?path=/wynajem-dlugoterminowy/${rental.slug}` });
+        expect(res.statusCode).toBe(301);
+        expect(res.headers['location']).toBe('/wynajem-dlugoterminowy');
+        expect(res.body).not.toContain('id="ssr-meta"');
+    });
+
+    it('published but inactive rental 301s to /wynajem-dlugoterminowy', async () => {
+        const rental = await app.prisma.rentalVehicle.create({
+            data: {
+                slug: `test-inactive-rental-${Date.now()}`,
+                make: 'TEST_RENDER',
+                model: 'InactiveCar',
+                version: null,
+                productionYear: 2025,
+                isActive: false,
+                isPublished: true,
+            },
+        });
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=/wynajem-dlugoterminowy/${rental.slug}` });
+        expect(res.statusCode).toBe(301);
+        expect(res.headers['location']).toBe('/wynajem-dlugoterminowy');
+    });
+
+    it('rental with a non-existent slug still returns 404 + noindex', async () => {
+        const res = await app.inject({ method: 'GET', url: `/api/render?path=/wynajem-dlugoterminowy/test-nonexistent-rental-${Date.now()}` });
         expect(res.statusCode).toBe(404);
         expect(res.body).toContain('noindex');
         expect(res.body).not.toContain('id="ssr-meta"');
