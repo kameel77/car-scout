@@ -665,16 +665,39 @@ export async function recomputeAll(ctx: CalcContext, opts?: { onlyMissing?: bool
     return processed;
 }
 
-/** Nightly cron (03:00) — refreshes reference installments for all listings (partner rates drift). */
+/** Cron: nocne pełne przeliczenie (03:00) + co godzinę uzupełnienie ofert bez raty referencyjnej (świeże importy). */
 export function initReferenceInstallmentsCron(prisma: PrismaClient) {
-    console.log('[FinancingCalc] Rejestracja zadania cron przeliczenia rat referencyjnych (03:00)');
+    console.log('[FinancingCalc] Rejestracja zadań cron przeliczenia rat referencyjnych (03:00, co godzinę :15 dla nowych ofert)');
+    // Wspólna flaga — nie startujemy przebiegu, gdy poprzedni jeszcze trwa.
+    let isRunning = false;
+
     cron.schedule('0 3 * * *', async () => {
+        if (isRunning) {
+            console.log('[CRON] Pominięto nocne przeliczenie rat referencyjnych — poprzedni przebieg trwa');
+            return;
+        }
+        isRunning = true;
         console.log('[CRON] Wykonanie nocnego przeliczenia rat referencyjnych');
         try {
             const count = await recomputeAll({ prisma, log: console });
             console.log(`[CRON] Przeliczono raty referencyjne dla ${count} ofert`);
         } catch (e) {
             console.error('[CRON] Nie udało się przeliczyć rat referencyjnych:', e);
+        } finally {
+            isRunning = false;
+        }
+    });
+
+    cron.schedule('15 * * * *', async () => {
+        if (isRunning) return;
+        isRunning = true;
+        try {
+            const count = await recomputeAll({ prisma, log: console }, { onlyMissing: true });
+            console.log(`[CRON] Uzupełniono raty referencyjne dla ${count} nowych ofert`);
+        } catch (e) {
+            console.error('[CRON] Nie udało się uzupełnić rat referencyjnych dla nowych ofert:', e);
+        } finally {
+            isRunning = false;
         }
     });
 }
