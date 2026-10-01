@@ -1,5 +1,6 @@
 import { PrismaClient, FinancingProduct, FinancingProviderConnection } from '@prisma/client';
 import cron from 'node-cron';
+import { buildFinancingQuoteKey, saveFinancingQuote } from './financing-quote-cache.js';
 
 // ---------------------------------------------------------------------------
 // Shared partner-API plumbing (moved from routes/financing.ts so it can be
@@ -540,6 +541,9 @@ async function calcInstallmentForProduct(
             const result = product.provider === 'INBANK'
                 ? await calcInbankInstallment(product, connection, params, ctx.log)
                 : await calcVehisInstallment(product, connection, params, ctx.log);
+
+            // Pełna odpowiedź partnera do magazynu — kalkulator na ofercie trafi w ten sam klucz.
+            await saveFinancingQuote(ctx.prisma, buildFinancingQuoteKey(product, connection, params), product.id, result);
 
             const netto = result.monthlyInstallment;
             return Math.round(category === 'CREDIT' ? netto * VAT : netto);
