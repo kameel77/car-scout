@@ -91,7 +91,7 @@ describe('SEO content (CMS) routes', () => {
             expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=300');
         });
 
-        it('returns 404 for an unpublished (draft) page', async () => {
+        it('returns 200 null for an unpublished (draft) page', async () => {
             await app.prisma.seoContentPage.create({
                 data: {
                     urlPath: '/samochody/test-seo-content-draft',
@@ -105,17 +105,19 @@ describe('SEO content (CMS) routes', () => {
                 url: '/api/seo-content?path=/samochody/test-seo-content-draft',
             });
 
-            expect(res.statusCode).toBe(404);
+            expect(res.statusCode).toBe(200);
+            expect(JSON.parse(res.body)).toBeNull();
         });
 
-        it('returns 404 for a non-existent page', async () => {
+        it('returns 200 null for a non-existent page', async () => {
             const res = await app.inject({
                 method: 'GET',
                 url: '/api/seo-content?path=/samochody/non-existent-xyz',
                 headers: { host: 'motolia.pl' },
             });
 
-            expect(res.statusCode).toBe(404);
+            expect(res.statusCode).toBe(200);
+            expect(JSON.parse(res.body)).toBeNull();
             expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=60');
         });
 
@@ -185,7 +187,8 @@ describe('SEO content (CMS) routes', () => {
                 method: 'GET',
                 url: '/api/seo-content?path=/samochody/test-seo-content-crud',
             });
-            expect(getAfterDelete.statusCode).toBe(404);
+            expect(getAfterDelete.statusCode).toBe(200);
+            expect(JSON.parse(getAfterDelete.body)).toBeNull();
         });
 
         it('rejects urlPath that does not match /samochody/<slug>[/<slug>]', async () => {
