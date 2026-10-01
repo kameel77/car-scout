@@ -1,8 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requirePermission } from '../middleware/permissions.js';
 import { z } from 'zod';
-import { createHash } from 'node:crypto';
-import { getJsonFromCache, setJsonInCache } from '../services/api-cache.js';
+import { buildFinancingQuoteKey, getFinancingQuote, saveFinancingQuote } from '../services/financing-quote-cache.js';
 import { calcInbankInstallment, calcVehisInstallment, FinancingCalcError } from '../services/financing-calc.service.js';
 
 const FinancingProductSchema = z.object({
@@ -65,6 +64,9 @@ function maskConnection(connection: any) {
     };
 }
 
+// Trwające wywołania partnera po kluczu wyniku (łączenie jednoczesnych identycznych zapytań).
+const inFlightCalcs = new Map<string, Promise<unknown>>();
+
 export async function financingRoutes(fastify: FastifyInstance) {
     // Public: Get active products for calculator
     fastify.get('/api/financing/calculator', async (request, reply) => {
@@ -112,27 +114,30 @@ export async function financingRoutes(fastify: FastifyInstance) {
                 return reply.code(409).send({ error: 'Connection not configured' });
             }
 
-            // Cache wyniku kalkulacji (6 h). updatedAt produktu/połączenia w kluczu — edycja w panelu
-            // omija stare wpisy bez osobnej inwalidacji. Błędy nie są cache'owane (zapis po sukcesie).
-            const paramsHash = createHash('sha1').update(JSON.stringify({
-                price: data.price,
-                downPaymentAmount: data.downPaymentAmount,
-                period: data.period,
-                initialFeePercent: data.initialFeePercent ?? null,
-                finalPaymentPercent: data.finalPaymentPercent ?? null,
-                manufacturingYear: data.manufacturingYear ?? null,
-                mileageKm: data.mileageKm ?? null,
-            })).digest('hex');
-            const cacheKey = `financing:calc:v1:${product.id}:${product.updatedAt.getTime()}:${connection.updatedAt.getTime()}:${paramsHash}`;
-            const cachedResult = await getJsonFromCache<unknown>(cacheKey);
+            // Wynik kalkulacji: Redis + trwały magazyn financing_quotes (36 h). Klucz z updatedAt produktu/połączenia
+            // — edycja w panelu omija stare wpisy bez osobnej inwalidacji. Błędy nie są zapisywane (zapis po sukcesie).
+            const cacheKey = buildFinancingQuoteKey(product, connection, data);
+            const cachedResult = await getFinancingQuote(fastify.prisma, cacheKey);
             if (cachedResult) return cachedResult;
 
             try {
-                const result = product.provider === 'INBANK'
-                    ? await calcInbankInstallment(product, connection, data, fastify.log)
-                    : await calcVehisInstallment(product, connection, data, fastify.log);
-                await setJsonInCache(cacheKey, result, 21600);
-                return result;
+                // Jednoczesne identyczne zapytania (np. dwa kalkulatory na karcie oferty) dzielą jedno wywołanie partnera.
+                let pending = inFlightCalcs.get(cacheKey);
+                if (!pending) {
+                    pending = (async () => {
+                        try {
+                            const result = product.provider === 'INBANK'
+                                ? await calcInbankInstallment(product, connection, data, fastify.log)
+                                : await calcVehisInstallment(product, connection, data, fastify.log);
+                            await saveFinancingQuote(fastify.prisma, cacheKey, product.id, result);
+                            return result;
+                        } finally {
+                            inFlightCalcs.delete(cacheKey);
+                        }
+                    })();
+                    inFlightCalcs.set(cacheKey, pending);
+                }
+                return await pending;
             } catch (error) {
                 if (error instanceof FinancingCalcError) {
                     return reply.code(error.statusCode).send(error.body);
