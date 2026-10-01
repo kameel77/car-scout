@@ -649,6 +649,15 @@ export async function recomputeAll(ctx: CalcContext, opts?: { onlyMissing?: bool
     const workers = Array.from({ length: Math.min(RECOMPUTE_CONCURRENCY, listings.length) }, () => worker());
     await Promise.all(workers);
 
+    // Sprzątanie magazynu wyników partnera — wpisy starsze niż 7 dni (ważność to 36 h).
+    try {
+        await ctx.prisma.financingQuote.deleteMany({
+            where: { computedAt: { lt: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
+        });
+    } catch (err) {
+        ctx.log.error({ err }, 'Reference installments: financing_quotes cleanup failed');
+    }
+
     return processed;
 }
 
