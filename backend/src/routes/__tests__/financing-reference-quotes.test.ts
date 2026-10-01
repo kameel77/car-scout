@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { buildApp } from '../../app';
-import { computeReferenceInstallments, recomputeAll } from '../../services/financing-calc.service';
+import { computeReferenceInstallments, recomputeAll, PARTNER_429_RETRY_DELAYS_MS } from '../../services/financing-calc.service';
 
 describe('reference installments — shared partner quote store', () => {
     let app: FastifyInstance;
@@ -184,5 +184,128 @@ describe('reference installments — shared partner quote store', () => {
         const second = await recomputeAll({ prisma: scoped, log: console }, { onlyMissing: true });
         expect(second).toBe(0);
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    describe('partner errors keep the previous reference installment', () => {
+        let leasingProductId: string;
+        let leasingListingId: string;
+        let errorCtxPrisma: PrismaClient;
+        const originalDelays = [...PARTNER_429_RETRY_DELAYS_MS];
+        const partnerFailure = (status: number) => ({ ok: false, status, text: async () => 'partner error' });
+        const partnerOk = { ok: true, status: 200, text: async () => JSON.stringify({ payment_amount_monthly: 900, total_cost: 50000 }) };
+        const quiet = { ...console, error: () => {} };
+
+        beforeAll(async () => {
+            const product = await app.prisma.financingProduct.create({
+                data: {
+                    category: 'LEASING',
+                    name: 'Test Inbank RefQuotes Leasing',
+                    provider: 'INBANK',
+                    providerConfig: { productCode: 'TEST', paymentDay: 15 },
+                    referenceRate: 5,
+                    margin: 2,
+                    commission: 1,
+                    maxInitialPayment: 50,
+                    maxFinalPayment: 20,
+                    minInstallments: 12,
+                    maxInstallments: 60,
+                },
+            });
+            leasingProductId = product.id;
+
+            const listing = await app.prisma.listing.create({
+                data: {
+                    make: 'TEST_REFQUOTES',
+                    model: 'Leasing',
+                    pricePln: 123000,
+                    mileageKm: 50000,
+                    productionYear: new Date().getFullYear() - 1,
+                    isArchived: false,
+                    creditAvailable: false,
+                    leasingAvailable: true,
+                    leasingProductId,
+                    referenceLeasingInstallment: 1234,
+                },
+            });
+            leasingListingId = listing.id;
+
+            // Tylko nasz produkt leasingowy — bez ewentualnego produktu OWN z lokalnej bazy (terminal fallback maskowałby błąd partnera).
+            errorCtxPrisma = new Proxy(ctxPrisma, {
+                get(target, prop) {
+                    if (prop === 'financingProduct') return { findMany: async () => [product] };
+                    return Reflect.get(target, prop, target);
+                },
+            }) as PrismaClient;
+        });
+
+        afterAll(async () => {
+            await app.prisma.financingQuote.deleteMany({ where: { productId: leasingProductId } });
+            await app.prisma.listing.delete({ where: { id: leasingListingId } });
+            await app.prisma.financingProduct.delete({ where: { id: leasingProductId } });
+        });
+
+        beforeEach(async () => {
+            await app.prisma.listing.update({
+                where: { id: leasingListingId },
+                data: { referenceLeasingInstallment: 1234, referenceCalcAt: null, leasingAvailable: true },
+            });
+            PARTNER_429_RETRY_DELAYS_MS.splice(0, PARTNER_429_RETRY_DELAYS_MS.length, 1, 1, 1);
+        });
+
+        afterAll(() => {
+            PARTNER_429_RETRY_DELAYS_MS.splice(0, PARTNER_429_RETRY_DELAYS_MS.length, ...originalDelays);
+        });
+
+        const stored = () => app.prisma.listing.findUniqueOrThrow({ where: { id: leasingListingId } });
+
+        it('partner 500 → previous value stays, referenceCalcAt is updated', async () => {
+            fetchMock.mockResolvedValue(partnerFailure(500));
+
+            const result = await computeReferenceInstallments({ prisma: errorCtxPrisma, log: quiet }, leasingListingId);
+
+            expect(result?.leasingInstallment).toBe(1234);
+            const row = await stored();
+            expect(row.referenceLeasingInstallment).toBe(1234);
+            expect(row.referenceCalcAt).not.toBeNull();
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('partner 429 then 200 → installment saved after a retry', async () => {
+            fetchMock.mockResolvedValueOnce(partnerFailure(429)).mockResolvedValueOnce(partnerOk);
+
+            const result = await computeReferenceInstallments({ prisma: errorCtxPrisma, log: quiet }, leasingListingId);
+
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+            expect(result?.leasingInstallment).toBe(900);
+            expect((await stored()).referenceLeasingInstallment).toBe(900);
+        });
+
+        it('partner 429 on every attempt → 1 + 3 retries, previous value stays', async () => {
+            fetchMock.mockResolvedValue(partnerFailure(429));
+
+            await computeReferenceInstallments({ prisma: errorCtxPrisma, log: quiet }, leasingListingId);
+
+            expect(fetchMock).toHaveBeenCalledTimes(4);
+            expect((await stored()).referenceLeasingInstallment).toBe(1234);
+        });
+
+        it('partner 422 → no retry, previous value stays', async () => {
+            fetchMock.mockResolvedValue(partnerFailure(422));
+
+            await computeReferenceInstallments({ prisma: errorCtxPrisma, log: quiet }, leasingListingId);
+
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect((await stored()).referenceLeasingInstallment).toBe(1234);
+        });
+
+        it('no qualifying product (leasingAvailable: false) → null, as before', async () => {
+            await app.prisma.listing.update({ where: { id: leasingListingId }, data: { leasingAvailable: false } });
+
+            const result = await computeReferenceInstallments({ prisma: errorCtxPrisma, log: quiet }, leasingListingId);
+
+            expect(fetchMock).not.toHaveBeenCalled();
+            expect(result?.leasingInstallment).toBeNull();
+            expect((await stored()).referenceLeasingInstallment).toBeNull();
+        });
     });
 });
