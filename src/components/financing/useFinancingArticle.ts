@@ -9,6 +9,11 @@ export type FinancingContentType = 'leasing' | 'leasing-konsumencki' | 'kredyt' 
 export interface FinancingArticle {
   h1: string;
   html: string;
+  /** FAQ z treści artykułu (hub z generatora poradników) — zastępuje FAQ z CMS na tej stronie. */
+  faq?: Array<{ question: string; answer: string }>;
+  /** Title/description z frontmatter (tylko brand motolia). */
+  title?: string;
+  description?: string;
 }
 
 /**

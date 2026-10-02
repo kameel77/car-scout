@@ -10,6 +10,8 @@ import {
     buildStaticMeta,
     buildFotonHubMeta,
     buildFotonModelMeta,
+    buildGuideMeta,
+    guideHubLabel,
     FOTON_MODEL_RE,
     catalogSkeletonHtml,
     defaultMeta,
@@ -29,7 +31,8 @@ import {
     StaticPagination,
 } from '../services/seo-meta.js';
 import { getFinancingArticle } from '../content/financing-content.js';
-import { pillarShellHtml } from '../services/pillar-shell.js';
+import { guideShellHtml, pillarShellHtml } from '../services/pillar-shell.js';
+import { getGuideArticle, listGuidePaths } from '../content/guide-content.js';
 import { getFotonSeoModel } from '../content/foton-content.js';
 import {
     BrandCatalogEntry,
@@ -443,6 +446,8 @@ const BRAND_MODEL_RE = /^\/samochody\/([^/]+)\/([^/]+)$/;
 // SSR zna trasę z góry, więc wstrzykuje modulepreload chunka — przeglądarka pobiera go
 // równolegle z index.js zamiast czekać na jego wykonanie. Klucze = ścieżki źródeł w manifeście.
 const ROUTE_MODULES: Array<{ match: (p: string) => boolean; module: string }> = [
+    // Poradniki (/leasing/vat itd.) przed LISTING_RE — inaczej /leasing/:slug złapałby je jako ofertę
+    { match: p => listGuidePaths(resolveBrandCtx().brand).includes(p), module: 'src/pages/GuideArticlePage.tsx' },
     { match: p => LISTING_RE.test(p), module: 'src/pages/ListingDetailPage.tsx' },
     { match: p => RENTAL_RE.test(p), module: 'src/pages/RentalDetailPage.tsx' },
     { match: p => PROMO_RE.test(p), module: 'src/pages/CampaignLandingPage.tsx' },
@@ -519,7 +524,8 @@ function routeEntryPreload(path: string, manifest: ViteManifest): string[] {
         'src/pages/RentalSearchPage.tsx',
         'src/pages/ConditionPage.tsx',
         'src/pages/SearchPage.tsx',
-        'src/pages/FinancingPillarPage.tsx'
+        'src/pages/FinancingPillarPage.tsx',
+        'src/pages/GuideArticlePage.tsx'
     ];
     if (!allowedModules.includes(route.module)) return [];
     // Gdy moduł trasy dzieli kod z własnymi lazy-chunkami, Rollup robi z niego chunk współdzielony
@@ -546,6 +552,12 @@ async function resolveMeta(
 ): Promise<PageMeta> {
     if (NOINDEX_RE.test(path)) {
         return defaultMeta(ctx, { noindex: true, status: 200 });
+    }
+
+    // Poradniki pod hubami — przed LISTING_RE (/leasing/:slug to też wzorzec ofert)
+    const guide = getGuideArticle(ctx.brand, path);
+    if (guide) {
+        return buildGuideMeta(guide, ctx);
     }
 
     const pm = path.match(PROMO_RE);
@@ -1265,8 +1277,11 @@ async function renderPage(
         // Strony katalogowe → skeleton siatki kart (pierwsza karta z realnym zdjęciem, gdy je
         // znamy — patrz meta.skeletonFirstImage); strony detalu (oferta/najem) → skeleton
         // galerii + sidebara; reszta (formularze, noindex) → pusto do montażu React.
+        const shellGuide = getGuideArticle(ctx.brand, path);
         const skeleton = isPaginatedPath(path)
             ? catalogSkeletonHtml(await getGridColumns(fastify), meta.skeletonFirstImage)
+            : shellGuide
+            ? guideShellHtml(shellGuide, guideHubLabel(shellGuide.hub))
             : (LISTING_RE.test(path) || RENTAL_RE.test(path))
                 ? detailSkeletonHtml()
                 : PILLAR_PATH_TYPES[path]
@@ -1345,7 +1360,9 @@ async function renderPage(
 
     // Keep the catalog routes' single lazy entry on the critical path without
     // preloading all of their transitive dependencies.
-    if (['/wynajem-dlugoterminowy', '/nowe', '/uzywane', '/samochody', '/leasing', '/leasing-konsumencki', '/kredyt'].includes(path) && page === 1) {
+    // Poradnik dla tej ścieżki (tylko brand z poradnikami) — preload chunka trasy i blok JSON niżej
+    const ssrGuide = getGuideArticle(ctx.brand, path);
+    if ((['/wynajem-dlugoterminowy', '/nowe', '/uzywane', '/samochody', '/leasing', '/leasing-konsumencki', '/kredyt'].includes(path) || !!ssrGuide) && page === 1) {
         const manifest = await getViteManifest();
         if (manifest) {
             const preload = routeEntryPreload(path, manifest);
@@ -1389,6 +1406,12 @@ async function renderPage(
     if (pillarType && pillarArticle) {
         const articleJson = JSON.stringify({ type: pillarType, ...pillarArticle }).replace(/</g, '\\u003c');
         html = html.replace('</head>', () => `<script type="application/json" id="financing-article">${articleJson}</script>\n</head>`);
+    }
+
+    // guide-article JSON block — initialData dla useGuideArticle (ten sam payload co GET /api/content/guide).
+    if (ssrGuide) {
+        const guideJson = JSON.stringify(ssrGuide).replace(/</g, '\\u003c');
+        html = html.replace('</head>', () => `<script type="application/json" id="guide-article">${guideJson}</script>\n</head>`);
     }
 
     // hero-banners JSON block — initialData React Query dla frontu (#3), tylko na /,

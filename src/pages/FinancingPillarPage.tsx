@@ -39,14 +39,14 @@ export default function FinancingPillarPage({ type }: { type: PillarType }) {
 
   const lead = React.useMemo(() => (article?.html ? splitLeadParagraph(article.html).lead : null), [article?.html]);
   const siteName = settings?.siteNamePl?.trim() || config.name;
-  const title = `${meta.title} | ${siteName}`;
+  const title = article?.title ?? `${meta.title} | ${siteName}`;
   const origin = window.location.origin;
 
   return (
     <div className="min-h-screen bg-background">
       <MetaHead
         title={title}
-        description={meta.description}
+        description={article?.description ?? meta.description}
         image={seoConfig?.homeOgImage}
         canonical={`/${type}`}
         schema={{

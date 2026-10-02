@@ -409,3 +409,100 @@
 .btn-negotiate:hover {
   animation: none;
 }
+
+/* ---------------------------------------------------------------------
+   Poradniki (GuideArticlePage) i treść hubów finansowania.
+   Czytelność: 17 px, interlinia 1.75, szerokość ~70 znaków (kontener),
+   tabele przewijane w poziomie z przyklejoną pierwszą kolumną (mobile).
+   --------------------------------------------------------------------- */
+@layer components {
+  .guide-lead p {
+    @apply text-base leading-relaxed text-foreground md:text-[1.0625rem];
+  }
+
+  .guide-prose {
+    @apply text-base leading-[1.75] text-foreground md:text-[1.0625rem];
+  }
+  .guide-prose > * + * {
+    @apply mt-4;
+  }
+  .guide-prose h2 {
+    @apply mt-12 scroll-mt-24 text-2xl font-bold leading-tight text-primary;
+  }
+  .guide-prose h3 {
+    @apply mt-8 scroll-mt-24 text-lg font-semibold leading-snug text-foreground md:text-xl;
+  }
+  .guide-prose h2 + p,
+  .guide-prose h3 + p {
+    @apply mt-3;
+  }
+  .guide-prose a {
+    @apply font-medium text-primary underline underline-offset-[3px] hover:no-underline;
+  }
+  .guide-prose strong {
+    @apply font-semibold;
+  }
+  .guide-prose ul {
+    @apply list-disc space-y-2 pl-6;
+  }
+  .guide-prose ol {
+    @apply list-decimal space-y-2 pl-6;
+  }
+  .guide-prose li::marker {
+    @apply text-primary;
+  }
+  .guide-prose .guide-table {
+    @apply my-6 overflow-x-auto rounded-xl border border-border bg-card;
+  }
+  .guide-prose .guide-table table {
+    @apply w-full min-w-[520px] border-collapse text-[0.9375rem] leading-snug;
+  }
+  .guide-prose .guide-table th {
+    @apply bg-muted px-3 py-2.5 text-left font-semibold text-foreground;
+  }
+  .guide-prose .guide-table td {
+    @apply border-t border-border px-3 py-2.5 align-top;
+  }
+  .guide-prose .guide-table th:first-child,
+  .guide-prose .guide-table td:first-child {
+    @apply sticky left-0 font-medium;
+  }
+  .guide-prose .guide-table td:first-child {
+    @apply bg-card;
+  }
+  .guide-prose .guide-table th:first-child {
+    @apply bg-muted;
+  }
+  .guide-prose .guide-figure {
+    @apply my-8;
+  }
+  .guide-prose .guide-figure img {
+    @apply h-auto w-full max-w-[640px] rounded-xl border border-border;
+  }
+  .guide-prose .guide-figure figcaption {
+    @apply mt-2 text-sm text-muted-foreground;
+  }
+  .guide-prose .guide-faq {
+    @apply mt-12;
+  }
+  .guide-prose .guide-faq h3 {
+    @apply mt-4 rounded-t-xl border border-b-0 border-border bg-card px-4 pt-4 text-base md:text-lg;
+  }
+  .guide-prose .guide-faq h3 + p {
+    @apply mt-0 rounded-b-xl border border-t-0 border-border bg-card px-4 pb-4 pt-2;
+  }
+  .guide-prose .guide-sources,
+  .guide-sources {
+    @apply text-sm;
+  }
+  .guide-sources ul {
+    @apply mt-2 list-disc space-y-1.5 pl-5 text-muted-foreground;
+  }
+  .guide-sources a {
+    @apply break-words text-primary underline underline-offset-2;
+  }
+  .guide-prose .guide-author-note,
+  .guide-prose .guide-disclaimer {
+    @apply text-sm text-muted-foreground;
+  }
+}
