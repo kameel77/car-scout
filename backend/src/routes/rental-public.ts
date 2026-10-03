@@ -1,9 +1,18 @@
 import { FastifyInstance } from 'fastify';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
+import { createReadStream } from 'fs';
+import { getSafeFilePath } from '../utils/path-helpers.js';
 import { sanitizeListing, sanitizeDealer, tryAuthenticate } from '../constants/dealer.js';
 import { normalizeBrand } from '../services/brand-normalization.service.js';
 import { requirePermission } from '../middleware/permissions.js';
 import { getOrSetJson, getJsonFromCache, setJsonInCache, buildRentalVehiclesQueryCacheKey, buildRentalVehicleSlugCacheKey, parseRentalVehiclesQuery } from '../services/api-cache.js';
 import { calculateRatesWithInsurance } from '../services/rental-pricing.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsRoot = path.resolve(__dirname, '../../uploads');
 export { calculateRatesWithInsurance };
 
 export function selectBestMatrixEntry<T extends { id?: string; offerType?: string; feePct?: number | null; [key: string]: any }>(
@@ -790,7 +799,8 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
         };
     });
 
-    // Operator only: Get vehicle-level operator information (supplier: dealer / ownerRentalCompany, availableFrom, firstRegistrationDate, vin)
+    // Operator only: Get vehicle-level operator information (supplier: dealer / ownerRentalCompany, availableFrom, firstRegistrationDate, vin,
+    // specNumbersByCompanyId = partner spec numbers from active assignments, hasSpecificationPdf flag — never the raw specificationUrl)
     fastify.get('/api/rental/vehicles/:slug/operator-info', {
         preHandler: [fastify.authenticate, requirePermission('rental:financials:read')]
     }, async (request, reply) => {
@@ -807,6 +817,11 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
                 vin: true,
                 firstRegistrationDate: true,
                 availableFrom: true,
+                specificationUrl: true,
+                rentalAssignments: {
+                    where: { isActive: true },
+                    select: { rentalCompanyId: true, externalVehicleId: true }
+                },
                 dealer: {
                     select: {
                         id: true,
@@ -831,6 +846,12 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             return reply.code(404).send({ error: 'Rental vehicle not found' });
         }
 
+        const specNumbersByCompanyId: Record<string, string> = {};
+        for (const a of vehicle.rentalAssignments) {
+            const specNumber = a.externalVehicleId?.trim();
+            if (specNumber) specNumbersByCompanyId[a.rentalCompanyId] = specNumber;
+        }
+
         return {
             vehicleId: vehicle.id,
             slug: vehicle.slug,
@@ -838,8 +859,54 @@ export async function rentalPublicRoutes(fastify: FastifyInstance) {
             firstRegistrationDate: vehicle.firstRegistrationDate,
             availableFrom: vehicle.availableFrom,
             dealer: vehicle.dealer,
-            ownerRentalCompany: vehicle.ownerRentalCompany
+            ownerRentalCompany: vehicle.ownerRentalCompany,
+            specNumbersByCompanyId,
+            hasSpecificationPdf: !!vehicle.specificationUrl
         };
+    });
+
+    // Operator only: equipment specification PDF (local upload streamed inline, external http(s) URL returned as JSON)
+    fastify.get('/api/rental/vehicles/:slug/specification-pdf', {
+        preHandler: [fastify.authenticate, requirePermission('rental:financials:read')]
+    }, async (request, reply) => {
+        const { slug } = request.params as { slug: string };
+
+        const vehicle = await fastify.prisma.rentalVehicle.findFirst({
+            where: {
+                OR: [{ slug }, { id: slug }],
+                isActive: true
+            },
+            select: { id: true, specificationUrl: true }
+        });
+
+        if (!vehicle || !vehicle.specificationUrl) {
+            return reply.code(404).send({ error: 'Specification not found' });
+        }
+
+        const specUrl = vehicle.specificationUrl;
+
+        if (specUrl.startsWith('http://') || specUrl.startsWith('https://')) {
+            return { url: specUrl };
+        }
+
+        if (specUrl.startsWith('/uploads/rental-specs/')) {
+            const relativePath = specUrl.replace('/uploads/rental-specs/', '');
+            const filePath = getSafeFilePath(path.join(uploadsRoot, 'rental-specs'), relativePath);
+            if (!filePath) {
+                return reply.code(400).send({ error: 'Invalid specification path' });
+            }
+            try {
+                await fs.stat(filePath);
+            } catch {
+                return reply.code(404).send({ error: 'Specification file not found' });
+            }
+            reply.header('Content-Type', 'application/pdf');
+            reply.header('Content-Disposition', `inline; filename="${path.basename(filePath)}"`);
+            reply.header('Cache-Control', 'private, no-store');
+            return reply.send(createReadStream(filePath));
+        }
+
+        return reply.code(404).send({ error: 'Specification not found' });
     });
 }
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -8,7 +8,7 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Building2, BadgePercent, Store, ShieldAlert, Calendar, Car } from 'lucide-react';
+import { Building2, BadgePercent, Store, ShieldAlert, Calendar, Car, FileText, FileDown } from 'lucide-react';
 import type { RentalOperatorInfo } from '@/services/rental-api';
 
 export interface RentalOperatorOfferModalProps {
@@ -19,6 +19,7 @@ export interface RentalOperatorOfferModalProps {
     feePct: number | null | undefined;
     operatorInfo: RentalOperatorInfo | null | undefined;
     isLoadingInfo?: boolean;
+    onOpenSpecificationPdf?: () => Promise<void>;
 }
 
 export function RentalOperatorOfferModal({
@@ -29,8 +30,25 @@ export function RentalOperatorOfferModal({
     feePct,
     operatorInfo,
     isLoadingInfo = false,
+    onOpenSpecificationPdf,
 }: RentalOperatorOfferModalProps) {
+    const [isOpeningPdf, setIsOpeningPdf] = useState(false);
+    const [pdfError, setPdfError] = useState(false);
+
     if (!offer) return null;
+
+    const handleOpenPdf = async () => {
+        if (!onOpenSpecificationPdf) return;
+        setIsOpeningPdf(true);
+        setPdfError(false);
+        try {
+            await onOpenSpecificationPdf();
+        } catch {
+            setPdfError(true);
+        } finally {
+            setIsOpeningPdf(false);
+        }
+    };
 
     const partnerName = offer.company?.name || 'Brak danych';
     const feeDisplay = feePct !== undefined && feePct !== null ? `${feePct}%` : 'Brak danych';
@@ -38,6 +56,7 @@ export function RentalOperatorOfferModal({
     const dealerName = operatorInfo?.dealer?.name;
     const dealerCity = operatorInfo?.dealer?.city;
     const ownerCompanyName = operatorInfo?.ownerRentalCompany?.name;
+    const specNumber = offer.company?.id ? operatorInfo?.specNumbersByCompanyId?.[offer.company.id] : undefined;
 
     return (
         <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
@@ -119,7 +138,7 @@ export function RentalOperatorOfferModal({
                     </div>
 
                     {/* Dodatkowe dane pojazdu dla operatora */}
-                    {(operatorInfo?.availableFrom || operatorInfo?.firstRegistrationDate || operatorInfo?.vin) && (
+                    {(operatorInfo?.availableFrom || operatorInfo?.firstRegistrationDate || operatorInfo?.vin || specNumber || operatorInfo?.hasSpecificationPdf) && (
                         <div className="p-3 rounded-xl bg-gray-50/70 border border-gray-200/60 text-xs space-y-1.5">
                             {operatorInfo?.availableFrom && (
                                 <div className="flex items-center justify-between">
@@ -139,10 +158,37 @@ export function RentalOperatorOfferModal({
                                     <span className="font-semibold text-gray-900 font-mono">{operatorInfo.firstRegistrationDate}</span>
                                 </div>
                             )}
+                            {specNumber && (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground flex items-center gap-1.5">
+                                        <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                                        Nr specyfikacji:
+                                    </span>
+                                    <span className="font-mono text-gray-800">{specNumber}</span>
+                                </div>
+                            )}
                             {operatorInfo?.vin && (
                                 <div className="flex items-center justify-between pt-1 border-t border-gray-200/40">
                                     <span className="text-muted-foreground">VIN:</span>
                                     <span className="font-mono text-gray-800">{operatorInfo.vin}</span>
+                                </div>
+                            )}
+                            {operatorInfo?.hasSpecificationPdf && onOpenSpecificationPdf && (
+                                <div className="pt-1.5">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={handleOpenPdf}
+                                        disabled={isOpeningPdf}
+                                    >
+                                        <FileDown className="w-3.5 h-3.5 mr-2" />
+                                        {isOpeningPdf ? 'Otwieranie...' : 'Specyfikacja wyposażenia (PDF)'}
+                                    </Button>
+                                    {pdfError && (
+                                        <p className="mt-1 text-xs text-red-600">Nie udało się otworzyć PDF</p>
+                                    )}
                                 </div>
                             )}
                         </div>
