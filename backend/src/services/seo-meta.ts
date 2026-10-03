@@ -2,6 +2,7 @@ import { normalizeBrand, normalizeModel } from './brand-normalization.service.js
 import { slugifyBrandName } from './brand-pages.service.js';
 import { FOTON_SEO_HUB_FAQ, FOTON_SEO_MODELS, type FotonSeoFaq, type FotonSeoModel } from '../content/foton-content.js';
 import { SHELL_HEADER_HTML } from './pillar-shell.js';
+import type { GuideArticle } from '../content/guide-content.js';
 
 export interface PageMeta {
     title: string;
@@ -915,6 +916,9 @@ function listingLinkHtml(l: RelatedListing, basePath: string): string {
 export interface FinancingArticle {
     h1: string;
     html: string;
+    faq?: Array<{ question: string; answer: string }>;
+    title?: string;
+    description?: string;
 }
 
 export interface StaticPagination {
@@ -1502,9 +1506,10 @@ ${listings.length > 0 ? `
 
     const isPaged = !!pagination && pagination.page > 1;
     const canonicalBase = route.canonicalPath ?? path;
-    const title = isPaged
-        ? `${route.title(ctx.brandName)} — strona ${pagination.page}`
-        : route.title(ctx.brandName);
+    // Artykuł z generatora (tylko motolia, np. hub /leasing) ma własny title i description z frontmatter;
+    // pozostałe brandy (carsalon) zostają przy wartościach z STATIC_ROUTES — bez wspólnej treści między domenami.
+    const baseTitle = article?.title ?? route.title(ctx.brandName);
+    const title = isPaged ? `${baseTitle} — strona ${pagination.page}` : baseTitle;
     // h1 bez sufiksu marki z <title> — "— strona N" może zostać, odróżnia strony paginacji
     const h1 = article
         ? escapeHtml(article.h1)
@@ -1527,6 +1532,9 @@ ${listings.length > 0 ? `
     // Filary z artykułem mają widoczny shell SSR z <h1> (pillar-shell.ts, render.ts) — tu bez <h1>,
     // żeby w dokumencie było dokładnie jedno <h1> (jak na stronie głównej).
     const h1InShell = browseAllLink && !!article;
+    // Artykuł z własną sekcją FAQ (hub /leasing z generatora) zastępuje FAQ z CMS — jedno FAQ na stronie,
+    // spójne z treścią zrecenzowaną przez doradcę; FAQPage JSON-LD budujemy z pytań artykułu.
+    const articleFaq = article?.faq && article.faq.length > 0 ? article.faq : null;
     const bodyHtml = `
 ${h1InShell ? '' : `<h1>${h1}</h1>`}
 ${introParagraphHtml}
@@ -1544,7 +1552,7 @@ ${article ? `
 <article>
 ${articleBodyHtml}
 </article>` : ''}
-${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
+${articleFaq ? '' : faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
 
     const jsonLd: any[] = [];
     if (listings.length > 0) {
@@ -1559,7 +1567,17 @@ ${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
         });
     }
 
-    if (faq.length > 0) {
+    if (articleFaq) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: articleFaq.map(f => ({
+                '@type': 'Question',
+                name: f.question,
+                acceptedAnswer: { '@type': 'Answer', text: f.answer },
+            })),
+        });
+    } else if (faq.length > 0) {
         jsonLd.push({
             '@context': 'https://schema.org',
             '@type': 'FAQPage',
@@ -1580,7 +1598,7 @@ ${faqSectionHtml(faq, 'Najczęstsze pytania')}`.trim();
 
     return {
         title,
-        description: route.description,
+        description: article?.description ?? route.description,
         canonical: `${ctx.baseUrl}${canonicalBase}${isPaged ? `?page=${pagination.page}` : ''}`,
         preloadImages: LIST_FIRST_PATHS.has(path) ? cardPreloads(listings, ctx.baseUrl) : undefined,
         skeletonFirstImage: LIST_FIRST_PATHS.has(path) ? skeletonFirstImage(listings, ctx.baseUrl) : undefined,
@@ -1788,4 +1806,81 @@ export function injectHead(template: string, meta: PageMeta): string {
     }
 
     return html;
+}
+
+// --- Poradniki pod hubami (/leasing/vat itd., KAM-20) ---
+// Treść z content/guide-content.ts (generator z markdown). bodyHtml dla botów zawiera pełny
+// artykuł bez <h1> — <h1> jest w widocznym shellu SSR (guideShellHtml), jak na stronach filarowych.
+const GUIDE_HUB_LABELS: Record<string, string> = { '/leasing': 'Leasing' };
+
+export function guideHubLabel(hub: string): string {
+    return GUIDE_HUB_LABELS[hub] ?? 'Poradnik';
+}
+
+export function buildGuideMeta(guide: GuideArticle, ctx: BrandCtx): PageMeta {
+    const url = `${ctx.baseUrl}${guide.path}`;
+    const hubLabel = guideHubLabel(guide.hub);
+    const ogImage = guide.ogImage.startsWith('http') ? guide.ogImage : `${ctx.baseUrl}${guide.ogImage}`;
+
+    const article: Record<string, unknown> = {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: guide.h1,
+        description: guide.description,
+        inLanguage: 'pl-PL',
+        mainEntityOfPage: url,
+        image: ogImage,
+        datePublished: guide.updatedAt,
+        dateModified: guide.updatedAt,
+        author: { '@type': 'Person', name: guide.author.name },
+        publisher: { '@type': 'Organization', name: ctx.brandName, url: `${ctx.baseUrl}/`, logo: ctx.logoUrl },
+    };
+    // reviewedBy tylko po faktycznej recenzji (KAM-11) — bez recenzji pole nie istnieje
+    if (guide.reviewedBy) {
+        article.reviewedBy = { '@type': 'Person', name: guide.reviewedBy };
+        if (guide.reviewedAt) article.lastReviewed = guide.reviewedAt;
+    }
+
+    const breadcrumb = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Strona główna', item: `${ctx.baseUrl}/` },
+            { '@type': 'ListItem', position: 2, name: hubLabel, item: `${ctx.baseUrl}${guide.hub}` },
+            { '@type': 'ListItem', position: 3, name: guide.breadcrumb, item: url },
+        ],
+    };
+
+    const jsonLd: object[] = [article, breadcrumb];
+    if (guide.faq.length > 0) {
+        jsonLd.push({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: guide.faq.map(f => ({
+                '@type': 'Question',
+                name: f.question,
+                acceptedAnswer: { '@type': 'Answer', text: f.answer },
+            })),
+        });
+    }
+
+    const bodyHtml = `
+<nav aria-label="Breadcrumb"><a href="/">Strona główna</a> › <a href="${guide.hub}">${escapeHtml(hubLabel)}</a> › ${escapeHtml(guide.breadcrumb)}</nav>
+<article>
+${guide.leadHtml}
+${guide.html}
+<p>Autor: ${escapeHtml(guide.author.name)}. ${escapeHtml(guide.author.bio)}</p>
+${guide.sourcesHtml ? `<h2>Źródła</h2>\n${guide.sourcesHtml}` : ''}
+${guide.disclaimer ? `<p>${escapeHtml(guide.disclaimer)}</p>` : ''}
+</article>`.trim();
+
+    return {
+        title: guide.title,
+        description: guide.description,
+        canonical: url,
+        ogImage,
+        bodyHtml,
+        jsonLd,
+        status: 200,
+    };
 }

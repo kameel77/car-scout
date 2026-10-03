@@ -528,6 +528,24 @@ describe('GET /api/render', () => {
         expect(other.body).not.toContain('<!--pillar-shell-->');
     });
 
+    it('guide pages (/leasing/vat) render as articles, not as /leasing/:slug offers', async () => {
+        for (const path of ['/leasing/vat', '/leasing/limity-podatkowe-2026']) {
+            const res = await app.inject({ method: 'GET', url: `/api/render?path=${path}` });
+            expect(res.statusCode, path).toBe(200);
+            const m = res.body.match(/<script type="application\/json" id="guide-article">(.*?)<\/script>/s);
+            expect(m, path).not.toBeNull();
+            const api = await app.inject({ method: 'GET', url: `/api/content/guide?path=${path}` });
+            expect(api.statusCode).toBe(200);
+            expect(JSON.parse(m![1])).toEqual(api.json());
+            expect(res.body).toContain('<!--guide-shell-->');
+            expect(res.body).toMatch(new RegExp(`rel="canonical"[^>]*${path.replace(/\//g, '\\/')}"`));
+            expect(res.body).toContain('"@type":"Article"');
+            expect(res.body.match(/<h1[\s>]/g), path).toHaveLength(1);
+        }
+        const missing = await app.inject({ method: 'GET', url: '/api/content/guide?path=/leasing/nie-ma' });
+        expect(missing.statusCode).toBe(404);
+    });
+
     it('CSP guard: rendered HTML has no inline executable script other than the whitelisted prefetch constants', async () => {
         const allowedBodies = new Set([CATALOG_PREFETCH_JS, RENTAL_PREFETCH_JS]);
         for (const path of ['/', '/samochody', '/wynajem-dlugoterminowy', '/leasing', '/leasing-konsumencki', '/kredyt']) {

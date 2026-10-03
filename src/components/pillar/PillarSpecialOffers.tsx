@@ -13,8 +13,7 @@ const OFFERS_COUNT = 4;
  * 4 „oferty specjalne” na nowe auta — ta sama zasada co elementy promowane na stronie głównej:
  * sort `recommended` stawia wyróżnione (isFeatured) na górze, resztę uzupełnia najnowszymi.
  */
-export function PillarSpecialOffers({ type }: { type: PillarType }) {
-  const copy = PILLAR_OFFERS[type];
+export function usePillarSpecialOffers(type: PillarType) {
   const { data, isLoading } = useQuery({
     queryKey: ['pillar-special-offers', type],
     queryFn: async () => {
@@ -29,8 +28,12 @@ export function PillarSpecialOffers({ type }: { type: PillarType }) {
     },
     staleTime: 5 * 60 * 1000,
   });
+  return { listings: (data ?? []).slice(0, OFFERS_COUNT), isLoading };
+}
 
-  const listings = (data ?? []).slice(0, OFFERS_COUNT);
+export function PillarSpecialOffers({ type }: { type: PillarType }) {
+  const copy = PILLAR_OFFERS[type];
+  const { listings, isLoading } = usePillarSpecialOffers(type);
   if (!isLoading && listings.length === 0) return null;
 
   return (
