@@ -3,6 +3,7 @@ import { requirePermission } from '../middleware/permissions.js';
 import { resolveBrandCtx } from '../services/seo-meta.js';
 import { generateListingSlug as buildListingSlug } from '../utils/url-utils.js';
 import { getFinancingArticle } from '../content/financing-content.js';
+import { getGuideArticle, listGuidePaths } from '../content/guide-content.js';
 import { getBrandCatalog, getModelCatalog } from '../services/brand-pages.service.js';
 import { getListingLastMeaningfulChange } from '../services/offer-lifecycle.service.js';
 import { isProductionHost } from '../services/environment.js';
@@ -25,6 +26,17 @@ export async function seoRoutes(fastify: FastifyInstance) {
         }
         reply.header('Cache-Control', 'public, max-age=3600');
         return article;
+    });
+
+    // Treść poradnika (/leasing/vat itd.) — ten sam payload co blok SSR `guide-article` (render.ts)
+    fastify.get('/api/content/guide', async (request, reply) => {
+        const { path } = request.query as { path?: string };
+        const guide = path ? getGuideArticle(resolveBrandCtx().brand, path) : undefined;
+        if (!guide) {
+            return reply.status(404).send({ error: 'Unknown guide' });
+        }
+        reply.header('Cache-Control', 'public, max-age=3600');
+        return guide;
     });
 
     // Get SEO Config
@@ -103,6 +115,14 @@ export async function seoRoutes(fastify: FastifyInstance) {
             urls.push({
                 loc: path === '/' ? `${baseUrl}/` : `${baseUrl}${path}`,
             });
+        });
+
+        // Poradniki pod hubami — lastmod = data aktualizacji z frontmatter, obraz = grafika OG
+        const brand = resolveBrandCtx().brand;
+        listGuidePaths(brand).forEach(path => {
+            const guide = getGuideArticle(brand, path);
+            if (!guide) return;
+            urls.push({ loc: `${baseUrl}${path}`, lastmod: guide.updatedAt, image: { loc: `${baseUrl}${guide.ogImage}` } });
         });
 
         // Slug generation helpers (must match frontend url-utils.ts)
@@ -399,6 +419,11 @@ Disallow: /*&q=
 
 Sitemap: ${baseUrl}/sitemap.xml
 `;
+        // Grafiki poradników (/poradnik/) są tylko dla brandu z poradnikami (motolia). Pliki z public/
+        // trafiają do builda każdego brandu, więc na pozostałych domenach odcinamy je od crawlowania.
+        if (listGuidePaths(resolveBrandCtx().brand).length === 0) {
+            return reply.type('text/plain').send(body.replace(/^Disallow: \/login$/gm, 'Disallow: /login\nDisallow: /poradnik/'));
+        }
         return reply.type('text/plain').send(body);
     });
 

@@ -17,6 +17,7 @@ import { ClarityPageTracker } from './components/seo/ClarityPageTracker';
 import { PageViewTracker } from './components/seo/PageViewTracker';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { GUIDE_PATHS } from "@/components/guide/guidePaths";
 import './i18n';
 
 // Homepage stays synchronous: createRoot does not hydrate or preserve the SSR shell
@@ -29,6 +30,7 @@ const Sonner = lazy(() => import("@/components/ui/sonner").then((m) => ({ defaul
 const Toaster = lazy(() => import("@/components/ui/toaster").then((m) => ({ default: m.Toaster })));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const FinancingPillarPage = lazy(() => import("./pages/FinancingPillarPage"));
+const GuideArticlePage = lazy(() => import("./pages/GuideArticlePage"));
 const ListingDetailPage = lazy(() => import("./pages/ListingDetailPage"));
 const RentalSearchPage = lazy(() => import("./pages/RentalSearchPage"));
 const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
@@ -118,6 +120,11 @@ const App = () => (
                           <Route path="/leasing" element={<FinancingPillarPage key="leasing" type="leasing" />} />
                           <Route path="/kredyt" element={<FinancingPillarPage key="kredyt" type="kredyt" />} />
                           <Route path="/leasing-konsumencki" element={<FinancingPillarPage key="leasing-konsumencki" type="leasing-konsumencki" />} />
+                          {/* Poradniki: trasy statyczne mają pierwszeństwo przed /leasing/:slug (oferty) */}
+                          {/* Tylko brand motolia — na carsalon te adresy wracają do /leasing/:slug (bez duplikatu treści) */}
+                          {(import.meta.env.VITE_BRAND === 'motolia' ? GUIDE_PATHS : []).map((p) => (
+                            <Route key={p} path={p} element={<GuideArticlePage key={p} path={p} />} />
+                          ))}
                           <Route path="/leasing/:slug" element={<ListingDetailPage />} />
                           <Route path="/leasing/:slug/lead" element={<LeadFormPage />} />
                           <Route path="/leasing/:slug/negotiate" element={<LeadFormPage />} />

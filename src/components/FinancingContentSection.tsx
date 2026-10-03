@@ -27,13 +27,17 @@ export function FinancingContentSection({ type, hideTitle }: { type: FinancingCo
 
   const { data: article } = useFinancingArticle(type);
 
+  // Artykuł z własnym FAQ (hub z generatora poradników) zastępuje FAQ z CMS — jedno FAQ na stronie,
+  // ten sam warunek co w SSR (seo-meta.ts, FAQPage z article.faq).
+  const articleHasFaq = !!article?.faq?.length;
+
   const { data: faqData } = useQuery({
     queryKey: ['financing-faq', type],
     queryFn: () => faqApi.list({ page: 'financing', financingType: type }),
     staleTime: 60 * 60 * 1000,
+    enabled: !articleHasFaq,
   });
-
-  const faqEntries = (faqData?.entries ?? []).filter((e) => e.isPublished !== false);
+  const faqEntries = articleHasFaq ? [] : (faqData?.entries ?? []).filter((e) => e.isPublished !== false);
 
   if (!article && faqEntries.length === 0) return null;
 
@@ -46,7 +50,7 @@ export function FinancingContentSection({ type, hideTitle }: { type: FinancingCo
           {!hideTitle && <h2 className="text-2xl font-bold mb-4">{article.h1}</h2>}
           <div className="relative">
             <div
-              className={`text-sm leading-relaxed text-muted-foreground [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:text-foreground [&_table]:mb-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border [&_td]:border-border [&_td]:p-2 ${expanded ? '' : 'max-h-[36rem] overflow-hidden'}`}
+              className={articleHasFaq ? `guide-prose ${expanded ? '' : 'max-h-[36rem] overflow-hidden'}` : `text-sm leading-relaxed text-muted-foreground [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:text-foreground [&_table]:mb-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border [&_td]:border-border [&_td]:p-2 ${expanded ? '' : 'max-h-[36rem] overflow-hidden'}`}
               dangerouslySetInnerHTML={{ __html: displayHtml }}
             />
             {!expanded && (
