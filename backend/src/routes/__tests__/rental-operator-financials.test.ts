@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { FastifyInstance } from 'fastify';
+import path from 'path';
+import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
 import { buildApp } from '../../app';
 import { sanitizeListing } from '../../constants/dealer.js';
+
+const specsRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../uploads/rental-specs');
 
 describe('Rental Operator Financials & Public Payload Guard', () => {
     let app: FastifyInstance;
@@ -92,6 +97,7 @@ describe('Rental Operator Financials & Public Payload Guard', () => {
             await app.prisma.vehicleRentalAssignment.deleteMany({ where: { id: testAssignmentId } });
         }
         if (testVehicleId) {
+            await fs.rm(path.join(specsRoot, testVehicleId), { recursive: true, force: true });
             await app.prisma.rentalVehicle.deleteMany({ where: { id: testVehicleId } });
         }
         if (testCompanyId) {
@@ -263,6 +269,101 @@ describe('Rental Operator Financials & Public Payload Guard', () => {
         expect(body.vin).toBe('WBA1234567890TEST');
         expect(body.ownerRentalCompany).toBeDefined();
         expect(body.ownerRentalCompany.name).toBe('Test CFM Company');
+    });
+
+    it('operator-info: returns specNumbersByCompanyId and hasSpecificationPdf, never the raw specificationUrl', async () => {
+        await app.prisma.vehicleRentalAssignment.update({
+            where: { id: testAssignmentId },
+            data: { externalVehicleId: '  294  ' }
+        });
+        await app.prisma.rentalVehicle.update({
+            where: { id: testVehicleId },
+            data: { specificationUrl: null }
+        });
+        const vehicle = await app.prisma.rentalVehicle.findUnique({ where: { id: testVehicleId } });
+        const url = `/api/rental/vehicles/${vehicle?.slug}/operator-info`;
+        const headers = { authorization: `Bearer ${platformManagerToken}` };
+
+        const withoutPdf = await app.inject({ method: 'GET', url, headers });
+        expect(withoutPdf.statusCode).toBe(200);
+        const withoutPdfBody = JSON.parse(withoutPdf.body);
+        expect(withoutPdfBody.specNumbersByCompanyId[testCompanyId]).toBe('294');
+        expect(withoutPdfBody.hasSpecificationPdf).toBe(false);
+
+        await app.prisma.rentalVehicle.update({
+            where: { id: testVehicleId },
+            data: { specificationUrl: '/uploads/rental-specs/secret/spec.pdf' }
+        });
+        const withPdf = await app.inject({ method: 'GET', url, headers });
+        expect(withPdf.statusCode).toBe(200);
+        const withPdfBody = JSON.parse(withPdf.body);
+        expect(withPdfBody.hasSpecificationPdf).toBe(true);
+        expect(withPdfBody.specificationUrl).toBeUndefined();
+        expect(withPdfBody.rentalAssignments).toBeUndefined();
+        expect(JSON.stringify(withPdfBody)).not.toContain('/uploads/rental-specs/secret');
+
+        // Empty externalVehicleId is omitted
+        await app.prisma.vehicleRentalAssignment.update({
+            where: { id: testAssignmentId },
+            data: { externalVehicleId: '   ' }
+        });
+        const emptySpec = await app.inject({ method: 'GET', url, headers });
+        expect(JSON.parse(emptySpec.body).specNumbersByCompanyId[testCompanyId]).toBeUndefined();
+    });
+
+    it('specification-pdf: rejects anonymous requests with 401 and dealer employees with 403', async () => {
+        const vehicle = await app.prisma.rentalVehicle.findUnique({ where: { id: testVehicleId } });
+        const url = `/api/rental/vehicles/${vehicle?.slug}/specification-pdf`;
+
+        const anon = await app.inject({ method: 'GET', url });
+        expect(anon.statusCode).toBe(401);
+
+        const employee = await app.inject({
+            method: 'GET',
+            url,
+            headers: { authorization: `Bearer ${dealerEmployeeToken}` }
+        });
+        expect(employee.statusCode).toBe(403);
+    });
+
+    it('specification-pdf: 404 without specificationUrl, JSON url for external link, PDF stream for local file', async () => {
+        const headers = { authorization: `Bearer ${platformManagerToken}` };
+        const vehicle = await app.prisma.rentalVehicle.findUnique({ where: { id: testVehicleId } });
+        const url = `/api/rental/vehicles/${vehicle?.slug}/specification-pdf`;
+
+        // No specificationUrl -> 404
+        await app.prisma.rentalVehicle.update({ where: { id: testVehicleId }, data: { specificationUrl: null } });
+        const none = await app.inject({ method: 'GET', url, headers });
+        expect(none.statusCode).toBe(404);
+
+        // External URL -> JSON { url }
+        await app.prisma.rentalVehicle.update({
+            where: { id: testVehicleId },
+            data: { specificationUrl: 'https://example.com/spec.pdf' }
+        });
+        const external = await app.inject({ method: 'GET', url, headers });
+        expect(external.statusCode).toBe(200);
+        expect(JSON.parse(external.body)).toEqual({ url: 'https://example.com/spec.pdf' });
+
+        // Local file -> application/pdf stream
+        const vehicleDir = path.join(specsRoot, testVehicleId);
+        await fs.mkdir(vehicleDir, { recursive: true });
+        await fs.writeFile(path.join(vehicleDir, 'test.pdf'), '%PDF-1.4\n%%EOF\n');
+        await app.prisma.rentalVehicle.update({
+            where: { id: testVehicleId },
+            data: { specificationUrl: `/uploads/rental-specs/${testVehicleId}/test.pdf` }
+        });
+        const local = await app.inject({ method: 'GET', url, headers });
+        expect(local.statusCode).toBe(200);
+        expect(local.headers['content-type']).toContain('application/pdf');
+        expect(local.headers['content-disposition']).toBe('inline; filename="test.pdf"');
+        expect(local.headers['cache-control']).toBe('private, no-store');
+        expect(local.body).toContain('%PDF-1.4');
+
+        // Missing local file -> 404
+        await fs.rm(path.join(vehicleDir, 'test.pdf'));
+        const missing = await app.inject({ method: 'GET', url, headers });
+        expect(missing.statusCode).toBe(404);
     });
 
     it('regression guard: public GET /api/rental/vehicles/:slug NEVER leaks vin, registrationNumber, ownerRentalCompanyId, dealerId, availableFrom, ownerRentalCompany to anonymous or non-operator users', async () => {

@@ -83,6 +83,8 @@ export interface RentalOperatorInfo {
         slug?: string | null;
         logoUrl?: string | null;
     } | null;
+    specNumbersByCompanyId: Record<string, string>;
+    hasSpecificationPdf: boolean;
 }
 
 export interface RentalCompany {
@@ -499,6 +501,38 @@ export const rentalPublicApi = {
 
     getOperatorInfo: async (slug: string, token: string): Promise<RentalOperatorInfo> => {
         return fetchWithAuth(`${API_BASE_URL}/api/rental/vehicles/${slug}/operator-info`, token);
+    },
+
+    // Opens the tab synchronously (before any await) so popup blockers allow it, then points it at the PDF.
+    openSpecificationPdf: async (slug: string, token: string): Promise<void> => {
+        const win = window.open('', '_blank');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/rental/vehicles/${slug}/specification-pdf`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                const error = await res.json().catch(() => ({}));
+                throw new Error(error.error || `Request failed: ${res.status}`);
+            }
+
+            let targetUrl: string;
+            if ((res.headers.get('content-type') || '').includes('application/json')) {
+                targetUrl = (await res.json()).url;
+            } else {
+                const blob = await res.blob();
+                targetUrl = URL.createObjectURL(blob);
+                setTimeout(() => URL.revokeObjectURL(targetUrl), 60_000);
+            }
+
+            if (win) {
+                win.location.href = targetUrl;
+            } else {
+                window.open(targetUrl, '_blank');
+            }
+        } catch (err) {
+            win?.close();
+            throw err;
+        }
     },
 
     submitLead: async (data: {

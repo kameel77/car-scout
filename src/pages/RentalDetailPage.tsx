@@ -728,6 +728,7 @@ export default function RentalDetailPage() {
                     feePct={selectedOperatorOffer ? financialsByCompanyId[selectedOperatorOffer.company?.id]?.feePct : null}
                     operatorInfo={operatorInfo}
                     isLoadingInfo={operatorInfoQuery.isLoading}
+                    onOpenSpecificationPdf={() => rentalPublicApi.openSpecificationPdf(slug!, token!)}
                 />
             )}
 
