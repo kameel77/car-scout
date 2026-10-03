@@ -11,7 +11,7 @@
   "author": "Kamil Tonkowicz",
   "reviewed_by": null,
   "reviewed_at": null,
-  "updated_at": "2026-10-02",
+  "updated_at": "2026-10-03",
   "og_image": "/poradnik/og/og-samochod-firma-vat.jpg",
   "figures": [
     {
@@ -36,7 +36,7 @@
 # Samochód w firmie a VAT: odliczenie 50% czy 100%, VAT-26 i ewidencja przebiegu
 Czynny podatnik VAT odlicza 50% VAT od wydatków na samochód osobowy, którego używa w firmie i prywatnie. Pełne odliczenie VAT od samochodu w firmie przysługuje tylko przy użytku wyłącznie firmowym. Wymaga ono zasad używania pojazdu, ewidencji przebiegu i informacji VAT-26. VAT-26 składasz do 25. dnia miesiąca po pierwszym wydatku, ale nie później niż w dniu przesłania JPK_V7 za ten okres. Zasady wynikają z art. 86a ustawy o VAT.
 ## Ile VAT odliczysz od samochodu w firmie?
-Odliczenie VAT od samochodu osobowego w firmie wynosi 50% albo 100%, zależnie od tego, jak go używasz. Zasada 50% obejmuje pojazdy samochodowe o dopuszczalnej masie całkowitej do 3,5 tony (art. 2 pkt 34 ustawy o VAT). Podstawowa stawka VAT wynosi 23%.
+Odliczenie VAT od samochodu osobowego w firmie wynosi 50% albo 100%, zależnie od tego, jak go używasz. Zasada 50% obejmuje pojazdy samochodowe o dopuszczalnej masie całkowitej do 3,5 tony (art. 2 pkt 34 [ustawy o VAT](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260001263)). Podstawowa stawka VAT wynosi 23%.
 
 
 | Cecha | Odliczenie 50% VAT | Odliczenie 100% VAT |
@@ -77,7 +77,7 @@ Ewidencja przebiegu pojazdu zawiera dane pojazdu, stany licznika i wpis dla każ
 
 Ewidencję prowadzisz od pierwszego do ostatniego dnia wykorzystywania pojazdu wyłącznie w działalności. Gdy udostępniasz pojazd osobie, która nie jest pracownikiem, to ty robisz wpis i podajesz stan licznika w dniu wydania i zwrotu.
 ### Termin i forma VAT-26
-VAT-26 składasz do 25. dnia miesiąca następującego po miesiącu pierwszego wydatku na pojazd. Informacja musi jednak trafić do urzędu nie później niż w dniu przesłania pliku JPK_V7 za okres pierwszego wydatku. Termin 25. dnia obowiązuje od 1 października 2021 r. (SLIM VAT 2). Wcześniej na złożenie VAT-26 było 7 dni od pierwszego wydatku.
+VAT-26 składasz do 25. dnia miesiąca następującego po miesiącu pierwszego wydatku na pojazd. Informacja musi jednak trafić do urzędu nie później niż w dniu przesłania pliku JPK_V7 za okres pierwszego wydatku. Termin 25. dnia obowiązuje od 1 października 2021 r. ([ustawa z 11 sierpnia 2021 r., Dz.U. 2021 poz. 1626](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20210001626), tzw. SLIM VAT 2). Wcześniej na złożenie VAT-26 było 7 dni od pierwszego wydatku.
 
 Formularz złożysz elektronicznie albo w urzędzie skarbowym. Wersję elektroniczną podpisujesz podpisem kwalifikowanym lub danymi autoryzującymi. Profilem Zaufanym przez ePUAP tego formularza nie podpiszesz.
 ### Co grozi za spóźniony VAT-26?
@@ -117,7 +117,7 @@ Nieodliczony VAT od samochodu zwiększa jego wartość, od której liczy się li
 
 Sposób użytkowania wpływa też na koszty eksploatacji w PIT i CIT. Przy użytku mieszanym zaliczasz do kosztów 75% wydatków na paliwo, serwis, naprawy, opony i parkingi. Jeśli samochód służy wyłącznie firmie, a potwierdza to ewidencja przebiegu, kosztem jest 100% tych wydatków. Reguła 75% nie dotyczy rat leasingu.
 
-Definicja samochodu osobowego z art. 5a pkt 19a ustawy o PIT wyłącza konstrukcje podobne do opisanych w art. 86a ust. 9 ustawy o VAT. Pojazd spełniający te warunki co do zasady nie jest więc samochodem osobowym dla PIT. Limity 100 000 zł, 150 000 zł i 225 000 zł dotyczą samochodów osobowych.
+Definicja samochodu osobowego z art. 5a pkt 19a [ustawy o PIT](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260000592) wyłącza konstrukcje podobne do opisanych w art. 86a ust. 9 ustawy o VAT. Pojazd spełniający te warunki co do zasady nie jest więc samochodem osobowym dla PIT. Limity 100 000 zł, 150 000 zł i 225 000 zł dotyczą samochodów osobowych.
 ## Co jeszcze sprawdzić przed wyborem formy finansowania samochodu do firmy?
 Przed wyborem formy finansowania sprawdź, jak leasing i najem rozkładają VAT oraz koszty w czasie. VAT od samochodu w firmie to jeden z kilku elementów całkowitego kosztu.
 ### Leasing samochodu osobowego
@@ -144,7 +144,15 @@ Autor: Kamil Tonkowicz, Product Owner & Technology Lead w Motolia. Ponad 20 lat 
 
 Źródła:
 
-- OpenLEX, art. 86a ustawy o podatku od towarów i usług (Dz.U. 2025 poz. 775 t.j., wersja od 1.04.2026): [https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-od-towarow-i-uslug-17086198/art-86-a](https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-od-towarow-i-uslug-17086198/art-86-a)
+Podstawa prawna:
+
+- [Ustawa z 11 marca 2004 r. o podatku od towarów i usług (t.j. Dz.U. 2026 poz. 1263 ze zm.)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260001263): art. 2 pkt 34, art. 86a ust. 1 do 14
+- [Ustawa z 26 lipca 1991 r. o podatku dochodowym od osób fizycznych (t.j. Dz.U. 2026 poz. 592 ze zm.)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260000592): art. 5a pkt 19a
+- [Ustawa z 11 sierpnia 2021 r. o zmianie ustawy o podatku od towarów i usług oraz ustawy Prawo bankowe (Dz.U. 2021 poz. 1626)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20210001626): art. 1 pkt 9 (termin VAT-26)
+
+Publikacje i opracowania:
+
+- OpenLEX, art. 86a ustawy o podatku od towarów i usług: [https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-od-towarow-i-uslug-17086198/art-86-a](https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-od-towarow-i-uslug-17086198/art-86-a)
 - OpenLEX, art. 2 ustawy o podatku od towarów i usług: [https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-od-towarow-i-uslug-17086198/art-2](https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-od-towarow-i-uslug-17086198/art-2)
 - OpenLEX, art. 5a ustawy o podatku dochodowym od osób fizycznych (Dz.U. 2026 poz. 592 t.j.): [https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-dochodowy-od-osob-fizycznych-16794311/art-5-a](https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-dochodowy-od-osob-fizycznych-16794311/art-5-a)
 - biznes.gov.pl, Podstawowe informacje o księgowości i ewidencjach (akt. 14.03.2026): [https://www.biznes.gov.pl/pl/portal/00260](https://www.biznes.gov.pl/pl/portal/00260)

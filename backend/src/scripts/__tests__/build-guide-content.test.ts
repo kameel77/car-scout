@@ -108,4 +108,18 @@ describe('generated files are in sync with backend/content/guides/*.md', () => {
         expect(readFileSync(OUT_BACKEND, 'utf8')).toBe(fresh.backend);
         expect(readFileSync(OUT_FRONTEND, 'utf8')).toBe(fresh.frontend);
     });
+    it('every text links the legal acts it cites to official sources and lists them under "Podstawa prawna"', () => {
+        const texts: Array<[string, string, string]> = [
+            ...Object.values(MOTOLIA_GUIDES).map((g) => [g.path, g.html, g.sourcesHtml] as [string, string, string]),
+            ...Object.entries(MOTOLIA_GENERATED_PILLARS).map(([p, g]) => [p, g.html, g.html] as [string, string, string]),
+        ];
+        for (const [path, html, sources] of texts) {
+            expect(html, path).toMatch(/<a href="https:\/\/isap\.sejm\.gov\.pl\/isap\.nsf\/DocDetails\.xsp\?id=WDU\d+" rel="noopener" target="_blank">/);
+            expect(sources, path).toContain('Podstawa prawna');
+        }
+        const vat = getGuideArticle('motolia', '/leasing/vat')!;
+        expect(vat.sourcesHtml).toContain('Dz.U. 2026 poz. 1263');
+        expect(JSON.stringify(MOTOLIA_GUIDES) + JSON.stringify(MOTOLIA_GENERATED_PILLARS)).not.toContain('2025 poz. 775');
+    });
 });
+

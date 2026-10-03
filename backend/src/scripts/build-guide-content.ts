@@ -241,7 +241,7 @@ export function build(): { backend: string; frontend: string; warnings: string[]
             // Hub korzysta z istniejącego szablonu strony filarowej: {h1, html}, lead = pierwszy <p>.
             const footer =
                 (p.authorBio ? `<p class="guide-author-note"><strong>Autor:</strong> ${stripTags(md(p.authorBio))}</p>` : '') +
-                (sourcesHtml ? `<details class="guide-sources"><summary>Źródła</summary>${sourcesHtml}</details>` : '') +
+                (sourcesHtml ? `<details class="guide-sources"><summary>Źródła i podstawa prawna</summary>${sourcesHtml}</details>` : '') +
                 (p.disclaimer ? `<p class="guide-disclaimer">${stripTags(md(p.disclaimer))}</p>` : '');
             pillars[p.fm.path] = {
                 h1: p.fm.h1,

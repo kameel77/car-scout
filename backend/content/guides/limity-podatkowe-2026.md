@@ -11,7 +11,7 @@
   "author": "Kamil Tonkowicz",
   "reviewed_by": null,
   "reviewed_at": null,
-  "updated_at": "2026-10-02",
+  "updated_at": "2026-10-03",
   "og_image": "/poradnik/og/og-leasing-limity-2026.jpg",
   "figures": [
     {
@@ -36,7 +36,7 @@
 # Limit 100 tys. zł w leasingu od 2026 r.: limity podatkowe samochodu osobowego
 Od 1 stycznia 2026 r. podatkowy limit kosztów samochodu osobowego wynosi 100 000 zł, 150 000 zł albo 225 000 zł. W leasingu, najmie i amortyzacji obowiązuje ten sam limit kosztów. Jego wysokość zależy od emisji CO2 zapisanej w centralnej ewidencji pojazdów (CEPiK). Auta spalinowe oraz w praktyce hybrydy HEV i MHEV mają limit 100 tys. zł. Auta z emisją poniżej 50 g/km dostają 150 tys. zł, a samochody elektryczne i wodorowe 225 tys. zł.
 ## Jakie limity kosztów samochodu osobowego obowiązują od 2026 roku?
-Od 1 stycznia 2026 r. limit kosztów samochodu osobowego przyjmuje jedną z trzech wartości, zależnie od napędu i emisji CO2. Nowe wartości wprowadziła ustawa z 2 grudnia 2021 r. o zmianie ustawy o elektromobilności i paliwach alternatywnych (Dz.U. 2021 poz. 2269). Do 31 grudnia 2025 r. każdy samochód spalinowy miał limit 150 000 zł.
+Od 1 stycznia 2026 r. limit kosztów samochodu osobowego przyjmuje jedną z trzech wartości, zależnie od napędu i emisji CO2. Nowe wartości wprowadziła ustawa z 2 grudnia 2021 r. o zmianie ustawy o elektromobilności i paliwach alternatywnych ([Dz.U. 2021 poz. 2269](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20210002269)). Do 31 grudnia 2025 r. każdy samochód spalinowy miał limit 150 000 zł.
 
 
 | Samochód osobowy | Emisja CO2 wg CEPiK | Limit od 1.01.2026 | Limit do 31.12.2025 |
@@ -48,7 +48,7 @@ Od 1 stycznia 2026 r. limit kosztów samochodu osobowego przyjmuje jedną z trze
 
 Trzy grupy wydatków na samochód osobowy podlegają limitowi kosztów:
 
-- odpisy amortyzacyjne przy zakupie i leasingu finansowym (art. 23 ust. 1 pkt 4 ustawy o PIT, art. 16 ust. 1 pkt 4 ustawy o CIT),
+- odpisy amortyzacyjne przy zakupie i leasingu finansowym (art. 23 ust. 1 pkt 4 [ustawy o PIT](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260000592), art. 16 ust. 1 pkt 4 [ustawy o CIT](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260000554)),
 - część kapitałową opłat w leasingu operacyjnym oraz opłaty z umów najmu i dzierżawy (art. 23 ust. 1 pkt 47a PIT, art. 16 ust. 1 pkt 49a CIT),
 - składki AC i GAP, ale według odrębnego limitu 150 000 zł.
 
@@ -58,9 +58,9 @@ W samochodzie spalinowym limit kosztów zależy od emisji CO2 silnika spalinoweg
 ### Hybryda HEV i MHEV
 Hybryda HEV i hybryda MHEV mają w praktyce limit 100 000 zł. Ich wpis emisji CO2 w CEPiK wynosi zwykle co najmniej 50 g/km. Żadna z nich nie ładuje się z zewnętrznego źródła energii.
 ### Hybryda plug-in (PHEV)
-Hybryda plug-in dostaje limit 150 000 zł tylko wtedy, gdy wpis CO2 w CEPiK jest niższy niż 50 g/km. Dyrektor KIS w interpretacji z 23 stycznia 2026 r. (0114-KDIP3-2.4011.1004.2025.2.MT) uznał dane z CEPiK za wiążące. W opisanej sprawie PHEV miał w homologacji 11 g/km, a w CEPiK 136 g/km. KIS przyznał temu autu limit 100 000 zł.
+Hybryda plug-in dostaje limit 150 000 zł tylko wtedy, gdy wpis CO2 w CEPiK jest niższy niż 50 g/km. Dyrektor KIS w interpretacji z 23 stycznia 2026 r. ([0114-KDIP3-2.4011.1004.2025.2.MT](https://eureka.mf.gov.pl/informacje/podglad/676885)) uznał dane z CEPiK za wiążące. W opisanej sprawie PHEV miał w homologacji 11 g/km, a w CEPiK 136 g/km. KIS przyznał temu autu limit 100 000 zł.
 ### Samochód elektryczny i wodorowy
-Samochód elektryczny i samochód napędzany wodorem mają limit 225 000 zł bez względu na dane o emisji. Definicje obu pojazdów zawiera ustawa o elektromobilności (art. 2 pkt 12 i pkt 15). Hybryda plug-in jest w tej ustawie pojazdem hybrydowym, a nie elektrycznym.
+Samochód elektryczny i samochód napędzany wodorem mają limit 225 000 zł bez względu na dane o emisji. Definicje obu pojazdów zawiera [ustawa o elektromobilności](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260001243) (art. 2 pkt 12 i pkt 15). Hybryda plug-in jest w tej ustawie pojazdem hybrydowym, a nie elektrycznym.
 ## Jak policzyć, jaka część raty leasingu jest kosztem?
 Gdy wartość samochodu przekracza limit kosztów, kosztem jest część kapitałowa raty pomnożona przez iloraz limitu i wartości samochodu. Część odsetkowa raty trafia do kosztów w całości (art. 23 ust. 5c PIT, art. 16 ust. 5c CIT).
 
@@ -85,7 +85,7 @@ Hybryda plug-in za 140 000 zł netto z wpisem CO2 poniżej 50 g/km ma limit 150 
 | PHEV 136 g/km w CEPiK | 140 000 zł | 100 000 zł | 156 100 zł | 64,06% | 71,43% |
 
 ## Czy limit 100 tys. zł obejmuje umowy leasingu zawarte przed 2026 rokiem?
-Tak, według Ministerstwa Finansów i Dyrektora KIS nowy limit kosztów obejmuje od 1 stycznia 2026 r. także wcześniejsze umowy leasingu operacyjnego, najmu i dzierżawy. Stanowisko MF przedstawił wiceminister Jarosław Neneman. KIS potwierdził je w interpretacji 0115-KDIT3.4011.157.2026.1.DP z 8 kwietnia 2026 r. Jeśli płacisz raty za hybrydę HEV z umowy z 2024 r., od stycznia 2026 r. rozliczasz je według limitu 100 000 zł.
+Tak, według Ministerstwa Finansów i Dyrektora KIS nowy limit kosztów obejmuje od 1 stycznia 2026 r. także wcześniejsze umowy leasingu operacyjnego, najmu i dzierżawy. Stanowisko MF przedstawił wiceminister Jarosław Neneman. KIS potwierdził je w [interpretacji 0115-KDIT3.4011.157.2026.1.DP](https://eureka.mf.gov.pl/informacje/podglad/686151) z 8 kwietnia 2026 r. Jeśli płacisz raty za hybrydę HEV z umowy z 2024 r., od stycznia 2026 r. rozliczasz je według limitu 100 000 zł.
 
 Przepis przejściowy chroni tylko samochody wprowadzone do ewidencji środków trwałych przed 1 stycznia 2026 r. Takie auta, kupione za gotówkę, na kredyt albo w leasingu finansowym, zachowują limit 150 000 zł lub 225 000 zł. Stanowiska MF i KIS w sprawie starych umów leasingu operacyjnego sądy administracyjne jeszcze nie oceniły.
 ## Limit AC i GAP: 150 000 zł dla każdego samochodu
@@ -134,6 +134,18 @@ Nie, limit 100 000 zł nie dotyczy ubezpieczenia AC. Składki AC i GAP mają lim
 Autor: Kamil Tonkowicz, Product Owner & Technology Lead w Motolia. Ponad 20 lat w bankowości i finansach: audytor banków i spółek leasingowych w EY, kontroler finansowy w Citi Handlowy. Od 2017 r. projektuje cyfrowe produkty leasingowe i kredytowe. Magister bankowości i finansów (UE we Wrocławiu).
 
 Źródła:
+
+Podstawa prawna:
+
+- [Ustawa z 26 lipca 1991 r. o podatku dochodowym od osób fizycznych (t.j. Dz.U. 2026 poz. 592 ze zm.)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260000592): art. 23 ust. 1 pkt 4, 47 i 47a, art. 23 ust. 5c, art. 23a pkt 1, art. 23b
+- [Ustawa z 15 lutego 1992 r. o podatku dochodowym od osób prawnych (t.j. Dz.U. 2026 poz. 554 ze zm.)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260000554): art. 16 ust. 1 pkt 4, 49 i 49a, art. 16 ust. 5c
+- [Ustawa z 11 stycznia 2018 r. o elektromobilności i paliwach alternatywnych (t.j. Dz.U. 2026 poz. 1243)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260001243): art. 2 pkt 12 i 15
+- [Ustawa z 2 grudnia 2021 r. o zmianie ustawy o elektromobilności i paliwach alternatywnych oraz niektórych innych ustaw (Dz.U. 2021 poz. 2269)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20210002269): art. 3, art. 4 i art. 30
+- [Dyrektor KIS, interpretacja indywidualna 0114-KDIP3-2.4011.1004.2025.2.MT z 23 stycznia 2026 r.](https://eureka.mf.gov.pl/informacje/podglad/676885): emisja CO2 z CEPiK
+- [Dyrektor KIS, interpretacja indywidualna 0115-KDIT3.4011.157.2026.1.DP z 8 kwietnia 2026 r.](https://eureka.mf.gov.pl/informacje/podglad/686151): limity a umowy leasingu sprzed 2026 r.
+- [Dyrektor KIS, interpretacja indywidualna 0115-KDIT3.4011.779.2025.1.DP z 3 grudnia 2025 r.](https://eureka.mf.gov.pl/informacje/podglad/670308): najem długoterminowy
+
+Publikacje i opracowania:
 
 - Prawo.pl: Stare umowy leasingu z niższym limitem od 2026 r. (21.04.2026): [https://www.prawo.pl/podatki/stare-umowy-leasingu-a-limit-kosztow-od-2026-r,1542853.html](https://www.prawo.pl/podatki/stare-umowy-leasingu-a-limit-kosztow-od-2026-r,1542853.html)
 - Związek Polskiego Leasingu: Nowe limity amortyzacji od 2026 r. (12.08.2025): [https://www.leasing.org.pl/Nowe+limity+amortyzacji+od+2026+r](https://www.leasing.org.pl/Nowe+limity+amortyzacji+od+2026+r).

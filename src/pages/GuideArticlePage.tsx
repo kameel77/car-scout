@@ -6,9 +6,15 @@ import { Footer } from '@/components/Footer';
 import { MetaHead } from '@/components/seo/MetaHead';
 import { useGuideArticle } from '@/components/guide/useGuideArticle';
 import { GUIDES_INDEX } from '@/components/guide/guidePaths';
+import { splitForOffers } from '@/components/guide/splitForOffers';
+import type { PillarType } from '@/components/pillar/pillarContent';
 
-const HUB_LABELS: Record<string, { label: string; cta: string; guideTitle: string }> = {
-  '/leasing': { label: 'Leasing', cta: 'Policz ratę leasingu', guideTitle: 'Leasing samochodu dla firm' },
+const GuideOffersRow = React.lazy(() =>
+  import('@/components/guide/GuideOffersRow').then((m) => ({ default: m.GuideOffersRow })),
+);
+
+const HUB_LABELS: Record<string, { label: string; cta: string; guideTitle: string; offers: PillarType }> = {
+  '/leasing': { label: 'Leasing', cta: 'Policz ratę leasingu', guideTitle: 'Leasing samochodu dla firm', offers: 'leasing' },
 };
 
 function formatDate(iso: string): string {
@@ -71,6 +77,7 @@ export default function GuideArticlePage({ path }: { path: string }) {
   const tocIds = React.useMemo(() => (guide?.toc ?? []).map((t) => t.id), [guide?.toc]);
   const active = useActiveSection(tocIds);
   const showMobileCta = useScrolledPast(500);
+  const [htmlBefore, htmlAfter] = React.useMemo(() => splitForOffers(guide?.html ?? ''), [guide?.html]);
 
   // Link z kotwicą (#sekcja) z wyszukiwarki lub innej strony: shell SSR nie ma id sekcji,
   // więc przewijamy dopiero po wyrenderowaniu treści.
@@ -104,7 +111,10 @@ export default function GuideArticlePage({ path }: { path: string }) {
     );
   }
 
-  const hub = HUB_LABELS[guide.hub] ?? { label: 'Poradnik', cta: 'Policz ratę', guideTitle: 'Przewodnik' };
+  const hub = HUB_LABELS[guide.hub];
+  const hubLabel = hub?.label ?? 'Poradnik';
+  const hubCta = hub?.cta ?? 'Policz ratę';
+  const hubGuideTitle = hub?.guideTitle ?? 'Przewodnik';
   const related = GUIDES_INDEX.filter((g) => g.hub === guide.hub && g.path !== guide.path);
 
   return (
@@ -117,7 +127,7 @@ export default function GuideArticlePage({ path }: { path: string }) {
           <ol className="flex flex-wrap items-center gap-1">
             <li><Link to="/" className="hover:text-foreground hover:underline">Strona główna</Link></li>
             <li aria-hidden="true"><ChevronRight className="h-4 w-4" /></li>
-            <li><Link to={guide.hub} className="hover:text-foreground hover:underline">{hub.label}</Link></li>
+            <li><Link to={guide.hub} className="hover:text-foreground hover:underline">{hubLabel}</Link></li>
             <li aria-hidden="true"><ChevronRight className="h-4 w-4" /></li>
             <li aria-current="page" className="text-foreground">{guide.breadcrumb}</li>
           </ol>
@@ -125,7 +135,7 @@ export default function GuideArticlePage({ path }: { path: string }) {
 
         <div className="mt-4 grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_300px]">
           <article className="min-w-0 max-w-[720px]">
-            <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">Poradnik · {hub.label}</p>
+            <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">Poradnik · {hubLabel}</p>
             <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground md:text-[2.5rem]">{guide.h1}</h1>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
@@ -161,7 +171,14 @@ export default function GuideArticlePage({ path }: { path: string }) {
               </details>
             )}
 
-            <div className="guide-prose mt-8" dangerouslySetInnerHTML={{ __html: guide.html }} />
+            <div className="guide-prose mt-8" dangerouslySetInnerHTML={{ __html: htmlBefore }} />
+            {hub?.offers && (
+              // Wtrącenie sprzedażowe w połowie lektury: jeden rząd ofert + link do wszystkich ofert (jak na hubie)
+              <React.Suspense fallback={<div className="my-10 min-h-[24rem] sm:min-h-[22rem]" aria-hidden="true" />}>
+                <GuideOffersRow type={hub.offers} />
+              </React.Suspense>
+            )}
+            {htmlAfter && <div className="guide-prose" dangerouslySetInnerHTML={{ __html: htmlAfter }} />}
 
             <section aria-label="Autor" className="mt-12 flex gap-4 rounded-xl border bg-card p-5">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground" aria-hidden="true">
@@ -190,7 +207,7 @@ export default function GuideArticlePage({ path }: { path: string }) {
                   <li>
                     <Link to={guide.hub} className="block h-full rounded-xl border bg-card p-4 transition-colors hover:border-primary">
                       <span className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">Przewodnik</span>
-                      <span className="mt-1 block font-semibold text-foreground">{hub.guideTitle}</span>
+                      <span className="mt-1 block font-semibold text-foreground">{hubGuideTitle}</span>
                     </Link>
                   </li>
                   {related.map((g) => (
@@ -237,7 +254,7 @@ export default function GuideArticlePage({ path }: { path: string }) {
                   className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-accent px-4 font-bold text-accent-foreground hover:brightness-95"
                 >
                   <Calculator className="h-5 w-5" aria-hidden="true" />
-                  {hub.cta}
+                  {hubCta}
                 </Link>
                 <Link to="/kontakt" className="mt-3 block text-center text-sm font-semibold text-primary underline underline-offset-2">
                   Zapytaj doradcę
@@ -260,7 +277,7 @@ export default function GuideArticlePage({ path }: { path: string }) {
           className="flex h-[52px] w-full items-center justify-center gap-2 rounded-md bg-accent font-bold text-accent-foreground"
         >
           <Calculator className="h-5 w-5" aria-hidden="true" />
-          {hub.cta}
+          {hubCta}
         </Link>
       </div>
 
